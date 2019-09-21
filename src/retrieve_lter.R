@@ -23,12 +23,12 @@ lter_download = function(src_df, lter_dir, dmn){
 
     endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
-    src_df = filter(src_df, domain == dmn)
+    src_df = dplyr::filter(src_df, domain == dmn)
 
     for(i in 1:nrow(src_df)){
 
         pid = src_df$pid_str[i]
-        element_ids = getURLContent(paste0(endpoint, pid))
+        element_ids = RCurl::getURLContent(paste0(endpoint, pid))
         element_ids = strsplit(element_ids, '\n')[[1]]
         rawdir = paste0(dmn, '/raw/', src_df$id[i])
 
@@ -38,7 +38,7 @@ lter_download = function(src_df, lter_dir, dmn){
             rawfile = paste0(rawdir, '/', e, '.csv')
             download.file(url=paste0(endpoint, pid, e),
                 destfile=rawfile, cacheOK=FALSE, method='curl')
-            d = read_csv(rawfile, guess_max=10000)
+            d = readr::read_csv(rawfile, guess_max=10000)
         }
 Z
         print(paste0(i, ': Downloaded ', src_df$type[i], ' (',
@@ -49,10 +49,10 @@ Z
 lterdir = '~/git/macrosheds/data_acquisition/data/lter/'
 
 #could totally put this part inside the function too
-lter_srcs = gs_title('lter_package_ids') %>%
-    gs_read() %>%
-    filter(in_workflow == 1) %>%
-    mutate(pid_str=str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
+lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
+    googlesheets::gs_read() %>%
+    dplyr::filter(in_workflow == 1) %>%
+    dplyr::mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
         '\\1/\\2/newest/'))
 
 lter_download(lter_srcs, lter_dir=lterdir, dmn='hjandrews')
