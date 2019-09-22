@@ -1,4 +1,5 @@
 library(RMariaDB)
+library(RPostgreSQL)
 library(DBI)
 library(plyr)
 library(data.table)
@@ -7,26 +8,27 @@ library(tidyverse)
 library(lubridate)
 library(feather)
 library(googledrive)
-library(tidylog, warn.conflicts = FALSE)
+library(tidylog)
 # library(rethinker)
 
 `%>%` = dplyr::`%>%`
-`.` = dplyr::`.`
+`.` = plyr::`.`
 `.SD` = data.table::`.SD`
 
 setwd('/home/mike/git/macrosheds/data_acquisition/')
 
 source('src/helpers.R')
 conf = readLines('config.txt')
-pw = extract_from_config('MYSQL_PW')
+mysql_pw = extract_from_config('MYSQL_PW')
+postgres_pw = extract_from_config('POSTGRESQL_PW')
 
 con = DBI::dbConnect(RMariaDB::MariaDB(), dbname='hbef',
-    username='root', password=pw)
+    username='root', password=mysql_pw)
 
 #can't use lazy_dt with summarize_if yet
 grab_cur = DBI::dbReadTable(con, 'chemistry') %>%
 # grab_cur = dtplyr::lazy_dt(DBI::dbReadTable(con, 'chemistry')) %>%
-    dplyr::mutate(uniqueID=gsub('_Dup', '', uniqueID)) %>%
+    tidylog::mutate(uniqueID=gsub('_Dup', '', uniqueID)) %>%
     data.table::data.table(.) %>%
     .[!is.na(uniqueID) & !is.na(datetime),
         lapply(.SD, function(x) {
@@ -38,15 +40,15 @@ grab_cur = DBI::dbReadTable(con, 'chemistry') %>%
     # group_by(uniqueID, datetime) %>%
     # summarize_if(is.numeric, mean, na.rm=TRUE) %>%
     # ungroup() %>%
-    dplyr::mutate(site=stringr::str_match(uniqueID, '^(.+?)_.+$')[,2],
+    tidylog::mutate(site=stringr::str_match(uniqueID, '^(.+?)_.+$')[,2],
         datetime=lubridate::with_tz(as.POSIXct(datetime, tz='US/Eastern',
             format='%m/%e/%y %H:%M'), tzone='UTC')) %>%
-    dplyr::select(-refNo, -uniqueID, -duplicate) %>%
+    tidylog::select(-refNo, -uniqueID, -duplicate) %>%
     replace(is.na(.), NA) %>% #for NaNs
     tibble::as_tibble()
 
 grab_hist = DBI::dbReadTable(con, 'historical') %>%
-    dplyr::mutate(uniqueID=gsub('_Dup', '', uniqueID)) %>%
+    tidylog::mutate(uniqueID=gsub('_Dup', '', uniqueID)) %>%
     data.table::data.table(.) %>%
    .[!is.na(uniqueID) & !is.na(datetime),
         lapply(.SD, function(x) {
@@ -54,30 +56,30 @@ grab_hist = DBI::dbReadTable(con, 'historical') %>%
         }),
         by=list(uniqueID, datetime)] %>%
     tibble::as_tibble(.) %>%
-    dplyr::mutate(site=stringr::str_match(uniqueID, '^(.+?)_.+$')[,2],
+    tidylog::mutate(site=stringr::str_match(uniqueID, '^(.+?)_.+$')[,2],
         datetime=lubridate::with_tz(as.POSIXct(datetime, tz='US/Eastern',
             format='%m/%e/%y %H:%M'), tzone='UTC')) %>%
-    dplyr::select(-refNo, -uniqueID, -date, -timeEST, -duplicate) %>%
+    tidylog::select(-refNo, -uniqueID, -date, -timeEST, -duplicate) %>%
     replace(is.na(.), NA) %>%
     tibble::as_tibble()
 
-grab = dplyr::full_join(grab_cur, grab_hist) %>%
+grab = tidylog::full_join(grab_cur, grab_hist) %>%
     dplyr::arrange(datetime)
 
 sensor_Q = dtplyr::lazy_dt(DBI::dbReadTable(con, 'sensor2')) %>%
-    dplyr::mutate(site=paste0('W', watershedID)) %>%
-    dplyr::select(-id, -watershedID) %>%
+    tidylog::mutate(site=paste0('W', watershedID)) %>%
+    tidylog::select(-id, -watershedID) %>%
     replace(is.na(.), NA) %>%
     tibble::as_tibble()
 
 sensor_etc = dtplyr::lazy_dt(DBI::dbReadTable(con, 'sensor3')) %>%
     dplyr::rename_all(function(x) gsub('S3__', '', x)) %>%
-    dplyr::mutate(site=paste0('W', watershedID)) %>%
-    dplyr::select(-id, -watershedID) %>%
+    tidylog::mutate(site=paste0('W', watershedID)) %>%
+    tidylog::select(-id, -watershedID) %>%
     replace(is.na(.), NA) %>%
     tibble::as_tibble()
 
-sensor = dplyr::full_join(sensor_Q, sensor_etc) %>%
+sensor = tidylog::full_join(sensor_Q, sensor_etc) %>%
     dplyr::arrange(datetime)
 
 # tidyr::gather(grab_cur,'variable', 'value',
@@ -94,7 +96,134 @@ out = googledrive::drive_upload("data/hbef.zip",
     googledrive::as_id('https://drive.google.com/drive/folders/0ABfF-JkuRvL5Uk9PVA'))
 
 #write data to timescaledb
+con = DBI::dbConnect(dbDriver('PostgreSQL'), host='localhost', dbname='test',
+    user='mike', password=postgres_pw)
 
+create_domain_table =
+    "CREATE TABLE domain (
+        id                  SMALLSERIAL PRIMARY KEY,
+        domainCode          CHAR(3)         NOT NULL,
+        domainName          VARCHAR(100)    NOT NULL,
+        originatingUser     SMALLINT,
+        url                 VARCHAR(300)
+    );"
+
+create_waterway_table =
+    "CREATE TABLE waterway (
+        id                  SMALLSERIAL PRIMARY KEY,
+        waterwayCode        CHAR(3)         NOT NULL,
+        waterwayName        VARCHAR(100)    NOT NULL
+    );"
+
+create_site_table =
+    "CREATE TABLE site (
+        id                  SMALLSERIAL PRIMARY KEY,
+        domain              SMALLINT        NOT NULL REFERENCES domain (id),
+        waterway            SMALLINT        NOT NULL REFERENCES waterway (id),
+        siteCode            CHAR(3)         NOT NULL,
+        siteName            VARCHAR(100)    NOT NULL,
+        latitude            FLOAT           NOT NULL,
+        longitude           FLOAT           NOT NULL,
+        datum               VARCHAR(100)    NOT NULL,
+        addDate             TIMESTAMPTZ     NOT NULL,
+        firstSensorRecord   TIMESTAMPTZ,
+        lastSensorRecord    TIMESTAMPTZ,
+        firstGrabRecord     TIMESTAMPTZ,
+        lastGrabRecord      TIMESTAMPTZ,
+        sensorVarList       TEXT [],
+        grabVarList         TEXT [],
+        wsSummaryVarList    TEXT [],
+        originatingUser     SMALLINT,
+        url                 VARCHAR(300),
+        contactEmail        VARCHAR(100)
+    );"
+
+create_unit_table =
+    "CREATE TABLE unit (
+        id                  SMALLSERIAL PRIMARY KEY,
+        unitCode            CHAR(3)         NOT NULL,
+        unitName            VARCHAR(100)    NOT NULL
+    );"
+
+create_method_table =
+    "CREATE TABLE method (
+        id                  SMALLSERIAL PRIMARY KEY,
+        methodCode          CHAR(3)         NOT NULL,
+        methodName          VARCHAR(100)    NOT NULL
+    );"
+
+create_variable_table =
+    "CREATE TABLE variable (
+        id                  SMALLSERIAL PRIMARY KEY,
+        variableCode        CHAR(3)         NOT NULL,
+        variableName        VARCHAR(100)    NOT NULL,
+        variableType        CHAR(9)         NOT NULL,
+        stdUnit             SMALLINT        NOT NULL REFERENCES unit (id),
+        stdMethod           SMALLINT        NOT NULL REFERENCES method (id),
+        unitList            TEXT []
+    );
+
+    ALTER TABLE variable
+        ADD CONSTRAINT check_types
+        CHECK (variableType IN (
+            'sensor', 'grab', 'wsSummary', 'blob', 'meta'
+        ) );"
+
+create_flagSensor_table =
+    "CREATE TABLE flagSensor (
+        id                  SERIAL          PRIMARY KEY,
+        dtStart             TIMESTAMPTZ     NOT NULL,
+        dtEnd               TIMESTAMPTZ     NOT NULL,
+        flagType            CHAR(15)        NOT NULL,
+        flagDetail          VARCHAR(100)    DEFAULT ''
+    );"
+
+create_flagGrab_table =
+    "CREATE TABLE flagGrab (
+        id                  SERIAL          PRIMARY KEY,
+        dtStart             TIMESTAMPTZ     NOT NULL,
+        dtEnd               TIMESTAMPTZ     NOT NULL,
+        flagType            CHAR(15)        NOT NULL,
+        flagDetail          VARCHAR(100)    DEFAULT ''
+    );"
+
+
+#####HERE: specifying pkey and creating hypertable
+create_dataSensor_table =
+        # id                  BIGSERIAL       PRIMARY KEY,
+    "CREATE TABLE dataSensor (
+        timestamp           TIMESTAMPTZ     NOT NULL,
+        variable            SMALLINT        NOT NULL REFERENCES variable (id),
+        unit                SMALLINT        NOT NULL REFERENCES unit (id),
+        method              SMALLINT        NOT NULL REFERENCES method (id),
+        flag                INTEGER         NOT NULL REFERENCES flagSensor (id)
+    );
+    SELECT create_hypertable('dataSensor', 'timestamp');"
+
+create_dataGrab_table =
+    "CREATE TABLE dataGrab (
+        id                  SERIAL          PRIMARY KEY,
+        timestamp           TIMESTAMPTZ     NOT NULL,
+        variable            SMALLINT        NOT NULL REFERENCES variable (id),
+        unit                SMALLINT        NOT NULL REFERENCES unit (id),
+        method              SMALLINT        NOT NULL REFERENCES method (id),
+        flag                INTEGER         NOT NULL REFERENCES flagGrab (id)
+    );"
+
+DBI::dbExecute(con, create_domain_table)
+DBI::dbExecute(con, create_waterway_table)
+DBI::dbExecute(con, create_site_table)
+DBI::dbExecute(con, create_unit_table)
+DBI::dbExecute(con, create_method_table)
+DBI::dbExecute(con, create_variable_table)
+DBI::dbExecute(con, create_flagSensor_table)
+DBI::dbExecute(con, create_flagGrab_table)
+DBI::dbExecute(con, create_dataSensor_table)
+DBI::dbExecute(con, create_dataGrab_table)
+        # temperature     DOUBLE PRECISION    NULL"
+        # device_id  INTEGER CHECK (device_id > 0),
+       #"SELECT create_hypertable('gg', 'time');"
+# dbClearResult(dbListResults(con)[[1]])
 
 # #write data to rethinkdb
 # recon = openConnection(host="localhost", port=28015, authKey=NULL, v="V0_4")

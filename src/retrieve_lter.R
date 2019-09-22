@@ -1,6 +1,7 @@
 library(RCurl)
 library(tidyverse)
 library(googlesheets)
+library(tidylog)
 
 #PASTA terminology:
 #packageId ex: knb-lter-arc.1226.2 where arc=site, 1226=identifier, 2=revision
@@ -21,9 +22,10 @@ lter_download = function(src_df, lter_dir, dmn){
     #dmn must match subdir name for domain in lter folder.
         #this will also be used to filter src_df
 
+    `%>%` = plyr::`%>%`
     endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
-    src_df = dplyr::filter(src_df, domain == dmn)
+    src_df = tidylog::filter(src_df, domain == dmn)
 
     for(i in 1:nrow(src_df)){
 
@@ -51,8 +53,8 @@ lterdir = '~/git/macrosheds/data_acquisition/data/lter/'
 #could totally put this part inside the function too
 lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
     googlesheets::gs_read() %>%
-    dplyr::filter(in_workflow == 1) %>%
-    dplyr::mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
+    tidylog::filter(in_workflow == 1) %>%
+    tidylog::mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
         '\\1/\\2/newest/'))
 
 lter_download(lter_srcs, lter_dir=lterdir, dmn='hjandrews')
