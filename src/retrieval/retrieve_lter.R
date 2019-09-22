@@ -31,11 +31,11 @@ lter_download = function(src_df, lter_dir, dmn){
         pid = src_df$pid_str[i]
         element_ids = RCurl::getURLContent(paste0(endpoint, pid))
         element_ids = strsplit(element_ids, '\n')[[1]]
-        rawdir = paste0(lter_dir,dmn, '/raw/',src_df$type[i])
+        rawdir = paste0(lter_dir, dmn, '/raw/', src_df$type[i])
 
         for(e in element_ids){
 
-            dir.create(rawdir, showWarnings=FALSE, recursive = TRUE)
+            dir.create(rawdir, showWarnings=FALSE, recursive=TRUE)
             rawfile = paste0(rawdir, '/', e, '.csv')
             download.file(url=paste0(endpoint, pid, e),
                 destfile=rawfile, cacheOK=FALSE, method='curl')
