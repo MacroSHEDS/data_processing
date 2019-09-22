@@ -1,7 +1,6 @@
-library(RCurl)
-library(tidyverse)
-library(googlesheets)
-library(tidylog)
+#library(RCurl)
+#library(tidyverse)
+#library(tidylog)
 
 #PASTA terminology:
 #packageId ex: knb-lter-arc.1226.2 where arc=site, 1226=identifier, 2=revision
@@ -22,7 +21,7 @@ lter_download = function(src_df, lter_dir, dmn){
     #dmn must match subdir name for domain in lter folder.
         #this will also be used to filter src_df
 
-    `%>%` = plyr::`%>%`
+    `%>%` = magrittr::`%>%`
     endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
     src_df = tidylog::filter(src_df, domain == dmn)
@@ -32,11 +31,11 @@ lter_download = function(src_df, lter_dir, dmn){
         pid = src_df$pid_str[i]
         element_ids = RCurl::getURLContent(paste0(endpoint, pid))
         element_ids = strsplit(element_ids, '\n')[[1]]
-        rawdir = paste0(dmn, '/raw/', src_df$id[i])
+        rawdir = paste0(lter_dir, dmn, '/raw/', src_df$type[i])
 
         for(e in element_ids){
 
-            dir.create(rawdir, showWarnings=FALSE)
+            dir.create(rawdir, showWarnings=FALSE, recursive=TRUE)
             rawfile = paste0(rawdir, '/', e, '.csv')
             download.file(url=paste0(endpoint, pid, e),
                 destfile=rawfile, cacheOK=FALSE, method='curl')
@@ -47,15 +46,3 @@ lter_download = function(src_df, lter_dir, dmn){
     }
 }
 
-lterdir = '~/git/macrosheds/data_acquisition/data/lter/'
-
-#could totally put this part inside the function too
-lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
-    googlesheets::gs_read() %>%
-    tidylog::filter(in_workflow == 1) %>%
-    tidylog::mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
-        '\\1/\\2/newest/'))
-
-lter_download(lter_srcs, lter_dir=lterdir, dmn='hjandrews')
-lter_download(lter_srcs, lter_dir=lterdir, dmn='south_umpqua')
-lter_download(lter_srcs, lter_dir=lterdir, dmn='etc')
