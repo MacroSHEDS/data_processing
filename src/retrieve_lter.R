@@ -40,9 +40,8 @@ lter_download = function(src_df, lter_dir, dmn){
             rawfile = paste0(rawdir, '/', e, '.csv')
             download.file(url=paste0(endpoint, pid, e),
                 destfile=rawfile, cacheOK=FALSE, method='curl')
-            d = readr::read_csv(rawfile, guess_max=10000)
         }
-Z
+
         print(paste0(i, ': Downloaded ', src_df$type[i], ' (',
             src_df$pretty_name[i], ') to ', lter_dir, '/', rawfile))
     }
