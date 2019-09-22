@@ -1,0 +1,69 @@
+
+
+# Long-Term Ecological Research Data Download
+
+One of the deepest wells of watershed data is the LTER network with famous 
+watershed studies including HJ Andrews, Hubbard Brook, Baltimore and more. 
+Luckily, for this project, the LTER network has recently dedicated significant
+resources to building an online database, PASTA, 
+of LTER-affiliated data, and we can
+directly and dynamically pull all relavent watershed data directly from this
+data base. The scripts below do exactly that for all sites where data was
+available in PASTA. These scripts may not get **all** data from a given site,
+because of lags between collection and submission to PASTA. However, these
+downloads *should* get most of the data available. 
+
+
+## How we do it 
+
+The core function for downloading the data lives [here](link). We use a 
+googlesheet to track the exact data ids of data in pasta and to write down 
+human-readable summary names for each data type (e.g. 'discharge','temperature',
+etc...). 
+
+```{r setup, warning=FALSE, message=FALSE}
+#Load in required libraries
+library(tidyverse)
+library(googledrive)
+library(googlesheets)
+
+#Grab the LTER download function
+source('src/retrieval/retrieve_lter.R')
+
+```
+
+
+### Download master google sheet for tracking data downloaded
+
+
+```{r,}
+#Download data into the data/lter folder
+lterdir = 'data/lter/'
+
+#could totally put this part inside the function too
+lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
+    googlesheets::gs_read() %>%
+    tidylog::filter(in_workflow == 1) %>%
+    mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
+        '\\1/\\2/newest/'))
+
+```
+
+
+## HJ Andrews
+
+### Download or not
+
+```{r}
+
+
+```
+
+
+
+
+```{r, eval=F}
+lter_download(src_df = lter_srcs, lter_dir=lterdir, dmn='hjandrews')
+
+```
+

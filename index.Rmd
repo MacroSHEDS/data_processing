@@ -1,0 +1,19 @@
+---
+title: "Intro to MacroSheds data"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+site: bookdown::bookdown_site
+documentclass: book
+output:
+  bookdown::gitbook: default
+  #bookdown::pdf_book: default
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# Intro
+
+This is a cool project
+
+
+
