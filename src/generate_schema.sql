@@ -1,4 +1,4 @@
-CREATE TABLE domain (
+CREATE TABLE IF NOT EXISTS domain (
     id                  SMALLSERIAL PRIMARY KEY,
     domain_code         CHAR(3)         NOT NULL,
     domain_name         VARCHAR(100)    NOT NULL,
@@ -6,13 +6,13 @@ CREATE TABLE domain (
     url                 VARCHAR(300)
 );
 
-CREATE TABLE waterway (
+CREATE TABLE IF NOT EXISTS waterway (
     id                  SMALLSERIAL PRIMARY KEY,
     waterway_code       CHAR(3)         NOT NULL,
     waterway_name       VARCHAR(100)    NOT NULL
 );
 
-CREATE TABLE site (
+CREATE TABLE IF NOT EXISTS site (
     id                  SMALLSERIAL PRIMARY KEY,
     domain              SMALLINT        NOT NULL REFERENCES domain (id),
     waterway            SMALLINT        NOT NULL REFERENCES waterway (id),
@@ -34,19 +34,19 @@ CREATE TABLE site (
     contact_email       VARCHAR(100)
 );
 
-CREATE TABLE unit (
+CREATE TABLE IF NOT EXISTS unit (
     id                  SMALLSERIAL PRIMARY KEY,
     unit_code           CHAR(3)         NOT NULL,
     unit_name           VARCHAR(100)    NOT NULL
 );
 
-CREATE TABLE method (
+CREATE TABLE IF NOT EXISTS method (
     id                  SMALLSERIAL PRIMARY KEY,
     method_code         CHAR(3)         NOT NULL,
     method_name         VARCHAR(100)    NOT NULL
 );
 
-CREATE TABLE variable (
+CREATE TABLE IF NOT EXISTS variable (
     id                  SMALLSERIAL PRIMARY KEY,
     variable_code       CHAR(3)         NOT NULL,
     variable_name       VARCHAR(100)    NOT NULL,
@@ -62,14 +62,14 @@ ALTER TABLE variable
         'sensor', 'grab', 'ws_summary', 'blob', 'meta'
     ) );
 
-CREATE TABLE flag_sensor (
+CREATE TABLE IF NOT EXISTS flag_sensor (
     id                  SERIAL          PRIMARY KEY,
-    flag_start          TIMESTAMPTZ     NOT NULL,
-    flag_end            TIMESTAMPTZ     NOT NULL,
     flag_type           TEXT []         NOT NULL,
-    flag_detail         TEXT []         DEFAULT ARRAY ['']
+    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY [""]
 );
--- flagtype            INTEGER         NOT NULL REFERENCES flagtypes (id),
+--    flag_type           INTEGER         NOT NULL REFERENCES flagtypes (id),
+--    flag_start          TIMESTAMPTZ     NOT NULL,
+--    flag_end            TIMESTAMPTZ     NOT NULL,
 
 -- ALTER TABLE flag_sensor
 --     ADD CONSTRAINT check_types
@@ -79,15 +79,15 @@ CREATE TABLE flag_sensor (
 --     ) );
 -- if you update flagtype list, make it jibe with charsize limit
 
-CREATE TABLE flag_grab (
+CREATE TABLE IF NOT EXISTS flag_grab (
     id                  SERIAL          PRIMARY KEY,
-    flag_start          TIMESTAMPTZ     NOT NULL,
-    flag_end            TIMESTAMPTZ     NOT NULL,
-    flag_type           CHAR(15)        NOT NULL,
-    flag_detail         VARCHAR(100)    DEFAULT ''
+    flag_type           TEXT []         NOT NULL,
+    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY [""]
 );
+--    flag_start          TIMESTAMPTZ     NOT NULL,
+--    flag_end            TIMESTAMPTZ     NOT NULL,
 
-CREATE TABLE data_sensor (
+CREATE TABLE IF NOT EXISTS data_sensor (
     datetime            TIMESTAMPTZ     NOT NULL,
     site                SMALLINT        NOT NULL REFERENCES SITE (id),
     variable            SMALLINT        NOT NULL REFERENCES variable (id),
@@ -100,7 +100,7 @@ SELECT create_hypertable('data_sensor', 'datetime');
         -- unit                SMALLINT        NOT NULL REFERENCES unit (id),
         -- method              SMALLINT        NOT NULL REFERENCES method (id),
 
-CREATE TABLE data_grab (
+CREATE TABLE IF NOT EXISTS data_grab (
     datetime            TIMESTAMPTZ     NOT NULL,
     site                SMALLINT        NOT NULL REFERENCES SITE (id),
     variable            SMALLINT        NOT NULL REFERENCES variable (id),
