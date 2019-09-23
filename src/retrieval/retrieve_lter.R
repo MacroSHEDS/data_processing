@@ -1,15 +1,19 @@
 #library(RCurl)
 #library(tidyverse)
+#library(googlesheets)
 #library(tidylog)
 
 #PASTA terminology:
 #packageId ex: knb-lter-arc.1226.2 where arc=site, 1226=identifier, 2=revision
 #each package contains 1 or more elements (e.g. datasets) with elementIds
 
-lter_download = function(src_df, lter_dir, dmn){
+lter_download = function(lter_dir, dmn){
 
-    #src_df must have the following columns:
-        #id: LTER packageId,
+    #src_df must have the following columns (CURRENTLY GRABBED FROM GSHEETS):
+        #site: LTER site code,
+        #identifier: LTER data product id,
+        #macrosheds_version: the currently held LTER package version
+            #set to -1 initially, so that it will be overwritten on first run.
         #domain: must match subdir name for domain in lter folder,
         #pretty_name: will be printed to the user (in bookdown)
         #type: dateset category, e.g. "snow depth"
@@ -17,32 +21,81 @@ lter_download = function(src_df, lter_dir, dmn){
 
     #lter_dir is the local parent folder for all lter domains,
         #e.g. HJ Andrews, HBEF, etc.
+        # should be specifiec as absolute path
 
     #dmn must match subdir name for domain in lter folder.
         #this will also be used to filter src_df
 
     `%>%` = magrittr::`%>%`
-    endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+    dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+    vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
-    src_df = tidylog::filter(src_df, domain == dmn)
+    #get site, identifier, version, etc information from gsheets
+    #this is temporary. should replace google sheet with db table eventually
+    #to prevent collisions, circumvent possibility of network errors.
+    gsheet = googlesheets::gs_title('lter_package_ids')
+    src_df = googlesheets::gs_read(gsheet)
+    src_df_filt = tidylog::filter(src_df, in_workflow == 1) #separated so gsheet can be reinserted
+    src_df_filt = tidylog::filter(src_df_filt, domain == dmn)
 
-    for(i in 1:nrow(src_df)){
+    for(i in 1:nrow(src_df_filt)){
 
-        pid = src_df$pid_str[i]
-        element_ids = RCurl::getURLContent(paste0(endpoint, pid))
-        element_ids = strsplit(element_ids, '\n')[[1]]
-        rawdir = paste0(lter_dir, dmn, '/raw/', src_df$type[i])
+        site = src_df_filt$site[i]
+        identifier = src_df_filt$identifier[i]
+        ms_version = src_df_filt$macrosheds_version[i]
 
-        for(e in element_ids){
+        #get current highest version of data package within LTER PASTA
+        vsn_request = paste0(vsn_endpoint, site, '/', identifier)
+        lter_version = RCurl::getURLContent(vsn_request)
+        lter_version = as.numeric(stringr::str_match(lter_version,
+            '[0-9]+$')[1]) #tidyfy this
 
+        new_vsn_available = ms_version < lter_version
+        if(new_vsn_available){
+
+            #get IDs of elements within data package
+            data_request = paste0(dl_endpoint, site, '/', identifier, '/',
+                lter_version)
+            element_ids = RCurl::getURLContent(data_request)
+            element_ids = strsplit(element_ids, '\n')[[1]]
+
+            #delete any previously downloaded, obsolete files for this package
+            rawdir = paste0(lter_dir, dmn, '/raw/', src_df_filt$type[i])
+            unlink(rawdir, recursive=TRUE)
             dir.create(rawdir, showWarnings=FALSE, recursive=TRUE)
-            rawfile = paste0(rawdir, '/', e, '.csv')
-            download.file(url=paste0(endpoint, pid, e),
-                destfile=rawfile, cacheOK=FALSE, method='curl')
+
+            #acquire new files
+            for(e in element_ids){
+
+                rawfile = paste0(rawdir, '/', e, '.csv')
+                download.file(url=paste0(data_request, '/', e),
+                    destfile=rawfile, cacheOK=FALSE, method='curl')
+            }
+
+            addtl_info = ifelse(new_vsn_available && ms_version != -1,
+                paste0('\n\tRemoved version ', ms_version, '\n'), '\n')
+            cat(paste0(
+                i, ': Downloaded ', src_df_filt$type[i], ' version ',
+                lter_version, ' (', src_df_filt$pretty_name[i], ') to\n\t',
+                rawdir, addtl_info
+            )) #will cat work in bookdown?
+
+            #update version number held locally
+            src_df[src_df$site == site & src_df$identifier == identifier,
+                'macrosheds_version'] = lter_version
+
+        } else {
+
+            cat(paste0(
+                i, ': Skipped ', src_df_filt$type[i], ' version ', lter_version,
+                ' (', src_df_filt$pretty_name[i], '). Already latest version.\n'
+            ))
         }
 
-        print(paste0(i, ': Downloaded ', src_df$type[i], ' (',
-            src_df$pretty_name[i], ') to ', lter_dir, '/', rawfile))
     }
-}
 
+    #update vsn numbers in gsheets
+    #this is temporary. should replace google sheet with db table eventually
+    #to prevent collisions, circumvent possibility of network errors.
+    googlesheets::gs_edit_cells(gsheet, input=src_df)
+}
