@@ -101,25 +101,25 @@ generate_schema_script = readr::read_file('src/generate_schema.sql')
 DBI::dbExecute(con, generate_schema_script)
 
 #shape datasets for db entry
-grablong = dplyr::mutate(grab, flag=paste('example flag', notes)) %>%
+grab_insert = dplyr::mutate(grab, flag=paste('example flag', notes)) %>%
     dplyr::mutate(flag=replace(flag, flag == 'example flag NA', NA)) %>%
     tidylog::select(-sampleType, -hydroGraph,
         -fieldCode, -canonical, -waterYr, -ionError, -notes) %>%
     tidylog::gather('variable', 'value', Ca:precipCatch, -site)
 
 #map all flag values to canonical flag types before db insertion
-grablong = dplyr::mutate(grablong, flag_type=get_flag_types(flagmap, flag))
+grab_insert = dplyr::mutate(grab_insert, flag_type=get_flag_types(flagmap, flag))
 
 #read flag information from postgresql and convert from array form to strings
 flag_grab = DBI::dbReadTable(con, 'flag_grab') %>%
-    dplyr::select(-id) %>%
+    # dplyr::select(-id) %>%
     dplyr::mutate_all(list(~ stringr::str_replace_all(., '[\\{\\}]', ''))) %>%
     dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\",', '";;'))) %>%
     dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\"', '')))
 
 existing_flags = paste(flag_grab$flag_type, flag_grab$flag_detail)
 
-flag_insert = tidylog::select(grablong, flag_detail=flag, flag_type) %>%
+flag_insert = tidylog::select(grab_insert, flag_detail=flag, flag_type) %>%
     distinct() %>%
     dplyr::mutate(flag_detail=
         tidylog::replace_na(flag_detail, '')) %>%
@@ -132,7 +132,20 @@ flag_insert = as.data.frame(lapply(flag_insert, function(x) {
         return(x)
     }))
 
+#insert new flags into flag table
 DBI::dbAppendTable(con, 'flag_grab', flag_insert)
+
+#update data with flag IDs
+new_flags_combined = paste(grab_insert$flag_type, grab_insert$flag)
+existing_flags_combined = paste(flag_grab$flag_type, flag_grab$flag_detail)
+new_flag_ids = flag_grab$id[match(new_flags_combined, existing_flags_combined)]
+
+grab_insert = select(grab_insert, -flag, -flag_type) %>%
+    mutate(flag=new_flag_ids)
+
+#insert new data into grab data table
+DBI::dbAppendTable(con, 'data_grab', grab_insert)
+
 
 dbDisconnect(con)
 
