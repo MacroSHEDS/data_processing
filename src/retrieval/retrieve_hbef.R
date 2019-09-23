@@ -82,29 +82,59 @@ sensor_etc = dtplyr::lazy_dt(DBI::dbReadTable(con, 'sensor3')) %>%
 sensor = tidylog::full_join(sensor_Q, sensor_etc) %>%
     dplyr::arrange(datetime)
 
-# tidyr::gather(grab_cur,'variable', 'value',
-#     data = gather(data, 'Variable', 'Value', Light_PAR:Discharge_m3s)
-
 DBI::dbDisconnect(con)
 
 #save locally and zip
-feather::write_feather(grab, 'data/lter/hbef/grab.feather')
+feather::write_feather(grablong, 'data/lter/hbef/grab.feather')
 feather::write_feather(sensor, 'data/lter/hbef/sensor.feather')
 zip('data/hbef.zip', list.files('data/lter/hbef', recursive=TRUE, full.names=TRUE))
 out = googledrive::drive_upload("data/lter/hbef.zip",
     googledrive::as_id('https://drive.google.com/drive/folders/0ABfF-JkuRvL5Uk9PVA'))
 
-#write data to timescaledb
-con = DBI::dbConnect(dbDriver('PostgreSQL'), host='localhost', dbname='test',
-    user='mike', password=postgres_pw)
+#connect to timescaledb; generate schema if necessary
+con = DBI::dbConnect(RPostgres::Postgres(), host='localhost',
+    dbname='macrosheds', user='mike', password=postgres_pw)
+# con = DBI::dbConnect(dbDriver('PostgreSQL'), host='localhost',
+#     dbname='macrosheds', user='mike', password=postgres_pw)
 
-generate_schema_script = read_file('src/generate_schema.sql')
+generate_schema_script = readr::read_file('src/generate_schema.sql')
 DBI::dbExecute(con, generate_schema_script)
 
+#shape datasets for db entry
+grablong = dplyr::mutate(grab, flag=paste('example flag', notes)) %>%
+    dplyr::mutate(flag=replace(flag, flag == 'example flag NA', NA)) %>%
+    tidylog::select(-sampleType, -hydroGraph,
+        -fieldCode, -canonical, -waterYr, -ionError, -notes) %>%
+    tidylog::gather('variable', 'value', Ca:precipCatch, -site)
 
-dbWriteTable(con, 'data_grab',
-    value=data_grab, append=TRUE, row.names=FALSE)
-# dbClearResult(dbListResults(con)[[1]])
+#map all flag values to canonical flag types before db insertion
+grablong = dplyr::mutate(grablong, flag_type=get_flag_types(flagmap, flag))
+
+#read flag information from postgresql and convert from array form to strings
+flag_grab = DBI::dbReadTable(con, 'flag_grab') %>%
+    dplyr::select(-id) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '[\\{\\}]', ''))) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\",', '";;'))) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\"', '')))
+
+existing_flags = paste(flag_grab$flag_type, flag_grab$flag_detail)
+
+flag_insert = tidylog::select(grablong, flag_detail=flag, flag_type) %>%
+    distinct() %>%
+    dplyr::mutate(flag_detail=
+        tidylog::replace_na(flag_detail, '')) %>%
+    tidylog::filter(! paste(flag_type, flag_detail) %in% existing_flags)
+# flag_insert[1,1] = 'aa,bb;;cc'
+
+flag_insert = as.data.frame(lapply(flag_insert, function(x) {
+        x = resolve_commas(x, comma_standin=';;')
+        x = postgres_arrayify(x)
+        return(x)
+    }))
+
+DBI::dbAppendTable(con, 'flag_grab', flag_insert)
+
+dbDisconnect(con)
 
 # #write data to rethinkdb
 # recon = openConnection(host="localhost", port=28015, authKey=NULL, v="V0_4")
