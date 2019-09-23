@@ -2,3 +2,4 @@ config.txt
 /data
 .Rproj.user
 .httr-oauth
+.Rhistory
