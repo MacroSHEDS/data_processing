@@ -40,12 +40,12 @@ source('src/retrieval/retrieve_lter.R')
 #Download data into the data/lter folder
 lterdir = 'data/lter/'
 
-#could totally put this part inside the function too
-lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
-    googlesheets::gs_read() %>%
-    tidylog::filter(in_workflow == 1) %>%
-    mutate(pid_str=stringr::str_replace(id, '^(.+?-.+?-.+?)\\.([0-9]+)$',
-        '\\1/\\2/newest/'))
+#moved this inside function. necessary for referencing vsn numbers
+#we can adjust in future, but for now it just fell together this way
+
+# lter_srcs = googlesheets::gs_title('lter_package_ids') %>%
+#     googlesheets::gs_read() %>%
+#     tidylog::filter(in_workflow == 1)
 
 ```
 
