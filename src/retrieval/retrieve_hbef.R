@@ -1,5 +1,5 @@
 library(RMariaDB)
-library(RPostgreSQL)
+library(RPostgres)
 library(DBI)
 library(plyr)
 library(data.table)
@@ -94,18 +94,20 @@ out = googledrive::drive_upload("data/lter/hbef.zip",
 #connect to timescaledb; generate schema if necessary
 con = DBI::dbConnect(RPostgres::Postgres(), host='localhost',
     dbname='macrosheds', user='mike', password=postgres_pw)
+
 # con = DBI::dbConnect(dbDriver('PostgreSQL'), host='localhost',
 #     dbname='macrosheds', user='mike', password=postgres_pw)
-
-generate_schema_script = readr::read_file('src/generate_schema.sql')
-DBI::dbExecute(con, generate_schema_script)
+# generate_schema_script = readr::read_file('src/generate_schema.sql')
+# DBI::dbExecute(con, generate_schema_script)
+# dbDisconnect(con)
 
 #shape datasets for db entry
 grab_insert = dplyr::mutate(grab, flag=paste('example flag', notes)) %>%
     dplyr::mutate(flag=replace(flag, flag == 'example flag NA', NA)) %>%
     tidylog::select(-sampleType, -hydroGraph,
         -fieldCode, -canonical, -waterYr, -ionError, -notes) %>%
-    tidylog::gather('variable', 'value', Ca:precipCatch, -site)
+    tidylog::gather('variable', 'value', Ca:precipCatch, -site) %>%
+    filter(! variable %in% c('gageHt', 'flowGageHt', 'precipCatch')) #might need?
 
 #map all flag values to canonical flag types before db insertion
 grab_insert = dplyr::mutate(grab_insert, flag_type=get_flag_types(flagmap, flag))
@@ -135,17 +137,56 @@ flag_insert = as.data.frame(lapply(flag_insert, function(x) {
 #insert new flags into flag table
 DBI::dbAppendTable(con, 'flag_grab', flag_insert)
 
-#update data with flag IDs
-new_flags_combined = paste(grab_insert$flag_type, grab_insert$flag)
-existing_flags_combined = paste(flag_grab$flag_type, flag_grab$flag_detail)
-new_flag_ids = flag_grab$id[match(new_flags_combined, existing_flags_combined)]
 
-grab_insert = select(grab_insert, -flag, -flag_type) %>%
-    mutate(flag=new_flag_ids)
+#eventually set up variable corroboration like with flags above.
+#for now, just importing from the CSV we've been working from
+variable_insert = readr::read_csv('../portal/data/variables.csv') %>%
+    dplyr::select(-R_display) %>%
+    dplyr::mutate(unit=1, method=1)
+# variable = DBI::dbReadTable(con, 'variable')
+
+#insert new vars into variable table
+# DBI::dbAppendTable(con, 'variable', variable_insert)
+
+#still gotta build out communications with site, unit, method, waterway,
+#domain, variable tables. all full of placeholders for now.
+
+sites = unique(grab_insert$site)
+site_insert = data.frame(site_name=sites) %>%
+    dplyr::mutate(domain=1, waterway=1,
+        site_code=substr(paste0(site_name, 'xx'), 1, 3),
+        latitude=1, longitude=1, datum='WGS 84', add_date=Sys.time())
+
+#insert new sites into site table
+# DBI::dbAppendTable(con, 'site', site_insert)
+
+#read flag information from postgresql and convert from array form to strings
+flag_grab = DBI::dbReadTable(con, 'flag_grab') %>%
+    # dplyr::select(-id) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '[\\{\\}]', ''))) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\",', '";;'))) %>%
+    dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\"', '')))
+
+#update data with flag IDs
+####HERE: flags_combined is ending up with a "clean NA" that needs to be "clean"
+flags_combined = paste(grab_insert$flag_type, grab_insert$flag)
+existing_flags_combined = paste(flag_grab$flag_type, flag_grab$flag_detail)
+flag_ids = flag_grab$id[match(flags_combined, existing_flags_combined)]
+
+grab_insert = dplyr::select(grab_insert, -flag, -flag_type) %>%
+    dplyr::mutate(flag=flag_ids)
+
+#update data with variable IDs and site IDs
+variable = DBI::dbReadTable(con, 'variable')
+variable_ids = variable$id[match(grab_insert$variable, variable$variable_code)]
+grab_insert = dplyr::mutate(grab_insert, variable=variable_ids)
+
+site = DBI::dbReadTable(con, 'site')
+site_ids = site$id[match(grab_insert$site, site$site_name)]
+grab_insert = dplyr::mutate(grab_insert, site=site_ids)
 
 #insert new data into grab data table
 DBI::dbAppendTable(con, 'data_grab', grab_insert)
-
 
 dbDisconnect(con)
 

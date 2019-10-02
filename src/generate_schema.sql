@@ -48,13 +48,14 @@ CREATE TABLE IF NOT EXISTS method (
 
 CREATE TABLE IF NOT EXISTS variable (
     id                  SMALLSERIAL PRIMARY KEY,
-    variable_code       CHAR(3)         NOT NULL,
+    variable_code       VARCHAR(15)     NOT NULL,
     variable_name       VARCHAR(100)    NOT NULL,
-    variable_type       CHAR(9)         NOT NULL,
-    std_unit            SMALLINT        NOT NULL REFERENCES unit (id),
-    std_method          SMALLINT        NOT NULL REFERENCES method (id),
-    unit_list           TEXT []
+    unit                SMALLINT        NOT NULL REFERENCES unit (id),
+    method              SMALLINT        NOT NULL REFERENCES method (id),
+    variable_type       CHAR(10)        NOT NULL,
+    variable_subtype    CHAR(7)         NOT NULL
 );
+--    unit_list           TEXT []
 
 ALTER TABLE variable
     ADD CONSTRAINT check_types
@@ -65,7 +66,7 @@ ALTER TABLE variable
 CREATE TABLE IF NOT EXISTS flag_sensor (
     id                  SERIAL          PRIMARY KEY,
     flag_type           TEXT []         NOT NULL,
-    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY [""]
+    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY ['']
 );
 --    flag_type           INTEGER         NOT NULL REFERENCES flagtypes (id),
 --    flag_start          TIMESTAMPTZ     NOT NULL,
@@ -82,7 +83,7 @@ CREATE TABLE IF NOT EXISTS flag_sensor (
 CREATE TABLE IF NOT EXISTS flag_grab (
     id                  SERIAL          PRIMARY KEY,
     flag_type           TEXT []         NOT NULL,
-    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY [""]
+    flag_detail         TEXT []         NOT NULL DEFAULT ARRAY ['']
 );
 --    flag_start          TIMESTAMPTZ     NOT NULL,
 --    flag_end            TIMESTAMPTZ     NOT NULL,
@@ -112,3 +113,8 @@ CREATE TABLE IF NOT EXISTS data_grab (
 SELECT create_hypertable('data_grab', 'datetime');
         -- unit                SMALLINT        NOT NULL REFERENCES unit (id),
         -- method              SMALLINT        NOT NULL REFERENCES method (id),
+
+insert into waterway (waterway_code, waterway_name) values ('plc', 'placeholder');
+insert into domain (domain_code, domain_name) values ('plc', 'placeholder');
+insert into method (method_code, method_name) values ('plc', 'placeholder');
+insert into unit (method_code, method_name) values ('plc', 'placeholder');
