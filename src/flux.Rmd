@@ -1,0 +1,137 @@
+---
+title: "hbef_flux"
+author: "Matthew Ross"
+date: "10/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(EGRET)
+library(tidyverse)
+library(dygraphs)
+library(xts)
+library(feather)
+library(lubridate)
+library(tictoc)
+library(dplyr)
+library(imputeTS)
+
+knitr::opts_chunk$set(echo = F)
+```
+
+# Daily flux artisinal style
+
+```{r}
+
+c <- read_feather('data/lter/hbef/grab.feather') 
+
+q <- read_feather('data/lter/hbef/sensorQ.feather') %>%
+  rename(site_name = watershedID) 
+
+c_daily <- c %>%
+    select(-ANC960,-ANCMet,-anionCharge,-cationCharge,-flowGageHt,-ionBalance,
+         -OMAl,-pH,-precipCatch,-spCond,-temp,-theoryCond,-TMAl) %>%
+  mutate(date = as.Date(datetime)) %>%
+  group_by(site_name,date) %>%
+  summarize_if(is.numeric,mean,na.rm=T) 
+
+hours_only <- tibble(datehour= seq(min(c$datetime),max(c$datetime),by='1 hour') %>%
+                       round_date(.,'hours')) %>% 
+  nest()
+
+
+full_hours <- tibble(site_name = unique(q$site_name),
+                    full_hours = rep(hours_only$data,length(site_name))) %>%
+  unnest(full_hours)
+
+  
+
+
+q_hourly <- q %>%
+  mutate(datehour = round_date(datetime,'hours')) %>%
+  right_join(.,full_hours,by=c('site_name','datehour')) %>%
+  arrange(datehour) %>%
+  group_by(site_name) %>%
+  mutate(Q_full = na_interpolation(Q_Ls,option='linear',maxgap = 30)) %>%
+  filter(!is.na(Q_full)) %>%
+  group_by(datehour,site_name) %>%
+  summarize(Q_Ls = mean(Q_full))
+
+q_daily <- q_hourly %>%
+  mutate(date=as.Date(datehour)) %>%
+  group_by(site_name,date) %>%
+  summarize(Q_Ld = sum(Q_Ls*60*60))
+
+qc_daily_conc <- left_join(q_daily,c_daily,by=c('site_name','date')) %>%
+  group_by(site_name) %>%
+  arrange(site_name,date) %>%
+  mutate_if(is.numeric,na_interpolation,option='linear',maxgap=15)
+
+
+qc_daily_flux <- qc_daily_conc %>%
+  mutate_at(vars(-site_name,-date,-Q_Ld),~(.*Q_Ld)/(1000*1000))
+
+write_feather(qc_daily_flux,path='data/lter/hbef/flux.feather')
+```
+
+
+
+# Not needed playground
+
+
+```{r}
+
+
+hours_only <- tibble(datehour= seq(min(c$datetime),max(c$datetime),by='1 hour') %>%
+                       round_date(.,'hours')) %>% 
+  nest()
+
+
+full_hours <- tibble(site_name = unique(q$site_name),
+                    full_hours = rep(hours_only$data,length(site_name))) %>%
+  unnest(full_hours)
+
+  
+
+
+q_hourly <- q %>%
+  mutate(datehour = round_date(datetime,'hours')) %>%
+  right_join(.,full_hours,by=c('site_name','datehour')) %>%
+  arrange(datehour) %>%
+  mutate(Q_full = na_interpolation(Q_Ls,option='linear',maxgap = 30)) %>%
+  filter(!is.na(Q_full)) %>%
+  group_by(datehour,site_name) %>%
+  summarize(Q_Ls = mean(Q_full))
+
+
+c_hourly <- c %>%
+  mutate(datehour = round_date(datetime,'hours')) %>%
+  group_by(datehour,site_name) %>%
+  summarize_if(is.numeric,mean)
+
+
+
+qc <- inner_join(q_hourly,c_hourly,by=c('datehour','site_name')) 
+
+
+
+```
+
+
+
+
+# QC plots
+```{r}
+basic_qc <- qc %>%
+  select(-ANC960,-ANCMet,-anionCharge,-cationCharge,-flowGageHt,-ionBalance,
+         -OMAl,-pH,-precipCatch,-spCond,-temp,-theoryCond,-TMAl) %>%
+  tidyr::gather(.,key='ion',value='conc',-datehour,-site_name,-Q_Ls) %>%
+  filter(!is.na(conc))
+
+
+ggplot(basic_qc,aes(x=Q_Ls,y=conc,color=site_name)) + 
+  geom_point() + 
+  facet_wrap(~ion,scales='free_y') + 
+  scale_x_log10()
+```
+
