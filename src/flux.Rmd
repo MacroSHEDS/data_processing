@@ -16,6 +16,7 @@ library(tictoc)
 library(dplyr)
 library(imputeTS)
 
+# knitr::opts_knit$set(root.dir = '~/git/macrosheds/data_acquisition/')
 knitr::opts_chunk$set(echo = F)
 ```
 
@@ -23,19 +24,21 @@ knitr::opts_chunk$set(echo = F)
 
 ```{r}
 
-c <- read_feather('data/lter/hbef/grab.feather') 
+cc <- read_feather('data/lter/hbef/grab.feather') 
 
 q <- read_feather('data/lter/hbef/sensorQ.feather') %>%
-  rename(site_name = watershedID) 
+  rename(site_name = watershedID)
 
-c_daily <- c %>%
-    select(-ANC960,-ANCMet,-anionCharge,-cationCharge,-flowGageHt,-ionBalance,
+site_data = read.csv('data/general/site_data.csv', stringsAsFactors=FALSE)
+
+c_daily <- cc %>%
+  select(-ANC960,-ANCMet,-anionCharge,-cationCharge,-flowGageHt,-ionBalance,
          -OMAl,-pH,-precipCatch,-spCond,-temp,-theoryCond,-TMAl) %>%
   mutate(date = as.Date(datetime)) %>%
   group_by(site_name,date) %>%
   summarize_if(is.numeric,mean,na.rm=T) 
 
-hours_only <- tibble(datehour= seq(min(c$datetime),max(c$datetime),by='1 hour') %>%
+hours_only <- tibble(datehour= seq(min(cc$datetime),max(cc$datetime),by='1 hour') %>%
                        round_date(.,'hours')) %>% 
   nest()
 
@@ -67,9 +70,11 @@ qc_daily_conc <- left_join(q_daily,c_daily,by=c('site_name','date')) %>%
   arrange(site_name,date) %>%
   mutate_if(is.numeric,na_interpolation,option='linear',maxgap=15)
 
-
 qc_daily_flux <- qc_daily_conc %>%
-  mutate_at(vars(-site_name,-date,-Q_Ld),~(.*Q_Ld)/(1000*1000))
+  mutate_at(vars(-site_name,-date,-Q_Ld),~(.*Q_Ld)/(1000*1000)) %>%
+  left_join(select(site_data, site_name, ws_area_ha)) %>%
+  mutate_at(vars(-site_name,-date,-Q_Ld),~(./ws_area_ha)) %>%
+  select(-ws_area_ha)
 
 write_feather(qc_daily_flux,path='data/lter/hbef/flux.feather')
 ```
@@ -82,7 +87,7 @@ write_feather(qc_daily_flux,path='data/lter/hbef/flux.feather')
 ```{r}
 
 
-hours_only <- tibble(datehour= seq(min(c$datetime),max(c$datetime),by='1 hour') %>%
+hours_only <- tibble(datehour= seq(min(cc$datetime),max(cc$datetime),by='1 hour') %>%
                        round_date(.,'hours')) %>% 
   nest()
 
@@ -104,7 +109,7 @@ q_hourly <- q %>%
   summarize(Q_Ls = mean(Q_full))
 
 
-c_hourly <- c %>%
+c_hourly <- cc %>%
   mutate(datehour = round_date(datetime,'hours')) %>%
   group_by(datehour,site_name) %>%
   summarize_if(is.numeric,mean)
