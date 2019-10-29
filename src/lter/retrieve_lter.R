@@ -1,7 +1,7 @@
-#library(RCurl)
-#library(tidyverse)
-#library(googlesheets)
-#library(tidylog)
+# library(RCurl)
+# library(tidyverse)
+# library(googlesheets)
+# library(tidylog)
 
 #PASTA terminology:
 #packageId ex: knb-lter-arc.1226.2 where arc=site, 1226=identifier, 2=revision
@@ -28,6 +28,7 @@ lter_download = function(lter_dir, dmn){
 
     `%>%` = magrittr::`%>%`
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+    name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
     #get site, identifier, version, etc information from gsheets
@@ -35,7 +36,7 @@ lter_download = function(lter_dir, dmn){
     #to prevent collisions, circumvent possibility of network errors.
     gsheet = googlesheets::gs_title('lter_package_ids')
     src_df = googlesheets::gs_read(gsheet)
-    src_df_filt = tidylog::filter(src_df, in_workflow == 1) #separated so gsheet can be reinserted
+    src_df_filt = tidylog::filter(src_df, in_workflow == 1)
     src_df_filt = tidylog::filter(src_df_filt, domain == dmn)
 
     for(i in 1:nrow(src_df_filt)){
@@ -53,22 +54,26 @@ lter_download = function(lter_dir, dmn){
         new_vsn_available = ms_version < lter_version
         if(new_vsn_available){
 
-            #get IDs of elements within data package
-            data_request = paste0(dl_endpoint, site, '/', identifier, '/',
+            #get IDs and names of elements within data package
+            name_request = paste0(name_endpoint, site, '/', identifier, '/',
                 lter_version)
-            element_ids = RCurl::getURLContent(data_request)
-            element_ids = strsplit(element_ids, '\n')[[1]]
+            reqdata = RCurl::getURLContent(name_request)
+            reqdata = strsplit(reqdata, '\n')[[1]]
+            reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),([0-9a-zA-Z]+)')
+            element_ids = reqdata[,2]
+            element_names = reqdata[,3]
 
             #delete any previously downloaded, obsolete files for this package
-            rawdir = paste0(lter_dir, dmn, '/raw/', src_df_filt$type[i])
+            rawdir = paste0(lter_dir, '/', dmn, '/raw/', src_df_filt$type[i])
             unlink(rawdir, recursive=TRUE)
             dir.create(rawdir, showWarnings=FALSE, recursive=TRUE)
 
             #acquire new files
-            for(e in element_ids){
-
-                rawfile = paste0(rawdir, '/', e, '.csv')
-                download.file(url=paste0(data_request, '/', e),
+            for(j in 1:length(element_names)){
+                data_request = paste0(dl_endpoint, site, '/', identifier, '/',
+                    lter_version)
+                rawfile = paste0(rawdir, '/', element_names[j], '.csv')
+                download.file(url=paste0(data_request, '/', element_ids[j]),
                     destfile=rawfile, cacheOK=FALSE, method='curl')
             }
 
@@ -78,9 +83,9 @@ lter_download = function(lter_dir, dmn){
                 i, ': Downloaded ', src_df_filt$type[i], ' version ',
                 lter_version, ' (', src_df_filt$pretty_name[i], ') to\n\t',
                 rawdir, addtl_info
-            )) #will cat work in bookdown?
+            )) #will cat() work in bookdown?
 
-            #update version number held locally
+            #update held version number
             src_df[src_df$site == site & src_df$identifier == identifier,
                 'macrosheds_version'] = lter_version
 
