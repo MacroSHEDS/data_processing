@@ -26,8 +26,7 @@ knitr::opts_chunk$set(echo = F)
 
 cc <- read_feather('data/lter/hbef/grab.feather') 
 
-q <- read_feather('data/lter/hbef/sensorQ.feather') %>%
-  rename(site_name = watershedID)
+q <- read_feather('data/lter/hbef/sensorQ.feather')
 
 site_data = read.csv('data/general/site_data.csv', stringsAsFactors=FALSE)
 
@@ -55,15 +54,15 @@ q_hourly <- q %>%
   right_join(.,full_hours,by=c('site_name','datehour')) %>%
   arrange(datehour) %>%
   group_by(site_name) %>%
-  mutate(Q_full = na_interpolation(Q_Ls,option='linear',maxgap = 30)) %>%
+  mutate(Q_full = na_interpolation(Q, option='linear', maxgap = 30)) %>%
   filter(!is.na(Q_full)) %>%
   group_by(datehour,site_name) %>%
-  summarize(Q_Ls = mean(Q_full))
+  summarize(Q = mean(Q_full))
 
 q_daily <- q_hourly %>%
   mutate(date=as.Date(datehour)) %>%
   group_by(site_name,date) %>%
-  summarize(Q_Ld = sum(Q_Ls*60*60))
+  summarize(Q_Ld = sum(Q*60*60))
 
 qc_daily_conc <- left_join(q_daily,c_daily,by=c('site_name','date')) %>%
   group_by(site_name) %>%
