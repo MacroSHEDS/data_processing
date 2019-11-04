@@ -1,7 +1,12 @@
 library(tidyverse)
 library(glue)
+library(lubridate)
+library(imputeTS)
 library(feather)
 library(tidylog)
+
+`%>%` = magrittr::`%>%`
+`.` = plyr::`.`
 
 setwd('/home/mike/git/macrosheds/data_acquisition/data/lter/hjandrews/')
 outdir = '/home/mike/git/macrosheds/portal/data/hjandrews/'
@@ -14,23 +19,29 @@ lter_download('/home/mike/git/macrosheds/data_acquisition/data/lter',
     'south_umpqua')
 
 sets = dir('raw')
-# elems = dir(glue('raw/{set}', set=sets[i]))
 
+#P
 precip = readr::read_csv('raw/precipitation/MS00403.csv') %>%
     tidylog::select(DATE, SITECODE, PRECIP_TOT_DAY, PRECIP_TOT_FLAG) %>%
     tidylog::filter(PRECIP_TOT_FLAG %in% c('A', 'E', 'T', 'U')) %>%
     tidylog::select(-PRECIP_TOT_FLAG) %>%
-    dplyr::rename(datetime=DATE, site_name=SITECODE, precipCatch=PRECIP_TOT_DAY)
+    dplyr::rename(datetime=DATE, site_name=SITECODE, precip=PRECIP_TOT_DAY) %>%
+    dplyr::mutate(datetime=as.POSIXct(datetime))
+attr(precip$datetime, 'tzone') = 'UTC'
 
 write_feather(precip, paste0(outdir, '/precip.feather'))
 
+#Q
 discharge = readr::read_csv('raw/discharge/HF00402.csv') %>%
     tidylog::select(DATE, SITECODE, MAX_Q) %>%
     dplyr::mutate(MAX_Q=MAX_Q * 28.32) %>%
-    dplyr::rename(datetime=DATE, site_name=SITECODE, Q=MAX_Q)
+    dplyr::rename(datetime=DATE, site_name=SITECODE, Q=MAX_Q) %>%
+    dplyr::mutate(datetime=as.POSIXct(datetime))
+attr(discharge$datetime, 'tzone') = 'UTC'
 
 write_feather(discharge, paste0(outdir, '/discharge.feather'))
 
+#conc (make sure datetime is POSIXct and not Date)
 grab = readr::read_csv('raw/stream_chemistry/CF00201.csv') %>%
     dplyr::rename(Na=X46) %>%
     tidylog::select(-STCODE, -LABNO, -TYPE, -ENTITY, -WATERYEAR, -INTERVAL,
@@ -46,71 +57,123 @@ grab = bind_cols(grabcodes, grabvars) %>%
     tidylog::filter(codeval %in% c('A', 'E')) %>%
     tidylog::select(-code, -codeval) %>%
     tidylog::spread(var, val) %>%
-    dplyr::rename(site_name=SITECODE, date_time=DATE_TIME, alk=ALK, Ca=CA,
+    dplyr::rename(site_name=SITECODE, datetime=DATE_TIME, alk=ALK, Ca=CA,
         Cl=CL, spCond=COND, Mg=MG, NH3_N=NH3N, NO3_N=NO3N, pH=PH, PO4_P=PO4P,
         SiO2=SI, SO4_S=SO4S, suspSed=SSED) %>%
     dplyr::mutate(spCond=spCond / 1000) #convert to S/cm
 
 write_feather(grab, paste0(outdir, '/grab.feather'))
 
-
-###HERE: CALC FLUX; TEST DOMAIN SELECTOR
-# cc = read_feather('data/lter/hbef/grab.feather')
-# q = read_feather('data/lter/hbef/sensorQ.feather')
-
-site_data = read.csv('data/general/site_data.csv', stringsAsFactors=FALSE)
+#flux
+site_data = read.csv('../../general/site_data.csv', stringsAsFactors=FALSE)
 non_flux_vars = c('ANC960', 'ANCMet', 'anionCharge', 'cationCharge',
-    'flowGageHt', 'ionBalance, OMAl', 'pH', 'precipCatch', 'spCond',
+    'flowGageHt', 'ionBalance, OMAl', 'pH', 'precip', 'spCond',
     'temp', 'theoryCond', 'TMAl', 'Alk', 'suspSed')
 
+# #method 1: seems to be removing data that should remain
+# grab_daily = grab %>%
+#     tidylog::select(- one_of(non_flux_vars)) %>%
+#     dplyr::mutate(date=as.Date(datetime)) %>%
+#     dplyr::group_by(site_name, date) %>%
+#     tidylog::summarize_if(is.numeric, mean, na.rm=TRUE)
+#
+# grab_rng = seq(min(grab$datetime), max(grab$datetime), by='1 hour')
+# hours_only = tibble::tibble(datehour=grab_rng %>%
+#         lubridate::round_date(., 'hours')) %>%
+#     tidyr::nest()
+#
+# full_hours = tibble::tibble(site_name=unique(discharge$site_name),
+#         full_hours=rep(hours_only$data, length(site_name))) %>%
+#     tidyr::unnest(full_hours)
+#
+# #currently aggregating by day, but this could be useful down the road
+# q_hourly = discharge %>%
+#     dplyr::mutate(datetime=as.POSIXct(datetime)) %>%
+#     dplyr::mutate(datehour=lubridate::round_date(datetime, 'hours')) %>%
+#     tidylog::right_join(., full_hours, by=c('site_name', 'datehour')) %>%
+#     dplyr::arrange(datehour) %>%
+#     dplyr::group_by(site_name) %>%
+#     dplyr::mutate(Q_full=imputeTS::na_interpolation(Q,
+#         option='linear', maxgap=30)) %>%
+#     tidylog::filter(! is.na(Q_full)) %>%
+#     dplyr::group_by(datehour, site_name) %>%
+#     tidylog::summarize(Q=mean(Q_full, na.rm=TRUE))
+#
+# q_daily = q_hourly %>%
+#     dplyr::mutate(date=as.Date(datehour)) %>%
+#     dplyr::group_by(site_name, date) %>%
+#     tidylog::summarize(Q_Ld=sum(Q * 60 * 60, na.rm=TRUE))
+#
+# qc_daily_conc = tidylog::left_join(q_daily, grab_daily,
+#         by=c('site_name', 'date')) %>%
+#     dplyr::group_by(site_name) %>%
+#     dplyr::arrange(site_name, date) %>%
+#     dplyr::ungroup()
+#
+# interpcols = sapply(qc_daily_conc, function(x) is.numeric(x) & ! all(is.na(x)))
+# qc_daily_conc = qc_daily_conc %>%
+#     tidylog::mutate_if(interpcols,
+#         imputeTS::na_interpolation, option='linear', maxgap=15)
+#
+# qc_daily_flux = qc_daily_conc %>%
+#     dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. * Q_Ld) / (1000 * 1000)) %>%
+#     tidylog::left_join(dplyr::select(site_data, site_name, ws_area_ha)) %>%
+#     dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. / ws_area_ha)) %>%
+#     dplyr::mutate(datetime=as.POSIXct(date)) %>%
+#     tidylog::select(-ws_area_ha, -date, -Q_Ld)
+
+#method 2: simplified
 grab_daily = grab %>%
-    select(- one_of(non_flux_vars)) %>%
-    select(-ANC960,-ANCMet,-anionCharge,-cationCharge,-flowGageHt,-ionBalance,
-        -OMAl,-pH,-precipCatch,-spCond,-temp,-theoryCond,-TMAl) %>%
-    mutate(date = as.Date(datetime)) %>%
-    group_by(site_name,date) %>%
-    summarize_if(is.numeric,mean,na.rm=T)
+    tidylog::select(- one_of(non_flux_vars)) %>%
+    dplyr::mutate(date=as.Date(datetime)) %>%
+    dplyr::group_by(site_name, date) %>%
+    tidylog::summarize_if(is.numeric, mean, na.rm=TRUE) %>%
+    dplyr::ungroup()
 
-hours_only = tibble(datehour= seq(min(cc$datetime),max(cc$datetime),by='1 hour') %>%
-        round_date(.,'hours')) %>%
-    nest()
+grab_rng = tibble::tibble(date=seq(min(grab_daily$date),
+    max(grab_daily$date), by='1 day'))
+grab_daily = grab_daily %>%
+    tidylog::right_join(grab_rng, by='date') %>%
+    tidylog::right_join(discharge, by=c(date='datetime', 'site_name')) %>%
+    dplyr::arrange(site_name, date)
 
+# interpcols = sapply(grab_daily, function(x) is.numeric(x) & sum(! is.na(x)) > 2)
+# grab_daily = grab_daily %>%
+#     dplyr::group_by(site_name) %>%
+#     dplyr::arrange(site_name, date) %>%
+#     mutate_if(function(x) is.numeric(x) & sum(! is.na(x)) > 2,
+#         imputeTS::na_interpolation, option='linear', maxgap=15) %>%
+#     dplyr::ungroup()
 
-full_hours = tibble(site_name = unique(q$site_name),
-    full_hours = rep(hours_only$data,length(site_name))) %>%
-    unnest(full_hours)
+#interpolate by site and var, but skip sets of all NA; requires a dplyr god
+for(s in unique(grab_daily$site_name)){
+    sitevar = grab_daily[grab_daily$site_name == s, ]
+    for(c in 3:ncol(sitevar)){
+        if(is.numeric(sitevar[, c]) & sum(! is.na(sitevar[, c])) > 2){
+            sitevar[, c] = imputeTS::na_interpolation(sitevar[, c],
+                option='linear', maxgap=15)
+        }
+    }
+    grab_daily[grab_daily$site_name == s, ] = sitevar
+}
 
+Q_daily = grab_daily %>%
+    dplyr::group_by(site_name, date) %>%
+    tidylog::summarize(Q_Ld=sum(Q * 60 * 60, na.rm=TRUE)) %>%
+    dplyr::ungroup()
 
+flux_daily = grab_daily %>%
+    tidylog::left_join(Q_daily, by=c('date', 'site_name')) %>%
+    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. * Q_Ld) / (1000 * 1000)) %>%
+    tidylog::left_join(dplyr::select(site_data, site_name, ws_area_ha)) %>%
+    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. / ws_area_ha)) %>%
+    dplyr::mutate(datetime=as.POSIXct(date)) %>%
+    tidylog::select(datetime, everything(), -ws_area_ha, -date, -Q_Ld, -Q) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime), any_vars(! is.na(.)))
 
-
-q_hourly = q %>%
-    mutate(datehour = round_date(datetime,'hours')) %>%
-    right_join(.,full_hours,by=c('site_name','datehour')) %>%
-    arrange(datehour) %>%
-    group_by(site_name) %>%
-    mutate(Q_full = na_interpolation(Q, option='linear', maxgap = 30)) %>%
-    filter(!is.na(Q_full)) %>%
-    group_by(datehour,site_name) %>%
-    summarize(Q = mean(Q_full))
-
-q_daily = q_hourly %>%
-    mutate(date=as.Date(datehour)) %>%
-    group_by(site_name,date) %>%
-    summarize(Q_Ld = sum(Q*60*60))
-
-qc_daily_conc = left_join(q_daily,c_daily,by=c('site_name','date')) %>%
-    group_by(site_name) %>%
-    arrange(site_name,date) %>%
-    mutate_if(is.numeric,na_interpolation,option='linear',maxgap=15)
-
-qc_daily_flux = qc_daily_conc %>%
-    mutate_at(vars(-site_name,-date,-Q_Ld),~(.*Q_Ld)/(1000*1000)) %>%
-    left_join(select(site_data, site_name, ws_area_ha)) %>%
-    mutate_at(vars(-site_name,-date,-Q_Ld),~(./ws_area_ha)) %>%
-    select(-ws_area_ha)
-
-write_feather(qc_daily_flux,path='data/lter/hbef/flux.feather')
-
+write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
+zz = read_feather(path='~/git/macrosheds/portal/data/hjandrews/flux.feather')
+zz$datetime[1]
 # f = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/grab.feather')
 # ff = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/grab_unabridged.feather')
 # fs = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/sensorQ.feather')
