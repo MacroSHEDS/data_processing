@@ -5,6 +5,9 @@ library(imputeTS)
 library(feather)
 library(tidylog)
 
+#NOTE: this script could be clarified with elements from subsequently written
+#processing scripts, e.g. process_hbef.R
+
 `%>%` = magrittr::`%>%`
 `.` = plyr::`.`
 
@@ -18,31 +21,37 @@ lter_download('/home/mike/git/macrosheds/data_acquisition/data/lter',
 lter_download('/home/mike/git/macrosheds/data_acquisition/data/lter',
     'south_umpqua')
 
-sets = dir('raw')
-
-#P
-precip = readr::read_csv('raw/precipitation/MS00403.csv') %>%
+#P (must be exported in mm)
+precip = readr::read_csv('raw/precipitation/MS00403') %>%
     tidylog::select(DATE, SITECODE, PRECIP_TOT_DAY, PRECIP_TOT_FLAG) %>%
     tidylog::filter(PRECIP_TOT_FLAG %in% c('A', 'E', 'T', 'U')) %>%
     tidylog::select(-PRECIP_TOT_FLAG) %>%
     dplyr::rename(datetime=DATE, site_name=SITECODE, precip=PRECIP_TOT_DAY) %>%
-    dplyr::mutate(datetime=as.POSIXct(datetime))
+    dplyr::mutate(datetime=as.POSIXct(datetime)) %>%
+    tidylog::distinct(.keep_all=TRUE) %>%
+    dplyr::arrange(site_name, datetime) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
 attr(precip$datetime, 'tzone') = 'UTC'
 
-write_feather(precip, paste0(outdir, '/precip.feather'))
+feather::write_feather(precip, paste0(outdir, '/precip.feather'))
 
-#Q
-discharge = readr::read_csv('raw/discharge/HF00402.csv') %>%
+#Q (must be exported in L/s)
+discharge = readr::read_csv('raw/discharge/HF00402') %>%
     tidylog::select(DATE, SITECODE, MAX_Q) %>%
     dplyr::mutate(MAX_Q=MAX_Q * 28.32) %>%
     dplyr::rename(datetime=DATE, site_name=SITECODE, Q=MAX_Q) %>%
-    dplyr::mutate(datetime=as.POSIXct(datetime))
+    dplyr::mutate(datetime=as.POSIXct(datetime)) %>%
+    tidylog::distinct(.keep_all=TRUE) %>%
+    dplyr::arrange(site_name, datetime) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
 attr(discharge$datetime, 'tzone') = 'UTC'
 
-write_feather(discharge, paste0(outdir, '/discharge.feather'))
+feather::write_feather(discharge, paste0(outdir, '/discharge.feather'))
 
 #conc (make sure datetime is POSIXct and not Date)
-grab = readr::read_csv('raw/stream_chemistry/CF00201.csv') %>%
+grab = readr::read_csv('raw/stream_chemistry/CF00201') %>%
     dplyr::rename(Na=X46) %>%
     tidylog::select(-STCODE, -LABNO, -TYPE, -ENTITY, -WATERYEAR, -INTERVAL,
         -MEAN_LPS, -Q_AREA_CM, -QCODE, -PVOL, -PVOLCODE)
@@ -53,16 +62,20 @@ grabvars = tidylog::select(grab, -dplyr::ends_with('CODE'), SITECODE) %>%
     tidylog::gather('var', 'val', -SITECODE, -DATE_TIME) %>%
     tidylog::select(-SITECODE, -DATE_TIME)
 
-grab = bind_cols(grabcodes, grabvars) %>%
+grab = dplyr::bind_cols(grabcodes, grabvars) %>%
     tidylog::filter(codeval %in% c('A', 'E')) %>%
     tidylog::select(-code, -codeval) %>%
     tidylog::spread(var, val) %>%
     dplyr::rename(site_name=SITECODE, datetime=DATE_TIME, alk=ALK, Ca=CA,
         Cl=CL, spCond=COND, Mg=MG, NH3_N=NH3N, NO3_N=NO3N, pH=PH, PO4_P=PO4P,
         SiO2=SI, SO4_S=SO4S, suspSed=SSED) %>%
-    dplyr::mutate(spCond=spCond / 1000) #convert to S/cm
+    dplyr::mutate(spCond=spCond / 1000) %>% #convert to S/cm
+    tidylog::distinct(.keep_all=TRUE) %>%
+    dplyr::arrange(site_name, datetime) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
 
-write_feather(grab, paste0(outdir, '/grab.feather'))
+feather::write_feather(grab, paste0(outdir, '/grab.feather'))
 
 #flux
 site_data = read.csv('../../general/site_data.csv', stringsAsFactors=FALSE)
@@ -124,8 +137,9 @@ non_flux_vars = c('ANC960', 'ANCMet', 'anionCharge', 'cationCharge',
 
 #method 2: simplified
 grab_daily = grab %>%
-    tidylog::select(- one_of(non_flux_vars)) %>%
-    dplyr::mutate(date=as.Date(datetime)) %>%
+    tidylog::select(- dplyr::one_of(non_flux_vars)) %>%
+    dplyr::mutate(date=lubridate::floor_date(datetime, 'day')) %>%
+    # dplyr::mutate(date2=as.Date(datetime)) %>%
     dplyr::group_by(site_name, date) %>%
     tidylog::summarize_if(is.numeric, mean, na.rm=TRUE) %>%
     dplyr::ungroup()
@@ -164,20 +178,16 @@ Q_daily = grab_daily %>%
 
 flux_daily = grab_daily %>%
     tidylog::left_join(Q_daily, by=c('date', 'site_name')) %>%
-    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. * Q_Ld) / (1000 * 1000)) %>%
-    tidylog::left_join(dplyr::select(site_data, site_name, ws_area_ha)) %>%
-    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld), ~(. / ws_area_ha)) %>%
+    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld),
+        ~(. * Q_Ld) / (1000 * 1000)) %>%
+    tidylog::left_join(dplyr::select(site_data, site_name, ws_area_ha),
+        by='site_name') %>%
+    dplyr::mutate_at(dplyr::vars(-site_name, -date, -Q_Ld),
+        ~(. / ws_area_ha)) %>%
     dplyr::mutate(datetime=as.POSIXct(date)) %>%
-    tidylog::select(datetime, everything(), -ws_area_ha, -date, -Q_Ld, -Q) %>%
-    dplyr::filter_at(dplyr::vars(-site_name, -datetime), any_vars(! is.na(.)))
+    tidylog::select(datetime, dplyr::everything(),
+        -ws_area_ha, -date, -Q_Ld, -Q) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
 
-write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
-zz = read_feather(path='~/git/macrosheds/portal/data/hjandrews/flux.feather')
-zz$datetime[1]
-# f = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/grab.feather')
-# ff = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/grab_unabridged.feather')
-# fs = read_feather('/home/mike/git/macrosheds/data_acquisition/data/lter/hbef/sensorQ.feather')
-# fm = read_feather('/home/mike/git/macrosheds/portal/data/hbef/grab.feather')
-
-# precip - https://portal.lternet.edu/nis/metadataviewer?packageid=knb-lter-and.5482.3
-    #mL
+feather::write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
