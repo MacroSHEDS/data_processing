@@ -46,3 +46,10 @@ postgres_arrayify = function(vec){
     vec = gsub('\\{\\}', '{""}', vec)
     return(vec)
 }
+
+clear_from_mem = function(...){
+    dots = match.call(expand.dots = FALSE)$...
+    names = vapply(dots, as.character, '')
+    rm(list=names, envir=globalenv())
+    gc()
+}

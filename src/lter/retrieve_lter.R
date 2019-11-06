@@ -59,7 +59,7 @@ lter_download = function(lter_dir, dmn){
                 lter_version)
             reqdata = RCurl::getURLContent(name_request)
             reqdata = strsplit(reqdata, '\n')[[1]]
-            reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),([0-9a-zA-Z]+)')
+            reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
             element_ids = reqdata[,2]
             element_names = reqdata[,3]
 
@@ -72,7 +72,7 @@ lter_download = function(lter_dir, dmn){
             for(j in 1:length(element_names)){
                 data_request = paste0(dl_endpoint, site, '/', identifier, '/',
                     lter_version)
-                rawfile = paste0(rawdir, '/', element_names[j], '.csv')
+                rawfile = paste0(rawdir, '/', element_names[j])
                 download.file(url=paste0(data_request, '/', element_ids[j]),
                     destfile=rawfile, cacheOK=FALSE, method='curl')
             }
