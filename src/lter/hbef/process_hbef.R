@@ -38,15 +38,33 @@ grab = readr::read_csv('raw/stream_precip_chemistry/stream chemistry',
     rename(site_name=site) %>%
     mutate(datetime=lubridate::as_datetime(paste(date, timeEST), tz='EST')) %>%
     mutate(datetime=lubridate::with_tz(datetime, tz='UTC')) %>%
-    select(site_name, datetime, dplyr::everything(), -archived, -pHmetrohm,
-        -uniqueID, -gageHt, -sampleType, -hydroGraph, -flowGageHt, -fieldCode,
-        -waterYr, -canonical, -duplicate, -date, -timeEST, -notes) %>%
+    select(site_name, datetime, dplyr::everything(),
+        -one_of('archived', 'pHmetrohm', 'uniqueID', 'gageHt', 'sampleType',
+            'hydroGraph', 'flowGageHt', 'fieldCode', 'waterYr', 'canonical',
+            'duplicate', 'date', 'timeEST', 'notes', 'precipCatch')) %>%
     distinct(.keep_all=TRUE) %>%
     arrange(site_name, datetime) %>%
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
 feather::write_feather(grab, paste0(outdir, '/grab.feather'))
+
+#precip chemistry
+pchem = readr::read_csv('raw/stream_precip_chemistry/precipitation chemistry',
+    guess_max=30000) %>%
+    rename(site_name=site) %>%
+    mutate(datetime=lubridate::as_datetime(paste(date, timeEST), tz='EST')) %>%
+    mutate(datetime=lubridate::with_tz(datetime, tz='UTC')) %>%
+    select(site_name, datetime, dplyr::everything(),
+        -one_of('archived', 'pHmetrohm', 'uniqueID', 'gageHt', 'sampleType',
+            'hydroGraph', 'flowGageHt', 'fieldCode', 'waterYr', 'canonical',
+            'duplicate', 'date', 'timeEST', 'notes', 'precipCatch')) %>%
+    distinct(.keep_all=TRUE) %>%
+    arrange(site_name, datetime) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
+
+feather::write_feather(pchem, paste0(outdir, '/pchem.feather'))
 
 #P (must be exported in mm)
 precip = readr::read_csv('raw/precipitation/dailyGagePrecip1956-2019.csv') %>%

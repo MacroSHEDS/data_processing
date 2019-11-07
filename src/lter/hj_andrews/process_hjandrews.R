@@ -53,10 +53,11 @@ feather::write_feather(discharge, paste0(outdir, '/discharge.feather'))
 #conc (make sure datetime is POSIXct and not Date)
 grab = readr::read_csv('raw/stream_chemistry/CF00201') %>%
     dplyr::rename(Na=X46) %>%
-    tidylog::select(-STCODE, -LABNO, -TYPE, -ENTITY, -WATERYEAR, -INTERVAL,
-        -MEAN_LPS, -Q_AREA_CM, -QCODE, -PVOL, -PVOLCODE)
+    tidylog::select(-one_of('STCODE', 'LABNO', 'TYPE', 'ENTITY', 'WATERYEAR',
+        'INTERVAL', 'MEAN_LPS', 'Q_AREA_CM', 'QCODE', 'PVOL', 'PVOLCODE'))
 
-grabcodes = tidylog::select(grab, SITECODE, DATE_TIME, dplyr::ends_with('CODE')) %>%
+grabcodes = tidylog::select(grab, SITECODE, DATE_TIME,
+        dplyr::ends_with('CODE')) %>%
     tidylog::gather('code', 'codeval', -SITECODE, -DATE_TIME)
 grabvars = tidylog::select(grab, -dplyr::ends_with('CODE'), SITECODE) %>%
     tidylog::gather('var', 'val', -SITECODE, -DATE_TIME) %>%
@@ -66,9 +67,10 @@ grab = dplyr::bind_cols(grabcodes, grabvars) %>%
     tidylog::filter(codeval %in% c('A', 'E')) %>%
     tidylog::select(-code, -codeval) %>%
     tidylog::spread(var, val) %>%
-    dplyr::rename(site_name=SITECODE, datetime=DATE_TIME, alk=ALK, Ca=CA,
-        Cl=CL, spCond=COND, Mg=MG, NH3_N=NH3N, NO3_N=NO3N, pH=PH, PO4_P=PO4P,
-        SiO2=SI, SO4_S=SO4S, suspSed=SSED) %>%
+    dplyr::rename_all(dplyr::recode, SITECODE='site_name', DATE_TIME='datetime',
+        ALK='alk', CA='Ca', CL='Cl', COND='spCond', MG='Mg', NH3N='NH3_N',
+        NO3N='NO3_N', PH='pH', PO4P='PO4_P', SI='SiO2', SO4S='SO4_S',
+        SSED='suspSed') %>%
     dplyr::mutate(spCond=spCond / 1000) %>% #convert to S/cm
     tidylog::distinct(.keep_all=TRUE) %>%
     dplyr::arrange(site_name, datetime) %>%
@@ -76,6 +78,36 @@ grab = dplyr::bind_cols(grabcodes, grabvars) %>%
         dplyr::any_vars(! is.na(.)))
 
 feather::write_feather(grab, paste0(outdir, '/grab.feather'))
+
+#precip chemistry
+pchem = readr::read_csv('raw/precip_chemistry/CP00201', guess_max=30000) %>%
+    dplyr::rename(Na=X44) %>%
+    tidylog::select(-one_of('STCODE', 'LABNO', 'TYPE', 'ENTITY', 'WATERYEAR',
+        'INTERVAL', 'MEAN_LPS', 'Q_AREA_CM', 'QCODE', 'PVOL', 'PVOLCODE',
+        'PRECIP_CM'))
+
+pchemcodes = tidylog::select(pchem, SITECODE, DATE_TIME,
+        dplyr::ends_with('CODE'), -PCODE) %>%
+    tidylog::gather('code', 'codeval', -SITECODE, -DATE_TIME)
+pchemvars = tidylog::select(pchem, -dplyr::ends_with('CODE'), SITECODE) %>%
+    tidylog::gather('var', 'val', -SITECODE, -DATE_TIME) %>%
+    tidylog::select(-SITECODE, -DATE_TIME)
+
+pchem = dplyr::bind_cols(pchemcodes, pchemvars) %>%
+    tidylog::filter(codeval %in% c('A', 'E')) %>%
+    tidylog::select(-code, -codeval) %>%
+    tidylog::spread(var, val) %>%
+    dplyr::rename_all(dplyr::recode, SITECODE='site_name', DATE_TIME='datetime',
+        ALK='alk', CA='Ca', CL='Cl', COND='spCond', MG='Mg', NH3N='NH3_N',
+        NO3N='NO3_N', PH='pH', PO4P='PO4_P', SI='SiO2', SO4S='SO4_S',
+        SSED='suspSed') %>%
+    dplyr::mutate(spCond=spCond / 1000) %>% #convert to S/cm
+    tidylog::distinct(.keep_all=TRUE) %>%
+    dplyr::arrange(site_name, datetime) %>%
+    dplyr::filter_at(dplyr::vars(-site_name, -datetime),
+        dplyr::any_vars(! is.na(.)))
+
+feather::write_feather(pchem, paste0(outdir, '/pchem.feather'))
 
 #flux
 site_data = read.csv('../../general/site_data.csv', stringsAsFactors=FALSE)
