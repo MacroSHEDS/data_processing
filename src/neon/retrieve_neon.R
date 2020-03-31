@@ -190,7 +190,7 @@ get_DP1.20288.001 = function(sets){
 }
 
 #DP1.20093.001 #Chemical properties of surface water
-#DP1.20267.001 #gauge height
+#DP1.20267.001 #gage height
 #DP4.00133.001 #Z-Q rating curve (only HOPB and GUIL)
 #DP4.00130.001 #continuous Q (only HOPB)
 
