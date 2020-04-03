@@ -10,11 +10,16 @@ library(tidyverse)
 # library(lubridate)
 library(feather)
 library(glue)
+library(logging)
 
 #neon data product codes are of this form: DPx.yyyyy.zzz,
 #where x is data level (1=qaqc'd), y is product id, z is revision
 
 setwd('/home/mike/git/macrosheds/')
+logging::basicConfig()
+# logReset()
+logging::addHandler(logging::writeToFile, logger='neon',
+    file='data_acquisition/logs/neon.log')
 
 #store these elsewhere
 # d_=d; data_inds_=data_inds; site_=site
@@ -28,10 +33,9 @@ determine_upstream_downstream = function(d_, data_inds_, site_){
     } else if(length(data_inds_) == 1){
         updown_order = 1
     } else {
-        #LOG HERE ####
-        # write(paste('Problem with data file number for site', site,
-        #     '(', prods_abb[p], date, ')'),
-        #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
+        msg = glue('Problem with data file number (up/downstream) for site',
+            '{site} ({prod}, {month})', site=site_, prod=prodcode, month=date)
+        logwarn(msg, logger='neon.module')
         next
     }
 
