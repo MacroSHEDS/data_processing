@@ -9,16 +9,86 @@ library(tidyverse)
 # library(dplyr, warn.conflicts = FALSE)
 # library(lubridate)
 library(feather)
+library(glue)
+
+#neon data product codes are of this form: DPx.yyyyy.zzz,
+#where x is data level (1=qaqc'd), y is product id, z is revision
 
 setwd('/home/mike/git/macrosheds/')
 
 #store these elsewhere
-get_DP1.20093.001 = function(sets){
+# d_=d; data_inds_=data_inds; site_=site
+determine_upstream_downstream = function(d_, data_inds_, site_){
+
+    #determine which dataset is upstream/downstream if necessary
+    updown_suffixes = c('-up', '-down')
+    if(length(data_inds_) == 2){
+        position = str_split(d_$data$files$name[data_inds_[1]], '\\.')[[1]][7]
+        updown_order = if(position == '101') 1:2 else 2:1
+    } else if(length(data_inds_) == 1){
+        updown_order = 1
+    } else {
+        #LOG HERE ####
+        # write(paste('Problem with data file number for site', site,
+        #     '(', prods_abb[p], date, ')'),
+        #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
+        next
+    }
+
+    site_with_suffixes = paste0(site_, updown_suffixes[updown_order])
+
+    return(site_with_suffixes)
+}
+# out_sub_ = out_sub
+resolve_neon_naming_conflicts = function(out_sub_, replacements){
+
+    #replacements is a named vector. name=find, value=replace;
+    #failed match does nothing
+
+    out_cols = colnames(out_sub_)
+
+    #get list of variables included
+    varind = grep('SciRvw', out_cols)
+    rgx = str_match(out_cols[varind], '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
+    # varlist = flagprefixlist = rgx[,2]
+    varlist = rgx[,2]
+
+    #harmonize redundant variable names
+    for(i in 1:length(replacements)){
+        r = replacements[i]
+        varlist = replace(varlist, which(varlist == names(r)), r)
+    }
+
+    if('startDate' %in% out_cols){
+        colnames(out_sub_) = replace(out_cols, which(out_cols == 'startDate'),
+            'startDateTime')
+    } else if('endDate' %in% out_cols){
+        colnames(out_sub_) = replace(out_cols, which(out_cols == 'endDate'),
+            'startDateTime') #not a mistake
+    } else {
+        # LOG HERE####
+        # write(paste('Datetime column not found for:', current_var,
+        #     site_with_suffix, date),
+        #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
+        next
+    }
+
+    #subset relevant columns
+    flagcols = grepl('.+?FinalQF(?!SciRvw)', out_cols,
+        perl=TRUE)
+    datacols = ! grepl('QF', out_cols, perl=TRUE)
+    relevant_cols = flagcols | datacols
+    out_sub_ = out_sub_[, relevant_cols]
+
+    return(out_sub_)
+}
+get_DP1.20093.001 = function(sets, silent=TRUE){
 
     grab = tibble()
 
     for(i in 1:nrow(sets)){
-        print(paste0('i=',i))
+
+        if(! silent) print(paste0('i=',i, '/', nrow(sets)))
 
         url = sets[i,1]
         site = sets[i,2]
@@ -94,12 +164,13 @@ get_DP1.20093.001 = function(sets){
 
     return(grab)
 }
-get_DP1.20288.001 = function(sets){
+get_DP1.20288.001 = function(sets, silent=TRUE){
 
-    sensor = tibble()
+    out = tibble()
 
     for(i in 1:nrow(sets)){
-        print(paste0('i=',i, '/', nrow(sets)))
+
+        if(! silent) print(paste0('i=',i, '/', nrow(sets)))
 
         url = sets[i,1]
         site = sets[i,2]
@@ -115,94 +186,55 @@ get_DP1.20288.001 = function(sets){
         data_inds = intersect(grep("expanded", d$data$files$name),
             grep("instantaneous", d$data$files$name))
 
-        #determine which dataset is upstream/downstream if necessary
-        updown_suffixes = c('-up', '-down')
-        if(length(data_inds) == 2){
-            position = str_split(d$data$files$name[data_inds[1]], '\\.')[[1]][7]
-            updown_order = if(position == '101') 1:2 else 2:1
-        } else if(length(data_inds) == 1){
-            updown_order = 1:2
-        } else {
-            # write(paste('Problem with data file number for site', site,
-            #     '(', prods_abb[p], date, ')'),
-            #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
-            next
-        }
+        site_with_suffixes = determine_upstream_downstream(d, data_inds, site)
 
         for(j in 1:length(data_inds)){
-            # print(paste('j=',j))
 
-            #add appropriate suffix for upstream/downstream sites
-            site_suffix = updown_suffixes[updown_order[j]]
-            site_with_suffix = paste0(site, site_suffix)
+            site_with_suffix = site_with_suffixes[j]
 
             #download data
-            sensor_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
+            out_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
                 stringsAsFactors=FALSE)
 
-            #get list of variables included
-            varind = grep('SciRvw', colnames(sensor_sub))
-            rgx = str_match(colnames(sensor_sub)[varind],
-                '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
-            varlist = flagprefixlist = rgx[,2]
-            if('specificCond' %in% varlist){
-                varlist[which(varlist == 'specificCond')] =
-                    'specificConductance'
-            }
-            if('dissolvedOxygenSat' %in% varlist){
-                varlist[which(varlist == 'dissolvedOxygenSat')] =
-                    'dissolvedOxygenSaturation'
-            }
+            out_sub = resolve_neon_naming_conflicts(out_sub,
+                c('specificCond'='specificConductance',
+                    'dissolvedOxygenSat'='dissolvedOxygenSaturation'))
 
-            flagcols = grepl('.+?FinalQF(?!SciRvw)', colnames(sensor_sub),
-                perl=TRUE)
-            datacols = ! grepl('QF', colnames(sensor_sub), perl=TRUE)
-            cols = flagcols | datacols
-            sensor_sub = sensor_sub[, cols]
-
-            #harmonize colnames
-            if('startDateTime' %in% colnames(sensor_sub)){
-                NULL #do nothing
-            } else if('startDate' %in% colnames(sensor_sub)){
-                colnames(sensor_sub)[which(colnames(sensor_sub) == 'startDate')] =
-                    'startDateTime'
-            } else if('endDate' %in% colnames(sensor_sub)){
-                colnames(sensor_sub)[which(colnames(sensor_sub) == 'endDate')] =
-                    'startDateTime'
-            } else {
-                # write(paste('Datetime column not found for:', current_var,
-                #     site_with_suffix, date),
-                #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
-                next
-            }
-
-            sensor_sub = mutate(sensor_sub,
+            out_sub = mutate(out_sub,
                 datetime=as.POSIXct(startDateTime,
                     tz='UTC', format='%Y-%m-%dT%H:%M:%SZ'),
                 site=site_with_suffix) %>%
                 select(-startDateTime)
 
-            sensor = bind_rows(sensor, sensor_sub)
+            out = bind_rows(out, out_sub)
         }
     }
 
-    return(sensor)
+    return(out)
 }
 
-#DP1.20093.001 #Chemical properties of surface water
-#DP1.20267.001 #gage height
-#DP4.00133.001 #Z-Q rating curve (only HOPB and GUIL)
-#DP4.00130.001 #continuous Q (only HOPB)
+#make this into a csv ####
+neonprods = tibble(prodID=c('DP1.20093.001', 'DP1.20288.001', 'DP1.20267.001',
+    'DP4.00133.001', 'DP4.00130.001', 'DP1.20048.001', 'DP1.20193.001'),
+    prod=c('chemistry', 'waterqual', 'gageht', 'zqcurve', 'Q', 'Qflowmeter',
+    'Qsalt'),
+    type=c('grab', 'sensor', 'grab', 'other', 'sensor', 'grab', 'grab'),
+    notes=c('','','','only HOPB and GUIL', 'only HOPB', '',''))
+# readr::write_csv(neonprods, 'data_acquisition/data/neon/neon_products_temp.csv')
 
-grab_data_products = c('DP1.20093.001')
-sensor_data_products = c('DP1.20288.001')
+# grab_data_products = filter(neonprods, type == 'grab') %>% pull(prodID)
+# sensor_data_products = filter(neonprods, type == 'sensor') %>% pull(prodID)
+# other_data_products = filter(neonprods, type == 'other') %>% pull(prodID)
 
-for(g in 1:length(grab_data_products)){
+# i=2; j=1; sets=site_sets
+for(i in 1:nrow(neonprods)){
 
     #get available datasets for this data product
-    product = grab_data_products[g]
+    prodcode = neonprods$prodID[i]
+    prodID = strsplit(prodcode, '\\.')[[1]][2]
+
     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-        product))
+        prodcode))
     txt = httr::content(req, as="text")
     neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
 
@@ -210,36 +242,46 @@ for(g in 1:length(grab_data_products)){
     urls = unlist(neondata$data$siteCodes$availableDataUrls)
     avail_sets = stringr::str_match(urls, '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})')
 
-    avail_sets = avail_sets[avail_sets[, 2] == 'WALK', ] ####remove this line
+    #retrieve data by site; log acquisitions (and revisions, once neon actually has them)
+    avail_sites = unique(avail_sets[, 2])
+    for(j in 1:length(avail_sites)){
 
-    retrieval_func = get(paste0('get_', product))
-    grab = do.call(retrieval_func, list(avail_sets)) #append to this?
+        site_sets = avail_sets[avail_sets[, 2] == avail_sites[j], ]
+
+        #filter already held sitemonths from site_sets ####
+        # site_sets = site_sets[1:10,]
+
+        retrieval_func = get(paste0('get_', prodcode))
+        site_dset = do.call(retrieval_func, list(site_sets))
+
+
+        write_feather(site_dset,
+            glue('data_acquisition/data/neon/raw/{p}_{id}_{site}.feather',
+            p=neonprods$prod[i], id=prodID))
+    }
 }
 
-for(s in 1:length(sensor_data_products)){
-
-    #get available datasets for this data product
-    product = sensor_data_products[s]
-    req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-        product))
-    txt = httr::content(req, as="text")
-    neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
-
-    #get available urls, sites, and dates
-    urls = unlist(neondata$data$siteCodes$availableDataUrls)
-    avail_sets = stringr::str_match(urls, '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})')
-
-    avail_sets = avail_sets[avail_sets[, 2] == 'WALK', ] ####remove this line
-
-    retrieval_func = get(paste0('get_', product))
-    sensor = do.call(retrieval_func, list(avail_sets)) #append to this?
-}
+# for(s in 1:length(sensor_data_products)){
+#
+#     #get available datasets for this data product
+#     product = sensor_data_products[s]
+#     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
+#         product))
+#     txt = httr::content(req, as="text")
+#     neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
+#
+#     #get available urls, sites, and dates
+#     urls = unlist(neondata$data$siteCodes$availableDataUrls)
+#     avail_sets = stringr::str_match(urls, '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})')
+#
+#     # avail_sets = avail_sets[avail_sets[, 2] == 'WALK', ] ####remove this line
+#
+#     retrieval_func = get(paste0('get_', product))
+#     sensor = do.call(retrieval_func, list(avail_sets)) #append to this?
+# }
 
 # tidyr::gather(grab_cur,'variable', 'value',
 #     data = gather(data, 'Variable', 'Value', Light_PAR:Discharge_m3s)
-
-write_feather(grab, 'data/neon/grab.feather')
-write_feather(sensor, 'data/neon/sensor.feather')
 
 zip('data/neon.zip', list.files('data/neon', recursive=TRUE, full.names=TRUE))
 out = drive_upload("data/neon.zip",
