@@ -1,3 +1,5 @@
+library(logging)
+
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
@@ -52,4 +54,52 @@ clear_from_mem = function(...){
     names = vapply(dots, as.character, '')
     rm(list=names, envir=globalenv())
     gc()
+}
+
+generate_ms_err = function(){
+    errobj = 1
+    class(errobj) = 'ms_err'
+    return(errobj)
+}
+
+update_held_data = function(new_dates){
+    held_dates = held_data[[prodcode]][[site]]
+    held_data_ = held_data
+    held_data_[[prodcode]][[site]] = append(held_dates, new_dates)
+    held_data <<- held_data_
+}
+
+# msg='neon data acquisition error. check the logs.'
+# addr='mjv22@duke.edu'; pw=conf$gmail_pw
+email_err = function(msg, addr, pw){
+
+    mailout = tryCatch({
+        email = envelope() %>%
+            from('grdouser@gmail.com') %>%
+            to(addr) %>%
+            subject('MacroSheds error') %>%
+            text(msg)
+        smtp = server(host='smtp.gmail.com',
+            port=587, #or 465 for SMTPS
+            username='grdouser@gmail.com',
+            password=pw)
+        smtp(email, verbose=FALSE)
+    }, error=function(e){
+        errout = 'err'
+        class(errout) = 'err'
+        return(errout)
+    })
+
+    if('err' %in% class(mailout)){
+        msg = 'Something bogus happened in email_err'
+        logging::logerr(msg, logger='neon.module')
+        return('fail')
+    } else {
+        return('success')
+    }
+
+}
+
+is_ms_err = function(x){
+    return('ms_err' %in% class(x))
 }
