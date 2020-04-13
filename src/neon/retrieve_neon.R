@@ -1,187 +1,215 @@
 library(httr)
 library(jsonlite)
-# library(stringr)
 library(tidyr)
+library(plyr)
 library(data.table)
 library(dtplyr)
-# library(plyr)
 library(tidyverse)
-# library(dplyr, warn.conflicts = FALSE)
 # library(lubridate)
 library(feather)
 library(glue)
 library(logging)
-library(jsonlite)
 library(emayili)
 
 #neon data product codes are of this form: DPx.yyyyy.zzz,
 #where x is data level (1=qaqc'd), y is product id, z is revision
 
 setwd('/home/mike/git/macrosheds/')
-
 source('data_acquisition/src/helpers.R')
-conf = jsonlite::fromJSON('data_acquisition/config.json')
+source('data_acquisition/src/neon/neon_helpers.R')
 
-held_data = jsonlite::fromJSON(
-    readr::read_file('data_acquisition/data/neon/held_data.json'))
+neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')
+neonprods = filter(neonprods, status == 'pending')
+
+conf = jsonlite::fromJSON('data_acquisition/config.json')
+held_data = try(jsonlite::fromJSON(
+    readr::read_file('data_acquisition/data/neon/held_data.json')), silent=TRUE)
+if('try-error' %in% class(held_data)) held_data = list()
 
 logging::basicConfig()
-# logReset()
 logging::addHandler(logging::writeToFile, logger='neon',
     file='data_acquisition/logs/neon.log')
+# logReset()
 
-#store these elsewhere
 # d_=d; data_inds_=data_inds; site_=site
-determine_upstream_downstream = function(d_, data_inds_, site_){
-
-    #determine which dataset is upstream/downstream if necessary
-    updown_suffixes = c('-up', '-down')
-    if(length(data_inds_) == 2){
-        position = str_split(d_$data$files$name[data_inds_[1]], '\\.')[[1]][7]
-        updown_order = if(position == '101') 1:2 else 2:1
-    } else if(length(data_inds_) == 1){
-        updown_order = 1
-    } else {
-        msg = glue('Problem with upstream/downstream indicator for site ',
-            '{site} ({prod}, {month}).', site=site_, prod=prodcode, month=date)
-        logging::logwarn(msg, logger='neon.module')
-        return(generate_ms_err())
-    }
-
-    site_with_suffixes = paste0(site_, updown_suffixes[updown_order])
-
-    return(site_with_suffixes)
-}
 # out_sub_ = out_sub; replacements = c('specificCond'='specificConductance',
 #         'dissolvedOxygenSat'='dissolvedOxygenSaturation')
-resolve_neon_naming_conflicts = function(out_sub_, replacements){
+# d=deets
+process_DP1.20093.001_api = function(d, loginfo){
 
-    #replacements is a named vector. name=find, value=replace;
-    #failed match does nothing
+    data1_ind = intersect(grep("expanded", d$data$files$name),
+        grep("fieldSuperParent", d$data$files$name))
+    data2_ind = intersect(grep("expanded", d$data$files$name),
+        grep("externalLabData", d$data$files$name))
+    data3_ind = intersect(grep("expanded", d$data$files$name),
+        grep("domainLabData", d$data$files$name))
 
-    out_cols = colnames(out_sub_)
+    data1 = tryCatch({
+        read.delim(d$data$files$url[data1_ind], sep=",",
+            stringsAsFactors=FALSE)
+    }, error=function(e){
+        data.frame()
+    })
+    data2 = tryCatch({
+        read.delim(d$data$files$url[data2_ind], sep=",",
+            stringsAsFactors=FALSE)
+    }, error=function(e){
+        data.frame()
+    })
+    data3 = tryCatch({
+        read.delim(d$data$files$url[data3_ind], sep=",",
+            stringsAsFactors=FALSE)
+    }, error=function(e){
+        data.frame()
+    })
 
-    #get list of variables included
-    varind = grep('SciRvw', out_cols)
-    rgx = str_match(out_cols[varind], '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
-    # varlist = flagprefixlist = rgx[,2]
-    varlist = rgx[,2]
-
-    #harmonize redundant variable names
-    for(i in 1:length(replacements)){
-        r = replacements[i]
-        varlist = replace(varlist, which(varlist == names(r)), r)
+    if(nrow(data1)){
+        data1 = select(data1, siteID, collectDate, dissolvedOxygen,
+            dissolvedOxygenSaturation, specificConductance, waterTemp,
+            maxDepth)
+    }
+    if(nrow(data2)){
+        data2 = select(data2, siteID, collectDate, pH, externalConductance,
+            externalANC, starts_with('water'), starts_with('total'),
+            starts_with('dissolved'), uvAbsorbance250, uvAbsorbance284,
+            shipmentWarmQF, externalLabDataQF)
+    }
+    if(nrow(data3)){
+        data3 = select(data3, siteID, collectDate, starts_with('alk'),
+            starts_with('anc'))
     }
 
-    if('startDate' %in% out_cols){
-        colnames(out_sub_) = replace(out_cols, which(out_cols == 'startDate'),
-            'startDateTime')
-    } else if('endDate' %in% out_cols){
-        colnames(out_sub_) = replace(out_cols, which(out_cols == 'endDate'),
-            'startDateTime') #not a mistake
-    } else if(! 'startDateTime' %in% out_cols){
-        msg = glue('Datetime column not found for site ',
-            '{site} ({prod}, {month}).', site=site, prod=prodcode, month=date)
-        logging::logwarn(msg, logger='neon.module')
-        return(generate_ms_err())
-    }
+    out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
+        group_by(collectDate) %>%
+        summarise_each(list(~ if(is.numeric(.)){
+            mean(., na.rm = TRUE)
+        } else {
+            first(.)
+        })) %>%
+        ungroup() %>%
+        mutate(datetime=as.POSIXct(collectDate, tz='UTC',
+            format='%Y-%m-%dT%H:%MZ')) %>%
+        select(-collectDate)
 
-    #subset relevant columns
-    flagcols = grepl('.+?FinalQF(?!SciRvw)', out_cols,
-        perl=TRUE)
-    datacols = ! grepl('QF', out_cols, perl=TRUE)
-    relevant_cols = flagcols | datacols
-    out_sub_ = out_sub_[, relevant_cols]
-
-    return(out_sub_)
+    return(out_sub)
 }
-get_DP1.20093.001 = function(sets, silent=TRUE){
+process_DP1.20093.001 = function(d, loginfo){
 
-    grab = tibble()
+    data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
+        startdate=loginfo$date, enddate=loginfo$date, package='basic',
+        check.size=FALSE)
 
-    for(i in 1:nrow(sets)){
+    datasets = names(data_pile)
 
-        if(! silent) print(paste0('i=',i, '/', nrow(sets)))
-
-        url = sets[i,1]
-        site = sets[i,2]
-        date = sets[i,3]
-
-        # write(paste('Processing:', site, date),
-        #     '../../logs_etc/NEON/NEON_ingest.log', append=TRUE)
-
-        #download a dataset for one site and month
-        d = httr::GET(url)
-        d = jsonlite::fromJSON(httr::content(d, as="text"))
-
-        # data1_ind = intersect(grep("expanded", d$data$files$name),
-        #     grep("fieldData", d$data$files$name))
-        data2_ind = intersect(grep("expanded", d$data$files$name),
-            grep("fieldSuperParent", d$data$files$name))
-        data3_ind = intersect(grep("expanded", d$data$files$name),
-            grep("externalLabData", d$data$files$name))
-        data4_ind = intersect(grep("expanded", d$data$files$name),
-            grep("domainLabData", d$data$files$name))
-
-        # data1 = read.delim(d$data$files$url[data1_ind], sep=",",
-        #     stringsAsFactors=FALSE)
-        data2 = tryCatch({
-            read.delim(d$data$files$url[data2_ind], sep=",",
-                stringsAsFactors=FALSE)
-        }, error=function(e){
-            data.frame()
-        })
-        data3 = tryCatch({
-            read.delim(d$data$files$url[data3_ind], sep=",",
-                stringsAsFactors=FALSE)
-        }, error=function(e){
-            data.frame()
-        })
-        data4 = tryCatch({
-            read.delim(d$data$files$url[data4_ind], sep=",",
-                stringsAsFactors=FALSE)
-        }, error=function(e){
-            data.frame()
-        })
-
-        if(nrow(data2)){
-            data2 = select(data2, siteID, collectDate, dissolvedOxygen,
-                dissolvedOxygenSaturation, specificConductance, waterTemp,
-                maxDepth)
-        }
-        if(nrow(data3)){
-            data3 = select(data3, siteID, collectDate, pH, externalConductance,
+    if('swc_externalLabDataByAnalyte' %in% datasets){
+        data_pile$swc_externalLabDataByAnalyte %>%
+            filter(qa filtering here) %>%
+            convert_units_here() %>%
+            select(collectDate, analyte, analyteConcentration, analyteUnits,
+                shipmentWarmQF, externalLabDataQF, sampleCondition) %>%
+            spread()
+    }
+    if('swc_externalLabData' %in% datasets){
+        data_pile$swc_externalLabData %>%
+            filter(qa filtering here) %>%
+            convert_units_here() %>%
+            select(collectDate, pH, externalConductance,
                 externalANC, starts_with('water'), starts_with('total'),
                 starts_with('dissolved'), uvAbsorbance250, uvAbsorbance284,
                 shipmentWarmQF, externalLabDataQF)
-        }
-        if(nrow(data4)){
-            data4 = select(data4, siteID, collectDate, starts_with('alk'),
-                starts_with('anc'))
-        }
+    }
+    # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-        grab_sub = plyr::join_all(list(data2, data3, data4), type='full') %>%
-            group_by(collectDate) %>%
-            summarise_each(list(~ if(is.numeric(.)){
-                mean(., na.rm = TRUE)
-            } else {
-                first(.)
-            })) %>%
-            ungroup() %>%
-            mutate(datetime=as.POSIXct(collectDate, tz='UTC',
-                format='%Y-%m-%dT%H:%MZ')) %>%
-            select(-collectDate)
+    identify which dsets is/are present and mget them into the following list
+    out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
+        group_by(collectDate) %>%
+        summarise_each(list(~ if(is.numeric(.)){
+            mean(., na.rm = TRUE)
+        } else {
+            first(.)
+        })) %>%
+        ungroup() %>%
+        mutate(datetime=as.POSIXct(collectDate, tz='UTC',
+            format='%Y-%m-%dT%H:%MZ')) %>%
+        select(-collectDate)
 
-        grab = bind_rows(grab, grab_sub)
+    return(out_sub)
+}
+    # neonUtilities::getAvg(loginfo$prodcode)
+process_DP1.20033.001 = function(d, loginfo){
+
+    data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
+        startdate=loginfo$date, enddate=loginfo$date, package='basic',
+        check.size=FALSE)
+
+    # out_sub = resolve_neon_naming_conflicts(data_pile$NSW_15_minute,
+    #     replacements=NULL, from_api=FALSE, loginfo_=loginfo)
+
+        # filter(qa filtering here) %>%
+        # convert_units_here() %>%
+    out_sub = select(data_pile$NSW_15_minute,
+            startDateTime, surfWaterNitrateMean, finalQF)
+
+    return(out_sub)
+}
+process_DP1.20042.001 = function(d, loginfo){
+
+    data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
+        startdate=loginfo$date, enddate=loginfo$date, package='basic',
+        check.size=FALSE)
+
+    # datasets = names(data_pile)
+    names(data_pile$NSW_15_minute)
+    View(data_pile$NSW_15_minute)
+
+    # out_sub = resolve_neon_naming_conflicts(data_pile$NSW_15_minute,
+    #     replacements=NULL, from_api=FALSE, loginfo_=loginfo)
+
+        # filter(qa filtering here) %>%
+        # convert_units_here() %>%
+    out_sub = select(data_pile$NSW_15_minute,
+            startDateTime, surfWaterNitrateMean, finalQF)
+    # write_lines(data_pile$readme_20033$X1, '/tmp/nitrate.txt')
+
+    return(out_sub)
+}
+process_DP1.20288.001 = function(d, loginfo){
+
+    data_inds = intersect(grep("expanded", d$data$files$name),
+        grep("instantaneous", d$data$files$name))
+
+    site_with_suffixes = determine_upstream_downstream(d, data_inds, loginfo)
+    if(is_ms_err(site_with_suffixes)) return(site_with_suffixes)
+
+    #process upstream and downstream sites independently
+    for(j in 1:length(data_inds)){
+
+        site_with_suffix = site_with_suffixes[j]
+
+        #download data
+        out_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
+            stringsAsFactors=FALSE)
+
+        out_sub = resolve_neon_naming_conflicts(out_sub, loginfo_=loginfo,
+            replacements=c('specificCond'='specificConductance',
+                'dissolvedOxygenSat'='dissolvedOxygenSaturation'))
+        if(is_ms_err(out_sub)) return(out_sub)
+
+        out_sub = mutate(out_sub,
+            datetime=as.POSIXct(startDateTime,
+                tz='UTC', format='%Y-%m-%dT%H:%M:%SZ'),
+            site=site_with_suffix) %>%
+            select(-startDateTime)
     }
 
-    return(grab)
+    return(out_sub)
 }
-# sets = site_sets; held=held_data
-get_DP1.20288.001 = function(sets, silent=TRUE){
+# sets = site_sets; held=held_data; i=nrow(sets)
+get_neon_data = function(sets, prodcode, silent=TRUE){
+
+    processing_func = get(paste0('process_', prodcode))
 
     out = tibble()
-
     successes = c()
     for(i in 1:nrow(sets)){
 
@@ -191,66 +219,39 @@ get_DP1.20288.001 = function(sets, silent=TRUE){
         site = sets[i, 2]
         date = sets[i, 3]
 
+        loginfo = list(site=site, date=date, prodcode=prodcode, url=url)
+
         msg = glue('Processing site ',
-            '{site} ({prod}, {month}).', site=site, prod=prodcode, month=date)
+            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
         logging::loginfo(msg, logger='neon.module')
 
-        #download a dataset for one site and month
-        d = httr::GET(url)
-        d = jsonlite::fromJSON(httr::content(d, as="text"))
-
-        data_inds = intersect(grep("expanded", d$data$files$name),
-            grep("instantaneous", d$data$files$name))
-
-        site_with_suffixes = determine_upstream_downstream(d, data_inds, site)
-        if(is_ms_err(site_with_suffixes)) next
-
-        j_loop_completed = TRUE
-        for(j in 1:length(data_inds)){
-
-            site_with_suffix = site_with_suffixes[j]
-
-            #download data
-            out_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
-                stringsAsFactors=FALSE)
-
-            out_sub = resolve_neon_naming_conflicts(out_sub,
-                c('specificCond'='specificConductance',
-                    'dissolvedOxygenSat'='dissolvedOxygenSaturation'))
-
-            if(is_ms_err(out_sub)){
-                j_loop_completed = FALSE
-                break
-            }
-
-            out_sub = mutate(out_sub,
-                datetime=as.POSIXct(startDateTime,
-                    tz='UTC', format='%Y-%m-%dT%H:%M:%SZ'),
-                site=site_with_suffix) %>%
-                select(-startDateTime)
-
-            out = bind_rows(out, out_sub)
-
+        deets = download_sitemonth_details(url)
+        if(is_ms_err(deets) || 'error' %in% names(deets)){
+            assign('email_err_msg', TRUE, pos=.GlobalEnv)
+            next
         }
 
-        if(j_loop_completed) successes = append(successes, date)
+        out_sub = do.call(processing_func,
+            args=list(d=deets, loginfo=loginfo))
+        if(is_ms_err(out_sub)){
+            assign('email_err_msg', TRUE, pos=.GlobalEnv)
+            next
+        }
 
+        out = bind_rows(out, out_sub)
+        successes = append(successes, date)
+        update_held_data(new_dates=successes, loginfo)
     }
-
-    update_held_data(new_dates=successes)
 
     return(out)
 }
 
-neonprods = readr::read_csv('data_acquisition/data/neon/neon_products_temp.csv')
-
-# grab_data_products = filter(neonprods, type == 'grab') %>% pull(prodID)
-# sensor_data_products = filter(neonprods, type == 'sensor') %>% pull(prodID)
-# other_data_products = filter(neonprods, type == 'other') %>% pull(prodID)
-
 # i=2; j=1; sets=site_sets
 email_err_msg = FALSE
-for(i in 1:nrow(neonprods)){
+# for(i in 1:nrow(neonprods)){
+for(i in 3){
+
+    outer_loop_err = FALSE
 
     #get available datasets for this data product
     prodcode = neonprods$prodID[i]
@@ -264,9 +265,9 @@ for(i in 1:nrow(neonprods)){
         neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
-        email_err_msg = TRUE
-        next
+        email_err_msg <<- outer_loop_err <<- TRUE
     })
+    if(outer_loop_err) next
 
     #get available urls, sites, and dates
     urls = unlist(neondata$data$siteCodes$availableDataUrls)
@@ -284,28 +285,24 @@ for(i in 1:nrow(neonprods)){
         }
 
         #filter already held sitemonths from site_sets ####
-        # site_sets = site_sets[1:10,]
+        # site_sets = site_sets[1:1, , drop=FALSE]
 
-        retrieval_func = get(paste0('get_', prodcode))
         tryCatch({
-            site_dset = do.call(retrieval_func, args=list(sets=site_sets))
+            site_dset = get_neon_data(site_sets, prodcode)
         }, error=function(e){
             logging::logerror(e, logger='neon.module')
-            email_err_msg = TRUE
-            next
+            email_err_msg <<- outer_loop_err <<- TRUE
         })
+        if(outer_loop_err) next
 
         write_feather(site_dset,
             glue('data_acquisition/data/neon/raw/{p}_{id}_{site}.feather',
             p=neonprods$prod[i], id=prodID, site=curr_site))
+
     }
 
-    # held_data = list()
-    readr::write_file(jsonlite::toJSON(held_data),
-        'data_acquisition/data/neon/held_data.json')
 }
 
-# install.packages('rJava')
 if(email_err_msg){
     email_err('neon data acquisition error. check the logs.',
         'mjv22@duke.edu', conf$gmail_pw)
