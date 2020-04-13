@@ -92,7 +92,7 @@ process_DP1.20093.001_api = function(d, loginfo){
         select(-collectDate)
 
     return(out_sub)
-}
+} #chem: obsolete
 process_DP1.20093.001 = function(d, loginfo){
 
     data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
@@ -134,7 +134,7 @@ process_DP1.20093.001 = function(d, loginfo){
         select(-collectDate)
 
     return(out_sub)
-}
+} #chem: need advice
     # neonUtilities::getAvg(loginfo$prodcode)
 process_DP1.20033.001 = function(d, loginfo){
 
@@ -142,37 +142,22 @@ process_DP1.20033.001 = function(d, loginfo){
         startdate=loginfo$date, enddate=loginfo$date, package='basic',
         check.size=FALSE)
 
-    # out_sub = resolve_neon_naming_conflicts(data_pile$NSW_15_minute,
-    #     replacements=NULL, from_api=FALSE, loginfo_=loginfo)
-
-        # filter(qa filtering here) %>%
-        # convert_units_here() %>%
     out_sub = select(data_pile$NSW_15_minute,
             startDateTime, surfWaterNitrateMean, finalQF)
 
     return(out_sub)
-}
+} #nitrate: done (no need for d now)
 process_DP1.20042.001 = function(d, loginfo){
 
     data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
         startdate=loginfo$date, enddate=loginfo$date, package='basic',
-        check.size=FALSE)
+        check.size=FALSE, avg=5)
 
-    # datasets = names(data_pile)
-    names(data_pile$NSW_15_minute)
-    View(data_pile$NSW_15_minute)
-
-    # out_sub = resolve_neon_naming_conflicts(data_pile$NSW_15_minute,
-    #     replacements=NULL, from_api=FALSE, loginfo_=loginfo)
-
-        # filter(qa filtering here) %>%
-        # convert_units_here() %>%
-    out_sub = select(data_pile$NSW_15_minute,
-            startDateTime, surfWaterNitrateMean, finalQF)
-    # write_lines(data_pile$readme_20033$X1, '/tmp/nitrate.txt')
+    out_sub = select(data_pile$PARWS_5min,
+            startDateTime, PARMean, PARFinalQF)
 
     return(out_sub)
-}
+} #par: done (interval?)
 process_DP1.20288.001 = function(d, loginfo){
 
     data_inds = intersect(grep("expanded", d$data$files$name),
@@ -203,7 +188,7 @@ process_DP1.20288.001 = function(d, loginfo){
     }
 
     return(out_sub)
-}
+} #waterqual: revamp
 # sets = site_sets; held=held_data; i=nrow(sets)
 get_neon_data = function(sets, prodcode, silent=TRUE){
 
@@ -249,7 +234,7 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
 # i=2; j=1; sets=site_sets
 email_err_msg = FALSE
 # for(i in 1:nrow(neonprods)){
-for(i in 3){
+for(i in 4){
 
     outer_loop_err = FALSE
 
