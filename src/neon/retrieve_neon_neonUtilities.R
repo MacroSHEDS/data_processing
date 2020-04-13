@@ -27,10 +27,9 @@ sensor_data_products = c('DP1.20288.001', 'DP4.00130.001')
 
 veg_str <- neonUtilities::loadByProduct(dpID="DP1.10098.001", site="WREF",
     package="expanded", check.size=T)
-chili <- neonUtilities::loadByProduct(dpID='DP1.20288.001', site="ARIK",
-    startdate='2016-12',
-    enddate='2017-05',
-    package="expanded", check.size=T)
+neonUtilities::loadByProduct(dpID='DP1.20288.001', site='ARIK',
+    startdate='2017-03', enddate='2017-05', package='expanded',
+    check.size=FALSE)
 
 sp = sensor_data_products[1]
 for(sp in sensor_data_products){

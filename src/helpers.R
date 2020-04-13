@@ -1,4 +1,5 @@
 library(logging)
+library(tidyverse)
 
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
@@ -62,13 +63,6 @@ generate_ms_err = function(){
     return(errobj)
 }
 
-update_held_data = function(new_dates){
-    held_dates = held_data[[prodcode]][[site]]
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]] = append(held_dates, new_dates)
-    held_data <<- held_data_
-}
-
 # msg='neon data acquisition error. check the logs.'
 # addr='mjv22@duke.edu'; pw=conf$gmail_pw
 email_err = function(msg, addr, pw){
@@ -103,3 +97,4 @@ email_err = function(msg, addr, pw){
 is_ms_err = function(x){
     return('ms_err' %in% class(x))
 }
+
