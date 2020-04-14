@@ -10,6 +10,7 @@ library(feather)
 library(glue)
 library(logging)
 library(emayili)
+library(neonUtilities)
 
 #neon data product codes are of this form: DPx.yyyyy.zzz,
 #where x is data level (1=qaqc'd), y is product id, z is revision
@@ -138,26 +139,100 @@ process_DP1.20093.001 = function(d, loginfo){
     # neonUtilities::getAvg(loginfo$prodcode)
 process_DP1.20033.001 = function(d, loginfo){
 
-    data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
-        startdate=loginfo$date, enddate=loginfo$date, package='basic',
-        check.size=FALSE)
+    thisenv = environment()
 
-    out_sub = select(data_pile$NSW_15_minute,
-            startDateTime, surfWaterNitrateMean, finalQF)
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE)
+
+        out_sub = select(data_pile$NSW_15_minute,
+                startDateTime, surfWaterNitrateMean, finalQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
 
     return(out_sub)
 } #nitrate: done (no need for d now)
 process_DP1.20042.001 = function(d, loginfo){
 
-    data_pile = neonUtilities::loadByProduct(loginfo$prodcode, site=loginfo$site,
-        startdate=loginfo$date, enddate=loginfo$date, package='basic',
-        check.size=FALSE, avg=5)
+    thisenv = environment()
 
-    out_sub = select(data_pile$PARWS_5min,
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE, avg=5)
+
+        out_sub = select(data_pile$PARWS_5min,
             startDateTime, PARMean, PARFinalQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
 
     return(out_sub)
 } #par: done (interval?)
+process_DP1.20053.001 = function(d, loginfo){
+
+    thisenv = environment()
+
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE, avg=5)
+
+        out_sub = select(data_pile$TSW_5min,
+                startDateTime, surfWaterTempMean, finalQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
+
+    return(out_sub)
+} #water temp: done
+process_DP1.00004.001 = function(d, loginfo){
+
+    thisenv = environment()
+
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE, avg=30)
+
+        out_sub = select(data_pile$BP_30min,
+                startDateTime, staPresMean, staPresFinalQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
+
+    return(out_sub)
+} #airpres: ready
+process_DP1.20097.001 = function(d, loginfo){
+
+    thisenv = environment()
+
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE)
+
+        out_sub = select(data_pile$sdg_externalLabData, collectDate,
+            concentrationCH4, concentrationCO2, concentrationN2O,
+            gasCheckStandardQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
+
+    return(out_sub)
+} #gases: ready
 process_DP1.20288.001 = function(d, loginfo){
 
     data_inds = intersect(grep("expanded", d$data$files$name),
@@ -210,7 +285,7 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
         logging::loginfo(msg, logger='neon.module')
 
-        deets = download_sitemonth_details(url)
+        deets = download_sitemonth_details(url) #no longer needed?
         if(is_ms_err(deets) || 'error' %in% names(deets)){
             assign('email_err_msg', TRUE, pos=.GlobalEnv)
             next
@@ -234,7 +309,7 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
 # i=2; j=1; sets=site_sets
 email_err_msg = FALSE
 # for(i in 1:nrow(neonprods)){
-for(i in 4){
+for(i in 7){
 
     outer_loop_err = FALSE
 
