@@ -101,6 +101,11 @@ process_DP1.20093.001 = function(d, loginfo){
         check.size=FALSE)
 
     datasets = names(data_pile)
+    z = data_pile$swc_externalLabDataByAnalyte
+    colnames(z)
+    unique(z$externalLabDataQF)
+    unique(z$sampleCondition)
+    unique(z$shipmentWarmQF)
 
     if('swc_externalLabDataByAnalyte' %in% datasets){
         data_pile$swc_externalLabDataByAnalyte %>%
@@ -233,6 +238,26 @@ process_DP1.20097.001 = function(d, loginfo){
 
     return(out_sub)
 } #gases: ready
+process_DP1.20016.001 = function(d, loginfo){
+
+    thisenv = environment()
+
+    tryCatch({
+        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
+            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
+            package='basic', check.size=FALSE)
+
+        out_sub = select(data_pile$sdg_externalLabData, collectDate,
+            concentrationCH4, concentrationCO2, concentrationN2O,
+            gasCheckStandardQF)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('out_sub', generate_ms_err(), pos=thisenv)
+    })
+
+    return(out_sub)
+} #stage: untouched (verify; wait for bobby?)
 process_DP1.20288.001 = function(d, loginfo){
 
     data_inds = intersect(grep("expanded", d$data$files$name),
@@ -361,6 +386,7 @@ for(i in 7){
 
     }
 
+    gc()
 }
 
 if(email_err_msg){
