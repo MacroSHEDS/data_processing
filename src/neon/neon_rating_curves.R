@@ -1,12 +1,63 @@
 library(tidyverse)
+library(RColorBrewer)
 
-#this produce includes variables needed for generating rating curves.
+#plot uncorrected stage data ####
+# prodcode = 'DP1.20016.001'
+
+ef = list.files('data_acquisition/data/neon/raw/surfaceElev/', full.names=TRUE)
+
+surface_elev = tibble::tibble()
+for(i in length(ef):1){
+    surface_elev = feather::read_feather(ef[i]) %>%
+        mutate(siteID=str_match(ef[i], '([A-Z]{4}).feather$')[,2]) %>%
+        bind_rows(surface_elev)
+}
+
+# sum(is.na(surface_elev$surfacewaterElevMean)) / nrow(surface_elev)
+
+# data_pile = neonUtilities::loadByProduct(prodcode,
+#     site='ARIK', package='basic', check.size=FALSE, avg=5)
+# saveRDS(data_pile, 'data_acquisition/data/neon/z_ARIK_temp.rds')
+# data_pile = readRDS('data_acquisition/data/neon/z_ARIK_temp.rds')
+# unique(data_pile$EOS_5_min$horizontalPosition)
+
+sites = unique(surface_elev$siteID)
+par(mfrow=c(3,3))
+cols = brewer.pal(6, 'Paired')
+for(s in sites[1:3]){
+
+    site_sub = filter(surface_elev, siteID == s) %>%
+        arrange(startDateTime)
+
+    if(length(unique(site_sub$verticalPosition)) > 1) stop('vert pos change')
+
+    hpos = unique(site_sub$horizontalPosition)
+    ylims = range(site_sub$surfacewaterElevMean, na.rm=TRUE)
+    for(i in 1:length(hpos)){
+
+        pos_sub = filter(site_sub, horizontalPosition == hpos[i])
+
+        if(i == 1){
+            plot(pos_sub$startDateTime, pos_sub$surfacewaterElevMean,
+                main=s, type='p', col=cols[i], pch='.', ylim=ylims)
+        } else {
+            points(pos_sub$startDateTime, pos_sub$surfacewaterElevMean,
+                col=cols[i], pch='.')
+        }
+    }
+}
+
+#make rating curves ####
+
+#this product includes variables needed for generating rating curves.
 #it also includes velocity, width, etc.
 prodcode = 'DP1.20048.001'
 
-data_pile = neonUtilities::loadByProduct(prodcode,
-    site='all', startdate=NA, enddate=NA,
-    package='basic', check.size=TRUE)
+# data_pile = neonUtilities::loadByProduct(prodcode,
+#     site='all', startdate=NA, enddate=NA,
+#     package='basic', check.size=TRUE)
+# saveRDS(data_pile, 'data_acquisition/data/neon/zq_data_temp.rds')
+data_pile = readRDS('data_acquisition/data/neon/zq_data_temp.rds')
 
 # readr::write_lines(data_pile$readme_20048$X1, '/tmp/neon_readme.txt')
 
@@ -49,7 +100,9 @@ for(i in 1:length(sites)){
     zqsub = filter(zq, siteID == site)
     Z = zqsub$streamStage
     Q = zqsub$totalDischarge
-    mod = try(nls(Q ~ (a * Z^b), start=list(a=1, b=1)), silent=TRUE)
+    mod = nls(Q ~ (a * exp(b * Z)), start=list(a=0.01, b=1)) #exp
+    # mod = nls(Q ~ (a * Z^b), start=list(a=1, b=1)) #power
+
 
     if(i == 25) {
         plot(Z, log(Q), main='', las=1, pch=20, col=color, cex=2, bty='n',
