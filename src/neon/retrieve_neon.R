@@ -15,6 +15,9 @@ library(neonUtilities)
 #neon data product codes are of this form: DPx.yyyyy.zzz,
 #where x is data level (1=qaqc'd), y is product id, z is revision
 
+#TODO: which products have upstream/downstream distinctions?
+#all sites should be given a suffix
+
 setwd('/home/mike/git/macrosheds/')
 source('data_acquisition/src/helpers.R')
 source('data_acquisition/src/neon/neon_helpers.R')
@@ -126,7 +129,7 @@ process_DP1.20093.001 = function(d, loginfo){
     }
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-    identify which dsets is/are present and mget them into the following list
+    # identify which dsets is/are present and mget them into the following list
     out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
         group_by(collectDate) %>%
         summarise_each(list(~ if(is.numeric(.)){
@@ -141,7 +144,6 @@ process_DP1.20093.001 = function(d, loginfo){
 
     return(out_sub)
 } #chem: need advice
-    # neonUtilities::getAvg(loginfo$prodcode)
 process_DP1.20033.001 = function(d, loginfo){
 
     thisenv = environment()
@@ -245,11 +247,27 @@ process_DP1.20016.001 = function(d, loginfo){
     tryCatch({
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE)
+            package='basic', check.size=FALSE, avg=5)
 
-        out_sub = select(data_pile$sdg_externalLabData, collectDate,
-            concentrationCH4, concentrationCO2, concentrationN2O,
-            gasCheckStandardQF)
+        out_sub = select(data_pile$EOS_5_min, startDateTime,
+            surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
+            horizontalPosition)
+
+        dir.create('data_acquisition/data/neon/raw/sensorpos')
+
+        f = glue('data_acquisition/data/neon/raw/sensorpos/sensorpos_{s}.feather',
+            s=loginfo$site)
+
+        if(file.exists(f)){
+            sens_pos = feather::read_feather(f)
+            sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
+                distinct()
+        } else {
+            sens_pos = data_pile$sensor_positions_20016
+        }
+
+        feather::write_feather(sens_pos, f)
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -257,7 +275,7 @@ process_DP1.20016.001 = function(d, loginfo){
     })
 
     return(out_sub)
-} #stage: untouched (verify; wait for bobby?)
+} #stage: ready
 process_DP1.20288.001 = function(d, loginfo){
 
     data_inds = intersect(grep("expanded", d$data$files$name),
@@ -334,7 +352,7 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
 # i=2; j=1; sets=site_sets
 email_err_msg = FALSE
 # for(i in 1:nrow(neonprods)){
-for(i in 7){
+for(i in 3){
 
     outer_loop_err = FALSE
 
@@ -380,8 +398,11 @@ for(i in 7){
         })
         if(outer_loop_err) next
 
+        dir.create(glue('data_acquisition/data/neon/raw/{p}',
+            p=neonprods$prod[i]), showWarnings=FALSE)
+
         write_feather(site_dset,
-            glue('data_acquisition/data/neon/raw/{p}_{id}_{site}.feather',
+            glue('data_acquisition/data/neon/raw/{p}/{p}_{id}_{site}.feather',
             p=neonprods$prod[i], id=prodID, site=curr_site))
 
     }
