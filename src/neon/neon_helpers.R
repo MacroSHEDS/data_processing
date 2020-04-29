@@ -80,7 +80,8 @@ download_sitemonth_details = function(geturl){
     return(d)
 }
 
-determine_upstream_downstream = function(d_, data_inds_, loginfo_){
+#obsolete now that neonUtilities package is working
+determine_upstream_downstream_api = function(d_, data_inds_, loginfo_){
 
     prodcode = loginfo_$prodcode
     site = loginfo_$site
@@ -103,4 +104,19 @@ determine_upstream_downstream = function(d_, data_inds_, loginfo_){
     site_with_suffixes = paste0(site, updown_suffixes[updown_order])
 
     return(site_with_suffixes)
+}
+
+determine_upstream_downstream = function(d_){
+
+    updown = substr(d_$horizontalPosition, 3, 3)
+    updown[updown == '1'] = 'u'
+    updown[updown == '2'] = 'd'
+    updown[updown == '0'] = 'b'
+
+    if(any(! updown %in% c('u', 'd', 'b'))){
+        # return(generate_ms_err())
+        stop('upstream/downstream indicator error')
+    }
+
+    return(updown)
 }
