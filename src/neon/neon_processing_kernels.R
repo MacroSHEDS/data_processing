@@ -3,17 +3,16 @@ process_0_DP1.20093.001 = function(loginfo){
     thisenv = environment()
 
     tryCatch({
+
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
             package='basic', check.size=FALSE)
         # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
         out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-            # filter(qa filtering here) %>%
-            # convert_units_here() %>%
+            mutate(site_name=loginfo$site) %>%
             select(collectDate, analyte, analyteConcentration, analyteUnits,
                 shipmentWarmQF, externalLabDataQF, sampleCondition)
-            # spread()
 
         # if('swc_externalLabData' %in% datasets){
         #     data_pile$swc_externalLabData %>%
@@ -24,6 +23,7 @@ process_0_DP1.20093.001 = function(loginfo){
         #             starts_with('dissolved'), uvAbsorbance250, uvAbsorbance284,
         #             shipmentWarmQF, externalLabDataQF)
         # }
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -32,18 +32,23 @@ process_0_DP1.20093.001 = function(loginfo){
 
     return(out_sub)
 
-} #chem: fix updown
+} #chem: ready (grab interval?)
 process_0_DP1.20033.001 = function(loginfo){
 
     thisenv = environment()
 
     tryCatch({
+
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
             package='basic', check.size=FALSE)
 
-        out_sub = select(data_pile$NSW_15_minute,
-                startDateTime, surfWaterNitrateMean, finalQF)
+        updown = determine_upstream_downstream(data_pile$NSW_15_minute)
+
+        out_sub = data_pile$NSW_15_minute %>%
+            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -51,18 +56,23 @@ process_0_DP1.20033.001 = function(loginfo){
     })
 
     return(out_sub)
-} #nitrate: fix updown
+} #nitrate: ready
 process_0_DP1.20042.001 = function(loginfo){
 
     thisenv = environment()
 
     tryCatch({
+
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
             package='basic', check.size=FALSE, avg=5)
 
-        out_sub = select(data_pile$PARWS_5min,
-            startDateTime, PARMean, PARFinalQF)
+        updown = determine_upstream_downstream(data_pile$PARWS_5min)
+
+        out_sub = data_pile$PARWS_5min %>%
+            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            select(site_name, startDateTime, PARMean, PARFinalQF)
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -70,18 +80,23 @@ process_0_DP1.20042.001 = function(loginfo){
     })
 
     return(out_sub)
-} #par: fix updown (interval?)
+} #par: ready (interval?)
 process_0_DP1.20053.001 = function(loginfo){
 
     thisenv = environment()
 
     tryCatch({
+
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
             package='basic', check.size=FALSE, avg=5)
 
-        out_sub = select(data_pile$TSW_5min,
-                startDateTime, surfWaterTempMean, finalQF)
+        updown = determine_upstream_downstream(data_pile$TSW_5min)
+
+        out_sub = data_pile$TSW_5min %>%
+            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            select(site_name, startDateTime, surfWaterTempMean, finalQF)
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -89,7 +104,7 @@ process_0_DP1.20053.001 = function(loginfo){
     })
 
     return(out_sub)
-} #water temp: fix updown
+} #water temp: ready
 process_0_DP1.00004.001 = function(loginfo){
 
     thisenv = environment()
@@ -119,16 +134,23 @@ process_0_DP1.20097.001 = function(loginfo){
     thisenv = environment()
 
     tryCatch({
+
         data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
             site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
             package='basic', check.size=FALSE)
 
-        # updown = determine_upstream_downstream(data_pile$waq_instantaneous)
-        #     mutate(site_name=paste0(loginfo$site, updown)) %>%
+        if('sdg_externalLabData' %in% names(data_pile)){
 
-        out_sub = select(data_pile$sdg_externalLabData, collectDate,
-            concentrationCH4, concentrationCO2, concentrationN2O,
-            gasCheckStandardQF)
+            d = data_pile$sdg_externalLabData
+
+            out_sub = d %>%
+                mutate(site_name=loginfo$site) %>%
+                select(site_name, collectDate, concentrationCH4, concentrationCO2,
+                    concentrationN2O, gasCheckStandardQF)
+        } else {
+            out_sub = generate_ms_exception('external lab gas analysis missing')
+        }
+
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
@@ -136,7 +158,7 @@ process_0_DP1.20097.001 = function(loginfo){
     })
 
     return(out_sub)
-} #gases: fix updown
+} #gases: ready (grab interval?)
 process_0_DP1.20016.001 = function(loginfo){
 
     thisenv = environment()
@@ -207,8 +229,23 @@ process_0_DP1.20288.001 = function(loginfo){
     return(out_sub)
 
 } #waterqual: ready
+process_0_ = function(loginfo){
+
+} #precip: not started
+process_0_ = function(loginfo){
+
+} #precip chem: not started
 
 process_1_DP1.20093.001 = function(loginfo){
+
+
+    out_sub = data_pile$swc_externalLabDataByAnalyte %>%
+        mutate(site_name=paste0(loginfo$site, updown)) %>%
+        # filter(qa filtering here) %>%
+        # convert_units_here() %>%
+        select(collectDate, analyte, analyteConcentration, analyteUnits,
+            shipmentWarmQF, externalLabDataQF, sampleCondition)
+    # spread()
 
     # # identify which dsets is/are present and mget them into the following list
     # out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
