@@ -108,7 +108,7 @@ email_err = function(msg, addr, pw){
 
 }
 
-get_data_tracker_UNNEEDED = function(domain){
+get_data_tracker = function(domain){
 
     #domain is a macrosheds domain string
 
@@ -121,7 +121,7 @@ get_data_tracker_UNNEEDED = function(domain){
     return(tracker_data)
 }
 
-get_data_tracker_LIST = function(domain, category, level){
+get_data_tracker_OBSOLETE = function(domain, category, level){
 
     #OBSOLETE
 
@@ -167,7 +167,7 @@ update_data_tracker_dates = function(new_dates, loginfo_, domain){
             d=domain, l=processing_level, c=category))
 }
 
-update_data_tracker_dates_LIST = function(new_dates, loginfo_, domain, category,
+update_data_tracker_dates_OBSOLETE = function(new_dates, loginfo_, domain, category,
     level){
 
     #OBSOLETE
@@ -192,4 +192,21 @@ update_data_tracker_dates_LIST = function(new_dates, loginfo_, domain, category,
     readr::write_file(jsonlite::toJSON(held_data),
         glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category))
+}
+
+make_tracker_skeleton = function(retrieval_chunks){
+
+    #retrieval_chunks is a vector of identifiers for subsets (chunks) of
+    #the overall dataset to be retrieved, e.g. sitemonths for NEON
+
+    munge_derive_skeleton = list(status='pending', mtime='1900-01-01')
+
+    tracker_skeleton = list(
+        retrieve=data.frame(
+            component=retrieval_chunks, mtime='1900-01-01',
+            held_version='-1', status='pending'),
+        munge=munge_derive_skeleton,
+        derive=munge_derive_skeleton)
+
+    return(tracker_skeleton)
 }
