@@ -1,17 +1,3 @@
-update_held_data = function(new_dates, loginfo_){
-
-    prodcode = loginfo_$prodcode
-    site = loginfo_$site
-
-    held_dates = held_data[[prodcode]][[site]]
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]] = append(held_dates, new_dates)
-    assign('held_data', held_data_, pos=.GlobalEnv)
-
-    readr::write_file(jsonlite::toJSON(held_data),
-        'data_acquisition/data/neon/held_data.json')
-}
-
 resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     from_api=FALSE, loginfo_){
 
@@ -109,11 +95,11 @@ determine_upstream_downstream_api = function(d_, data_inds_, loginfo_){
 determine_upstream_downstream = function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
-    updown[updown == '1'] = 'u'
-    updown[updown == '2'] = 'd'
-    updown[updown == '0'] = 'b'
+    updown[updown == '1'] = '-up'
+    updown[updown %in% c('0', '2')] = ''
+    # updown[updown == '0'] = 'b'
 
-    if(any(! updown %in% c('u', 'd', 'b'))){
+    if(any(! updown %in% c('-up', ''))){
         # return(generate_ms_err())
         stop('upstream/downstream indicator error')
     }

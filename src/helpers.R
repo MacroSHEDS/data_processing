@@ -57,10 +57,24 @@ clear_from_mem = function(...){
     gc()
 }
 
-generate_ms_err = function(){
-    errobj = 1
+generate_ms_err = function(text=1){
+    errobj = text
     class(errobj) = 'ms_err'
     return(errobj)
+}
+
+generate_ms_exception = function(text=1){
+    excobj = text
+    class(excobj) = 'ms_exception'
+    return(excobj)
+}
+
+is_ms_err = function(x){
+    return('ms_err' %in% class(x))
+}
+
+is_ms_exception = function(x){
+    return('ms_exception' %in% class(x))
 }
 
 # msg='neon data acquisition error. check the logs.'
@@ -87,14 +101,53 @@ email_err = function(msg, addr, pw){
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
         logging::logerr(msg, logger='neon.module')
-        return('fail')
+        return('email fail')
     } else {
-        return('success')
+        return('email success')
     }
 
 }
 
-is_ms_err = function(x){
-    return('ms_err' %in% class(x))
+get_data_tracker = function(domain, category, level){
+
+    #domain is a macrosheds domain string
+    #category is one of 'held', 'problem', 'blacklist'
+    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
+
+    level = as.character(level)
+    processing_level = switch(level, '0'='0_retrieval_trackers',
+        '1'='1_munge_trackers', '2'='2_derive_trackers')
+
+    tracker_data = try(jsonlite::fromJSON(readr::read_file(
+        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+            d=domain, l=processing_level, c=category)
+    )), silent=TRUE)
+
+    if('try-error' %in% class(tracker_data)) tracker_data = list()
+
+    return(tracker_data)
 }
 
+update_data_tracker_dates = function(new_dates, loginfo_, domain, category, level){
+
+    #new_dates is a vector of year-months, e.g. '2019-12'
+    #domain is a macrosheds domain string
+    #category is one of 'held', 'problem', 'blacklist'
+    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
+
+    level = as.character(level)
+
+    prodcode = loginfo_$prodcode
+    site = loginfo_$site
+    processing_level = switch(level, '0'='0_retrieval_trackers',
+        '1'='1_munge_trackers', '2'='2_derive_trackers')
+
+    held_dates = held_data[[prodcode]][[site]]$months
+    held_data_ = held_data
+    held_data_[[prodcode]][[site]]$months = append(held_dates, new_dates)
+    assign('held_data', held_data_, pos=.GlobalEnv)
+
+    readr::write_file(jsonlite::toJSON(held_data),
+        glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+            d=domain, l=processing_level, c=category))
+}

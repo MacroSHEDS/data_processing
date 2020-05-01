@@ -1,20 +1,20 @@
-library(httr)
-library(jsonlite)
-library(tidyr)
-library(plyr)
-library(data.table)
-library(dtplyr)
+# library(httr)
+# library(jsonlite)
+# library(tidyr)
+# library(plyr)
+# library(data.table)
+# library(dtplyr)
 library(tidyverse)
 # library(lubridate)
 library(feather)
 library(glue)
 library(logging)
 library(emayili)
-library(neonUtilities)
+# library(neonUtilities)
 
 #note: see neon_notes.txt
 
-#todo: build data blacklist (to minimize email error notifications)
+#todo:
 
 setwd('/home/mike/git/macrosheds/')
 source('data_acquisition/src/helpers.R')
@@ -24,8 +24,8 @@ source('data_acquisition/src/neon/neon_processing_kernels.R')
 domain = 'neon'
 
 logging::basicConfig()
-logging::addHandler(logging::writeToFile, logger=domain,
-    file=glue::glue('data_acquisition/logs/{d}.log', d=domain))
+logging::addHandler(logging::writeToFile, logger='neon',
+    file='data_acquisition/logs/neon.log')
 # logReset()
 
 conf = jsonlite::fromJSON('data_acquisition/config.json')
@@ -33,12 +33,12 @@ conf = jsonlite::fromJSON('data_acquisition/config.json')
 neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')
 neonprods = filter(neonprods, status == 'ready')
 
-held_data = get_data_tracker(domain=domain, category='held', level=0)
-problem_data = get_data_tracker(domain=domain, category='problem', level=0)
-blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=0)
+held_data = get_data_tracker(domain=domain, category='held', level=1)
+problem_data = get_data_tracker(domain=domain, category='problem', level=1)
+blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=1)
 
 # sets = site_sets; held=held_data; i=1
-get_neon_data = function(sets, prodcode, silent=TRUE){
+munge_neon_data = function(sets, prodcode, silent=TRUE){
 
     processing_func = get(paste0('process_0_', prodcode))
 
@@ -68,19 +68,17 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
 
         if(is_ms_exception(out_sub)){
             # update_blacklist_data(new_dates=date, loginfo)
-            update_data_tracker_dates(date, loginfo, domain, category='problem',
-                level=0)
+            update_problem_data(new_dates=date, loginfo)
             next
         } else if(is_ms_err(out_sub)){
-            update_data_tracker_dates(date, loginfo, domain, category='problem',
-                level=0)
+            update_problem_data(new_dates=date, loginfo)
             assign('email_err_msg', TRUE, pos=.GlobalEnv)
             next
         }
 
         out = bind_rows(out, out_sub)
         # successes = append(successes, date)
-        update_data_tracker_dates(date, loginfo, domain, category='held', level=0)
+        update_held_data(new_dates=date, loginfo)
     }
 
     return(out)
@@ -102,6 +100,16 @@ for(i in 1:nrow(neonprods)){
         blacklist_data[[prodcode]] = list()
     }
 
+    prodfiles = list.files(glue::glue('data_acquisition/data/{d}/raw/{p}',
+        d=domain, p=neonprods$prod[i]), full.names=TRUE)
+
+    for(j in 1:length(prodfiles)){
+        qqq = file.info(prodfiles[j])$ctime
+    }
+
+    #---#
+
+
     tryCatch({
         req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
             prodcode))
@@ -122,27 +130,23 @@ for(i in 1:nrow(neonprods)){
     for(j in 1:length(avail_sites)){
 
         curr_site = avail_sites[j]
-        site_sets = avail_sets[avail_sets[, 2] == curr_site, , drop=FALSE]
+        site_sets = avail_sets[avail_sets[, 2] == curr_site, ]
 
         if(! curr_site %in% names(held_data[[prodcode]])){
-
-            ins = list(months=vector(mode='character'),
-                mtime=as.POSIXct('1900-01-01'))
-
-            held_data[[prodcode]][[curr_site]] = ins
-            problem_data[[prodcode]][[curr_site]] = ins
-            blacklist_data[[prodcode]][[curr_site]] = ins
+            held_data[[prodcode]][[curr_site]] = vector(mode='character')
+            problem_data[[prodcode]][[curr_site]] = vector(mode='character')
+            blacklist_data[[prodcode]][[curr_site]] = vector(mode='character')
         }
 
         #filter already held or ignored sitemonths from site_sets
-        skip_sets = c(held_data[[prodcode]][[curr_site]]$months,
-            problem_data[[prodcode]][[curr_site]]$months,
-            blacklist_data[[prodcode]][[curr_site]]$months)
-        site_sets = site_sets[! site_sets[, 3] %in% skip_sets, , drop=FALSE]
+        skip_sets = c(held_data[[prodcode]][[curr_site]],
+            problem_data[[prodcode]][[curr_site]],
+            blacklist_data[[prodcode]][[curr_site]])
+        site_sets = site_sets[! site_sets[, 3] %in% skip_sets, ]
 
         if(nrow(site_sets) == 0){
             logging::loginfo(glue('Nothing to do for {s} {p}',
-                    s=curr_site, p=prodID),
+                s=curr_site, p=prodID),
                 logger='neon.module')
             next
         }
@@ -159,29 +163,15 @@ for(i in 1:nrow(neonprods)){
         dir.create(glue('data_acquisition/data/{d}/raw/{p}',
             d=domain, p=neonprods$prod[i]), showWarnings=FALSE)
 
-        site_file = glue('data_acquisition/data/{d}/raw/{p}/',
-            '{p}_{id}_{site}.feather',
-            d=domain, p=neonprods$prod[i], id=prodID, site=curr_site)
-
-        write_feather(site_dset, site_file)
-
-        #update modification time for product-site feather files
-        held_data = get_data_tracker(domain=domain, category='held', level=0)
-        held_data[[prodcode]][[curr_site]]$mtime = file.info(site_file)$mtime
-
-        readr::write_file(jsonlite::toJSON(held_data),
-            glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
-                d=domain, l='0_retrieval_trackers', c='held'))
+        write_feather(site_dset,
+            glue('data_acquisition/data/{d}/raw/{p}/{p}_{id}_{site}.feather',
+                d=domain, p=neonprods$prod[i], id=prodID, site=curr_site))
     }
 
     gc()
 }
 
 if(email_err_msg){
-    email_err('neon data acquisition error. check the logs.',
+    email_err('neon data munging error. check the logs.',
         'mjv22@duke.edu', conf$gmail_pw)
 }
-
-# zip('data/neon.zip', list.files('data/neon', recursive=TRUE, full.names=TRUE))
-# out = drive_upload("data/neon.zip",
-#     as_id('https://drive.google.com/drive/folders/0ABfF-JkuRvL5Uk9PVA'))
