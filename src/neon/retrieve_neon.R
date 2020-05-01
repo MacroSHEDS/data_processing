@@ -34,28 +34,29 @@ conf = jsonlite::fromJSON('data_acquisition/config.json')
 neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')
 neonprods = filter(neonprods, status == 'ready')
 
+# tracker = Node$new('neon')
+# tracker$AddChild(prodname_ms)
+# # tracker[[prodname_ms]]$AddChild(curr_site)
+# retrieve_insert = data.frame(month=character(), status=character())
+# retrieve_insert = data.frame(month='2012-04', mtime=as.POSIXct('1900-01-01'),
+#     held_version='1', status='ok')
+# munge_derive_insert = list(mtime=as.POSIXct('1900-01-01'), status='pending')
+# tracker[[prodname_ms]]$AddChild(curr_site, retrieve=retrieve_insert,
+#     munge=munge_derive_insert, derive=munge_derive_insert)
+# zz = jsonlite::toJSON(as.list(tracker))
+# qq = jsonlite::fromJSON(zz)
+# class(qq$chemistry_20093$ARIK$retrieve)
+# qq2 = as.Node(qq)
+# qq2 = qq2$Do(function(n) n=as.data.frame(as.list(n)),
+#     filterFun=function(x) x$name == 'retrieve')
+# as.data.frame(as.list(qq2$chemistry_20093$ARIK$retrieve))
 
-tracker = Node$new('neon')
-tracker$AddChild(prodname_ms)
-# tracker[[prodname_ms]]$AddChild(curr_site)
-retrieve_insert = data.frame(month=character(), status=character())
-retrieve_insert = data.frame(month='2012-04', mtime=as.POSIXct('1900-01-01'),
-    held_version='1', status='ok')
-munge_derive_insert = list(mtime=as.POSIXct('1900-01-01'), status='pending')
-tracker[[prodname_ms]]$AddChild(curr_site, retrieve=retrieve_insert,
-    munge=munge_derive_insert, derive=munge_derive_insert)
-zz = jsonlite::toJSON(as.list(tracker))
-qq = jsonlite::fromJSON(zz)
-class(qq$chemistry_20093$ARIK$retrieve)
-qq2 = as.Node(qq)
-qq2 = qq2$Do(function(n) n=as.data.frame(as.list(n)),
-    filterFun=function(x) x$name == 'retrieve')
-as.data.frame(as.list(qq2$chemistry_20093$ARIK$retrieve))
+held_data = get_data_tracker(domain)
 # held_data = get_data_tracker(domain=domain, category='held', level=0)
 # problem_data = get_data_tracker(domain=domain, category='problem', level=0)
 # blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=0)
 
-# sets = site_sets; held=held_data; i=1
+# sets = site_sets; i=1
 get_neon_data = function(sets, prodcode, silent=TRUE){
 
     processing_func = get(paste0('process_0_', prodcode))
@@ -115,21 +116,30 @@ for(i in 1:nrow(neonprods)){
 # for(i in 3){
 
     outer_loop_err = FALSE
-
-    #get available datasets for this data product
     prodcode = neonprods$prodID[i]
-    prodname_ms = paste0(neonprods$prod[i], '_',
-        strsplit(prodcode, '\\.')[[1]][2])
+    prodname_ms = paste0(neonprods$prod[i], '_', prodcode)
 
-    if(! prodcode %in% names(held_data)){
-        held_data[[prodcode]] = list()
-        problem_data[[prodcode]] = list()
-        blacklist_data[[prodcode]] = list()
+    #get available datasets and newest versions for this data product
+    prodlist = get_neon_product_list()
+    prod_variants = grep(prodcode, prodlist)
+
+    if(length(prod_variants) > 1){
+        email_err('neon has created a v.002 product. investigate!',
+            'mjv22@duke.edu', conf$gmail_pw)
+        stop()
     }
+
+    newest_variant = prodlist[prod_variants] %>%
+        substr(11, 13) %>%
+        as.numeric() %>%
+        which.max()
+    prodcode_full = prodlist[prod_variants[newest_variant]]
+
+    if(! prodname_ms %in% names(held_data)) held_data[[prodname_ms]] = list()
 
     tryCatch({
         req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-            prodcode))
+            prodcode_full))
         txt = httr::content(req, as="text")
         neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
     }, error=function(e){
@@ -149,20 +159,24 @@ for(i in 1:nrow(neonprods)){
         curr_site = avail_sites[j]
         site_sets = avail_sets[avail_sets[, 2] == curr_site, , drop=FALSE]
 
-        if(! curr_site %in% names(held_data[[prodcode]])){
-
-            ins = list(months=vector(mode='character'),
-                mtime=as.POSIXct('1900-01-01'))
-
-            held_data[[prodcode]][[curr_site]] = ins
-            problem_data[[prodcode]][[curr_site]] = ins
-            blacklist_data[[prodcode]][[curr_site]] = ins
+        if(! curr_site %in% names(held_data[[prodname_ms]])){
+            held_data[[prodname_ms]][[curr_site]] =
+                make_tracker_skeleton(retrieval_chunks=site_sets[, 3])
         }
 
+        # #get last modification times of held dataset chunks
+        # held_files = list.files(glue::glue('data_acquisition/data/{d}/raw/{p}/{s}',
+        #     d=domain, p=prodname_ms, s=curr_site), full.names=TRUE)
+        # held_chunks = data.frame(held_chunk=str_match(held_files,
+        #         '([0-9]{4}-[0-9]{2}).feather$')[, 2],
+        #     mtime=file.info(held_files)$mtime)
+
         #filter already held or ignored sitemonths from site_sets
-        skip_sets = c(held_data[[prodcode]][[curr_site]]$months,
-            problem_data[[prodcode]][[curr_site]]$months,
-            blacklist_data[[prodcode]][[curr_site]]$months)
+        retrieval_tracking = held_data[[prodname_ms]][[curr_site]]$retrieve
+        skip_sets = retrieval_tracking %>%
+            filter(status == 'blacklist') %>%
+            pull(
+
         site_sets = site_sets[! site_sets[, 3] %in% skip_sets, , drop=FALSE]
 
         if(nrow(site_sets) == 0){
@@ -174,7 +188,7 @@ for(i in 1:nrow(neonprods)){
         # site_sets = site_sets[1:1, , drop=FALSE]
 
         tryCatch({
-            site_dset = get_neon_data(site_sets, prodcode)
+            site_dset = get_neon_data(site_sets, prodcode_full)
         }, error=function(e){
             logging::logerror(e, logger='neon.module')
             email_err_msg <<- outer_loop_err <<- TRUE
@@ -195,7 +209,7 @@ for(i in 1:nrow(neonprods)){
         #not sure why that is, but loading it from file here gets around
         #that issue)
         held_data = get_data_tracker(domain=domain, category='held', level=0)
-        held_data[[prodcode]][[curr_site]]$mtime = file.info(site_file)$mtime
+        held_data[[prodname_ms]][[curr_site]]$mtime = file.info(site_file)$mtime
 
         readr::write_file(jsonlite::toJSON(held_data),
             glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
