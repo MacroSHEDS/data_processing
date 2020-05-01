@@ -106,3 +106,13 @@ determine_upstream_downstream = function(d_){
 
     return(updown)
 }
+
+get_neon_product_list = function(){
+
+    req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/"))
+    txt = httr::content(req, as="text")
+    data_pile = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
+    prodlist = data_pile$data$productCode
+
+    return(prodlist)
+}
