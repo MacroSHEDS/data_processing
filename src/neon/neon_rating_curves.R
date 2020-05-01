@@ -41,8 +41,6 @@ zq = zq1 %>%
 
 sites = unique(zq$siteID)
 
-
-
 #prepare surface elev data ####
 
 # prodcode = 'DP1.20016.001'
@@ -339,8 +337,9 @@ dev.off()
 xlims = range(zq$streamStage[zq$siteID != 'FLNT'], na.rm=TRUE)
 ylims = range(log(zq$totalDischarge[zq$siteID != 'FLNT']), na.rm=TRUE)
 
-# par(mfrow=c(3, 3), oma=c(4, 4, 0, 0), mar=c(0, 0, 3, 0))
-# for(i in 1:length(sites[1:9])){
+png('plots/neon_rating_curves.png', height=10, width=10, units='in',
+    type='cairo', res=300)
+
 par(mfrow=c(5, 5), oma=c(5, 6, 0, 0), mar=c(0, 0, 3, 0))
 color = alpha('steelblue4', alpha=0.3)
 curveseq = seq(-1, 5, 0.01)
@@ -352,8 +351,10 @@ for(i in 1:length(sites)){
     zqsub = filter(zq, siteID == site)
     Z = zqsub$streamStage
     Q = zqsub$totalDischarge
-    mod = nls(Q ~ (a * exp(b * Z)), start=list(a=0.01, b=1)) #exp
-    # mod = nls(Q ~ (a * Z^b), start=list(a=1, b=1)) #power
+    mod = try(nls(Q ~ (a * exp(b * Z)), start=list(a=0.01, b=1))) #exp
+    if('try-error' %in% class(mod)){
+        mod = nls(Q ~ (a * Z^b), start=list(a=1, b=1)) #power
+    }
 
 
     if(i == 25) {
@@ -380,4 +381,4 @@ for(i in 1:length(sites)){
     mtext('Log Discharge (cms)', 2, outer=TRUE, line=4)
 }
 
-# dev.off()
+dev.off()
