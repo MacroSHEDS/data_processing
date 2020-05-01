@@ -11,6 +11,7 @@ library(glue)
 library(logging)
 library(emayili)
 library(neonUtilities)
+library(data.tree)
 
 #note: see neon_notes.txt
 
@@ -33,9 +34,26 @@ conf = jsonlite::fromJSON('data_acquisition/config.json')
 neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')
 neonprods = filter(neonprods, status == 'ready')
 
-held_data = get_data_tracker(domain=domain, category='held', level=0)
-problem_data = get_data_tracker(domain=domain, category='problem', level=0)
-blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=0)
+
+tracker = Node$new('neon')
+tracker$AddChild(prodname_ms)
+# tracker[[prodname_ms]]$AddChild(curr_site)
+retrieve_insert = data.frame(month=character(), status=character())
+retrieve_insert = data.frame(month='2012-04', mtime=as.POSIXct('1900-01-01'),
+    held_version='1', status='ok')
+munge_derive_insert = list(mtime=as.POSIXct('1900-01-01'), status='pending')
+tracker[[prodname_ms]]$AddChild(curr_site, retrieve=retrieve_insert,
+    munge=munge_derive_insert, derive=munge_derive_insert)
+zz = jsonlite::toJSON(as.list(tracker))
+qq = jsonlite::fromJSON(zz)
+class(qq$chemistry_20093$ARIK$retrieve)
+qq2 = as.Node(qq)
+qq2 = qq2$Do(function(n) n=as.data.frame(as.list(n)),
+    filterFun=function(x) x$name == 'retrieve')
+as.data.frame(as.list(qq2$chemistry_20093$ARIK$retrieve))
+# held_data = get_data_tracker(domain=domain, category='held', level=0)
+# problem_data = get_data_tracker(domain=domain, category='problem', level=0)
+# blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=0)
 
 # sets = site_sets; held=held_data; i=1
 get_neon_data = function(sets, prodcode, silent=TRUE){
@@ -64,7 +82,7 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
         #     next
         # }
 
-        out_sub = do.call(processing_func, args=list(loginfo=loginfo))
+        out_sitemonth = do.call(processing_func, args=list(loginfo=loginfo))
 
         if(is_ms_exception(out_sub)){
             # update_blacklist_data(new_dates=date, loginfo)
@@ -78,15 +96,20 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
             next
         }
 
-        out = bind_rows(out, out_sub)
-        # successes = append(successes, date)
+        site_dir = glue::glue('data_acquisition/data/{d}/raw/{p}_{id}/{s}',
+            d=domain, p=neonprods$prod[i], id=prodID, s=site)
+        dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
+
+        sitemonth_file = glue::glue('{sd}/{t}.feather', sd=site_dir, t=date)
+        write_feather(out_sitemonth, sitemonth_file)
+
         update_data_tracker_dates(date, loginfo, domain, category='held', level=0)
     }
 
     return(out)
 }
 
-# i=2; j=1; sets=site_sets
+# i=1; j=1; sets=site_sets
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
 # for(i in 3){
@@ -95,7 +118,9 @@ for(i in 1:nrow(neonprods)){
 
     #get available datasets for this data product
     prodcode = neonprods$prodID[i]
-    prodID = strsplit(prodcode, '\\.')[[1]][2]
+    prodname_ms = paste0(neonprods$prod[i], '_',
+        strsplit(prodcode, '\\.')[[1]][2])
+
     if(! prodcode %in% names(held_data)){
         held_data[[prodcode]] = list()
         problem_data[[prodcode]] = list()
@@ -141,8 +166,8 @@ for(i in 1:nrow(neonprods)){
         site_sets = site_sets[! site_sets[, 3] %in% skip_sets, , drop=FALSE]
 
         if(nrow(site_sets) == 0){
-            logging::loginfo(glue('Nothing to do for {s} {p}',
-                    s=curr_site, p=prodID),
+            logging::loginfo(glue('Nothing to do for {s} {n}',
+                    s=curr_site, n=prodname_ms),
                 logger='neon.module')
             next
         }
@@ -160,12 +185,15 @@ for(i in 1:nrow(neonprods)){
             d=domain, p=neonprods$prod[i]), showWarnings=FALSE)
 
         site_file = glue('data_acquisition/data/{d}/raw/{p}/',
-            '{p}_{id}_{site}.feather',
-            d=domain, p=neonprods$prod[i], id=prodID, site=curr_site)
+            '{p}_{n}_{site}.feather',
+            d=domain, p=neonprods$prod[i], n=prodname_ms, site=curr_site)
 
         write_feather(site_dset, site_file)
 
         #update modification time for product-site feather files
+        #(note that held_data in global env may contain failed dates.
+        #not sure why that is, but loading it from file here gets around
+        #that issue)
         held_data = get_data_tracker(domain=domain, category='held', level=0)
         held_data[[prodcode]][[curr_site]]$mtime = file.info(site_file)$mtime
 
