@@ -84,7 +84,7 @@ munge_neon_data = function(sets, prodcode, silent=TRUE){
     return(out)
 }
 
-# i=2; j=1; sets=site_sets
+# i=1; j=1; sets=site_sets
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
 # for(i in 3){
@@ -104,7 +104,11 @@ for(i in 1:nrow(neonprods)){
         d=domain, p=neonprods$prod[i]), full.names=TRUE)
 
     for(j in 1:length(prodfiles)){
-        qqq = file.info(prodfiles[j])$ctime
+        str_match(prodfiles[j], '[A-Z]{4}[down???]')
+        held_data0 = get_data_tracker(domain=domain, category='held', level=0)
+        held_data0[[neonprods$prodID[i]]]
+        qqq = file.info(prodfiles[j])$mtime
+
     }
 
     #---#
