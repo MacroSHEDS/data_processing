@@ -66,8 +66,8 @@ download_sitemonth_details = function(geturl){
     return(d)
 }
 
-#obsolete now that neonUtilities package is working
 determine_upstream_downstream_api = function(d_, data_inds_, loginfo_){
+    #obsolete now that neonUtilities package is working
 
     prodcode = loginfo_$prodcode
     site = loginfo_$site
@@ -107,7 +107,7 @@ determine_upstream_downstream = function(d_){
     return(updown)
 }
 
-get_neon_product_list = function(){
+get_avail_neon_products = function(){
 
     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/"))
     txt = httr::content(req, as="text")
@@ -115,4 +115,57 @@ get_neon_product_list = function(){
     prodlist = data_pile$data$productCode
 
     return(prodlist)
+}
+
+get_neon_product_specs = function(code){
+
+    prodlist = try(get_avail_neon_products())
+    if('try-error' %in% class(prodlist)){
+        logging::logerror(glue::glue("Can't retrieve NEON product list for {c}",
+            , c=code), logger='neon.module')
+        stop()
+    }
+
+    prod_variant_inds = grep(code, prodlist)
+
+    if(length(prod_variant_inds) > 1){
+        return(generate_ms_err('More than one product variant for this prodcode.'))
+    }
+
+    newest_variant_ind = prodlist[prod_variant_inds] %>%
+        substr(11, 13) %>%
+        as.numeric() %>%
+        which.max()
+
+    prodcode_full = prodlist[prod_variant_inds[newest_variant_ind]]
+    prod_version = strsplit(prodcode_full, '\\.')[[1]][3]
+
+    return(list(prodcode_full=prodcode_full, prod_version=prod_version))
+}
+
+get_avail_neon_product_sets = function(prodcode_full){
+
+    thisenv = environment()
+
+    tryCatch({
+        req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
+            prodcode_full))
+        txt = httr::content(req, as="text")
+        neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        # email_err_msg <<- outer_loop_err <<- TRUE
+        # assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('avail_sets', generate_ms_err(), pos=thisenv)
+    })
+
+    urls = unlist(neondata$data$siteCodes$availableDataUrls)
+
+    avail_sets = stringr::str_match(urls,
+        '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})') %>%
+        as_tibble(.name_repair='unique') %>%
+        rename(url=`...1`, site_name=`...2`, component=`...3`)
+
+    return(avail_sets)
+
 }
