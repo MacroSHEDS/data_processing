@@ -143,7 +143,7 @@ get_data_tracker_OBSOLETE = function(domain, category, level){
     return(tracker_data)
 }
 
-update_data_tracker_dates = function(new_dates, loginfo_, domain){
+update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain){
 
     #new_dates is a vector of year-months, e.g. '2019-12'
     #domain is a macrosheds domain string
@@ -152,8 +152,8 @@ update_data_tracker_dates = function(new_dates, loginfo_, domain){
 
     level = as.character(level)
 
-    prodcode = loginfo_$prodcode
-    site = loginfo_$site
+    prodcode = set_details_$prodcode
+    site = set_details_$site
     processing_level = switch(level, '0'='0_retrieval_trackers',
         '1'='1_munge_trackers', '2'='2_derive_trackers')
 
@@ -167,7 +167,7 @@ update_data_tracker_dates = function(new_dates, loginfo_, domain){
             d=domain, l=processing_level, c=category))
 }
 
-update_data_tracker_dates_OBSOLETE = function(new_dates, loginfo_, domain, category,
+update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain, category,
     level){
 
     #OBSOLETE
@@ -179,8 +179,8 @@ update_data_tracker_dates_OBSOLETE = function(new_dates, loginfo_, domain, categ
 
     level = as.character(level)
 
-    prodcode = loginfo_$prodcode
-    site = loginfo_$site
+    prodcode = set_details_$prodcode
+    site = set_details_$site
     processing_level = switch(level, '0'='0_retrieval_trackers',
         '1'='1_munge_trackers', '2'='2_derive_trackers')
 
@@ -224,28 +224,111 @@ product_is_tracked = function(tracker, prod){
     return(bool)
 }
 
+site_is_tracked = function(tracker, prod, site){
+    bool = site %in% names(tracker[[prod]])
+    return(bool)
+}
+
 track_new_product = function(tracker, prod){
 
     if(prod %in% names(tracker)){
-        stop('This product is already being tracked.')
+        msg = 'This product is already being tracked.'
+        logging::logerror(msg, logger='neon.module')
+        stop(msg)
     }
 
     tracker[[prod]] = list()
     return(tracker)
 }
 
-add_new_site_components = function(tracker, prod, site, avail){
+track_new_site_components = function(tracker, prod, site, avail){
 
-    retrieval_tracking = tracker[[prod]][[site]]$retrieve
+    retrieval_tracker = tracker[[prod]][[site]]$retrieve
 
-    retrieval_tracking = avail %>%
-        filter(! component %in% retrieval_tracking$component) %>%
+    retrieval_tracker = avail %>%
+        filter(! component %in% retrieval_tracker$component) %>%
         select(component) %>%
         mutate(mtime='1900-01-01', held_version='-1', status='pending') %>%
-        bind_rows(retrieval_tracking) %>%
+        bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prod]][[site]]$retrieve = retrieval_tracking
+    tracker[[prod]][[site]]$retrieve = retrieval_tracker
 
     return(tracker)
+}
+
+# tracker=held_data; prod=prodname_ms; site=curr_site; avail=avail_site_sets
+# specs=prod_specs
+# rm(tracker, prod, site, avail, specs)
+# filter_unneeded_sets = function(tracker, prod, site, avail, specs){
+populate_set_details = function(tracker, prod, site, avail, specs){
+
+    retrieval_tracker = tracker[[prod]][[site]]$retrieve
+
+    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
+    rgx_capt = str_match(avail$url, rgx)[, -1]
+
+    retrieval_tracker = avail %>%
+        mutate(
+            avail_version = as.numeric(rgx_capt[, 3]),
+            prodcode_full = rgx_capt[, 1],
+            prodcode_id = rgx_capt[, 2],
+            prodname_ms = prod) %>%
+        full_join(retrieval_tracker, by='component') %>%
+        # filter(status != 'blacklist' | is.na(status)) %>%
+        mutate(
+            held_version = as.numeric(held_version),
+            needed = avail_version - held_version > 0)
+        # filter(needed == TRUE | is.na(needed))
+
+    if(any(is.na(retrieval_tracker$needed))){
+        msg = paste0('Must run `track_new_site_components` before ',
+            'running `populate_set_details`')
+        logging::logerror(msg, logger='neon.module')
+        stop(msg)
+    }
+
+    return(retrieval_tracker)
+}
+
+filter_unneeded_sets = function(tracker_with_details){
+
+
+    new_sets = tracker_with_details %>%
+        filter(status != 'blacklist' | is.na(status)) %>%
+        filter(needed == TRUE | is.na(needed))
+
+    if(any(is.na(new_sets$needed))){
+        msg = paste0('Must run `track_new_site_components` and ',
+            '`populate_set_details` before running `populate_set_details`')
+        logging::logerror(msg, logger='neon.module')
+        stop(msg)
+    }
+
+    return(new_sets)
+}
+
+# set_details=s
+update_data_tracker_r = function(domain, tracker, set_details, new_status){
+
+    #this updates the retrieve section of a data tracker in memory and on disk.
+    #see update_data_tracker_m for the munge section and update_data_tracker_d
+    #for the derive section
+
+    rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
+
+    set_ind = which(rt$component == set_details$component)
+
+    if(new_status %in% c('pending', 'ok')){
+        rt$held_version[set_ind] = as.character(set_details$avail_version)
+    }
+    rt$status[set_ind] = new_status
+    rt$mtime[set_ind] = as.character(Sys.time())
+
+    tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
+
+    readr::write_file(jsonlite::toJSON(tracker),
+        glue::glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+
+    assign('held_data', tracker, pos=.GlobalEnv)
 }
