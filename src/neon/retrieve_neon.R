@@ -13,6 +13,8 @@ library(emayili)
 library(neonUtilities)
 library(data.tree)
 
+sm = suppressMessages
+
 #note: see neon_notes.txt
 
 #todo: build data blacklist (to minimize email error notifications)
@@ -110,58 +112,43 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
     return(out)
 }
 
-# i=1; j=1; sets=site_sets
+# i=1; j=1
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
 # for(i in 3){
 
-    outer_loop_err = FALSE
+    outer_loop_err = FALSE #should be able to rework the end of this loop so this line isnt needed
     prodcode = neonprods$prodID[i]
     prodname_ms = paste0(neonprods$prod[i], '_', prodcode)
-
-    #get available datasets and newest versions for this data product
-    prodlist = get_neon_product_list()
-    prod_variants = grep(prodcode, prodlist)
-
-    if(length(prod_variants) > 1){
-        email_err('neon has created a v.002 product. investigate!',
+    prod_specs = get_neon_product_specs(prodcode)
+    if(is_ms_err(prod_specs)){
+        email_err('NEON may have created a v.002 product. investigate!',
             'mjv22@duke.edu', conf$gmail_pw)
-        stop()
     }
 
-    newest_variant = prodlist[prod_variants] %>%
-        substr(11, 13) %>%
-        as.numeric() %>%
-        which.max()
-    prodcode_full = prodlist[prod_variants[newest_variant]]
+    # if(! prodname_ms %in% names(held_data)) held_data[[prodname_ms]] = list()
+    if(! product_is_tracked(held_data, prodname_ms)){
+        held_data = track_new_product(held_data, prodname_ms)
+    }
 
-    if(! prodname_ms %in% names(held_data)) held_data[[prodname_ms]] = list()
-
-    tryCatch({
-        req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-            prodcode_full))
-        txt = httr::content(req, as="text")
-        neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
-    }, error=function(e){
-        logging::logerror(e, logger='neon.module')
-        email_err_msg <<- outer_loop_err <<- TRUE
-    })
-    if(outer_loop_err) next
-
-    #get available urls, sites, and dates
-    urls = unlist(neondata$data$siteCodes$availableDataUrls)
-    avail_sets = stringr::str_match(urls, '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})')
+    avail_sets = sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
+    if(is_ms_err(avail_sets)){
+        email_err_msg = TRUE
+        next
+    }
 
     #retrieve data by site; log acquisitions (and revisions, once neon actually has them)
-    avail_sites = unique(avail_sets[, 2])
+    #REVISIT THIS COMMENT
+    avail_sites = unique(avail_sets$site_name)
     for(j in 1:length(avail_sites)){
 
         curr_site = avail_sites[j]
-        site_sets = avail_sets[avail_sets[, 2] == curr_site, , drop=FALSE]
+        avail_site_sets = avail_sets[avail_sets$site_name == curr_site, ,
+            drop=FALSE]
 
         if(! curr_site %in% names(held_data[[prodname_ms]])){
-            held_data[[prodname_ms]][[curr_site]] =
-                make_tracker_skeleton(retrieval_chunks=site_sets[, 3])
+            held_data = insert_site_skeleton(held_data, prodname_ms, curr_site,
+                site_components=avail_site_sets$component)
         }
 
         # #get last modification times of held dataset chunks
@@ -171,24 +158,38 @@ for(i in 1:nrow(neonprods)){
         #         '([0-9]{4}-[0-9]{2}).feather$')[, 2],
         #     mtime=file.info(held_files)$mtime)
 
-        #filter already held or ignored sitemonths from site_sets
-        retrieval_tracking = held_data[[prodname_ms]][[curr_site]]$retrieve
+        held_data = add_new_site_components(held_data, prodname_ms, curr_site,
+            avail_site_sets)
+
+        #filter already held or ignored sitemonths from avail_site_sets
+        # new_sets = avail_site_sets$component[! avail_site_sets$component %in%
+        #         retrieval_tracking$component]
         skip_sets = retrieval_tracking %>%
-            filter(status == 'blacklist') %>%
-            pull(
+            filter(status != 'blacklist') %>%
+            pull()
 
-        site_sets = site_sets[! site_sets[, 3] %in% skip_sets, , drop=FALSE]
+        prodfiles = list.files(glue::glue('data_acquisition/data/{d}/raw/{p}',
+            d=domain, p=prodname_ms), full.names=TRUE)
+        for(j in 1:length(prodfiles)){
+            str_match(prodfiles[j], '[A-Z]{4}[down???]')
+            held_data0 = get_data_tracker(domain=domain, category='held', level=0)
+            held_data0[[neonprods$prodID[i]]]
+            qqq = file.info(prodfiles[j])$mtime
+        }
 
-        if(nrow(site_sets) == 0){
+
+        avail_site_sets = avail_site_sets[! avail_site_sets[, 3] %in% skip_sets, , drop=FALSE]
+
+        if(nrow(avail_site_sets) == 0){
             logging::loginfo(glue('Nothing to do for {s} {n}',
                     s=curr_site, n=prodname_ms),
                 logger='neon.module')
             next
         }
-        # site_sets = site_sets[1:1, , drop=FALSE]
+        # avail_site_sets = avail_site_sets[1:1, , drop=FALSE]
 
         tryCatch({
-            site_dset = get_neon_data(site_sets, prodcode_full)
+            site_dset = get_neon_data(avail_site_sets, prod_specs$prodcode_full)
         }, error=function(e){
             logging::logerror(e, logger='neon.module')
             email_err_msg <<- outer_loop_err <<- TRUE
