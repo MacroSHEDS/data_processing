@@ -58,10 +58,10 @@ held_data = get_data_tracker(domain)
 # problem_data = get_data_tracker(domain=domain, category='problem', level=0)
 # blacklist_data = get_data_tracker(domain=domain, category='blacklist', level=0)
 
-# sets = site_sets; i=1
-get_neon_data = function(sets, prodcode, silent=TRUE){
+# sets=new_sets; i=1; tracker=held_data
+get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
-    processing_func = get(paste0('process_0_', prodcode))
+    # processing_func = get(paste0('process_0_', prodcode))
 
     out = tibble()
     # successes = failures = blacklist = c()
@@ -69,14 +69,16 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
 
-        url = sets[i, 1]
-        site = sets[i, 2]
-        date = sets[i, 3]
+        s = sets[i, ]
+        # url = sets[i, 1]
+        # site = sets[i, 2]
+        # date = sets[i, 3]
 
-        loginfo = list(site=site, date=date, prodcode=prodcode, url=url)
+        # loginfo = list(site=s$site_name, date=s$component, prodcode=s$prodcode_full,
+        #     url=url)
 
-        msg = glue('Processing site ',
-            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
+        msg = glue('Processing {site}, {prod}, {month}',
+            site=s$site_name, prod=s$prodname_ms, month=s$component)
         logging::loginfo(msg, logger='neon.module')
 
         # deets = download_sitemonth_details(url) #obsolete since neonUtilities
@@ -85,28 +87,26 @@ get_neon_data = function(sets, prodcode, silent=TRUE){
         #     next
         # }
 
-        out_sitemonth = do.call(processing_func, args=list(loginfo=loginfo))
+        out_sitemonth = do.call(processing_func, args=list(set_details=s))
 
-        if(is_ms_exception(out_sub)){
-            # update_blacklist_data(new_dates=date, loginfo)
-            update_data_tracker_dates(date, loginfo, domain, category='problem',
-                level=0)
+        if(is_ms_exception(out_sitemonth)){
+            update_data_tracker_r(domain, tracker, s, status='error')
             next
-        } else if(is_ms_err(out_sub)){
-            update_data_tracker_dates(date, loginfo, domain, category='problem',
-                level=0)
+        } else if(is_ms_err(out_sitemonth)){
+            update_data_tracker_r(domain, tracker, s, status='error')
             assign('email_err_msg', TRUE, pos=.GlobalEnv)
             next
         }
 
-        site_dir = glue::glue('data_acquisition/data/{d}/raw/{p}_{id}/{s}',
-            d=domain, p=neonprods$prod[i], id=prodID, s=site)
+        site_dir = glue::glue('data_acquisition/data/{d}/raw/{p}/{s}',
+            d=domain, p=s$prodname_ms, s=s$site_name)
         dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
 
-        sitemonth_file = glue::glue('{sd}/{t}.feather', sd=site_dir, t=date)
+        sitemonth_file = glue::glue('{sd}/{t}.feather',
+            sd=site_dir, t=s$component)
         write_feather(out_sitemonth, sitemonth_file)
 
-        update_data_tracker_dates(date, loginfo, domain, category='held', level=0)
+        update_data_tracker_r(domain, tracker, s, status='ok')
     }
 
     return(out)
@@ -126,7 +126,6 @@ for(i in 1:nrow(neonprods)){
             'mjv22@duke.edu', conf$gmail_pw)
     }
 
-    # if(! prodname_ms %in% names(held_data)) held_data[[prodname_ms]] = list()
     if(! product_is_tracked(held_data, prodname_ms)){
         held_data = track_new_product(held_data, prodname_ms)
     }
@@ -146,7 +145,7 @@ for(i in 1:nrow(neonprods)){
         avail_site_sets = avail_sets[avail_sets$site_name == curr_site, ,
             drop=FALSE]
 
-        if(! curr_site %in% names(held_data[[prodname_ms]])){
+        if(! site_is_tracked(held_data, prodname_ms, curr_site)){
             held_data = insert_site_skeleton(held_data, prodname_ms, curr_site,
                 site_components=avail_site_sets$component)
         }
@@ -158,63 +157,56 @@ for(i in 1:nrow(neonprods)){
         #         '([0-9]{4}-[0-9]{2}).feather$')[, 2],
         #     mtime=file.info(held_files)$mtime)
 
-        held_data = add_new_site_components(held_data, prodname_ms, curr_site,
+        held_data = track_new_site_components(held_data, prodname_ms, curr_site,
             avail_site_sets)
+
+        retrieval_details = populate_set_details(held_data, prodname_ms,
+            curr_site, avail_site_sets, prod_specs)
+
+        new_sets = filter_unneeded_sets(retrieval_details)
+
 
         #filter already held or ignored sitemonths from avail_site_sets
         # new_sets = avail_site_sets$component[! avail_site_sets$component %in%
         #         retrieval_tracking$component]
-        skip_sets = retrieval_tracking %>%
-            filter(status != 'blacklist') %>%
-            pull()
+        #
+        # avail_site_sets = avail_site_sets[! avail_site_sets[, 3] %in% skip_sets, , drop=FALSE]
 
-        prodfiles = list.files(glue::glue('data_acquisition/data/{d}/raw/{p}',
-            d=domain, p=prodname_ms), full.names=TRUE)
-        for(j in 1:length(prodfiles)){
-            str_match(prodfiles[j], '[A-Z]{4}[down???]')
-            held_data0 = get_data_tracker(domain=domain, category='held', level=0)
-            held_data0[[neonprods$prodID[i]]]
-            qqq = file.info(prodfiles[j])$mtime
-        }
-
-
-        avail_site_sets = avail_site_sets[! avail_site_sets[, 3] %in% skip_sets, , drop=FALSE]
-
-        if(nrow(avail_site_sets) == 0){
+        if(nrow(new_sets) == 0){
             logging::loginfo(glue('Nothing to do for {s} {n}',
-                    s=curr_site, n=prodname_ms),
-                logger='neon.module')
+                    s=curr_site, n=prodname_ms), logger='neon.module')
             next
         }
         # avail_site_sets = avail_site_sets[1:1, , drop=FALSE]
 
         tryCatch({
-            site_dset = get_neon_data(avail_site_sets, prod_specs$prodcode_full)
+            site_dset = get_neon_data(domain=domain, new_sets, held_data)
+            # site_dset = get_neon_data(avail_site_sets, prod_specs$prodcode_full)
         }, error=function(e){
             logging::logerror(e, logger='neon.module')
             email_err_msg <<- outer_loop_err <<- TRUE
         })
         if(outer_loop_err) next
 
-        dir.create(glue('data_acquisition/data/{d}/raw/{p}',
-            d=domain, p=neonprods$prod[i]), showWarnings=FALSE)
+        # dir.create(glue('data_acquisition/data/{d}/raw/{p}',
+        #     d=domain, p=neonprods$prod[i]), showWarnings=FALSE)
+        #
+        # site_file = glue('data_acquisition/data/{d}/raw/{p}/',
+        #     '{p}_{n}_{site}.feather',
+        #     d=domain, p=neonprods$prod[i], n=prodname_ms, site=curr_site)
+        #
+        # write_feather(site_dset, site_file)
 
-        site_file = glue('data_acquisition/data/{d}/raw/{p}/',
-            '{p}_{n}_{site}.feather',
-            d=domain, p=neonprods$prod[i], n=prodname_ms, site=curr_site)
-
-        write_feather(site_dset, site_file)
-
-        #update modification time for product-site feather files
-        #(note that held_data in global env may contain failed dates.
-        #not sure why that is, but loading it from file here gets around
-        #that issue)
-        held_data = get_data_tracker(domain=domain, category='held', level=0)
-        held_data[[prodname_ms]][[curr_site]]$mtime = file.info(site_file)$mtime
-
-        readr::write_file(jsonlite::toJSON(held_data),
-            glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
-                d=domain, l='0_retrieval_trackers', c='held'))
+        # #update modification time for product-site feather files
+        # #(note that held_data in global env may contain failed dates.
+        # #not sure why that is, but loading it from file here gets around
+        # #that issue)
+        # held_data = get_data_tracker(domain=domain, category='held', level=0)
+        # held_data[[prodname_ms]][[curr_site]]$mtime = file.info(site_file)$mtime
+        #
+        # readr::write_file(jsonlite::toJSON(held_data),
+        #     glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        #         d=domain, l='0_retrieval_trackers', c='held'))
     }
 
     gc()

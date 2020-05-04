@@ -1,12 +1,14 @@
 resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
-    from_api=FALSE, loginfo_){
+    from_api=FALSE, set_details_){
+
+    #obsolete now that neonUtilities package is working
 
     #replacements is a named vector. name=find, value=replace;
     #failed match does nothing
 
-    prodcode = loginfo_$prodcode
-    site = loginfo_$site
-    date = loginfo_$date
+    prodcode = set_details_$prodcode
+    site = set_details_$site
+    date = set_details_$date
 
     out_cols = colnames(out_sub_)
 
@@ -66,12 +68,12 @@ download_sitemonth_details = function(geturl){
     return(d)
 }
 
-determine_upstream_downstream_api = function(d_, data_inds_, loginfo_){
+determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
     #obsolete now that neonUtilities package is working
 
-    prodcode = loginfo_$prodcode
-    site = loginfo_$site
-    date = loginfo_$date
+    prodcode = set_details_$prodcode
+    site = set_details_$site
+    date = set_details_$date
 
     #determine which dataset is upstream/downstream if necessary
     updown_suffixes = c('-up', '-down')
