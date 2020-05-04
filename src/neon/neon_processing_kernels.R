@@ -1,16 +1,16 @@
-process_0_DP1.20093.001 = function(loginfo){
+process_0_DP1.20093.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE)
         # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
         out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-            mutate(site_name=loginfo$site) %>%
+            mutate(site_name=set_details$site_name) %>%
             select(collectDate, analyte, analyteConcentration, analyteUnits,
                 shipmentWarmQF, externalLabDataQF, sampleCondition)
 
@@ -33,20 +33,20 @@ process_0_DP1.20093.001 = function(loginfo){
     return(out_sub)
 
 } #chem: ready (grab interval?)
-process_0_DP1.20033.001 = function(loginfo){
+process_0_DP1.20033.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE)
 
         updown = determine_upstream_downstream(data_pile$NSW_15_minute)
 
         out_sub = data_pile$NSW_15_minute %>%
-            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            mutate(site_name=paste0(set_details$site_name, updown)) %>%
             select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
 
     }, error=function(e){
@@ -57,20 +57,20 @@ process_0_DP1.20033.001 = function(loginfo){
 
     return(out_sub)
 } #nitrate: ready
-process_0_DP1.20042.001 = function(loginfo){
+process_0_DP1.20042.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE, avg=5)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
         updown = determine_upstream_downstream(data_pile$PARWS_5min)
 
         out_sub = data_pile$PARWS_5min %>%
-            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            mutate(site_name=paste0(set_details$site_name, updown)) %>%
             select(site_name, startDateTime, PARMean, PARFinalQF)
 
     }, error=function(e){
@@ -81,20 +81,20 @@ process_0_DP1.20042.001 = function(loginfo){
 
     return(out_sub)
 } #par: ready (interval?)
-process_0_DP1.20053.001 = function(loginfo){
+process_0_DP1.20053.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE, avg=5)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
         updown = determine_upstream_downstream(data_pile$TSW_5min)
 
         out_sub = data_pile$TSW_5min %>%
-            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            mutate(site_name=paste0(set_details$site_name, updown)) %>%
             select(site_name, startDateTime, surfWaterTempMean, finalQF)
 
     }, error=function(e){
@@ -105,20 +105,20 @@ process_0_DP1.20053.001 = function(loginfo){
 
     return(out_sub)
 } #water temp: ready
-process_0_DP1.00004.001 = function(loginfo){
+process_0_DP1.00004.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE, avg=30)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE, avg=30)
 
         updown = determine_upstream_downstream(data_pile$BP_30min)
 
         out_sub = data_pile$BP_30min %>%
-            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            mutate(site_name=paste0(set_details$site_name, updown)) %>%
             select(site_name, startDateTime, staPresMean, staPresFinalQF)
 
     }, error=function(e){
@@ -129,22 +129,22 @@ process_0_DP1.00004.001 = function(loginfo){
 
     return(out_sub)
 } #airpres: ready
-process_0_DP1.20097.001 = function(loginfo){
+process_0_DP1.20097.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
 
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE)
 
         if('sdg_externalLabData' %in% names(data_pile)){
 
             d = data_pile$sdg_externalLabData
 
             out_sub = d %>%
-                mutate(site_name=loginfo$site) %>%
+                mutate(site_name=set_details$site_name) %>%
                 select(site_name, collectDate, concentrationCH4, concentrationCO2,
                     concentrationN2O, gasCheckStandardQF)
         } else {
@@ -159,14 +159,14 @@ process_0_DP1.20097.001 = function(loginfo){
 
     return(out_sub)
 } #gases: ready (grab interval?)
-process_0_DP1.20016.001 = function(loginfo){
+process_0_DP1.20016.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE, avg=5)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
         out_sub = select(data_pile$EOS_5_min, startDateTime,
             surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
@@ -175,7 +175,7 @@ process_0_DP1.20016.001 = function(loginfo){
         dir.create('data_acquisition/data/neon/raw/surfaceElev_sensorpos')
 
         f = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/',
-            'sensorpos_{s}.feather', s=loginfo$site)
+            'sensorpos_{s}.feather', s=set_details$site_name)
 
         if(file.exists(f)){
             sens_pos = feather::read_feather(f)
@@ -195,14 +195,14 @@ process_0_DP1.20016.001 = function(loginfo){
 
     return(out_sub)
 } #stage: waiting on NEON; fix updown
-process_0_DP1.20288.001 = function(loginfo){
+process_0_DP1.20288.001 = function(set_details){
 
     thisenv = environment()
 
     tryCatch({
-        data_pile = neonUtilities::loadByProduct(loginfo$prodcode,
-            site=loginfo$site, startdate=loginfo$date, enddate=loginfo$date,
-            package='basic', check.size=FALSE)
+        data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+            site=set_details$site_name, startdate=set_details$component,
+            enddate=set_details$component, package='basic', check.size=FALSE)
 
         cn = colnames(data_pile$waq_instantaneous)
         cn_base = na.omit(stringr::str_match(cn, '(.*?)FinalQF$')[,2])
@@ -216,7 +216,7 @@ process_0_DP1.20288.001 = function(loginfo){
         #dissolvedOxygenSaturation doesn't follow the naming convention of the
         #others. rawCalibratedfDOM is additional.
         out_sub = data_pile$waq_instantaneous %>%
-            mutate(site_name=paste0(loginfo$site, updown)) %>%
+            mutate(site_name=paste0(set_details$site_name, updown)) %>%
             select(site_name, startDateTime, one_of(cn_keep),
                 dissolvedOxygenSaturation, rawCalibratedfDOM)
 
@@ -229,18 +229,18 @@ process_0_DP1.20288.001 = function(loginfo){
     return(out_sub)
 
 } #waterqual: ready
-process_0_ = function(loginfo){
+process_0_ = function(set_details){
 
 } #precip: not started
-process_0_ = function(loginfo){
+process_0_ = function(set_details){
 
 } #precip chem: not started
 
-process_1_DP1.20093.001 = function(loginfo){
+process_1_DP1.20093.001 = function(set_details){
 
 
     out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-        mutate(site_name=paste0(loginfo$site, updown)) %>%
+        mutate(site_name=paste0(set_details$site_name, updown)) %>%
         # filter(qa filtering here) %>%
         # convert_units_here() %>%
         select(collectDate, analyte, analyteConcentration, analyteUnits,
@@ -267,7 +267,7 @@ process_1_DP1.20093.001 = function(loginfo){
     #     dir.create('data_acquisition/data/neon/raw/chemistry')
     #
     #     f = glue('data_acquisition/data/neon/raw/chemistry/sensorpos_{s}.feather',
-    #         s=loginfo$site)
+    #         s=set_details$site_name)
     #
     #     if(file.exists(f)){
     #         sens_pos = feather::read_feather(f)
@@ -286,7 +286,7 @@ process_1_DP1.20093.001 = function(loginfo){
     # })
 } #chem: just scraps
 
-process_0_DP1.20093.001_api = function(d, loginfo){
+process_0_DP1.20093.001_api = function(d, set_details){
 
     data1_ind = intersect(grep("expanded", d$data$files$name),
         grep("fieldSuperParent", d$data$files$name))
@@ -344,12 +344,13 @@ process_0_DP1.20093.001_api = function(d, loginfo){
 
     return(out_sub)
 } #chem: obsolete
-process_0_DP1.20288.001_api = function(d, loginfo){
+process_0_DP1.20288.001_api = function(d, set_details){
 
     data_inds = intersect(grep("expanded", d$data$files$name),
         grep("instantaneous", d$data$files$name))
 
-    site_with_suffixes = determine_upstream_downstream(d, data_inds, loginfo)
+    site_with_suffixes = determine_upstream_downstream(d, data_inds,
+        set_details)
     if(is_ms_err(site_with_suffixes)) return(site_with_suffixes)
 
     #process upstream and downstream sites independently
@@ -361,7 +362,8 @@ process_0_DP1.20288.001_api = function(d, loginfo){
         out_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
             stringsAsFactors=FALSE)
 
-        out_sub = resolve_neon_naming_conflicts(out_sub, loginfo_=loginfo,
+        out_sub = resolve_neon_naming_conflicts(out_sub,
+            set_details_=set_details,
             replacements=c('specificCond'='specificConductance',
                 'dissolvedOxygenSat'='dissolvedOxygenSaturation'))
         if(is_ms_err(out_sub)) return(out_sub)
