@@ -202,11 +202,50 @@ make_tracker_skeleton = function(retrieval_chunks){
     munge_derive_skeleton = list(status='pending', mtime='1900-01-01')
 
     tracker_skeleton = list(
-        retrieve=data.frame(
+        retrieve=tibble::tibble(
             component=retrieval_chunks, mtime='1900-01-01',
             held_version='-1', status='pending'),
         munge=munge_derive_skeleton,
         derive=munge_derive_skeleton)
 
     return(tracker_skeleton)
+}
+
+insert_site_skeleton = function(tracker, prod, site, site_components){
+
+    tracker[[prod]][[site]] =
+        make_tracker_skeleton(retrieval_chunks=site_components)
+
+    return(tracker)
+}
+
+product_is_tracked = function(tracker, prod){
+    bool = prod %in% names(tracker)
+    return(bool)
+}
+
+track_new_product = function(tracker, prod){
+
+    if(prod %in% names(tracker)){
+        stop('This product is already being tracked.')
+    }
+
+    tracker[[prod]] = list()
+    return(tracker)
+}
+
+add_new_site_components = function(tracker, prod, site, avail){
+
+    retrieval_tracking = tracker[[prod]][[site]]$retrieve
+
+    retrieval_tracking = avail %>%
+        filter(! component %in% retrieval_tracking$component) %>%
+        select(component) %>%
+        mutate(mtime='1900-01-01', held_version='-1', status='pending') %>%
+        bind_rows(retrieval_tracking) %>%
+        arrange(component)
+
+    tracker[[prod]][[site]]$retrieve = retrieval_tracking
+
+    return(tracker)
 }
