@@ -1,4 +1,9 @@
-process_0_DP1.20093.001 = function(set_details){
+library(logging)
+library(tidyverse)
+
+glue = glue::glue
+
+process_0_20093 = function(set_details){
 
     thisenv = environment()
 
@@ -33,7 +38,7 @@ process_0_DP1.20093.001 = function(set_details){
     return(out_sub)
 
 } #chem: ready (grab interval?)
-process_0_DP1.20033.001 = function(set_details){
+process_0_20033 = function(set_details){
 
     thisenv = environment()
 
@@ -57,7 +62,7 @@ process_0_DP1.20033.001 = function(set_details){
 
     return(out_sub)
 } #nitrate: ready
-process_0_DP1.20042.001 = function(set_details){
+process_0_20042 = function(set_details){
 
     thisenv = environment()
 
@@ -81,7 +86,7 @@ process_0_DP1.20042.001 = function(set_details){
 
     return(out_sub)
 } #par: ready (interval?)
-process_0_DP1.20053.001 = function(set_details){
+process_0_20053 = function(set_details){
 
     thisenv = environment()
 
@@ -105,7 +110,7 @@ process_0_DP1.20053.001 = function(set_details){
 
     return(out_sub)
 } #water temp: ready
-process_0_DP1.00004.001 = function(set_details){
+process_0_00004 = function(set_details){
 
     thisenv = environment()
 
@@ -129,7 +134,7 @@ process_0_DP1.00004.001 = function(set_details){
 
     return(out_sub)
 } #airpres: ready
-process_0_DP1.20097.001 = function(set_details){
+process_0_20097 = function(set_details){
 
     thisenv = environment()
 
@@ -159,7 +164,7 @@ process_0_DP1.20097.001 = function(set_details){
 
     return(out_sub)
 } #gases: ready (grab interval?)
-process_0_DP1.20016.001 = function(set_details){
+process_0_20016 = function(set_details){
 
     thisenv = environment()
 
@@ -172,7 +177,8 @@ process_0_DP1.20016.001 = function(set_details){
             surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
             horizontalPosition)
 
-        dir.create('data_acquisition/data/neon/raw/surfaceElev_sensorpos')
+        dir.create('data_acquisition/data/neon/raw/surfaceElev_sensorpos',
+            showWarnings=FALSE)
 
         f = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/',
             'sensorpos_{s}.feather', s=set_details$site_name)
@@ -195,7 +201,7 @@ process_0_DP1.20016.001 = function(set_details){
 
     return(out_sub)
 } #stage: waiting on NEON; fix updown
-process_0_DP1.20288.001 = function(set_details){
+process_0_20288 = function(set_details){
 
     thisenv = environment()
 
@@ -236,7 +242,7 @@ process_0_ = function(set_details){
 
 } #precip chem: not started
 
-process_1_DP1.20093.001 = function(set_details){
+process_1_20093 = function(set_details){
 
 
     out_sub = data_pile$swc_externalLabDataByAnalyte %>%

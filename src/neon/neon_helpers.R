@@ -1,3 +1,8 @@
+library(logging)
+library(tidyverse)
+
+glue = glue::glue
+
 resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     from_api=FALSE, set_details_){
 
@@ -123,7 +128,7 @@ get_neon_product_specs = function(code){
 
     prodlist = try(get_avail_neon_products())
     if('try-error' %in% class(prodlist)){
-        logging::logerror(glue::glue("Can't retrieve NEON product list for {c}",
+        logging::logerror(glue("Can't retrieve NEON product list for {c}",
             , c=code), logger='neon.module')
         stop()
     }
