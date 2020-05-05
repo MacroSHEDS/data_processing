@@ -11,7 +11,6 @@ library(glue)
 library(logging)
 library(emayili)
 library(neonUtilities)
-library(data.tree)
 
 sm = suppressMessages
 glue = glue::glue
@@ -34,25 +33,9 @@ logging::addHandler(logging::writeToFile, logger=domain,
 
 conf = jsonlite::fromJSON('data_acquisition/config.json')
 
-neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')
-neonprods = filter(neonprods, status == 'ready')
-
-# tracker = Node$new('neon')
-# tracker$AddChild(prodname_ms)
-# # tracker[[prodname_ms]]$AddChild(curr_site)
-# retrieve_insert = data.frame(month=character(), status=character())
-# retrieve_insert = data.frame(month='2012-04', mtime=as.POSIXct('1900-01-01'),
-#     held_version='1', status='ok')
-# munge_derive_insert = list(mtime=as.POSIXct('1900-01-01'), status='pending')
-# tracker[[prodname_ms]]$AddChild(curr_site, retrieve=retrieve_insert,
-#     munge=munge_derive_insert, derive=munge_derive_insert)
-# zz = jsonlite::toJSON(as.list(tracker))
-# qq = jsonlite::fromJSON(zz)
-# class(qq$chemistry_20093$ARIK$retrieve)
-# qq2 = as.Node(qq)
-# qq2 = qq2$Do(function(n) n=as.data.frame(as.list(n)),
-#     filterFun=function(x) x$name == 'retrieve')
-# as.data.frame(as.list(qq2$chemistry_20093$ARIK$retrieve))
+neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
+    mutate(prodcode = sprintf('%05d', prodcode)) %>%
+    filter(status == 'ready')
 
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
@@ -103,12 +86,12 @@ for(i in 1:nrow(neonprods)){
 # for(i in 3){
 
     outer_loop_err = FALSE #should be able to rework the end of this loop so this line isnt needed
-    prodcode = neonprods$prodID[i]
-    prodname_ms = paste0(neonprods$prod[i], '_', prodcode)
-    prod_specs = get_neon_product_specs(prodcode)
+    prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
+    prod_specs = get_neon_product_specs(neonprods$prodcode[i])
     if(is_ms_err(prod_specs)){
-        email_err('NEON may have created a v.002 product. investigate!',
-            'mjv22@duke.edu', conf$gmail_pw)
+        msg = 'NEON may have created a v.002 product. investigate!'
+        email_err(msg, 'mjv22@duke.edu', conf$gmail_pw)
+        stop(msg)
     }
 
     held_data = get_data_tracker(domain)
@@ -152,6 +135,7 @@ for(i in 1:nrow(neonprods)){
 
         update_data_tracker_r(domain, tracker=held_data)
 
+        #REWRITE THIS SO THAT ERROR HANDLING IS INSIDE GET_NEON_DATA
         tryCatch({
             site_dset = get_neon_data(domain=domain, new_sets, held_data)
         }, error=function(e){
