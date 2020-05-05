@@ -1,7 +1,7 @@
-library(logging)
-library(tidyverse)
-
-glue = glue::glue
+# library(logging)
+# library(tidyverse)
+#
+# glue = glue::glue
 
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
@@ -337,7 +337,7 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
     if(is.null(tracker) && (
             is.null(tracker_name) || is.null(set_details) || is.null(new_status)
     )){
-        msg = paste0('If tracker is not supplied, these must be:',
+        msg = paste0('If tracker is not supplied, these args must be:',
             'tracker_name, set_details, new_status.')
         logging::logerror(msg, logger='neon.module')
         stop(msg)
