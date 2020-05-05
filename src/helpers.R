@@ -1,6 +1,8 @@
 library(logging)
 library(tidyverse)
 
+glue = glue::glue
+
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
@@ -112,11 +114,24 @@ get_data_tracker = function(domain){
 
     #domain is a macrosheds domain string
 
-    tracker_data = try(jsonlite::fromJSON(readr::read_file(
-        glue::glue('data_acquisition/data/{d}/data_tracker.json', d=domain)
-    )), silent=TRUE)
+    thisenv = environment()
 
-    if('try-error' %in% class(tracker_data)) tracker_data = list()
+    tryCatch({
+
+        tracker_data = glue('data_acquisition/data/{d}/data_tracker.json',
+                d=domain) %>%
+            readr::read_file() %>%
+            jsonlite::fromJSON()
+
+        # tracker_data = lapply(tracker_data, function(x){
+        #     lapply(x, function(y){
+        #         y$retrieve = as_tibble(y$retrieve)
+        #     })
+        # })
+
+    }, error=function(e){
+        assign('tracker_data', list(), pos=thisenv)
+    })
 
     return(tracker_data)
 }
@@ -163,7 +178,7 @@ update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain){
     assign('held_data', held_data_, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(held_data),
-        glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category))
 }
 
@@ -190,7 +205,7 @@ update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain, c
     assign('held_data', held_data_, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(held_data),
-        glue::glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category))
 }
 
@@ -308,27 +323,46 @@ filter_unneeded_sets = function(tracker_with_details){
     return(new_sets)
 }
 
-# set_details=s
-update_data_tracker_r = function(domain, tracker, set_details, new_status){
+update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
+    set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
     #see update_data_tracker_m for the munge section and update_data_tracker_d
     #for the derive section
 
-    rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
+    #if tracker is supplied, it will be used to write/overwrite the one on disk.
+    #if it is omitted or set to NULL, the appropriate tracker will be loaded
+    #from disk.
 
-    set_ind = which(rt$component == set_details$component)
-
-    if(new_status %in% c('pending', 'ok')){
-        rt$held_version[set_ind] = as.character(set_details$avail_version)
+    if(is.null(tracker) && (
+            is.null(tracker_name) || is.null(set_details) || is.null(new_status)
+    )){
+        msg = paste0('If tracker is not supplied, these must be:',
+            'tracker_name, set_details, new_status.')
+        logging::logerror(msg, logger='neon.module')
+        stop(msg)
     }
-    rt$status[set_ind] = new_status
-    rt$mtime[set_ind] = as.character(Sys.time())
 
-    tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
+    if(is.null(tracker)){
+
+        tracker = get_data_tracker(domain)
+
+        rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
+
+        set_ind = which(rt$component == set_details$component)
+
+        if(new_status %in% c('pending', 'ok')){
+            rt$held_version[set_ind] = as.character(set_details$avail_version)
+        }
+        rt$status[set_ind] = new_status
+        rt$mtime[set_ind] = as.character(Sys.time())
+
+        tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
+
+        assign(tracker_name, tracker, pos=.GlobalEnv)
+    }
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue::glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
 
-    assign('held_data', tracker, pos=.GlobalEnv)
 }
