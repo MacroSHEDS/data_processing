@@ -242,54 +242,36 @@ process_0_ = function(set_details){
 
 } #precip chem: not started
 
-process_1_20093 = function(set_details){
+process_1_20093 = function(set, set_details){
+
+    # #NEON has no record of what flags might be encountered here, so build some lists
+    # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
+    # #         analyteUnits=c(), analyte=c()),
+    # #     'data_acquisition/data/neon/temp/20093_variants.rds')
+    #
+    # v = readRDS('data_acquisition/data/neon/temp/20093_variants.rds')
+    # v = list(shipmentWarmQF=c(set$shipmentWarmQF, v$shipmentWarmQF),
+    #     externalLabDataQF=c(set$externalLabDataQF, v$externalLabDataQF),
+    #     sampleCondition=c(set$sampleCondition, v$sampleCondition),
+    #     vars=c(paste(set$analyte, set$analyteUnits), v$vars))
+    # saveRDS(v, 'data_acquisition/data/neon/temp/20093_variants.rds')
+    table(v$vars)
+    filter(data_pile$variables_20093, units == 'microsiemensPerCentimeter')
+
+    colnames(set)
+    set %>%
+        filter(
+            shipmentWarmQF == 0,
+            externalLabDataQF != paste0('formatChange|legacyData|Preliminary ',
+                'method: UV absorbance not water blank subtracted'),
+            sampleCondition == 'GOOD') %>%
+        mutate(
+            ANC = ANC / 1000, #meq/L -> eq/L
+            conductivity = conductivity / 1e6, #uS/cm -> S/cm
+            # look for other needed conversions
+            #fix names
 
 
-    out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        # filter(qa filtering here) %>%
-        # convert_units_here() %>%
-        select(collectDate, analyte, analyteConcentration, analyteUnits,
-            shipmentWarmQF, externalLabDataQF, sampleCondition)
-    # spread()
-
-    # # identify which dsets is/are present and mget them into the following list
-    # out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
-    #     group_by(collectDate) %>%
-    #     summarise_each(list(~ if(is.numeric(.)){
-    #         mean(., na.rm = TRUE)
-    #     } else {
-    #         first(.)
-    #     })) %>%
-    #     ungroup() %>%
-    #     mutate(datetime=as.POSIXct(collectDate, tz='UTC',
-    #         format='%Y-%m-%dT%H:%MZ')) %>%
-    #     select(-collectDate)
-    #
-    # return(out_sub)
-
-    #---
-
-    #     dir.create('data_acquisition/data/neon/raw/chemistry')
-    #
-    #     f = glue('data_acquisition/data/neon/raw/chemistry/sensorpos_{s}.feather',
-    #         s=set_details$site_name)
-    #
-    #     if(file.exists(f)){
-    #         sens_pos = feather::read_feather(f)
-    #         sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
-    #             distinct()
-    #     } else {
-    #         sens_pos = data_pile$sensor_positions_20016
-    #     }
-    #
-    #     feather::write_feather(sens_pos, f)
-    #
-    # }, error=function(e){
-    #     logging::logerror(e, logger='neon.module')
-    #     assign('email_err_msg', TRUE, pos=.GlobalEnv)
-    #     assign('out_sub', generate_ms_err(), pos=thisenv)
-    # })
 } #chem: just scraps
 
 process_0_DP1.20093.001_api = function(d, set_details){

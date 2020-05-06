@@ -36,7 +36,7 @@ neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
     mutate(prodcode = sprintf('%05d', prodcode)) %>%
     filter(status == 'ready')
 
-# i=1; j=1
+# i=1; j=1; k=1
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
     # for(i in 3){
@@ -67,19 +67,29 @@ for(i in 1:nrow(neonprods)){
             filter(status == 'ok')
 
         #wrap this in the merge analog of get_neon_data
+        out = tibble()
         for(k in 1:nrow(retrieval_log)){
 
             file_deets = retrieval_log[k, ]
 
-            comp = feather::read_feather(glue('data_acquisition/data/neon/raw/',
-                '{p}/{s}/{f}.feather', p=prodname_ms, s=site,
+            comp = feather::read_feather(glue('data_acquisition/data/{d}/raw/',
+                '{p}/{s}/{f}.feather', d=domain, p=prodname_ms, s=site,
                 f=file_deets$component))
 
             processing_func = get(paste0('process_1_', prodcode))
-            do.call(processing_func, args=list(set_details=))
 
-            gc()
+            out = do.call(processing_func, args=list(set=comp, set_details=1))
+            # out = bind_rows(out, comp)
         }
+
+        # prod_dir = glue('data_acquisition/data/{d}/munged/{p}',
+        #     d=domain, p=prodname_ms)
+        # dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+        #
+        # site_file = glue('{sd}/{t}.feather', pd=prod_dir, c=out)
+        # write_feather(out, site_file)
+
+        gc()
     }
 }
 
