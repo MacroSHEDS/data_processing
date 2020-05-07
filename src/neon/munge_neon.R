@@ -5,7 +5,7 @@
 # library(data.table)
 # library(dtplyr)
 library(tidyverse)
-# library(lubridate)
+library(lubridate)
 library(feather)
 library(glue)
 library(logging)
@@ -78,20 +78,31 @@ for(i in 1:nrow(neonprods)){
 
             processing_func = get(paste0('process_1_', prodcode))
 
-            out = do.call(processing_func, args=list(set=comp, set_details=1))
-            # out = bind_rows(out, comp)
+            out_comp = suppressWarnings(do.call(processing_func,
+                args=list(set=comp, site_name=site)))
+            out = bind_rows(out, out_comp)
         }
 
-        # prod_dir = glue('data_acquisition/data/{d}/munged/{p}',
-        #     d=domain, p=prodname_ms)
-        # dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-        #
-        # site_file = glue('{sd}/{t}.feather', pd=prod_dir, c=out)
-        # write_feather(out, site_file)
+        prod_dir = glue('data_acquisition/data/{d}/munged/{p}',
+            d=domain, p=prodname_ms)
+        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
+        write_feather(out, site_file)
 
         gc()
     }
 }
+
+# #temp; only needed to get neon vizzed by kick-off meeting time
+# fs = list.files('data_acquisition/data/neon/munged/chemistry_20093/',
+#     full.names=TRUE)
+# all_sites = tibble::tibble()
+# for(f in fs){
+#     x = read_feather(f)
+#     all_sites = bind_rows(all_sites, x)
+# }
+# write_feather(all_sites, 'portal/data/neon/grab.feather')
 
 if(email_err_msg){
     email_err('neon data acquisition error. check the logs.',

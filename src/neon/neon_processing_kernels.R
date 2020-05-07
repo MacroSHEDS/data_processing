@@ -242,7 +242,8 @@ process_0_ = function(set_details){
 
 } #precip chem: not started
 
-process_1_20093 = function(set, set_details){
+# set=comp; set_details=1
+process_1_20093 = function(set, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
@@ -255,24 +256,34 @@ process_1_20093 = function(set, set_details){
     #     sampleCondition=c(set$sampleCondition, v$sampleCondition),
     #     vars=c(paste(set$analyte, set$analyteUnits), v$vars))
     # saveRDS(v, 'data_acquisition/data/neon/temp/20093_variants.rds')
-    table(v$vars)
-    filter(data_pile$variables_20093, units == 'microsiemensPerCentimeter')
+    # table(v$vars)
 
-    colnames(set)
-    set %>%
+    set = set %>%
         filter(
             shipmentWarmQF == 0,
             externalLabDataQF != paste0('formatChange|legacyData|Preliminary ',
                 'method: UV absorbance not water blank subtracted'),
-            sampleCondition == 'GOOD') %>%
+            sampleCondition == 'GOOD',
+            analyte != 'TSS - Dry Mass') %>%
+        select(-analyteUnits, -shipmentWarmQF, -externalLabDataQF,
+            -sampleCondition) %>%
+        group_by(collectDate, analyte) %>%
+        summarize(analyteConcentration = mean(analyteConcentration, na.rm=TRUE)) %>%
+        ungroup() %>%
+        tidyr::spread(analyte, analyteConcentration) %>%
+        mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
+        mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(
-            ANC = ANC / 1000, #meq/L -> eq/L
-            conductivity = conductivity / 1e6, #uS/cm -> S/cm
-            # look for other needed conversions
-            #fix names
+            collectDate = lubridate::force_tz(collectDate, 'UTC'),
+            site_name = site_name) %>%
+        rename_all(dplyr::recode, collectDate='datetime', conductivity='spCond',
+            `NH4 - N`='NH4_N', `NO2 - N`='NO2_N', `NO3+NO2 - N`='NO3_NO2_N',
+            `Ortho - P`='PO4_P', `UV Absorbance (250 nm)`='abs250',
+            `UV Absorbance (280 nm)`='abs280') %>%
+        select(site_name, datetime, everything())
 
-
-} #chem: just scraps
+    return(set)
+} #chem:
 
 process_0_DP1.20093.001_api = function(d, set_details){
 
