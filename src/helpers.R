@@ -366,3 +366,34 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
         glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
 
 }
+
+#build this when the time comes
+populate_missing_shiny_files = function(domain){
+
+    #this is not yet working. first, shiny needs to be reconfigured to
+    #pull site files as requested. atm all sites are bound into one feather
+    #by domain and dataset (i.e. neon-precip, neon-Q, etc)
+
+    list.files('data/hbef/')
+
+    qq = read_feather('data/hbef/discharge.feather')
+    qq = filter(qq, site_name == 'donkey')
+    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    write_feather(qq, 'data/neon/discharge.feather')
+
+    qq = read_feather('data/hbef/flux.feather')
+    qq = filter(qq, site_name == 'donkey')
+    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    write_feather(qq, 'data/neon/flux.feather')
+
+    qq = read_feather('data/hbef/pchem.feather')
+    qq = filter(qq, site_name == 'donkey')
+    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    write_feather(qq, 'data/neon/pchem.feather')
+
+    qq = read_feather('data/hbef/precip.feather')
+    qq = filter(qq, site_name == 'donkey')
+    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    write_feather(qq, 'data/neon/precip.feather')
+
+}
