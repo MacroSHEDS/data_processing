@@ -12,9 +12,6 @@ library(logging)
 library(emayili)
 library(neonUtilities)
 
-sm = suppressMessages
-glue = glue::glue
-
 #note: see neon_notes.txt
 
 #todo: build data blacklist (to minimize email error notifications)
@@ -40,7 +37,6 @@ neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
-    out = tibble()
     for(i in 1:nrow(sets)){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
@@ -76,8 +72,6 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
         update_data_tracker_r(domain, tracker_name='held_data', set_details=s,
             new_status='ok')
     }
-
-    return(out)
 }
 
 # i=1; j=1
@@ -85,7 +79,6 @@ email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
 # for(i in 3){
 
-    outer_loop_err = FALSE #should be able to rework the end of this loop so this line isnt needed
     prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
     prod_specs = get_neon_product_specs(neonprods$prodcode[i])
     if(is_ms_err(prod_specs)){
@@ -135,14 +128,12 @@ for(i in 1:nrow(neonprods)){
 
         update_data_tracker_r(domain, tracker=held_data)
 
-        #REWRITE THIS SO THAT ERROR HANDLING IS INSIDE GET_NEON_DATA
         tryCatch({
-            site_dset = get_neon_data(domain=domain, new_sets, held_data)
+            get_neon_data(domain=domain, new_sets, held_data)
         }, error=function(e){
             logging::logerror(e, logger='neon.module')
-            email_err_msg <<- outer_loop_err <<- TRUE
+            email_err_msg <<- TRUE
         })
-        if(outer_loop_err) next
 
     }
 
