@@ -1,19 +1,9 @@
-# library(httr)
-# library(jsonlite)
-# library(tidyr)
-# library(plyr)
-# library(data.table)
-# library(dtplyr)
 library(tidyverse)
 library(lubridate)
 library(feather)
 library(glue)
 library(logging)
 library(emayili)
-# library(neonUtilities)
-
-sm = suppressMessages
-glue = glue::glue
 
 #note: see neon_notes.txt
 
@@ -36,61 +26,69 @@ neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
     mutate(prodcode = sprintf('%05d', prodcode)) %>%
     filter(status == 'ready')
 
+# domain='neon'; site='ARIK'; prod=prodname_ms; tracker=held_data
+munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
+
+    retrieval_log = extract_retrieval_log(held_data, prod, site)
+
+    if(nrow(retrieval_log) == 0){
+        return()
+    }
+
+    out = tibble()
+    for(k in 1:nrow(retrieval_log)){
+
+        sitemonth = retrieval_log[k, 'component']
+        comp = feather::read_feather(glue('data_acquisition/data/{d}/raw/',
+            '{p}/{s}/{sm}.feather', d=domain, p=prod, s=site, sm=sitemonth))
+
+        prodcode = strsplit(prod, '_')[[1]][2]
+        processing_func = get(paste0('process_1_', prodcode))
+
+        out_comp = suppressWarnings(do.call(processing_func,
+            args=list(set=comp, site_name=site)))
+        out = bind_rows(out, out_comp)
+    }
+
+    prod_dir = glue('data_acquisition/data/{d}/munged/{p}', d=domain, p=prod)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
+    write_feather(out, site_file)
+
+    update_data_tracker_m(domain, tracker_name='held_data', prod=prodname_ms,
+        site=site, new_status='ok')
+
+    gc()
+}
+
 # i=1; j=1; k=1
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
-    # for(i in 3){
 
-    prodcode = neonprods$prodcode[i]
-    prodname_ms = paste0(neonprods$prodname[i], '_', prodcode)
-    # prod_specs = get_neon_product_specs(neonprods$prodcode[i])
-    # if(is_ms_err(prod_specs)){
-    #     email_err('NEON may have created a v.002 product. investigate!',
-    #         'mjv22@duke.edu', conf$gmail_pw)
-    # }
+    prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
 
     held_data = get_data_tracker(domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
-        stop(glue('Product {p} is not yet tracked. Retrieve ',
-            'it before munging it.', p=prodname_ms))
+        logging::logwarn(glue('Product {p} is not yet tracked. Retrieve ',
+            'it before munging it.', p=prodname_ms), logger='neon.module')
+        next
     }
 
     sites = names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
 
-        site = sites[j]
+        tryCatch({
+            munge_neon_site(domain, sites[j], prodname_ms, held_data)
+        }, error=function(e){
+            logging::logerror(e, logger='neon.module')
+            email_err_msg <<- TRUE
+            update_data_tracker_m(domain, tracker_name='held_data',
+                prod=prodname_ms, site=site, new_status='error')
+        })
 
-        retrieval_log = held_data[[prodname_ms]][[site]]$retrieve %>%
-            tibble::as_tibble() %>%
-            filter(status == 'ok')
-
-        #wrap this in the merge analog of get_neon_data
-        out = tibble()
-        for(k in 1:nrow(retrieval_log)){
-
-            file_deets = retrieval_log[k, ]
-
-            comp = feather::read_feather(glue('data_acquisition/data/{d}/raw/',
-                '{p}/{s}/{f}.feather', d=domain, p=prodname_ms, s=site,
-                f=file_deets$component))
-
-            processing_func = get(paste0('process_1_', prodcode))
-
-            out_comp = suppressWarnings(do.call(processing_func,
-                args=list(set=comp, site_name=site)))
-            out = bind_rows(out, out_comp)
-        }
-
-        prod_dir = glue('data_acquisition/data/{d}/munged/{p}',
-            d=domain, p=prodname_ms)
-        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-
-        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
-        write_feather(out, site_file)
-
-        gc()
     }
 }
 
@@ -105,6 +103,6 @@ for(i in 1:nrow(neonprods)){
 # write_feather(all_sites, 'portal/data/neon/grab.feather')
 
 if(email_err_msg){
-    email_err('neon data acquisition error. check the logs.',
+    email_err('neon munge error. check the logs.',
         'mjv22@duke.edu', conf$gmail_pw)
 }

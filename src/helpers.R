@@ -1,7 +1,8 @@
 # library(logging)
 # library(tidyverse)
-#
-# glue = glue::glue
+
+sm = suppressMessages
+glue = glue::glue
 
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
@@ -367,6 +368,27 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
 
 }
 
+# tracker_name='held_data'; prod=prodname_ms; new_status='ok'
+update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
+
+    #this updates the munge section of a data tracker in memory and on disk.
+    #see update_data_tracker_d for the derive section
+
+    tracker = get_data_tracker(domain)
+
+    mt = tracker[[prod]][[site]]$munge
+
+    mt$status = new_status
+    mt$mtime = as.character(Sys.time())
+
+    tracker[[prod]][[site]]$munge = mt
+
+    assign(tracker_name, tracker, pos=.GlobalEnv)
+
+    readr::write_file(jsonlite::toJSON(tracker),
+        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+}
+
 #build this when the time comes
 populate_missing_shiny_files = function(domain){
 
@@ -396,4 +418,13 @@ populate_missing_shiny_files = function(domain){
     qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
     write_feather(qq, 'data/neon/precip.feather')
 
+}
+
+extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
+
+    retrieved_data = tracker[[prod]][[site]]$retrieve %>%
+        tibble::as_tibble() %>%
+        filter(status == keep_status)
+
+    return(retrieved_data)
 }

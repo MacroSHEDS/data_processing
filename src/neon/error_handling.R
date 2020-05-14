@@ -34,6 +34,8 @@ if(outer_loop_err) next
 
 #depth 1
 
+processing_func = get(paste0('process_0_', s$prodcode_id))
+out_sitemonth = do.call(processing_func, args=list(set_details=s))
 if(is_ms_exception(out_sitemonth)){
     update_data_tracker_r(domain, tracker_name='held_data', set_details=s,
         new_status='error')
@@ -45,9 +47,21 @@ if(is_ms_exception(out_sitemonth)){
     next
 }
 
-#
+#depth 2
 
 msg = paste0('If tracker is not supplied, these must be:',
     'tracker_name, set_details, new_status.')
 logging::logerror(msg, logger='neon.module')
 stop(msg)
+
+if(any(! updown %in% c('-up', ''))){ #det ups downs
+    # return(generate_ms_err())
+    stop('upstream/downstream indicator error')
+}
+
+#depth 3 (in kernel trycatch)
+}, error=function(e){
+    logging::logerror(e, logger='neon.module')
+    assign('email_err_msg', TRUE, pos=.GlobalEnv)
+    assign('out_sub', generate_ms_err(), pos=thisenv)
+})
