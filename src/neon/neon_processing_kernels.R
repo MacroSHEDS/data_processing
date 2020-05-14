@@ -283,7 +283,7 @@ process_1_20093 = function(set, site_name){
         select(site_name, datetime, everything())
 
     return(set)
-} #chem:
+} #chem: ready
 
 process_0_DP1.20093.001_api = function(d, set_details){
 
