@@ -37,6 +37,8 @@ neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
+    if(nrow(sets) == 0) return()
+
     for(i in 1:nrow(sets)){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
@@ -77,7 +79,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 # i=1; j=1
 email_err_msg = FALSE
 for(i in 1:nrow(neonprods)){
-# for(i in 3){
+# for(i in 1){
 
     prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
     prod_specs = get_neon_product_specs(neonprods$prodcode[i])
