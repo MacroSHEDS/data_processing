@@ -3,6 +3,7 @@
 #
 # glue = glue::glue
 
+# set_details=s
 process_0_20093 = function(set_details){
 
     thisenv = environment()
@@ -14,20 +15,25 @@ process_0_20093 = function(set_details){
             enddate=set_details$component, package='basic', check.size=FALSE)
         # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-        out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-            mutate(site_name=set_details$site_name) %>%
-            select(collectDate, analyte, analyteConcentration, analyteUnits,
-                shipmentWarmQF, externalLabDataQF, sampleCondition)
+        # data_pile$swc_domainLabData #this has alc and anc, which we want!
+        if('swc_domainLabData' %in% names(data_pile)){
+            #build this!
+            # out_sub = this
+            NULL
+        }
 
-        # if('swc_externalLabData' %in% datasets){
-        #     data_pile$swc_externalLabData %>%
-        #         # filter(qa filtering here) %>%
-        #         # convert_units_here() %>%
-        #         select(collectDate, pH, externalConductance,
-        #             externalANC, starts_with('water'), starts_with('total'),
-        #             starts_with('dissolved'), uvAbsorbance250, uvAbsorbance284,
-        #             shipmentWarmQF, externalLabDataQF)
-        # }
+        if('swc_externalLabDataByAnalyte' %in% names(data_pile)){
+            #out_sub = join(out_sub, this) #do this too!
+            #then fix stop message below
+            out_sub = data_pile$swc_externalLabDataByAnalyte %>%
+                mutate(site_name=set_details$site_name) %>%
+                select(collectDate, analyte, analyteConcentration, analyteUnits,
+                    shipmentWarmQF, externalLabDataQF, sampleCondition)
+        }
+
+        if(! exists('out_sub')){
+            stop('No external lab data available (still gotta parse domain lab data)')
+        }
 
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
@@ -223,8 +229,10 @@ process_0_20288 = function(set_details){
         #others. rawCalibratedfDOM is additional.
         out_sub = data_pile$waq_instantaneous %>%
             mutate(site_name=paste0(set_details$site_name, updown)) %>%
-            select(site_name, startDateTime, one_of(cn_keep),
-                dissolvedOxygenSaturation, rawCalibratedfDOM)
+            select(site_name, one_of('startDate', 'startDateTime'),
+                one_of(cn_keep), dissolvedOxygenSaturation,
+                rawCalibratedfDOM) %>%
+            rename_all(dplyr::recode, startDate='startDateTime')
 
     }, error=function(e){
         logging::logerror(e, logger='neon.module')

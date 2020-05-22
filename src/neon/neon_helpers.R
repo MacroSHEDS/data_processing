@@ -95,12 +95,14 @@ determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
     return(site_with_suffixes)
 }
 
+# d_ = data_pile$waq_instantaneous
 determine_upstream_downstream = function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
     updown[updown == '1'] = '-up'
-    updown[updown %in% c('0', '2')] = ''
-    # updown[updown == '0'] = 'b'
+
+    #2 means downstream. 0 means only one sensor? 3 means ???
+    updown[updown %in% c('0', '2', '3')] = ''
 
     if(any(! updown %in% c('-up', ''))){
         # return(generate_ms_err())
