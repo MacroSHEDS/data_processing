@@ -3,6 +3,9 @@ library(RColorBrewer)
 library(feather)
 library(glue)
 library(lubridate)
+# library(neonUtilities)
+# library(stageQCurve)
+# devtools::install_github('NEONScience/NEON-stream-discharge/L4Discharge/stageQCurve')
 
 setwd('~/git/macrosheds/data_acquisition/data/neon/')
 

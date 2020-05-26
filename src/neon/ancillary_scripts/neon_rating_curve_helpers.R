@@ -1,11 +1,11 @@
-get_sensor_positions = function(site_id){
+get_sensor_positions = function(site_id, sp_path){
+    #se_path = path to surface elevation containing directory
 
     sp = tibble()
-    monthfiles = list.files(glue('raw/surfaceElev_20016/{s}', s=site_id))
+    monthfiles = list.files(glue('{p}/{s}', p=sp_path, s=site_id))
 
     for(m in monthfiles){
-        sp0 = read_feather(glue('raw/surfaceElev_sensorpos/{s}/{m}',
-            s=site_id, m=m))
+        sp0 = read_feather(glue('{p}/{s}/{m}', p=sp_path, s=site_id, m=m))
         sp = bind_rows(sp, sp0)
     }
 
@@ -24,14 +24,13 @@ get_sensor_positions = function(site_id){
     return(sp)
 }
 
-get_surface_elevation = function(site_id){
+get_surface_elevation = function(site_id, se_path){
 
     el = tibble()
-    monthfiles = list.files(glue('raw/surfaceElev_20016/{s}', s=site_id))
+    monthfiles = list.files(glue('{p}/{s}', p=se_path, s=site_id))
 
     for(m in monthfiles){
-        el0 = read_feather(glue('raw/surfaceElev_20016/{s}/{m}',
-            s=site_id, m=m))
+        el0 = read_feather(glue('{p}/{s}/{m}', p=se_path, s=site_id, m=m))
         el = bind_rows(el, el0)
     }
 
@@ -100,13 +99,12 @@ left_rolljoin = function(x, y, rollkey_x, rollkey_y){
 
 #watch out. this rolls speccond values forward by datetimes till they match up
 #with the datetimes in your zq frame. they might roll a long way.
-merge_speccond_zq = function(site_id, site_zq_df){
+merge_speccond_zq = function(site_id, site_zq_df, wq_path){
 
-    wq_files = list.files(glue('raw/waterqual_20288/{s}', s=site_id))
+    wq_files = list.files(glue('{p}/{s}', p=wq_path, s=site_id))
     wq = tibble()
     for(f in wq_files){
-        wq = read_feather(glue('raw/waterqual_20288/{s}/{f}',
-                s=site_id, f=f)) %>%
+        wq = read_feather(glue('{p}/{s}/{f}', p=wq_path, s=site_id, f=f)) %>%
             bind_rows(wq)
     }
 

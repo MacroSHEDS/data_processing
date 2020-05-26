@@ -1,5 +1,8 @@
-#building incomplete Z-Q rating curves for 3 neon sites: COMO, FLNT, BLDE.
-#using long intervals during which sensors were not moved.
+#build Z-Q rating curves for 3 neon sites: COMO, FLNT, BLDE.
+#formanually specified intervals during which sensors were not moved.
+
+#download full collections of neon data by product here:
+# https://drive.google.com/open?id=1cDjQYenRTc4XJQGmvRctQ8pqACgD3PNB
 
 library(tidyverse)
 library(RColorBrewer)
@@ -8,18 +11,24 @@ library(glue)
 library(lubridate)
 library(data.table)
 
+#set paths here
 setwd('~/git/macrosheds/data_acquisition/data/neon/')
+helper_funcs_path = '../../src/neon/ancillary_scripts/neon_rating_curve_helpers.R'
+surface_elev_path = 'raw/surfaceElev_sensorpos'
+sensor_position_path = 'raw/surfaceElev_20016'
+water_qual_path = 'raw/waterqual_20288'
+zq_path = 'zq_data.rds'
 
-source('../../src/neon/neon_rating_curve_helpers.R')
-zq = get_zq('zq_data_temp.rds')
+source(helper_funcs_path)
+zq = get_zq(zq_path)
 
 #FLNT ####
 
 site = 'FLNT'
 
 #get stage; plot it; grab only downstream sensor (102, vs. upstream=101); replot
-sp = get_sensor_positions(site)
-el = get_surface_elevation(site)
+sp = get_sensor_positions(site, sp_path=surface_elev_path)
+el = get_surface_elevation(site, se_path=sensor_position_path)
 stg = calc_stage(sp, el)
 
 plot_stage(stg, sp, site)
@@ -34,15 +43,16 @@ stg$discharge_cms = predict(mod, list(Z=stg$stage))
 plot_discharge(stg, sp, site)
 
 #make speccond-Q rating curve
-site_zq = merge_speccond_zq(site, site_zq) #no speccond for this site
+site_zq = merge_speccond_zq(site, site_zq, wq_path=water_qual_path)
+    #no speccond for this site
 
 #COMO ####
 
 site = 'COMO'
 
 #get stage; plot it; grab only downstream sensor (102, vs. upstream=101); replot
-sp = get_sensor_positions(site)
-el = get_surface_elevation(site)
+sp = get_sensor_positions(site, sp_path=surface_elev_path)
+el = get_surface_elevation(site, se_path=sensor_position_path)
 stg = calc_stage(sp, el)
 
 plot_stage(stg, sp, site)
@@ -73,15 +83,16 @@ stg$discharge_cms = predict(mod, list(Z=stg$stage))
 plot_discharge(stg, sp, site)
 
 #make speccond-Q rating curve?
-site_zq = merge_speccond_zq(site, site_zq) #speccond unusable for this site.
+site_zq = merge_speccond_zq(site, site_zq, wq_path=water_qual_path)
+    #speccond unusable for this site.
 
 #BLDE ####
 
 site = 'BLDE'
 
 #get stage; plot it; grab only downstream sensor (102, vs. upstream=101); replot
-sp = get_sensor_positions(site)
-el = get_surface_elevation(site)
+sp = get_sensor_positions(site, sp_path=surface_elev_path)
+el = get_surface_elevation(site, se_path=sensor_position_path)
 stg = calc_stage(sp, el)
 
 plot_stage(stg, sp, site)
@@ -109,4 +120,5 @@ stg$discharge_cms = predict(mod, list(Z=stg$stage))
 plot_discharge(stg, sp, site)
 
 #make speccond-Q rating curve?
-site_zq = merge_speccond_zq(site, site_zq) #no speccond for this site
+site_zq = merge_speccond_zq(site, site_zq, wq_path=water_qual_path)
+    #no speccond for this site
