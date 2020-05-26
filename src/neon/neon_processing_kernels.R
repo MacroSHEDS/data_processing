@@ -179,25 +179,26 @@ process_0_20016 = function(set_details){
             site=set_details$site_name, startdate=set_details$component,
             enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
+        updown = determine_upstream_downstream(data_pile$EOS_5_min)
+
         out_sub = select(data_pile$EOS_5_min, startDateTime,
             surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
             horizontalPosition)
 
-        dir.create('data_acquisition/data/neon/raw/surfaceElev_sensorpos',
-            showWarnings=FALSE)
+        drc = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/{s}',
+            s=set_details$site_name)
+        dir.create(drc, showWarnings=FALSE, recursive=TRUE)
+        f = glue(drc, '/{p}.feather', p=set_details$component)
 
-        f = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/',
-            'sensorpos_{s}.feather', s=set_details$site_name)
+        # if(file.exists(f)){
+        #     sens_pos = feather::read_feather(f)
+        #     sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
+        #         distinct()
+        # } else {
+        #     sens_pos = data_pile$sensor_positions_20016
+        # }
 
-        if(file.exists(f)){
-            sens_pos = feather::read_feather(f)
-            sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
-                distinct()
-        } else {
-            sens_pos = data_pile$sensor_positions_20016
-        }
-
-        feather::write_feather(sens_pos, f)
+        feather::write_feather(data_pile$sensor_positions_20016, f)
 
     }, error=function(e){
         logging::logerror(e, logger='neon.module')
@@ -206,7 +207,7 @@ process_0_20016 = function(set_details){
     })
 
     return(out_sub)
-} #stage: waiting on NEON; fix updown
+} #stage: waiting on NEON
 process_0_20288 = function(set_details){
 
     thisenv = environment()

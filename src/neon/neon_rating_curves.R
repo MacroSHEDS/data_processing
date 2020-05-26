@@ -1,8 +1,10 @@
 library(tidyverse)
 library(RColorBrewer)
-# library(lubridate)
+library(feather)
+library(glue)
+library(lubridate)
 
-setwd('data_acquisition/data/neon/')
+setwd('~/git/macrosheds/data_acquisition/data/neon/')
 
 #prepare rating curve data ####
 
@@ -41,32 +43,110 @@ zq = zq1 %>%
 
 sites = unique(zq$siteID)
 
-#prepare surface elev data ####
+# zq2 = zq %>%
+#     filter(siteID == 'ARIK')
+# plot(zq2$streamStage, log(zq2$totalDischarge), col=zq2$)
 
-# prodcode = 'DP1.20016.001'
+#convert surface elev to stage and plot it####
+#surface elev acquired via macrosheds data_acquisition system
 
-ef = list.files('raw/surfaceElev', full.names=TRUE)
-ef_sites = stringr::str_match(ef, '([A-Z]{4})\\.feather$')[,2]
-ef = ef[ef_sites %in% sites]
+sites = list.dirs('raw/surfaceElev_20016/', full.names=FALSE)
+sites = sites[nchar(sites) > 0]
 
-surface_elev = tibble::tibble()
-for(i in length(ef):1){
-    surface_elev = feather::read_feather(ef[i]) %>%
-        mutate(siteID=str_match(ef[i], '([A-Z]{4}).feather$')[,2]) %>%
-        bind_rows(surface_elev)
+png('plots/zqsites_stage2.png', height=10, width=10, units='in',
+    type='cairo', res=300)
+cols = brewer.pal(10, 'Paired')
+par(mfrow=c(5, 5), oma=c(2, 2, 0, 0), mar=c(3, 3, 3, 0))
+
+el = sp = tibble()
+# s = sites[1]
+for(s in sites){
+
+    monthfiles = list.files(glue('raw/surfaceElev_20016/{s}', s=s))
+    for(m in monthfiles){
+        el0 = read_feather(glue('raw/surfaceElev_20016/{s}/{m}', s=s, m=m))
+        sp0 = read_feather(glue('raw/surfaceElev_sensorpos/{s}/{m}',
+            s=s, m=m))
+
+        el = bind_rows(el, el0)
+        sp = bind_rows(sp, sp0)
+    }
+
+    # sp = sp %>%
+    #     select_if(~(any(! is.na(.)))) %>%
+    #     select(-one_of('pitch', 'roll', 'azimuth'), -ends_with('Offset')) %>%
+    #     distinct()
+    sp = sp %>%
+        mutate(
+            horizontalPosition = substr(HOR.VER, 1, 3),
+            referenceStart = as.POSIXct(referenceStart, tz='UTC')) %>%
+        select(one_of('siteID', 'horizontalPosition', 'referenceElevation',
+            'referenceStart')) %>%
+        distinct() %>%
+        group_by(horizontalPosition, referenceStart) %>%
+        filter(referenceElevation == first(referenceElevation)) %>%
+        ungroup() %>%
+        filter(! is.na(referenceStart)) %>%
+        select(-siteID)
+
+    hp = sort(unique(sp$horizontalPosition))
+
+    #merge sensor position data
+    #could also somehow vertically sync all stages with current sensor position
+    el_rebuild = tibble()
+    for(j in 1:length(hp)){
+
+        el_hpos = el %>%
+            filter(horizontalPosition == hp[j])
+
+        sensdates = pull(el_hpos, startDateTime)
+
+        refdates = sp %>%
+            filter(horizontalPosition == hp[j]) %>%
+            arrange(referenceStart) %>%
+            pull(referenceStart)
+
+        refcol = as.POSIXct(as.character(cut(sensdates,
+            breaks=c(
+                # as.POSIXct('1900-01-01', tz='UTC'),
+                refdates,
+                as.POSIXct('2100-01-01', tz='UTC')
+            ), include.lowest=TRUE, labels=refdates)), tz='UTC')
+
+        el_rebuild = el_hpos %>%
+            bind_cols(list(refdate=refcol)) %>%
+            bind_rows(el_rebuild)
+    }
+
+    el = el_rebuild %>%
+        arrange(horizontalPosition, startDateTime) %>%
+        left_join(sp, by=c('refdate'='referenceStart', 'horizontalPosition')) %>%
+        mutate(stage = surfacewaterElevMean - referenceElevation)
+
+    rm(el_rebuild)
+    gc()
+
+    el = el %>%
+        filter(sWatElevFinalQF == 0) %>%
+        select(-refdate, -surfacewaterElevMean, -referenceElevation,
+            -sWatElevFinalQF, -verticalPosition)
+
+    #begin plot part
+    # xrng = range(el2$startDateTime, na.rm=TRUE)
+    # yrng = range(el2$stage, na.rm=TRUE)
+
+    plot(el2$startDateTime, el2$stage, type='n')
+    for(j in 1:length(hp)){
+        el_plot = filter(el2, horizontalPosition == hp[j])
+        points(el_plot$startDateTime, el_plot$stage, col=cols[j], pch='.',
+            bty='l')
+    }
+    mtext('Time (UTC)', 1, outer=TRUE, line=1)
+    mtext('Stage (m)', 2, outer=TRUE, line=1)
+
 }
 
-# sum(is.na(surface_elev$surfacewaterElevMean)) / nrow(surface_elev)
-
-# data_pile = neonUtilities::loadByProduct(prodcode,
-#     site='ARIK', package='basic', check.size=FALSE, avg=5)
-# saveRDS(data_pile, 'data_acquisition/data/neon/z_ARIK_temp.rds')
-# data_pile = readRDS('data_acquisition/data/neon/z_ARIK_temp.rds')
-# unique(data_pile$EOS_5_min$horizontalPosition)
-
-# sites = unique(surface_elev$siteID)
-
-#plot surface elevation series ####
+#plot surface elevation series (obsolete) ####
 
 png('plots/zqsites_surface_elev.png', height=10, width=10, units='in',
     type='cairo', res=300)
@@ -124,7 +204,7 @@ for(s in sites){
 
 dev.off()
 
-#plot uncorrected stage series ####
+#plot uncorrected stage series (obsolete) ####
 
 png('plots/zqsites_stage.png', height=10, width=10, units='in',
     type='cairo', res=300)
@@ -210,7 +290,7 @@ for(s in sites){
 
 dev.off()
 
-#plot harmonized stage series ####
+#plot harmonized stage series (obsolete template) ####
 
 png('plots/zqsites_stage_harmonized.png', height=10, width=10, units='in',
     type='cairo', res=300)
@@ -332,7 +412,7 @@ for(s in sites){
 
 dev.off()
 
-#make rating curves ####
+#make rating curves (still legit) ####
 
 xlims = range(zq$streamStage[zq$siteID != 'FLNT'], na.rm=TRUE)
 ylims = range(log(zq$totalDischarge[zq$siteID != 'FLNT']), na.rm=TRUE)

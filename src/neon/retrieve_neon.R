@@ -33,6 +33,7 @@ conf = jsonlite::fromJSON('data_acquisition/config.json')
 neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
     mutate(prodcode = sprintf('%05d', prodcode)) %>%
     filter(status == 'ready')
+# neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')[14,]
 
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
