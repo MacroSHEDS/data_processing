@@ -107,10 +107,11 @@ grab_insert = dplyr::mutate(grab, flag=paste('example flag', notes)) %>%
     tidylog::select(-sampleType, -hydroGraph,
         -fieldCode, -canonical, -waterYr, -ionError, -notes) %>%
     tidylog::gather('variable', 'value', Ca:precipCatch, -site) %>%
-    filter(! variable %in% c('gageHt', 'flowGageHt', 'precipCatch')) #might need?
+    filter(! variable %in% c('gageHt'))#, 'flowGageHt', 'precipCatch'))
 
 #map all flag values to canonical flag types before db insertion
-grab_insert = dplyr::mutate(grab_insert, flag_type=get_flag_types(flagmap, flag))
+grab_insert = dplyr::mutate(grab_insert,
+    flag_type=get_flag_types(flagmap, flag))
 
 #read flag information from postgresql and convert from array form to strings
 flag_grab = DBI::dbReadTable(con, 'flag_grab') %>%
@@ -128,11 +129,13 @@ flag_insert = tidylog::select(grab_insert, flag_detail=flag, flag_type) %>%
     tidylog::filter(! paste(flag_type, flag_detail) %in% existing_flags)
 # flag_insert[1,1] = 'aa,bb;;cc'
 
-flag_insert = as.data.frame(lapply(flag_insert, function(x) {
-        x = resolve_commas(x, comma_standin=';;')
-        x = postgres_arrayify(x)
-        return(x)
-    }))
+if(nrow(flag_insert)){
+    flag_insert = as.data.frame(lapply(flag_insert, function(x) {
+            x = resolve_commas(x, comma_standin=';;')
+            x = postgres_arrayify(x)
+            return(x)
+        }))
+}
 
 #insert new flags into flag table
 DBI::dbAppendTable(con, 'flag_grab', flag_insert)
@@ -143,10 +146,14 @@ DBI::dbAppendTable(con, 'flag_grab', flag_insert)
 variable_insert = readr::read_csv('../portal/data/variables.csv') %>%
     dplyr::select(-R_display) %>%
     dplyr::mutate(unit=1, method=1)
-# variable = DBI::dbReadTable(con, 'variable')
+
+variable = DBI::dbReadTable(con, 'variable')
+
+variable_insert = filter(variable_insert,
+    ! variable_code %in% variable$variable_code)
 
 #insert new vars into variable table
-# DBI::dbAppendTable(con, 'variable', variable_insert)
+DBI::dbAppendTable(con, 'variable', variable_insert)
 
 #still gotta build out communications with site, unit, method, waterway,
 #domain, variable tables. all full of placeholders for now.
@@ -168,9 +175,9 @@ flag_grab = DBI::dbReadTable(con, 'flag_grab') %>%
     dplyr::mutate_all(list(~ stringr::str_replace_all(., '\\"', '')))
 
 #update data with flag IDs
-####HERE: flags_combined is ending up with a "clean NA" that needs to be "clean"
 flags_combined = paste(grab_insert$flag_type, grab_insert$flag)
 existing_flags_combined = paste(flag_grab$flag_type, flag_grab$flag_detail)
+existing_flags_combined[which(existing_flags_combined == 'clean ')] = 'clean NA'
 flag_ids = flag_grab$id[match(flags_combined, existing_flags_combined)]
 
 grab_insert = dplyr::select(grab_insert, -flag, -flag_type) %>%
@@ -189,52 +196,3 @@ grab_insert = dplyr::mutate(grab_insert, site=site_ids)
 DBI::dbAppendTable(con, 'data_grab', grab_insert)
 
 dbDisconnect(con)
-
-# #write data to rethinkdb
-# recon = openConnection(host="localhost", port=28015, authKey=NULL, v="V0_4")
-#
-# dbs = cursorToList(r()$dbList()$run(recon))
-# if(! 'macrosheds' %in% dbs){
-#     r()$dbCreate('macrosheds')$run(recon)
-# }
-#
-# tables = cursorToList(r('macrosheds')$tableList()$run(recon))
-# if(! 'sourcedata' %in% dbs){
-#     r('macrosheds')$tableCreate('sourcedata')$run(recon)
-# }
-#
-# grablong = gather(select(grab, -waterYr), 'variable', 'value', Ca:canonical)
-# grablong$id = 1:nrow(grablong)
-# grablist = plyr::daply(grablong, .(id), list)
-# grablist = unname(grablist)
-#
-# chunker_ingester = function(l, chunksize=100000){
-#
-#     #determine chunks based on number of records
-#     n_recs = length(l)
-#     n_full_chunks = floor(n_recs / chunksize)
-#     partial_chunk_len = n_recs %% chunksize
-#
-#     #convert directly to dict if small enough, otherwise do it chunkwise
-#     if(n_full_chunks == 0){
-#         r('macrosheds', 'sourcedata')$insert(l)$run(recon)
-#     } else {
-#         for(i in 1:n_full_chunks){
-#             chunk = l[1:chunksize]
-#             l[1:chunksize] = NULL
-#             r('macrosheds', 'sourcedata')$insert(chunk)$run(recon)
-#         }
-#     }
-#
-#     if(partial_chunk_len){
-#         r('macrosheds', 'sourcedata')$insert(l)$run(recon)
-#     }
-# }
-#
-# chunker_ingester(grablist)
-#
-# r('macrosheds', 'sourcedata')$insert(grablist[1:5])$run(recon)
-# r('macrosheds', 'sourcedata')$get(1)$run(recon)
-# r('macrosheds', 'sourcedata')$delete()$run(recon)
-# r('macrosheds', 'sourcedata')$count()$run(recon)
-# close(recon)
