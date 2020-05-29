@@ -3,3 +3,5 @@ config.txt
 .Rproj.user
 .httr-oauth
 .Rhistory
+.httr-oauth
+/logs

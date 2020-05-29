@@ -1,0 +1,4 @@
+#neon data product codes are of this form: DPx.yyyyy.zzz,
+#where x is data level (1=qaqc'd), y is product id, z is revision
+
+#the final digit of horizontalPosition indicates upstream (1) or downstream (2)
