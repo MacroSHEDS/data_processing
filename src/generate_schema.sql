@@ -1,3 +1,5 @@
+--NOTE: establish indexes. negligible now, critical later.
+
 CREATE TABLE IF NOT EXISTS domain (
     id                  SMALLSERIAL PRIMARY KEY,
     domain_code         CHAR(3)         NOT NULL,
@@ -21,6 +23,7 @@ CREATE TABLE IF NOT EXISTS site (
     latitude            FLOAT           NOT NULL,
     longitude           FLOAT           NOT NULL,
     datum               VARCHAR(100)    NOT NULL,
+    ws_area_ha          FLOAT,
     add_date            TIMESTAMPTZ     NOT NULL,
     first_sensor_record TIMESTAMPTZ,
     last_sensor_record  TIMESTAMPTZ,
