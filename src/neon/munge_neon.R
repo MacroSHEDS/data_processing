@@ -9,22 +9,21 @@ library(emayili)
 
 #todo:
 
-setwd('/home/mike/git/macrosheds/')
-source('data_acquisition/src/helpers.R')
-source('data_acquisition/src/neon/neon_helpers.R')
-source('data_acquisition/src/neon/neon_processing_kernels.R')
+setwd('/home/mike/git/macrosheds/data_acquisition')
+source('src/helpers.R')
+source('src/neon/neon_helpers.R')
+source('src/neon/neon_processing_kernels.R')
 
 domain = 'neon'
 
 logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger=domain,
-    file=glue('data_acquisition/logs/{d}.log', d=domain))
+    file=glue('logs/{d}.log', d=domain))
 
-conf = jsonlite::fromJSON('data_acquisition/config.json')
+conf = jsonlite::fromJSON('config.json')
 
-neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
-    mutate(prodcode = sprintf('%05d', prodcode)) %>%
-    filter(status == 'ready')
+prod_info = get_product_info(dmn=domain, status_level='munge',
+    get_statuses='ready')
 
 # domain='neon'; site='ARIK'; prod=prodname_ms; tracker=held_data
 munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
@@ -39,7 +38,7 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
     for(k in 1:nrow(retrieval_log)){
 
         sitemonth = retrieval_log[k, 'component']
-        comp = feather::read_feather(glue('data_acquisition/data/{d}/raw/',
+        comp = feather::read_feather(glue('data/{d}/raw/',
             '{p}/{s}/{sm}.feather', d=domain, p=prod, s=site, sm=sitemonth))
 
         prodcode = strsplit(prod, '_')[[1]][2]
@@ -50,11 +49,16 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
         out = bind_rows(out, out_comp)
     }
 
-    prod_dir = glue('data_acquisition/data/{d}/munged/{p}', d=domain, p=prod)
+    prod_dir = glue('data/{d}/munged/{p}', d=domain, p=prod)
     dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
 
     site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
     write_feather(out, site_file)
+
+    #create a link to the new file from the portal repo
+    #(from and to seem logically reversed in file.link)
+    sw(file.link(to=glue('../portal/data/{d}/{p}/{s}.feather',
+        d=domain, p=strsplit(prod, '_')[[1]][1], s=site), from=site_file))
 
     update_data_tracker_m(domain, tracker_name='held_data', prod=prodname_ms,
         site=site, new_status='ok')
@@ -64,9 +68,9 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
 
 # i=1; j=1; k=1
 email_err_msg = FALSE
-for(i in 1:nrow(neonprods)){
+for(i in 1:nrow(prod_info)){
 
-    prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
+    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
 
     held_data = get_data_tracker(domain)
 
