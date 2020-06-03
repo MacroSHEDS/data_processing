@@ -1,9 +1,5 @@
-# library(logging)
-# library(tidyverse)
-#
-# glue = glue::glue
 
-# set_details=s
+#retrieval kernels
 process_0_20093 = function(set_details){
 
     thisenv = environment()
@@ -251,7 +247,7 @@ process_0_ = function(set_details){
 
 } #precip chem: not started
 
-# set=comp; set_details=1
+#munge kernels
 process_1_20093 = function(set, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
@@ -294,6 +290,7 @@ process_1_20093 = function(set, site_name){
     return(set)
 } #chem: ready
 
+#obsolete kernels (for parts, maybe)
 process_0_DP1.20093.001_api = function(d, set_details){
 
     data1_ind = intersect(grep("expanded", d$data$files$name),

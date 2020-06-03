@@ -16,24 +16,22 @@ library(neonUtilities)
 
 #todo: build data blacklist (to minimize email error notifications)
 
-setwd('/home/mike/git/macrosheds/')
-source('data_acquisition/src/helpers.R')
-source('data_acquisition/src/neon/neon_helpers.R')
-source('data_acquisition/src/neon/neon_processing_kernels.R')
+setwd('/home/mike/git/macrosheds/data_acquisition')
+source('src/helpers.R')
+source('src/neon/neon_helpers.R')
+source('src/neon/neon_processing_kernels.R')
 
 domain = 'neon'
 
 logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger=domain,
-    file=glue('data_acquisition/logs/{d}.log', d=domain))
+    file=glue('logs/{d}.log', d=domain))
 # logReset()
 
-conf = jsonlite::fromJSON('data_acquisition/config.json')
+conf = jsonlite::fromJSON('config.json')
 
-neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv') %>%
-    mutate(prodcode = sprintf('%05d', prodcode)) %>%
-    filter(status == 'ready')
-# neonprods = readr::read_csv('data_acquisition/data/neon/neon_products.csv')[14,]
+prod_info = get_product_info(dmn=domain, status_level='retrieve',
+    get_statuses='ready')
 
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
@@ -79,11 +77,11 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
 # i=1; j=1
 email_err_msg = FALSE
-for(i in 1:nrow(neonprods)){
+for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
-    prodname_ms = paste0(neonprods$prodname[i], '_', neonprods$prodcode[i])
-    prod_specs = get_neon_product_specs(neonprods$prodcode[i])
+    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prod_specs = get_neon_product_specs(prod_info$prodcode[i])
     if(is_ms_err(prod_specs)){
         msg = 'NEON may have created a v.002 product. investigate!'
         email_err(msg, 'mjv22@duke.edu', conf$gmail_pw)

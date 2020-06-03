@@ -1,8 +1,7 @@
 # library(logging)
 # library(tidyverse)
 
-sm = suppressMessages
-glue = glue::glue
+source('function_aliases.R')
 
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
@@ -119,7 +118,7 @@ get_data_tracker = function(domain){
 
     tryCatch({
 
-        tracker_data = glue('data_acquisition/data/{d}/data_tracker.json',
+        tracker_data = glue('data/{d}/data_tracker.json',
                 d=domain) %>%
             readr::read_file() %>%
             jsonlite::fromJSON()
@@ -150,7 +149,7 @@ get_data_tracker_OBSOLETE = function(domain, category, level){
         '1'='1_munge_trackers', '2'='2_derive_trackers')
 
     tracker_data = try(jsonlite::fromJSON(readr::read_file(
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        glue('data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category)
     )), silent=TRUE)
 
@@ -179,7 +178,7 @@ update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain){
     assign('held_data', held_data_, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(held_data),
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        glue('data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category))
 }
 
@@ -206,7 +205,7 @@ update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain, c
     assign('held_data', held_data_, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(held_data),
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
+        glue('data/{d}/data_trackers/{l}/{c}_data.json',
             d=domain, l=processing_level, c=category))
 }
 
@@ -364,7 +363,7 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
     }
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+        glue('data/{d}/data_tracker.json', d=domain))
 
 }
 
@@ -386,7 +385,7 @@ update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+        glue('data/{d}/data_tracker.json', d=domain))
 }
 
 #build this when the time comes
@@ -427,4 +426,16 @@ extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
         filter(status == keep_status)
 
     return(retrieved_data)
+}
+
+get_product_info = function(dmn, status_level, get_statuses){
+
+    prods = read_csv(glue('data/{d}/products.csv', d=dmn))
+    # mutate(prodcode = sprintf('%05d', prodcode)) %>%
+    # filter(retrieve_status == status)
+
+    status_column = glue(status_level, '_status')
+    prods = prods[prods[[status_column]] %in% get_statuses, ]
+
+    return(prods)
 }
