@@ -8,13 +8,13 @@ library(emayili)
 #note: see neon_notes.txt
 
 #todo:
+domain = 'neon'
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
 source('src/helpers.R')
-source('src/neon/neon_helpers.R')
-source('src/neon/neon_processing_kernels.R')
+source(glue('src/{d}/helpers.R', d=domain))
+source(glue('src/{d}/processing_kernels.R', d=domain))
 
-domain = 'neon'
 
 logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger=domain,
