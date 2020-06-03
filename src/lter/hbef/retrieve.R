@@ -12,21 +12,16 @@ library(logging)
 library(emayili)
 library(neonUtilities)
 
-#note: see neon_notes.txt
-
-#todo: build data blacklist (to minimize email error notifications)
+domain = 'hbef'
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
 source('src/helpers.R')
-source('src/neon/neon_helpers.R')
-source('src/neon/neon_processing_kernels.R')
-
-domain = 'neon'
+source(glue('src/{d}/helpers.R',  d=domain))
+source(glue('src/{d}/processing_kernels.R', d=domain))
 
 logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger=domain,
     file=glue('logs/{d}.log', d=domain))
-# logReset()
 
 conf = jsonlite::fromJSON('config.json')
 
