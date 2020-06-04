@@ -16,6 +16,18 @@ get_all_helpers = function(network=NULL, domain){
         silent=TRUE))
 }
 
+set_up_logger = function(network, domain){
+
+    logger_name = glue(network, '_', domain)
+    logger_module = glue(logger_name, '.module')
+
+    logging::basicConfig()
+    logging::addHandler(logging::writeToFile, logger=logger_name,
+        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+
+    return(logger_module)
+}
+
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
@@ -377,13 +389,17 @@ extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
     return(retrieved_data)
 }
 
-get_product_info = function(network=NULL, domain, status_level, get_statuses){
+get_product_info = function(network, domain=NULL, status_level, get_statuses){
 
-    if(is.null(network)) network = domain
+    #unlike other functions with network and domain arguments, this one accepts
+    #either network alone, or network and domain. if just network is given,
+    #it will look for products.csv at the network level
 
-    prods = read_csv(glue('data/{n}/{d}/products.csv', n=network, d=domain))
-    # mutate(prodcode = sprintf('%05d', prodcode)) %>%
-    # filter(retrieve_status == status)
+    if(is.null(domain)){
+        prods = read_csv(glue('src/{n}/products.csv', n=network))
+    } else {
+        prods = read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    }
 
     status_column = glue(status_level, '_status')
     prods = prods[prods[[status_column]] %in% get_statuses, ]
