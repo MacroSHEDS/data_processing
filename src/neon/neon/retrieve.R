@@ -40,7 +40,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
         msg = glue('Processing {site}, {prod}, {month}',
             site=s$site_name, prod=s$prodname_ms, month=s$component)
-        logging::loginfo(msg, logger='neon.module')
+        logging::loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
         out_sitemonth = do.call(processing_func, args=list(set_details=s))
@@ -117,7 +117,7 @@ for(i in 1:nrow(prod_info)){
 
         if(nrow(new_sets) == 0){
             logging::loginfo(glue('Nothing to do for {s} {n}',
-                    s=curr_site, n=prodname_ms), logger='neon.module')
+                    s=curr_site, n=prodname_ms), logger=logger_module)
             next
         }
 
@@ -126,7 +126,7 @@ for(i in 1:nrow(prod_info)){
         tryCatch({
             get_neon_data(domain=domain, new_sets, held_data)
         }, error=function(e){
-            logging::logerror(e, logger='neon.module')
+            logging::logerror(e, logger=logger_module)
             email_err_msg <<- TRUE
         })
 
