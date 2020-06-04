@@ -127,7 +127,7 @@ email_err = function(msg, addr, pw){
 
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
-        logging::logerr(msg, logger='neon.module')
+        logging::logerr(msg, logger=logger_module)
         return('email fail')
     } else {
         return('email success')
@@ -204,7 +204,7 @@ track_new_product = function(tracker, prod){
 
     if(prod %in% names(tracker)){
         msg = 'This product is already being tracked.'
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -255,7 +255,7 @@ populate_set_details = function(tracker, prod, site, avail, specs){
     if(any(is.na(retrieval_tracker$needed))){
         msg = paste0('Must run `track_new_site_components` before ',
             'running `populate_set_details`')
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -272,7 +272,7 @@ filter_unneeded_sets = function(tracker_with_details){
     if(any(is.na(new_sets$needed))){
         msg = paste0('Must run `track_new_site_components` and ',
             '`populate_set_details` before running `populate_set_details`')
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -297,7 +297,7 @@ update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
     )){
         msg = paste0('If tracker is not supplied, these args must be:',
             'tracker_name, set_details, new_status.')
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 

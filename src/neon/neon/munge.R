@@ -73,7 +73,7 @@ for(i in 2){
 
     if(! product_is_tracked(held_data, prodname_ms)){
         logging::logwarn(glue('Product {p} is not yet tracked. Retrieve ',
-            'it before munging it.', p=prodname_ms), logger='neon.module')
+            'it before munging it.', p=prodname_ms), logger=logger_module)
         next
     }
 
@@ -84,7 +84,7 @@ for(i in 2){
         tryCatch({
             munge_neon_site(domain, sites[j], prodname_ms, held_data)
         }, error=function(e){
-            logging::logerror(e, logger='neon.module')
+            logging::logerror(e, logger=logger_module)
             email_err_msg <<- TRUE
             update_data_tracker_m(network=network, domain=domain,
                 tracker_name='held_data', prod=prodname_ms, site=sites[j],
