@@ -4,27 +4,24 @@ ms_pasta_domain_refmap = list(
     hjandrews = 'knb-lter-and'
 )
 
-get_avail_lter_product_sets = function(prodcode, domain_ref){
+get_avail_lter_product_sets = function(prodcode, domain){
 
     thisenv = environment()
 
     tryCatch({
 
         #get current highest version of data package within LTER PASTA
+        domain_ref = ms_pasta_domain_refmap[[domain]]
         vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
-        vsn_request = glue(vsn_endpoint, domain, '/', prodcode)
+        vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
         lter_version = RCurl::getURLContent(vsn_request)
         lter_version = as.numeric(stringr::str_match(lter_version,
             '[0-9]+$')[1])
 
         new_vsn_available = ms_version < lter_version
 
-        req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-            prodcode_full))
-        txt = httr::content(req, as="text")
-        neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger='hbef.module')
         # email_err_msg <<- outer_loop_err <<- TRUE
         # assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('avail_sets', generate_ms_err(), pos=thisenv)
@@ -82,7 +79,7 @@ resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     } else if(! 'startDateTime' %in% out_cols){
         msg = glue('Datetime column not found for site ',
             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger='neon.module')
+        logging::logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
 
@@ -106,7 +103,7 @@ download_sitemonth_details = function(geturl){
         d = httr::GET(geturl)
         d = jsonlite::fromJSON(httr::content(d, as="text"))
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('d', generate_ms_err(), pos=thisenv)
     })
@@ -131,7 +128,7 @@ determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
     } else {
         msg = glue('Problem with upstream/downstream indicator for site ',
             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger='neon.module')
+        logging::logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
 
@@ -172,7 +169,7 @@ get_neon_product_specs = function(code){
     prodlist = try(get_avail_neon_products())
     if('try-error' %in% class(prodlist)){
         logging::logerror(glue("Can't retrieve NEON product list for {c}",
-            , c=code), logger='neon.module')
+            , c=code), logger=logger_module)
         stop()
     }
 
@@ -203,7 +200,7 @@ get_avail_neon_product_sets = function(prodcode_full){
         txt = httr::content(req, as="text")
         neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         # email_err_msg <<- outer_loop_err <<- TRUE
         # assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('avail_sets', generate_ms_err(), pos=thisenv)

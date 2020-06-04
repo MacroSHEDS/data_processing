@@ -32,7 +32,7 @@ process_0_20093 = function(set_details){
         }
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -57,7 +57,7 @@ process_0_20033 = function(set_details){
             select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -81,7 +81,7 @@ process_0_20042 = function(set_details){
             select(site_name, startDateTime, PARMean, PARFinalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -105,7 +105,7 @@ process_0_20053 = function(set_details){
             select(site_name, startDateTime, surfWaterTempMean, finalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -129,7 +129,7 @@ process_0_00004 = function(set_details){
             select(site_name, startDateTime, staPresMean, staPresFinalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -159,7 +159,7 @@ process_0_20097 = function(set_details){
         }
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -197,7 +197,7 @@ process_0_20016 = function(set_details){
         feather::write_feather(data_pile$sensor_positions_20016, f)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -232,7 +232,7 @@ process_0_20288 = function(set_details){
             rename_all(dplyr::recode, startDate='startDateTime')
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
