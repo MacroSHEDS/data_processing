@@ -12,12 +12,13 @@ library(logging)
 library(emayili)
 library(neonUtilities)
 
-domain = 'hbef'
+network = 'neon'
+domain = 'neon'
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
-source('src/helpers.R')
-source(glue('src/{d}/helpers.R',  d=domain))
-source(glue('src/{d}/processing_kernels.R', d=domain))
+
+source('src/global_helpers.R')
+get_all_helpers(network=network, domain=domain)
 
 logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger=domain,
@@ -25,8 +26,8 @@ logging::addHandler(logging::writeToFile, logger=domain,
 
 conf = jsonlite::fromJSON('config.json')
 
-prod_info = get_product_info(dmn=domain, status_level='retrieve',
-    get_statuses='ready')
+prod_info = get_product_info(network=domain, domain=domain,
+    status_level='retrieve', get_statuses='ready')
 
 # sets=new_sets; i=1; tracker=held_data
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
@@ -47,33 +48,33 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
         out_sitemonth = do.call(processing_func, args=list(set_details=s))
 
         if(is_ms_exception(out_sitemonth)){
-            update_data_tracker_r(domain, tracker_name='held_data', set_details=s,
-                new_status='error')
+            update_data_tracker_r(network=domain, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='error')
             next
         } else if(is_ms_err(out_sitemonth)){
-            update_data_tracker_r(domain, tracker_name='held_data', set_details=s,
-                new_status='error')
+            update_data_tracker_r(network=domain, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='error')
             assign('email_err_msg', TRUE, pos=.GlobalEnv)
             next
         }
 
-        site_dir = glue('data_acquisition/data/{d}/raw/{p}/{s}',
-            d=domain, p=s$prodname_ms, s=s$site_name)
+        site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
+            n=network, d=domain, p=s$prodname_ms, s=s$site_name)
         dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
 
         sitemonth_file = glue('{sd}/{t}.feather',
             sd=site_dir, t=s$component)
         write_feather(out_sitemonth, sitemonth_file)
 
-        update_data_tracker_r(domain, tracker_name='held_data', set_details=s,
-            new_status='ok')
+        update_data_tracker_r(network=domain, domain=domain,
+            tracker_name='held_data', set_details=s, new_status='ok')
     }
 }
 
 # i=1; j=1
 email_err_msg = FALSE
 for(i in 1:nrow(prod_info)){
-# for(i in 1){
+# for(i in 4){
 
     prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
     prod_specs = get_neon_product_specs(prod_info$prodcode[i])
@@ -83,7 +84,7 @@ for(i in 1:nrow(prod_info)){
         stop(msg)
     }
 
-    held_data = get_data_tracker(domain)
+    held_data = get_data_tracker(network=domain, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
         held_data = track_new_product(held_data, prodname_ms)
@@ -122,7 +123,7 @@ for(i in 1:nrow(prod_info)){
             next
         }
 
-        update_data_tracker_r(domain, tracker=held_data)
+        update_data_tracker_r(network=domain, domain=domain, tracker=held_data)
 
         tryCatch({
             get_neon_data(domain=domain, new_sets, held_data)
