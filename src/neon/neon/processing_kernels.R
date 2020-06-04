@@ -181,7 +181,7 @@ process_0_20016 = function(set_details){
             surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
             horizontalPosition)
 
-        drc = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/{s}',
+        drc = glue('data/neon/neon/raw/surfaceElev_sensorpos/{s}',
             s=set_details$site_name)
         dir.create(drc, showWarnings=FALSE, recursive=TRUE)
         f = glue(drc, '/{p}.feather', p=set_details$component)
@@ -253,14 +253,14 @@ process_1_20093 = function(set, site_name){
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
     # #         analyteUnits=c(), analyte=c()),
-    # #     'data_acquisition/data/neon/temp/20093_variants.rds')
+    # #     'data/neon/temp/20093_variants.rds')
     #
-    # v = readRDS('data_acquisition/data/neon/temp/20093_variants.rds')
+    # v = readRDS('data/neon/neon/temp/20093_variants.rds')
     # v = list(shipmentWarmQF=c(set$shipmentWarmQF, v$shipmentWarmQF),
     #     externalLabDataQF=c(set$externalLabDataQF, v$externalLabDataQF),
     #     sampleCondition=c(set$sampleCondition, v$sampleCondition),
     #     vars=c(paste(set$analyte, set$analyteUnits), v$vars))
-    # saveRDS(v, 'data_acquisition/data/neon/temp/20093_variants.rds')
+    # saveRDS(v, 'data/neon/neon/temp/20093_variants.rds')
     # table(v$vars)
 
     set = set %>%

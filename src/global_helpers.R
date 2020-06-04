@@ -3,6 +3,19 @@
 
 source('function_aliases.R')
 
+get_all_helpers = function(network=NULL, domain){
+
+    if(is.null(network)) network = domain
+
+    sw(try(source(glue('src/{n}/network_helpers.R', n=network)), silent=TRUE))
+    sw(try(source(glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)),
+        silent=TRUE))
+
+    sw(try(source(glue('src/{n}/processing_kernels.R', d=domain)), silent=TRUE))
+    sw(try(source(glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)),
+        silent=TRUE))
+}
+
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
@@ -110,16 +123,20 @@ email_err = function(msg, addr, pw){
 
 }
 
-get_data_tracker = function(domain){
+get_data_tracker = function(network=NULL, domain){
 
+    #network is an optional macrosheds network name string. If omitted, it's
+        #assumed to be identical to the domain string.
     #domain is a macrosheds domain string
+
+    if(is.null(network)) network = domain
 
     thisenv = environment()
 
     tryCatch({
 
-        tracker_data = glue('data/{d}/data_tracker.json',
-                d=domain) %>%
+        tracker_data = glue('data/{n}/{d}/data_tracker.json',
+                n=network, d=domain) %>%
             readr::read_file() %>%
             jsonlite::fromJSON()
 
@@ -134,79 +151,6 @@ get_data_tracker = function(domain){
     })
 
     return(tracker_data)
-}
-
-get_data_tracker_OBSOLETE = function(domain, category, level){
-
-    #OBSOLETE
-
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    tracker_data = try(jsonlite::fromJSON(readr::read_file(
-        glue('data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category)
-    )), silent=TRUE)
-
-    if('try-error' %in% class(tracker_data)) tracker_data = list()
-
-    return(tracker_data)
-}
-
-update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain){
-
-    #new_dates is a vector of year-months, e.g. '2019-12'
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    held_dates = held_data[[prodcode]][[site]]$months
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]]$months = append(held_dates, new_dates)
-    assign('held_data', held_data_, pos=.GlobalEnv)
-
-    readr::write_file(jsonlite::toJSON(held_data),
-        glue('data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category))
-}
-
-update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain, category,
-    level){
-
-    #OBSOLETE
-
-    #new_dates is a vector of year-months, e.g. '2019-12'
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    held_dates = held_data[[prodcode]][[site]]$months
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]]$months = append(held_dates, new_dates)
-    assign('held_data', held_data_, pos=.GlobalEnv)
-
-    readr::write_file(jsonlite::toJSON(held_data),
-        glue('data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category))
 }
 
 make_tracker_skeleton = function(retrieval_chunks){
@@ -323,8 +267,8 @@ filter_unneeded_sets = function(tracker_with_details){
     return(new_sets)
 }
 
-update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
-    set_details=NULL, new_status=NULL){
+update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
+    tracker_name=NULL, set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
     #see update_data_tracker_m for the munge section and update_data_tracker_d
@@ -333,6 +277,8 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
     #from disk.
+
+    if(is.null(network)) network = domain
 
     if(is.null(tracker) && (
             is.null(tracker_name) || is.null(set_details) || is.null(new_status)
@@ -345,7 +291,7 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(domain)
+        tracker = get_data_tracker(network=domain, domain=domain)
 
         rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
 
@@ -363,17 +309,20 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
     }
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{d}/data_tracker.json', d=domain))
+        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 
 }
 
 # tracker_name='held_data'; prod=prodname_ms; new_status='ok'
-update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
+update_data_tracker_m = function(network=NULL, domain, tracker_name, prod,
+    site, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_d for the derive section
 
-    tracker = get_data_tracker(domain)
+    if(missing(network)) network = domain
+
+    tracker = get_data_tracker(network=domain, domain=domain)
 
     mt = tracker[[prod]][[site]]$munge
 
@@ -385,7 +334,7 @@ update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{d}/data_tracker.json', d=domain))
+        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 }
 
 #build this when the time comes
@@ -428,9 +377,11 @@ extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
     return(retrieved_data)
 }
 
-get_product_info = function(dmn, status_level, get_statuses){
+get_product_info = function(network=NULL, domain, status_level, get_statuses){
 
-    prods = read_csv(glue('data/{d}/products.csv', d=dmn))
+    if(is.null(network)) network = domain
+
+    prods = read_csv(glue('data/{n}/{d}/products.csv', n=network, d=domain))
     # mutate(prodcode = sprintf('%05d', prodcode)) %>%
     # filter(retrieve_status == status)
 
