@@ -13,8 +13,6 @@ setwd('/home/mike/git/macrosheds/data_acquisition')
 source('src/global_helpers.R')
 get_all_helpers(network=network, domain=domain)
 
-logger_module = set_up_logger(network=network, domain=domain)
-
 conf = jsonlite::fromJSON('config.json')
 
 prod_info = get_product_info(network=network, domain=domain,
