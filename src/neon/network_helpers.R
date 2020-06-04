@@ -1,4 +1,49 @@
 
+ms_pasta_domain_refmap = list(
+    hbef = 'knb-lter-hbr',
+    hjandrews = 'knb-lter-and'
+)
+
+get_avail_lter_product_sets = function(prodcode, domain_ref){
+
+    thisenv = environment()
+
+    tryCatch({
+
+        #get current highest version of data package within LTER PASTA
+        vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
+        vsn_request = glue(vsn_endpoint, domain, '/', prodcode)
+        lter_version = RCurl::getURLContent(vsn_request)
+        lter_version = as.numeric(stringr::str_match(lter_version,
+            '[0-9]+$')[1])
+
+        new_vsn_available = ms_version < lter_version
+
+        req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
+            prodcode_full))
+        txt = httr::content(req, as="text")
+        neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
+    }, error=function(e){
+        logging::logerror(e, logger='neon.module')
+        # email_err_msg <<- outer_loop_err <<- TRUE
+        # assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        assign('avail_sets', generate_ms_err(), pos=thisenv)
+    })
+
+    urls = unlist(neondata$data$siteCodes$availableDataUrls)
+
+    avail_sets = stringr::str_match(urls,
+        '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})') %>%
+        as_tibble(.name_repair='unique') %>%
+        rename(url=`...1`, site_name=`...2`, component=`...3`)
+
+    return(avail_sets)
+
+}
+
+
+
+#neon stuff below here, for borrowing parts
 resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     from_api=FALSE, set_details_){
 

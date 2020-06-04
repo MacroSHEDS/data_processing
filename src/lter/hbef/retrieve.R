@@ -12,9 +12,12 @@ library(logging)
 library(emayili)
 library(neonUtilities)
 
-network = 'neon'
-domain = 'neon'
+#notice, in LTER parlance, our domains are "sites", and our prodcodes
+#are "identifiers"
 
+network = 'lter'
+domain = 'hbef'
+'fart.hockey'
 setwd('/home/mike/git/macrosheds/data_acquisition')
 
 source('src/global_helpers.R')
@@ -24,11 +27,11 @@ logger_module = set_up_logger(network=network, domain=domain)
 
 conf = jsonlite::fromJSON('config.json')
 
-prod_info = get_product_info(network=network, domain=NULL,
+prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
 
 # sets=new_sets; i=1; tracker=held_data
-get_neon_data = function(domain, sets, tracker, silent=TRUE){
+get_lter_data = function(domain, sets, tracker, silent=TRUE){
 
     if(nrow(sets) == 0) return()
 
@@ -72,15 +75,15 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 # i=1; j=1
 email_err_msg = FALSE
 for(i in 1:nrow(prod_info)){
-# for(i in 4){
 
-    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
-    prod_specs = get_neon_product_specs(prod_info$prodcode[i])
-    if(is_ms_err(prod_specs)){
-        msg = 'NEON may have created a v.002 product. investigate!'
-        email_err(msg, 'mjv22@duke.edu', conf$gmail_pw)
-        stop(msg)
-    }
+    prodcode = prod_info$prodcode[i]
+    prodname_ms = paste0(prod_info$prodname[i], '_', prodcode)
+    # prod_specs = get_neon_product_specs(prod_info$prodcode[i])
+    # if(is_ms_err(prod_specs)){
+    #     msg = 'NEON may have created a v.002 product. investigate!'
+    #     email_err(msg, 'mjv22@duke.edu', conf$gmail_pw)
+    #     stop(msg)
+    # }
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -88,7 +91,7 @@ for(i in 1:nrow(prod_info)){
         held_data = track_new_product(held_data, prodname_ms)
     }
 
-    avail_sets = sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
+    avail_sets = get_avail_lter_product_sets(prodcode=prodcode, domain=domain)
     if(is_ms_err(avail_sets)){
         email_err_msg = TRUE
         next
@@ -117,7 +120,7 @@ for(i in 1:nrow(prod_info)){
 
         if(nrow(new_sets) == 0){
             logging::loginfo(glue('Nothing to do for {s} {n}',
-                    s=curr_site, n=prodname_ms), logger='neon.module')
+                    s=curr_site, n=prodname_ms), logger=logger_module)
             next
         }
 
