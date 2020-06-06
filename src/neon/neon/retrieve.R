@@ -111,7 +111,7 @@ for(i in 1:nrow(prod_info)){
             avail_site_sets)
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            curr_site, avail_site_sets, prod_specs)
+            curr_site, avail_site_sets)
 
         new_sets = filter_unneeded_sets(retrieval_details)
 

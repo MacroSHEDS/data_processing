@@ -27,3 +27,4 @@ distinct = dplyr::distinct
 `.` = plyr::`.`
 sm = suppressMessages
 sw = suppressWarnings
+str_match = stringr::str_match

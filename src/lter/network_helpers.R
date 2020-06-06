@@ -1,3 +1,105 @@
+ms_pasta_domain_refmap = list(
+    hbef = 'knb-lter-hbr',
+    hjandrews = 'knb-lter-and'
+)
+
+get_latest_product_version = function(prodname, domain, data_tracker){
+
+    thisenv = environment()
+
+    vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
+
+    tryCatch({
+
+        domain_ref = ms_pasta_domain_refmap[[domain]]
+        prodcode = prodcode_from_ms_prodname(prodname)
+
+        vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
+        newest_vsn = RCurl::getURLContent(vsn_request)
+        newest_vsn = as.numeric(stringr::str_match(newest_vsn,
+            '[0-9]+$')[1])
+
+    }, error=function(e){
+        logging::logerror(e, logger=logger_module)
+        assign('newest_version',
+            generate_ms_err('error in get_latest_product_version'),
+            pos=thisenv)
+    })
+
+    return(newest_vsn)
+}
+
+get_avail_lter_product_sets = function(prodname, version, domain, data_tracker){
+
+    #returns: tibble with url, site_name, component (aka element_name)
+
+    thisenv = environment()
+
+    name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
+    dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+
+    tryCatch({
+
+        domain_ref = ms_pasta_domain_refmap[[domain]]
+        prodcode = strsplit(prodname, '_')[[1]][2]
+
+        name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
+            version)
+        reqdata = RCurl::getURLContent(name_request)
+        reqdata = strsplit(reqdata, '\n')[[1]]
+        reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
+
+        element_ids = reqdata[,2]
+        dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
+            '/', element_ids)
+
+        avail_sets = tibble(url=dl_urls,
+            site_name=str_match(reqdata[,3], '(.+?)_.*')[,2],
+            component=reqdata[,3])
+
+    }, error=function(e){
+        logging::logerror(e, logger=logger_module)
+        assign('avail_sets',
+            generate_ms_err('error in get_avail_lter_product_sets'),
+            pos=thisenv)
+    })
+
+    return(avail_sets)
+}
+
+populate_set_details = function(tracker, prod, site, avail, latest_vsn){
+
+    #must return a tibble with a "needed" column, which indicates which new
+    #datasets need to be retrieved
+
+    retrieval_tracker = tracker[[prod]][[site]]$retrieve
+    prodcode = prodcode_from_ms_prodname(prod)
+
+    retrieval_tracker = avail %>%
+        mutate(
+            avail_version = latest_vsn,
+            prodcode_full = NA, #no such thing for lter. could simply omit
+            prodcode_id = prodcode,
+            prodname_ms = prod) %>%
+        full_join(retrieval_tracker, by='component') %>%
+        # filter(status != 'blacklist' | is.na(status)) %>%
+        mutate(
+            held_version = as.numeric(held_version),
+            needed = avail_version - held_version > 0)
+
+    if(any(is.na(retrieval_tracker$needed))){
+        msg = paste0('Must run `track_new_site_components` before ',
+            'running `populate_set_details`')
+        logging::logerror(msg, logger=logger_module)
+        stop(msg)
+    }
+
+    return(retrieval_tracker)
+}
+
+
+
+#neon stuff below here. for parts.
 
 resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     from_api=FALSE, set_details_){
@@ -150,8 +252,6 @@ get_neon_product_specs = function(code){
 
 get_avail_neon_product_sets = function(prodcode_full){
 
-    #returns: tibble with url, site_name, component columns
-
     thisenv = environment()
     avail_sets = tibble()
 
@@ -177,38 +277,6 @@ get_avail_neon_product_sets = function(prodcode_full){
         rename(url=`...1`, site_name=`...2`, component=`...3`)
 
     return(avail_sets)
-
 }
 
-populate_set_details = function(tracker, prod, site, avail){
 
-    #must return a tibble with a "needed" column, which indicates which new
-    #datasets need to be retrieved
-
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
-
-    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
-    rgx_capt = str_match(avail$url, rgx)[, -1]
-
-    retrieval_tracker = avail %>%
-        mutate(
-            avail_version = as.numeric(rgx_capt[, 3]),
-            prodcode_full = rgx_capt[, 1],
-            prodcode_id = rgx_capt[, 2],
-            prodname_ms = prod) %>%
-        full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blacklist' | is.na(status)) %>%
-        mutate(
-            held_version = as.numeric(held_version),
-            needed = avail_version - held_version > 0)
-        # filter(needed == TRUE | is.na(needed))
-
-    if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logging::logerror(msg, logger=logger_module)
-        stop(msg)
-    }
-
-    return(retrieval_tracker)
-}
