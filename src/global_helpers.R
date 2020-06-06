@@ -1,7 +1,7 @@
 # library(logging)
 # library(tidyverse)
 
-source('function_aliases.R')
+source('src/function_aliases.R')
 
 get_all_helpers = function(network=NULL, domain){
 
@@ -104,21 +104,33 @@ is_ms_exception = function(x){
     return('ms_exception' %in% class(x))
 }
 
-# msg='neon data acquisition error. check the logs.'
 # addr='mjv22@duke.edu'; pw=conf$gmail_pw
-email_err = function(msg, addr, pw){
+email_err = function(msgs, addrs, pw){
+
+    if(is.list(msgs)){
+        msgs = Reduce(function(x, y) paste(x, y, sep='\n---\n'), msgs)
+    }
+
+    text_body = glue('Error list:\n\n', msgs, '\n\nEnd of errors')
 
     mailout = tryCatch({
-        email = envelope() %>%
-            from('grdouser@gmail.com') %>%
-            to(addr) %>%
-            subject('MacroSheds error') %>%
-            text(msg)
-        smtp = server(host='smtp.gmail.com',
-            port=587, #or 465 for SMTPS
-            username='grdouser@gmail.com',
-            password=pw)
-        smtp(email, verbose=FALSE)
+
+        for(a in addrs){
+
+            email = envelope() %>%
+                from('grdouser@gmail.com') %>%
+                to(a) %>%
+                subject('MacroSheds error') %>%
+                text(text_body)
+
+            smtp = server(host='smtp.gmail.com',
+                port=587, #or 465 for SMTPS
+                username='grdouser@gmail.com',
+                password=pw)
+
+            smtp(email, verbose=FALSE)
+        }
+
     }, error=function(e){
         errout = 'err'
         class(errout) = 'err'
@@ -228,40 +240,6 @@ track_new_site_components = function(tracker, prod, site, avail){
     return(tracker)
 }
 
-# tracker=held_data; prod=prodname_ms; site=curr_site; avail=avail_site_sets
-# specs=prod_specs
-# rm(tracker, prod, site, avail, specs)
-# filter_unneeded_sets = function(tracker, prod, site, avail, specs){
-populate_set_details = function(tracker, prod, site, avail, specs){
-
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
-
-    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
-    rgx_capt = str_match(avail$url, rgx)[, -1]
-
-    retrieval_tracker = avail %>%
-        mutate(
-            avail_version = as.numeric(rgx_capt[, 3]),
-            prodcode_full = rgx_capt[, 1],
-            prodcode_id = rgx_capt[, 2],
-            prodname_ms = prod) %>%
-        full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blacklist' | is.na(status)) %>%
-        mutate(
-            held_version = as.numeric(held_version),
-            needed = avail_version - held_version > 0)
-        # filter(needed == TRUE | is.na(needed))
-
-    if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logging::logerror(msg, logger=logger_module)
-        stop(msg)
-    }
-
-    return(retrieval_tracker)
-}
-
 filter_unneeded_sets = function(tracker_with_details){
 
 
@@ -279,6 +257,7 @@ filter_unneeded_sets = function(tracker_with_details){
     return(new_sets)
 }
 
+# tracker_name='held_data'; set_details=s; new_status='ok'
 update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
     tracker_name=NULL, set_details=NULL, new_status=NULL){
 
@@ -288,7 +267,7 @@ update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
 
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk.
+    #from disk, updated, and then written back to disk.
 
     if(is.null(network)) network = domain
 
@@ -303,7 +282,7 @@ update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(network=domain, domain=domain)
+        tracker = get_data_tracker(network=network, domain=domain)
 
         rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
 
@@ -334,7 +313,7 @@ update_data_tracker_m = function(network=NULL, domain, tracker_name, prod,
 
     if(missing(network)) network = domain
 
-    tracker = get_data_tracker(network=domain, domain=domain)
+    tracker = get_data_tracker(network=network, domain=domain)
 
     mt = tracker[[prod]][[site]]$munge
 
@@ -405,4 +384,43 @@ get_product_info = function(network, domain=NULL, status_level, get_statuses){
     prods = prods[prods[[status_column]] %in% get_statuses, ]
 
     return(prods)
+}
+
+prodcode_from_ms_prodname = function(ms_prodname){
+
+    prodcode = strsplit(ms_prodname, '_')[[1]][2]
+
+    return(prodcode)
+}
+
+pprint_callstack = function(){
+
+    funcnamevec = unlist(lapply(as.list(sys.calls()), deparse))
+    funcnamevec = funcnamevec[-length(funcnamevec)] #exclude pprint_callstack
+    callchain = paste(funcnamevec, collapse=' --> ')
+
+    return(callchain)
+}
+
+handle_error = function(err, note){
+
+    #combines error message, callstack, and any notes as string.
+    #logs this collection, adds it to global list of errors to email,
+    #and returns it as custom error class
+
+    if(missing(note)) note = 'No note'
+
+    pretty_callstack = pprint_callstack()
+
+    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}',
+        e=err, c=pretty_callstack, n=note)
+
+    logging::logerror(full_message, logger=logger_module)
+
+    email_err_msg = append(email_err_msg, full_message)
+    assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+
+    ms_err = generate_ms_err(full_message)
+
+    return(ms_err)
 }

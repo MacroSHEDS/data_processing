@@ -12,8 +12,8 @@ library(logging)
 library(emayili)
 library(neonUtilities)
 
-#notice, in LTER parlance, our domains are "sites", and our prodcodes
-#are "identifiers"
+#notice, in LTER parlance, our domains are "sites", our prodcodes
+#are "identifiers", our components are "elements", and each element has an "element id"
 
 network = 'lter'
 domain = 'hbef'
@@ -28,7 +28,8 @@ logger_module = set_up_logger(network=network, domain=domain)
 conf = jsonlite::fromJSON('config.json')
 
 prod_info = get_product_info(network=network, domain=domain,
-    status_level='retrieve', get_statuses='ready')
+    # status_level='retrieve', get_statuses='ready')
+    status_level='retrieve', get_statuses='pending')
 
 # sets=new_sets; i=1; tracker=held_data
 get_lter_data = function(domain, sets, tracker, silent=TRUE){
@@ -46,44 +47,31 @@ get_lter_data = function(domain, sets, tracker, silent=TRUE){
         logging::loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
-        out_sitemonth = do.call(processing_func, args=list(set_details=s))
+        result = do.call(processing_func,
+            args=list(set_details=s, network=network, domain=domain))
 
-        if(is_ms_exception(out_sitemonth)){
-            update_data_tracker_r(network=domain, domain=domain,
+        if(is_ms_err(result) || is_ms_exception(result)){
+            update_data_tracker_r(network=network, domain=domain,
                 tracker_name='held_data', set_details=s, new_status='error')
             next
-        } else if(is_ms_err(out_sitemonth)){
-            update_data_tracker_r(network=domain, domain=domain,
-                tracker_name='held_data', set_details=s, new_status='error')
-            assign('email_err_msg', TRUE, pos=.GlobalEnv)
-            next
+        } else {
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='ok')
         }
-
-        site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
-            n=network, d=domain, p=s$prodname_ms, s=s$site_name)
-        dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
-
-        sitemonth_file = glue('{sd}/{t}.feather',
-            sd=site_dir, t=s$component)
-        write_feather(out_sitemonth, sitemonth_file)
-
-        update_data_tracker_r(network=domain, domain=domain,
-            tracker_name='held_data', set_details=s, new_status='ok')
+        # } else if(is_ms_err(result)){
+        #     update_data_tracker_r(network=domain, domain=domain,
+        #         tracker_name='held_data', set_details=s, new_status='error')
+        #     assign('email_err_msg', TRUE, pos=.GlobalEnv)
+        #     next
+        # }
     }
 }
 
 # i=1; j=1
-email_err_msg = FALSE
+email_err_msg = list()
 for(i in 1:nrow(prod_info)){
 
-    prodcode = prod_info$prodcode[i]
-    prodname_ms = paste0(prod_info$prodname[i], '_', prodcode)
-    # prod_specs = get_neon_product_specs(prod_info$prodcode[i])
-    # if(is_ms_err(prod_specs)){
-    #     msg = 'NEON may have created a v.002 product. investigate!'
-    #     email_err(msg, 'mjv22@duke.edu', conf$gmail_pw)
-    #     stop(msg)
-    # }
+    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -91,9 +79,19 @@ for(i in 1:nrow(prod_info)){
         held_data = track_new_product(held_data, prodname_ms)
     }
 
-    avail_sets = get_avail_lter_product_sets(prodcode=prodcode, domain=domain)
+    latest_vsn = get_latest_product_version(prodname=prodname_ms,
+        domain=domain, data_tracker=held_data)
+
+    if(is_ms_err(latest_vsn)){
+        email_err_msg = append(email_err_msg, latest_vsn)
+        next
+    }
+
+    avail_sets = get_avail_lter_product_sets(prodname=prodname_ms,
+        version=latest_vsn, domain=domain, data_tracker=held_data)
+
     if(is_ms_err(avail_sets)){
-        email_err_msg = TRUE
+        email_err_msg = append(email_err_msg, avail_sets)
         next
     }
 
@@ -114,7 +112,7 @@ for(i in 1:nrow(prod_info)){
             avail_site_sets)
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            curr_site, avail_site_sets, prod_specs)
+            curr_site, avail_site_sets, latest_vsn)
 
         new_sets = filter_unneeded_sets(retrieval_details)
 
@@ -127,10 +125,10 @@ for(i in 1:nrow(prod_info)){
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
         tryCatch({
-            get_neon_data(domain=domain, new_sets, held_data)
+            get_lter_data(domain=domain, new_sets, held_data)
         }, error=function(e){
             logging::logerror(e, logger=logger_module)
-            email_err_msg <<- TRUE
+            email_err_msg <<- TRUE #must change this to list append
         })
 
     }
@@ -138,7 +136,6 @@ for(i in 1:nrow(prod_info)){
     gc()
 }
 
-if(email_err_msg){
-    email_err('neon data acquisition error. check the logs.',
-        'mjv22@duke.edu', conf$gmail_pw)
+if(length(email_err_msg)){
+    email_err(email_err_msg, conf$report_emails, conf$gmail_pw)
 }
