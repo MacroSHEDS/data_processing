@@ -1,8 +1,32 @@
 # library(logging)
 # library(tidyverse)
 
-sm = suppressMessages
-glue = glue::glue
+source('src/function_aliases.R')
+
+get_all_helpers = function(network=NULL, domain){
+
+    if(is.null(network)) network = domain
+
+    sw(try(source(glue('src/{n}/network_helpers.R', n=network)), silent=TRUE))
+    sw(try(source(glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)),
+        silent=TRUE))
+
+    sw(try(source(glue('src/{n}/processing_kernels.R', d=domain)), silent=TRUE))
+    sw(try(source(glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)),
+        silent=TRUE))
+}
+
+set_up_logger = function(network, domain){
+
+    logger_name = glue(network, '_', domain)
+    logger_module = glue(logger_name, '.module')
+
+    logging::basicConfig()
+    logging::addHandler(logging::writeToFile, logger=logger_name,
+        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+
+    return(logger_module)
+}
 
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
@@ -80,21 +104,33 @@ is_ms_exception = function(x){
     return('ms_exception' %in% class(x))
 }
 
-# msg='neon data acquisition error. check the logs.'
 # addr='mjv22@duke.edu'; pw=conf$gmail_pw
-email_err = function(msg, addr, pw){
+email_err = function(msgs, addrs, pw){
+
+    if(is.list(msgs)){
+        msgs = Reduce(function(x, y) paste(x, y, sep='\n---\n'), msgs)
+    }
+
+    text_body = glue('Error list:\n\n', msgs, '\n\nEnd of errors')
 
     mailout = tryCatch({
-        email = envelope() %>%
-            from('grdouser@gmail.com') %>%
-            to(addr) %>%
-            subject('MacroSheds error') %>%
-            text(msg)
-        smtp = server(host='smtp.gmail.com',
-            port=587, #or 465 for SMTPS
-            username='grdouser@gmail.com',
-            password=pw)
-        smtp(email, verbose=FALSE)
+
+        for(a in addrs){
+
+            email = envelope() %>%
+                from('grdouser@gmail.com') %>%
+                to(a) %>%
+                subject('MacroSheds error') %>%
+                text(text_body)
+
+            smtp = server(host='smtp.gmail.com',
+                port=587, #or 465 for SMTPS
+                username='grdouser@gmail.com',
+                password=pw)
+
+            smtp(email, verbose=FALSE)
+        }
+
     }, error=function(e){
         errout = 'err'
         class(errout) = 'err'
@@ -103,7 +139,7 @@ email_err = function(msg, addr, pw){
 
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
-        logging::logerr(msg, logger='neon.module')
+        logging::logerr(msg, logger=logger_module)
         return('email fail')
     } else {
         return('email success')
@@ -111,16 +147,20 @@ email_err = function(msg, addr, pw){
 
 }
 
-get_data_tracker = function(domain){
+get_data_tracker = function(network=NULL, domain){
 
+    #network is an optional macrosheds network name string. If omitted, it's
+        #assumed to be identical to the domain string.
     #domain is a macrosheds domain string
+
+    if(is.null(network)) network = domain
 
     thisenv = environment()
 
     tryCatch({
 
-        tracker_data = glue('data_acquisition/data/{d}/data_tracker.json',
-                d=domain) %>%
+        tracker_data = glue('data/{n}/{d}/data_tracker.json',
+                n=network, d=domain) %>%
             readr::read_file() %>%
             jsonlite::fromJSON()
 
@@ -135,79 +175,6 @@ get_data_tracker = function(domain){
     })
 
     return(tracker_data)
-}
-
-get_data_tracker_OBSOLETE = function(domain, category, level){
-
-    #OBSOLETE
-
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    tracker_data = try(jsonlite::fromJSON(readr::read_file(
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category)
-    )), silent=TRUE)
-
-    if('try-error' %in% class(tracker_data)) tracker_data = list()
-
-    return(tracker_data)
-}
-
-update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain){
-
-    #new_dates is a vector of year-months, e.g. '2019-12'
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    held_dates = held_data[[prodcode]][[site]]$months
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]]$months = append(held_dates, new_dates)
-    assign('held_data', held_data_, pos=.GlobalEnv)
-
-    readr::write_file(jsonlite::toJSON(held_data),
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category))
-}
-
-update_data_tracker_dates_OBSOLETE = function(new_dates, set_details_, domain, category,
-    level){
-
-    #OBSOLETE
-
-    #new_dates is a vector of year-months, e.g. '2019-12'
-    #domain is a macrosheds domain string
-    #category is one of 'held', 'problem', 'blacklist'
-    #level is processing level (0 = retrieval, 1 = munge, 2 = derive)
-
-    level = as.character(level)
-
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    processing_level = switch(level, '0'='0_retrieval_trackers',
-        '1'='1_munge_trackers', '2'='2_derive_trackers')
-
-    held_dates = held_data[[prodcode]][[site]]$months
-    held_data_ = held_data
-    held_data_[[prodcode]][[site]]$months = append(held_dates, new_dates)
-    assign('held_data', held_data_, pos=.GlobalEnv)
-
-    readr::write_file(jsonlite::toJSON(held_data),
-        glue('data_acquisition/data/{d}/data_trackers/{l}/{c}_data.json',
-            d=domain, l=processing_level, c=category))
 }
 
 make_tracker_skeleton = function(retrieval_chunks){
@@ -249,7 +216,7 @@ track_new_product = function(tracker, prod){
 
     if(prod %in% names(tracker)){
         msg = 'This product is already being tracked.'
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -273,40 +240,6 @@ track_new_site_components = function(tracker, prod, site, avail){
     return(tracker)
 }
 
-# tracker=held_data; prod=prodname_ms; site=curr_site; avail=avail_site_sets
-# specs=prod_specs
-# rm(tracker, prod, site, avail, specs)
-# filter_unneeded_sets = function(tracker, prod, site, avail, specs){
-populate_set_details = function(tracker, prod, site, avail, specs){
-
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
-
-    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
-    rgx_capt = str_match(avail$url, rgx)[, -1]
-
-    retrieval_tracker = avail %>%
-        mutate(
-            avail_version = as.numeric(rgx_capt[, 3]),
-            prodcode_full = rgx_capt[, 1],
-            prodcode_id = rgx_capt[, 2],
-            prodname_ms = prod) %>%
-        full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blacklist' | is.na(status)) %>%
-        mutate(
-            held_version = as.numeric(held_version),
-            needed = avail_version - held_version > 0)
-        # filter(needed == TRUE | is.na(needed))
-
-    if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logging::logerror(msg, logger='neon.module')
-        stop(msg)
-    }
-
-    return(retrieval_tracker)
-}
-
 filter_unneeded_sets = function(tracker_with_details){
 
 
@@ -317,15 +250,16 @@ filter_unneeded_sets = function(tracker_with_details){
     if(any(is.na(new_sets$needed))){
         msg = paste0('Must run `track_new_site_components` and ',
             '`populate_set_details` before running `populate_set_details`')
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
     return(new_sets)
 }
 
-update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
-    set_details=NULL, new_status=NULL){
+# tracker_name='held_data'; set_details=s; new_status='ok'
+update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
+    tracker_name=NULL, set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
     #see update_data_tracker_m for the munge section and update_data_tracker_d
@@ -333,20 +267,22 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
 
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk.
+    #from disk, updated, and then written back to disk.
+
+    if(is.null(network)) network = domain
 
     if(is.null(tracker) && (
             is.null(tracker_name) || is.null(set_details) || is.null(new_status)
     )){
         msg = paste0('If tracker is not supplied, these args must be:',
             'tracker_name, set_details, new_status.')
-        logging::logerror(msg, logger='neon.module')
+        logging::logerror(msg, logger=logger_module)
         stop(msg)
     }
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(domain)
+        tracker = get_data_tracker(network=network, domain=domain)
 
         rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
 
@@ -364,17 +300,20 @@ update_data_tracker_r = function(domain, tracker=NULL, tracker_name=NULL,
     }
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 
 }
 
 # tracker_name='held_data'; prod=prodname_ms; new_status='ok'
-update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
+update_data_tracker_m = function(network=NULL, domain, tracker_name, prod,
+    site, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_d for the derive section
 
-    tracker = get_data_tracker(domain)
+    if(missing(network)) network = domain
+
+    tracker = get_data_tracker(network=network, domain=domain)
 
     mt = tracker[[prod]][[site]]$munge
 
@@ -386,7 +325,7 @@ update_data_tracker_m = function(domain, tracker_name, prod, site, new_status){
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
     readr::write_file(jsonlite::toJSON(tracker),
-        glue('data_acquisition/data/{d}/data_tracker.json', d=domain))
+        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 }
 
 #build this when the time comes
@@ -427,4 +366,61 @@ extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
         filter(status == keep_status)
 
     return(retrieved_data)
+}
+
+get_product_info = function(network, domain=NULL, status_level, get_statuses){
+
+    #unlike other functions with network and domain arguments, this one accepts
+    #either network alone, or network and domain. if just network is given,
+    #it will look for products.csv at the network level
+
+    if(is.null(domain)){
+        prods = read_csv(glue('src/{n}/products.csv', n=network))
+    } else {
+        prods = read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    }
+
+    status_column = glue(status_level, '_status')
+    prods = prods[prods[[status_column]] %in% get_statuses, ]
+
+    return(prods)
+}
+
+prodcode_from_ms_prodname = function(ms_prodname){
+
+    prodcode = strsplit(ms_prodname, '_')[[1]][2]
+
+    return(prodcode)
+}
+
+pprint_callstack = function(){
+
+    funcnamevec = unlist(lapply(as.list(sys.calls()), deparse))
+    funcnamevec = funcnamevec[-length(funcnamevec)] #exclude pprint_callstack
+    callchain = paste(funcnamevec, collapse=' --> ')
+
+    return(callchain)
+}
+
+handle_error = function(err, note){
+
+    #combines error message, callstack, and any notes as string.
+    #logs this collection, adds it to global list of errors to email,
+    #and returns it as custom error class
+
+    if(missing(note)) note = 'No note'
+
+    pretty_callstack = pprint_callstack()
+
+    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}',
+        e=err, c=pretty_callstack, n=note)
+
+    logging::logerror(full_message, logger=logger_module)
+
+    email_err_msg = append(email_err_msg, full_message)
+    assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+
+    ms_err = generate_ms_err(full_message)
+
+    return(ms_err)
 }
