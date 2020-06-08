@@ -37,7 +37,7 @@ resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     } else if(! 'startDateTime' %in% out_cols){
         msg = glue('Datetime column not found for site ',
             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger='neon.module')
+        logging::logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
 
@@ -61,7 +61,7 @@ download_sitemonth_details = function(geturl){
         d = httr::GET(geturl)
         d = jsonlite::fromJSON(httr::content(d, as="text"))
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('d', generate_ms_err(), pos=thisenv)
     })
@@ -86,7 +86,7 @@ determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
     } else {
         msg = glue('Problem with upstream/downstream indicator for site ',
             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger='neon.module')
+        logging::logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
 
@@ -127,7 +127,7 @@ get_neon_product_specs = function(code){
     prodlist = try(get_avail_neon_products())
     if('try-error' %in% class(prodlist)){
         logging::logerror(glue("Can't retrieve NEON product list for {c}",
-            , c=code), logger='neon.module')
+            , c=code), logger=logger_module)
         stop()
     }
 
@@ -150,7 +150,10 @@ get_neon_product_specs = function(code){
 
 get_avail_neon_product_sets = function(prodcode_full){
 
+    #returns: tibble with url, site_name, component columns
+
     thisenv = environment()
+    avail_sets = tibble()
 
     tryCatch({
         req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
@@ -158,11 +161,13 @@ get_avail_neon_product_sets = function(prodcode_full){
         txt = httr::content(req, as="text")
         neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         # email_err_msg <<- outer_loop_err <<- TRUE
         # assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('avail_sets', generate_ms_err(), pos=thisenv)
     })
+
+    if(is_ms_err(avail_sets)) return(avail_sets)
 
     urls = unlist(neondata$data$siteCodes$availableDataUrls)
 
@@ -173,4 +178,37 @@ get_avail_neon_product_sets = function(prodcode_full){
 
     return(avail_sets)
 
+}
+
+populate_set_details = function(tracker, prod, site, avail){
+
+    #must return a tibble with a "needed" column, which indicates which new
+    #datasets need to be retrieved
+
+    retrieval_tracker = tracker[[prod]][[site]]$retrieve
+
+    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
+    rgx_capt = str_match(avail$url, rgx)[, -1]
+
+    retrieval_tracker = avail %>%
+        mutate(
+            avail_version = as.numeric(rgx_capt[, 3]),
+            prodcode_full = rgx_capt[, 1],
+            prodcode_id = rgx_capt[, 2],
+            prodname_ms = prod) %>%
+        full_join(retrieval_tracker, by='component') %>%
+        # filter(status != 'blacklist' | is.na(status)) %>%
+        mutate(
+            held_version = as.numeric(held_version),
+            needed = avail_version - held_version > 0)
+        # filter(needed == TRUE | is.na(needed))
+
+    if(any(is.na(retrieval_tracker$needed))){
+        msg = paste0('Must run `track_new_site_components` before ',
+            'running `populate_set_details`')
+        logging::logerror(msg, logger=logger_module)
+        stop(msg)
+    }
+
+    return(retrieval_tracker)
 }

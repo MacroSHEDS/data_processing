@@ -1,0 +1,15 @@
+"prodcode","prodname","type","retrieve_status","munge_status","derive_status","notes"
+"20093","chemistry","grab","ready","ready","pending",
+"20288","waterqual","sensor","ready","pending","pending",
+"20267","gageht","grab","paused","pending","pending",
+"00133","zqcurve","other","paused","pending","pending","only HOPB and GUIL"
+"00130","Q","sensor","paused","pending","pending","only HOPB"
+"20048","Qflowmeter","grab","paused","pending","pending",
+"20193","Qsalt","grab","paused","pending","pending",
+"20008","speccond","sensor","unavailable","unavailable","unavailable",
+"20033","nitrate","sensor","ready","pending","pending",
+"20042","PAR","sensor","ready","ready","pending",
+"20053","watertemp","sensor","ready","pending","pending",
+"00004","airpressure","sensor","ready","pending","pending",
+"20097","gases","grab","ready","pending","pending",
+"20016","surfaceElev","sensor","pending","pending","pending",
