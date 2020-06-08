@@ -1,9 +1,5 @@
-# library(logging)
-# library(tidyverse)
-#
-# glue = glue::glue
 
-# set_details=s
+#retrieval kernels
 process_0_20093 = function(set_details){
 
     thisenv = environment()
@@ -36,7 +32,7 @@ process_0_20093 = function(set_details){
         }
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -61,7 +57,7 @@ process_0_20033 = function(set_details){
             select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -85,7 +81,7 @@ process_0_20042 = function(set_details){
             select(site_name, startDateTime, PARMean, PARFinalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -109,7 +105,7 @@ process_0_20053 = function(set_details){
             select(site_name, startDateTime, surfWaterTempMean, finalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -133,7 +129,7 @@ process_0_00004 = function(set_details){
             select(site_name, startDateTime, staPresMean, staPresFinalQF)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -163,7 +159,7 @@ process_0_20097 = function(set_details){
         }
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -185,7 +181,7 @@ process_0_20016 = function(set_details){
             surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
             horizontalPosition)
 
-        drc = glue('data_acquisition/data/neon/raw/surfaceElev_sensorpos/{s}',
+        drc = glue('data/neon/neon/raw/surfaceElev_sensorpos/{s}',
             s=set_details$site_name)
         dir.create(drc, showWarnings=FALSE, recursive=TRUE)
         f = glue(drc, '/{p}.feather', p=set_details$component)
@@ -201,7 +197,7 @@ process_0_20016 = function(set_details){
         feather::write_feather(data_pile$sensor_positions_20016, f)
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -236,7 +232,7 @@ process_0_20288 = function(set_details){
             rename_all(dplyr::recode, startDate='startDateTime')
 
     }, error=function(e){
-        logging::logerror(e, logger='neon.module')
+        logging::logerror(e, logger=logger_module)
         assign('email_err_msg', TRUE, pos=.GlobalEnv)
         assign('out_sub', generate_ms_err(), pos=thisenv)
     })
@@ -251,20 +247,20 @@ process_0_ = function(set_details){
 
 } #precip chem: not started
 
-# set=comp; set_details=1
+#munge kernels
 process_1_20093 = function(set, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
     # #         analyteUnits=c(), analyte=c()),
-    # #     'data_acquisition/data/neon/temp/20093_variants.rds')
+    # #     'data/neon/temp/20093_variants.rds')
     #
-    # v = readRDS('data_acquisition/data/neon/temp/20093_variants.rds')
+    # v = readRDS('data/neon/neon/temp/20093_variants.rds')
     # v = list(shipmentWarmQF=c(set$shipmentWarmQF, v$shipmentWarmQF),
     #     externalLabDataQF=c(set$externalLabDataQF, v$externalLabDataQF),
     #     sampleCondition=c(set$sampleCondition, v$sampleCondition),
     #     vars=c(paste(set$analyte, set$analyteUnits), v$vars))
-    # saveRDS(v, 'data_acquisition/data/neon/temp/20093_variants.rds')
+    # saveRDS(v, 'data/neon/neon/temp/20093_variants.rds')
     # table(v$vars)
 
     set = set %>%
@@ -294,6 +290,7 @@ process_1_20093 = function(set, site_name){
     return(set)
 } #chem: ready
 
+#obsolete kernels (for parts, maybe)
 process_0_DP1.20093.001_api = function(d, set_details){
 
     data1_ind = intersect(grep("expanded", d$data$files$name),
