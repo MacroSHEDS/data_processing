@@ -4,3 +4,4 @@ config.txt
 .httr-oauth
 .Rhistory
 /logs
+/src/lter/OBSOLETE
