@@ -11,6 +11,7 @@ library(glue)
 library(logging)
 library(emayili)
 library(neonUtilities)
+library(tinsel)
 
 #notice, in LTER parlance, our domains are "sites", our prodcodes
 #are "identifiers", our components are "elements", and each element has an "element id"
@@ -22,6 +23,9 @@ setwd('/home/mike/git/macrosheds/data_acquisition')
 
 source('src/global_helpers.R')
 get_all_helpers(network=network, domain=domain)
+# rm(process_0_1)
+source_decoratees('src/lter/hbef/processing_kernels.R')
+# source_decoratees('~/Desktop/test_dec.R')
 
 logger_module = set_up_logger(network=network, domain=domain)
 
@@ -49,6 +53,7 @@ get_lter_data = function(domain, sets, tracker, silent=TRUE){
         processing_func = get(paste0('process_0_', s$prodcode_id))
         result = do.call(processing_func,
             args=list(set_details=s, network=network, domain=domain))
+        # process_0_1(set_details=s, network=network, domain=domain)
 
         if(is_ms_err(result) || is_ms_exception(result)){
             update_data_tracker_r(network=network, domain=domain,
@@ -58,16 +63,10 @@ get_lter_data = function(domain, sets, tracker, silent=TRUE){
             update_data_tracker_r(network=network, domain=domain,
                 tracker_name='held_data', set_details=s, new_status='ok')
         }
-        # } else if(is_ms_err(result)){
-        #     update_data_tracker_r(network=domain, domain=domain,
-        #         tracker_name='held_data', set_details=s, new_status='error')
-        #     assign('email_err_msg', TRUE, pos=.GlobalEnv)
-        #     next
-        # }
     }
 }
 
-# i=1; j=1
+# i=1; j=2
 email_err_msg = list()
 for(i in 1:nrow(prod_info)){
 

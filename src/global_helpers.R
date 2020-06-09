@@ -1,22 +1,37 @@
-# library(logging)
-# library(tidyverse)
+# library(tinsel)
 
 source('src/function_aliases.R')
 
-get_all_helpers = function(network=NULL, domain){
+#. handle_errors
+get_all_helpers <- function(network=NULL, domain){
+
+    #source_decoratees reads in decorator functions (tinsel package)
 
     if(is.null(network)) network = domain
 
     sw(try(source(glue('src/{n}/network_helpers.R', n=network)), silent=TRUE))
+    sw(try(source_decoratees(glue('src/{n}/network_helpers.R', n=network)),
+        silent=TRUE))
+
     sw(try(source(glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)),
+        silent=TRUE))
+    sw(try(source_decoratees(glue('src/{n}/{d}/domain_helpers.R',
+            n=network, d=domain)),
         silent=TRUE))
 
     sw(try(source(glue('src/{n}/processing_kernels.R', d=domain)), silent=TRUE))
+    sw(try(source_decoratees(glue('src/{n}/processing_kernels.R', d=domain)),
+        silent=TRUE))
+
     sw(try(source(glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)),
+        silent=TRUE))
+    sw(try(source_decoratees(glue('src/{n}/{d}/processing_kernels.R',
+            n=network, d=domain)),
         silent=TRUE))
 }
 
-set_up_logger = function(network, domain){
+#. handle_errors
+set_up_logger <- function(network, domain){
 
     logger_name = glue(network, '_', domain)
     logger_module = glue(logger_name, '.module')
@@ -28,7 +43,8 @@ set_up_logger = function(network, domain){
     return(logger_module)
 }
 
-extract_from_config = function(key){
+#. handle_errors
+extract_from_config <- function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
@@ -44,7 +60,8 @@ flagmap = list(
     general_concern=c('example flag 7')
 )
 
-get_flag_types = function(mapping, flags) {
+#. handle_errors
+get_flag_types <- function(mapping, flags) {
 
     #MUST ENHANCE THIS TO ACCOUNT FOR MULTIPLE FLAGS APPLIED TO THE SAME
     #datapoint. see DB I/O card in projects todo list
@@ -65,46 +82,53 @@ get_flag_types = function(mapping, flags) {
     return(flag_types)
 }
 
-resolve_commas = function(vec, comma_standin){
+#. handle_errors
+resolve_commas <- function(vec, comma_standin){
     vec = gsub(',', '\\,', vec, fixed=TRUE)
     vec = gsub(comma_standin, ',', vec)
     return(vec)
 }
 
-postgres_arrayify = function(vec){
+#. handle_errors
+postgres_arrayify <- function(vec){
     vec = paste0('{', vec, '}')
     vec = gsub('\\{\\}', '{""}', vec)
     return(vec)
 }
 
-clear_from_mem = function(...){
+#. handle_errors
+clear_from_mem <- function(...){
     dots = match.call(expand.dots = FALSE)$...
     names = vapply(dots, as.character, '')
     rm(list=names, envir=globalenv())
     gc()
 }
 
-generate_ms_err = function(text=1){
+#. handle_errors
+generate_ms_err <- function(text=1){
     errobj = text
     class(errobj) = 'ms_err'
     return(errobj)
 }
 
-generate_ms_exception = function(text=1){
+#. handle_errors
+generate_ms_exception <- function(text=1){
     excobj = text
     class(excobj) = 'ms_exception'
     return(excobj)
 }
 
-is_ms_err = function(x){
+#. handle_errors
+is_ms_err <- function(x){
     return('ms_err' %in% class(x))
 }
 
-is_ms_exception = function(x){
+#. handle_errors
+is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-# addr='mjv22@duke.edu'; pw=conf$gmail_pw
+# not decorated. error handling unique for this function
 email_err = function(msgs, addrs, pw){
 
     if(is.list(msgs)){
@@ -132,6 +156,9 @@ email_err = function(msgs, addrs, pw){
         }
 
     }, error=function(e){
+
+        #not sure if class "error" is always returned by tryCatch,
+        #so creating custom class
         errout = 'err'
         class(errout) = 'err'
         return(errout)
@@ -147,7 +174,7 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-get_data_tracker = function(network=NULL, domain){
+get_data_tracker <- function(network=NULL, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
         #assumed to be identical to the domain string.
@@ -177,7 +204,7 @@ get_data_tracker = function(network=NULL, domain){
     return(tracker_data)
 }
 
-make_tracker_skeleton = function(retrieval_chunks){
+make_tracker_skeleton <- function(retrieval_chunks){
 
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
     #the overall dataset to be retrieved, e.g. sitemonths for NEON
@@ -194,7 +221,7 @@ make_tracker_skeleton = function(retrieval_chunks){
     return(tracker_skeleton)
 }
 
-insert_site_skeleton = function(tracker, prod, site, site_components){
+insert_site_skeleton <- function(tracker, prod, site, site_components){
 
     tracker[[prod]][[site]] =
         make_tracker_skeleton(retrieval_chunks=site_components)
@@ -202,17 +229,17 @@ insert_site_skeleton = function(tracker, prod, site, site_components){
     return(tracker)
 }
 
-product_is_tracked = function(tracker, prod){
+product_is_tracked <- function(tracker, prod){
     bool = prod %in% names(tracker)
     return(bool)
 }
 
-site_is_tracked = function(tracker, prod, site){
+site_is_tracked <- function(tracker, prod, site){
     bool = site %in% names(tracker[[prod]])
     return(bool)
 }
 
-track_new_product = function(tracker, prod){
+track_new_product <- function(tracker, prod){
 
     if(prod %in% names(tracker)){
         msg = 'This product is already being tracked.'
@@ -224,7 +251,7 @@ track_new_product = function(tracker, prod){
     return(tracker)
 }
 
-track_new_site_components = function(tracker, prod, site, avail){
+track_new_site_components <- function(tracker, prod, site, avail){
 
     retrieval_tracker = tracker[[prod]][[site]]$retrieve
 
@@ -240,7 +267,7 @@ track_new_site_components = function(tracker, prod, site, avail){
     return(tracker)
 }
 
-filter_unneeded_sets = function(tracker_with_details){
+filter_unneeded_sets <- function(tracker_with_details){
 
 
     new_sets = tracker_with_details %>%
@@ -258,7 +285,7 @@ filter_unneeded_sets = function(tracker_with_details){
 }
 
 # tracker_name='held_data'; set_details=s; new_status='ok'
-update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
+update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
     tracker_name=NULL, set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
@@ -305,7 +332,7 @@ update_data_tracker_r = function(network=NULL, domain, tracker=NULL,
 }
 
 # tracker_name='held_data'; prod=prodname_ms; new_status='ok'
-update_data_tracker_m = function(network=NULL, domain, tracker_name, prod,
+update_data_tracker_m <- function(network=NULL, domain, tracker_name, prod,
     site, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
@@ -329,7 +356,7 @@ update_data_tracker_m = function(network=NULL, domain, tracker_name, prod,
 }
 
 #build this when the time comes
-populate_missing_shiny_files = function(domain){
+populate_missing_shiny_files <- function(domain){
 
     #this is not yet working. first, shiny needs to be reconfigured to
     #pull site files as requested. atm all sites are bound into one feather
@@ -359,7 +386,7 @@ populate_missing_shiny_files = function(domain){
 
 }
 
-extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
+extract_retrieval_log <- function(tracker, prod, site, keep_status='ok'){
 
     retrieved_data = tracker[[prod]][[site]]$retrieve %>%
         tibble::as_tibble() %>%
@@ -368,7 +395,7 @@ extract_retrieval_log = function(tracker, prod, site, keep_status='ok'){
     return(retrieved_data)
 }
 
-get_product_info = function(network, domain=NULL, status_level, get_statuses){
+get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 
     #unlike other functions with network and domain arguments, this one accepts
     #either network alone, or network and domain. if just network is given,
@@ -386,23 +413,33 @@ get_product_info = function(network, domain=NULL, status_level, get_statuses){
     return(prods)
 }
 
-prodcode_from_ms_prodname = function(ms_prodname){
+prodcode_from_ms_prodname <- function(ms_prodname){
 
     prodcode = strsplit(ms_prodname, '_')[[1]][2]
 
     return(prodcode)
 }
 
-pprint_callstack = function(){
+pprint_callstack <- function(){
 
-    funcnamevec = unlist(lapply(as.list(sys.calls()), deparse))
-    funcnamevec = funcnamevec[-length(funcnamevec)] #exclude pprint_callstack
-    callchain = paste(funcnamevec, collapse=' --> ')
+    # zz <<- as.list(sys.calls())
+    # call_list = zz
+    call_list = as.list(sys.calls())
+    l = length(call_list)
+    call_list_cleaned = call_list[-((l - 5):l)]
 
-    return(callchain)
+    call_vec = unlist(lapply(call_list_cleaned,
+        function(x){
+            paste(deparse(x), collapse='\n')
+        }))
+
+    call_string_pretty = paste(call_vec, collapse=' -->\n')
+
+    return(call_string_pretty)
 }
 
-handle_error = function(err, note){
+#ideally there will be no use for handle_error. handle_errors should be universal
+handle_error <- function(err, note){
 
     #combines error message, callstack, and any notes as string.
     #logs this collection, adds it to global list of errors to email,
@@ -412,7 +449,7 @@ handle_error = function(err, note){
 
     pretty_callstack = pprint_callstack()
 
-    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}',
+    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}\n',
         e=err, c=pretty_callstack, n=note)
 
     logging::logerror(full_message, logger=logger_module)
@@ -423,4 +460,39 @@ handle_error = function(err, note){
     ms_err = generate_ms_err(full_message)
 
     return(ms_err)
+}
+
+handle_errors <- function(f){
+
+    #decorator function. takes any function as argument and executes it.
+    #if error occurs within passed function, combines error message and
+    #pretty callstack as single message, logs and emails this message.
+    #returns custom macrosheds (ms) error class.
+
+    wrapper <- function(...){
+
+        thisenv = environment()
+
+        tryCatch({
+            return_val = f()
+        }, error=function(e){
+
+            pretty_callstack = pprint_callstack()
+
+            full_message = glue('\nError: {e}\nCallstack: {c}\n',
+                e=e, c=pretty_callstack)
+
+            logging::logerror(full_message, logger=logger_module) #logger_module is global
+
+            email_err_msg = append(email_err_msg, full_message)
+            assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+
+            assign('return_val', generate_ms_err(full_message), pos=thisenv)
+
+        })
+
+        return(return_val)
+    }
+
+    return(wrapper)
 }
