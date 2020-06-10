@@ -1,37 +1,114 @@
-# library(tinsel)
-
 source('src/function_aliases.R')
 
-#. handle_errors
-get_all_helpers <- function(network=NULL, domain){
+#functions without decorators (e.g. #. handle_errors) have special error handling
 
-    #source_decoratees reads in decorator functions (tinsel package)
+handle_errors = function(f){
 
-    if(is.null(network)) network = domain
+    #decorator function. takes any function as argument and executes it.
+    #if error occurs within passed function, combines error message and
+    #pretty callstack as single message, logs and emails this message.
+    #returns custom macrosheds (ms) error class.
 
-    sw(try(source(glue('src/{n}/network_helpers.R', n=network)), silent=TRUE))
-    sw(try(source_decoratees(glue('src/{n}/network_helpers.R', n=network)),
-        silent=TRUE))
+    wrapper = function(...){
 
-    sw(try(source(glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)),
-        silent=TRUE))
-    sw(try(source_decoratees(glue('src/{n}/{d}/domain_helpers.R',
-            n=network, d=domain)),
-        silent=TRUE))
+        thisenv = environment()
 
-    sw(try(source(glue('src/{n}/processing_kernels.R', d=domain)), silent=TRUE))
-    sw(try(source_decoratees(glue('src/{n}/processing_kernels.R', d=domain)),
-        silent=TRUE))
+        tryCatch({
+            return_val = f(...)
+        }, error=function(e){
 
-    sw(try(source(glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)),
-        silent=TRUE))
-    sw(try(source_decoratees(glue('src/{n}/{d}/processing_kernels.R',
-            n=network, d=domain)),
-        silent=TRUE))
+            pretty_callstack = pprint_callstack()
+
+            full_message = glue('\nError: {e}\nCallstack: {c}\n',
+                e=e, c=pretty_callstack)
+
+            logging::logerror(full_message, logger=logger_module) #logger_module is global
+
+            email_err_msg = append(email_err_msg, full_message)
+            assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+
+            assign('return_val', generate_ms_err(full_message), pos=thisenv)
+
+        })
+
+        return(return_val)
+    }
+
+    return(wrapper)
+}
+
+#ideally there will be no use for handle_error. handle_errors should be universal
+handle_error = function(err, note){
+
+    #combines error message, callstack, and any notes as string.
+    #logs this collection, adds it to global list of errors to email,
+    #and returns it as custom error class
+
+    if(missing(note)) note = 'No note'
+
+    pretty_callstack = pprint_callstack()
+
+    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}\n',
+        e=err, c=pretty_callstack, n=note)
+
+    logging::logerror(full_message, logger=logger_module)
+
+    email_err_msg = append(email_err_msg, full_message)
+    assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+
+    ms_err = generate_ms_err(full_message)
+
+    return(ms_err)
 }
 
 #. handle_errors
-set_up_logger <- function(network, domain){
+export_to_global <- function(from_env, exclude=NULL){
+
+    #exclude is a character vector of names not to export.
+    #unmatched names will be ignored.
+
+    #vars could also be passed individually and handled by ...
+    # vars = list(...)
+    # varnames = all.vars(match.call())
+
+    varnames = ls(name=from_env)
+    varnames = varnames[! varnames %in% exclude]
+    vars = mget(varnames, envir=from_env)
+
+    for(i in 1:length(varnames)){
+        assign(varnames[i], vars[[i]], .GlobalEnv)
+    }
+}
+
+get_all_local_helpers = function(domain, network=domain){
+
+    #source_decoratees reads in decorator functions (tinsel package).
+    #because it can only read them into the current environment, all files
+    #sourced by this function are exported locally, then exported globally
+
+    location1 = glue('src/{n}/network_helpers.R', n=network)
+    sw(try(source(location1, local=TRUE), silent=TRUE))
+    sw(try(source_decoratees(location1), silent=TRUE))
+
+    location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
+    sw(try(source(location2, local=TRUE), silent=TRUE))
+    sw(try(source_decoratees(location2), silent=TRUE))
+
+    location3 = glue('src/{n}/processing_kernels.R', n=network)
+    sw(try(source(location3, local=TRUE), silent=TRUE))
+    sw(try(source_decoratees(location3), silent=TRUE))
+
+    location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
+    sw(try(source(location4, local=TRUE), silent=TRUE))
+    sw(try(source_decoratees(location4), silent=TRUE))
+
+    rm(location1, location2, location3, location4)
+
+    export_to_global(from_env=environment(),
+        exclude=c('network', 'domain', 'thisenv'))
+}
+
+set_up_logger = function(network, domain){
 
     logger_name = glue(network, '_', domain)
     logger_module = glue(logger_name, '.module')
@@ -43,8 +120,7 @@ set_up_logger <- function(network, domain){
     return(logger_module)
 }
 
-#. handle_errors
-extract_from_config <- function(key){
+extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
@@ -174,7 +250,8 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-get_data_tracker <- function(network=NULL, domain){
+# not decorated. error handling unique for this function
+get_data_tracker = function(network=NULL, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
         #assumed to be identical to the domain string.
@@ -204,6 +281,7 @@ get_data_tracker <- function(network=NULL, domain){
     return(tracker_data)
 }
 
+#. handle_errors
 make_tracker_skeleton <- function(retrieval_chunks){
 
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
@@ -221,6 +299,7 @@ make_tracker_skeleton <- function(retrieval_chunks){
     return(tracker_skeleton)
 }
 
+#. handle_errors
 insert_site_skeleton <- function(tracker, prod, site, site_components){
 
     tracker[[prod]][[site]] =
@@ -229,16 +308,19 @@ insert_site_skeleton <- function(tracker, prod, site, site_components){
     return(tracker)
 }
 
+#. handle_errors
 product_is_tracked <- function(tracker, prod){
     bool = prod %in% names(tracker)
     return(bool)
 }
 
+#. handle_errors
 site_is_tracked <- function(tracker, prod, site){
     bool = site %in% names(tracker[[prod]])
     return(bool)
 }
 
+#. handle_errors
 track_new_product <- function(tracker, prod){
 
     if(prod %in% names(tracker)){
@@ -251,6 +333,7 @@ track_new_product <- function(tracker, prod){
     return(tracker)
 }
 
+#. handle_errors
 track_new_site_components <- function(tracker, prod, site, avail){
 
     retrieval_tracker = tracker[[prod]][[site]]$retrieve
@@ -267,9 +350,10 @@ track_new_site_components <- function(tracker, prod, site, avail){
     return(tracker)
 }
 
+#. handle_errors
 filter_unneeded_sets <- function(tracker_with_details){
 
-
+    if(i==3) stop('err3')
     new_sets = tracker_with_details %>%
         filter(status != 'blacklist' | is.na(status)) %>%
         filter(needed == TRUE | is.na(needed))
@@ -284,7 +368,7 @@ filter_unneeded_sets <- function(tracker_with_details){
     return(new_sets)
 }
 
-# tracker_name='held_data'; set_details=s; new_status='ok'
+#. handle_errors
 update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
     tracker_name=NULL, set_details=NULL, new_status=NULL){
 
@@ -331,7 +415,7 @@ update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
 
 }
 
-# tracker_name='held_data'; prod=prodname_ms; new_status='ok'
+#. handle_errors
 update_data_tracker_m <- function(network=NULL, domain, tracker_name, prod,
     site, new_status){
 
@@ -355,7 +439,8 @@ update_data_tracker_m <- function(network=NULL, domain, tracker_name, prod,
         glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 }
 
-#build this when the time comes
+#build populate_missing_shiny_files when the time comes
+#. handle_errors
 populate_missing_shiny_files <- function(domain){
 
     #this is not yet working. first, shiny needs to be reconfigured to
@@ -386,6 +471,7 @@ populate_missing_shiny_files <- function(domain){
 
 }
 
+#. handle_errors
 extract_retrieval_log <- function(tracker, prod, site, keep_status='ok'){
 
     retrieved_data = tracker[[prod]][[site]]$retrieve %>%
@@ -395,6 +481,7 @@ extract_retrieval_log <- function(tracker, prod, site, keep_status='ok'){
     return(retrieved_data)
 }
 
+#. handle_errors
 get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 
     #unlike other functions with network and domain arguments, this one accepts
@@ -402,9 +489,9 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
     #it will look for products.csv at the network level
 
     if(is.null(domain)){
-        prods = read_csv(glue('src/{n}/products.csv', n=network))
+        prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
     } else {
-        prods = read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain))
+        prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
     }
 
     status_column = glue(status_level, '_status')
@@ -413,6 +500,7 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
     return(prods)
 }
 
+#. handle_errors
 prodcode_from_ms_prodname <- function(ms_prodname){
 
     prodcode = strsplit(ms_prodname, '_')[[1]][2]
@@ -420,6 +508,7 @@ prodcode_from_ms_prodname <- function(ms_prodname){
     return(prodcode)
 }
 
+#. handle_errors
 pprint_callstack <- function(){
 
     # zz <<- as.list(sys.calls())
@@ -438,61 +527,3 @@ pprint_callstack <- function(){
     return(call_string_pretty)
 }
 
-#ideally there will be no use for handle_error. handle_errors should be universal
-handle_error <- function(err, note){
-
-    #combines error message, callstack, and any notes as string.
-    #logs this collection, adds it to global list of errors to email,
-    #and returns it as custom error class
-
-    if(missing(note)) note = 'No note'
-
-    pretty_callstack = pprint_callstack()
-
-    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}\n',
-        e=err, c=pretty_callstack, n=note)
-
-    logging::logerror(full_message, logger=logger_module)
-
-    email_err_msg = append(email_err_msg, full_message)
-    assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
-
-    ms_err = generate_ms_err(full_message)
-
-    return(ms_err)
-}
-
-handle_errors <- function(f){
-
-    #decorator function. takes any function as argument and executes it.
-    #if error occurs within passed function, combines error message and
-    #pretty callstack as single message, logs and emails this message.
-    #returns custom macrosheds (ms) error class.
-
-    wrapper <- function(...){
-
-        thisenv = environment()
-
-        tryCatch({
-            return_val = f()
-        }, error=function(e){
-
-            pretty_callstack = pprint_callstack()
-
-            full_message = glue('\nError: {e}\nCallstack: {c}\n',
-                e=e, c=pretty_callstack)
-
-            logging::logerror(full_message, logger=logger_module) #logger_module is global
-
-            email_err_msg = append(email_err_msg, full_message)
-            assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
-
-            assign('return_val', generate_ms_err(full_message), pos=thisenv)
-
-        })
-
-        return(return_val)
-    }
-
-    return(wrapper)
-}
