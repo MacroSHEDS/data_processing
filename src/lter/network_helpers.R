@@ -3,71 +3,76 @@ ms_pasta_domain_refmap = list(
     hjandrews = 'knb-lter-and'
 )
 
-get_latest_product_version = function(prodname, domain, data_tracker){
+#. handle_errors
+get_latest_product_version <- function(prodname, domain, data_tracker){
 
-    thisenv = environment()
+    if(i==1) stop('err1')
+    # thisenv = environment()
 
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
-    tryCatch({
+    # tryCatch({
 
-        domain_ref = ms_pasta_domain_refmap[[domain]]
-        prodcode = prodcode_from_ms_prodname(prodname)
+    domain_ref = ms_pasta_domain_refmap[[domain]]
+    prodcode = prodcode_from_ms_prodname(ms_prodname=prodname)
 
-        vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
-        newest_vsn = RCurl::getURLContent(vsn_request)
-        newest_vsn = as.numeric(stringr::str_match(newest_vsn,
-            '[0-9]+$')[1])
+    vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
+    newest_vsn = RCurl::getURLContent(vsn_request)
+    newest_vsn = as.numeric(stringr::str_match(newest_vsn,
+        '[0-9]+$')[1])
 
-    }, error=function(e){
-        logging::logerror(e, logger=logger_module)
-        assign('newest_version',
-            generate_ms_err('error in get_latest_product_version'),
-            pos=thisenv)
-    })
+    # }, error=function(e){
+    #     logging::logerror(e, logger=logger_module)
+    #     assign('newest_version',
+    #         generate_ms_err('error in get_latest_product_version'),
+    #         pos=thisenv)
+    # })
 
     return(newest_vsn)
 }
 
-get_avail_lter_product_sets = function(prodname, version, domain, data_tracker){
+#. handle_errors
+get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker){
 
+    if(i==2) stop('err2')
     #returns: tibble with url, site_name, component (aka element_name)
 
-    thisenv = environment()
+    # thisenv = environment()
 
     name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
-    tryCatch({
+    # tryCatch({
 
-        domain_ref = ms_pasta_domain_refmap[[domain]]
-        prodcode = strsplit(prodname, '_')[[1]][2]
+    domain_ref = ms_pasta_domain_refmap[[domain]]
+    prodcode = strsplit(prodname, '_')[[1]][2]
 
-        name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
-            version)
-        reqdata = RCurl::getURLContent(name_request)
-        reqdata = strsplit(reqdata, '\n')[[1]]
-        reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
+    name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
+        version)
+    reqdata = RCurl::getURLContent(name_request)
+    reqdata = strsplit(reqdata, '\n')[[1]]
+    reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
-        element_ids = reqdata[,2]
-        dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
-            '/', element_ids)
+    element_ids = reqdata[,2]
+    dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
+        '/', element_ids)
 
-        avail_sets = tibble(url=dl_urls,
-            site_name=str_match(reqdata[,3], '(.+?)_.*')[,2],
-            component=reqdata[,3])
+    avail_sets = tibble(url=dl_urls,
+        site_name=str_match(reqdata[,3], '(.+?)_.*')[,2],
+        component=reqdata[,3])
 
-    }, error=function(e){
-        logging::logerror(e, logger=logger_module)
-        assign('avail_sets',
-            generate_ms_err('error in get_avail_lter_product_sets'),
-            pos=thisenv)
-    })
+    # }, error=function(e){
+    #     logging::logerror(e, logger=logger_module)
+    #     assign('avail_sets',
+    #         generate_ms_err('error in get_avail_lter_product_sets'),
+    #         pos=thisenv)
+    # })
 
     return(avail_sets)
 }
 
-populate_set_details = function(tracker, prod, site, avail, latest_vsn){
+#. handle_errors
+populate_set_details <- function(tracker, prod, site, avail, latest_vsn){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
@@ -97,11 +102,42 @@ populate_set_details = function(tracker, prod, site, avail, latest_vsn){
     return(retrieval_tracker)
 }
 
+# sets=new_sets; i=1; tracker=held_data
+#. handle_errors
+get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
+    if(i>4) stop('err4+')
+    if(nrow(sets) == 0) return()
+
+    for(i in 1:nrow(sets)){
+
+        if(! silent) print(paste0('i=', i, '/', nrow(sets)))
+
+        s = sets[i, ]
+
+        msg = glue('Processing {site}, {prod}, {month}',
+            site=s$site_name, prod=s$prodname_ms, month=s$component)
+        logging::loginfo(msg, logger=logger_module)
+
+        processing_func = get(paste0('process_0_', s$prodcode_id))
+        result = do.call(processing_func,
+            args=list(set_details=s, network=network, domain=domain))
+        # process_0_1(set_details=s, network=network, domain=domain)
+
+        if(is_ms_err(result) || is_ms_exception(result)){
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='error')
+            next
+        } else {
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='ok')
+        }
+    }
+}
 
 #neon stuff below here. for parts.
 
-resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
+resolve_neon_naming_conflicts <- function(out_sub_, replacements=NULL,
     from_api=FALSE, set_details_){
 
     #obsolete now that neonUtilities package is working
@@ -155,7 +191,7 @@ resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
     return(out_sub_)
 }
 
-download_sitemonth_details = function(geturl){
+download_sitemonth_details <- function(geturl){
 
     thisenv = environment()
 
@@ -171,7 +207,7 @@ download_sitemonth_details = function(geturl){
     return(d)
 }
 
-determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
+determine_upstream_downstream_api <- function(d_, data_inds_, set_details_){
     #obsolete now that neonUtilities package is working
 
     prodcode = set_details_$prodcode
@@ -198,7 +234,7 @@ determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
 }
 
 # d_ = data_pile$waq_instantaneous
-determine_upstream_downstream = function(d_){
+determine_upstream_downstream <- function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
     updown[updown == '1'] = '-up'
@@ -214,7 +250,7 @@ determine_upstream_downstream = function(d_){
     return(updown)
 }
 
-get_avail_neon_products = function(){
+get_avail_neon_products <- function(){
 
     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/"))
     txt = httr::content(req, as="text")
@@ -224,7 +260,7 @@ get_avail_neon_products = function(){
     return(prodlist)
 }
 
-get_neon_product_specs = function(code){
+get_neon_product_specs <- function(code){
 
     prodlist = try(get_avail_neon_products())
     if('try-error' %in% class(prodlist)){
@@ -250,7 +286,7 @@ get_neon_product_specs = function(code){
     return(list(prodcode_full=prodcode_full, prod_version=prod_version))
 }
 
-get_avail_neon_product_sets = function(prodcode_full){
+get_avail_neon_product_sets <- function(prodcode_full){
 
     thisenv = environment()
     avail_sets = tibble()
