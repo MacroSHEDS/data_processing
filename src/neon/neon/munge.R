@@ -10,7 +10,7 @@ for(i in 1:nrow(prod_info)){
     held_data = get_data_tracker(network=network, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
-        logging::logwarn(glue('Product {p} is not yet tracked. Retrieve ',
+        logwarn(glue('Product {p} is not yet tracked. Retrieve ',
             'it before munging it.', p=prodname_ms), logger=logger_module)
         next
     }

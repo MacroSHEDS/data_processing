@@ -6,11 +6,7 @@ ms_pasta_domain_refmap = list(
 #. handle_errors
 get_latest_product_version <- function(prodname, domain, data_tracker){
 
-    # thisenv = environment()
-
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
-
-    # tryCatch({
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
     prodcode = prodcode_from_ms_prodname(ms_prodname=prodname)
@@ -20,13 +16,6 @@ get_latest_product_version <- function(prodname, domain, data_tracker){
     newest_vsn = as.numeric(stringr::str_match(newest_vsn,
         '[0-9]+$')[1])
 
-    # }, error=function(e){
-    #     logging::logerror(e, logger=logger_module)
-    #     assign('newest_version',
-    #         generate_ms_err('error in get_latest_product_version'),
-    #         pos=thisenv)
-    # })
-
     return(newest_vsn)
 }
 
@@ -35,12 +24,8 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
 
     #returns: tibble with url, site_name, component (aka element_name)
 
-    # thisenv = environment()
-
     name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
-
-    # tryCatch({
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
     prodcode = strsplit(prodname, '_')[[1]][2]
@@ -58,13 +43,6 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
     avail_sets = tibble(url=dl_urls,
         site_name=str_match(reqdata[,3], '(.+?)_.*')[,2],
         component=reqdata[,3])
-
-    # }, error=function(e){
-    #     logging::logerror(e, logger=logger_module)
-    #     assign('avail_sets',
-    #         generate_ms_err('error in get_avail_lter_product_sets'),
-    #         pos=thisenv)
-    # })
 
     return(avail_sets)
 }
@@ -93,7 +71,7 @@ populate_set_details <- function(tracker, prod, site, avail, latest_vsn){
     if(any(is.na(retrieval_tracker$needed))){
         msg = paste0('Must run `track_new_site_components` before ',
             'running `populate_set_details`')
-        logging::logerror(msg, logger=logger_module)
+        logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -114,7 +92,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         msg = glue('Processing {site}, {prod}, {month}',
             site=s$site_name, prod=s$prodname_ms, month=s$component)
-        logging::loginfo(msg, logger=logger_module)
+        loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
         result = do.call(processing_func,

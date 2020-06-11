@@ -1,6 +1,6 @@
 source('src/function_aliases.R')
 
-email_err_msg = list()
+email_err_msgs = list()
 
 flagmap = list(
     clean=c(NA, 'example flag 0'),
@@ -21,6 +21,8 @@ handle_errors = function(f){
     #pretty callstack as single message, logs and emails this message.
     #returns custom macrosheds (ms) error class.
 
+    #TODO: log unabridged callstack, email pretty one
+
     wrapper = function(...){
 
         thisenv = environment()
@@ -31,14 +33,20 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
+            if(! exists('curr_site')) curr_site = 'NO SITE'
+            if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
+
             # full_message = glue('\nError: {e}\nCallstack: {c}\n',
             #     e=e, c=pretty_callstack)
-            full_message = glue('Callstack: {c}\n\n', c=pretty_callstack)
+            full_message = glue('network: {n}, domain: {d}\nsite: {s}\n'
+                'product: {P}\nCallstack: {c}\n\n',
+                n=network, d=domain, s=curr_site, p=prodname_ms,
+                c=pretty_callstack)
 
-            logging::logerror(full_message, logger=logger_module) #logger_module is global
+            logerror(full_message, logger=logger_module)
 
-            email_err_msg = append(email_err_msg, full_message)
-            assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
+            email_err_msgs = append(email_err_msgs, full_message)
+            assign('email_err_msgs', email_err_msgs, pos=.GlobalEnv)
 
             assign('return_val', generate_ms_err(full_message), pos=thisenv)
 
@@ -48,30 +56,6 @@ handle_errors = function(f){
     }
 
     return(wrapper)
-}
-
-#ideally there will be no use for handle_error. handle_errors should be universal
-handle_error = function(err, note){
-
-    #combines error message, callstack, and any notes as string.
-    #logs this collection, adds it to global list of errors to email,
-    #and returns it as custom error class
-
-    if(missing(note)) note = 'No note'
-
-    pretty_callstack = pprint_callstack()
-
-    full_message = glue('Error: {e}\nCallstack: {c}\nMS note: {n}\n',
-        e=err, c=pretty_callstack, n=note)
-
-    logging::logerror(full_message, logger=logger_module)
-
-    email_err_msg = append(email_err_msg, full_message)
-    assign('email_err_msg', email_err_msg, pos=.GlobalEnv)
-
-    ms_err = generate_ms_err(full_message)
-
-    return(ms_err)
 }
 
 pprint_callstack = function(){
@@ -297,7 +281,7 @@ email_err = function(msgs, addrs, pw){
 
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
-        logging::logerr(msg, logger=logger_module)
+        logerr(msg, logger=logger_module)
         return('email fail')
     } else {
         return('email success')
@@ -379,7 +363,7 @@ track_new_product <- function(tracker, prod){
 
     if(prod %in% names(tracker)){
         msg = 'This product is already being tracked.'
-        logging::logerror(msg, logger=logger_module)
+        logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -414,7 +398,7 @@ filter_unneeded_sets <- function(tracker_with_details){
     if(any(is.na(new_sets$needed))){
         msg = paste0('Must run `track_new_site_components` and ',
             '`populate_set_details` before running `populate_set_details`')
-        logging::logerror(msg, logger=logger_module)
+        logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -440,7 +424,7 @@ update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
     )){
         msg = paste0('If tracker is not supplied, these args must be:',
             'tracker_name, set_details, new_status.')
-        logging::logerror(msg, logger=logger_module)
+        logerror(msg, logger=logger_module)
         stop(msg)
     }
 
@@ -561,3 +545,17 @@ prodcode_from_ms_prodname <- function(ms_prodname){
     return(prodcode)
 }
 
+#. handle_errors
+ms_retrieve = function(network=domain, domain){
+    source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
+}
+
+#. handle_errors
+ms_munge = function(network=domain, domain){
+    source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
+}
+
+#. handle_errors
+ms_derive = function(network=domain, domain){
+    source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
+}
