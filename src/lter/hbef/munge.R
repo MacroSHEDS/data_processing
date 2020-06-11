@@ -1,9 +1,6 @@
-library(tidyverse)
+#just a standin. fully scrap this and replace it with updated neon/munge.R before developing
+
 library(lubridate)
-library(feather)
-library(glue)
-library(logging)
-library(emayili)
 
 network = 'neon'
 domain = 'neon'

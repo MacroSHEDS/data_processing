@@ -1,20 +1,14 @@
 #notice, in LTER parlance, our domains are "sites", our prodcodes
 #are "identifiers", our components are "elements", and each element has an "element id"
 
-network = 'lter'
-domain = 'hbef'
-
-get_all_local_helpers(network=network, domain=domain)
-
-logger_module = set_up_logger(network=network, domain=domain)
-
 prod_info = get_product_info(network=network, domain=domain,
     # status_level='retrieve', get_statuses='ready')
     status_level='retrieve', get_statuses='pending')
 
 # i=1; j=2
-prod_info = prod_info[c(1, 1, 1, 1, 1),]
-for(i in 1:nrow(prod_info)){
+# prod_info = prod_info[c(1, 1, 1, 1, 1),]
+# for(i in 1:nrow(prod_info)){
+for(i in 1){
 
     prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
 
@@ -34,7 +28,8 @@ for(i in 1:nrow(prod_info)){
 
     #retrieve data by site; log acquisitions and revisions
     avail_sites = unique(avail_sets$site_name)
-    for(j in 1:length(avail_sites)){
+    for(j in 1){
+    # for(j in 1:length(avail_sites)){
 
         curr_site = avail_sites[j]
         avail_site_sets = avail_sets[avail_sets$site_name == curr_site, ,
@@ -63,13 +58,7 @@ for(i in 1:nrow(prod_info)){
 
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
-        # tryCatch({
         get_lter_data(domain=domain, new_sets, held_data)
-        # }, error=function(e){
-        #     logging::logerror(e, logger=logger_module)
-        #     email_err_msg <<- TRUE #must change this to list append
-        # })
-
     }
 
     gc()
