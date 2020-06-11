@@ -28,3 +28,6 @@ distinct = dplyr::distinct
 sm = suppressMessages
 sw = suppressWarnings
 str_match = stringr::str_match
+loginfo = logging::loginfo
+logwarn = logging::logwarn
+logerror = logging::logerror

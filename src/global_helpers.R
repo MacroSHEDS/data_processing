@@ -1,6 +1,18 @@
 source('src/function_aliases.R')
 
-#functions without decorators (e.g. #. handle_errors) have special error handling
+email_err_msg = list()
+
+flagmap = list(
+    clean=c(NA, 'example flag 0'),
+    sensor_concern=c('example flag 1'),
+    unit_unknown=c('example flag 2'),
+    unit_concern=c('example flag 3'),
+    method_unknown=c('example flag 4', 'example flag 5'),
+    method_concern=c('example flag 6'),
+    general_concern=c('example flag 7')
+)
+
+#functions without the "#. handle_errors" decorator have special error handling
 
 handle_errors = function(f){
 
@@ -19,8 +31,9 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
-            full_message = glue('\nError: {e}\nCallstack: {c}\n',
-                e=e, c=pretty_callstack)
+            # full_message = glue('\nError: {e}\nCallstack: {c}\n',
+            #     e=e, c=pretty_callstack)
+            full_message = glue('Callstack: {c}\n\n', c=pretty_callstack)
 
             logging::logerror(full_message, logger=logger_module) #logger_module is global
 
@@ -61,6 +74,36 @@ handle_error = function(err, note){
     return(ms_err)
 }
 
+pprint_callstack = function(){
+
+    #make callstack more informative. if we end up sourcing files rather than
+    #packaging, print which files were sourced along with callstack.
+
+    # zz = as.list(sys.calls())
+    # zx[[zxc]] <<- zz
+    # zxc <<- zxc + 1
+    # call_list = zz
+    # # call_list = zx[[1]]
+
+    call_list = as.list(sys.calls())
+    call_names = sapply(call_list, all.names, max.names=2)
+    ms_entities = grep('pprint', ls(envir=.GlobalEnv), value=TRUE, invert=TRUE)
+    ms_calls_bool = sapply(call_names, function(x) any(x %in% ms_entities))
+    # call_vec = call_vec[call_vec != 'pprint_callstack']
+
+    # l = length(call_list)
+    # call_list_cleaned = call_list[-((l - 4):l)]
+    call_list_cleaned = call_list[ms_calls_bool]
+    call_vec = unlist(lapply(call_list_cleaned,
+        function(x){
+            paste(deparse(x), collapse='\n')
+        }))
+
+    call_string_pretty = paste(call_vec, collapse=' -->\n')
+
+    return(call_string_pretty)
+}
+
 #. handle_errors
 export_to_global <- function(from_env, exclude=NULL){
 
@@ -80,6 +123,7 @@ export_to_global <- function(from_env, exclude=NULL){
     }
 }
 
+#. handle_errors
 get_all_local_helpers = function(domain, network=domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
@@ -108,33 +152,32 @@ get_all_local_helpers = function(domain, network=domain){
         exclude=c('network', 'domain', 'thisenv'))
 }
 
+#. handle_errors
 set_up_logger = function(network, domain){
 
-    logger_name = glue(network, '_', domain)
+    #the logging package establishes logger hierarchy based on name.
+    #our root logger is named "ms", and our network-domain loggers are named
+    #ms.network.domain, e.g. "ms.lter.hbef". When messages are logged, loggers
+    #are referred to as name.module. A message logged to
+    #logger="ms.lter.hbef.module" would be handled by loggers named
+    #"ms.lter.hbef", "ms.lter", and "ms", some of which may not have established
+    #handlers
+
+    logger_name = glue('ms.{n}.{d}', n=network, d=domain)
     logger_module = glue(logger_name, '.module')
 
-    logging::basicConfig()
     logging::addHandler(logging::writeToFile, logger=logger_name,
         file=glue('logs/{n}_{d}.log', n=network, d=domain))
 
     return(logger_module)
 }
 
+#. handle_errors
 extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
 }
-
-flagmap = list(
-    clean=c(NA, 'example flag 0'),
-    sensor_concern=c('example flag 1'),
-    unit_unknown=c('example flag 2'),
-    unit_concern=c('example flag 3'),
-    method_unknown=c('example flag 4', 'example flag 5'),
-    method_concern=c('example flag 6'),
-    general_concern=c('example flag 7')
-)
 
 #. handle_errors
 get_flag_types <- function(mapping, flags) {
@@ -173,11 +216,24 @@ postgres_arrayify <- function(vec){
 }
 
 #. handle_errors
-clear_from_mem <- function(...){
-    dots = match.call(expand.dots = FALSE)$...
-    names = vapply(dots, as.character, '')
-    rm(list=names, envir=globalenv())
+clear_from_mem <- function(..., clearlist){
+
+    if(missing(clearlist)){
+        dots = match.call(expand.dots = FALSE)$...
+        clearlist = vapply(dots, as.character, '')
+    }
+
+    rm(list=clearlist, envir=.GlobalEnv)
     gc()
+}
+
+#. handle_errors
+retain_ms_globals <- function(retain_vars){
+
+    all_globals = ls(envir=.GlobalEnv, all.names=TRUE)
+    clutter = all_globals[! all_globals %in% retain_vars]
+
+    clear_from_mem(clearlist=clutter)
 }
 
 #. handle_errors
@@ -204,7 +260,6 @@ is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-# not decorated. error handling unique for this function
 email_err = function(msgs, addrs, pw){
 
     if(is.list(msgs)){
@@ -250,7 +305,6 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-# not decorated. error handling unique for this function
 get_data_tracker = function(network=NULL, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
@@ -353,7 +407,6 @@ track_new_site_components <- function(tracker, prod, site, avail){
 #. handle_errors
 filter_unneeded_sets <- function(tracker_with_details){
 
-    if(i==3) stop('err3')
     new_sets = tracker_with_details %>%
         filter(status != 'blacklist' | is.na(status)) %>%
         filter(needed == TRUE | is.na(needed))
@@ -506,24 +559,5 @@ prodcode_from_ms_prodname <- function(ms_prodname){
     prodcode = strsplit(ms_prodname, '_')[[1]][2]
 
     return(prodcode)
-}
-
-#. handle_errors
-pprint_callstack <- function(){
-
-    # zz <<- as.list(sys.calls())
-    # call_list = zz
-    call_list = as.list(sys.calls())
-    l = length(call_list)
-    call_list_cleaned = call_list[-((l - 5):l)]
-
-    call_vec = unlist(lapply(call_list_cleaned,
-        function(x){
-            paste(deparse(x), collapse='\n')
-        }))
-
-    call_string_pretty = paste(call_vec, collapse=' -->\n')
-
-    return(call_string_pretty)
 }
 
