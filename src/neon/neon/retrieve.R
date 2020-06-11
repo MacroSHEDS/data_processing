@@ -43,7 +43,7 @@ for(i in 1:nrow(prod_info)){
         new_sets = filter_unneeded_sets(retrieval_details)
 
         if(nrow(new_sets) == 0){
-            logging::loginfo(glue('Nothing to do for {s} {n}',
+            loginfo(glue('Nothing to do for {s} {n}',
                     s=curr_site, n=prodname_ms), logger=logger_module)
             next
         }

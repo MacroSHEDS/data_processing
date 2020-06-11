@@ -11,7 +11,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
         msg = glue('Processing {site}, {prod}, {month}',
             site=s$site_name, prod=s$prodname_ms, month=s$component)
-        logging::loginfo(msg, logger=logger_module)
+        loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
         out_sitemonth = do.call(processing_func, args=list(set_details=s))
@@ -231,7 +231,7 @@ populate_set_details <- function(tracker, prod, site, avail){
 #     } else if(! 'startDateTime' %in% out_cols){
 #         msg = glue('Datetime column not found for site ',
 #             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-#         logging::logwarn(msg, logger=logger_module)
+#         logwarn(msg, logger=logger_module)
 #         return(generate_ms_err())
 #     }
 #
@@ -264,7 +264,7 @@ populate_set_details <- function(tracker, prod, site, avail){
 #     } else {
 #         msg = glue('Problem with upstream/downstream indicator for site ',
 #             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-#         logging::logwarn(msg, logger=logger_module)
+#         logwarn(msg, logger=logger_module)
 #         return(generate_ms_err())
 #     }
 #
