@@ -33,7 +33,7 @@ lter_download('/home/mike/git/macrosheds/data_acquisition/data/lter',
 # gg = read_feather('~/git/macrosheds/portal/data/hjandrews/grab.feather')
 
 #grab
-grab = readr::read_csv('raw/stream_precip_chemistry/stream chemistry',
+grab = read_csv('raw/stream_precip_chemistry/stream chemistry',
         guess_max=30000) %>%
     rename(site_name=site) %>%
     mutate(datetime=lubridate::as_datetime(paste(date, timeEST), tz='EST')) %>%
@@ -47,10 +47,10 @@ grab = readr::read_csv('raw/stream_precip_chemistry/stream chemistry',
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(grab, paste0(outdir, '/grab.feather'))
+write_feather(grab, paste0(outdir, '/grab.feather'))
 
 #precip chemistry
-pchem = readr::read_csv('raw/stream_precip_chemistry/precipitation chemistry',
+pchem = read_csv('raw/stream_precip_chemistry/precipitation chemistry',
     guess_max=30000) %>%
     rename(site_name=site) %>%
     mutate(datetime=lubridate::as_datetime(paste(date, timeEST), tz='EST')) %>%
@@ -64,10 +64,10 @@ pchem = readr::read_csv('raw/stream_precip_chemistry/precipitation chemistry',
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(pchem, paste0(outdir, '/pchem.feather'))
+write_feather(pchem, paste0(outdir, '/pchem.feather'))
 
 #P (must be exported in mm)
-precip = readr::read_csv('raw/precipitation/dailyGagePrecip1956-2019.csv') %>%
+precip = read_csv('raw/precipitation/dailyGagePrecip1956-2019.csv') %>%
     mutate(datetime=lubridate::as_datetime(DATE, tz='UTC')) %>%
     select(-DATE) %>%
     rename(site_name=rainGage, precip=Precip) %>%
@@ -76,7 +76,7 @@ precip = readr::read_csv('raw/precipitation/dailyGagePrecip1956-2019.csv') %>%
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(precip, paste0(outdir, '/precip.feather'))
+write_feather(precip, paste0(outdir, '/precip.feather'))
 clear_from_mem(precip)
 
 #Q (must be exported in L/s)
@@ -88,7 +88,7 @@ discharge = tibble::tibble()
 
 for(s in sets_old){
 
-    d = readr::read_csv(s,
+    d = read_csv(s,
             col_types=readr::cols(
                 DATETIME=readr::col_character()
             )) %>%
@@ -106,7 +106,7 @@ for(s in sets_old){
 
 for(s in sets_5min){
 
-    d = readr::read_csv(s,
+    d = read_csv(s,
             col_types=readr::cols(
                 DATETIME=readr::col_character(),
                 Flag=readr::col_character()
@@ -126,8 +126,8 @@ for(s in sets_5min){
 
 discharge = arrange(discharge, site_name, datetime)
 
-feather::write_feather(discharge, paste0(outdir, '/discharge.feather'))
-# discharge = feather::read_feather(paste0(outdir, '/discharge.feather'))
+write_feather(discharge, paste0(outdir, '/discharge.feather'))
+# discharge = read_feather(paste0(outdir, '/discharge.feather'))
 
 #flux
 site_data = read.csv('../../general/site_data.csv', stringsAsFactors=FALSE)
@@ -183,4 +183,4 @@ flux_daily = grab_daily %>%
         dplyr::any_vars(! is.na(.)))
 clear_from_mem(grab_daily, Q_daily)
 
-feather::write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
+write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
