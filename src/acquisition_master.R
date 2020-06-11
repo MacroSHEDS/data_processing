@@ -30,7 +30,7 @@ network_domain = read_csv('data/general/site_data.csv') %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'email_err_msg')
+ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -38,20 +38,20 @@ for(dmnrow in 1:nrow(network_domain)){
     domain = network_domain$domain[dmnrow]
 
     logger_module = set_up_logger(network=network, domain=domain)
-    logging::loginfo(logger=logger_module,
+    loginfo(logger=logger_module,
         msg=glue('Processing network: {n}, domain: {d}', n=network, d=domain))
 
     get_all_local_helpers(network=network, domain=domain)
 
-    source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
-    source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
-    # source(glue('src/{n}/{d}/derive.R', n=network, d=domain)
+    ms_retrieve(network=network, domain=domain)
+    ms_munge(network=network, domain=domain)
+    # ms_derive(network=network, domain=domain)
 
     retain_ms_globals(ms_globals)
 }
 
-if(length(email_err_msg)){
-    email_err(email_err_msg, conf$report_emails, conf$gmail_pw)
+if(length(email_err_msgs)){
+    email_err(email_err_msgs, conf$report_emails, conf$gmail_pw)
 }
 
-logging::loginfo('Run complete', logger='ms.module')
+loginfo('Run complete', logger='ms.module')

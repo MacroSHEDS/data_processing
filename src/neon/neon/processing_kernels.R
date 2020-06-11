@@ -31,6 +31,7 @@ process_0_20093 <- function(set_details){
 
     return(out_sub)
 } #chem: ready (grab interval?)
+
 #. handle_errors
 process_0_20033 <- function(set_details){
 
@@ -46,6 +47,7 @@ process_0_20033 <- function(set_details){
 
     return(out_sub)
 } #nitrate: ready
+
 #. handle_errors
 process_0_20042 <- function(set_details){
 
@@ -61,6 +63,7 @@ process_0_20042 <- function(set_details){
 
     return(out_sub)
 } #par: ready (interval?)
+
 #. handle_errors
 process_0_20053 <- function(set_details){
 
@@ -76,6 +79,7 @@ process_0_20053 <- function(set_details){
 
     return(out_sub)
 } #water temp: ready
+
 #. handle_errors
 process_0_00004 <- function(set_details){
 
@@ -91,6 +95,7 @@ process_0_00004 <- function(set_details){
 
     return(out_sub)
 } #airpres: ready
+
 #. handle_errors
 process_0_20097 <- function(set_details){
 
@@ -112,6 +117,7 @@ process_0_20097 <- function(set_details){
 
     return(out_sub)
 } #gases: ready (grab interval?)
+
 #. handle_errors
 process_0_20016 <- function(set_details){
 
@@ -142,6 +148,7 @@ process_0_20016 <- function(set_details){
 
     return(out_sub)
 } #stage: waiting on NEON
+
 #. handle_errors
 process_0_20288 <- function(set_details){
 
@@ -170,10 +177,12 @@ process_0_20288 <- function(set_details){
     return(out_sub)
 
 } #waterqual: ready
+
 #. handle_errors
 process_0_ <- function(set_details){
 
 } #precip: not started
+
 #. handle_errors
 process_0_ <- function(set_details){
 
