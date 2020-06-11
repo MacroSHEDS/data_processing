@@ -1,6 +1,5 @@
 
 #retrieval kernels
-#SHOULD THERE BE JUST ONE FOR LTER?
 
 #. handle_errors
 process_0_1 <- function(set_details, network, domain){
@@ -15,3 +14,5 @@ process_0_1 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 
 } #discharge: ready
+
+#munge kernels

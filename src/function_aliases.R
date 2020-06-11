@@ -4,6 +4,7 @@
 
 read_csv = readr::read_csv
 read_feather = feather::read_feather
+write_feather = feather::write_feather
 glue = glue::glue
 filter = dplyr::filter
 select = dplyr::select

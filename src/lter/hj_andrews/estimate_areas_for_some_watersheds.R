@@ -1,4 +1,4 @@
-Q = feather::read_feather('~/git/macrosheds/portal/data/hjandrews/discharge.feather')
+Q = read_feather('~/git/macrosheds/portal/data/hjandrews/discharge.feather')
 
 q = filter(Q, site_name %in% c('GSWSMA', 'GSWSMF', 'GSWSMC'),
     datetime < as.POSIXct('1997-01-01')) %>%

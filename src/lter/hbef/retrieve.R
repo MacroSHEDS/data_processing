@@ -1,5 +1,3 @@
-#notice, in LTER parlance, our domains are "sites", our prodcodes
-#are "identifiers", our components are "elements", and each element has an "element id"
 
 prod_info = get_product_info(network=network, domain=domain,
     # status_level='retrieve', get_statuses='ready')

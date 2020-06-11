@@ -2,11 +2,11 @@ library(tidyverse)
 library(imputeTS)
 library(lubridate)
 
-# flux = feather::read_feather('/home/mike/git/macrosheds/portal/data/hbef/flux.feather')
-pchem = feather::read_feather('/home/mike/git/macrosheds/portal/data/hbef/pchem.feather')
-pcip = feather::read_feather('/home/mike/git/macrosheds/portal/data/hbef/precip.feather')
-conc = feather::read_feather('/home/mike/git/macrosheds/portal/data/hbef/grab.feather')
-disch = feather::read_feather('/home/mike/git/macrosheds/portal/data/hbef/discharge.feather')
+# flux = read_feather('/home/mike/git/macrosheds/portal/data/hbef/flux.feather')
+pchem = read_feather('/home/mike/git/macrosheds/portal/data/hbef/pchem.feather')
+pcip = read_feather('/home/mike/git/macrosheds/portal/data/hbef/precip.feather')
+conc = read_feather('/home/mike/git/macrosheds/portal/data/hbef/grab.feather')
+disch = read_feather('/home/mike/git/macrosheds/portal/data/hbef/discharge.feather')
 variables = read_csv('/home/mike/git/macrosheds/portal/data/variables.csv')
 fluxvars = variables$variable_code[as.logical(variables$flux_convertible)]
 
