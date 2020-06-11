@@ -14,24 +14,34 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
-        out_sitemonth = do.call(processing_func, args=list(set_details=s))
+        result = do.call(processing_func,
+            args=list(set_details=s, network=network, domain=domain))
 
-        if(is_ms_err(out_sitemonth) || is_ms_exception(out_sitemonth)){
-            update_data_tracker_r(network=domain, domain=domain,
+        if(is_ms_err(result) || is_ms_exception(result)){
+            update_data_tracker_r(network=network, domain=domain,
                 tracker_name='held_data', set_details=s, new_status='error')
             next
+        } else {
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='ok')
         }
 
-        site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
-            n=network, d=domain, p=s$prodname_ms, s=s$site_name)
-        dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
-
-        sitemonth_file = glue('{sd}/{t}.feather',
-            sd=site_dir, t=s$component)
-        write_feather(out_sitemonth, sitemonth_file)
-
-        update_data_tracker_r(network=domain, domain=domain,
-            tracker_name='held_data', set_details=s, new_status='ok')
+        # if(is_ms_err(out_sitemonth) || is_ms_exception(out_sitemonth)){
+        #     update_data_tracker_r(network=domain, domain=domain,
+        #         tracker_name='held_data', set_details=s, new_status='error')
+        #     next
+        # }
+        #
+        # site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
+        #     n=network, d=domain, p=s$prodname_ms, s=s$site_name)
+        # dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
+        #
+        # sitemonth_file = glue('{sd}/{t}.feather',
+        #     sd=site_dir, t=s$component)
+        # write_feather(out_sitemonth, sitemonth_file)
+        #
+        # update_data_tracker_r(network=domain, domain=domain,
+        #     tracker_name='held_data', set_details=s, new_status='ok')
     }
 }
 
@@ -49,15 +59,15 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
     for(k in 1:nrow(retrieval_log)){
 
         sitemonth = retrieval_log[k, 'component']
-        comp = feather::read_feather(glue('data/{n}/{d}/raw/',
+        comp = read_feather(glue('data/{n}/{d}/raw/',
             '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
             sm=sitemonth))
 
-        prodcode = strsplit(prod, '_')[[1]][2]
+        prodcode = prodcode_from_ms_prodname(prod)
         processing_func = get(paste0('process_1_', prodcode))
 
         out_comp = sw(do.call(processing_func,
-            args=list(set=comp, site_name=site)))
+            args=list(set=comp, network=network, domain=domain, site_name=site)))
         out = bind_rows(out, out_comp)
     }
 
@@ -124,7 +134,7 @@ get_neon_product_specs <- function(code){
 
     if(length(prod_variant_inds) > 1){
         stop(glue('More than one product variant for this prodcode. Did neon ',
-            'make a v.002 data product?')
+            'make a v.002 data product?'))
     }
 
     newest_variant_ind = prodlist[prod_variant_inds] %>%

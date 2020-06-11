@@ -38,7 +38,7 @@ handle_errors = function(f){
 
             # full_message = glue('\nError: {e}\nCallstack: {c}\n',
             #     e=e, c=pretty_callstack)
-            full_message = glue('network: {n}, domain: {d}\nsite: {s}\n'
+            full_message = glue('network: {n}, domain: {d}\nsite: {s}\n',
                 'product: {P}\nCallstack: {c}\n\n',
                 n=network, d=domain, s=curr_site, p=prodname_ms,
                 c=pretty_callstack)
@@ -108,7 +108,7 @@ export_to_global <- function(from_env, exclude=NULL){
 }
 
 #. handle_errors
-get_all_local_helpers = function(domain, network=domain){
+get_all_local_helpers = function(network=domain, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
     #because it can only read them into the current environment, all files
@@ -137,7 +137,7 @@ get_all_local_helpers = function(domain, network=domain){
 }
 
 #. handle_errors
-set_up_logger = function(network, domain){
+set_up_logger = function(network=domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -289,13 +289,11 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-get_data_tracker = function(network=NULL, domain){
+get_data_tracker = function(network=domain, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
         #assumed to be identical to the domain string.
     #domain is a macrosheds domain string
-
-    if(is.null(network)) network = domain
 
     thisenv = environment()
 
@@ -305,12 +303,6 @@ get_data_tracker = function(network=NULL, domain){
                 n=network, d=domain) %>%
             readr::read_file() %>%
             jsonlite::fromJSON()
-
-        # tracker_data = lapply(tracker_data, function(x){
-        #     lapply(x, function(y){
-        #         y$retrieve = as_tibble(y$retrieve)
-        #     })
-        # })
 
     }, error=function(e){
         assign('tracker_data', list(), pos=thisenv)
@@ -406,7 +398,7 @@ filter_unneeded_sets <- function(tracker_with_details){
 }
 
 #. handle_errors
-update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
+update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
     tracker_name=NULL, set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
@@ -416,8 +408,6 @@ update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
     #from disk, updated, and then written back to disk.
-
-    if(is.null(network)) network = domain
 
     if(is.null(tracker) && (
             is.null(tracker_name) || is.null(set_details) || is.null(new_status)
@@ -450,16 +440,16 @@ update_data_tracker_r <- function(network=NULL, domain, tracker=NULL,
     readr::write_file(jsonlite::toJSON(tracker),
         glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 
+    return(NULL)
+
 }
 
 #. handle_errors
-update_data_tracker_m <- function(network=NULL, domain, tracker_name, prod,
+update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
     site, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_d for the derive section
-
-    if(missing(network)) network = domain
 
     tracker = get_data_tracker(network=network, domain=domain)
 
@@ -474,15 +464,17 @@ update_data_tracker_m <- function(network=NULL, domain, tracker_name, prod,
 
     readr::write_file(jsonlite::toJSON(tracker),
         glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
+
+    return(NULL)
 }
 
-#build populate_missing_shiny_files when the time comes
+#build populate_missing_shiny_files if the time comes
 #. handle_errors
 populate_missing_shiny_files <- function(domain){
 
     #this is not yet working. first, shiny needs to be reconfigured to
-    #pull site files as requested. atm all sites are bound into one feather
-    #by domain and dataset (i.e. neon-precip, neon-Q, etc)
+    #pull all site files as requested. atm precip and pchem are still
+    #bound into one file (i.e. precip.feather instead of site1.feather)
 
     list.files('data/hbef/')
 

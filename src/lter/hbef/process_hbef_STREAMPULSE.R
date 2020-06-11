@@ -85,8 +85,8 @@ sensor = tidylog::full_join(sensor_Q, sensor_etc) %>%
 DBI::dbDisconnect(con)
 
 #save locally and zip
-feather::write_feather(grablong, 'data/lter/hbef/grab.feather')
-feather::write_feather(sensor, 'data/lter/hbef/sensor.feather')
+write_feather(grablong, 'data/lter/hbef/grab.feather')
+write_feather(sensor, 'data/lter/hbef/sensor.feather')
 zip('data/hbef.zip', list.files('data/lter/hbef', recursive=TRUE, full.names=TRUE))
 out = googledrive::drive_upload("data/lter/hbef.zip",
     googledrive::as_id('https://drive.google.com/drive/folders/0ABfF-JkuRvL5Uk9PVA'))
@@ -143,7 +143,7 @@ DBI::dbAppendTable(con, 'flag_grab', flag_insert)
 
 #eventually set up variable corroboration like with flags above.
 #for now, just importing from the CSV we've been working from
-variable_insert = readr::read_csv('../portal/data/variables.csv') %>%
+variable_insert = read_csv('../portal/data/variables.csv') %>%
     dplyr::select(-R_display) %>%
     dplyr::mutate(unit=1, method=1)
 

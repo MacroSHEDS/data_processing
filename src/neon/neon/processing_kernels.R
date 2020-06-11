@@ -137,14 +137,14 @@ process_0_20016 <- function(set_details){
     f = glue(drc, '/{p}.feather', p=set_details$component)
 
     # if(file.exists(f)){
-    #     sens_pos = feather::read_feather(f)
+    #     sens_pos = read_feather(f)
     #     sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
     #         distinct()
     # } else {
     #     sens_pos = data_pile$sensor_positions_20016
     # }
 
-    feather::write_feather(data_pile$sensor_positions_20016, f)
+    write_feather(data_pile$sensor_positions_20016, f)
 
     return(out_sub)
 } #stage: waiting on NEON

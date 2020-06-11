@@ -28,7 +28,7 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = strsplit(prodname, '_')[[1]][2]
+    prodcode = prodcode_from_ms_prodname(prodname)
 
     name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
