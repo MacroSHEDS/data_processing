@@ -4,6 +4,7 @@
 
 read_csv = readr::read_csv
 read_feather = feather::read_feather
+write_feather = feather::write_feather
 glue = glue::glue
 filter = dplyr::filter
 select = dplyr::select
@@ -28,3 +29,6 @@ distinct = dplyr::distinct
 sm = suppressMessages
 sw = suppressWarnings
 str_match = stringr::str_match
+loginfo = logging::loginfo
+logwarn = logging::logwarn
+logerror = logging::logerror

@@ -22,7 +22,7 @@ lter_download('/home/mike/git/macrosheds/data_acquisition/data/lter',
     'south_umpqua')
 
 #P (must be exported in mm)
-precip = readr::read_csv('raw/precipitation/MS00403') %>%
+precip = read_csv('raw/precipitation/MS00403') %>%
     tidylog::select(DATE, SITECODE, PRECIP_TOT_DAY, PRECIP_TOT_FLAG) %>%
     tidylog::filter(PRECIP_TOT_FLAG %in% c('A', 'E', 'T', 'U')) %>%
     tidylog::select(-PRECIP_TOT_FLAG) %>%
@@ -34,10 +34,10 @@ precip = readr::read_csv('raw/precipitation/MS00403') %>%
         dplyr::any_vars(! is.na(.)))
 attr(precip$datetime, 'tzone') = 'UTC'
 
-feather::write_feather(precip, paste0(outdir, '/precip.feather'))
+write_feather(precip, paste0(outdir, '/precip.feather'))
 
 #Q (must be exported in L/s)
-discharge = readr::read_csv('raw/discharge/HF00402') %>%
+discharge = read_csv('raw/discharge/HF00402') %>%
     tidylog::select(DATE, SITECODE, MAX_Q) %>%
     dplyr::mutate(MAX_Q=MAX_Q * 28.32) %>%
     dplyr::rename(datetime=DATE, site_name=SITECODE, Q=MAX_Q) %>%
@@ -48,10 +48,10 @@ discharge = readr::read_csv('raw/discharge/HF00402') %>%
         dplyr::any_vars(! is.na(.)))
 attr(discharge$datetime, 'tzone') = 'UTC'
 
-feather::write_feather(discharge, paste0(outdir, '/discharge.feather'))
+write_feather(discharge, paste0(outdir, '/discharge.feather'))
 
 #conc (make sure datetime is POSIXct and not Date)
-grab = readr::read_csv('raw/stream_chemistry/CF00201') %>%
+grab = read_csv('raw/stream_chemistry/CF00201') %>%
     dplyr::rename(Na=X46) %>%
     tidylog::select(-one_of('STCODE', 'LABNO', 'TYPE', 'ENTITY', 'WATERYEAR',
         'INTERVAL', 'MEAN_LPS', 'Q_AREA_CM', 'QCODE', 'PVOL', 'PVOLCODE'))
@@ -77,10 +77,10 @@ grab = dplyr::bind_cols(grabcodes, grabvars) %>%
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(grab, paste0(outdir, '/grab.feather'))
+write_feather(grab, paste0(outdir, '/grab.feather'))
 
 #precip chemistry
-pchem = readr::read_csv('raw/precip_chemistry/CP00201', guess_max=30000) %>%
+pchem = read_csv('raw/precip_chemistry/CP00201', guess_max=30000) %>%
     dplyr::rename(Na=X44) %>%
     tidylog::select(-one_of('STCODE', 'LABNO', 'TYPE', 'ENTITY', 'WATERYEAR',
         'INTERVAL', 'MEAN_LPS', 'Q_AREA_CM', 'QCODE', 'PVOL', 'PVOLCODE',
@@ -107,7 +107,7 @@ pchem = dplyr::bind_cols(pchemcodes, pchemvars) %>%
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(pchem, paste0(outdir, '/pchem.feather'))
+write_feather(pchem, paste0(outdir, '/pchem.feather'))
 
 #flux
 site_data = read.csv('../../general/site_data.csv', stringsAsFactors=FALSE)
@@ -222,4 +222,4 @@ flux_daily = grab_daily %>%
     dplyr::filter_at(dplyr::vars(-site_name, -datetime),
         dplyr::any_vars(! is.na(.)))
 
-feather::write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))
+write_feather(flux_daily, path=paste0(outdir, '/flux.feather'))

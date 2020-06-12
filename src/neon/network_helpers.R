@@ -1,102 +1,104 @@
 
-resolve_neon_naming_conflicts = function(out_sub_, replacements=NULL,
-    from_api=FALSE, set_details_){
+#. handle_errors
+get_neon_data = function(domain, sets, tracker, silent=TRUE){
+    # sets=new_sets; i=1; tracker=held_data
 
-    #obsolete now that neonUtilities package is working
+    for(i in 1:nrow(sets)){
 
-    #replacements is a named vector. name=find, value=replace;
-    #failed match does nothing
+        if(! silent) print(paste0('i=', i, '/', nrow(sets)))
 
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    date = set_details_$date
+        s = sets[i, ]
 
-    out_cols = colnames(out_sub_)
+        msg = glue('Processing {site}, {prod}, {month}',
+            site=s$site_name, prod=s$prodname_ms, month=s$component)
+        loginfo(msg, logger=logger_module)
 
-    if(! is.null(replacements)){
+        processing_func = get(paste0('process_0_', s$prodcode_id))
+        result = do.call(processing_func,
+            args=list(set_details=s, network=network, domain=domain))
 
-        #get list of variables included
-        varind = grep('SciRvw', out_cols)
-        rgx = str_match(out_cols[varind], '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
-        # varlist = flagprefixlist = rgx[,2]
-        varlist = rgx[,2]
-
-        #harmonize redundant variable names
-        for(i in 1:length(replacements)){
-            r = replacements[i]
-            varlist = replace(varlist, which(varlist == names(r)), r)
+        if(is_ms_err(result) || is_ms_exception(result)){
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='error')
+            next
+        } else {
+            update_data_tracker_r(network=network, domain=domain,
+                tracker_name='held_data', set_details=s, new_status='ok')
         }
-    }
 
-    if('startDate' %in% out_cols){
-        colnames(out_sub_) = replace(out_cols, which(out_cols == 'startDate'),
-            'startDateTime')
-    } else if('endDate' %in% out_cols){
-        colnames(out_sub_) = replace(out_cols, which(out_cols == 'endDate'),
-            'startDateTime') #not a mistake
-    } else if(! 'startDateTime' %in% out_cols){
-        msg = glue('Datetime column not found for site ',
-            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger=logger_module)
-        return(generate_ms_err())
+        # if(is_ms_err(out_sitemonth) || is_ms_exception(out_sitemonth)){
+        #     update_data_tracker_r(network=domain, domain=domain,
+        #         tracker_name='held_data', set_details=s, new_status='error')
+        #     next
+        # }
+        #
+        # site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
+        #     n=network, d=domain, p=s$prodname_ms, s=s$site_name)
+        # dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
+        #
+        # sitemonth_file = glue('{sd}/{t}.feather',
+        #     sd=site_dir, t=s$component)
+        # write_feather(out_sitemonth, sitemonth_file)
+        #
+        # update_data_tracker_r(network=domain, domain=domain,
+        #     tracker_name='held_data', set_details=s, new_status='ok')
     }
-
-    #subset relevant columns (needed if NEON API was used)
-    if(from_api){
-        flagcols = grepl('.+?FinalQF(?!SciRvw)', out_cols,
-            perl=TRUE)
-        datacols = ! grepl('QF', out_cols, perl=TRUE)
-        relevant_cols = flagcols | datacols
-        out_sub_ = out_sub_[, relevant_cols]
-    }
-
-    return(out_sub_)
 }
 
-download_sitemonth_details = function(geturl){
+#. handle_errors
+munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
+    # domain='neon'; site='ARIK'; prod=prodname_ms; tracker=held_data
 
-    thisenv = environment()
+    retrieval_log = extract_retrieval_log(held_data, prod, site)
 
-    tryCatch({
-        d = httr::GET(geturl)
-        d = jsonlite::fromJSON(httr::content(d, as="text"))
-    }, error=function(e){
-        logging::logerror(e, logger=logger_module)
-        assign('email_err_msg', TRUE, pos=.GlobalEnv)
-        assign('d', generate_ms_err(), pos=thisenv)
-    })
+    if(nrow(retrieval_log) == 0){
+        return()
+    }
+
+    out = tibble()
+    for(k in 1:nrow(retrieval_log)){
+
+        sitemonth = retrieval_log[k, 'component']
+        comp = read_feather(glue('data/{n}/{d}/raw/',
+            '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
+            sm=sitemonth))
+
+        prodcode = prodcode_from_ms_prodname(prod)
+        processing_func = get(paste0('process_1_', prodcode))
+
+        out_comp = sw(do.call(processing_func,
+            args=list(set=comp, network=network, domain=domain, site_name=site)))
+        out = bind_rows(out, out_comp)
+    }
+
+    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prod)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
+    write_feather(out, site_file)
+
+    #create a link to the new file from the portal repo
+    #(from and to seem logically reversed in file.link)
+    sw(file.link(to=glue('../portal/data/{d}/{p}/{s}.feather',
+        d=domain, p=strsplit(prod, '_')[[1]][1], s=site), from=site_file))
+
+    update_data_tracker_m(network=network, domain=domain,
+        tracker_name='held_data', prod=prodname_ms, site=site, new_status='ok')
+
+    return('sitemunge complete')
+}
+
+#. handle_errors
+download_sitemonth_details <- function(geturl){
+
+    d = httr::GET(geturl)
+    d = jsonlite::fromJSON(httr::content(d, as="text"))
 
     return(d)
 }
 
-determine_upstream_downstream_api = function(d_, data_inds_, set_details_){
-    #obsolete now that neonUtilities package is working
-
-    prodcode = set_details_$prodcode
-    site = set_details_$site
-    date = set_details_$date
-
-    #determine which dataset is upstream/downstream if necessary
-    updown_suffixes = c('-up', '-down')
-    if(length(data_inds_) == 2){
-        position = str_split(d_$data$files$name[data_inds_[1]], '\\.')[[1]][7]
-        updown_order = if(position == '101') 1:2 else 2:1
-    } else if(length(data_inds_) == 1){
-        updown_order = 1
-    } else {
-        msg = glue('Problem with upstream/downstream indicator for site ',
-            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-        logging::logwarn(msg, logger=logger_module)
-        return(generate_ms_err())
-    }
-
-    site_with_suffixes = paste0(site, updown_suffixes[updown_order])
-
-    return(site_with_suffixes)
-}
-
-# d_ = data_pile$waq_instantaneous
-determine_upstream_downstream = function(d_){
+#. handle_errors
+determine_upstream_downstream <- function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
     updown[updown == '1'] = '-up'
@@ -112,7 +114,8 @@ determine_upstream_downstream = function(d_){
     return(updown)
 }
 
-get_avail_neon_products = function(){
+#. handle_errors
+get_avail_neon_products <- function(){
 
     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/"))
     txt = httr::content(req, as="text")
@@ -122,19 +125,16 @@ get_avail_neon_products = function(){
     return(prodlist)
 }
 
-get_neon_product_specs = function(code){
+#. handle_errors
+get_neon_product_specs <- function(code){
 
-    prodlist = try(get_avail_neon_products())
-    if('try-error' %in% class(prodlist)){
-        logging::logerror(glue("Can't retrieve NEON product list for {c}",
-            , c=code), logger=logger_module)
-        stop()
-    }
+    prodlist = get_avail_neon_products()
 
     prod_variant_inds = grep(code, prodlist)
 
     if(length(prod_variant_inds) > 1){
-        return(generate_ms_err('More than one product variant for this prodcode.'))
+        stop(glue('More than one product variant for this prodcode. Did neon ',
+            'make a v.002 data product?'))
     }
 
     newest_variant_ind = prodlist[prod_variant_inds] %>%
@@ -148,26 +148,17 @@ get_neon_product_specs = function(code){
     return(list(prodcode_full=prodcode_full, prod_version=prod_version))
 }
 
-get_avail_neon_product_sets = function(prodcode_full){
+#. handle_errors
+get_avail_neon_product_sets <- function(prodcode_full){
 
     #returns: tibble with url, site_name, component columns
 
-    thisenv = environment()
     avail_sets = tibble()
 
-    tryCatch({
-        req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
-            prodcode_full))
-        txt = httr::content(req, as="text")
-        neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
-    }, error=function(e){
-        logging::logerror(e, logger=logger_module)
-        # email_err_msg <<- outer_loop_err <<- TRUE
-        # assign('email_err_msg', TRUE, pos=.GlobalEnv)
-        assign('avail_sets', generate_ms_err(), pos=thisenv)
-    })
-
-    if(is_ms_err(avail_sets)) return(avail_sets)
+    req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/",
+        prodcode_full))
+    txt = httr::content(req, as="text")
+    neondata = jsonlite::fromJSON(txt, simplifyDataFrame=TRUE, flatten=TRUE)
 
     urls = unlist(neondata$data$siteCodes$availableDataUrls)
 
@@ -177,10 +168,10 @@ get_avail_neon_product_sets = function(prodcode_full){
         rename(url=`...1`, site_name=`...2`, component=`...3`)
 
     return(avail_sets)
-
 }
 
-populate_set_details = function(tracker, prod, site, avail){
+#. handle_errors
+populate_set_details <- function(tracker, prod, site, avail){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
@@ -204,11 +195,90 @@ populate_set_details = function(tracker, prod, site, avail){
         # filter(needed == TRUE | is.na(needed))
 
     if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logging::logerror(msg, logger=logger_module)
-        stop(msg)
+        stop(glue('Must run `track_new_site_components` before ',
+            'running `populate_set_details`'))
     }
 
     return(retrieval_tracker)
 }
+
+
+# resolve_neon_naming_conflicts_OBSOLETE = function(out_sub_, replacements=NULL,
+#     from_api=FALSE, set_details_){
+#
+#     #obsolete now that neonUtilities package is working
+#
+#     #replacements is a named vector. name=find, value=replace;
+#     #failed match does nothing
+#
+#     prodcode = set_details_$prodcode
+#     site = set_details_$site
+#     date = set_details_$date
+#
+#     out_cols = colnames(out_sub_)
+#
+#     if(! is.null(replacements)){
+#
+#         #get list of variables included
+#         varind = grep('SciRvw', out_cols)
+#         rgx = str_match(out_cols[varind], '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
+#         # varlist = flagprefixlist = rgx[,2]
+#         varlist = rgx[,2]
+#
+#         #harmonize redundant variable names
+#         for(i in 1:length(replacements)){
+#             r = replacements[i]
+#             varlist = replace(varlist, which(varlist == names(r)), r)
+#         }
+#     }
+#
+#     if('startDate' %in% out_cols){
+#         colnames(out_sub_) = replace(out_cols, which(out_cols == 'startDate'),
+#             'startDateTime')
+#     } else if('endDate' %in% out_cols){
+#         colnames(out_sub_) = replace(out_cols, which(out_cols == 'endDate'),
+#             'startDateTime') #not a mistake
+#     } else if(! 'startDateTime' %in% out_cols){
+#         msg = glue('Datetime column not found for site ',
+#             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
+#         logwarn(msg, logger=logger_module)
+#         return(generate_ms_err())
+#     }
+#
+#     #subset relevant columns (needed if NEON API was used)
+#     if(from_api){
+#         flagcols = grepl('.+?FinalQF(?!SciRvw)', out_cols,
+#             perl=TRUE)
+#         datacols = ! grepl('QF', out_cols, perl=TRUE)
+#         relevant_cols = flagcols | datacols
+#         out_sub_ = out_sub_[, relevant_cols]
+#     }
+#
+#     return(out_sub_)
+# }
+
+# determine_upstream_downstream_api_OBSOLETE = function(d_, data_inds_, set_details_){
+#     #obsolete now that neonUtilities package is working
+#
+#     prodcode = set_details_$prodcode
+#     site = set_details_$site
+#     date = set_details_$date
+#
+#     #determine which dataset is upstream/downstream if necessary
+#     updown_suffixes = c('-up', '-down')
+#     if(length(data_inds_) == 2){
+#         position = str_split(d_$data$files$name[data_inds_[1]], '\\.')[[1]][7]
+#         updown_order = if(position == '101') 1:2 else 2:1
+#     } else if(length(data_inds_) == 1){
+#         updown_order = 1
+#     } else {
+#         msg = glue('Problem with upstream/downstream indicator for site ',
+#             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
+#         logwarn(msg, logger=logger_module)
+#         return(generate_ms_err())
+#     }
+#
+#     site_with_suffixes = paste0(site, updown_suffixes[updown_order])
+#
+#     return(site_with_suffixes)
+# }
