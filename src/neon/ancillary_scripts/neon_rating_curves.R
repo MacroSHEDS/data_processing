@@ -231,7 +231,7 @@ for(s in sites){
     }
 
     spos = glue::glue('raw/sensorpos/sensorpos_{site}.feather', site=s) %>%
-        feather::read_feather() %>%
+        read_feather() %>%
         mutate(start=as.POSIXct(start, tz='GMT')) %>%
         select(start, HOR.VER, referenceLatitude, referenceLongitude,
             referenceElevation) %>%
@@ -317,7 +317,7 @@ for(s in sites){
     }
 
     spos = glue::glue('raw/sensorpos/sensorpos_{site}.feather', site=s) %>%
-        feather::read_feather() %>%
+        read_feather() %>%
         mutate(start=as.POSIXct(start, tz='GMT')) %>%
         select(start, HOR.VER, referenceLatitude, referenceLongitude,
             referenceElevation) %>%
