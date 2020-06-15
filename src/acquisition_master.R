@@ -1,17 +1,19 @@
-library(httr)
-library(jsonlite)
-library(tidyr)
-library(plyr)
-library(data.table)
-library(dtplyr)
-library(tidyverse)
-library(lubridate)
-library(feather)
-library(glue)
-library(logging)
-library(emayili)
-library(neonUtilities)
-library(tinsel)
+suppressPackageStartupMessages({
+    library(httr)
+    library(jsonlite)
+    library(tidyr)
+    library(plyr)
+    library(data.table)
+    library(dtplyr)
+    library(tidyverse)
+    library(lubridate)
+    library(feather)
+    library(glue)
+    library(logging)
+    library(emayili)
+    library(neonUtilities)
+    library(tinsel)
+})
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
 conf = jsonlite::fromJSON('config.json')
@@ -24,7 +26,7 @@ logging::addHandler(logging::writeToFile, logger='ms',
 source('src/global_helpers.R')
 source_decoratees('src/global_helpers.R') #parse decorators
 
-network_domain = read_csv('data/general/site_data.csv') %>%
+network_domain = sm(read_csv('data/general/site_data.csv')) %>%
     filter(as.logical(in_workflow)) %>%
     select(network, domain) %>%
     distinct() %>%
@@ -32,6 +34,7 @@ network_domain = read_csv('data/general/site_data.csv') %>%
 
 ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
 
+# dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]

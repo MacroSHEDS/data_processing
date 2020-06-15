@@ -1,7 +1,7 @@
 
 #. handle_errors
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
-    # sets=new_sets; i=1; tracker=held_data
+    # sets=new_sets; i=20; tracker=held_data
 
     for(i in 1:nrow(sets)){
 
@@ -47,27 +47,30 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
 #. handle_errors
 munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
-    # domain='neon'; site='ARIK'; prod=prodname_ms; tracker=held_data
+    # domain='neon'; site=sites[j]; prod=prodname_ms; tracker=held_data
 
     retrieval_log = extract_retrieval_log(held_data, prod, site)
 
     if(nrow(retrieval_log) == 0){
-        return()
+        return(generate_ms_err('missing retrieval log'))
     }
 
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        sitemonth = retrieval_log[k, 'component']
-        comp = read_feather(glue('data/{n}/{d}/raw/',
-            '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
-            sm=sitemonth))
+        # sitemonth = retrieval_log[k, 'component']
+        # comp = read_feather(glue('data/{n}/{d}/raw/',
+        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
+        #     sm=sitemonth))
 
         prodcode = prodcode_from_ms_prodname(prod)
         processing_func = get(paste0('process_1_', prodcode))
+        in_comp = retrieval_log[k, 'component']
 
         out_comp = sw(do.call(processing_func,
-            args=list(set=comp, network=network, domain=domain, site_name=site)))
+            # args=list(set=comp, network=network, domain=domain,site_name=site)))
+            args=list(network=network, domain=domain, ms_prodname=prod,
+                site_name=site, component=in_comp)))
         out = bind_rows(out, out_comp)
     }
 
@@ -77,13 +80,22 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
     site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
     write_feather(out, site_file)
 
+    #if there's already a data file for this site-time-product in the portal
+    #repo, remove it
+    portal_site_file = glue('../portal/data/{d}/{p}/{s}.feather',
+        d=domain, p=strsplit(prod, '_')[[1]][1], s=site)
+    unlink(portal_site_file)
+
     #create a link to the new file from the portal repo
     #(from and to seem logically reversed in file.link)
-    sw(file.link(to=glue('../portal/data/{d}/{p}/{s}.feather',
-        d=domain, p=strsplit(prod, '_')[[1]][1], s=site), from=site_file))
+    sw(file.link(to=portal_site_file, from=site_file))
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prod=prodname_ms, site=site, new_status='ok')
+
+    msg = glue('munged {p} - {c} ({n}/{d}/{s})',
+            p=prod, c=in_comp, n=network, d=domain, s=site)
+    loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
 }
