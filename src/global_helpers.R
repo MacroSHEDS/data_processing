@@ -117,20 +117,28 @@ get_all_local_helpers = function(network=domain, domain){
     #sourced by this function are exported locally, then exported globally
 
     location1 = glue('src/{n}/network_helpers.R', n=network)
-    sw(try(source(location1, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location1), silent=TRUE))
+    if(file.exists(location1)){
+        sw(source(location1, local=TRUE))
+        sw(source_decoratees(location1))
+    }
 
     location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
-    sw(try(source(location2, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location2), silent=TRUE))
+    if(file.exists(location2)){
+        sw(source(location2, local=TRUE))
+        sw(source_decoratees(location2))
+    }
 
     location3 = glue('src/{n}/processing_kernels.R', n=network)
-    sw(try(source(location3, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location3), silent=TRUE))
+    if(file.exists(location3)){
+        sw(source(location3, local=TRUE))
+        sw(source_decoratees(location3))
+    }
 
     location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
-    sw(try(source(location4, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location4), silent=TRUE))
+    if(file.exists(location4)){
+        sw(source(location4, local=TRUE))
+        sw(source_decoratees(location4))
+    }
 
     rm(location1, location2, location3, location4)
 
