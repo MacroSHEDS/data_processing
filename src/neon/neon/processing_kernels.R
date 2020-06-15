@@ -179,7 +179,7 @@ process_0_ <- function(set_details){
 #NEEDS WORK
 #. handle_errors
 process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
-    # ms_prodname=prod; site_name=site; component=retrieval_log[k, 'component']
+    # ms_prodname=prod; site_name=site; component=in_comp
     # process_1_20093 <- function(set, network, domain, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
@@ -221,7 +221,10 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     }
 
     if(! exists('out_sub')){
-        stop('No external lab data available (still gotta parse domain lab data)')
+        stop(glue('No external lab data available ',
+            '(still gotta parse domain lab data)'))
+        # return(generate_ms_exception(glue('No external lab data available ',
+        #     '(still gotta parse domain lab data)')))
     }
 
     out_sub = out_sub %>%
