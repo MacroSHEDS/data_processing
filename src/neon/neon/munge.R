@@ -1,4 +1,4 @@
-prod_info = get_product_info(network=network, domain=domain,
+prod_info = get_product_info(network=network,
     status_level='munge', get_statuses='ready')
 
 # i=1; j=1; k=1
