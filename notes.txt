@@ -7,3 +7,4 @@ setting up timescaledb:
         see digitalocean bookmark instead of link for setting up postgres superuser
         the superuser should have the same name as an existing linux user, so long as auth is ident based
     connect to console with sudo -u postgres psql; not the 
+mike modification
