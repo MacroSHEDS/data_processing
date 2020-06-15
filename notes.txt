@@ -8,3 +8,4 @@ setting up timescaledb:
         the superuser should have the same name as an existing linux user, so long as auth is ident based
     connect to console with sudo -u postgres psql; not the 
 
+fake note
