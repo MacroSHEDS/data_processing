@@ -1,7 +1,7 @@
 
 #. handle_errors
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
-    # sets=new_sets; i=1; tracker=held_data
+    # sets=new_sets; i=20; tracker=held_data
 
     for(i in 1:nrow(sets)){
 
@@ -47,7 +47,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
 #. handle_errors
 munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
-    # domain='neon'; site='ARIK'; prod=prodname_ms; tracker=held_data
+    # domain='neon'; site=sites[j]; prod=prodname_ms; tracker=held_data
 
     retrieval_log = extract_retrieval_log(held_data, prod, site)
 
@@ -58,16 +58,18 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        sitemonth = retrieval_log[k, 'component']
-        comp = read_feather(glue('data/{n}/{d}/raw/',
-            '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
-            sm=sitemonth))
+        # sitemonth = retrieval_log[k, 'component']
+        # comp = read_feather(glue('data/{n}/{d}/raw/',
+        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
+        #     sm=sitemonth))
 
         prodcode = prodcode_from_ms_prodname(prod)
         processing_func = get(paste0('process_1_', prodcode))
 
         out_comp = sw(do.call(processing_func,
-            args=list(set=comp, network=network, domain=domain, site_name=site)))
+            # args=list(set=comp, network=network, domain=domain,site_name=site)))
+            args=list(network=network, domain=domain, ms_prodname=prod,
+                site_name=site, component=retrieval_log[k, 'component'])))
         out = bind_rows(out, out_comp)
     }
 
