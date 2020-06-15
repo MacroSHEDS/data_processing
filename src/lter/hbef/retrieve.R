@@ -5,10 +5,10 @@ prod_info = get_product_info(network=network, domain=domain,
 
 # i=1; j=2
 # prod_info = prod_info[c(1, 1, 1, 1, 1),]
-# for(i in 1:nrow(prod_info)){
-for(i in 1){
+for(i in 1:nrow(prod_info)){
+# for(i in 1){
 
-    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prodname_ms = glue(prod_info$prodname[i], '_', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 

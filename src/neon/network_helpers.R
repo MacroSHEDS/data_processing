@@ -71,7 +71,11 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
             # args=list(set=comp, network=network, domain=domain,site_name=site)))
             args=list(network=network, domain=domain, ms_prodname=prod,
                 site_name=site, component=in_comp)))
-        out = bind_rows(out, out_comp)
+
+        if(! is_ms_err(out_comp)){
+            out = bind_rows(out, out_comp)
+        }
+
     }
 
     prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prod)
