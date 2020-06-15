@@ -31,6 +31,8 @@ handle_errors = function(f){
             return_val = f(...)
         }, error=function(e){
 
+            print(e)
+
             pretty_callstack = pprint_callstack()
 
             if(! exists('curr_site')) curr_site = 'NO SITE'
@@ -39,7 +41,7 @@ handle_errors = function(f){
             # full_message = glue('\nError: {e}\nCallstack: {c}\n',
             #     e=e, c=pretty_callstack)
             full_message = glue('network: {n}, domain: {d}\nsite: {s}\n',
-                'product: {P}\nCallstack: {c}\n\n',
+                'product: {p}\nCallstack: {c}\n\n',
                 n=network, d=domain, s=curr_site, p=prodname_ms,
                 c=pretty_callstack)
 
@@ -52,7 +54,7 @@ handle_errors = function(f){
 
         })
 
-        return(return_val)
+        if(! is.null(return_val)) return(return_val)
     }
 
     return(wrapper)
@@ -115,20 +117,28 @@ get_all_local_helpers = function(network=domain, domain){
     #sourced by this function are exported locally, then exported globally
 
     location1 = glue('src/{n}/network_helpers.R', n=network)
-    sw(try(source(location1, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location1), silent=TRUE))
+    if(file.exists(location1)){
+        sw(source(location1, local=TRUE))
+        sw(source_decoratees(location1))
+    }
 
     location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
-    sw(try(source(location2, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location2), silent=TRUE))
+    if(file.exists(location2)){
+        sw(source(location2, local=TRUE))
+        sw(source_decoratees(location2))
+    }
 
     location3 = glue('src/{n}/processing_kernels.R', n=network)
-    sw(try(source(location3, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location3), silent=TRUE))
+    if(file.exists(location3)){
+        sw(source(location3, local=TRUE))
+        sw(source_decoratees(location3))
+    }
 
     location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
-    sw(try(source(location4, local=TRUE), silent=TRUE))
-    sw(try(source_decoratees(location4), silent=TRUE))
+    if(file.exists(location4)){
+        sw(source(location4, local=TRUE))
+        sw(source_decoratees(location4))
+    }
 
     rm(location1, location2, location3, location4)
 
@@ -161,42 +171,6 @@ extract_from_config = function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
-}
-
-#. handle_errors
-get_flag_types <- function(mapping, flags) {
-
-    #MUST ENHANCE THIS TO ACCOUNT FOR MULTIPLE FLAGS APPLIED TO THE SAME
-    #datapoint. see DB I/O card in projects todo list
-
-    flags = paste(flags) #convert special types to char
-    lengths = sapply(mapping, length)
-    keyvec = rep(names(mapping), times=lengths)
-    valvec = paste(unlist(unname(mapping)))
-
-    if(any(! flags %in% valvec)){
-        unaccounted_for = flags[which(! flags %in% valvec)]
-        stop(paste('Missing mapping for flags:',
-            paste(unaccounted_for, collapse=', ')))
-    }
-
-    flag_types = keyvec[match(flags, valvec)]
-
-    return(flag_types)
-}
-
-#. handle_errors
-resolve_commas <- function(vec, comma_standin){
-    vec = gsub(',', '\\,', vec, fixed=TRUE)
-    vec = gsub(comma_standin, ',', vec)
-    return(vec)
-}
-
-#. handle_errors
-postgres_arrayify <- function(vec){
-    vec = paste0('{', vec, '}')
-    vec = gsub('\\{\\}', '{""}', vec)
-    return(vec)
 }
 
 #. handle_errors
@@ -440,8 +414,7 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
     readr::write_file(jsonlite::toJSON(tracker),
         glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 
-    return(NULL)
-
+    return()
 }
 
 #. handle_errors
@@ -465,39 +438,7 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
     readr::write_file(jsonlite::toJSON(tracker),
         glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
 
-    return(NULL)
-}
-
-#build populate_missing_shiny_files if the time comes
-#. handle_errors
-populate_missing_shiny_files <- function(domain){
-
-    #this is not yet working. first, shiny needs to be reconfigured to
-    #pull all site files as requested. atm precip and pchem are still
-    #bound into one file (i.e. precip.feather instead of site1.feather)
-
-    list.files('data/hbef/')
-
-    qq = read_feather('data/hbef/discharge.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
-    write_feather(qq, 'data/neon/discharge.feather')
-
-    qq = read_feather('data/hbef/flux.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
-    write_feather(qq, 'data/neon/flux.feather')
-
-    qq = read_feather('data/hbef/pchem.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
-    write_feather(qq, 'data/neon/pchem.feather')
-
-    qq = read_feather('data/hbef/precip.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
-    write_feather(qq, 'data/neon/precip.feather')
-
+    return()
 }
 
 #. handle_errors
@@ -538,16 +479,53 @@ prodcode_from_ms_prodname <- function(ms_prodname){
 }
 
 #. handle_errors
-ms_retrieve = function(network=domain, domain){
+ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
 }
 
 #. handle_errors
-ms_munge = function(network=domain, domain){
+ms_munge <- function(network=domain, domain){
     source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
+    return()
 }
 
 #. handle_errors
-ms_derive = function(network=domain, domain){
+ms_derive <- function(network=domain, domain){
     source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
+    return()
+}
+
+#. handle_errors
+serialize_list_to_dir <- function(l, dest){
+
+    #l must be a named list
+    #dest is the path to a directory that will be created if it doesn't exist
+
+    #list element classes currently handled: data.frame, character
+
+    elemclasses = lapply(l, class)
+
+    handled = lapply(elemclasses,
+        function(x) any(c('character', 'data.frame') %in% x))
+
+    if(! all(unlist(handled))){
+        stop('Unhandled class encountered')
+    }
+
+    dir.create(dest, showWarnings=FALSE, recursive=TRUE)
+
+    for(i in 1:length(l)){
+
+        if('data.frame' %in% elemclasses[[i]]){
+
+            fpath = paste0(dest, '/', names(l)[i], '.feather')
+            write_feather(l[[i]], fpath)
+
+        } else if('character' %in% x){
+
+            fpath = paste0(dest, '/', names(l)[i], '.txt')
+            readr::write_file(l[[i]], fpath)
+        }
+    }
+
 }
