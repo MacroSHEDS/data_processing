@@ -291,11 +291,11 @@ make_tracker_skeleton <- function(retrieval_chunks){
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
     #the overall dataset to be retrieved, e.g. sitemonths for NEON
 
-    munge_derive_skeleton = list(status='pending', mtime='1900-01-01')
+    munge_derive_skeleton = list(status='pending', mtime='1500-01-01')
 
     tracker_skeleton = list(
         retrieve=tibble::tibble(
-            component=retrieval_chunks, mtime='1900-01-01',
+            component=retrieval_chunks, mtime='1500-01-01',
             held_version='-1', status='pending'),
         munge=munge_derive_skeleton,
         derive=munge_derive_skeleton)
@@ -328,9 +328,8 @@ site_is_tracked <- function(tracker, prod, site){
 track_new_product <- function(tracker, prod){
 
     if(prod %in% names(tracker)){
-        msg = 'This product is already being tracked.'
-        logerror(msg, logger=logger_module)
-        stop(msg)
+        logwarn('This product is already being tracked.', logger=logger_module)
+        return(tracker)
     }
 
     tracker[[prod]] = list()
