@@ -2,34 +2,20 @@
 #retrieval kernels
 
 #. handle_errors
-process_0_20093 <- function(set_details){
+process_0_20093 <- function(set_details, network, domain){
+    # set_details=s
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE)
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-    # data_pile$swc_domainLabData #this has alc and anc, which we want!
-    if('swc_domainLabData' %in% names(data_pile)){
-        #build this!
-        # out_sub = this
-        NULL
-    }
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    if('swc_externalLabDataByAnalyte' %in% names(data_pile)){
-        #out_sub = join(out_sub, this) #do this too!
-        #then fix stop message below
-        out_sub = data_pile$swc_externalLabDataByAnalyte %>%
-            mutate(site_name=set_details$site_name) %>%
-            select(collectDate, analyte, analyteConcentration, analyteUnits,
-                shipmentWarmQF, externalLabDataQF, sampleCondition)
-    }
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    if(! exists('out_sub')){
-        stop('No external lab data available (still gotta parse domain lab data)')
-    }
-
-    return(out_sub)
 } #chem: ready (grab interval?)
 
 #. handle_errors
@@ -190,8 +176,11 @@ process_0_ <- function(set_details){
 
 #munge kernels
 
+#NEEDS WORK
 #. handle_errors
-process_1_20093 <- function(set, site_name){
+process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
+    # ms_prodname=prod; site_name=site; component=retrieval_log[k, 'component']
+    # process_1_20093 <- function(set, network, domain, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
@@ -206,7 +195,36 @@ process_1_20093 <- function(set, site_name){
     # saveRDS(v, 'data/neon/neon/temp/20093_variants.rds')
     # table(v$vars)
 
-    set = set %>%
+    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+
+    rawfiles = list.files(rawdir)
+
+    #this has alc and anc, which we want!
+    relevant_file1 = 'swc_domainLabData.feather'
+    if(relevant_file1 %in% rawfiles){
+        #build this!
+        NULL
+    }
+
+    relevant_file2 = 'swc_externalLabDataByAnalyte.feather'
+    if(relevant_file2 %in% rawfiles){
+        #out_sub = join(out_sub, this) #do this too!
+        #then fix stop message below
+
+        rawd = read_feather(glue(rawdir, '/', relevant_file2))
+
+        out_sub = rawd %>%
+            mutate(site_name=site_name) %>%
+            select(collectDate, analyte, analyteConcentration, analyteUnits,
+                shipmentWarmQF, externalLabDataQF, sampleCondition)
+    }
+
+    if(! exists('out_sub')){
+        stop('No external lab data available (still gotta parse domain lab data)')
+    }
+
+    out_sub = out_sub %>%
         filter(
             shipmentWarmQF == 0,
             externalLabDataQF != paste0('formatChange|legacyData|Preliminary ',
@@ -230,7 +248,7 @@ process_1_20093 <- function(set, site_name){
             `UV Absorbance (280 nm)`='abs280') %>%
         select(site_name, datetime, everything())
 
-    return(set)
+    return(out_sub)
 } #chem: ready
 
 #obsolete kernels (for parts, maybe)
