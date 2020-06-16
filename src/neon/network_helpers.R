@@ -98,8 +98,8 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prod=prodname_ms, site=site, new_status='ok')
 
-    msg = glue('munged {p} - {c} ({n}/{d}/{s})',
-            p=prod, c=in_comp, n=network, d=domain, s=site)
+    msg = glue('munged {p} ({n}/{d}/{s})',
+            p=prod, n=network, d=domain, s=site)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
@@ -118,13 +118,12 @@ download_sitemonth_details <- function(geturl){
 determine_upstream_downstream <- function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
-    updown[updown == '1'] = '-up'
+    updown[updown == '1'] = '-up' #1 means upstream sensor
 
-    #2 means downstream. 0 means only one sensor? 3 means ???
+    #2 means downstream sensor. 0 means only one sensor? 3 means ???
     updown[updown %in% c('0', '2', '3')] = ''
 
     if(any(! updown %in% c('-up', ''))){
-        # return(generate_ms_err())
         stop('upstream/downstream indicator error')
     }
 
@@ -219,6 +218,20 @@ populate_set_details <- function(tracker, prod, site, avail){
     return(retrieval_tracker)
 }
 
+write_neon_readme = function(raw_neonfile_dir, dest){
+
+    readme_name = grep('readme', list.files(raw_neonfile_dir), value=TRUE)
+    readme = read_feather(glue(raw_neonfile_dir, '/', readme_name))
+    readr::write_lines(readme$X1, dest)
+}
+
+load_neon_variablekey = function(raw_neonfile_dir){
+
+    varkey_name = grep('variables', list.files(raw_neonfile_dir), value=TRUE)
+    varkey = read_feather(glue(raw_neonfile_dir, '/', varkey_name))
+
+    return(varkey)
+}
 
 # resolve_neon_naming_conflicts_OBSOLETE = function(out_sub_, replacements=NULL,
 #     from_api=FALSE, set_details_){

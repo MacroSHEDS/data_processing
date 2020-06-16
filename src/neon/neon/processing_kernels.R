@@ -34,20 +34,19 @@ process_0_20033 <- function(set_details, network, domain){
 } #nitrate: ready
 
 #. handle_errors
-process_0_20042 <- function(set_details){
+process_0_20042 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
-    updown = determine_upstream_downstream(data_pile$PARWS_5min)
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    out_sub = data_pile$PARWS_5min %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        select(site_name, startDateTime, PARMean, PARFinalQF)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    return(out_sub)
-} #par: needs modification
+} #par: ready
 
 #. handle_errors
 process_0_20053 <- function(set_details){
@@ -253,6 +252,7 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     return(out_sub)
 } #chem: ready
 
+#NEEDS WORK
 process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
     # ms_prodname=prod; site_name=site; component=in_comp
 
@@ -260,32 +260,69 @@ process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
         n=network, d=domain, p=ms_prodname, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
+    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
+    # write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.txt')
 
     relevant_file1 = 'NSW_15_minute.feather'
     if(relevant_file1 %in% rawfiles){
-
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-
-        out_sub = rawd %>%
-            mutate(site_name=siteID) %>%
-            select(site_name, horizontalPosition, startDateTime,
-                surfWaterNitrateMean, finalQF)
-
     } else {
-        return(generate_ms_exception(glue('standin...')))
+        return(generate_ms_exception(glue('Relevant file missing')))
     }
 
+    out_sub = mutate(rawd, site_name=siteID)
     updown = determine_upstream_downstream(out_sub)
 
     out_sub = out_sub %>%
-        mutate(site_name=paste0(site_name, updown)) %>%
-        select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
-
-    #convert nitrate to our unit
+        mutate(
+            site_name=glue(site_name, updown),
+            startDateTime = lubridate::force_tz(startDateTime, 'UTC'),
+            surfWaterNitrateMean = surfWaterNitrateMean * 0.01) %>% #!!!
+        filter(finalQF == 0) %>%
+        group_by(startDateTime) %>%
+        summarize(surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE)) %>%
+        ungroup() %>%
+        select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean)
 
     return(out_sub)
 } #nitrate: ready
 
+#NEEDS WORK
+process_1_20042 <- function(network, domain, ms_prodname, site_name, component){
+    # ms_prodname=prod; site_name=site; component=in_comp
+
+    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+
+    rawfiles = list.files(rawdir)
+    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
+
+    relevant_file1 = 'PARWS_5min.feather'
+    if(relevant_file1 %in% rawfiles){
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+    } else {
+        return(generate_ms_exception(glue('Relevant file missing')))
+    }
+
+    #MAKE SURE UNITS MATCH OUR STANDARD MS UNITS, TIME ZONE IS UTC, ETC. (SEE PROTOCOL)
+
+    #THIS CHUNK NEEDS WORK (i borrowed it from the nitrate processing kernel)
+    out_sub = mutate(rawd, site_name=siteID)
+    updown = determine_upstream_downstream(out_sub)
+
+    out_sub = out_sub %>%
+        mutate(
+            site_name=glue(site_name, updown),
+            startDateTime = lubridate::force_tz(startDateTime, 'UTC'),
+            surfWaterNitrateMean = surfWaterNitrateMean * 0.01) %>%
+        filter(finalQF == 0) %>%
+        group_by(startDateTime) %>%
+        summarize(surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE)) %>%
+        ungroup() %>%
+        select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean)
+
+    return(out_sub)
+} #PAR: under construction
 
 #obsolete kernels (for parts, maybe)
 
