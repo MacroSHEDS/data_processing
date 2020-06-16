@@ -1,5 +1,6 @@
 config.json
-/data
+/data/*
+!/data/general
 .Rproj.user
 .httr-oauth
 .Rhistory
