@@ -20,7 +20,7 @@ conf = jsonlite::fromJSON('config.json')
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
-logging::addHandler(logging::writeToFile, logger='ms',
+logging::addHandler(logging::writeToFile, logger='ms.word.word2',
     file='logs/0_ms_master.log')
 
 source('src/global_helpers.R')
