@@ -19,19 +19,18 @@ process_0_20093 <- function(set_details, network, domain){
 } #chem: ready (grab interval?)
 
 #. handle_errors
-process_0_20033 <- function(set_details){
+process_0_20033 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE)
 
-    updown = determine_upstream_downstream(data_pile$NSW_15_minute)
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    out_sub = data_pile$NSW_15_minute %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    return(out_sub)
 } #nitrate: ready
 
 #. handle_errors
@@ -48,7 +47,7 @@ process_0_20042 <- function(set_details){
         select(site_name, startDateTime, PARMean, PARFinalQF)
 
     return(out_sub)
-} #par: ready (interval?)
+} #par: needs modification
 
 #. handle_errors
 process_0_20053 <- function(set_details){
@@ -64,7 +63,7 @@ process_0_20053 <- function(set_details){
         select(site_name, startDateTime, surfWaterTempMean, finalQF)
 
     return(out_sub)
-} #water temp: ready
+} #water temp: needs modification
 
 #. handle_errors
 process_0_00004 <- function(set_details){
@@ -80,7 +79,7 @@ process_0_00004 <- function(set_details){
         select(site_name, startDateTime, staPresMean, staPresFinalQF)
 
     return(out_sub)
-} #airpres: ready
+} #airpres: needs modification
 
 #. handle_errors
 process_0_20097 <- function(set_details){
@@ -102,7 +101,7 @@ process_0_20097 <- function(set_details){
     }
 
     return(out_sub)
-} #gases: ready (grab interval?)
+} #gases: needs modification
 
 #. handle_errors
 process_0_20016 <- function(set_details){
@@ -162,7 +161,7 @@ process_0_20288 <- function(set_details){
 
     return(out_sub)
 
-} #waterqual: ready
+} #waterqual: needs modification
 
 #. handle_errors
 process_0_ <- function(set_details){
@@ -222,7 +221,7 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
 
     if(! exists('out_sub')){
         stop(glue('No external lab data available ',
-            '(still gotta parse domain lab data)'))
+            '(still gotta parse domain lab data)')) #uncomment next when resolved
         # return(generate_ms_exception(glue('No external lab data available ',
         #     '(still gotta parse domain lab data)')))
     }
@@ -253,6 +252,40 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
 
     return(out_sub)
 } #chem: ready
+
+process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
+    # ms_prodname=prod; site_name=site; component=in_comp
+
+    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+
+    rawfiles = list.files(rawdir)
+
+    relevant_file1 = 'NSW_15_minute.feather'
+    if(relevant_file1 %in% rawfiles){
+
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+
+        out_sub = rawd %>%
+            mutate(site_name=siteID) %>%
+            select(site_name, horizontalPosition, startDateTime,
+                surfWaterNitrateMean, finalQF)
+
+    } else {
+        return(generate_ms_exception(glue('standin...')))
+    }
+
+    updown = determine_upstream_downstream(out_sub)
+
+    out_sub = out_sub %>%
+        mutate(site_name=paste0(site_name, updown)) %>%
+        select(site_name, startDateTime, surfWaterNitrateMean, finalQF)
+
+    #convert nitrate to our unit
+
+    return(out_sub)
+} #nitrate: ready
+
 
 #obsolete kernels (for parts, maybe)
 

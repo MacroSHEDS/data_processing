@@ -64,6 +64,7 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
         #     sm=sitemonth))
 
         prodcode = prodcode_from_ms_prodname(prod)
+
         processing_func = get(paste0('process_1_', prodcode))
         in_comp = retrieval_log[k, 'component']
 
