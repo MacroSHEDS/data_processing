@@ -46,6 +46,7 @@ we have three data levels within macrosheds. these are used in naming processing
 + 2 = derived (calculated from level 1 data; also ready for the macrosheds portal)
 So, for example, the 1 in process_1_20093 means this is a munge kernel.
 
+**begin SOP:**
 1. you might already have a retrieve.R script for this network/domain. if not, borrow one from some already handled network/domain. use this as a template
 2. step through ms superstructure until processing can't proceed successfully without modification
     1. if error/incompatibility occurs in retrieve.R modify retrieve.R to accommodate new idiosyncrasies
