@@ -1,6 +1,9 @@
 source('src/function_aliases.R')
 
 email_err_msgs = list()
+err_cnt = 0
+unique_errors = c()
+unique_exceptions = c()
 
 flagmap = list(
     clean=c(NA, 'example flag 0'),
@@ -31,19 +34,25 @@ handle_errors = function(f){
             return_val = f(...)
         }, error=function(e){
 
-            print(e)
+            err_cnt_new = err_cnt + 1
+            assign('err_cnt', err_cnt_new, pos=.GlobalEnv)
+
+            err_msg = as.character(e)
+            if(! err_msg %in% unique_errors){
+                unique_errors_new = append(unique_errors, err_msg)
+                assign('unique_errors', unique_errors_new, pos=.GlobalEnv)
+            }
 
             pretty_callstack = pprint_callstack()
 
             if(! exists('curr_site')) curr_site = 'NO SITE'
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
-            # full_message = glue('\nError: {e}\nCallstack: {c}\n',
-            #     e=e, c=pretty_callstack)
-            full_message = glue('network: {n}, domain: {d}\nsite: {s}\n',
-                'product: {p}\nCallstack: {c}\n\n',
-                n=network, d=domain, s=curr_site, p=prodname_ms,
-                c=pretty_callstack)
+            full_message = glue('{ec}\n\n',
+                'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
+                'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
+                ec=err_cnt, n=network, d=domain, s=curr_site, p=prodname_ms,
+                e=err_msg, c=pretty_callstack)
 
             logerror(full_message, logger=logger_module)
 
@@ -53,6 +62,19 @@ handle_errors = function(f){
             assign('return_val', generate_ms_err(full_message), pos=thisenv)
 
         })
+
+        if(is_ms_exception(return_val)){
+
+            exception_msg = as.character(return_val)
+
+            if(! exception_msg %in% unique_exceptions){
+                unique_exceptions_new = append(unique_exceptions, e)
+                assign('unique_exceptions', unique_exceptions_new,
+                    pos=.GlobalEnv)
+            }
+
+            message(glue('MS Exception: ', exception_msg))
+        }
 
         if(! is.null(return_val)) return(return_val)
     }
@@ -85,7 +107,7 @@ pprint_callstack = function(){
             paste(deparse(x), collapse='\n')
         }))
 
-    call_string_pretty = paste(call_vec, collapse=' -->\n')
+    call_string_pretty = paste(call_vec, collapse=' -->\n\t')
 
     return(call_string_pretty)
 }
@@ -194,15 +216,13 @@ retain_ms_globals <- function(retain_vars){
     clear_from_mem(clearlist=clutter)
 }
 
-#. handle_errors
-generate_ms_err <- function(text=1){
+generate_ms_err = function(text=1){
     errobj = text
     class(errobj) = 'ms_err'
     return(errobj)
 }
 
-#. handle_errors
-generate_ms_exception <- function(text=1){
+generate_ms_exception = function(text=1){
     excobj = text
     class(excobj) = 'ms_exception'
     return(excobj)
@@ -527,4 +547,56 @@ serialize_list_to_dir <- function(l, dest){
         }
     }
 
+}
+
+#. handle_errors
+parse_molecular_formulae <- function(formulae){
+
+    #`formulae` is a vector
+
+    # formulae = c('C', 'C4', 'Cl', 'Cl2', 'CCl', 'C2Cl', 'C2Cl2', 'C2Cl2B2')
+    # formulae = 'BCH10He10PLi2'
+    # formulae='Mn'
+
+    conc_vars = str_match(formulae, '^(?:OM|TM|DO|TD|UT|UTK|TK)?([A-Za-z0-9]+)_?')[,2]
+    two_let_symb_num = str_extract_all(conc_vars, '([A-Z][a-z][0-9]+)')
+    conc_vars = str_remove_all(conc_vars, '([A-Z][a-z][0-9]+)')
+    one_let_symb_num = str_extract_all(conc_vars, '([A-Z][0-9]+)')
+    conc_vars = str_remove_all(conc_vars, '([A-Z][0-9]+)')
+    two_let_symb = str_extract_all(conc_vars, '([A-Z][a-z])')
+    conc_vars = str_remove_all(conc_vars, '([A-Z][a-z])')
+    one_let_symb = str_extract_all(conc_vars, '([A-Z])')
+
+    constituents = mapply(c, SIMPLIFY=FALSE,
+        two_let_symb_num, one_let_symb_num, two_let_symb, one_let_symb)
+
+    return(constituents) # a list of vectors
+}
+
+#. handle_errors
+combine_atomic_masses <- function(molecular_constituents){
+
+    #`molecular_constituents` is a vector
+
+    xmat = str_match(molecular_constituents,
+        '([A-Z][a-z]?)([0-9]+)?')[, -1, drop=FALSE]
+    elems = xmat[,1]
+    mults = as.numeric(xmat[,2])
+    mults[is.na(mults)] = 1
+    molecular_mass = sum(PeriodicTable::mass(elems) * mults)
+
+    return(molecular_mass) #a scalar
+}
+
+#. handle_errors
+calculate_molar_mass <- function(molecular_formula){
+
+    if(length(molecular_formula) > 1){
+        stop('molecular_formula must be a string of length 1')
+    }
+
+    parsed_formula = parse_molecular_formulae(molecular_formula)[[1]]
+    molar_mass = combine_atomic_masses(parsed_formula)
+
+    return(molar_mass)
 }
