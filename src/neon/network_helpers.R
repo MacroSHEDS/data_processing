@@ -225,90 +225,11 @@ write_neon_readme = function(raw_neonfile_dir, dest){
     readr::write_lines(readme$X1, dest)
 }
 
-load_neon_variablekey = function(raw_neonfile_dir){
+write_neon_variablekey = function(raw_neonfile_dir, dest){
 
     varkey_name = grep('variables', list.files(raw_neonfile_dir), value=TRUE)
     varkey = read_feather(glue(raw_neonfile_dir, '/', varkey_name))
+    write_csv(varkey, dest)
 
     return(varkey)
 }
-
-# resolve_neon_naming_conflicts_OBSOLETE = function(out_sub_, replacements=NULL,
-#     from_api=FALSE, set_details_){
-#
-#     #obsolete now that neonUtilities package is working
-#
-#     #replacements is a named vector. name=find, value=replace;
-#     #failed match does nothing
-#
-#     prodcode = set_details_$prodcode
-#     site = set_details_$site
-#     date = set_details_$date
-#
-#     out_cols = colnames(out_sub_)
-#
-#     if(! is.null(replacements)){
-#
-#         #get list of variables included
-#         varind = grep('SciRvw', out_cols)
-#         rgx = str_match(out_cols[varind], '^(\\w*)(?:FinalQFSciRvw|SciRvwQF)$')
-#         # varlist = flagprefixlist = rgx[,2]
-#         varlist = rgx[,2]
-#
-#         #harmonize redundant variable names
-#         for(i in 1:length(replacements)){
-#             r = replacements[i]
-#             varlist = replace(varlist, which(varlist == names(r)), r)
-#         }
-#     }
-#
-#     if('startDate' %in% out_cols){
-#         colnames(out_sub_) = replace(out_cols, which(out_cols == 'startDate'),
-#             'startDateTime')
-#     } else if('endDate' %in% out_cols){
-#         colnames(out_sub_) = replace(out_cols, which(out_cols == 'endDate'),
-#             'startDateTime') #not a mistake
-#     } else if(! 'startDateTime' %in% out_cols){
-#         msg = glue('Datetime column not found for site ',
-#             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-#         logwarn(msg, logger=logger_module)
-#         return(generate_ms_err())
-#     }
-#
-#     #subset relevant columns (needed if NEON API was used)
-#     if(from_api){
-#         flagcols = grepl('.+?FinalQF(?!SciRvw)', out_cols,
-#             perl=TRUE)
-#         datacols = ! grepl('QF', out_cols, perl=TRUE)
-#         relevant_cols = flagcols | datacols
-#         out_sub_ = out_sub_[, relevant_cols]
-#     }
-#
-#     return(out_sub_)
-# }
-
-# determine_upstream_downstream_api_OBSOLETE = function(d_, data_inds_, set_details_){
-#     #obsolete now that neonUtilities package is working
-#
-#     prodcode = set_details_$prodcode
-#     site = set_details_$site
-#     date = set_details_$date
-#
-#     #determine which dataset is upstream/downstream if necessary
-#     updown_suffixes = c('-up', '-down')
-#     if(length(data_inds_) == 2){
-#         position = str_split(d_$data$files$name[data_inds_[1]], '\\.')[[1]][7]
-#         updown_order = if(position == '101') 1:2 else 2:1
-#     } else if(length(data_inds_) == 1){
-#         updown_order = 1
-#     } else {
-#         msg = glue('Problem with upstream/downstream indicator for site ',
-#             '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
-#         logwarn(msg, logger=logger_module)
-#         return(generate_ms_err())
-#     }
-#
-#     site_with_suffixes = paste0(site, updown_suffixes[updown_order])
-#
-#     return(site_with_suffixes)
-# }
