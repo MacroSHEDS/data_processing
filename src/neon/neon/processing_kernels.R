@@ -1,6 +1,6 @@
+#retrieval kernels ####
 
-#retrieval kernels
-
+#chem: READY
 #. handle_errors
 process_0_20093 <- function(set_details, network, domain){
     # set_details=s
@@ -16,8 +16,9 @@ process_0_20093 <- function(set_details, network, domain){
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
-} #chem: ready (grab interval?)
+}
 
+#nitrate: READY
 #. handle_errors
 process_0_20033 <- function(set_details, network, domain){
 
@@ -31,8 +32,9 @@ process_0_20033 <- function(set_details, network, domain){
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
-} #nitrate: ready
+}
 
+#photosynthetically active radiation (PAR): READY
 #. handle_errors
 process_0_20042 <- function(set_details, network, domain){
 
@@ -46,139 +48,133 @@ process_0_20042 <- function(set_details, network, domain){
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
-} #par: ready
+}
 
+#water temperature: READY
 #. handle_errors
-process_0_20053 <- function(set_details){
+process_0_20053 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
-    updown = determine_upstream_downstream(data_pile$TSW_5min)
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    out_sub = data_pile$TSW_5min %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        select(site_name, startDateTime, surfWaterTempMean, finalQF)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    return(out_sub)
-} #water temp: needs modification
+}
 
+#air pressure: READY
 #. handle_errors
-process_0_00004 <- function(set_details){
+process_0_00004 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=30)
 
-    updown = determine_upstream_downstream(data_pile$BP_30min)
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    out_sub = data_pile$BP_30min %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        select(site_name, startDateTime, staPresMean, staPresFinalQF)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    return(out_sub)
-} #airpres: needs modification
+    # out_sub = data_pile$BP_30min %>%
+    #     mutate(site_name=paste0(set_details$site_name, updown)) %>%
+    #     select(site_name, startDateTime, staPresMean, staPresFinalQF)
+}
 
+#gases: READY
 #. handle_errors
-process_0_20097 <- function(set_details){
+process_0_20097 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE)
 
-    if('sdg_externalLabData' %in% names(data_pile)){
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-        d = data_pile$sdg_externalLabData
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-        out_sub = d %>%
-            mutate(site_name=set_details$site_name) %>%
-            select(site_name, collectDate, concentrationCH4, concentrationCO2,
-                concentrationN2O, gasCheckStandardQF)
-    } else {
-        out_sub = generate_ms_exception('external lab gas analysis missing')
-    }
+}
 
-    return(out_sub)
-} #gases: needs modification
-
+#stage: OUT OF SERVICE
 #. handle_errors
-process_0_20016 <- function(set_details){
+process_0_20016 <- function(set_details, network, domain){
+
+    stop('disabled. waiting on NEON to fix this product')
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
 
-    updown = determine_upstream_downstream(data_pile$EOS_5_min)
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    out_sub = select(data_pile$EOS_5_min, startDateTime,
-        surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
-        horizontalPosition)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    drc = glue('data/neon/neon/raw/surfaceElev_sensorpos/{s}',
-        s=set_details$site_name)
-    dir.create(drc, showWarnings=FALSE, recursive=TRUE)
-    f = glue(drc, '/{p}.feather', p=set_details$component)
+    # out_sub = select(data_pile$EOS_5_min, startDateTime,
+    #     surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
+    #     horizontalPosition)
 
-    # if(file.exists(f)){
-    #     sens_pos = read_feather(f)
-    #     sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
-    #         distinct()
-    # } else {
-    #     sens_pos = data_pile$sensor_positions_20016
-    # }
+    #BELOW: old code for acquiring sensor positions. relevant for decyphering
+    #neon's level data and eventually estimating discharge
 
-    write_feather(data_pile$sensor_positions_20016, f)
+    # drc = glue('data/neon/neon/raw/surfaceElev_sensorpos/{s}',
+    #     s=set_details$site_name)
+    # dir.create(drc, showWarnings=FALSE, recursive=TRUE)
+    # f = glue(drc, '/{p}.feather', p=set_details$component)
+    #
+    # # if(file.exists(f)){
+    # #     sens_pos = read_feather(f)
+    # #     sens_pos = bind_rows(data_pile$sensor_positions_20016, sens_pos) %>%
+    # #         distinct()
+    # # } else {
+    # #     sens_pos = data_pile$sensor_positions_20016
+    # # }
+    #
+    # write_feather(data_pile$sensor_positions_20016, f)
 
-    return(out_sub)
-} #stage: waiting on NEON
+}
 
+#water quality: READY
 #. handle_errors
-process_0_20288 <- function(set_details){
+process_0_20288 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE)
 
-    cn = colnames(data_pile$waq_instantaneous)
-    cn_base = na.omit(stringr::str_match(cn, '(.*?)FinalQF$')[,2])
-    cn_keep = c(cn_base,
-        paste0(cn_base, 'FinalQF'),
-        paste0(cn_base, 'ExpUncert'))
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+        s=set_details$site_name, c=set_details$component)
 
-    updown = determine_upstream_downstream(data_pile$waq_instantaneous)
+    serialize_list_to_dir(data_pile, raw_data_dest)
 
-    #omitting sensorDepth, buoyNAflag, etc.
-    #dissolvedOxygenSaturation doesn't follow the naming convention of the
-    #others. rawCalibratedfDOM is additional.
-    out_sub = data_pile$waq_instantaneous %>%
-        mutate(site_name=paste0(set_details$site_name, updown)) %>%
-        select(site_name, one_of('startDate', 'startDateTime'),
-            one_of(cn_keep), dissolvedOxygenSaturation,
-            rawCalibratedfDOM) %>%
-        rename_all(dplyr::recode, startDate='startDateTime')
+}
 
-    return(out_sub)
-
-} #waterqual: needs modification
-
+#precip: NOT STARTED
 #. handle_errors
-process_0_ <- function(set_details){
+process_0_ <- function(set_details, network, domain){
 
-} #precip: not started
+}
 
+#precip chem: NOT STARTED
 #. handle_errors
-process_0_ <- function(set_details){
+process_0_ <- function(set_details, network, domain){
 
-} #precip chem: not started
+}
 
-#munge kernels
+#munge kernels ####
 
-#NEEDS WORK
+#chem: READY
 #. handle_errors
 process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     # ms_prodname=prod; site_name=site; component=in_comp
-    # process_1_20093 <- function(set, network, domain, site_name){
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
@@ -213,7 +209,6 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
         rawd = read_feather(glue(rawdir, '/', relevant_file2))
 
         out_sub = rawd %>%
-            mutate(site_name=site_name) %>%
             select(collectDate, analyte, analyteConcentration, analyteUnits,
                 shipmentWarmQF, externalLabDataQF, sampleCondition)
     }
@@ -221,6 +216,7 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     if(! exists('out_sub')){
         stop(glue('No external lab data available ',
             '(still gotta parse domain lab data)')) #uncomment next when resolved
+
         # return(generate_ms_exception(glue('No external lab data available ',
         #     '(still gotta parse domain lab data)')))
     }
@@ -240,19 +236,19 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
         tidyr::spread(analyte, analyteConcentration) %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
-        mutate(
-            collectDate = lubridate::force_tz(collectDate, 'UTC'),
-            site_name = site_name) %>%
-        rename_all(dplyr::recode, collectDate='datetime', conductivity='spCond',
-            `NH4 - N`='NH4_N', `NO2 - N`='NO2_N', `NO3+NO2 - N`='NO3_NO2_N',
-            `Ortho - P`='PO4_P', `UV Absorbance (250 nm)`='abs250',
+        mutate(collectDate = lubridate::force_tz(collectDate, 'UTC')) %>%
+        rename_all(dplyr::recode, siteID='site_name', collectDate='datetime',
+            conductivity='spCond', `NH4 - N`='NH4_N', `NO2 - N`='NO2_N',
+            `NO3+NO2 - N`='NO3_NO2_N', `Ortho - P`='PO4_P',
+            `UV Absorbance (250 nm)`='abs250',
             `UV Absorbance (280 nm)`='abs280') %>%
         select(site_name, datetime, everything())
 
     return(out_sub)
-} #chem: ready
+}
 
-#NEEDS WORK
+#nitrate: READY
+#. handle_errors
 process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
     # ms_prodname=prod; site_name=site; component=in_comp
 
@@ -261,159 +257,130 @@ process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
-    # write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.txt')
+    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
     relevant_file1 = 'NSW_15_minute.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
     } else {
-        return(generate_ms_exception(glue('Relevant file missing')))
+        return(generate_ms_exception('Relevant file missing'))
     }
 
-    out_sub = mutate(rawd, site_name=siteID)
+    if(all(out_sub$finalQF == 1)){
+        return(generate_ms_exception('All records failed QA'))
+    }
+
     updown = determine_upstream_downstream(out_sub)
+    N_mass = calculate_molar_mass('N')
 
     out_sub = out_sub %>%
         mutate(
-            site_name=glue(site_name, updown),
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC'),
-            surfWaterNitrateMean = surfWaterNitrateMean * 0.01) %>% #!!!
-        filter(finalQF == 0) %>%
-        group_by(startDateTime) %>%
+            site_name=paste0(siteID, updown), #append "-up" to upstream site_names
+            startDateTime = lubridate::force_tz(startDateTime, 'UTC'), #GMT -> UTC
+            surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
+        filter(finalQF == 0) %>% #remove flagged records
+        group_by(startDateTime, site_name) %>%
         summarize(surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE)) %>%
         ungroup() %>%
         select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean)
 
     return(out_sub)
-} #nitrate: ready
+}
 
-#NEEDS WORK
+#par: PENDING Spencer, this one's for you. The file you'll use is PARWS_5min.feather
+#. handle_errors
 process_1_20042 <- function(network, domain, ms_prodname, site_name, component){
-    # ms_prodname=prod; site_name=site; component=in_comp
+    NULL
+}
+
+#water temp: PENDING (needed file: TSW_5min.feather; needed column: surfWaterTempMean)
+#. handle_errors
+process_1_20053 <- function(network, domain, ms_prodname, site_name, component){
+    NULL
+}
+
+#air pres: PENDING (needed file: BP_30min.feather; needed column: staPresMean; flag column: staPresFinalQF)
+#. handle_errors
+process_1_00004 <- function(network, domain, ms_prodname, site_name, component){
+    NULL
+}
+
+#gases: PENDING (started)
+#. handle_errors
+process_1_20097 <- function(network, domain, ms_prodname, site_name, component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=ms_prodname, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
+    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-    relevant_file1 = 'PARWS_5min.feather'
+    relevant_file1 = 'sdg_externalLabData.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
     } else {
-        return(generate_ms_exception(glue('Relevant file missing')))
+        return(generate_ms_exception('Relevant file missing'))
     }
 
-    #MAKE SURE UNITS MATCH OUR STANDARD MS UNITS, TIME ZONE IS UTC, ETC. (SEE PROTOCOL)
+    if(all(out_sub$gasCheckStandardQF == 1)){
+        return(generate_ms_exception('All records failed QA'))
+    }
 
-    #THIS CHUNK NEEDS WORK (i borrowed it from the nitrate processing kernel)
-    out_sub = mutate(rawd, site_name=siteID)
     updown = determine_upstream_downstream(out_sub)
 
+    #these are the columns we want:
+    # collectDate, concentrationCH4, concentrationCO2, concentrationN2O
+
+    #still needs to be built...
+}
+
+#stage: PENDING (not yet needed. waiting on neon)
+process_1_20016 <- function(network, domain, ms_prodname, site_name, component){
+    NULL
+}
+
+#waterqual: PENDING (started)
+process_1_20288 <- function(network, domain, ms_prodname, site_name, component){
+
+    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+
+    rawfiles = list.files(rawdir)
+    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
+    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
+
+    relevant_file1 = 'waq_instantaneous.feather'
+    if(relevant_file1 %in% rawfiles){
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
+
+    #LOTS OF FLAG COLUMNS FOR THIS PRODUCT. WILL NEED A MORE ELABORATE FLAG FILTER
+    # if(){
+    #     return(generate_ms_exception('All records failed QA'))
+    # }
+
+    #MIGHT NOT WORK
+    updown = determine_upstream_downstream(out_sub)
+
+    #THIS CAN HELP WITH COLUMN SELECTION (COLS WITH ASSOC FLAGS ARE USEFUL COLS)
+    cn = colnames(out_sub)
+    cn_base = na.omit(stringr::str_match(cn, '(.*?)FinalQF$')[,2])
+    cn_keep = c(cn_base,
+        paste0(cn_base, 'FinalQF'),
+        paste0(cn_base, 'ExpUncert'))
+
+    #dissolvedOxygenSaturation doesn't follow the naming convention of the others.
+    #rawCalibratedfDOM is additional.
+    #still gotta do the usual time zone conversion, unit conversion, etc.
     out_sub = out_sub %>%
-        mutate(
-            site_name=glue(site_name, updown),
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC'),
-            surfWaterNitrateMean = surfWaterNitrateMean * 0.01) %>%
-        filter(finalQF == 0) %>%
-        group_by(startDateTime) %>%
-        summarize(surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE)) %>%
-        ungroup() %>%
-        select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean)
+        mutate(site_name=paste0(site_name, updown)) %>%
+        select(site_name, one_of('startDate', 'startDateTime'), #naming discrepancy
+            one_of(cn_keep), dissolvedOxygenSaturation,
+            rawCalibratedfDOM) %>%
+        rename_all(dplyr::recode, startDate='startDateTime') #rename only if column exists
 
     return(out_sub)
-} #PAR: under construction
-
-#obsolete kernels (for parts, maybe)
-
-# process_0_DP1.20093.001_api = function(d, set_details){
-#
-#     data1_ind = intersect(grep("expanded", d$data$files$name),
-#         grep("fieldSuperParent", d$data$files$name))
-#     data2_ind = intersect(grep("expanded", d$data$files$name),
-#         grep("externalLabData", d$data$files$name))
-#     data3_ind = intersect(grep("expanded", d$data$files$name),
-#         grep("domainLabData", d$data$files$name))
-#
-#     data1 = tryCatch({
-#         read.delim(d$data$files$url[data1_ind], sep=",",
-#             stringsAsFactors=FALSE)
-#     }, error=function(e){
-#         data.frame()
-#     })
-#     data2 = tryCatch({
-#         read.delim(d$data$files$url[data2_ind], sep=",",
-#             stringsAsFactors=FALSE)
-#     }, error=function(e){
-#         data.frame()
-#     })
-#     data3 = tryCatch({
-#         read.delim(d$data$files$url[data3_ind], sep=",",
-#             stringsAsFactors=FALSE)
-#     }, error=function(e){
-#         data.frame()
-#     })
-#
-#     if(nrow(data1)){
-#         data1 = select(data1, siteID, collectDate, dissolvedOxygen,
-#             dissolvedOxygenSaturation, specificConductance, waterTemp,
-#             maxDepth)
-#     }
-#     if(nrow(data2)){
-#         data2 = select(data2, siteID, collectDate, pH, externalConductance,
-#             externalANC, starts_with('water'), starts_with('total'),
-#             starts_with('dissolved'), uvAbsorbance250, uvAbsorbance284,
-#             shipmentWarmQF, externalLabDataQF)
-#     }
-#     if(nrow(data3)){
-#         data3 = select(data3, siteID, collectDate, starts_with('alk'),
-#             starts_with('anc'))
-#     }
-#
-#     out_sub = plyr::join_all(list(data1, data2, data3), type='full') %>%
-#         group_by(collectDate) %>%
-#         summarise_each(list(~ if(is.numeric(.)){
-#             mean(., na.rm = TRUE)
-#         } else {
-#             first(.)
-#         })) %>%
-#         ungroup() %>%
-#         mutate(datetime=as.POSIXct(collectDate, tz='UTC',
-#             format='%Y-%m-%dT%H:%MZ')) %>%
-#         select(-collectDate)
-#
-#     return(out_sub)
-# } #chem: obsolete
-# process_0_DP1.20288.001_api = function(d, set_details){
-#
-#     data_inds = intersect(grep("expanded", d$data$files$name),
-#         grep("instantaneous", d$data$files$name))
-#
-#     site_with_suffixes = determine_upstream_downstream(d, data_inds,
-#         set_details)
-#     if(is_ms_err(site_with_suffixes)) return(site_with_suffixes)
-#
-#     #process upstream and downstream sites independently
-#     for(j in 1:length(data_inds)){
-#
-#         site_with_suffix = site_with_suffixes[j]
-#
-#         #download data
-#         out_sub = read.delim(d$data$files$url[data_inds[j]], sep=",",
-#             stringsAsFactors=FALSE)
-#
-#         out_sub = resolve_neon_naming_conflicts(out_sub,
-#             set_details_=set_details,
-#             replacements=c('specificCond'='specificConductance',
-#                 'dissolvedOxygenSat'='dissolvedOxygenSaturation'))
-#         if(is_ms_err(out_sub)) return(out_sub)
-#
-#         out_sub = mutate(out_sub,
-#             datetime=as.POSIXct(startDateTime,
-#                 tz='UTC', format='%Y-%m-%dT%H:%M:%SZ'),
-#             site=site_with_suffix) %>%
-#             select(-startDateTime)
-#     }
-#
-#     return(out_sub)
-# } #waterqual: obsolete
+}
