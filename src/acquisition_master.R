@@ -13,6 +13,7 @@ suppressPackageStartupMessages({
     library(emayili)
     library(neonUtilities)
     library(tinsel)
+    library(PeriodicTable)
 })
 
 setwd('/home/mike/git/macrosheds/data_acquisition')

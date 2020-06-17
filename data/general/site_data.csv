@@ -63,7 +63,7 @@
 "hjandrews","H. J. Andrews","lter","LTER",,"VARMET","Vanilla Leaf Met Meadow Recording RG","rain_gauge",44.273329,-122.149663,,1,
 "hjandrews","H. J. Andrews","lter","LTER",,"WS10RG","Top of WS#10 Storage RG","rain_gauge",44.219956,-122.25684,,1,
 "hjandrews","H. J. Andrews","lter","LTER",,"WS09RG","Top of WS#9 Storage RG","rain_gauge",44.203214,-122.254851,,1,
-"neon","NEON","neon","NEON","Little Rock Lake","LIRO","Little Rock Lake","lake_gauge",45.998269,-89.704767,,0,
+"neon","NEON","neon","NEON","Little Rock Lake","LIRO","Little Rock Lake","lake_gauge",45.998269,-89.704767,,0,"."
 "neon","NEON","neon","NEON","Toolik Lake","TOOK","Toolik Lake","lake_gauge",68.630692,-149.610636,,0,
 "neon","NEON","neon","NEON","Ordway-Swisher Biological Station - Suggs Lake","SUGG","Ordway-Swisher Biological Station - Suggs Lake","lake_gauge",29.68705,-82.01617,,0,
 "neon","NEON","neon","NEON","Crampton Lake","CRAM","Crampton Lake","lake_gauge",46.21111,-89.47825,,0,
