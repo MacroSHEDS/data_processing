@@ -68,7 +68,7 @@ handle_errors = function(f){
             exception_msg = as.character(return_val)
 
             if(! exception_msg %in% unique_exceptions){
-                unique_exceptions_new = append(unique_exceptions, e)
+                unique_exceptions_new = append(unique_exceptions, exception_msg)
                 assign('unique_exceptions', unique_exceptions_new,
                     pos=.GlobalEnv)
             }
