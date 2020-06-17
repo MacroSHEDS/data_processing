@@ -47,8 +47,9 @@ we have three data levels within macrosheds. these are used in naming processing
 So, for example, the 1 in process_1_20093 means this is a munge kernel.
 
 **begin SOP:**
-1. you might already have a retrieve.R script for this network/domain. if not, borrow one from some already handled network/domain. use this as a template
-2. step through ms superstructure until processing can't proceed successfully without modification
+1. for a new domain or new network, research it's naming conventions. fill out name_variants.csv with a new column
+2. you might already have a retrieve.R script for this network/domain. if not, borrow one from some already handled network/domain. use this as a template
+3. step through ms superstructure until processing can't proceed successfully without modification
     1. if error/incompatibility occurs in retrieve.R modify retrieve.R to accommodate new idiosyncrasies
         + mind existing retrieve.R scripts as you develop. attempt to harmonize accross them
         + add, remove, modify helper functions and/or the body of retrieve.R in order to accomplish this
@@ -56,7 +57,7 @@ So, for example, the 1 in process_1_20093 means this is a munge kernel.
     2. if error/incompatibility occurs in the outer retrieval function (e.g. get_neon_data, get_lter_data), do as above.
         + e.g. modify get_networkx_data to accommodate new idiosyncrasies. try to harmonize it with get_neon_data and get_lter_data as much as possible
     3. borrow a retrieval kernel (the innermost level of retrieval processing, where the data are actually downloaded) to use as a template. if it doesn't work as-is, modify it
-1. you might already have a munge.R script for this network/domain. if not, borrow one from some already handled network/domain. use this as a template
+4. you might already have a munge.R script for this network/domain. if not, borrow one from some already handled network/domain. use this as a template
     1. repeat above instructions for munge.R
     2. repeat as above for munge function, e.g. munge_neon_site()
     3. error/incompatibility _should_ occur in the munge kernel, the innermost level of munge processing
@@ -73,5 +74,5 @@ So, for example, the 1 in process_1_20093 means this is a munge kernel.
             + "datetime"
             + e.g. "spCond" (again, consult variables.csv for variable names)
         + if necessary, separate one site into multiple sites. we have to do this for some neon "sites", where there's secretly an upstream sensor array and a downstream sensor array.
-1. we haven't started deriving data yet, but the process will be similar to the above. build out this section when we get there
+5. we haven't started deriving data yet, but the process will be similar to the above. build out this section when we get there
 
