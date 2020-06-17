@@ -73,7 +73,7 @@ munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
             args=list(network=network, domain=domain, ms_prodname=prod,
                 site_name=site, component=in_comp)))
 
-        if(! is_ms_err(out_comp)){
+        if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
         }
 
