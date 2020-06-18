@@ -600,3 +600,40 @@ calculate_molar_mass <- function(molecular_formula){
 
     return(molar_mass)
 }
+
+
+update_productfile <- function(network, domain=NULL, level, product, status) {
+    
+    if(is.null(domain)){
+        prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
+    } else {
+        prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
+    }
+    
+    col_name <- glue(level, '_status')
+    
+    if (!col_name %in% c("retrieve_status", "munge_status", "derive_status")) {
+        stop("level not allowed")
+        
+    } else{
+    
+    prod_no_change <- prods %>%
+        mutate(change = ifelse(prodname==product, 1, 0)) %>%
+        filter(change == 0)
+    
+    prod_change <- prods %>%
+        mutate(change = ifelse(prodname==product, 1, 0)) %>%
+        filter(change == 1) %>%
+        mutate(!!col_name := status) 
+    
+    prod_fin <- rbind(prod_no_change, prod_change) %>%
+        select(-change)}
+
+    if(is.null(domain)){
+        write_csv(prod_fin, glue('src/{n}/products.csv', n=network))
+    } else {
+        write_csv(prod_fin, glue('src/{n}/{d}/products.csv', n=network, d=domain)) }
+}
+    
+    
+    
