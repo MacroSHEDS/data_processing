@@ -1,7 +1,10 @@
+
+#update_productfile(network = "neon", level = "retrieve", product = "watertemp", status = "ready")
+
 prod_info = get_product_info(network=network,
     status_level='munge', get_statuses='ready')
 
-# i=7; j=1; k=20
+# i=4; j=1; k=20
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
