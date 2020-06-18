@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
 })
 
-setwd('~/desktop/macrosheds/data_acquisition')
+ms_setwd()
 conf = jsonlite::fromJSON('config.json')
 
 #set up global logger. network-domain loggers are set up later

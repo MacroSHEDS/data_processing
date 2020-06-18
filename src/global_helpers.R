@@ -601,7 +601,6 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
-
 update_productfile <- function(network, domain=NULL, level, product, status) {
     
     if(is.null(domain)){
@@ -635,5 +634,50 @@ update_productfile <- function(network, domain=NULL, level, product, status) {
         write_csv(prod_fin, glue('src/{n}/{d}/products.csv', n=network, d=domain)) }
 }
     
-    
-    
+#. handle_errors
+ms_setwd <- function(){
+
+    mikewd = try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE)
+    if(! 'try-error' %in% class(mikewd)) return()
+
+    spencerwd = try(setwd('~/desktop/macrosheds/data_acquisition',
+        silent=TRUE)
+    if(! 'try-error' %in% class(spencerwd)) return()
+
+    serverwd = setwd('/home/macrosheds/data_acquisition')
+
+}
+
+#. handle_errors
+update_product_statuses <- function(network, domain...other args){
+
+    #in progress
+
+    #this should maybe be defined globally?
+    status_codes = c('READY', 'PENDING', 'PAUSED')
+
+    kf = get_kernelfile(...) #already made, kinda?
+
+    # kernel_lines = read_lines('src/neon/neon/processing_kernels.R')
+    kernel_lines = read_lines(kf)
+
+    #we'd have to change our comments in processing_kernels.R to include
+    #"STATUS=", or something similar.
+    status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
+    statuses = stringr::str_match(kernel_lines[status_line_inds],
+        'STATUS=([A-Z]+)')[, 2]
+
+    if(any(! statuses %in% status_codes)){
+        stop('illegal status')
+    }
+
+    funcname_lines = kernel_lines[status_line_inds + 2]
+    func_codes = stringr::str_match(func_names,
+        'process_([0-2])_(.*)? <-')[, 2:3, drop=FALSE]
+
+    func_lvls = func_codes[, 1, drop=TRUE]
+    prodcodes = func_codes[, 2, drop=TRUE]
+
+    #now we have all we need in order to update products.csv!!
+
+}
