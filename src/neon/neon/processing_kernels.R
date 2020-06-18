@@ -1,6 +1,6 @@
 #retrieval kernels ####
 
-#chem: READY
+#chem: STATUS=READY
 #. handle_errors
 process_0_20093 <- function(set_details, network, domain){
     # set_details=s
@@ -290,76 +290,76 @@ process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
 #par: READY
 #. handle_errors
 process_1_20042 <- function(network, domain, ms_prodname, site_name, component){
-    
+
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                   n=network, d=domain, p=ms_prodname, s=site_name, c=component)
-    
+
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
-    
+
     relevant_file1 = 'PARWS_5min.feather'
-    
+
     if(relevant_file1 %in% rawfiles){
         out_sub = read_feather(glue(rawdir, '/', relevant_file1))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
-    
+
     if(all(out_sub$PARFinalQF == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
-    
+
     updown = determine_upstream_downstream(out_sub)
-    
+
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC 
+            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         filter(PARFinalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
         summarize(PARMean = mean(PARMean, na.rm=TRUE)) %>%
         ungroup() %>%
         select(site_name, datetime=startDateTime, PAR=PARMean)
-    
+
     return(out_sub)
 }
 
-#water temp: PENDING (needed file: TSW_5min.feather; needed column: surfWaterTempMean)
+#water temp: READY
 #. handle_errors
 process_1_20053 <- function(network, domain, ms_prodname, site_name, component){
-    
+
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                   n=network, d=domain, p=ms_prodname, s=site_name, c=component)
-    
+
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
-    
+
     relevant_file1 = 'TSW_5min.feather'
-    
+
     if(relevant_file1 %in% rawfiles){
         out_sub = read_feather(glue(rawdir, '/', relevant_file1))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
-    
+
     if(all(out_sub$finalQF == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
-    
+
     updown = determine_upstream_downstream(out_sub)
-    
+
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC 
+            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         filter(finalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
         summarize(surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE)) %>%
         ungroup() %>%
         select(site_name, datetime=startDateTime, temp=surfWaterTempMean)
-    
+
     return(out_sub)
 }
 
