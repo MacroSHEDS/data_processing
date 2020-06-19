@@ -6,3 +6,5 @@ config.json
 .Rhistory
 /logs
 /src/lter/OBSOLETE
+src/.Rapp.history
+data_acquisition.Rproj

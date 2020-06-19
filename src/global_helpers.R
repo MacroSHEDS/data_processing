@@ -630,3 +630,63 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
+#. handle_errors
+update_product_file <- function(network, domain, level, prod_code, status) {
+
+    if(network == domain){
+        prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
+    } else {
+        prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
+    }
+
+    for(i in 1:length(prod_code)) {
+        col_name = as.character(glue(level[i], '_status'))
+        row_num = as.numeric(which(prods$prodcode == prod_code[i], arr.ind=TRUE))
+        prods[row_num, col_name] = status[i]
+    }
+
+    if(network == domain){
+        write_csv(prods, glue('src/{n}/products.csv', n=network))
+    } else {
+        write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    }
+}
+
+#. handle_errors
+update_product_statuses <- function(network, domain){
+
+    #status_codes should maybe be defined globally, or in a file
+    status_codes = c('READY', 'PENDING', 'PAUSED')
+    kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
+    kernel_lines = read_lines(kf)
+
+    status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
+    statuses = stringr::str_match(kernel_lines[status_line_inds],
+        'STATUS=([A-Z]+)')[, 2]
+
+    if(any(! statuses %in% status_codes)){
+        stop('illegal status')
+    }
+
+    funcname_lines = kernel_lines[status_line_inds + 2]
+
+    if(any(! grep('process_[0-2]_.+?', funcname_lines))){
+        stop(glue('function definition must begin exactly two lines after STATUS',
+            ' indicator. function must be named "process_<level>_<prodcode>"'))
+    }
+
+    func_codes = stringr::str_match(funcname_lines,
+        'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
+
+    func_lvls = func_codes[, 1, drop=TRUE]
+    prodcodes = func_codes[, 2, drop=TRUE]
+
+    level_name = case_when(func_lvls == 0 ~ "retrieve",
+       func_lvls == 1 ~ "munge",
+       func_lvls == 2 ~ "derive")
+
+    status_names = tolower(statuses)
+
+    update_product_file(network=network, domain=domain, level=level_name,
+        prod_code=prodcodes, status=status_names)
+}
