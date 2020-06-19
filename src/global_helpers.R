@@ -601,13 +601,37 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
+
+update_product_file = function(network, domain, level, prod_code, status) {
+    
+    if(network == domain){
+        prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
+    } else {
+        prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
+    }
+    
+        for(i in 1:length(prod_code)) {
+            
+            col_name = as.character(glue(level[i], '_status'))
+            
+            row_num = as.numeric(which(prods$prodcode == prod_code[i], arr.ind=TRUE))
+            
+            prods[row_num, col_name] = status[i] 
+        }
+
+    if(network == domain){
+        write_csv(prods, glue('src/{n}/products.csv', n=network))
+    } else {
+        write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain)) }
+}
+    
 #. handle_errors
-ms_setwd <- function(){
+ms_setwd <- function() {
 
     mikewd = try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE)
     if(! 'try-error' %in% class(mikewd)) return()
 
-    spencerwd = try(setwd('~/desktop/macrosheds/data_acquisition',
+    spencerwd = try(setwd('~/desktop/macrosheds/data_acquisition/'),
         silent=TRUE)
     if(! 'try-error' %in% class(spencerwd)) return()
 
@@ -616,16 +640,15 @@ ms_setwd <- function(){
 }
 
 #. handle_errors
-update_product_statuses <- function(network, domain...other args){
+update_product_statuses = function(network, domain) {
 
     #in progress
 
     #this should maybe be defined globally?
     status_codes = c('READY', 'PENDING', 'PAUSED')
 
-    kf = get_kernelfile(...) #already made, kinda?
+    kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
 
-    # kernel_lines = read_lines('src/neon/neon/processing_kernels.R')
     kernel_lines = read_lines(kf)
 
     #we'd have to change our comments in processing_kernels.R to include
@@ -636,15 +659,27 @@ update_product_statuses <- function(network, domain...other args){
 
     if(any(! statuses %in% status_codes)){
         stop('illegal status')
-    }
+    } 
 
     funcname_lines = kernel_lines[status_line_inds + 2]
-    func_codes = stringr::str_match(func_names,
+    func_codes = stringr::str_match(funcname_lines,
         'process_([0-2])_(.*)? <-')[, 2:3, drop=FALSE]
 
     func_lvls = func_codes[, 1, drop=TRUE]
+    
+    level_name = case_when(func_lvls == 0 ~ "retrieve",
+                           func_lvls == 1 ~ "munge",
+                           func_lvls == 2 ~ "derive")
+    
     prodcodes = func_codes[, 2, drop=TRUE]
+    
+    status_names = tolower(statuses)
 
-    #now we have all we need in order to update products.csv!!
-
+    update_product_file(network=network, 
+                        domain=domain, 
+                        level=level_name, 
+                        prod_code=prodcodes, 
+                        status=status_names)
 }
+
+
