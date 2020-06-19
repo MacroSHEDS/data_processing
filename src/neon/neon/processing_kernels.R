@@ -18,7 +18,7 @@ process_0_20093 <- function(set_details, network, domain){
 
 }
 
-#nitrate: READY
+#nitrate: STATUS=READY
 #. handle_errors
 process_0_20033 <- function(set_details, network, domain){
 
@@ -34,7 +34,7 @@ process_0_20033 <- function(set_details, network, domain){
 
 }
 
-#photosynthetically active radiation (PAR): READY
+#photosynthetically active radiation (PAR): STATUS=READY
 #. handle_errors
 process_0_20042 <- function(set_details, network, domain){
 
@@ -50,7 +50,7 @@ process_0_20042 <- function(set_details, network, domain){
 
 }
 
-#water temperature: READY
+#water temperature: STATUS=READY
 #. handle_errors
 process_0_20053 <- function(set_details, network, domain){
 
@@ -66,7 +66,7 @@ process_0_20053 <- function(set_details, network, domain){
 
 }
 
-#air pressure: READY
+#air pressure: STATUS=READY
 #. handle_errors
 process_0_00004 <- function(set_details, network, domain){
 
@@ -85,7 +85,7 @@ process_0_00004 <- function(set_details, network, domain){
     #     select(site_name, startDateTime, staPresMean, staPresFinalQF)
 }
 
-#gases: READY
+#gases: STATUS=READY
 #. handle_errors
 process_0_20097 <- function(set_details, network, domain){
 
@@ -101,7 +101,7 @@ process_0_20097 <- function(set_details, network, domain){
 
 }
 
-#stage: OUT OF SERVICE
+#stage: STATUS=PAUSED
 #. handle_errors
 process_0_20016 <- function(set_details, network, domain){
 
@@ -141,7 +141,7 @@ process_0_20016 <- function(set_details, network, domain){
 
 }
 
-#water quality: READY
+#water quality: STATUS=READY
 #. handle_errors
 process_0_20288 <- function(set_details, network, domain){
 
@@ -171,7 +171,7 @@ process_0_ <- function(set_details, network, domain){
 
 #munge kernels ####
 
-#chem: READY
+#chem: STATUS=READY
 #. handle_errors
 process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     # ms_prodname=prod; site_name=site; component=in_comp
@@ -247,7 +247,7 @@ process_1_20093 <- function(network, domain, ms_prodname, site_name, component){
     return(out_sub)
 }
 
-#nitrate: READY
+#nitrate: STATUS=READY
 #. handle_errors
 process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
     # ms_prodname=prod; site_name=site; component=in_comp
@@ -287,7 +287,7 @@ process_1_20033 <- function(network, domain, ms_prodname, site_name, component){
     return(out_sub)
 }
 
-#par: READY
+#par: STATUS=READY
 #. handle_errors
 process_1_20042 <- function(network, domain, ms_prodname, site_name, component){
 
@@ -325,7 +325,7 @@ process_1_20042 <- function(network, domain, ms_prodname, site_name, component){
     return(out_sub)
 }
 
-#water temp: READY
+#water temp: STATUS=READY
 #. handle_errors
 process_1_20053 <- function(network, domain, ms_prodname, site_name, component){
 
@@ -363,7 +363,7 @@ process_1_20053 <- function(network, domain, ms_prodname, site_name, component){
     return(out_sub)
 }
 
-#air pres: PENDING (needed file: BP_30min.feather; needed column: staPresMean; flag column: staPresFinalQF)
+#air pres: STATUS=PENDING (needed file: BP_30min.feather; needed column: staPresMean; flag column: staPresFinalQF)
 #. handle_errors
 process_1_00004 <- function(network, domain, ms_prodname, site_name, component){
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
@@ -381,26 +381,26 @@ process_1_00004 <- function(network, domain, ms_prodname, site_name, component){
         return(generate_ms_exception('Relevant file missing'))
     }
     
-    if(all(out_sub$finalQF == 1)){
+    if(all(out_sub$staPresFinalQF == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
-    
+    #Vertical position is 025 at ABBY site (maybe not an aquatic site?). Do not know what this code means about position 
     updown = determine_upstream_downstream(out_sub)
     
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC 
-        filter(finalQF == 0) %>% #remove flagged records
+        filter(staPresFinalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
-        summarize(surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE)) %>%
+        summarize(staPresMean = mean(staPresMean, na.rm=TRUE)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, temp=surfWaterTempMean)
+        select(site_name, datetime=startDateTime, airpressure=staPresMean)
     
     return(out_sub)
 }
 
-#gases: PENDING (started)
+#gases: STATUS=PENDING (started)
 #. handle_errors
 process_1_20097 <- function(network, domain, ms_prodname, site_name, component){
 
