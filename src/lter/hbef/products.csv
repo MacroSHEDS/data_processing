@@ -1,7 +1,7 @@
-"prodcode","prodname","type","retrieve_status","munge_status","derive_status","notes"
-1,"discharge","unknown","pending","pending","pending",
-13,"precipitation","unknown","pending","pending","pending","see also product 14"
-208,"stream_precip_chemistry","unknown","pending","pending","pending",
-5482,"rain_gauge_locations","unknown","paused","pending","pending",
-3239,"stream_gauge_locations","unknown","paused","pending","pending",
-100,"rain_gauge_locations","unknown","paused","pending","pending",
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes,NA_status
+1,discharge,unknown,pending,pending,pending,NA,NA
+13,precipitation,unknown,pending,pending,pending,see also product 14,NA
+208,stream_precip_chemistry,unknown,pending,pending,pending,NA,NA
+5482,rain_gauge_locations,unknown,paused,pending,pending,NA,NA
+3239,stream_gauge_locations,unknown,paused,pending,pending,NA,NA
+100,rain_gauge_locations,unknown,paused,pending,pending,NA,NA
