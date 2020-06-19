@@ -16,7 +16,8 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
 })
 
-ms_setwd()
+#ms_setwd()
+setwd("~/desktop/macrosheds/data_acquisition/")
 conf = jsonlite::fromJSON('config.json')
 
 #set up global logger. network-domain loggers are set up later
@@ -45,6 +46,8 @@ for(dmnrow in 1:nrow(network_domain)){
     loginfo(logger=logger_module,
         msg=glue('Processing network: {n}, domain: {d}', n=network, d=domain))
 
+    update_product_statuses(network=network, domain=domain)
+    
     get_all_local_helpers(network=network, domain=domain)
 
     ms_retrieve(network=network, domain=domain)
