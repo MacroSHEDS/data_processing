@@ -132,7 +132,7 @@ export_to_global <- function(from_env, exclude=NULL){
 }
 
 #. handle_errors
-get_all_local_helpers = function(network=domain, domain){
+get_all_local_helpers <- function(network=domain, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
     #because it can only read them into the current environment, all files
@@ -169,7 +169,7 @@ get_all_local_helpers = function(network=domain, domain){
 }
 
 #. handle_errors
-set_up_logger = function(network=domain, domain){
+set_up_logger <- function(network=domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -189,7 +189,7 @@ set_up_logger = function(network=domain, domain){
 }
 
 #. handle_errors
-extract_from_config = function(key){
+extract_from_config <- function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
@@ -430,8 +430,9 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
 
     return()
 }
@@ -454,8 +455,36 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
-    readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
+
+    return()
+}
+
+#. handle_errors
+backup_tracker <- function(path){
+
+    mch = stringr::str_match(path,
+        '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+
+    if(any(is.na(mch))){
+        stop('Invalid tracker path or name')
+    }
+
+    dir.create(glue(mch[1], '/tracker_backups'),
+        recursive=TRUE, showWarnings=FALSE)
+
+    tstamp = Sys.time() %>%
+        lubridate::with_tz(tzone='UTC') %>%
+        format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
+
+    newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
+    file.copy(path, newpath, overwrite=FALSE) #write only one tracker per hour
+
+    #remove tracker backups older than 7 days
+    system2('find', c(glue(mch[1], '/tracker_backups/*'),
+        '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
 
     return()
 }
@@ -601,50 +630,3 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
-#. handle_errors
-ms_setwd <- function(){
-
-    mikewd = try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE)
-    if(! 'try-error' %in% class(mikewd)) return()
-
-    spencerwd = try(setwd('~/desktop/macrosheds/data_acquisition',
-        silent=TRUE)
-    if(! 'try-error' %in% class(spencerwd)) return()
-
-    serverwd = setwd('/home/macrosheds/data_acquisition')
-
-}
-
-#. handle_errors
-update_product_statuses <- function(network, domain...other args){
-
-    #in progress
-
-    #this should maybe be defined globally?
-    status_codes = c('READY', 'PENDING', 'PAUSED')
-
-    kf = get_kernelfile(...) #already made, kinda?
-
-    # kernel_lines = read_lines('src/neon/neon/processing_kernels.R')
-    kernel_lines = read_lines(kf)
-
-    #we'd have to change our comments in processing_kernels.R to include
-    #"STATUS=", or something similar.
-    status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
-    statuses = stringr::str_match(kernel_lines[status_line_inds],
-        'STATUS=([A-Z]+)')[, 2]
-
-    if(any(! statuses %in% status_codes)){
-        stop('illegal status')
-    }
-
-    funcname_lines = kernel_lines[status_line_inds + 2]
-    func_codes = stringr::str_match(func_names,
-        'process_([0-2])_(.*)? <-')[, 2:3, drop=FALSE]
-
-    func_lvls = func_codes[, 1, drop=TRUE]
-    prodcodes = func_codes[, 2, drop=TRUE]
-
-    #now we have all we need in order to update products.csv!!
-
-}

@@ -3,8 +3,7 @@ prod_info = get_product_info(network=network, domain=domain,
     # status_level='retrieve', get_statuses='ready')
     status_level='retrieve', get_statuses='pending')
 
-# i=1; j=2
-# prod_info = prod_info[c(1, 1, 1, 1, 1),]
+# i=1; j=3
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
