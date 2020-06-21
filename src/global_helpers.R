@@ -5,14 +5,18 @@ err_cnt = 0
 unique_errors = c()
 unique_exceptions = c()
 
+#this map obsolete; new map will be built based on comments.
+#work out binarization for quick flag decomposition.
 flagmap = list(
-    clean=c(NA, 'example flag 0'),
-    sensor_concern=c('example flag 1'),
-    unit_unknown=c('example flag 2'),
-    unit_concern=c('example flag 3'),
-    method_unknown=c('example flag 4', 'example flag 5'),
-    method_concern=c('example flag 6'),
-    general_concern=c('example flag 7')
+    clean=c(), #0
+    method_unknown=c(), #1; method not given
+    method_concern=c(), #2; method known to be lame
+    #--- flagsum <= 3: ok
+    #--- flagsum > 3: dirty
+    sensor_concern=c(), #4; keywords: sensor*, expos*, detect*
+    unit_unknown=c(), #8; unit not given
+    unit_concern=c(), #16; unit unclear or inconvertible
+    general_concern=c() #32; keywords:
 )
 
 #functions without the "#. handle_errors" decorator have special error handling
@@ -45,13 +49,15 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
-            if(! exists('curr_site')) curr_site = 'NO SITE'
+            if(exists('curr_site')) sitename = curr_site
+            if(exists('site_name')) sitename = site_name
+            if(! exists('sitename')) sitename = 'NO SITE'
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
             full_message = glue('{ec}\n\n',
                 'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
                 'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
-                ec=err_cnt, n=network, d=domain, s=curr_site, p=prodname_ms,
+                ec=err_cnt, n=network, d=domain, s=sitename, p=prodname_ms,
                 e=err_msg, c=pretty_callstack)
 
             logerror(full_message, logger=logger_module)
@@ -631,7 +637,7 @@ calculate_molar_mass <- function(molecular_formula){
 }
 
 #. handle_errors
-update_product_file <- function(network, domain, level, prod_code, status) {
+update_product_file <- function(network, domain, level, prod_code, status){
 
     if(network == domain){
         prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
@@ -641,7 +647,7 @@ update_product_file <- function(network, domain, level, prod_code, status) {
 
     for(i in 1:length(prod_code)) {
         col_name = as.character(glue(level[i], '_status'))
-        row_num = as.numeric(which(prods$prodcode == prod_code[i], arr.ind=TRUE))
+        row_num = which(prods$prodcode == prod_code[i])
         prods[row_num, col_name] = status[i]
     }
 
@@ -650,6 +656,8 @@ update_product_file <- function(network, domain, level, prod_code, status) {
     } else {
         write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
     }
+
+    return()
 }
 
 #. handle_errors
@@ -689,4 +697,6 @@ update_product_statuses <- function(network, domain){
 
     update_product_file(network=network, domain=domain, level=level_name,
         prod_code=prodcodes, status=status_names)
+
+    return()
 }
