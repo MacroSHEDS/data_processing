@@ -1,7 +1,6 @@
 
 prod_info = get_product_info(network=network, domain=domain,
-    # status_level='retrieve', get_statuses='ready')
-    status_level='retrieve', get_statuses='pending')
+    status_level='retrieve', get_statuses='ready')
 
 # i=1; j=3
 for(i in 1:nrow(prod_info)){
