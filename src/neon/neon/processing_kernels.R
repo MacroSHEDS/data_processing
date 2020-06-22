@@ -171,7 +171,7 @@ process_0_ <- function(set_details, network, domain){
 
 #munge kernels ####
 
-#chem: STATUS=READY
+#chem: STATUS=PENDING (how to handle flags after spread?)
 #. handle_errors
 process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
     component){
@@ -208,10 +208,15 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
         #then fix stop message below
 
         rawd = read_feather(glue(rawdir, '/', relevant_file2))
+        # rawd = read_feather('data/neon/neon/raw/chemistry_DP1.20093/BARC/2016-11/swc_externalLabDataByAnalyte.feather')
 
-        out_sub = rawd %>%
-            select(collectDate, analyte, analyteConcentration, analyteUnits,
-                shipmentWarmQF, externalLabDataQF, sampleCondition)
+        # out_sub = rawd %>%
+        #     select(collectDate, analyte, analyteConcentration, analyteUnits,
+        #         shipmentWarmQF, externalLabDataQF, sampleCondition)
+        out_sub = sourceflags_to_ms_status(rawd,
+            flagstatus_mappings = list(shipmentWarmQF = 0,
+                sampleCondition = 'GOOD',
+                externalLabDataQF = c('formatChange|legacyData', '', 'NA')))
     }
 
     if(! exists('out_sub')){
@@ -224,16 +229,19 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
 
     out_sub = out_sub %>%
         filter(
-            shipmentWarmQF == 0,
-            externalLabDataQF != paste0('formatChange|legacyData|Preliminary ',
-                'method: UV absorbance not water blank subtracted'),
-            sampleCondition == 'GOOD',
+            # shipmentWarmQF == 0,
+            # externalLabDataQF != paste0('formatChange|legacyData|Preliminary ',
+            #     'method: UV absorbance not water blank subtracted'),
+            # sampleCondition == 'GOOD',
             analyte != 'TSS - Dry Mass') %>%
-        select(-analyteUnits, -shipmentWarmQF, -externalLabDataQF,
-            -sampleCondition) %>%
+        # select(-analyteUnits, -shipmentWarmQF, -externalLabDataQF,
+        #     -sampleCondition) %>%
+        select(collectDate, analyte, analyteConcentration, ms_status) %>%
         group_by(collectDate, analyte) %>%
-        summarize(analyteConcentration = mean(analyteConcentration, na.rm=TRUE)) %>%
-        ungroup() %>%
+        summarize(
+            analyteConcentration = mean(analyteConcentration, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup() %>% #SPREAD LATER INSTEAD?
         tidyr::spread(analyte, analyteConcentration) %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
@@ -265,7 +273,8 @@ process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
 
     relevant_file1 = 'NSW_15_minute.feather'
     if(relevant_file1 %in% rawfiles){
-        out_sub = read_feather(glue(rawdir, '/', relevant_file1))
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -282,11 +291,14 @@ process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             startDateTime = lubridate::force_tz(startDateTime, 'UTC'), #GMT -> UTC
             surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
-        filter(finalQF == 0) %>% #remove flagged records
+        # filter(finalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
-        summarize(surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE)) %>%
+        summarize(
+            surfWaterNitrateMean = mean(surfWaterNitrateMean, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean)
+        select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean,
+            ms_status)
 
     return(out_sub)
 }
@@ -306,7 +318,8 @@ process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
     relevant_file1 = 'PARWS_5min.feather'
 
     if(relevant_file1 %in% rawfiles){
-        out_sub = read_feather(glue(rawdir, '/', relevant_file1))
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(PARFinalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -321,11 +334,12 @@ process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        filter(PARFinalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
-        summarize(PARMean = mean(PARMean, na.rm=TRUE)) %>%
+        summarize(
+            PARMean = mean(PARMean, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, PAR=PARMean)
+        select(site_name, datetime=startDateTime, PAR=PARMean, ms_status)
 
     return(out_sub)
 }
@@ -345,7 +359,8 @@ process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
     relevant_file1 = 'TSW_5min.feather'
 
     if(relevant_file1 %in% rawfiles){
-        out_sub = read_feather(glue(rawdir, '/', relevant_file1))
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -360,11 +375,13 @@ process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        filter(finalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
-        summarize(surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE)) %>%
+        summarize(
+            surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, temp=surfWaterTempMean)
+        select(site_name, datetime=startDateTime, temp=surfWaterTempMean,
+            ms_status)
 
     return(out_sub)
 }
@@ -383,7 +400,8 @@ process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
     relevant_file1 = 'BP_30min.feather'
 
     if(relevant_file1 %in% rawfiles){
-        out_sub = read_feather(glue(rawdir, '/', relevant_file1))
+        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(staPresFinalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -398,11 +416,13 @@ process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        filter(staPresFinalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
-        summarize(staPresMean = mean(staPresMean, na.rm=TRUE)) %>%
+        summarize(
+            staPresMean = mean(staPresMean, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, airpressure=staPresMean)
+        select(site_name, datetime=startDateTime, airpressure=staPresMean,
+            ms_status)
 
     return(out_sub)
 }
@@ -422,6 +442,7 @@ process_1_DP1.20097 <- function(network, domain, ms_prodname, site_name,
     relevant_file1 = 'sdg_externalLabData.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0)) #flagcolnames?
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -460,6 +481,7 @@ process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
     relevant_file1 = 'waq_instantaneous.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0)) #flagcolnames?
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
