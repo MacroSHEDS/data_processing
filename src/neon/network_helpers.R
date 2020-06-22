@@ -46,7 +46,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 }
 
 #. handle_errors
-munge_neon_site = function(domain, site, prod, tracker, silent=TRUE){
+munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
     # domain='neon'; site=sites[j]; prod=prodname_ms; tracker=held_data
 
     retrieval_log = extract_retrieval_log(held_data, prod, site)
@@ -150,14 +150,14 @@ get_neon_product_specs <- function(code){
 
     if(length(prod_variant_inds) > 1){
         #works for this code but maybe not others? not sure the best way to handle this situation
-        
+
         prod_info<- sm(read_csv("src/neon/products.csv")) %>%
             filter(prodcode == code)
-        
+
         split <- unlist(strsplit(as.character(prod_info[1,"notes"]), split = " "))
-        
+
         keep <- as.character(grep(code, split, value=T))
-        
+
         if(length(keep) != 1) {
             stop(glue('More than one product variant for this prodcode. Did neon ',
                       'make a v.002 data product?'))
@@ -205,7 +205,7 @@ populate_set_details <- function(tracker, prod, site, avail){
 
     retrieval_tracker = tracker[[prod]][[site]]$retrieve
 
-    rgx = '/(DP[0-9]\\.([0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
+    rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
     rgx_capt = str_match(avail$url, rgx)[, -1]
 
     retrieval_tracker = avail %>%
