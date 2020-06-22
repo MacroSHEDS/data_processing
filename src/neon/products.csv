@@ -8,7 +8,7 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes
 20193,Qsalt,grab,paused,pending,pending,NA
 20008,speccond,sensor,unavailiable,unavailiable,unavailiable,NA
 20033,nitrate,sensor,ready,ready,pending,NA
-00004,airpressure,sensor,ready,ready,pending,DP1.00004.001 is needed product
+00004,airpressure,sensor,ready,pending,pending,DP1.00004.001 is needed product
 20097,gasses,grab,ready,pending,pending,NA
 20016,surfaceElev,sensor,paused,pending,pending,NA
 20053,watertemp,sensor,ready,ready,pending,NA

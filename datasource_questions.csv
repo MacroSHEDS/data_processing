@@ -1,0 +1,3 @@
+network,domain,prodcode,prodname,questions
+neon,neon,20097,gasses,Where is information on vertical and horizontal position
+neon,neon,20097,gasses,"The gasCheckStandardQF indicator is only ever -1 indicating test not performed or NA, broken?"
