@@ -1,3 +1,5 @@
+#functions without the "#. handle_errors" decorator have special error handling
+
 source('src/function_aliases.R')
 
 email_err_msgs = list()
@@ -5,17 +7,25 @@ err_cnt = 0
 unique_errors = c()
 unique_exceptions = c()
 
-flagmap = list(
-    clean=c(NA, 'example flag 0'),
-    sensor_concern=c('example flag 1'),
-    unit_unknown=c('example flag 2'),
-    unit_concern=c('example flag 3'),
-    method_unknown=c('example flag 4', 'example flag 5'),
-    method_concern=c('example flag 6'),
-    general_concern=c('example flag 7')
-)
+# flag systems (future use?; increasing user value and difficulty to manage):
 
-#functions without the "#. handle_errors" decorator have special error handling
+# system1: binary status (0=chill, 1=unchill)
+# system2: 0=chill, 1=unit_unknown, 2=unit_concern, 4=other_concern
+# system3: 0=chill, 1=unit_unknown, 2=unit_concern,
+    #4=method_unknown, 8=method_concern, 16=other_concern
+# system4: 0=chill, 1=unit_unknown, 2=unit_concern,
+    #4=method_unknown, 8=method_concern, 16=sensor_concern, 32=general_concern
+flagmap = list(
+    clean=c(), #0
+    method_unknown=c(), #1; method not given
+    method_concern=c(), #2; method known to be lame
+    #--- flagsum <= 3: ok
+    #--- flagsum > 3: dirty
+    sensor_concern=c(), #4; keywords: sensor*, expos*, detect*
+    unit_unknown=c(), #8; unit not given
+    unit_concern=c(), #16; unit unclear or inconvertible
+    general_concern=c() #32; keywords:
+)
 
 handle_errors = function(f){
 
@@ -45,13 +55,15 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
-            if(! exists('curr_site')) curr_site = 'NO SITE'
+            if(exists('curr_site')) sitename = curr_site
+            if(exists('site_name')) sitename = site_name
+            if(! exists('sitename')) sitename = 'NO SITE'
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
             full_message = glue('{ec}\n\n',
                 'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
                 'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
-                ec=err_cnt, n=network, d=domain, s=curr_site, p=prodname_ms,
+                ec=err_cnt, n=network, d=domain, s=sitename, p=prodname_ms,
                 e=err_msg, c=pretty_callstack)
 
             logerror(full_message, logger=logger_module)
@@ -113,6 +125,48 @@ pprint_callstack = function(){
 }
 
 #. handle_errors
+sourceflags_to_ms_status <- function(d, flagstatus_mappings,
+    exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
+
+    #d is a df/tibble with flag and/or status columns
+    #flagstatus_mappings is a list of flag or status column names mapped to
+        #vectors of values that might be encountered in those columns.
+        #see exclude_mapvals.
+    #exclude_mapvals: a boolean vector of length equal to the length of
+        #flagstatus_mappings. for each TRUE, values in the corresponding vector
+        #are treated as OK values (mapped to ms_status 0). values
+        #not in the vector are treated as flagged (mapped to ms_status 1).
+        #For each FALSE, this relationship is inverted, i.e. values *in* the
+        #corresponding vector are treated as flagged.
+
+    flagcolnames = names(flagstatus_mappings)
+    d = mutate(d, ms_status = 0)
+
+    for(i in 1:length(flagstatus_mappings)){
+        # d = filter(d, !! sym(flagcolnames[i]) %in% flagcols[[i]])
+        # d = mutate(d,
+        #     ms_status = ifelse(flagcolnames[i] %in% flagcols[[i]], 0, 1))
+
+        if(exclude_mapvals[i]){
+            ok_bool = ! d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        } else {
+            ok_bool = d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        }
+
+        d$ms_status[! ok_bool] = 1
+    }
+
+    d = select(d, -one_of(flagcolnames))
+
+    return(d)
+}
+
+#. handle_errors
+numeric_any <- function(num_vec){
+    return(as.numeric(any(as.logical(num_vec))))
+}
+
+#. handle_errors
 export_to_global <- function(from_env, exclude=NULL){
 
     #exclude is a character vector of names not to export.
@@ -132,7 +186,7 @@ export_to_global <- function(from_env, exclude=NULL){
 }
 
 #. handle_errors
-get_all_local_helpers = function(network=domain, domain){
+get_all_local_helpers <- function(network=domain, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
     #because it can only read them into the current environment, all files
@@ -169,7 +223,7 @@ get_all_local_helpers = function(network=domain, domain){
 }
 
 #. handle_errors
-set_up_logger = function(network=domain, domain){
+set_up_logger <- function(network=domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -189,7 +243,7 @@ set_up_logger = function(network=domain, domain){
 }
 
 #. handle_errors
-extract_from_config = function(key){
+extract_from_config <- function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
@@ -430,8 +484,9 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
 
     return()
 }
@@ -454,8 +509,36 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
-    readr::write_file(jsonlite::toJSON(tracker),
-        glue('data/{n}/{d}/data_tracker.json', n=network, d=domain))
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
+
+    return()
+}
+
+#. handle_errors
+backup_tracker <- function(path){
+
+    mch = stringr::str_match(path,
+        '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+
+    if(any(is.na(mch))){
+        stop('Invalid tracker path or name')
+    }
+
+    dir.create(glue(mch[1], '/tracker_backups'),
+        recursive=TRUE, showWarnings=FALSE)
+
+    tstamp = Sys.time() %>%
+        lubridate::with_tz(tzone='UTC') %>%
+        format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
+
+    newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
+    file.copy(path, newpath, overwrite=FALSE) #write only one tracker per hour
+
+    #remove tracker backups older than 7 days
+    system2('find', c(glue(mch[1], '/tracker_backups/*'),
+        '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
 
     return()
 }
@@ -601,85 +684,67 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
+#. handle_errors
+update_product_file <- function(network, domain, level, prod_code, status){
 
-update_product_file = function(network, domain, level, prod_code, status) {
-    
     if(network == domain){
         prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
     } else {
         prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
     }
-    
-        for(i in 1:length(prod_code)) {
-            
-            col_name = as.character(glue(level[i], '_status'))
-            
-            row_num = as.numeric(which(prods$prodcode == prod_code[i], arr.ind=TRUE))
-            
-            prods[row_num, col_name] = status[i] 
-        }
+
+    for(i in 1:length(prod_code)) {
+        col_name = as.character(glue(level[i], '_status'))
+        row_num = which(prods$prodcode == prod_code[i])
+        prods[row_num, col_name] = status[i]
+    }
 
     if(network == domain){
         write_csv(prods, glue('src/{n}/products.csv', n=network))
     } else {
-        write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain)) }
-}
-    
-#. handle_errors
-ms_setwd <- function() {
+        write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    }
 
-    mikewd = try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE)
-    if(! 'try-error' %in% class(mikewd)) return()
-
-    spencerwd = try(setwd('~/desktop/macrosheds/data_acquisition/'),
-        silent=TRUE)
-    if(! 'try-error' %in% class(spencerwd)) return()
-
-    serverwd = setwd('/home/macrosheds/data_acquisition')
-
+    return()
 }
 
 #. handle_errors
-update_product_statuses = function(network, domain) {
+update_product_statuses <- function(network, domain){
 
-    #in progress
-
-    #this should maybe be defined globally?
+    #status_codes should maybe be defined globally, or in a file
     status_codes = c('READY', 'PENDING', 'PAUSED')
-
     kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
-
     kernel_lines = read_lines(kf)
 
-    #we'd have to change our comments in processing_kernels.R to include
-    #"STATUS=", or something similar.
     status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
     statuses = stringr::str_match(kernel_lines[status_line_inds],
         'STATUS=([A-Z]+)')[, 2]
 
     if(any(! statuses %in% status_codes)){
         stop('illegal status')
-    } 
+    }
 
     funcname_lines = kernel_lines[status_line_inds + 2]
+
+    if(any(! grep('process_[0-2]_.+?', funcname_lines))){
+        stop(glue('function definition must begin exactly two lines after STATUS',
+            ' indicator. function must be named "process_<level>_<prodcode>"'))
+    }
+
     func_codes = stringr::str_match(funcname_lines,
-        'process_([0-2])_(.*)? <-')[, 2:3, drop=FALSE]
+        'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
 
     func_lvls = func_codes[, 1, drop=TRUE]
-    
-    level_name = case_when(func_lvls == 0 ~ "retrieve",
-                           func_lvls == 1 ~ "munge",
-                           func_lvls == 2 ~ "derive")
-    
     prodcodes = func_codes[, 2, drop=TRUE]
-    
+
+    level_name = case_when(func_lvls == 0 ~ "retrieve",
+       func_lvls == 1 ~ "munge",
+       func_lvls == 2 ~ "derive")
+
     status_names = tolower(statuses)
 
-    update_product_file(network=network, 
-                        domain=domain, 
-                        level=level_name, 
-                        prod_code=prodcodes, 
-                        status=status_names)
+    update_product_file(network=network, domain=domain, level=level_name,
+        prod_code=prodcodes, status=status_names)
+
+    return()
 }
-
-
