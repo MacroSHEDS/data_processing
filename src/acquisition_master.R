@@ -36,7 +36,7 @@ network_domain = sm(read_csv('data/general/site_data.csv')) %>%
 
 ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
 
- dmnrow=3
+# dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
