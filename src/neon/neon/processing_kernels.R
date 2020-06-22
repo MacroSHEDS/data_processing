@@ -7,7 +7,7 @@ process_0_20093 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='expanded', check.size=FALSE)
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
@@ -24,7 +24,7 @@ process_0_20033 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='expanded', check.size=FALSE)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -40,7 +40,7 @@ process_0_20042 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='expanded', check.size=FALSE, avg=5)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -56,7 +56,7 @@ process_0_20053 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='expanded', check.size=FALSE, avg=5)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -72,7 +72,7 @@ process_0_00004 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=30)
+        enddate=set_details$component, package='expanded', check.size=FALSE, avg=30)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -91,7 +91,7 @@ process_0_20097 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='expanded', check.size=FALSE)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -109,7 +109,7 @@ process_0_20016 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='expanded', check.size=FALSE, avg=5)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -147,7 +147,7 @@ process_0_20288 <- function(set_details, network, domain){
 
     data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='expanded', check.size=FALSE)
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -413,21 +413,41 @@ process_1_20097 <- function(network, domain, ms_prodname, site_name, component){
 
     relevant_file1 = 'sdg_externalLabData.feather'
     if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        out_sub = read_feather(glue(rawdir, '/', relevant_file1))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$gasCheckStandardQF == 1)){
-        return(generate_ms_exception('All records failed QA'))
-    }
-
-    updown = determine_upstream_downstream(out_sub)
+   # if(all(out_sub$gasCheckStandardQF == 1)){
+     #   return(generate_ms_exception('All records failed QA'))
+   # }
+    #Cant seem to locate information on horizontal position
+    #updown = determine_upstream_downstream(out_sub)
 
     #these are the columns we want:
-    # collectDate, concentrationCH4, concentrationCO2, concentrationN2O
+    # collectDate, concentrationCH4, concentrationCO2, concentrationCO2 = mean(concentrationCO2, na.rm=TRUE)
 
-    #still needs to be built...
+    out_sub = out_sub %>%
+        mutate(
+            #site_name=paste0(siteID, updown), #append "-up" to upstream site_names
+            datetime = lubridate::force_tz(collectDate, 'UTC'), #GMT -> UTC
+        type =  strsplit(as.character(out_sub$sampleID), ".", fixed=TRUE)) 
+    
+    for(i in 1:nrow(out_sub)) {
+        out_sub[i,26] <- as.character(unlist(out_sub$type[i])[4])
+    }
+    
+    out_sub=out_sub %>%
+        mutate(type = unlist(type)) %>%
+        mutate(type = ifelse(type == "WAT", "water", "air")) %>%
+        #filter(gasCheckStandardQF == 0) %>% #remove flagged records
+        group_by(datetime, siteID, sampleID, type) %>%
+        summarize(concentrationCH4 = mean(concentrationCH4, na.rm=TRUE),
+                  concentrationCO2 = mean(concentrationCO2, na.rm=TRUE),
+                  concentrationN2O = mean(concentrationN2O, na.rm=TRUE),
+                  gasCheckStandardQF = mean(gasCheckStandardQF, na.rm=TRUE)) %>%
+        ungroup() %>%
+        select(site_name=siteID, datetime, CH4=concentrationCH4, CO2=concentrationCO2, N2O=concentrationN2O, gasCheckStandardQF, medium=type)
 }
 
 #stage: PENDING (not yet needed. waiting on neon)
