@@ -378,42 +378,42 @@ make_tracker_skeleton <- function(retrieval_chunks){
 }
 
 #. handle_errors
-insert_site_skeleton <- function(tracker, prod, site, site_components){
+insert_site_skeleton <- function(tracker, prodname_ms, site, site_components){
 
-    tracker[[prod]][[site]] =
+    tracker[[prodname_ms]][[site]] =
         make_tracker_skeleton(retrieval_chunks=site_components)
 
     return(tracker)
 }
 
 #. handle_errors
-product_is_tracked <- function(tracker, prod){
-    bool = prod %in% names(tracker)
+product_is_tracked <- function(tracker, prodname_ms){
+    bool = prodname_ms %in% names(tracker)
     return(bool)
 }
 
 #. handle_errors
-site_is_tracked <- function(tracker, prod, site){
-    bool = site %in% names(tracker[[prod]])
+site_is_tracked <- function(tracker, prodname_ms, site){
+    bool = site %in% names(tracker[[prodname_ms]])
     return(bool)
 }
 
 #. handle_errors
-track_new_product <- function(tracker, prod){
+track_new_product <- function(tracker, prodname_ms){
 
-    if(prod %in% names(tracker)){
+    if(prodname_ms %in% names(tracker)){
         logwarn('This product is already being tracked.', logger=logger_module)
         return(tracker)
     }
 
-    tracker[[prod]] = list()
+    tracker[[prodname_ms]] = list()
     return(tracker)
 }
 
 #. handle_errors
-track_new_site_components <- function(tracker, prod, site, avail){
+track_new_site_components <- function(tracker, prodname_ms, site, avail){
 
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
 
     retrieval_tracker = avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
@@ -422,7 +422,7 @@ track_new_site_components <- function(tracker, prod, site, avail){
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prod]][[site]]$retrieve = retrieval_tracker
+    tracker[[prodname_ms]][[site]]$retrieve = retrieval_tracker
 
     return(tracker)
 }
@@ -492,7 +492,7 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 }
 
 #. handle_errors
-update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
+update_data_tracker_m <- function(network=domain, domain, tracker_name, prodname_ms,
     site, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
@@ -500,12 +500,12 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name, prod,
 
     tracker = get_data_tracker(network=network, domain=domain)
 
-    mt = tracker[[prod]][[site]]$munge
+    mt = tracker[[prodname_ms]][[site]]$munge
 
     mt$status = new_status
     mt$mtime = as.character(Sys.time())
 
-    tracker[[prod]][[site]]$munge = mt
+    tracker[[prodname_ms]][[site]]$munge = mt
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
@@ -573,9 +573,9 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 }
 
 #. handle_errors
-prodcode_from_ms_prodname <- function(ms_prodname){
+prodcode_from_prodname_ms <- function(prodname_ms){
 
-    prodcode = strsplit(ms_prodname, '_')[[1]][2]
+    prodcode = strsplit(prodname_ms, '_')[[1]][2]
 
     return(prodcode)
 }

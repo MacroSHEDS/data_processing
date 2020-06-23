@@ -173,7 +173,7 @@ process_0_ <- function(set_details, network, domain){
 
 #chem: STATUS=PENDING (how to handle flags after spread?)
 #. handle_errors
-process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     component){
     # site_name=site; component=in_comp
 
@@ -191,7 +191,7 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
     # table(v$vars)
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
 
@@ -260,12 +260,12 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
 
 #nitrate: STATUS=READY
 #. handle_errors
-process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     component){
-    # ms_prodname=prod; site_name=site; component=in_comp
+    # prodname_ms=prodname_ms; site_name=site; component=in_comp
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -305,11 +305,11 @@ process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
 
 #par: STATUS=READY
 #. handle_errors
-process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -346,11 +346,11 @@ process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
 
 #water temp: STATUS=READY
 #. handle_errors
-process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -388,10 +388,10 @@ process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
 
 #air pres: STATUS=PENDING (needed file: BP_30min.feather; needed column: staPresMean; flag column: staPresFinalQF)
 #. handle_errors
-process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     component){
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -429,11 +429,11 @@ process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
 
 #gases: STATUS=PENDING (started)
 #. handle_errors
-process_1_DP1.20097 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -461,18 +461,18 @@ process_1_DP1.20097 <- function(network, domain, ms_prodname, site_name,
 
 #stage: STATUS=PENDING (not yet needed. waiting on neon)
 #. handle_errors
-process_1_DP1.20016 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     component){
     NULL
 }
 
 #waterqual: STATUS=PENDING (started)
 #. handle_errors
-process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
