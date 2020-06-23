@@ -173,9 +173,9 @@ process_0_ <- function(set_details, network, domain){
 
 #chem: STATUS=PENDING (how to handle flags after spread?)
 #. handle_errors
-process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     component){
-    # ms_prodname=prod; site_name=site; component=in_comp
+    # site_name=site; component=in_comp
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
@@ -191,7 +191,7 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
     # table(v$vars)
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
 
@@ -242,7 +242,7 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
             analyteConcentration = mean(analyteConcentration, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>% #SPREAD LATER INSTEAD?
-        tidyr::spread(analyte, analyteConcentration) %>%
+        spread(analyte, analyteConcentration) %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(
@@ -260,12 +260,12 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
 
 #nitrate: STATUS=READY
 #. handle_errors
-process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     component){
-    # ms_prodname=prod; site_name=site; component=in_comp
+    # prodname_ms=prodname_ms; site_name=site; component=in_comp
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -279,7 +279,7 @@ process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$finalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -305,11 +305,11 @@ process_1_DP1.20033 <- function(network, domain, ms_prodname, site_name,
 
 #par: STATUS=READY
 #. handle_errors
-process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -324,7 +324,7 @@ process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$PARFinalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -346,11 +346,11 @@ process_1_DP1.20042 <- function(network, domain, ms_prodname, site_name,
 
 #water temp: STATUS=READY
 #. handle_errors
-process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -365,7 +365,7 @@ process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$finalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -386,12 +386,12 @@ process_1_DP1.20053 <- function(network, domain, ms_prodname, site_name,
     return(out_sub)
 }
 
-#air pres: STATUS=READY (needed file: BP_30min.feather; needed column: staPresMean; flag column: staPresFinalQF)
+#air pres: STATUS=READY 
 #. handle_errors
-process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     component){
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -427,54 +427,52 @@ process_1_DP1.00004 <- function(network, domain, ms_prodname, site_name,
     return(out_sub)
 }
 
-#gases: STATUS=READY (started) (data qf flags not ready)
+#gases: STATUS=READY 
 #. handle_errors
-process_1_DP1.20097 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
     
-    error1 <- read_feather(glue(rawdir, '/', "sdg_fieldSuperParent.feather")) %>%
-        select(uid, remarks)
-    error2 <- read_feather(glue(rawdir, '/', "sdg_fieldDataAir.feather")) %>%
-        select(uid, sdgAirDataQF, lowAirVolumeQF)
-    error3 <- read_feather(glue(rawdir, '/', "sdg_fieldDataProc.feather")) %>%
-        select(uid, sdgProcessDataQF, lowGasVolumeQF)
-    error4 <- read_feather(glue(rawdir, '/', "sdg_fieldData.feather")) %>%
-        select(uid, sdgFieldDataQF)
-    
-    error5 <- read_feather(glue(rawdir, '/', "NEON.Loecke_Lab_at_University_of_Kansas.sdg_externalLabSummaryData.feather")) %>%
-        select(uid, dataQF)
-    
-    errors <- full_join(error1, error2, by = "uid") %>%
-        full_join(error3, by = "uid") %>%
-        full_join(error4, by = "uid") %>%
-        full_join(error5, by = "uid")
-
     relevant_file1 = 'sdg_externalLabData.feather'
+    error_file1 = 'sdg_fieldDataProc.feather'
+    error_file2 = 'sdg_fieldDataAir.feather' 
+    
+    if(error_file1  %in% rawfiles) {
+        error1 <- read_feather(glue(rawdir, '/', "sdg_fieldDataAir.feather")) %>%
+            select(uid, sdgAirDataQF, lowAirVolumeQF) }
+    else{
+        return(generate_ms_exception('Relevant error file missing')) }
+    
+    if(error_file2  %in% rawfiles) {
+        error2 <- read_feather(glue(rawdir, '/', "sdg_fieldDataProc.feather")) %>%
+            select(uid, sdgProcessDataQF, lowGasVolumeQF)
+        errors <- full_join(error1, error2, by = "uid") }
+    else{
+        return(generate_ms_exception('Relevant error file missing'))}
+    
     if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(gasCheckStandardQF = 0)) #flagcolnames:
-        #in wpa_fieldSuperParent:fieldDataQF, sdg_fieldDataAir:sdgAirDataQF lowAirVolumeQF,
-        #sdg_fieldDataProc:sdgProcessDataQF lowGasVolumeQF, sdg_fieldData:sdgFieldDataQF, 
-        #sdg_externalLabData:sdgExternalLabDataQF, gasCheckStandardQF
+        rawd = read_feather(glue(rawdir, '/', relevant_file1)) %>%
+            left_join(errors, by = "uid")
+        out_sub = sourceflags_to_ms_status(rawd, flagstatus_mappings = list(
+            gasCheckStandardQF = c(0, NA),
+            lowGasVolumeQF = c(NA, 0),
+            sampleCondition = "OK", 
+            sdgProcessDataQF = c(NA, 0))) 
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-   # if(all(out_sub$gasCheckStandardQF == 1)){
-     #   return(generate_ms_exception('All records failed QA'))
-   # }
-    #Cant seem to locate information on horizontal position
-    #updown = determine_upstream_downstream(out_sub)
+    if(all(out_sub$ms_status == 1)){
+        return(generate_ms_exception('All records failed QA'))
+    }
 
-    #these are the columns we want:
-    # collectDate, concentrationCH4, concentrationCO2, concentrationCO2 = mean(concentrationCO2, na.rm=TRUE)
+    updown = determine_upstream_downstream(out_sub)
 
     out_sub = out_sub %>%
         mutate(
@@ -482,30 +480,39 @@ process_1_DP1.20097 <- function(network, domain, ms_prodname, site_name,
             datetime = lubridate::force_tz(collectDate, 'UTC'), #GMT -> UTC
         type =  grepl("AIR", out_sub$internalSampleName)) %>%
         mutate(type = ifelse(type == TRUE, "air", "water")) %>%
-        full_join(errors, by = "uid")
-        #group_by(datetime, siteID, sampleID, type) %>%
-        #summarize(concentrationCH4 = mean(concentrationCH4, na.rm=TRUE),
-        #          concentrationCO2 = mean(concentrationCO2, na.rm=TRUE),
-        #          concentrationN2O = mean(concentrationN2O, na.rm=TRUE)) %>%
-        #ungroup() %>%
-        #select(site_name=siteID, datetime, CH4=concentrationCH4, CO2=concentrationCO2, N2O=concentrationN2O, medium=type)
+        pivot_wider(values_from = c(concentrationCH4, concentrationCO2, concentrationN2O),
+            names_from = type) %>%
+        group_by(datetime, siteID) %>%
+        summarize(concentrationCH4_air = mean(concentrationCH4_air, na.rm=TRUE),
+            concentrationCH4_water = mean(concentrationCH4_water, na.rm=TRUE),
+            concentrationCO2_air = mean(concentrationCO2_air, na.rm=TRUE),
+            concentrationCO2_water = mean(concentrationCO2_water, na.rm=TRUE),
+            concentrationN2O_air = mean(concentrationN2O_air, na.rm=TRUE),
+            concentrationN2O_water = mean(concentrationN2O_water, na.rm=TRUE),
+            ms_status = mean(ms_status, na.rm = T)) %>%
+        ungroup() %>%
+        select(site_name=siteID, datetime, CH4_air=concentrationCH4_air, 
+            CH4_water=concentrationCH4_water, CO2_air=concentrationCO2_air,
+            CO2_water=concentrationCO2_water, N2O_air=concentrationN2O_air, 
+            N2O_water=concentrationN2O_water, ms_status) 
+    
     return(out_sub)
 }
 
 #stage: STATUS=PENDING (not yet needed. waiting on neon)
 #. handle_errors
-process_1_DP1.20016 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     component){
     NULL
 }
 
-#waterqual: STATUS=PENDING (started) (Flagging is not ready)
+#waterqual: STATUS=READY 
 #. handle_errors
-process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
+process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=ms_prodname, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -514,12 +521,13 @@ process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
      relevant_file1 = 'waq_instantaneous.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(specificConductanceFinalQF = 0, 
+        out_sub = sourceflags_to_ms_status(rawd, list(specificCondFinalQF = 0, 
             dissolvedOxygenFinalQF = 0, dissolvedOxygenSatFinalQF = 0, 
-            pHFinalQF = 0, specificConductanceExpUncert = 0, 
-            dissolvedOxygenExpUncert = 0, dissolvedOxygenSatExpUncert = 0, 
-            pHExpUncert = 0, chlorophyllExpUncert = 0, turbidityExpUncert  = 0, 
-            fDOMExpUncert = 0)) #flagcolnames?
+            pHFinalQF = 0, chlorophyllFinalQF = 0, turbidityFinalQF = 0, 
+            fDOMFinalQF = 0, specificCondFinalQFSciRvw = c(0, NA), 
+            dissolvedOxygenSatFinalQFSciRvw = c(0, NA), dissolvedOxygenFinalQFSciRvw = c(0, NA), 
+            pHFinalQFSciRvw = c(0, NA), chlorophyllFinalQFSciRvw = c(0, NA), 
+            turbidityFinalQFSciRvw  = c(0, NA), fDOMFinalQFSciRvw = c(0, NA))) 
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -533,19 +541,19 @@ process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
     updown = determine_upstream_downstream(out_sub)
 
     #THIS CAN HELP WITH COLUMN SELECTION (COLS WITH ASSOC FLAGS ARE USEFUL COLS)
-    cn = colnames(out_sub)
-    cn_base = na.omit(stringr::str_match(cn, '(.*?)FinalQF$')[,2])
-    cn_keep = c(cn_base,
-        paste0(cn_base, 'FinalQF'),
-        paste0(cn_base, 'ExpUncert'))
+    #cn = colnames(out_sub)
+    #cn_base = na.omit(stringr::str_match(cn, '(.*?)FinalQF$')[,2])
+    #cn_keep = c(cn_base,
+    #    paste0(cn_base, 'FinalQF'),
+    #    paste0(cn_base, 'ExpUncert'))
 
     #dissolvedOxygenSaturation doesn't follow the naming convention of the others.
     #rawCalibratedfDOM is additional.
     #still gotta do the usual time zone conversion, unit conversion, etc.
     out_sub = out_sub %>%
         mutate(site_name=paste0(site_name, updown)) %>%
-        select(site_name, startDateTime, #naming discrepancy
-            specificConductance, dissolvedOxygen, pH,chlorophyll, turbidity, fDOM) %>%
+        select(site_name, startDateTime, specificConductance, dissolvedOxygen,
+            pH,chlorophyll, turbidity, fDOM, ms_status) %>%
         mutate(specificConductance = specificConductance/1000000) %>%
         group_by(startDateTime, site_name) %>%
         summarise(specificConductance = mean(specificConductance, na.rm = TRUE),
@@ -553,10 +561,10 @@ process_1_DP1.20288 <- function(network, domain, ms_prodname, site_name,
             pH = mean(pH, na.rm = TRUE),
             chlorophyll = mean(chlorophyll, na.rm = TRUE),
             turbidity = mean(turbidity, na.rm = TRUE),
-            fDOM = mean(fDOM, na.rm = TRUE)) %>%
-        #need to add in ms_status
+            fDOM = mean(fDOM, na.rm = TRUE),
+            ms_status = mean(ms_status, na.rm = TRUE)) %>%
         select(site_name, datetime=startDateTime, spCond=specificConductance,
-            DO=dissolvedOxygen, CHL=chlorophyll, turbid=turbidity, FDOM=fDOM)
+            DO=dissolvedOxygen, CHL=chlorophyll, turbid=turbidity, FDOM=fDOM, ms_status)
 
     return(out_sub)
 }
