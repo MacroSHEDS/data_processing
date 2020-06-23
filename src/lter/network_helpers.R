@@ -4,12 +4,12 @@ ms_pasta_domain_refmap = list(
 )
 
 #. handle_errors
-get_latest_product_version <- function(prodname, domain, data_tracker){
+get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_ms_prodname(ms_prodname=prodname)
+    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
 
     vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
     newest_vsn = RCurl::getURLContent(vsn_request)
@@ -20,7 +20,7 @@ get_latest_product_version <- function(prodname, domain, data_tracker){
 }
 
 #. handle_errors
-get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker){
+get_avail_lter_product_sets <- function(prodname_ms, version, domain, data_tracker){
 
     #returns: tibble with url, site_name, component (aka element_name)
 
@@ -28,7 +28,7 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_ms_prodname(prodname)
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
@@ -48,20 +48,20 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
 }
 
 #. handle_errors
-populate_set_details <- function(tracker, prod, site, avail, latest_vsn){
+populate_set_details <- function(tracker, prodname_ms, site, avail, latest_vsn){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
-    prodcode = prodcode_from_ms_prodname(prod)
+    retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     retrieval_tracker = avail %>%
         mutate(
             avail_version = latest_vsn,
             prodcode_full = NA, #no such thing for lter. could simply omit
             prodcode_id = prodcode,
-            prodname_ms = prod) %>%
+            prodname_ms = prodname_ms) %>%
         full_join(retrieval_tracker, by='component') %>%
         # filter(status != 'blacklist' | is.na(status)) %>%
         mutate(
@@ -90,8 +90,8 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {site}, {prod}, {month}',
-            site=s$site_name, prod=s$prodname_ms, month=s$component)
+        msg = glue('Processing {site}, {prodname_ms}, {month}',
+            site=s$site_name, prodname_ms=s$prodname_ms, month=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))

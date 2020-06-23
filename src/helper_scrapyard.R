@@ -132,7 +132,7 @@ resolve_neon_naming_conflicts_OBSOLETE = function(out_sub_, replacements=NULL,
             'startDateTime') #not a mistake
     } else if(! 'startDateTime' %in% out_cols){
         msg = glue('Datetime column not found for site ',
-            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
+            '{site} ({prodname_ms}, {date}).', site=site, prodname_ms=prodcode, date=date)
         logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
@@ -165,7 +165,7 @@ determine_upstream_downstream_api_OBSOLETE = function(d_, data_inds_, set_detail
         updown_order = 1
     } else {
         msg = glue('Problem with upstream/downstream indicator for site ',
-            '{site} ({prod}, {date}).', site=site, prod=prodcode, date=date)
+            '{site} ({prodname_ms}, {date}).', site=site, prodname_ms=prodcode, date=date)
         logwarn(msg, logger=logger_module)
         return(generate_ms_err())
     }
