@@ -64,3 +64,6 @@
 "CHL","Chlorophyll","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
 "turbid","Turbidity","formazinNephelometricUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
 "FDOM", "Fluorescent dissolved organic matter","quinineSulfateUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"CO2","Carbon dioxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"CH4","Methane","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"N2O","Nitrous oxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
