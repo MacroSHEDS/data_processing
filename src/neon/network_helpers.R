@@ -9,8 +9,8 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {site}, {prod}, {month}',
-            site=s$site_name, prod=s$prodname_ms, month=s$component)
+        msg = glue('Processing {site}, {prodname_ms}, {month}',
+            site=s$site_name, prodname_ms=s$prodname_ms, month=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -63,14 +63,14 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
         #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site,
         #     sm=sitemonth))
 
-        prodcode = prodcode_from_ms_prodname(prodname_ms)
+        prodcode = prodcode_from_prodname_ms(prodname_ms)
 
         processing_func = get(paste0('process_1_', prodcode))
         in_comp = retrieval_log[k, 'component']
 
         out_comp = sw(do.call(processing_func,
             # args=list(set=comp, network=network, domain=domain,site_name=site)))
-            args=list(network=network, domain=domain, ms_prodname=prodname_ms,
+            args=list(network=network, domain=domain, prodname_ms=prodname_ms,
                 site_name=site, component=in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
@@ -96,7 +96,7 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
     sw(file.link(to=portal_site_file, from=site_file))
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prod=prodname_ms, site=site, new_status='ok')
+        tracker_name='held_data', prodname_ms=prodname_ms, site=site, new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
             p=prodname_ms, n=network, d=domain, s=site)
@@ -198,12 +198,12 @@ get_avail_neon_product_sets <- function(prodcode_full){
 }
 
 #. handle_errors
-populate_set_details <- function(tracker, prod, site, avail){
+populate_set_details <- function(tracker, prodname_ms, site, avail){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prod]][[site]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
 
     rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
     rgx_capt = str_match(avail$url, rgx)[, -1]
@@ -213,7 +213,7 @@ populate_set_details <- function(tracker, prod, site, avail){
             avail_version = as.numeric(rgx_capt[, 3]),
             prodcode_full = rgx_capt[, 1],
             prodcode_id = rgx_capt[, 2],
-            prodname_ms = prod) %>%
+            prodname_ms = prodname_ms) %>%
         full_join(retrieval_tracker, by='component') %>%
         # filter(status != 'blacklist' | is.na(status)) %>%
         mutate(
