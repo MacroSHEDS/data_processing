@@ -279,7 +279,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$finalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -324,7 +324,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$PARFinalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -350,7 +350,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -365,7 +365,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$finalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
@@ -406,7 +406,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$staPresFinalQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
     #Vertical position is 025 at ABBY site (maybe not an aquatic site?). Do not know what this code means about position
@@ -447,7 +447,7 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$gasCheckStandardQF == 1)){
+    if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
 
