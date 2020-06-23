@@ -175,7 +175,7 @@ process_0_ <- function(set_details, network, domain){
 #. handle_errors
 process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
     component){
-    # ms_prodname=prod; site_name=site; component=in_comp
+    # site_name=site; component=in_comp
 
     # #NEON has no record of what flags might be encountered here, so build some lists
     # # saveRDS(list(shipmentWarmQF=c(), externalLabDataQF=c(), sampleCondition=c(),
@@ -242,7 +242,7 @@ process_1_DP1.20093 <- function(network, domain, ms_prodname, site_name,
             analyteConcentration = mean(analyteConcentration, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>% #SPREAD LATER INSTEAD?
-        tidyr::spread(analyte, analyteConcentration) %>%
+        spread(analyte, analyteConcentration) %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(

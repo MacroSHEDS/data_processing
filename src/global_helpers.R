@@ -544,9 +544,9 @@ backup_tracker <- function(path){
 }
 
 #. handle_errors
-extract_retrieval_log <- function(tracker, prod, site, keep_status='ok'){
+extract_retrieval_log <- function(tracker, prodname_ms, site, keep_status='ok'){
 
-    retrieved_data = tracker[[prod]][[site]]$retrieve %>%
+    retrieved_data = tracker[[prodname_ms]][[site]]$retrieve %>%
         tibble::as_tibble() %>%
         filter(status == keep_status)
 

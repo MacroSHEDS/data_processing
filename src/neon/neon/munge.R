@@ -2,7 +2,7 @@
 prod_info = get_product_info(network=network,
     status_level='munge', get_statuses='ready')
 
-# i=2; j=1; k=20
+# i=2; j=1; k=2
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -18,8 +18,8 @@ for(i in 1:nrow(prod_info)){
 
     sites = names(held_data[[prodname_ms]])
 
-    # for(j in 1:length(sites)){
-    for(j in 2){
+    for(j in 1:length(sites)){
+    # for(j in 2){
 
         munge_msg = munge_neon_site(domain, sites[j], prodname_ms, held_data)
 
