@@ -4,12 +4,12 @@ ms_pasta_domain_refmap = list(
 )
 
 #. handle_errors
-get_latest_product_version <- function(prodname, domain, data_tracker){
+get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname)
+    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
 
     vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
     newest_vsn = RCurl::getURLContent(vsn_request)
@@ -20,7 +20,7 @@ get_latest_product_version <- function(prodname, domain, data_tracker){
 }
 
 #. handle_errors
-get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker){
+get_avail_lter_product_sets <- function(prodname_ms, version, domain, data_tracker){
 
     #returns: tibble with url, site_name, component (aka element_name)
 
@@ -28,7 +28,7 @@ get_avail_lter_product_sets <- function(prodname, version, domain, data_tracker)
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname)
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
