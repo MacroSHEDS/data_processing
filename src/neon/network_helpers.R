@@ -47,7 +47,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
 #. handle_errors
 munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
-    # site=sites[j]; tracker=held_data
+    site=sites[j]; tracker=held_data
 
     retrieval_log = extract_retrieval_log(held_data, prodname_ms, site)
 
@@ -81,14 +81,16 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 
     prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prodname_ms)
     dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-
     site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
     write_feather(out, site_file)
 
+    portal_prod_dir = glue('../portal/data/{d}/{p}',
+        d=domain, p=strsplit(prodname_ms, '_')[[1]][1])
+    dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
+    portal_site_file = glue('{pd}/{s}.feather', pd=portal_prod_dir, s=site)
+
     #if there's already a data file for this site-time-product in the portal
     #repo, remove it
-    portal_site_file = glue('../portal/data/{d}/{p}/{s}.feather',
-        d=domain, p=strsplit(prodname_ms, '_')[[1]][1], s=site)
     unlink(portal_site_file)
 
     #create a link to the new file from the portal repo
@@ -96,7 +98,8 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
     sw(file.link(to=portal_site_file, from=site_file))
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site=site, new_status='ok')
+        tracker_name='held_data', prodname_ms=prodname_ms, site=site,
+        new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
             p=prodname_ms, n=network, d=domain, s=site)
