@@ -14,11 +14,11 @@ for(i in 1:nrow(prod_info)){
         held_data = track_new_product(held_data, prodname_ms)
     }
 
-    latest_vsn = get_latest_product_version(prodname=prodname_ms,
+    latest_vsn = get_latest_product_version(prodname_ms=prodname_ms,
         domain=domain, data_tracker=held_data)
     if(is_ms_err(latest_vsn)) next
 
-    avail_sets = get_avail_lter_product_sets(prodname=prodname_ms,
+    avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
         version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
 
