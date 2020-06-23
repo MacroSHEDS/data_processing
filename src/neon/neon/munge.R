@@ -1,9 +1,10 @@
 prod_info = get_product_info(network=network,
-    status_level='munge', get_statuses='pending')
+    status_level='munge', get_statuses='ready')
 
+# look<-read_feather("data/neon/neon/munged/gases_DP1.20097/ARIK.feather")
+# vars <- read_feather("data/neon/neon/raw/gases_DP1.20097/ARIK/2016-08/variables_20097.feather")
 
-# i=8; j=1; k=20
-# i=2; j=1; k=20
+# i=3; j=1; k=20
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 

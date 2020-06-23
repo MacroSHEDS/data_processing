@@ -60,3 +60,7 @@
 "abs250","UV Absorbance at 250nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "abs280","UV Absorbance at 280nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "PAR","Photosynthetically Active Radiation","uM/m^2/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"DO","Dissolved Oxygen","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"CHL","Chlorophyll","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"turbid","Turbidity","formazinNephelometricUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"FDOM", "Fluorescent dissolved organic matter","quinineSulfateUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0

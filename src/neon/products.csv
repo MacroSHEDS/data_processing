@@ -1,5 +1,5 @@
 prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes
-DP1.20093,chemistry,grab,ready,ready,pending,NA
+DP1.20093,chemistry,grab,ready,pending,pending,NA
 DP1.20288,waterqual,sensor,ready,pending,pending,NA
 DP?.20267,gageht,grab,paused,pending,pending,verify DP#
 DP?.00133,zqcurve,other,paused,pending,pending,verify DP#
@@ -8,8 +8,8 @@ DP?.20048,Qflowmeter,grab,paused,pending,pending,verify DP#
 DP?.20193,Qsalt,grab,paused,pending,pending,verify DP#
 DP?.20008,speccond,sensor,unavailiable,unavailiable,unavailiable,verify DP#
 DP1.20033,nitrate,sensor,ready,ready,pending,NA
-DP1.00004,airpressure,sensor,ready,pending,pending,NA
-DP1.20097,gases,grab,ready,pending,pending,NA
+DP1.00004,airpressure,sensor,ready,ready,pending,NA
+DP1.20097,gases,grab,ready,ready,pending,NA
 DP1.20016,surfaceElev,sensor,paused,pending,pending,NA
 DP1.20053,watertemp,sensor,ready,ready,pending,NA
 DP1.20042,PAR,sensor,ready,ready,pending,NA
