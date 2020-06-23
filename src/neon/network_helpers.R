@@ -46,10 +46,10 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 }
 
 #. handle_errors
-munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
-    # domain='neon'; site=sites[j]; prod=prodname_ms; tracker=held_data
+munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
+    # site=sites[j]; tracker=held_data
 
-    retrieval_log = extract_retrieval_log(held_data, prod, site)
+    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -60,17 +60,17 @@ munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
 
         # sitemonth = retrieval_log[k, 'component']
         # comp = read_feather(glue('data/{n}/{d}/raw/',
-        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prod, s=site,
+        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site,
         #     sm=sitemonth))
 
-        prodcode = prodcode_from_ms_prodname(prod)
+        prodcode = prodcode_from_ms_prodname(prodname_ms)
 
         processing_func = get(paste0('process_1_', prodcode))
         in_comp = retrieval_log[k, 'component']
 
         out_comp = sw(do.call(processing_func,
             # args=list(set=comp, network=network, domain=domain,site_name=site)))
-            args=list(network=network, domain=domain, ms_prodname=prod,
+            args=list(network=network, domain=domain, ms_prodname=prodname_ms,
                 site_name=site, component=in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
@@ -79,7 +79,7 @@ munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
 
     }
 
-    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prod)
+    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prodname_ms)
     dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
 
     site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
@@ -88,7 +88,7 @@ munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
     #if there's already a data file for this site-time-product in the portal
     #repo, remove it
     portal_site_file = glue('../portal/data/{d}/{p}/{s}.feather',
-        d=domain, p=strsplit(prod, '_')[[1]][1], s=site)
+        d=domain, p=strsplit(prodname_ms, '_')[[1]][1], s=site)
     unlink(portal_site_file)
 
     #create a link to the new file from the portal repo
@@ -99,7 +99,7 @@ munge_neon_site <- function(domain, site, prod, tracker, silent=TRUE){
         tracker_name='held_data', prod=prodname_ms, site=site, new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
-            p=prod, n=network, d=domain, s=site)
+            p=prodname_ms, n=network, d=domain, s=site)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
