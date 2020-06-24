@@ -1,4 +1,4 @@
- suppressPackageStartupMessages({
+suppressPackageStartupMessages({
     library(httr)
     library(jsonlite)
     library(tidyr)
