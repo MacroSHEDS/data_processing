@@ -104,7 +104,7 @@ populate_set_details <- function(tracker, prodname_ms, site, avail, latest_vsn){
     return(retrieval_tracker)
 }
 
-sets=new_sets; i=1; tracker=held_data
+# sets=new_sets; i=1; tracker=held_data
 #. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
