@@ -21,9 +21,10 @@ for(i in 1:nrow(prod_info)){
     avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
         version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
-
+    
     #retrieve data by site; log acquisitions and revisions
     avail_sites = unique(avail_sets$site_name)
+
     # for(j in 1){
     for(j in 1:length(avail_sites)){
 
@@ -61,3 +62,4 @@ for(i in 1:nrow(prod_info)){
     loginfo('Retrieval complete for all sites and products',
         logger=logger_module)
 }
+

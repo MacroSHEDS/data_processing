@@ -1,7 +1,7 @@
 prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes,NA_status
-1,discharge,unknown,ready,ready,pending,NA,NA
-13,precipitation,unknown,pending,pending,pending,see also product 14,NA
-208,stream_precip_chemistry,unknown,pending,pending,pending,NA,NA
-5482,rain_gauge_locations,unknown,paused,pending,pending,NA,NA
-3239,stream_gauge_locations,unknown,paused,pending,pending,NA,NA
-100,rain_gauge_locations,unknown,paused,pending,pending,NA,NA
+1,discharge,unknown,ready,pending,pending,NA,NA
+13,precipitation,unknown,ready,pending,pending,see also product 14,NA
+208,stream_precip_chemistry,unknown,ready,pending,pending,NA,NA
+5482,rain_gauge_locations,unknown,pending,pending,pending,NA,NA
+3239,stream_gauge_locations,unknown,pending,pending,pending,NA,NA
+100,rain_gauge_locations,unknown,ready,pending,pending,NA,NA
