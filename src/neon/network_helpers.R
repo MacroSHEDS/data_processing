@@ -151,21 +151,10 @@ get_neon_product_specs <- function(code){
 
     prod_variant_inds = grep(code, prodlist)
 
-    if(length(prod_variant_inds) > 1){
-        #works for this code but maybe not others? not sure the best way to handle this situation
-
-        prod_info<- sm(read_csv("src/neon/products.csv")) %>%
-            filter(prodcode == code)
-
-        split <- unlist(strsplit(as.character(prod_info[1,"notes"]), split = " "))
-
-        keep <- as.character(grep(code, split, value=T))
-
         if(length(keep) != 1) {
             stop(glue('More than one product variant for this prodcode. Did neon ',
                       'make a v.002 data product?'))
         }
-    }
 
     newest_variant_ind = prodlist[prod_variant_inds] %>%
         substr(11, 13) %>%

@@ -36,14 +36,45 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain, data_track
     reqdata = strsplit(reqdata, '\n')[[1]]
     reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
-    element_ids = reqdata[,2]
+    element_ids = reqdata[,2] 
     dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
         '/', element_ids)
-
+    
+    names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
+    
+    #check to see if site information is included in lter informaiton
+    if(any(is.na(names))) {
+        #replace components names with _ rather than spaces 
+        if(length(str_split_fixed(reqdata[,3], " ", n = Inf)) > 1) {
+            
+            names_new <- replace_na(names, "sites_combined_or_missing")
+            
+            components <- str_replace_all(reqdata[,3], " ", "_")
+            
+            avail_sets = tibble(url=dl_urls,
+                site_name=names_new, 
+                component=components) 
+        } else {
+            
+            names_new <- replace_na(names, "sites_combined_or_missing")
+            avail_sets = tibble(url=dl_urls,
+                site_name=names_new, 
+                component=reqdata[,3]) 
+        }
+        #some names do not include file endings. Add .csv if no files path is there 
+        if(length(str_split_fixed(avail_sets$component[1], "[.]", n = Inf)) == 1) {
+            components <- paste0(components, ".csv")
+            
+            avail_sets = tibble(url=dl_urls,
+                site_name=names_new, 
+                component=components) 
+        }
+    }
+    if(all(!is.na(names))) {
     avail_sets = tibble(url=dl_urls,
-        site_name=str_match(reqdata[,3], '(.+?)_.*')[,2],
-        component=reqdata[,3])
-
+        site_name=names,
+        component=reqdata[,3]) 
+    }
     return(avail_sets)
 }
 
