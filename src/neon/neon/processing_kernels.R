@@ -247,7 +247,7 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(
             site_name = site_name,
-            collectDate = lubridate::force_tz(collectDate, 'UTC')) %>%
+            collectDate = force_tz(collectDate, 'UTC')) %>%
         rename_all(dplyr::recode, siteID='site_name', collectDate='datetime',
             conductivity='spCond', `NH4 - N`='NH4_N', `NO2 - N`='NO2_N',
             `NO3+NO2 - N`='NO3_NO2_N', `Ortho - P`='PO4_P',
@@ -289,7 +289,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC'), #GMT -> UTC
+            startDateTime = force_tz(startDateTime, 'UTC'), #GMT -> UTC
             surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
         # filter(finalQF == 0) %>% #remove flagged records
         group_by(startDateTime, site_name) %>%
@@ -333,7 +333,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
+            startDateTime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         group_by(startDateTime, site_name) %>%
         summarize(
             PARMean = mean(PARMean, na.rm=TRUE),
@@ -374,7 +374,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
+            startDateTime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         group_by(startDateTime, site_name) %>%
         summarize(
             surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE),
@@ -415,7 +415,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     out_sub = out_sub %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = lubridate::force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
+            startDateTime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         group_by(startDateTime, site_name) %>%
         summarize(
             staPresMean = mean(staPresMean, na.rm=TRUE),
