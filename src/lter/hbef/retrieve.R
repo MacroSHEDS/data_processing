@@ -1,6 +1,6 @@
-
 prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
+    # status_level='retrieve', get_statuses='pending')
 
 # i=1; j=1
 for(i in 1:nrow(prod_info)){
@@ -24,9 +24,9 @@ for(i in 1:nrow(prod_info)){
     
     #retrieve data by site; log acquisitions and revisions
     avail_sites = unique(avail_sets$site_name)
-    
-    #for(j in 1){
-     for(j in 1:length(avail_sites)){
+
+    # for(j in 1){
+    for(j in 1:length(avail_sites)){
 
         curr_site = avail_sites[j]
         avail_site_sets = avail_sets[avail_sets$site_name == curr_site, ,
@@ -59,5 +59,7 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
+    loginfo('Retrieval complete for all sites and products',
+        logger=logger_module)
 }
 

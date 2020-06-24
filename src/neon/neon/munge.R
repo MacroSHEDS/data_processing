@@ -30,5 +30,7 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
+    loginfo('Munging complete for all sites and products',
+        logger=logger_module)
 }
  

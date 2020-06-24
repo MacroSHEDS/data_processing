@@ -140,4 +140,3 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
         }
     }
 }
-
