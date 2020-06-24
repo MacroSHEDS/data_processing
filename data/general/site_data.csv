@@ -1,13 +1,13 @@
 "domain","pretty_domain","network","pretty_network","stream","site_name","full_name","site_type","latitude","longitude","ws_area_ha","in_workflow","notes"
-"hbef","HBEF","lter","LTER","Stream 1","W1","Watershed 1","stream_gauge",43.952034,-71.726501,11.8,1,
-"hbef","HBEF","lter","LTER","Stream 2","W2","Watershed 2","stream_gauge",43.953358,-71.724174,15.6,1,
-"hbef","HBEF","lter","LTER","Stream 3","W3","Watershed 3","stream_gauge",43.954875,-71.722816,42.4,1,
-"hbef","HBEF","lter","LTER","Stream 4","W4","Watershed 4","stream_gauge",43.950176,-71.725792,36.1,1,
-"hbef","HBEF","lter","LTER","Stream 5","W5","Watershed 5","stream_gauge",43.948845,-71.731918,21.9,1,
-"hbef","HBEF","lter","LTER","Stream 6","W6","Watershed 6","stream_gauge",43.94994,-71.735641,13.2,1,
-"hbef","HBEF","lter","LTER","Stream 7","W7","Watershed 7","stream_gauge",43.927509,-71.767075,77.38,1,
-"hbef","HBEF","lter","LTER","Stream 8","W8","Watershed 8","stream_gauge",43.929436,-71.759521,59.4,1,
-"hbef","HBEF","lter","LTER","Stream 9","W9","Watershed 9","stream_gauge",43.926014,-71.747195,68.4,1,
+"hbef","HBEF","lter","LTER","Stream 1","w1","Watershed 1","stream_gauge",43.952034,-71.726501,11.8,1,
+"hbef","HBEF","lter","LTER","Stream 2","w2","Watershed 2","stream_gauge",43.953358,-71.724174,15.6,1,
+"hbef","HBEF","lter","LTER","Stream 3","w3","Watershed 3","stream_gauge",43.954875,-71.722816,42.4,1,
+"hbef","HBEF","lter","LTER","Stream 4","w4","Watershed 4","stream_gauge",43.950176,-71.725792,36.1,1,
+"hbef","HBEF","lter","LTER","Stream 5","w5","Watershed 5","stream_gauge",43.948845,-71.731918,21.9,1,
+"hbef","HBEF","lter","LTER","Stream 6","w6","Watershed 6","stream_gauge",43.94994,-71.735641,13.2,1,
+"hbef","HBEF","lter","LTER","Stream 7","w7","Watershed 7","stream_gauge",43.927509,-71.767075,77.38,1,
+"hbef","HBEF","lter","LTER","Stream 8","w8","Watershed 8","stream_gauge",43.929436,-71.759521,59.4,1,
+"hbef","HBEF","lter","LTER","Stream 9","w9","Watershed 9","stream_gauge",43.926014,-71.747195,68.4,1,
 "hbef","HBEF","lter","LTER",,"RG1","Rain Gauge 1","rain_gauge",43.952120788912,-71.7248377271807,,1,"converted shapefile from lter using st_transform"
 "hbef","HBEF","lter","LTER",,"RG11","Rain Gauge 11","rain_gauge",43.9502266292999,-71.7346124400276,,1,"converted shapefile from lter using st_transform"
 "hbef","HBEF","lter","LTER",,"RG23","Rain Gauge 23","rain_gauge",43.9272011309167,-71.746926195465,,1,"converted shapefile from lter using st_transform"

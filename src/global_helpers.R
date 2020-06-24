@@ -183,6 +183,8 @@ export_to_global <- function(from_env, exclude=NULL){
     for(i in 1:length(varnames)){
         assign(varnames[i], vars[[i]], .GlobalEnv)
     }
+
+    return()
 }
 
 #. handle_errors
@@ -220,6 +222,8 @@ get_all_local_helpers <- function(network=domain, domain){
 
     export_to_global(from_env=environment(),
         exclude=c('network', 'domain', 'thisenv'))
+
+    return()
 }
 
 #. handle_errors
@@ -259,6 +263,8 @@ clear_from_mem <- function(..., clearlist){
 
     rm(list=clearlist, envir=.GlobalEnv)
     gc()
+
+    return()
 }
 
 #. handle_errors
@@ -268,6 +274,8 @@ retain_ms_globals <- function(retain_vars){
     clutter = all_globals[! all_globals %in% retain_vars]
 
     clear_from_mem(clearlist=clutter)
+
+    return()
 }
 
 generate_ms_err = function(text=1){
@@ -530,7 +538,7 @@ backup_tracker <- function(path){
         recursive=TRUE, showWarnings=FALSE)
 
     tstamp = Sys.time() %>%
-        lubridate::with_tz(tzone='UTC') %>%
+        with_tz(tzone='UTC') %>%
         format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
 
     newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
@@ -585,6 +593,7 @@ prodcode_from_prodname_ms <- function(prodname_ms){
 #. handle_errors
 ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
+    return()
 }
 
 #. handle_errors
@@ -632,6 +641,7 @@ serialize_list_to_dir <- function(l, dest){
         }
     }
 
+    return()
 }
 
 #. handle_errors
