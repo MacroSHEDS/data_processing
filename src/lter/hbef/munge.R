@@ -19,7 +19,7 @@ for(i in 1:nrow(prod_info)){
 
     for(j in 1:length(sites)){
 
-        munge_msg = munge_neon_site(domain, sites[j], prodname_ms, held_data)
+        munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
 
         if(is_ms_err(munge_msg)){
             update_data_tracker_m(network=network, domain=domain,
@@ -29,4 +29,6 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
+    loginfo('Munging complete for all sites and products',
+        logger=logger_module)
 }

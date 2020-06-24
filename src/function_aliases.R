@@ -34,3 +34,6 @@ str_match = stringr::str_match
 loginfo = logging::loginfo
 logwarn = logging::logwarn
 logerror = logging::logerror
+with_tz = lubridate::with_tz
+force_tz = lubridate::force_tz
+as_datetime = lubridate::as_datetime
