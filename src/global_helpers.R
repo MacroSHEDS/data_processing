@@ -576,7 +576,8 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 prodcode_from_prodname_ms <- function(prodname_ms){
 
     name_length = length(strsplit(prodname_ms, '_')[[1]])
-    prodcode = strsplit(prodname_ms, '_')[[1]][max(name_length)]
+    prodcode = strsplit(prodname_ms, '_')[[1]][2:name_length]
+    prodcode <- paste(prodcode,collapse="_")
 
     return(prodcode)
 }
@@ -749,3 +750,55 @@ update_product_statuses <- function(network, domain){
 
     return()
 }
+
+unit_converter <- function(val, input_unit, output_unit) {
+    
+    units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
+        convert_factor = c(0.000000001, 0.000001, 0.001, 0.01, 0.1, 100, 
+            1000, 1000000))
+
+    old_fraction <- as.vector(str_split_fixed(input_unit, "/", n = Inf))
+    
+    old_top <- as.vector(str_split_fixed(old_fraction[1], "", n = Inf))
+    
+    if(length(old_top) == 2) {
+        old_top_unit <- str_split_fixed(old_top, "", 2)[1]
+        
+        old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2]) 
+        
+    }else {
+        old_top_conver <- 1
+    }
+    
+    if(length(old_fraction) == 2) {
+        old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
+        
+        old_bottom_conver <- ifelse(length(old_bottom) == 1, 1, 
+            as.numeric(filter(units, prefix == old_bottom[1])[,2]))
+    } else{old_bottom_conver <- 1}
+    
+    new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
+    
+    new_top <- as.vector(str_split_fixed(new_fraction[1], "", n = Inf))
+    
+    if(length(new_top) == 2) {
+        new_top_unit <- str_split_fixed(new_top, "", 2)[1]
+        
+        new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2]) 
+        
+    }else {
+        new_top_conver <- 1
+    }
+    
+    if(length(new_fraction) == 2) {
+        new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
+        
+        new_bottom_conver <- ifelse(length(new_bottom) == 1, 1, 
+            as.numeric(filter(units, prefix == new_bottom[1])[,2]))
+    } else{new_bottom_conver <- 1}
+    
+        new_val <- val*(old_top_conver/new_top_conver)
+        
+        new_val <- new_val*(old_bottom_conver/new_bottom_conver)
+
+    return(new_val) }
