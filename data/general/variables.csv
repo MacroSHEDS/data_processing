@@ -1,62 +1,62 @@
-"variable_code","variable_name","unit","method","variable_type","variable_subtype","R_display","valence","flux_convertible"
-"Al_ICP","Aluminum ICP","mg/L","UNKNOWN","grab","Cations","expression(Al^'+3')",3,1
-"OMAl","Aluminum OM","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",3,1
-"TMAl","Aluminum TM","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",3,1
-"NH4","Ammonium","mg/L","UNKNOWN","grab","Cations","expression(NH^'+4')",4,1
-"Ca","Calcium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Ca^'+2')",2,1
-"Cl","Chloride","mg/L","ion chromatography","grab","Anions","expression(Cl^'-')",1,1
-"F","Fluorine","mg/L","UNKNOWN","grab","Anions","expression(F^'-')",1,1
-"Fe","Iron","mg/L","UNKNOWN","grab","Cations","expression(UNKNOWN)",2.5,1
-"Mg","Magnesium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Mg^'+2')",2,1
-"Mn","Manganese","mg/L","UNKNOWN","grab","Cations","expression(UNKNOWN)",3,1
-"NO3","Nitrate","mg/L","UNKNOWN","grab","Anions","expression(NO[3]^'-')",1,1
-"PO4","Phosphate","mg/L","UNKNOWN","grab","Anions","expression(PO[4]^'-3')",3,1
-"K","Potassium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(K^'+')",1,1
-"Na","Sodium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Na^'+')",1,1
-"SO4","Sulfate","mg/L","UNKNOWN","grab","Anions","expression(SO[4]^'-2')",2,1
-"anionCharge","TOTAL Anion Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"cationCharge","TOTAL Cation Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"pH","pH","unitless","glass electrode","grab","Other","expression(UNKNOWN)",,0
-"pHmetrohm","pH Metrohm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"DOC","Dissolved Organic Carbon","mg/L","combustion","grab","Other","expression(UNKNOWN)",1,1
-"TDN","Total Dissolved Nitrogen","mg/L","persulfate digestion -  calorimetric analysis","grab","Other","expression(UNKNOWN)",1,1
-"DON","Dissolved Organic Nitrogen","mg/L","derived","grab","Other","expression(UNKNOWN)",1,1
-"DIC","Dissolved Inorganic Carbon","M/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"SiO2","Silica","UNKNOWN","molybdenum blue","grab","Other","expression(SiO[2])",1,1
-"ANC960","Acid Neutralizing Capacity 960","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"ANCMet","Acid Neutralizing Capacity Met","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"spCond","Specific Conductivity","S/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"theoryCond","Theoretical Conductivity","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"temp","Water Temperature","degrees C","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"ionBalance","Ion Balance","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"precipCatch","Catchment Precipitation","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"flowGageHt","Discharge","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"alk","Alkalinity","mg/L","electrometric titration to pH 4.5","grab","Other","expression(UNKNOWN)",,1
-"suspSed","Suspended Sediment","mg/L","gravimetric","grab","Other","expression(UNKNOWN)",,1
-"NH4_N","Ammonium-N","mg/L","phenate method","grab","Cations","expression(UNKNOWN)",4,1
-"NO3_N","Nitrate-N","mg/L","cadmium reduction","grab","Anions","expression(UNKNOWN)",1,1
-"PO4_P","Phosphate-P","mg/L","ascorbic acid","grab","Anions","expression(UNKNOWN)",3,1
-"SO4_S","Sulfate-S","mg/L","ion chromatography","grab","Anions","expression(UNKNOWN)",2,1
-"TDP","Total Dissolved Phosphorus","mg/L","persulfate digestion - ascorbic acid finish","grab","Other","expression(UNKNOWN)",1,1
-"TKN","Total Kjeldahl Nitrogen","mg/L","Kjeldahl digestion - nessler finish","grab","Other","expression(UNKNOWN)",1,1
-"UTKN","Unfilt. Total Kjeldahl Nitrogen","mg/L","Kjeldahl digestion - nessler finish","grab","Other","expression(UNKNOWN)",1,1
-"UTN","Unfiltered Total Nitrogen","mg/L","persulfate digestion - calorimetric analysis","grab","Other","expression(UNKNOWN)",1,1
-"UTP","Unfiltered Total Phosphorus","mg/L","persulfate digestion - ascorbic acid finish","grab","Other","expression(UNKNOWN)",1,1
-"ANC","Acid Neutralizing Capacity","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"Br","Bromide","mg/L","UNKNOWN","grab","Anions","expression(Br^'-')",1,1
-"CO3","Carbonate","mg/L","UNKNOWN","grab","Anions","expression(CO[3]^'-2')",2,1
-"DIC","Dissolved Inorganic Carbon","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"HCO3","Bicarbonate","mg/L","UNKNOWN","grab","Anions","expression(HCO[3]^'-')",3,1
-"NO2_N","Nitrite-N","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"NO3_NO2_N","Nitrate-N and nitrite-N","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"Si","Silicon","mg/L","UNKNOWN","grab","Anions","expression(Si^'-4')",4,1
-"TDS","Total Dissolved Solids","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"TN","Total Nitrogen","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"TOC","Total Organic Carbon","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"TP","Total Phosphorus","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
-"TPC","Total Particulate Carbon","mg","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"TPN","Total Particulate Nitrogen","mg","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"TSS","Total Suspended Solids","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"abs250","UV Absorbance at 250nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"abs280","UV Absorbance at 280nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"PAR","Photosynthetically Active Radiation","uM/m^2/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"variable_code","variable_name","unit","method","variable_type","variable_subtype","R_display","valence","flux_convertible","notes"
+"Al_ICP","Aluminum ICP","mg/L","UNKNOWN","grab","Cations","expression(Al^'+3')",3,1,
+"OMAl","Aluminum OM","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",3,1,
+"TMAl","Aluminum TM","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",3,1,
+"NH4","Ammonium","mg/L","UNKNOWN","grab","Cations","expression(NH^'+4')",4,1,"should always be converted to NH4-N. remove this row once hbef munging complete"
+"Ca","Calcium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Ca^'+2')",2,1,
+"Cl","Chloride","mg/L","ion chromatography","grab","Anions","expression(Cl^'-')",1,1,
+"F","Fluorine","mg/L","UNKNOWN","grab","Anions","expression(F^'-')",1,1,
+"Fe","Iron","mg/L","UNKNOWN","grab","Cations","expression(UNKNOWN)",2.5,1,
+"Mg","Magnesium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Mg^'+2')",2,1,
+"Mn","Manganese","mg/L","UNKNOWN","grab","Cations","expression(UNKNOWN)",3,1,
+"NO3","Nitrate","mg/L","UNKNOWN","grab","Anions","expression(NO[3]^'-')",1,1,"should always be converted to NO3-N. remove this row once hbef munging complete"
+"PO4","Phosphate","mg/L","UNKNOWN","grab","Anions","expression(PO[4]^'-3')",3,1,"should always be converted to PO4-P. remove this row once hbef munging complete"
+"K","Potassium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(K^'+')",1,1,
+"Na","Sodium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Na^'+')",1,1,
+"SO4","Sulfate","mg/L","UNKNOWN","grab","Anions","expression(SO[4]^'-2')",2,1,
+"anionCharge","TOTAL Anion Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"cationCharge","TOTAL Cation Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"pH","pH","unitless","glass electrode","grab","Other","expression(UNKNOWN)",,0,
+"pHmetrohm","pH Metrohm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"DOC","Dissolved Organic Carbon","mg/L","combustion","grab","Other","expression(UNKNOWN)",1,1,
+"TDN","Total Dissolved Nitrogen","mg/L","persulfate digestion -  calorimetric analysis","grab","Other","expression(UNKNOWN)",1,1,
+"DON","Dissolved Organic Nitrogen","mg/L","derived","grab","Other","expression(UNKNOWN)",1,1,
+"DIC","Dissolved Inorganic Carbon","M/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"SiO2","Silica","UNKNOWN","molybdenum blue","grab","Other","expression(SiO[2])",1,1,
+"ANC960","Acid Neutralizing Capacity 960","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"ANCMet","Acid Neutralizing Capacity Met","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"spCond","Specific Conductivity","S/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"theoryCond","Theoretical Conductivity","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"temp","Water Temperature","degrees C","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"ionBalance","Ion Balance","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"precip","Catchment Precipitation","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"discharge","Discharge","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"alk","Alkalinity","mg/L","electrometric titration to pH 4.5","grab","Other","expression(UNKNOWN)",,1,
+"suspSed","Suspended Sediment","mg/L","gravimetric","grab","Other","expression(UNKNOWN)",,1,
+"NH4_N","Ammonium-N","mg/L","phenate method","grab","Cations","expression(UNKNOWN)",4,1,
+"NO3_N","Nitrate-N","mg/L","cadmium reduction","grab","Anions","expression(UNKNOWN)",1,1,
+"PO4_P","Phosphate-P","mg/L","ascorbic acid","grab","Anions","expression(UNKNOWN)",3,1,
+"SO4_S","Sulfate-S","mg/L","ion chromatography","grab","Anions","expression(UNKNOWN)",2,1,
+"TDP","Total Dissolved Phosphorus","mg/L","persulfate digestion - ascorbic acid finish","grab","Other","expression(UNKNOWN)",1,1,
+"TKN","Total Kjeldahl Nitrogen","mg/L","Kjeldahl digestion - nessler finish","grab","Other","expression(UNKNOWN)",1,1,
+"UTKN","Unfilt. Total Kjeldahl Nitrogen","mg/L","Kjeldahl digestion - nessler finish","grab","Other","expression(UNKNOWN)",1,1,
+"UTN","Unfiltered Total Nitrogen","mg/L","persulfate digestion - calorimetric analysis","grab","Other","expression(UNKNOWN)",1,1,
+"UTP","Unfiltered Total Phosphorus","mg/L","persulfate digestion - ascorbic acid finish","grab","Other","expression(UNKNOWN)",1,1,
+"ANC","Acid Neutralizing Capacity","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"Br","Bromide","mg/L","UNKNOWN","grab","Anions","expression(Br^'-')",1,1,
+"CO3","Carbonate","mg/L","UNKNOWN","grab","Anions","expression(CO[3]^'-2')",2,1,
+"DIC","Dissolved Inorganic Carbon","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"HCO3","Bicarbonate","mg/L","UNKNOWN","grab","Anions","expression(HCO[3]^'-')",3,1,
+"NO2_N","Nitrite-N","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"NO3_NO2_N","Nitrate-N and nitrite-N","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"Si","Silicon","mg/L","UNKNOWN","grab","Anions","expression(Si^'-4')",4,1,
+"TDS","Total Dissolved Solids","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"TN","Total Nitrogen","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"TOC","Total Organic Carbon","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"TP","Total Phosphorus","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"TPC","Total Particulate Carbon","mg","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"TPN","Total Particulate Nitrogen","mg","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"TSS","Total Suspended Solids","mg/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"abs250","UV Absorbance at 250nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"abs280","UV Absorbance at 280nm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
+"PAR","Photosynthetically Active Radiation","uM/m^2/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,
