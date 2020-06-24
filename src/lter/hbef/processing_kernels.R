@@ -10,7 +10,7 @@ process_0_1 <- function(set_details, network, domain){
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
-    
+
 }
 
 #precip: STATUS=READY
@@ -96,9 +96,12 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
         mutate(
             datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
             # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
-            site_name = paste0('w', site_name)) %>%
+            site_name = paste0('w', site_name),
+            ms_status = 0) %>%
         group_by(datetime, site_name) %>%
-        summarize(discharge = mean(discharge, na.rm=TRUE)) %>%
+        summarize(
+            discharge = mean(discharge, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup()
 
     return(d)
