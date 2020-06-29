@@ -1,7 +1,6 @@
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
-# i=1; j=1; k=1
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -18,8 +17,14 @@ for(i in 1:nrow(prod_info)){
     sites = names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
-
-        munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
+        
+        if(prodname_ms %in% c("precipitation_13", "stream_precip_chemistry_208")) {
+            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms, held_data, 
+                prodcode=prod_info$prodcode[i])
+        } else 
+        {
+            munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
+        }
 
         if(is_ms_err(munge_msg)){
             update_data_tracker_m(network=network, domain=domain,
