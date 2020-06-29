@@ -4,10 +4,10 @@ prod_info = get_product_info(network=network, domain=domain,
 
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
-    
+
     prodcode <- prod_info$prodcode[i]
 
-    prodname_ms = glue(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -22,7 +22,7 @@ for(i in 1:nrow(prod_info)){
     avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
         version=latest_vsn, domain=domain, data_tracker=held_data, prodcode=prodcode)
     if(is_ms_err(avail_sets)) next
-    
+
     #retrieve data by site; log acquisitions and revisions
     avail_sites = unique(avail_sets$site_name)
 
