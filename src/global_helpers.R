@@ -807,8 +807,8 @@ unit_converter <- function(val, input_unit, output_unit) {
             as.numeric(filter(units, prefix == new_bottom[1])[,2]))
     } else{new_bottom_conver <- 1}
     
-        new_val <- val*(old_top_conver/new_top_conver)
+        new_val <- val*old_top_conver*new_top_conver
         
-        new_val <- new_val*(old_bottom_conver/new_bottom_conver)
+        new_val <- new_val/(old_bottom_conver*new_bottom_conver)
 
     return(new_val) }
