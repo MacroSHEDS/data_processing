@@ -2,9 +2,10 @@ prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
     # status_level='retrieve', get_statuses='pending')
 
-# i=1; j=1
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
+    
+    prodcode <- prod_info$prodcode[i]
 
     prodname_ms = glue(prod_info$prodname[i], '_', prod_info$prodcode[i])
 
@@ -15,11 +16,11 @@ for(i in 1:nrow(prod_info)){
     }
 
     latest_vsn = get_latest_product_version(prodname_ms=prodname_ms,
-        domain=domain, data_tracker=held_data)
+        domain=domain, data_tracker=held_data, prodcode=prodcode)
     if(is_ms_err(latest_vsn)) next
 
     avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
-        version=latest_vsn, domain=domain, data_tracker=held_data)
+        version=latest_vsn, domain=domain, data_tracker=held_data, prodcode=prodcode)
     if(is_ms_err(avail_sets)) next
     
     #retrieve data by site; log acquisitions and revisions
@@ -42,7 +43,7 @@ for(i in 1:nrow(prod_info)){
         if(is_ms_err(held_data)) next
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            curr_site, avail_site_sets, latest_vsn)
+            curr_site, avail_site_sets, latest_vsn, prodcode)
         if(is_ms_err(retrieval_details)) next
 
         new_sets = filter_unneeded_sets(retrieval_details)
