@@ -4,7 +4,7 @@ prod_info = get_product_info(network=network, domain=domain,
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
-    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -17,12 +17,11 @@ for(i in 1:nrow(prod_info)){
     sites = names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
-        
-        if(prodname_ms %in% c("precipitation_13", "stream_precip_chemistry_208")) {
-            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms, held_data, 
+
+        if(prodname_ms %in% c('precipitation_13', 'stream_precip_chemistry_208')) {
+            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms, held_data,
                 prodcode=prod_info$prodcode[i])
-        } else 
-        {
+        } else {
             munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
         }
 
