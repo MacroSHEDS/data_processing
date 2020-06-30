@@ -2,12 +2,11 @@ prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
     # status_level='retrieve', get_statuses='pending')
 
+# i=3
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
-    
-    prodcode <- prod_info$prodcode[i]
 
-    prodname_ms = glue(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -16,16 +15,19 @@ for(i in 1:nrow(prod_info)){
     }
 
     latest_vsn = get_latest_product_version(prodname_ms=prodname_ms,
-        domain=domain, data_tracker=held_data, prodcode=prodcode)
+        domain=domain, data_tracker=held_data)
     if(is_ms_err(latest_vsn)) next
 
     avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
-        version=latest_vsn, domain=domain, data_tracker=held_data, prodcode=prodcode)
+        version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
-    
-    #retrieve data by site; log acquisitions and revisions
+
+    if(prodname_ms %in% c('precipitation__13', 'stream_precip_chemistry__208')){
+        avail_sets$site_name <- 'sitename_NA'
+    }
     avail_sites = unique(avail_sets$site_name)
 
+    # j=1
     # for(j in 1){
     for(j in 1:length(avail_sites)){
 
@@ -43,7 +45,7 @@ for(i in 1:nrow(prod_info)){
         if(is_ms_err(held_data)) next
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            curr_site, avail_site_sets, latest_vsn, prodcode)
+            curr_site, avail_site_sets, latest_vsn)
         if(is_ms_err(retrieval_details)) next
 
         new_sets = filter_unneeded_sets(retrieval_details)
