@@ -5,7 +5,7 @@ prod_info = get_product_info(network=network,
 for(i in 1:nrow(prod_info)){
 # for(i in 4){
 
-    prodname_ms = paste0(prod_info$prodname[i], '_', prod_info$prodcode[i])
+    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
     prod_specs = get_neon_product_specs(prod_info$prodcode[i])
     if(is_ms_err(prod_specs)) next
 
