@@ -57,7 +57,8 @@ munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 }
 
 #. handle_errors
-munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode, silent=TRUE){
+munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode,
+    silent=TRUE){
     #site=sites[1]; tracker=held_data; k=1
 
     retrieval_log = extract_retrieval_log(held_data, prodname_ms, site) %>%
@@ -69,6 +70,8 @@ munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode, si
 
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
+
+        prodcode = prodcode_from_prodname_ms(prodname_ms)
 
         processing_func = get(paste0('process_1_', prodcode))
         in_comp = pull(retrieval_log[k, 'component'])
