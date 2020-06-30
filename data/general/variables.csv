@@ -14,8 +14,8 @@
 "K","Potassium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(K^'+')",1,1
 "Na","Sodium","mg/L","flame atomic absorption spectroscopy","grab","Cations","expression(Na^'+')",1,1
 "SO4","Sulfate","mg/L","UNKNOWN","grab","Anions","expression(SO[4]^'-2')",2,1
-"anionCharge","TOTAL Anion Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"cationCharge","TOTAL Cation Charge","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"anionCharge","TOTAL Anion Charge","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"cationCharge","TOTAL Cation Charge","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "pH","pH","unitless","glass electrode","grab","Other","expression(UNKNOWN)",,0
 "pHmetrohm","pH Metrohm","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "DOC","Dissolved Organic Carbon","mg/L","combustion","grab","Other","expression(UNKNOWN)",1,1
@@ -23,12 +23,12 @@
 "DON","Dissolved Organic Nitrogen","mg/L","derived","grab","Other","expression(UNKNOWN)",1,1
 "DIC","Dissolved Inorganic Carbon","M/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1
 "SiO2","Silica","UNKNOWN","molybdenum blue","grab","Other","expression(SiO[2])",1,1
-"ANC960","Acid Neutralizing Capacity 960","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"ANCMet","Acid Neutralizing Capacity Met","eq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"spCond","Specific Conductivity","S/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"theoryCond","Theoretical Conductivity","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"ANC960","Acid Neutralizing Capacity 960","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"ANCMet","Acid Neutralizing Capacity Met","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"spCond","Specific Conductivity","uS/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"theoryCond","Theoretical Conductivity","uS/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "temp","Water Temperature","degrees C","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"ionBalance","Ion Balance","unitless","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"ionBalance","Ion Balance","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "precipCatch","Catchment Precipitation","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "flowGageHt","Discharge","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "alk","Alkalinity","mg/L","electrometric titration to pH 4.5","grab","Other","expression(UNKNOWN)",,1
@@ -63,7 +63,8 @@
 "DO","Dissolved Oxygen","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
 "CHL","Chlorophyll","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
 "turbid","Turbidity","formazinNephelometricUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
-"FDOM", "Fluorescent dissolved organic matter","quinineSulfateUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
-"CO2","Carbon dioxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"FDOM","Fluorescent Dissolved Organic Matter","quinineSulfateUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"CO2","Carbon Dioxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "CH4","Methane","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"N2O","Nitrous oxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"N2O","Nitrous Oxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"ionError","Ion Error","%","UNKNOWN","grab","Other","expression(UNKNOWN)",,0

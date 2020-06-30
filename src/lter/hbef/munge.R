@@ -18,9 +18,9 @@ for(i in 1:nrow(prod_info)){
 
     for(j in 1:length(sites)){
 
-        if(prodname_ms %in% c('precipitation_13', 'stream_precip_chemistry_208')) {
-            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms, held_data,
-                prodcode=prod_info$prodcode[i])
+        if(prodname_ms %in% c('precipitation__13', 'stream_precip_chemistry__208')){
+            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms,
+                held_data)
         } else {
             munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
         }
