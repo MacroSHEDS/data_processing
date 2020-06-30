@@ -4,14 +4,12 @@ ms_pasta_domain_refmap = list(
 )
 
 #. handle_errors
-get_latest_product_version <- function(prodname_ms, domain, data_tracker, prodcode=NULL){
+get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    
-    if(is.null(prodcode)) {
-    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms) }
+    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
 
     vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
     newest_vsn = RCurl::getURLContent(vsn_request)
@@ -21,8 +19,10 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker, prodco
     return(newest_vsn)
 }
 
+# version=latest_vsn; data_tracker=held_data
 #. handle_errors
-get_avail_lter_product_sets <- function(prodname_ms, version, domain, data_tracker, prodcode=NULL){
+get_avail_lter_product_sets <- function(prodname_ms, version, domain,
+    data_tracker){
 
     #returns: tibble with url, site_name, component (aka element_name)
 
@@ -30,65 +30,69 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain, data_track
     dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
 
     domain_ref = ms_pasta_domain_refmap[[domain]]
-    
-    if(is.null(prodcode)) {
-    prodcode = prodcode_from_prodname_ms(prodname_ms) }
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
     reqdata = RCurl::getURLContent(name_request)
     reqdata = strsplit(reqdata, '\n')[[1]]
-    reqdata = stringr::str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
+    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE)
+    reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
-    element_ids = reqdata[,2] 
+    element_ids = reqdata[,2]
     dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
         '/', element_ids)
-    
+
     names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
-    
-    #check to see if site information is included in lter informaiton
-    if(any(is.na(names))) {
-        #replace components names with _ rather than spaces 
-        if(length(str_split_fixed(reqdata[,3], " ", n = Inf)) > 1) {
-            
-            names_new <- replace_na(names, "sites_combined_or_missing")
-            
-            components <- str_replace_all(reqdata[,3], " ", "_")
-            
-            avail_sets = tibble(url=dl_urls,
-                site_name=names_new, 
-                component=components) 
-        } else {
-            
-            names_new <- replace_na(names, "sites_combined_or_missing")
-            avail_sets = tibble(url=dl_urls,
-                site_name=names_new, 
-                component=reqdata[,3]) 
-        }
-        #some names do not include file endings. Add .csv if no files path is there 
-        if(length(str_split_fixed(avail_sets$component[1], "[.]", n = Inf)) == 1) {
-            components <- paste0(components, ".csv")
-            
-            avail_sets = tibble(url=dl_urls,
-                site_name=names_new, 
-                component=components) 
-        }
-    }
-    if(all(!is.na(names))) {
+
+    # #check to see if site information is included in lter informaiton
+    # if(any(is.na(names))) {
+    #     #replace components names with _ rather than spaces
+    #     if(length(str_split_fixed(reqdata[,3], " ", n = Inf)) > 1){
+    #
+    #         names_new <- replace_na(names, "sites_combined_or_missing")
+    #
+    #         components <- str_replace_all(reqdata[,3], " ", "_")
+    #
+    #         avail_sets = tibble(url=dl_urls,
+    #             site_name=names_new,
+    #             component=components)
+    #     } else {
+    #
+    #         names_new <- replace_na(names, "sites_combined_or_missing")
+    #         avail_sets = tibble(url=dl_urls,
+    #             site_name=names_new,
+    #             component=reqdata[,3])
+    #     }
+    #     #some names do not include file endings. Add .csv if no files path is there
+    #     if(length(str_split_fixed(avail_sets$component[1], "[.]", n = Inf)) == 1) {
+    #         components <- paste0(components, ".csv")
+    #
+    #         avail_sets = tibble(url=dl_urls,
+    #             site_name=names_new,
+    #             component=components)
+    #     }
+    # } else {
+    #     avail_sets = tibble(url=dl_urls,
+    #         site_name=names,
+    #         component=reqdata[,3])
+    # }
     avail_sets = tibble(url=dl_urls,
         site_name=names,
-        component=reqdata[,3]) 
-    }
+        component=reqdata[,3])
+
     return(avail_sets)
 }
 
+# tracker=held_data; site='sitename_NA'; avail=avail_sets
 #. handle_errors
-populate_set_details <- function(tracker, prodname_ms, site, avail, latest_vsn, prodcode){
+populate_set_details <- function(tracker, prodname_ms, site, avail, latest_vsn){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
     retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     retrieval_tracker = avail %>%
         mutate(
