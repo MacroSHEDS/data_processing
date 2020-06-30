@@ -705,6 +705,18 @@ calculate_molar_mass <- function(molecular_formula){
 }
 
 #. handle_errors
+convert_molecule <- function(x, from, to){
+
+    #e.g. convert_molecule(1.54, 'NH4', 'N')
+
+    from_mass <- calculate_molar_mass(from)
+    to_mass <- calculate_molar_mass(to)
+    converted_mass <- x * to_mass / from_mass
+
+    return(converted_mass)
+}
+
+#. handle_errors
 update_product_file <- function(network, domain, level, prod_code, status){
 
     if(network == domain){
@@ -769,7 +781,7 @@ update_product_statuses <- function(network, domain){
     return()
 }
 
-unit_converter <- function(val, input_unit, output_unit) {
+convert_unit <- function(val, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
         convert_factor = c(0.000000001, 0.000001, 0.001, 0.01, 0.1, 100,
