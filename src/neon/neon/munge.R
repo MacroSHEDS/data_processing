@@ -24,7 +24,7 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(munge_msg)){
             update_data_tracker_m(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms, site=sites[j],
+                tracker_name='held_data', prodname_ms=prodname_ms, site_name=sites[j],
                 new_status='error')
         }
     }
