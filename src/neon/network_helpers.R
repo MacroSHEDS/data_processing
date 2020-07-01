@@ -17,37 +17,16 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
         result = do.call(processing_func,
             args=list(set_details=s, network=network, domain=domain))
 
-        if(is_ms_err(result) || is_ms_exception(result)){
-            update_data_tracker_r(network=network, domain=domain,
-                tracker_name='held_data', set_details=s, new_status='error')
-            next
-        } else {
-            update_data_tracker_r(network=network, domain=domain,
-                tracker_name='held_data', set_details=s, new_status='ok')
-        }
+        new_status <- evaluate_result_status(result)
+        update_data_tracker_r(network=network, domain=domain,
+            tracker_name='held_data', set_details=s, new_status=new_status)
 
-        # if(is_ms_err(out_sitemonth) || is_ms_exception(out_sitemonth)){
-        #     update_data_tracker_r(network=domain, domain=domain,
-        #         tracker_name='held_data', set_details=s, new_status='error')
-        #     next
-        # }
-        #
-        # site_dir = glue('data/{n}/{d}/raw/{p}/{s}',
-        #     n=network, d=domain, p=s$prodname_ms, s=s$site_name)
-        # dir.create(site_dir, showWarnings=FALSE, recursive=TRUE)
-        #
-        # sitemonth_file = glue('{sd}/{t}.feather',
-        #     sd=site_dir, t=s$component)
-        # write_feather(out_sitemonth, sitemonth_file)
-        #
-        # update_data_tracker_r(network=domain, domain=domain,
-        #     tracker_name='held_data', set_details=s, new_status='ok')
     }
 }
 
 #. handle_errors
 munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
-    site=sites[j]; tracker=held_data
+    # site=sites[j]; tracker=held_data
 
     retrieval_log = extract_retrieval_log(held_data, prodname_ms, site)
 
@@ -79,23 +58,16 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 
     }
 
-    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain, p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
-    write_feather(out, site_file)
+    write_munged_file(d = out,
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        site = site)
 
-    portal_prod_dir = glue('../portal/data/{d}/{p}',
-        d=domain, p=strsplit(prodname_ms, '_')[[1]][1])
-    dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
-    portal_site_file = glue('{pd}/{s}.feather', pd=portal_prod_dir, s=site)
-
-    #if there's already a data file for this site-time-product in the portal
-    #repo, remove it
-    unlink(portal_site_file)
-
-    #create a link to the new file from the portal repo
-    #(from and to seem logically reversed in file.link)
-    sw(file.link(to=portal_site_file, from=site_file))
+    create_portal_link(network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        site = site)
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms, site=site,

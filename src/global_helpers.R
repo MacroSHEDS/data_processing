@@ -290,6 +290,12 @@ generate_ms_exception = function(text=1){
     return(excobj)
 }
 
+generate_blacklist_indicator = function(text=1){
+    indobj = text
+    class(indobj) = 'blacklist_indicator'
+    return(indobj)
+}
+
 #. handle_errors
 is_ms_err <- function(x){
     return('ms_err' %in% class(x))
@@ -298,6 +304,25 @@ is_ms_err <- function(x){
 #. handle_errors
 is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
+}
+
+#. handle_errors
+is_blacklist_indicator <- function(x){
+    return('blacklist_indicator' %in% class(x))
+}
+
+#. handle_errors
+evaluate_result_status <- function(r){
+
+    if(is_ms_err(r) || is_ms_exception(r)){
+        status <- 'error'
+    } else if(is_blacklist_indicator(r)){
+        status <- 'blacklist'
+    } else {
+        status <- 'ok'
+    }
+
+    return(status)
 }
 
 email_err = function(msgs, addrs, pw){
@@ -781,6 +806,7 @@ update_product_statuses <- function(network, domain){
     return()
 }
 
+#. handle_errors
 convert_unit <- function(val, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
@@ -832,3 +858,40 @@ convert_unit <- function(val, input_unit, output_unit){
         new_val <- new_val/(old_bottom_conver*new_bottom_conver)
 
     return(new_val) }
+
+#. handle_errors
+write_munged_file <- function(d, network, domain, prodname_ms, site){
+
+    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
+        p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
+    write_feather(d, site_file)
+
+    return()
+}
+
+#. handle_errors
+create_portal_link <- function(network, domain, prodname_ms, site){
+
+    portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
+        d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
+    dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+    portal_site_file = glue('{pd}/{s}.feather',
+        pd=portal_prod_dir, s=site)
+
+    #if there's already a data file for this site-time-product in
+    #the portal repo, remove it
+    unlink(portal_site_file)
+
+    #create a link to the portal repo from the new site file
+    #(note: really, to and from are equivalent, as they both
+    #point to the same underlying structure in the filesystem)
+    site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
+        n=network, d=domain, p=prodname_ms, s=site)
+    invisible(sw(file.link(to=portal_site_file, from=site_file)))
+
+    return()
+}
