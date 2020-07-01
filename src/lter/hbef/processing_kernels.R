@@ -94,7 +94,7 @@ process_0_100 <- function(set_details, network, domain){
 #. handle_errors
 process_1_1 <- function(network, domain, prodname_ms, site_name,
     component){
-    # site_name=site; component=in_comp
+    # site_name=site_name; component=in_comp
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
