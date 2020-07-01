@@ -137,13 +137,8 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
             args=list(set_details=s, network=network, domain=domain))
         # process_0_1(set_details=s, network=network, domain=domain)
 
-        if(is_ms_err(result) || is_ms_exception(result)){
-            update_data_tracker_r(network=network, domain=domain,
-                tracker_name='held_data', set_details=s, new_status='error')
-            next
-        } else {
-            update_data_tracker_r(network=network, domain=domain,
-                tracker_name='held_data', set_details=s, new_status='ok')
-        }
+        new_status <- evaluate_result_status(result)
+        update_data_tracker_r(network=network, domain=domain,
+            tracker_name='held_data', set_details=s, new_status=new_status)
     }
 }
