@@ -1,6 +1,9 @@
+loginfo('Beginning munge', logger=logger_module)
+
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
+# i=2
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -18,7 +21,7 @@ for(i in 1:nrow(prod_info)){
 
     for(j in 1:length(sites)){
 
-        if(prodname_ms %in% c('precipitation__13', 'stream_precip_chemistry__208')){
+        if(grepl('(precip|stream_chemistry)', prodname_ms)){
             munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms,
                 held_data)
         } else {
@@ -33,6 +36,7 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
-    loginfo('Munging complete for all sites and products',
-        logger=logger_module)
 }
+
+loginfo('Munging complete for all sites and products',
+    logger=logger_module)
