@@ -55,15 +55,13 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
-            if(exists('curr_site')) sitename = curr_site
-            if(exists('site_name')) sitename = site_name
-            if(! exists('sitename')) sitename = 'NO SITE'
+            if(! exists('site_name')) site_name = 'NO SITE'
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
             full_message = glue('{ec}\n\n',
                 'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
                 'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
-                ec=err_cnt, n=network, d=domain, s=sitename, p=prodname_ms,
+                ec=err_cnt, n=network, d=domain, s=site_name, p=prodname_ms,
                 e=err_msg, c=pretty_callstack)
 
             logerror(full_message, logger=logger_module)
@@ -411,9 +409,10 @@ make_tracker_skeleton <- function(retrieval_chunks){
 }
 
 #. handle_errors
-insert_site_skeleton <- function(tracker, prodname_ms, site, site_components){
+insert_site_skeleton <- function(tracker, prodname_ms, site_name,
+    site_components){
 
-    tracker[[prodname_ms]][[site]] =
+    tracker[[prodname_ms]][[site_name]] =
         make_tracker_skeleton(retrieval_chunks=site_components)
 
     return(tracker)
@@ -426,8 +425,8 @@ product_is_tracked <- function(tracker, prodname_ms){
 }
 
 #. handle_errors
-site_is_tracked <- function(tracker, prodname_ms, site){
-    bool = site %in% names(tracker[[prodname_ms]])
+site_is_tracked <- function(tracker, prodname_ms, site_name){
+    bool = site_name %in% names(tracker[[prodname_ms]])
     return(bool)
 }
 
@@ -444,9 +443,9 @@ track_new_product <- function(tracker, prodname_ms){
 }
 
 #. handle_errors
-track_new_site_components <- function(tracker, prodname_ms, site, avail){
+track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
-    retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
 
     retrieval_tracker = avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
@@ -455,7 +454,7 @@ track_new_site_components <- function(tracker, prodname_ms, site, avail){
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prodname_ms]][[site]]$retrieve = retrieval_tracker
+    tracker[[prodname_ms]][[site_name]]$retrieve = retrieval_tracker
 
     return(tracker)
 }
@@ -526,19 +525,19 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 
 #. handle_errors
 update_data_tracker_m <- function(network=domain, domain, tracker_name, prodname_ms,
-    site, new_status){
+    site_name, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_d for the derive section
 
     tracker = get_data_tracker(network=network, domain=domain)
 
-    mt = tracker[[prodname_ms]][[site]]$munge
+    mt = tracker[[prodname_ms]][[site_name]]$munge
 
     mt$status = new_status
     mt$mtime = as.character(Sys.time())
 
-    tracker[[prodname_ms]][[site]]$munge = mt
+    tracker[[prodname_ms]][[site_name]]$munge = mt
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
@@ -577,9 +576,10 @@ backup_tracker <- function(path){
 }
 
 #. handle_errors
-extract_retrieval_log <- function(tracker, prodname_ms, site, keep_status='ok'){
+extract_retrieval_log <- function(tracker, prodname_ms, site_name,
+    keep_status='ok'){
 
-    retrieved_data = tracker[[prodname_ms]][[site]]$retrieve %>%
+    retrieved_data = tracker[[prodname_ms]][[site_name]]$retrieve %>%
         tibble::as_tibble() %>%
         filter(status == keep_status)
 
@@ -860,27 +860,27 @@ convert_unit <- function(val, input_unit, output_unit){
     return(new_val) }
 
 #. handle_errors
-write_munged_file <- function(d, network, domain, prodname_ms, site){
+write_munged_file <- function(d, network, domain, prodname_ms, site_name){
 
     prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
         p=prodname_ms)
     dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
 
-    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
+    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
     write_feather(d, site_file)
 
     return()
 }
 
 #. handle_errors
-create_portal_link <- function(network, domain, prodname_ms, site){
+create_portal_link <- function(network, domain, prodname_ms, site_name){
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
         d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
 
     portal_site_file = glue('{pd}/{s}.feather',
-        pd=portal_prod_dir, s=site)
+        pd=portal_prod_dir, s=site_name)
 
     #if there's already a data file for this site-time-product in
     #the portal repo, remove it
@@ -890,7 +890,7 @@ create_portal_link <- function(network, domain, prodname_ms, site){
     #(note: really, to and from are equivalent, as they both
     #point to the same underlying structure in the filesystem)
     site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
-        n=network, d=domain, p=prodname_ms, s=site)
+        n=network, d=domain, p=prodname_ms, s=site_name)
     invisible(sw(file.link(to=portal_site_file, from=site_file)))
 
     return()

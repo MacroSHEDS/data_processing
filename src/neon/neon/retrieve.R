@@ -23,28 +23,28 @@ for(i in 1:nrow(prod_info)){
     for(j in 1){
     # for(j in 1:length(avail_sites)){
 
-        curr_site = avail_sites[j]
-        avail_site_sets = avail_sets[avail_sets$site_name == curr_site, ,
+        site_name = avail_sites[j]
+        avail_site_sets = avail_sets[avail_sets$site_name == site_name, ,
             drop=FALSE]
 
-        if(! site_is_tracked(held_data, prodname_ms, curr_site)){
-            held_data = insert_site_skeleton(held_data, prodname_ms, curr_site,
+        if(! site_is_tracked(held_data, prodname_ms, site_name)){
+            held_data = insert_site_skeleton(held_data, prodname_ms, site_name,
                 site_components=avail_site_sets$component)
         }
 
-        held_data = track_new_site_components(held_data, prodname_ms, curr_site,
+        held_data = track_new_site_components(held_data, prodname_ms, site_name,
             avail_site_sets)
         if(is_ms_err(held_data)) next
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            curr_site, avail_site_sets)
+            site_name, avail_site_sets)
         if(is_ms_err(retrieval_details)) next
 
         new_sets = filter_unneeded_sets(retrieval_details)
 
         if(nrow(new_sets) == 0){
             loginfo(glue('Nothing to do for {s} {n}',
-                    s=curr_site, n=prodname_ms), logger=logger_module)
+                    s=site_name, n=prodname_ms), logger=logger_module)
             next
         }
 
