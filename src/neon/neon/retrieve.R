@@ -54,6 +54,7 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
-    loginfo('Retrieval complete for all sites and products',
-        logger=logger_module)
 }
+
+loginfo('Retrieval complete for all sites and products',
+    logger=logger_module)

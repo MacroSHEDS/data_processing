@@ -3,7 +3,7 @@
 munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
     # site=sites[j]; tracker=held_data; k=1
 
-    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site)
+    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -26,24 +26,16 @@ munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
         }
     }
 
-    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
-        p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site)
-    write_feather(out, site_file)
+    write_munged_file(d = out,
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        site = site)
 
-    portal_prod_dir = glue('../portal/data/{d}/{p}',
-        d=domain, p=strsplit(prodname_ms, '_')[[1]][1])
-    dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
-    portal_site_file = glue('{pd}/{s}.feather', pd=portal_prod_dir, s=site)
-
-    #if there's already a data file for this site-time-product in the portal
-    #repo, remove it
-    unlink(portal_site_file)
-
-    #create a link to the new file from the portal repo
-    #(from and to seem logically reversed in file.link)
-    invisible(sw(file.link(to=portal_site_file, from=site_file)))
+    create_portal_link(network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        site = site)
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms, site=site,
@@ -57,12 +49,12 @@ munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 }
 
 #. handle_errors
-munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode,
-    silent=TRUE){
-    #site=sites[1]; tracker=held_data; k=1
+munge_hbef_combined <- function(domain, site, prodname_ms, tracker, silent=TRUE){
+    # site=sites[j]; tracker=held_data; k=1
 
-    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site) %>%
-        filter(component != "Analytical_Methods.csv")
+
+    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site) %>%
+        filter(component != "Analytical Methods")
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -84,31 +76,24 @@ munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode,
             out = bind_rows(out, out_comp)
         }
 
-    gauges <- unique(out_comp$site_name)
+        sites <- unique(out_comp$site_name)
 
-    for(f in 1:length(gauges)) {
-        new <- out_comp %>%
-            filter(site_name == gauges[f])
+        for(i in 1:length(sites)){
 
-        prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
-            p=prodname_ms)
-        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=gauges[f])
-        write_feather(new, site_file)
+            filt_site <- sites[i]
+            out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-        portal_prod_dir = glue('../portal/data/{d}/{p}',
-            d=domain, p=strsplit(prodname_ms, '_')[[1]][1])
-        dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
-        portal_site_file = glue('{pd}/{s}.feather', pd=portal_prod_dir, s=gauges[f])
+            write_munged_file(d = out_comp_filt,
+                network = network,
+                domain = domain,
+                prodname_ms = prodname_ms,
+                site = filt_site)
 
-        #if there's already a data file for this site-time-product in the portal
-        #repo, remove it
-        unlink(portal_site_file)
-
-        #create a link to the new file from the portal repo
-        #(from and to seem logically reversed in file.link)
-        invisible(sw(file.link(to=portal_site_file, from=site_file)))
-    }
+            create_portal_link(network = network,
+                domain = domain,
+                prodname_ms = prodname_ms,
+                site = filt_site)
+        }
     }
 
     update_data_tracker_m(network=network, domain=domain,
@@ -121,5 +106,3 @@ munge_hbef_combined <- function(domain, site, prodname_ms, tracker, prodcode,
 
     return('sitemunge complete')
 }
-
-
