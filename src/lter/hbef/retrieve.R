@@ -1,8 +1,9 @@
+
 prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
     # status_level='retrieve', get_statuses='pending')
 
-# i=3
+# i=4
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
@@ -22,7 +23,7 @@ for(i in 1:nrow(prod_info)){
         version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
 
-    if(prodname_ms %in% c('precipitation__13', 'stream_precip_chemistry__208')){
+    if(grepl('(precip|stream_chemistry)', prodname_ms)){
         avail_sets$site_name <- 'sitename_NA'
     }
     avail_sites = unique(avail_sets$site_name)
@@ -62,7 +63,7 @@ for(i in 1:nrow(prod_info)){
     }
 
     gc()
-    loginfo('Retrieval complete for all sites and products',
-        logger=logger_module)
 }
 
+loginfo('Retrieval complete for all sites and products',
+    logger=logger_module)

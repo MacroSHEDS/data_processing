@@ -32,8 +32,23 @@ process_0_208 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name)
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
+
+    if(set_details$component == 'Analytical Methods'){
+        fext <- '.pdf'
+    } else {
+        l1 <- all(grepl('precip', c(set_details$component,  prodname_ms)))
+        l2 <- all(grepl('stream', c(set_details$component,  prodname_ms)))
+
+        if(! sum(l1, l2)){
+            loginfo('Skipping redundant download', logger=logger_module)
+            return(generate_blacklist_indicator())
+        }
+
+        fext <- '.csv'
+    }
+
     download.file(url=set_details$url,
-        destfile=glue(raw_data_dest, '/', set_details$component, '.csv'),
+        destfile=glue(raw_data_dest, '/', set_details$component, fext),
         cacheOK=FALSE, method='curl')
 }
 
@@ -112,7 +127,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 process_1_13 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     d = sw(read_csv(rawfile, progress=FALSE,
@@ -134,15 +149,21 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
         ungroup()
 }
 
-#stream_precip_chemistry: STATUS=READY
+#stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
 process_1_208 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    #this product includes precip chem and stream chem, which have the same
+    #data structure. so for now, the component argument governs which one is
+    #processed herein. once we work out rain interpolation, we might have to
+    #add a conditional and some divergent processing here.
 
-    if(component == "precipitation_chemistry.csv") {
+    #this product also includes its own precip (mm) and discharge (L/s), but we
+    #can ignore those in favor of the more complete products 1 and 13
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
     d <- sw(read_csv(rawfile, col_types=readr::cols_only(
             site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
@@ -152,24 +173,29 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
             DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',
             `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
             theoryCond='n', ionError='n', ionBalance='n'))) %>%
+        rename(site_name = site) %>%
+        mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
+            tolower(site_name), site_name)) %>%
         mutate(
             timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
             datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'),
-            ms_status = ifelse(is.na(fieldCode), FALSE, TRUE),#see summarize
+            ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
             DIC = convert_unit(DIC, 'uM', 'mM'),
             NH4_N = convert_molecule(NH4, 'NH4', 'N'),
             NO3_N = convert_molecule(NO3, 'NO3', 'N'),
             PO4_P = convert_molecule(PO4, 'PO4', 'P')) %>%
-        rename(site_name = site) %>%
         select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
         group_by(datetime, site_name) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status))
-    }
+        mutate(ms_status = as.numeric(ms_status)) %>%
+        select(-ms_status, everything())
+
+    d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
 
     return(d)
 }
+
 
 #derive kernels####
 
