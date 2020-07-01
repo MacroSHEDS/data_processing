@@ -524,11 +524,12 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 }
 
 #. handle_errors
-update_data_tracker_m <- function(network=domain, domain, tracker_name, prodname_ms,
-    site_name, new_status){
+update_data_tracker_m <- function(network=domain, domain, tracker_name,
+    prodname_ms, site_name, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
-    #see update_data_tracker_d for the derive section
+    #see update_data_tracker_r for the retrieval section and
+    #update_data_tracker_d for the derive section
 
     tracker = get_data_tracker(network=network, domain=domain)
 
@@ -538,6 +539,32 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name, prodname
     mt$mtime = as.character(Sys.time())
 
     tracker[[prodname_ms]][[site_name]]$munge = mt
+
+    assign(tracker_name, tracker, pos=.GlobalEnv)
+
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
+
+    return()
+}
+
+#. handle_errors
+update_data_tracker_d <- function(network=domain, domain, tracker_name,
+    prodname_ms, site_name, new_status){
+
+    #this updates the derive section of a data tracker in memory and on disk.
+    #see update_data_tracker_r for the retrieval section and
+    #update_data_tracker_m for the munge section
+
+    tracker = get_data_tracker(network=network, domain=domain)
+
+    dt = tracker[[prodname_ms]][[site_name]]$derive
+
+    dt$status = new_status
+    dt$mtime = as.character(Sys.time())
+
+    tracker[[prodname_ms]][[site_name]]$derive = dt
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
@@ -584,6 +611,18 @@ extract_retrieval_log <- function(tracker, prodname_ms, site_name,
         filter(status == keep_status)
 
     return(retrieved_data)
+}
+
+#. handle_errors
+get_munge_status <- function(tracker, prodname_ms, site_name){
+    munge_status = tracker[[prodname_ms]][[site_name]]$munge$status
+    return(munge_status)
+}
+
+#. handle_errors
+get_derive_status <- function(tracker, prodname_ms, site_name){
+    derive_status = tracker[[prodname_ms]][[site_name]]$derive$status
+    return(derive_status)
 }
 
 #. handle_errors

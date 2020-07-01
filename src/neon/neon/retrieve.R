@@ -48,6 +48,15 @@ for(i in 1:nrow(prod_info)){
             next
         }
 
+        if(! is.na(prod_info$munge_status[i])){
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'pending')
+        }
+
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
         get_neon_data(domain=domain, new_sets, held_data)

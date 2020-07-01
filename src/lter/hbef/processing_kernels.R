@@ -196,6 +196,31 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-
 #derive kernels####
 
+#precip: STATUS=PENDING
+#. handle_errors
+process_2_13 <- function(network, domain, prodname_ms, site_name,
+    component){
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+
+    d = sw(read_csv(rawfile, progress=FALSE,
+        col_types=readr::cols_only(
+            DATE='c', #can't parse 24:00
+            rainGage='c',
+            Precip='d'))) %>%
+        # Flag='c'))) %>% #all flags are acceptable for this product
+        rename(datetime = DATE,
+            site_name = rainGage,
+            precip = Precip) %>%
+        mutate(
+            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
+            ms_status = 0) %>%
+        group_by(datetime, site_name) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup()
+}
