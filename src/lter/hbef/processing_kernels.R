@@ -94,7 +94,7 @@ process_0_100 <- function(set_details, network, domain){
 #. handle_errors
 process_1_1 <- function(network, domain, prodname_ms, site_name,
     component){
-    # site_name=site; component=in_comp
+    # site_name=site_name; component=in_comp
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
@@ -196,6 +196,160 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-
 #derive kernels####
 
+#precip: STATUS=READY
+#. handle_errors
+process_2_13 <- function(network, domain, prodname_ms){
+
+    #this logic is temporary, and just gets precip into the format that works
+    #with the portal. but once interp is working, we'll perform that here
+    #instead
+
+    mfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = prodname_ms)
+
+    combined <- tibble()
+    for(f in mfiles){
+        d = read_feather(f)
+        combined <- bind_rows(combined, d)
+    }
+
+    #this chunk will be replaced by create_portal_link when interp is ready
+    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
+         n = network,
+         d = domain,
+         p = prodname_ms)
+    write_feather(combined, site_file)
+    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
+    unlink(portal_site_file)
+    invisible(sw(file.link(to = portal_site_file, from = site_file)))
+
+    return()
+}
+
+#precip_chemistry: STATUS=READY
+#. handle_errors
+process_2_208 <- function(network, domain, prodname_ms){
+
+    #this logic is temporary, and just gets pchem into the format that works
+    #with the portal. but once interp is working, we'll perform that here
+    #instead
+
+    mfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = prodname_ms)
+
+    combined <- tibble()
+    for(f in mfiles){
+        d = read_feather(f)
+        combined <- bind_rows(combined, d)
+    }
+
+    #this chunk will be replaced by create_portal_link when interp is ready
+    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms)
+    write_feather(combined, site_file)
+    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
+    unlink(portal_site_file)
+    invisible(sw(file.link(to = portal_site_file, from = site_file)))
+
+    return()
+}
+
+#stream_flux: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms){
+
+    dt_round_interv <- 'hours' #passed to lubridate::round_date
+
+    chemfiles <- list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = 'stream_chemistry__208')
+    qfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = 'discharge__1')
+
+    flux_vars <- ms_vars %>%
+        filter(flux_convertible == 1) %>%
+        pull(variable_code)
+
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+
+    for(s in flux_sites){
+
+        chem <- read_feather(glue(
+                    'data/{n}/{d}/munged/stream_chemistry__208/{s}.feather',
+                        n = network,
+                        d = domain,
+                        s = s)) %>%
+            select(one_of(flux_vars), 'datetime', 'ms_status') %>%
+            mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+            group_by(datetime) %>%
+            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+            ungroup()
+
+        daterange <- range(chem$datetime)
+        fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
+                                        by=dt_round_interv))
+
+        discharge <- read_feather(glue(
+                        'data/{n}/{d}/munged/discharge__1/{s}.feather',
+                            n = network,
+                            d = domain,
+                            s = s)) %>%
+            select(-site_name) %>%
+            filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
+            mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+            group_by(datetime) %>%
+            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+            ungroup()
+
+        flux <- chem %>%
+            full_join(discharge,
+                      by = 'datetime') %>%
+            mutate(ms_status = numeric_any(c(ms_status.x, ms_status.y))) %>%
+            select(-ms_status.x, -ms_status.y) %>%
+            full_join(fulldt,
+                      by='datetime') %>%
+            arrange(datetime) %>%
+            select_if(~(! all(is.na(.)))) %>%
+            mutate_at(vars(-datetime, -ms_status),
+                      imputeTS::na_interpolation,
+                      maxgap = 30) %>%
+            mutate_at(vars(-datetime, -discharge, -ms_status),
+                      ~(. * discharge)) %>%
+            mutate(site_name = s)
+
+        write_munged_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = s)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = s)
+    }
+
+    return()
+}
+
+#precip_flux: STATUS=PENDING
+#. handle_errors
+process_2_ms002 <- function(network, domain, prodname_ms){
+
+    #precip interp should be a munge step?
+        #so fluc calc can always be performed after
+        #precip is localized to stream sites
+
+    #or devise some other way for the correct order of events to be ensured
+    #without requiring additional thought on the part of the developer
+
+}

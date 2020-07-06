@@ -14,6 +14,7 @@ suppressPackageStartupMessages({
     library(neonUtilities)
     library(tinsel)
     library(PeriodicTable)
+    library(imputeTS)
 })
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
@@ -31,7 +32,8 @@ source('src/dev_helpers.R') #comment before pushing
 source('src/global_helpers.R')
 source_decoratees('src/global_helpers.R') #parse decorators
 
-network_domain = sm(read_csv('data/general/site_data.csv')) %>%
+ms_vars <- sm(read_csv('data/general/variables.csv'))
+network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     filter(as.logical(in_workflow)) %>%
     select(network, domain) %>%
     distinct() %>%
