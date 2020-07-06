@@ -3,3 +3,119 @@ owrite_tracker = function(){
         n=network, d=domain)
     jsonlite::write_json(held_data, tracker_path)
 }
+
+export_all_local_helpers <- function(outfile){
+
+    #needs work (run body interactively and it'll work)
+
+    require(tidyverse)
+    require(glue)
+
+    sw = suppressWarnings
+
+    try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
+    try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
+
+    network_domain = read_csv('data/general/site_data.csv') %>%
+        filter(as.logical(in_workflow)) %>%
+        select(network, domain) %>%
+        distinct() %>%
+        arrange(network, domain)
+
+    get_all_local_helpers <- function(network=domain, domain){
+
+        #source_decoratees reads in decorator functions (tinsel package).
+        #because it can only read them into the current environment, all files
+        #sourced by this function are exported locally, then exported globally
+
+        location1 = glue('src/{n}/network_helpers.R', n=network)
+        if(file.exists(location1)){
+            sw(source(location1, local=TRUE))
+            # sw(source_decoratees(location1))
+        }
+
+        location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
+        if(file.exists(location2)){
+            sw(source(location2, local=TRUE))
+            # sw(source_decoratees(location2))
+        }
+
+        location3 = glue('src/{n}/processing_kernels.R', n=network)
+        if(file.exists(location3)){
+            sw(source(location3, local=TRUE))
+            # sw(source_decoratees(location3))
+        }
+
+        location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
+        if(file.exists(location4)){
+            sw(source(location4, local=TRUE))
+            # sw(source_decoratees(location4))
+        }
+
+        rm(location1, location2, location3, location4)
+
+        export_to_global(from_env=environment(),
+            exclude=c('network', 'domain', 'thisenv'))
+
+        return()
+    }
+
+    export_to_global <- function(from_env, exclude=NULL){
+
+        #exclude is a character vector of names not to export.
+        #unmatched names will be ignored.
+
+        #vars could also be passed individually and handled by ...
+        # vars = list(...)
+        # varnames = all.vars(match.call())
+
+        varnames = ls(name=from_env)
+        varnames = varnames[! varnames %in% exclude]
+        vars = mget(varnames, envir=from_env)
+
+        for(i in 1:length(varnames)){
+            assign(varnames[i], vars[[i]], .GlobalEnv)
+        }
+
+        return()
+    }
+
+    for(dmnrow in 1:nrow(network_domain)){
+
+        network = network_domain$network[dmnrow]
+        domain = network_domain$domain[dmnrow]
+
+        get_all_local_helpers(network=network, domain=domain)
+    }
+
+    rm(ms_pasta_domain_refmap, export_all_local_helpers, dmnrow,
+        domain, network, export_to_global, get_all_local_helpers,
+        outfile, sw, envir=.GlobalEnv)
+
+    write.csv(data.frame(funcname=ls()), outfile)
+
+    return()
+}
+
+export_all_global_helpers <- function(outfile){
+
+    #needs work (run body interactively and it'll work)
+
+    try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
+    try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
+
+    source('src/function_aliases.R')
+
+    thisenv = environment()
+    aliases = ls(envir=thisenv)
+
+    source('src/global_helpers.R')
+
+    rm(email_err_msgs, err_cnt, unique_errors, unique_exceptions, flagmap,
+        envir=.GlobalEnv)
+    rm(list=aliases, envir=.GlobalEnv)
+
+    write.csv(data.frame(funcname=ls()), outfile)
+
+    return()
+}
