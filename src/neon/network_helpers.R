@@ -9,8 +9,8 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {site}, {prodname_ms}, {month}',
-            site=s$site_name, prodname_ms=s$prodname_ms, month=s$component)
+        msg = glue('Processing {s}, {p}, {c}',
+            s=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -25,10 +25,10 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 }
 
 #. handle_errors
-munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
-    # site=sites[j]; tracker=held_data
+munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
+    # site_name=sites[j]; tracker=held_data
 
-    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site)
+    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site_name)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -39,7 +39,7 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 
         # sitemonth = retrieval_log[k, 'component']
         # comp = read_feather(glue('data/{n}/{d}/raw/',
-        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site,
+        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site_name,
         #     sm=sitemonth))
 
         prodcode = prodcode_from_prodname_ms(prodname_ms)
@@ -48,9 +48,9 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
         in_comp = retrieval_log[k, 'component']
 
         out_comp = sw(do.call(processing_func,
-            # args=list(set=comp, network=network, domain=domain,site_name=site)))
+            # args=list(set=comp, network=network, domain=domain,site_name=site_name)))
             args=list(network=network, domain=domain, prodname_ms=prodname_ms,
-                site_name=site, component=in_comp)))
+                site_name=site_name, component=in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
@@ -62,19 +62,19 @@ munge_neon_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
         network = network,
         domain = domain,
         prodname_ms = prodname_ms,
-        site = site)
+        site_name = site_name)
 
     create_portal_link(network = network,
         domain = domain,
         prodname_ms = prodname_ms,
-        site = site)
+        site_name = site_name)
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site=site,
+        tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
         new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
-            p=prodname_ms, n=network, d=domain, s=site)
+            p=prodname_ms, n=network, d=domain, s=site_name)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
@@ -162,12 +162,12 @@ get_avail_neon_product_sets <- function(prodcode_full){
 }
 
 #. handle_errors
-populate_set_details <- function(tracker, prodname_ms, site, avail){
+populate_set_details <- function(tracker, prodname_ms, site_name, avail){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
 
     rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
     rgx_capt = str_match(avail$url, rgx)[, -1]
