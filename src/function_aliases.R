@@ -24,6 +24,7 @@ full_join = dplyr::full_join
 vars = dplyr::vars
 pull = dplyr::pull
 distinct = dplyr::distinct
+one_of = dplyr::one_of
 spread = tidyr::spread
 gather = tidyr::gather
 `%>%` = magrittr::`%>%`
