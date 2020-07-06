@@ -55,6 +55,7 @@ handle_errors = function(f){
 
             pretty_callstack = pprint_callstack()
 
+            if(exists('s')) site_name = s
             if(! exists('site_name')) site_name = 'NO SITE'
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
@@ -933,4 +934,45 @@ create_portal_link <- function(network, domain, prodname_ms, site_name){
     invisible(sw(file.link(to=portal_site_file, from=site_file)))
 
     return()
+}
+
+#. handle_errors
+is_ms_prodcode <- function(prodcode){
+
+    #always specify macrosheds "pseudo product codes" as "msXXX" where
+    #X is zero-padded integer. these codes are used for derived products
+    #that don't exist within the data source.
+
+    return(grepl('ms[0-9]{3}', prodcode))
+}
+
+#. handle_errors
+list_munged_files <- function(network, domain, prodname_ms){
+
+    mfiles <- glue('data/{n}/{d}/munged/{p}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms) %>%
+        list.files(full.names = TRUE)
+
+    return(mfiles)
+}
+
+#. handle_errors
+fname_from_fpath <- function(paths, include_fext = TRUE){
+
+    #paths is a vector of filepaths of/this/form. final slash is used to
+    #delineate file name.
+
+    #if include_fext == FALSE, file extension will not be included
+
+    fnames <- vapply(strsplit(paths, '/'),
+                     function(x) x[length(x)],
+                     FUN.VALUE = '')
+
+    if(! include_fext){
+        fnames <- str_match(fnames,'(.*?)\\..*')[, 2]
+    }
+
+    return(fnames)
 }
