@@ -1,9 +1,10 @@
 
 #. handle_errors
-munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
-    # site=sites[j]; tracker=held_data; k=1
+munge_hbef_site <- function(domain, site_name, prodname_ms, tracker,
+    silent=TRUE){
+    # site_name=sites[j]; tracker=held_data; k=1
 
-    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site)
+    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -19,7 +20,7 @@ munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
 
         out_comp = sw(do.call(processing_func,
             args=list(network=network, domain=domain, prodname_ms=prodname_ms,
-                site_name=site, component=in_comp)))
+                site_name=site_name, component=in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
@@ -30,30 +31,31 @@ munge_hbef_site <- function(domain, site, prodname_ms, tracker, silent=TRUE){
         network = network,
         domain = domain,
         prodname_ms = prodname_ms,
-        site = site)
+        site_name = site_name)
 
     create_portal_link(network = network,
         domain = domain,
         prodname_ms = prodname_ms,
-        site = site)
+        site_name = site_name)
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site=site,
+        tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
         new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
-        p=prodname_ms, n=network, d=domain, s=site)
+        p=prodname_ms, n=network, d=domain, s=site_name)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
 }
 
 #. handle_errors
-munge_hbef_combined <- function(domain, site, prodname_ms, tracker, silent=TRUE){
-    # site=sites[j]; tracker=held_data; k=1
+munge_hbef_combined <- function(domain, site_name, prodname_ms, tracker,
+    silent=TRUE){
+    # site_name=sites[j]; tracker=held_data; k=1
 
 
-    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site) %>%
+    retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name) %>%
         filter(component != "Analytical Methods")
 
     if(nrow(retrieval_log) == 0){
@@ -70,7 +72,7 @@ munge_hbef_combined <- function(domain, site, prodname_ms, tracker, silent=TRUE)
 
         out_comp = sw(do.call(processing_func,
             args=list(network=network, domain=domain, prodname_ms=prodname_ms,
-                site_name=site, component=in_comp)))
+                site_name=site_name, component=in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
@@ -87,21 +89,21 @@ munge_hbef_combined <- function(domain, site, prodname_ms, tracker, silent=TRUE)
                 network = network,
                 domain = domain,
                 prodname_ms = prodname_ms,
-                site = filt_site)
+                site_name = filt_site)
 
             create_portal_link(network = network,
                 domain = domain,
                 prodname_ms = prodname_ms,
-                site = filt_site)
+                site_name = filt_site)
         }
     }
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site=site,
+        tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
         new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
-        p=prodname_ms, n=network, d=domain, s=site)
+        p=prodname_ms, n=network, d=domain, s=site_name)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
