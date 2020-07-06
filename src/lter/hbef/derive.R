@@ -1,10 +1,11 @@
 loginfo('Beginning derive', logger=logger_module)
+site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
 prod_info = get_product_info(network=network, domain=domain,
-    status_level='derive', get_statuses='pending')
-    # status_level='derive', get_statuses='ready')
+    status_level='derive', get_statuses='ready') %>%
+    arrange(prodcode)
 
-# i=2
+# i=4
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -14,8 +15,13 @@ for(i in 1:nrow(prod_info)){
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
-        if(grepl('ms[0-9]{3}$', prodname_ms)){
-            held_data = track_new_product(held_data, prodname_ms)
+        if(is_ms_prodcode(prodcode_from_prodname_ms(prodname_ms))){
+            held_data <- track_new_product(tracker = held_data,
+                                           prodname_ms = prodname_ms)
+            held_data <- insert_site_skeleton(tracker = held_data,
+                                             prodname_ms = prodname_ms,
+                                             site_name = site_name,
+                                             site_components = 'NA')
         } else {
             logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
                 'it before deriving from it.', p=prodname_ms), logger=logger_module)
@@ -28,32 +34,35 @@ for(i in 1:nrow(prod_info)){
                                        site_name = site_name)
 
     if(derive_status == 'ok'){
-        loginfo(glue('Nothing to do for {s} {p}',
-            s=site_name, p=prodname_ms), logger=logger_module)
+        loginfo(glue('Nothing to do for {p}',
+                     p=prodname_ms),
+                logger=logger_module)
         next
     }
 
-    sites = names(held_data[[prodname_ms]])
+    prodcode = prodcode_from_prodname_ms(prodname_ms)
 
-    for(j in 1:length(sites)){
+    processing_func = get(paste0('process_2_', prodcode))
 
-        #UPDATE THIS AFTER WRITING DERIVE KERNELS
-        if(grepl('(precip|stream_chemistry)', prodname_ms)){
-            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms,
-                held_data)
-        } else {
-            munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
-        }
+    derive_msg <- sw(do.call(processing_func,
+                             args=list(network = network,
+                                       domain = domain,
+                                       prodname_ms = prodname_ms)))
 
-        if(is_ms_err(derive_msg)){
-            update_data_tracker_d(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms,
-                site_name=sites[j], new_status='error')
-        }
-    }
+    stts <- ifelse(is_ms_err(derive_msg), 'error', 'ok')
+    update_data_tracker_d(network=network, domain=domain,
+        tracker_name='held_data', prodname_ms=prodname_ms,
+        site_name=site_name, new_status=stts)
+
+    msg = glue('Derived {p} ({n}/{d}/{s})',
+               p = prodname_ms,
+               n = network,
+               d = domain,
+               s = site_name)
+    loginfo(msg, logger=logger_module)
 
     gc()
 }
 
-loginfo('Derive complete for all sites and products',
-    logger=logger_module)
+loginfo('Derive complete for all products',
+        logger=logger_module)
