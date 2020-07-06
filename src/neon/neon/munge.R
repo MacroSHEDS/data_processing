@@ -1,5 +1,6 @@
 prod_info = get_product_info(network=network,
-    status_level='munge', get_statuses='ready')
+    status_level='munge', get_statuses='ready') %>%
+    arrange(prodcode)
 
 # i=1; j=1; k=2
 for(i in 1:nrow(prod_info)){
@@ -15,6 +16,25 @@ for(i in 1:nrow(prod_info)){
         next
     }
 
+    munge_status <- get_munge_status(tracker = held_data,
+                                     prodname_ms = prodname_ms,
+                                     site_name = site_name)
+
+    if(munge_status == 'ok'){
+        loginfo(glue('Nothing to do for {s} {p}',
+            s=site_name, p=prodname_ms), logger=logger_module)
+        next
+    }
+
+    if(! is.na(prod_info$derive_status[i])){
+        update_data_tracker_d(network = network,
+                              domain = domain,
+                              tracker_name = 'held_data',
+                              prodname_ms = prodname_ms,
+                              site_name = site_name,
+                              new_status = 'pending')
+    }
+
     sites = names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
@@ -24,13 +44,14 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(munge_msg)){
             update_data_tracker_m(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms, site=sites[j],
+                tracker_name='held_data', prodname_ms=prodname_ms, site_name=sites[j],
                 new_status='error')
         }
     }
 
     gc()
-    loginfo('Munging complete for all sites and products',
-        logger=logger_module)
 }
- 
+
+loginfo('Munging complete for all sites and products',
+    logger=logger_module)
+
