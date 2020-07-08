@@ -163,9 +163,6 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     #processed herein. once we work out rain interpolation, we might have to
     #add a conditional and some divergent processing here.
 
-    #this product also includes its own precip (mm) and discharge (L/s), but we
-    #can ignore those in favor of the more complete products 1 and 13
-
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
@@ -178,8 +175,8 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
             `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
             theoryCond='n', ionError='n', ionBalance='n'))) %>%
         rename(site_name = site,
-               precipitation_ns = precipCatch,
-               discharge_ns = flowGageHt) %>%
+               precipitation_ns = precipCatch, #nonstandard precip
+               discharge_ns = flowGageHt) %>% #nonstandard discharge
         mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
             tolower(site_name), site_name)) %>%
         mutate(
