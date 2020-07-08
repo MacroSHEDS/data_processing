@@ -1,12 +1,10 @@
-"prodcode","prodname","type","retrieve_status","munge_status","derive_status","notes"
-1,"discharge","sensor","ready","ready","NA","NA"
-13,"precipitation","grab","ready","ready","ready","see also product 14"
-208,"precip_chemistry","grab","ready","ready","ready","NA"
-208,"stream_chemistry","grab","ready","ready","ready","NA"
-5482,"rain_gauge_locations","spatial","pending","pending","NA","NA"
-3239,"stream_gauge_locations","spatial","pending","pending","NA","NA"
-100,"rain_gauge_locations","spatial","ready","pending","NA","NA"
-"ms001","stream_flux_inst","derived","NA","NA","ready","NA"
-"ms002","precip_flux_inst","derived","NA","NA","pending","NA"
-"ms003","stream_vwc","derived","NA","NA","pending","NA"
-"ms004","precip_vwc","derived","NA","NA","pending","NA"
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+1,discharge,sensor,ready,ready,NA,stream_flux_inst__ms001,NA
+13,precipitation,grab,ready,ready,ready,precip_flux_inst__ms002,see also product 14
+208,precip_chemistry,grab,ready,ready,ready,precip_flux_inst__ms002,NA
+208,stream_chemistry,grab,ready,ready,NA,stream_flux_inst__ms001,NA
+5482,rain_gauge_locations,spatial,pending,pending,NA,NA,NA
+3239,stream_gauge_locations,spatial,pending,pending,NA,NA,NA
+100,rain_gauge_locations,spatial,ready,pending,NA,NA,NA
+ms001,stream_flux_inst,derived,NA,NA,ready,NA,NA
+ms002,precip_flux_inst,derived,NA,NA,pending,NA,NA

@@ -13,7 +13,7 @@ process_0_1 <- function(set_details, network, domain){
 
 }
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_0_13 <- function(set_details, network, domain){
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
@@ -25,7 +25,7 @@ process_0_13 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 }
 
-#stream_precip_chemistry: STATUS=READY
+#stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_208 <- function(set_details, network, domain){
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
@@ -124,7 +124,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_1_13 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -171,13 +171,15 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     d <- sw(read_csv(rawfile, col_types=readr::cols_only(
             site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-            temp='n', ANC960='n', ANCMet='n', #precipCatch='n',# notes='c',
+            temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
             Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
             Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',
+            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
             `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
             theoryCond='n', ionError='n', ionBalance='n'))) %>%
-        rename(site_name = site) %>%
+        rename(site_name = site,
+               precipitation_ns = precipCatch,
+               discharge_ns = flowGageHt) %>%
         mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
             tolower(site_name), site_name)) %>%
         mutate(
@@ -204,7 +206,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels####
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_2_13 <- function(network, domain, prodname_ms){
 
@@ -223,6 +225,9 @@ process_2_13 <- function(network, domain, prodname_ms){
     }
 
     #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
     site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
          n = network,
          d = domain,
@@ -254,6 +259,9 @@ process_2_208 <- function(network, domain, prodname_ms){
     }
 
     #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
     site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
                       n = network,
                       d = domain,
@@ -270,12 +278,15 @@ process_2_208 <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
+    chemprod <- 'stream_chemistry__208'
+    qprod <- 'discharge__1'
+
     chemfiles <- list_munged_files(network = network,
                                    domain = domain,
-                                   prodname_ms = 'stream_chemistry__208')
+                                   prodname_ms = chemprod)
     qfiles <- list_munged_files(network = network,
                                 domain = domain,
-                                prodname_ms = 'discharge__1')
+                                prodname_ms = qprod)
 
     flux_sites <- generics::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
@@ -283,8 +294,9 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 
     for(s in flux_sites){
 
-        flux <- sw(calc_inst_flux(chemprod = 'stream_chemistry__208',
-                                  qprod = 'discharge__1',
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s,
                                   dt_round_interv = 'hours'))
 
         write_munged_file(d = flux,
@@ -302,41 +314,43 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     return()
 }
 
-#precip_flux_inst: STATUS=PENDING
+#precip_flux_inst: STATUS=PENDING (must localize precip to stream sites first)
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms){
 
-    #precip interp should be a munge step?
-        #so fluc calc can always be performed after
-        #precip is localized to stream sites
+    chemprod <- 'precip_chemistry__208'
+    qprod <- 'precipitation__13'
 
-    #or devise some other way for the correct order of events to be ensured
-    #without requiring additional thought on the part of the developer
+    chemfiles <- list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = chemprod)
+    qfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = qprod)
 
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+
+    for(s in flux_sites){
+
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s,
+                                  dt_round_interv = 'hours'))
+
+        write_munged_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = s)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = s)
+    }
+
+    return()
 }
 
-#precip_vwc: STATUS=PENDING
-#. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms){
-
-    #precip interp should be a munge step?
-        #so fluc calc can always be performed after
-        #precip is localized to stream sites
-
-    #or devise some other way for the correct order of events to be ensured
-    #without requiring additional thought on the part of the developer
-
-}
-
-#precip_vwc: STATUS=PENDING
-#. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms){
-
-    #precip interp should be a munge step?
-        #so fluc calc can always be performed after
-        #precip is localized to stream sites
-
-    #or devise some other way for the correct order of events to be ensured
-    #without requiring additional thought on the part of the developer
-
-}

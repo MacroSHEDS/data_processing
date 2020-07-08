@@ -52,9 +52,12 @@ for(i in 1:nrow(prod_info)){
         new_sets = filter_unneeded_sets(retrieval_details)
 
         if(nrow(new_sets) == 0){
-            loginfo(glue('Nothing to do for {s} {n}',
-                    s=site_name, n=prodname_ms), logger=logger_module)
+            loginfo(glue('Nothing to do for {s} {p}',
+                    s=site_name, p=prodname_ms), logger=logger_module)
             next
+        } else {
+            loginfo(glue('Retrieving {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
         }
 
         if(! is.na(prod_info$munge_status[i])){
