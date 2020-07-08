@@ -8,3 +8,4 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes
 100,rain_gauge_locations,spatial,ready,pending,NA,NA
 ms001,stream_flux,derived,NA,NA,ready,NA
 ms002,precip_flux,derived,NA,NA,pending,NA
+94,ws_boundary,spatial,ready,ready,NA,NA
