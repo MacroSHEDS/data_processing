@@ -2,10 +2,10 @@
 
 source('src/function_aliases.R')
 
-email_err_msgs = list()
-err_cnt = 0
-unique_errors = c()
-unique_exceptions = c()
+assign('email_err_msgs', list(), envir=.GlobalEnv)
+assign('err_cnt', 0, envir=.GlobalEnv)
+assign('unique_errors', c(), envir=.GlobalEnv)
+assign('unique_exceptions', c(), envir=.GlobalEnv)
 
 # flag systems (future use?; increasing user value and difficulty to manage):
 
@@ -551,23 +551,44 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 }
 
 #. handle_errors
-update_data_tracker_d <- function(network=domain, domain, tracker_name,
-    prodname_ms, site_name, new_status){
+update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
+    tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
 
     #this updates the derive section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
     #update_data_tracker_m for the munge section
 
-    tracker = get_data_tracker(network=network, domain=domain)
+    #if tracker is supplied, it will be used to write/overwrite the one on disk.
+    #if it is omitted or set to NULL, the appropriate tracker will be loaded
+    #from disk, updated, and then written back to disk.
 
-    dt = tracker[[prodname_ms]][[site_name]]$derive
+    if(is.null(tracker) && (
+        is.null(tracker_name) || is.null(prodname_ms) ||
+        is.null(new_status) || is.null(site_name)
+    )){
+        msg = paste0('If tracker is not supplied, these args must be:',
+                     'tracker_name, prodname_ms, new_status, new_status.')
+        logerror(msg, logger=logger_module)
+        stop(msg)
+    }
 
-    dt$status = new_status
-    dt$mtime = as.character(Sys.time())
+    if(is.null(tracker)){
 
-    tracker[[prodname_ms]][[site_name]]$derive = dt
+        tracker = get_data_tracker(network=network, domain=domain)
 
-    assign(tracker_name, tracker, pos=.GlobalEnv)
+        dt = tracker[[prodname_ms]][[site_name]]$derive
+
+        if(is.null(dt)){
+           return(generate_ms_exception('Product not yet tracked; no action taken.'))
+        }
+
+        dt$status = new_status
+        dt$mtime = as.character(Sys.time())
+
+        tracker[[prodname_ms]][[site_name]]$derive = dt
+
+        assign(tracker_name, tracker, pos=.GlobalEnv)
+    }
 
     trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
@@ -796,7 +817,8 @@ convert_molecule <- function(x, from, to){
 }
 
 #. handle_errors
-update_product_file <- function(network, domain, level, prod_code, status){
+update_product_file <- function(network, domain, level, prodcode, status,
+                                prodname){
 
     if(network == domain){
         prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
@@ -804,9 +826,17 @@ update_product_file <- function(network, domain, level, prod_code, status){
         prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
     }
 
-    for(i in 1:length(prod_code)) {
+    prodname_list <- strsplit(prodname, '; ')
+    names_matched <- sapply(prodname_list, function(x) all(x %in% prods$prodname))
+    if(! all(names_matched)){
+        stop(glue('All prodnames in processing_kernels.R must match ',
+                  'prodnames in products.csv'))
+    }
+
+    for(i in 1:length(prodcode)){
         col_name = as.character(glue(level[i], '_status'))
-        row_num = which(prods$prodcode == prod_code[i])
+        row_num <- which(prods$prodcode == prodcode[i] &
+                             prods$prodname %in% prodname_list[[i]])
         prods[row_num, col_name] = status[i]
     }
 
@@ -828,11 +858,13 @@ update_product_statuses <- function(network, domain){
     kernel_lines = read_lines(kf)
 
     status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
-    statuses = stringr::str_match(kernel_lines[status_line_inds],
-        'STATUS=([A-Z]+)')[, 2]
+    mch = stringr::str_match(kernel_lines[status_line_inds],
+        '#(.+?): STATUS=([A-Z]+)')[, 2:3]
+    prodnames = mch[, 1, drop=TRUE]
+    statuses = mch[, 2, drop=TRUE]
 
     if(any(! statuses %in% status_codes)){
-        stop('illegal status')
+        stop(glue('Illegal status in ', kf))
     }
 
     funcname_lines = kernel_lines[status_line_inds + 2]
@@ -848,14 +880,15 @@ update_product_statuses <- function(network, domain){
     func_lvls = func_codes[, 1, drop=TRUE]
     prodcodes = func_codes[, 2, drop=TRUE]
 
-    level_name = case_when(func_lvls == 0 ~ "retrieve",
+    level_names = case_when(func_lvls == 0 ~ "retrieve",
        func_lvls == 1 ~ "munge",
        func_lvls == 2 ~ "derive")
 
     status_names = tolower(statuses)
 
-    update_product_file(network=network, domain=domain, level=level_name,
-        prod_code=prodcodes, status=status_names)
+    update_product_file(network=network, domain=domain, level=level_names,
+                        prodcode=prodcodes, status=status_names,
+                        prodname=prodnames)
 
     return()
 }
@@ -992,7 +1025,7 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
 }
 
 #. handle_errors
-calc_inst_flux <- function(chemprod, qprod, dt_round_interv){
+calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
 
     #chemprod is the prodname_ms for stream or precip chemistry
     #qprod is the prodname_ms for stream discharge or precip volume over time
@@ -1011,7 +1044,7 @@ calc_inst_flux <- function(chemprod, qprod, dt_round_interv){
                               n = network,
                               d = domain,
                               cp = chemprod,
-                              s = s)) %>%
+                              s = site_name)) %>%
         select(one_of(flux_vars), 'datetime', 'ms_status') %>%
         mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
         group_by(datetime) %>%
@@ -1026,7 +1059,7 @@ calc_inst_flux <- function(chemprod, qprod, dt_round_interv){
                                    n = network,
                                    d = domain,
                                    qp = qprod,
-                                   s = s)) %>%
+                                   s = site_name)) %>%
         select(-site_name) %>%
         filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
         mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
@@ -1048,16 +1081,11 @@ calc_inst_flux <- function(chemprod, qprod, dt_round_interv){
                   maxgap = 30) %>%
         mutate_at(vars(-datetime, -!!sym(qvar), -ms_status),
                   ~(. * !!sym(qvar))) %>%
-        mutate(site_name = s) %>%
+        mutate(site_name = !!(site_name)) %>%
         select(-!!sym(qvar)) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                    any_vars(! is.na(.))) %>%
         select(datetime, site_name, everything())
 
     return(flux)
-}
-
-#. handle_errors
-calc_vwc <- function(chemprod, qprod, dt_round_interv){
-    NULL #build this
 }

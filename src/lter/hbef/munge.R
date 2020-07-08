@@ -18,39 +18,53 @@ for(i in 1:nrow(prod_info)){
         next
     }
 
-    munge_status <- get_munge_status(tracker = held_data,
-                                     prodname_ms = prodname_ms,
-                                     site_name = site_name)
-    if(munge_status == 'ok'){
-        loginfo(glue('Nothing to do for {s} {p}',
-            s=site_name, p=prodname_ms), logger=logger_module)
-        next
-    }
-
-    if(! is.na(prod_info$derive_status[i])){
-        update_data_tracker_d(network = network,
-                              domain = domain,
-                              tracker_name = 'held_data',
-                              prodname_ms = prodname_ms,
-                              site_name = site_name,
-                              new_status = 'pending')
-    }
-
     sites = names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
 
+        site_name <- sites[j]
+
+        munge_status <- get_munge_status(tracker = held_data,
+                                         prodname_ms = prodname_ms,
+                                         site_name = site_name)
+        if(munge_status == 'ok'){
+            loginfo(glue('Nothing to do for {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
+            next
+        } else {
+            loginfo(glue('Munging {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
+        }
+
+        if(! is.na(prod_info$derive_status[i])){
+            update_data_tracker_d(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'pending')
+        }
+
+        if(! is.na(prod_info$precursor_of[i])){
+            catch <- update_data_tracker_d(network = network,
+                                           domain = domain,
+                                           tracker_name = 'held_data',
+                                           prodname_ms = prod_info$precursor_of[i],
+                                           site_name = 'sitename_NA',
+                                           new_status = 'pending')
+        }
+
         if(grepl('(precip|stream_chemistry)', prodname_ms)){
-            munge_msg = munge_hbef_combined(domain, sites[j], prodname_ms,
+            munge_msg = munge_hbef_combined(domain, site_name, prodname_ms,
                 held_data)
         } else {
-            munge_msg = munge_hbef_site(domain, sites[j], prodname_ms, held_data)
+            munge_msg = munge_hbef_site(domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_msg)){
             update_data_tracker_m(network=network, domain=domain,
                 tracker_name='held_data', prodname_ms=prodname_ms,
-                site_name=sites[j], new_status='error')
+                site_name=site_name, new_status='error')
         }
     }
 
