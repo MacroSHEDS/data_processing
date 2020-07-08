@@ -56,7 +56,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ms_retrieve(network=network, domain=domain)
     ms_munge(network=network, domain=domain)
-    # ms_derive(network=network, domain=domain)
+    ms_derive(network=network, domain=domain)
 
     retain_ms_globals(ms_globals)
 }
