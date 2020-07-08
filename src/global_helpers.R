@@ -664,6 +664,20 @@ prodcode_from_prodname_ms <- function(prodname_ms){
 }
 
 #. handle_errors
+prodname_from_prodname_ms <- function(prodname_ms){
+
+    #prodname_ms consists of the macrosheds official name for a data
+    #category, e.g. discharge, and the source-specific code for that
+    #data product, e.g. DP1.20093. These two values are concatenated,
+    #separated by a double underscore. So long as we never use a double
+    #underscore in a macrosheds official data category name, this function
+    #will be able to split a prodname_ms into its two constituent parts.
+
+    prodname <- strsplit(prodname_ms, '__')[[1]][1]
+    return(prodname)
+}
+
+#. handle_errors
 ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
     return()
@@ -975,4 +989,75 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
     }
 
     return(fnames)
+}
+
+#. handle_errors
+calc_inst_flux <- function(chemprod, qprod, dt_round_interv){
+
+    #chemprod is the prodname_ms for stream or precip chemistry
+    #qprod is the prodname_ms for stream discharge or precip volume over time
+    #dt_round_interv is a rounding interval passed to lubridate::round_date
+
+    qvar <- prodname_from_prodname_ms(qprod)
+    if(! qvar %in% c('precipitation', 'discharge')){
+        stop('Could not determine stream/precip')
+    }
+
+    flux_vars <- ms_vars %>% #ms_vars is global
+        filter(flux_convertible == 1) %>%
+        pull(variable_code)
+
+    chem <- read_feather(glue('data/{n}/{d}/munged/{cp}/{s}.feather',
+                              n = network,
+                              d = domain,
+                              cp = chemprod,
+                              s = s)) %>%
+        select(one_of(flux_vars), 'datetime', 'ms_status') %>%
+        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup()
+
+    daterange <- range(chem$datetime)
+    fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
+                                    by=dt_round_interv))
+
+    discharge <- read_feather(glue('data/{n}/{d}/munged/{qp}/{s}.feather',
+                                   n = network,
+                                   d = domain,
+                                   qp = qprod,
+                                   s = s)) %>%
+        select(-site_name) %>%
+        filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
+        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup()
+
+    flux <- chem %>%
+        full_join(discharge,
+                  by = 'datetime') %>%
+        mutate(ms_status = numeric_any(c(ms_status.x, ms_status.y))) %>%
+        select(-ms_status.x, -ms_status.y) %>%
+        full_join(fulldt,
+                  by='datetime') %>%
+        arrange(datetime) %>%
+        select_if(~(! all(is.na(.)))) %>%
+        mutate_at(vars(-datetime, -ms_status),
+                  imputeTS::na_interpolation,
+                  maxgap = 30) %>%
+        mutate_at(vars(-datetime, -!!sym(qvar), -ms_status),
+                  ~(. * !!sym(qvar))) %>%
+        mutate(site_name = s) %>%
+        select(-!!sym(qvar)) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                   any_vars(! is.na(.))) %>%
+        select(datetime, site_name, everything())
+
+    return(flux)
+}
+
+#. handle_errors
+calc_vwc <- function(chemprod, qprod, dt_round_interv){
+    NULL #build this
 }
