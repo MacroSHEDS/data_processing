@@ -28,7 +28,7 @@ logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing
+source('src/dev_helpers.R') #comment before pushing live
 source('src/global_helpers.R')
 source_decoratees('src/global_helpers.R') #parse decorators
 
@@ -40,8 +40,6 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     arrange(network, domain)
 
 ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
-
-
 
 # dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){

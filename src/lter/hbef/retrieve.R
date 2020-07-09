@@ -2,7 +2,8 @@
 prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready') %>%
     arrange(prodcode)
-# i=3
+
+# i=6
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
@@ -27,7 +28,7 @@ for(i in 1:nrow(prod_info)){
     }
     avail_sites = unique(avail_sets$site_name)
 
-    j=1
+    # j=1
     for(j in 1:length(avail_sites)){
 
         site_name = avail_sites[j]
