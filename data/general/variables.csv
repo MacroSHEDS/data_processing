@@ -29,8 +29,10 @@
 "theoryCond","Theoretical Conductivity","uS/cm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "temp","Water Temperature","degrees C","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "ionBalance","Ion Balance","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"precipCatch","Catchment Precipitation","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"flowGageHt","Discharge","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"precipitation_ns","Basin Precip (nonstandard)","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"discharge_ns","Discharge (nonstandard)","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"precipitation","Basin Precip","mm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"discharge","Discharge","L/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "alk","Alkalinity","mg/L","electrometric titration to pH 4.5","grab","Other","expression(UNKNOWN)",,1
 "suspSed","Suspended Sediment","mg/L","gravimetric","grab","Other","expression(UNKNOWN)",,1
 "NH4_N","Ammonium-N","mg/L","phenate method","grab","Cations","expression(UNKNOWN)",4,1
@@ -62,9 +64,9 @@
 "PAR","Photosynthetically Active Radiation","uM/m^2/s","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "DO","Dissolved Oxygen","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
 "CHL","Chlorophyll","mg/L","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
-"turbid","Turbidity","formazinNephelometricUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
-"FDOM","Fluorescent Dissolved Organic Matter","quinineSulfateUnit","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
-"CO2","Carbon Dioxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"CH4","Methane","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
-"N2O","Nitrous Oxide","parts per million volumetric","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"turbid","Turbidity","FNU","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"FDOM","Fluorescent Dissolved Organic Matter","QSU","UNKNOWN","sensor","Other","expression(UNKNOWN)",,0
+"CO2","Carbon Dioxide","ppm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"CH4","Methane","ppm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
+"N2O","Nitrous Oxide","ppm","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
 "ionError","Ion Error","%","UNKNOWN","grab","Other","expression(UNKNOWN)",,0
