@@ -88,6 +88,21 @@ process_0_100 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 }
 
+#ws_boundary: STATUS=READY 
+#. handle_errors 
+process_0_94 <- function(set_details, network, domain) {
+    raw_data_dest = glue('{wd}/data/{n}/{d}/geospatial/{p}',
+                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms)
+    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE) 
+    
+    dest=glue(raw_data_dest, '/', set_details$component)
+    download.file(url=set_details$url,
+                  destfile=dest,
+                  cacheOK=FALSE, method='curl') 
+    
+    unzip(zipfile=dest, exdir=raw_data_dest, overwrite =TRUE)
+}
+
 #munge kernels ####
 
 #discharge: STATUS=READY
@@ -200,6 +215,32 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
 
     return(d)
+}
+
+#ws_boundary: STATUS=READY 
+#. handle_errors 
+process_1_94 <- function(network, domain, prodname_ms, site_name,
+                         component) {
+    rawfile = glue('data/{n}/{d}/geospatial/{p}',
+                   n=network, d=domain, p=prodname_ms) 
+    
+    ws <- sf::st_read(rawfile) %>%
+        filter(!is.na(WS)) 
+    
+    for(i in 1:nrow(ws)) {
+            new_ws <- ws[i,]
+            
+            site <- as_tibble(ws[i,]) %>%
+                select(WS) %>%
+                as.character()
+            
+            ws_dir <- glue(rawfile, "/", "ws", site)
+            
+            dir.create(ws_dir, recursive = TRUE)
+            
+            sf::st_write(new_ws, glue(ws_dir, "/", "ws", site, ".shp"), 
+                         delete_dsn=TRUE)
+        } 
 }
 
 #derive kernels####
