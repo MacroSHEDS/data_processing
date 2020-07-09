@@ -2,7 +2,7 @@
 #. handle_errors
 munge_hbef_site <- function(domain, site_name, prodname_ms, tracker,
     silent=TRUE){
-    # site_name=sites[j]; tracker=held_data; k=1
+    # tracker=held_data; k=1
 
     retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name)
 
@@ -16,7 +16,7 @@ munge_hbef_site <- function(domain, site_name, prodname_ms, tracker,
         prodcode = prodcode_from_prodname_ms(prodname_ms)
 
         processing_func = get(paste0('process_1_', prodcode))
-        in_comp = retrieval_log[k, 'component']
+        in_comp = retrieval_log[k, 'component', drop=TRUE]
 
         out_comp = sw(do.call(processing_func,
             args=list(network=network, domain=domain, prodname_ms=prodname_ms,
@@ -27,16 +27,19 @@ munge_hbef_site <- function(domain, site_name, prodname_ms, tracker,
         }
     }
 
-    write_munged_file(d = out,
-        network = network,
-        domain = domain,
-        prodname_ms = prodname_ms,
-        site_name = site_name)
+    if(sum(dim(out)) > 0){
 
-    create_portal_link(network = network,
-        domain = domain,
-        prodname_ms = prodname_ms,
-        site_name = site_name)
+        write_munged_file(d = out,
+            network = network,
+            domain = domain,
+            prodname_ms = prodname_ms,
+            site_name = site_name)
+
+        create_portal_link(network = network,
+            domain = domain,
+            prodname_ms = prodname_ms,
+            site_name = site_name)
+    }
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
