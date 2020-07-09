@@ -2,8 +2,7 @@
 prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready') %>%
     arrange(prodcode)
-
-# i=4
+# i=6
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
@@ -28,7 +27,7 @@ for(i in 1:nrow(prod_info)){
     }
     avail_sites = unique(avail_sets$site_name)
 
-    # j=1
+    j=1
     # for(j in 1){
     for(j in 1:length(avail_sites)){
 
@@ -60,14 +59,14 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(! is.na(prod_info$munge_status[i])){
-            update_data_tracker_m(network = network,
-                                  domain = domain,
-                                  tracker_name = 'held_data',
-                                  prodname_ms = prodname_ms,
-                                  site_name = site_name,
-                                  new_status = 'pending')
-        }
+        #if(! is.na(prod_info$munge_status[i])){
+         #   update_data_tracker_m(network = network,
+          #                        domain = domain,
+           #                       tracker_name = 'held_data',
+            #                      prodname_ms = prodname_ms,
+             #                     site_name = site_name,
+              #                    new_status = 'pending')
+        # }
 
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
@@ -79,3 +78,4 @@ for(i in 1:nrow(prod_info)){
 
 loginfo('Retrieval complete for all sites and products',
     logger=logger_module)
+
