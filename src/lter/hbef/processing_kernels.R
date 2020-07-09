@@ -174,9 +174,10 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
             DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
             `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
             theoryCond='n', ionError='n', ionBalance='n'))) %>%
-        rename(site_name = site,
-               precipitation_ns = precipCatch, #nonstandard precip
-               discharge_ns = flowGageHt) %>% #nonstandard discharge
+        rename(site_name = site) %>%
+        rename_all(dplyr::recode, #essentially rename_if_exists
+                   precipCatch='precipitation_ns',
+                   flowGageHt='discharge_ns') %>%
         mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
             tolower(site_name), site_name)) %>%
         mutate(
