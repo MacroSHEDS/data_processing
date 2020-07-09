@@ -13,7 +13,7 @@ process_0_1 <- function(set_details, network, domain){
 
 }
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_0_13 <- function(set_details, network, domain){
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
@@ -25,7 +25,7 @@ process_0_13 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 }
 
-#stream_precip_chemistry: STATUS=READY
+#stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_208 <- function(set_details, network, domain){
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
@@ -128,6 +128,8 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
             # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
             site_name = paste0('w', site_name),
             ms_status = 0) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize(
             discharge = mean(discharge, na.rm=TRUE),
@@ -137,7 +139,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_1_13 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -157,6 +159,8 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
         mutate(
             datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
             ms_status = 0) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize(
             precip = mean(precip, na.rm=TRUE),
@@ -182,13 +186,15 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     d <- sw(read_csv(rawfile, col_types=readr::cols_only(
             site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-            temp='n', ANC960='n', ANCMet='n', #precipCatch='n',# notes='c',
+            temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
             Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
             Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',
+            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
             `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
             theoryCond='n', ionError='n', ionBalance='n'))) %>%
-        rename(site_name = site) %>%
+        rename(site_name = site,
+               precipitation_ns = precipCatch,
+               discharge_ns = flowGageHt) %>%
         mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
             tolower(site_name), site_name)) %>%
         mutate(
@@ -200,6 +206,8 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
             NO3_N = convert_molecule(NO3, 'NO3', 'N'),
             PO4_P = convert_molecule(PO4, 'PO4', 'P')) %>%
         select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
+        filter_at(vars(-site_name, -datetime),
+                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
@@ -239,7 +247,7 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels####
 
-#precip: STATUS=READY
+#precipitation: STATUS=READY
 #. handle_errors
 process_2_13 <- function(network, domain, prodname_ms){
 
@@ -258,6 +266,9 @@ process_2_13 <- function(network, domain, prodname_ms){
     }
 
     #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
     site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
          n = network,
          d = domain,
@@ -289,6 +300,9 @@ process_2_208 <- function(network, domain, prodname_ms){
     }
 
     #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
     site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
                       n = network,
                       d = domain,
@@ -301,22 +315,19 @@ process_2_208 <- function(network, domain, prodname_ms){
     return()
 }
 
-#stream_flux: STATUS=READY
+#stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
-    dt_round_interv <- 'hours' #passed to lubridate::round_date
+    chemprod <- 'stream_chemistry__208'
+    qprod <- 'discharge__1'
 
     chemfiles <- list_munged_files(network = network,
                                    domain = domain,
-                                   prodname_ms = 'stream_chemistry__208')
+                                   prodname_ms = chemprod)
     qfiles <- list_munged_files(network = network,
                                 domain = domain,
-                                prodname_ms = 'discharge__1')
-
-    flux_vars <- ms_vars %>%
-        filter(flux_convertible == 1) %>%
-        pull(variable_code)
+                                prodname_ms = qprod)
 
     flux_sites <- generics::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
@@ -324,48 +335,10 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 
     for(s in flux_sites){
 
-        chem <- read_feather(glue(
-                    'data/{n}/{d}/munged/stream_chemistry__208/{s}.feather',
-                        n = network,
-                        d = domain,
-                        s = s)) %>%
-            select(one_of(flux_vars), 'datetime', 'ms_status') %>%
-            mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-            group_by(datetime) %>%
-            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-            ungroup()
-
-        daterange <- range(chem$datetime)
-        fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
-                                        by=dt_round_interv))
-
-        discharge <- read_feather(glue(
-                        'data/{n}/{d}/munged/discharge__1/{s}.feather',
-                            n = network,
-                            d = domain,
-                            s = s)) %>%
-            select(-site_name) %>%
-            filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
-            mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-            group_by(datetime) %>%
-            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-            ungroup()
-
-        flux <- chem %>%
-            full_join(discharge,
-                      by = 'datetime') %>%
-            mutate(ms_status = numeric_any(c(ms_status.x, ms_status.y))) %>%
-            select(-ms_status.x, -ms_status.y) %>%
-            full_join(fulldt,
-                      by='datetime') %>%
-            arrange(datetime) %>%
-            select_if(~(! all(is.na(.)))) %>%
-            mutate_at(vars(-datetime, -ms_status),
-                      imputeTS::na_interpolation,
-                      maxgap = 30) %>%
-            mutate_at(vars(-datetime, -discharge, -ms_status),
-                      ~(. * discharge)) %>%
-            mutate(site_name = s)
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s,
+                                  dt_round_interv = 'hours'))
 
         write_munged_file(d = flux,
                           network = network,
@@ -382,15 +355,43 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     return()
 }
 
-#precip_flux: STATUS=PENDING
+#precip_flux_inst: STATUS=PENDING (must localize precip to stream sites first)
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms){
 
-    #precip interp should be a munge step?
-        #so fluc calc can always be performed after
-        #precip is localized to stream sites
+    chemprod <- 'precip_chemistry__208'
+    qprod <- 'precipitation__13'
 
-    #or devise some other way for the correct order of events to be ensured
-    #without requiring additional thought on the part of the developer
+    chemfiles <- list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = chemprod)
+    qfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = qprod)
 
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+
+    for(s in flux_sites){
+
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s,
+                                  dt_round_interv = 'hours'))
+
+        write_munged_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = s)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = s)
+    }
+
+    return()
 }
+
