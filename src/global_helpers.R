@@ -947,38 +947,93 @@ convert_unit <- function(val, input_unit, output_unit){
     return(new_val) }
 
 #. handle_errors
-write_munged_file <- function(d, network, domain, prodname_ms, site_name){
+write_munged_file <- function(d, network, domain, prodname_ms, site_name,
+                              shapefile=FALSE){
 
-    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
-        p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+    if(shapefile){
 
-    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
-    write_feather(d, site_file)
+        site_dir = glue('{wd}/data/{n}/{d}/munged/{p}/{s}',
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         p = prodname_ms,
+                         s = site_name)
+
+        dir.create(site_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
+        sw(sf::st_write(obj = d,
+                        dsn = glue(site_dir, '/', site_name, '.shp'),
+                        delete_dsn = TRUE,
+                        quiet = TRUE))
+    } else {
+
+        prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
+            p=prodname_ms)
+        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
+        write_feather(d, site_file)
+    }
 
     return()
 }
 
 #. handle_errors
-create_portal_link <- function(network, domain, prodname_ms, site_name){
+create_portal_link <- function(network, domain, prodname_ms, site_name,
+                               dir=FALSE){
+
+    #if dir=TRUE, treat site_name as a directory name, and link all files
+        #within (necessary for e.g. shapefiles, which often come with other files)
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
         d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
 
-    portal_site_file = glue('{pd}/{s}.feather',
-        pd=portal_prod_dir, s=site_name)
+    if(! dir){
 
-    #if there's already a data file for this site-time-product in
-    #the portal repo, remove it
-    unlink(portal_site_file)
+        portal_site_file = glue('{pd}/{s}.feather',
+            pd=portal_prod_dir, s=site_name)
 
-    #create a link to the portal repo from the new site file
-    #(note: really, to and from are equivalent, as they both
-    #point to the same underlying structure in the filesystem)
-    site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
-        n=network, d=domain, p=prodname_ms, s=site_name)
-    invisible(sw(file.link(to=portal_site_file, from=site_file)))
+        #if there's already a data file for this site-time-product in
+        #the portal repo, remove it
+        unlink(portal_site_file)
+
+        #create a link to the portal repo from the new site file
+        #(note: really, to and from are equivalent, as they both
+        #point to the same underlying structure in the filesystem)
+        site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
+            n=network, d=domain, p=prodname_ms, s=site_name)
+        invisible(sw(file.link(to=portal_site_file, from=site_file)))
+
+    } else {
+
+        site_dir <- glue('data/{n}/{d}/munged/{p}/{s}',
+                         n = network,
+                         d = domain,
+                         p = prodname_ms,
+                         s = site_name)
+
+        portal_prod_dir <- glue('../portal/data/{d}/{p}', #ignore network
+                                d = domain,
+                                p = strsplit(prodname_ms, '__')[[1]][1])
+
+        dir.create(portal_prod_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
+        site_files <- list.files(site_dir)
+        for(s in site_files){
+
+            site_file <- glue(site_dir, '/', s)
+            portal_site_file <- glue(portal_prod_dir, '/', s)
+            unlink(portal_site_file)
+            invisible(sw(file.link(to = portal_site_file,
+                                   from = site_file)))
+        }
+
+    }
 
     return()
 }
@@ -1024,124 +1079,124 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
     return(fnames)
 }
 
-#still in progress 
+#still in progress
 delineate_watershed <- function(lat, long) {
-    
+
     site <- tibble(x = lat,
                      y = long) %>%
         sf::st_as_sf(coords = c("y", "x"), crs = 4269) %>%
         sf::st_transform(102008)
-    
+
     start_comid <- nhdplusTools::discover_nhdplus_id(sf::st_sfc(
-        sf::st_point(c(long, lat)), crs = 4269)) 
-    
+        sf::st_point(c(long, lat)), crs = 4269))
+
     flowline <- nhdplusTools::navigate_nldi(list(featureSource = "comid",
                                                  featureID = start_comid),
                                             mode = "upstreamTributaries",
                                             data_source = "")
-    
+
     subset_file <- tempfile(fileext = ".gpkg")
-    
+
     subset <- nhdplusTools::subset_nhdplus(comids = flowline$nhdplus_comid,
                                            output_file = subset_file,
                                            nhdplus_data = "download",
                                            return_data = TRUE)
-    
+
     flowlines <- subset$NHDFlowline_Network %>%
         sf::st_transform(102008)
-    
+
     catchments <- subset$CatchmentSP %>%
         sf::st_transform(102008)
-    
+
     upstream <- nhdplusTools::get_UT(flowlines, start_comid)
-    
+
     watershed <- catchments %>%
         filter(featureid %in% upstream) %>%
         sf::st_buffer(0.01) %>%
         sf::st_union() %>%
-        sf::st_as_sf() 
-    
+        sf::st_as_sf()
+
     if(as.numeric(sf::st_area(watershed)) >= 60000000) {
-        return(watershed) 
-        } 
+        return(watershed)
+        }
     else {
-        
+
         outline = sf::st_as_sfc(sf::st_bbox(flowlines))
-        
+
         outline_buff <- outline %>%
             sf::st_buffer(5000)
-        
+
         dem <- elevatr::get_elev_raster(as(outline_buff, 'Spatial'), z=12)
-        
+
         temp_raster <- tempfile(fileext = ".tif")
-        
+
         raster::writeRaster(dem, temp_raster, overwrite = T)
-        
+
         temp_point <- tempfile(fileext = ".shp")
-        
+
         sf::st_write(sf::st_zm(site), temp_point, delete_layer=TRUE)
-        
+
         temp_breash2 <- tempfile(fileext = ".tif")
         whitebox::wbt_fill_single_cell_pits(temp_raster, temp_breash2)
-        
+
         temp_breached <- tempfile(fileext = ".tif")
         whitebox::wbt_breach_depressions(temp_breash2,temp_breached,flat_increment=.01)
-        
+
         temp_d8_pntr <- tempfile(fileext = ".tif")
         whitebox::wbt_d8_pointer(temp_breached,temp_d8_pntr)
-        
+
         temp_shed <- tempfile(fileext = ".tif")
         whitebox::wbt_unnest_basins(temp_d8_pntr, temp_point, temp_shed)
-        
+
         # No idea why but wbt_unnest_basins() aves whatever file path with a _1 after the name so must add
         file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
-        
+
         file_shed <- paste0(file_new[1], "_1.", file_new[2])
-        
+
         check <- raster::raster(file_shed)
         values <- raster::getValues(check)
         values[is.na(values)] <- 0
-    
-    
+
+
     if(sum(values, na.rm = TRUE) < 100) {
-        
+
         flow <- tempfile(fileext = ".tif")
         whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
-        
+
         snap <- tempfile(fileext = ".shp")
         whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
-        
+
         temp_shed <- tempfile(fileext = ".tif")
         whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
-        
+
         file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
-        
+
         file_shed <- paste0(file_new[1], "_1.", file_new[2])
-        
+
         check <- raster::raster(file_shed)
         values <- raster::getValues(check)
         values[is.na(values)] <- 0
-    } 
+    }
     watershed_raster <- raster::rasterToPolygons(raster::raster(file_shed))
-    
+
     #Convert shapefile to sf
     watershed_df <- sf::st_as_sf(watershed_raster)
-    
+
     #buffer to join all pixles into one shape
     watershed <- sf::st_buffer(watershed_df, 0.1) %>%
         sf::st_union() %>%
         sf::st_as_sf()
-    
+
     if(sum(values, na.rm = T) < 100) {
         watershed <- watershed %>%
             mutate(flag = "check")
     }
-    
-    #sf::st_write(watershed_union, dsn = 
+
+    #sf::st_write(watershed_union, dsn =
      #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
       #                    n = sites$network, d = sites$domain, s = sites$site_name))
-    return(watershed) 
-    
+    return(watershed)
+
     }
 }
 

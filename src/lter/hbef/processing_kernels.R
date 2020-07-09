@@ -88,19 +88,25 @@ process_0_100 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 }
 
-#ws_boundary: STATUS=READY 
-#. handle_errors 
+#ws_boundary: STATUS=READY
+#. handle_errors
 process_0_94 <- function(set_details, network, domain) {
-    raw_data_dest = glue('{wd}/data/{n}/{d}/geospatial/{p}',
-                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms)
-    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE) 
-    
-    dest=glue(raw_data_dest, '/', set_details$component)
-    download.file(url=set_details$url,
-                  destfile=dest,
-                  cacheOK=FALSE, method='curl') 
-    
-    unzip(zipfile=dest, exdir=raw_data_dest, overwrite =TRUE)
+
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         p = set_details$prodname_ms,
+                         s = set_details$site_name)
+    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
+
+    rawfile=glue(raw_data_dest, '/', set_details$component)
+    download.file(url = set_details$url,
+                  destfile = rawfile,
+                  cacheOK = FALSE,
+                  method = 'curl')
+
+    return()
 }
 
 #munge kernels ####
@@ -217,30 +223,49 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#ws_boundary: STATUS=READY 
-#. handle_errors 
+#ws_boundary: STATUS=READY
+#. handle_errors
 process_1_94 <- function(network, domain, prodname_ms, site_name,
-                         component) {
-    rawfile = glue('data/{n}/{d}/geospatial/{p}',
-                   n=network, d=domain, p=prodname_ms) 
-    
-    ws <- sf::st_read(rawfile) %>%
-        filter(!is.na(WS)) 
-    
-    for(i in 1:nrow(ws)) {
-            new_ws <- ws[i,]
-            
-            site <- as_tibble(ws[i,]) %>%
-                select(WS) %>%
-                as.character()
-            
-            ws_dir <- glue(rawfile, "/", "ws", site)
-            
-            dir.create(ws_dir, recursive = TRUE)
-            
-            sf::st_write(new_ws, glue(ws_dir, "/", "ws", site, ".shp"), 
-                         delete_dsn=TRUE)
-        } 
+                         component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n=network, d=domain, p=prodname_ms, s=site_name)
+    rawfile <- glue(rawdir, '/', component)
+
+    zipped_files <- unzip(zipfile = rawfile,
+                          exdir = rawdir,
+                          overwrite = TRUE)
+
+    ws <- sf::st_read(rawdir,
+                      quiet = TRUE) %>%
+        filter(!is.na(WS))
+
+    unlink(zipped_files)
+
+    for(i in 1:nrow(ws)){
+
+        new_ws <- ws[i,]
+
+        site_name <- as_tibble(new_ws) %>%
+            pull(WS) %>%
+            as.character() %>%
+            stringr::str_replace('WS', 'w') #harmonize hbef sitenames
+
+        write_munged_file(d = new_ws,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = site_name,
+                          shapefile = TRUE)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = site_name,
+                           dir = TRUE)
+    }
+
+    return()
 }
 
 #derive kernels####
