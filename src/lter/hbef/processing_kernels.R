@@ -268,11 +268,141 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
     return()
 }
 
+#rain_gauge_locations: STATUS=READY
+#. handle_errors
+process_1_100 <- function(network, domain, prodname_ms, site_name,
+                          component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n=network, d=domain, p=prodname_ms, s=site_name)
+    rawfile <- glue(rawdir, '/', component)
+
+    zipped_files <- unzip(zipfile = rawfile,
+                          exdir = rawdir,
+                          overwrite = TRUE)
+
+    rg_all <- sf::st_read(rawdir,
+                          quiet = TRUE) %>%
+        filter(! is.na(GAGE_NUM))
+
+    unlink(zipped_files)
+
+    for(i in 1:nrow(rg_all)){
+
+        rg <- rg_all[i,] %>%
+            sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
+
+        gage_id <- as_tibble(rg) %>%
+            mutate(GAGE_NUM = paste0('rg', GAGE_NUM)) %>%
+            pull(GAGE_NUM)
+
+        write_munged_file(d = rg,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = gage_id,
+                          shapefile = TRUE)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = gage_id,
+                           dir = TRUE)
+    }
+
+    return()
+}
+
 #derive kernels####
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_2_13 <- function(network, domain, prodname_ms){
+    # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
+
+    choose_projection = function(lat, long){
+
+        if(lat <= 15 && lat >= -15){ #equatorial
+            PROJ4 = paste0('+proj=laea +lon_0=', long)
+        } else { #temperate or polar
+            PROJ4 = paste0('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+        }
+
+        return(PROJ4)
+    }
+
+
+    mfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = prodname_ms)
+    # mfiles2 <- list_munged_files(network = network,
+    #                              domain = domain,
+    #                              prodname_ms = 'ws_boundary__94')
+
+
+    #mapping onto spencer's code
+    rain_raw <- read_feather(mfiles[i]) %>%
+        rename(date = datetime, ID = site_name)
+    # watersheds <- sf::st_read('data/lter/hbef/munged/ws_boundary__94/')
+    wbprod <- 'ws_boundary__94'
+    # projstring <- "+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    wb_sf_paths <- list.files(glue('data/{n}/{d}/munged/{wb}',
+                                   n = network,
+                                   d = domain,
+                                   wb = wbprod),
+                              recursive = TRUE,
+                              full.names = TRUE,
+                              pattern = '*.shp')
+    wb_sfs <- lapply(wb_sf_paths, function(x) sf::st_read(x))
+    wb_sf <- sw(Reduce(sf::st_union, wb_sfs))
+    watersheds <- wb_sf
+    rain_location <- sf::st_read('data/lter/hbef/munged/rain_gauge_locations__100/rg8/rg8.shp')
+    # st_set_crs(2154)
+    # write_sf()
+
+    ## Read in data
+    rain_location <- st_read('data_in/hbef_raingage')
+    watersheds <- st_read('data_in/hbef_wsheds')
+    rain_raw <- read_csv('data_in/hbef_precip.csv') %>%
+        rename(date = 1, ID = 2, precip = 3)
+    ## Summarise data
+    rain_annual <- rain_raw %>%
+        # mutate(date = ymd(date)) %>%
+        filter(year(date) == 2004) %>%
+        group_by(ID) %>%
+        summarise(annual = sum(precip, na.rm = T))
+    rain_join <- left_join(rain_location, rain_annual) %>%
+        st_transform(projstring)
+    #?
+    dem <- elevatr::get_elev_raster(watersheds, z = 12) %>%
+        #project raster?
+        #st_transform(projstring)
+    projstring <- "+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    gs <- gstat(formula = annual~1,
+                locations = rain_join)
+
+    idw <- raster::interpolate(dem, gs)
+    idw_mask <- mask(idw, watersheds)
+    idw_trm <- trim(idw_mask)
+    ## Interpolation
+    v = variogram(annual~1, rain_join)
+    m = fit.variogram(v, vgm(1, 'Sph'))
+    ws_grid <- dem
+    #May not work if you have an updated stars but not an updated sf
+    ws_stars <- st_as_stars(ws_grid)
+    interp = krige(formula = annual~1, rain_join, ws_stars, model = m)
+    plot(interp)
+    test <- st_as_sf(interp)
+    mapview(test, zcol = 'var1.pred', lwd = 0)
+    mapview(rain_join, zcol = 'annual')
+    # IDW
+    test <- dem
+    gs <- gstat(formula=annual~1, locations=rain_join)
+    idw <- interpolate(test, gs)
+    idw_mask <- mask(idw, ws8)
+    idw_trm <- trim(idw_mask)
+
+
 
     #this logic is temporary, and just gets precip into the format that works
     #with the portal. but once interp is working, we'll perform that here
