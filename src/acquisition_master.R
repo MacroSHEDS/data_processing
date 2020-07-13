@@ -1,4 +1,16 @@
 suppressPackageStartupMessages({
+
+    #spatial packages
+    library(gstat)
+    # library(terra)  #must load before gstat package
+    library(raster) #raster has been replaced by terra (way faster)
+    library(stars)
+    library(sf)
+    library(sp)
+    library(mapview)
+    library(elevatr)
+
+    #everything else
     library(httr)
     library(jsonlite)
     library(tidyr)
@@ -16,14 +28,6 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
     library(imputeTS)
 
-    #spatial packages
-    library(stars)
-    library(sf)
-    library(gstat) #must load before raster package
-    library(raster)
-    library(sp)
-    library(mapview)
-    library(elevatr)
 })
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
