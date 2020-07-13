@@ -3,7 +3,7 @@ prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready') %>%
     arrange(prodcode)
 
-# i=6
+# i=3
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
