@@ -52,21 +52,9 @@ process_0_208 <- function(set_details, network, domain){
         cacheOK=FALSE, method='curl')
 }
 
-#rain_gauge_locations: STATUS=PENDING (not sure why this cannot be accessed, may it does not exist. also repeated with 100)
+#stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_0_5482 <- function(set_details, network, domain){
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
-    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
-    download.file(url=set_details$url,
-        destfile=glue(raw_data_dest, '/', set_details$component),
-        cacheOK=FALSE, method='curl')
-}
-
-#stream_gauge_locations: STATUS=PENDING (not sure why this cannot be accessed, may it does not exist)
-#. handle_errors
-process_0_3239 <- function(set_details, network, domain){
+process_0_107 <- function(set_details, network, domain){
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name)
@@ -313,6 +301,51 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
     return()
 }
 
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_1_107 <- function(network, domain, prodname_ms, site_name,
+                          component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n=network, d=domain, p=prodname_ms, s=site_name)
+    rawfile <- glue(rawdir, '/', component)
+
+    zipped_files <- unzip(zipfile = rawfile,
+                          exdir = rawdir,
+                          overwrite = TRUE)
+
+    weirs_all <- sf::st_read(rawdir,
+                             quiet = TRUE) %>%
+        filter(! is.na(WEIR_NUM))
+
+    unlink(zipped_files)
+
+    for(i in 1:nrow(weirs_all)){
+
+        w <- weirs_all[i,] %>%
+             sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
+
+        site_name <- as_tibble(w) %>%
+            mutate(WEIR_NUM = paste0('w', WEIR_NUM)) %>%
+            pull(WEIR_NUM)
+
+        write_munged_file(d = w,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = site_name,
+                          shapefile = TRUE)
+
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = site_name,
+                           dir = TRUE)
+    }
+
+    return()
+}
+
 #derive kernels####
 
 #precipitation: STATUS=READY
@@ -320,73 +353,93 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
 process_2_13 <- function(network, domain, prodname_ms){
     # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
 
-    choose_projection = function(lat, long){
-
-        if(lat <= 15 && lat >= -15){ #equatorial
-            PROJ4 = paste0('+proj=laea +lon_0=', long)
-        } else { #temperate or polar
-            PROJ4 = paste0('+proj=laea +lat_0=', lat, ' +lon_0=', long)
-        }
-
-        return(PROJ4)
-    }
-
-
-    mfiles <- list_munged_files(network = network,
-                                domain = domain,
-                                prodname_ms = prodname_ms)
-    # mfiles2 <- list_munged_files(network = network,
-    #                              domain = domain,
-    #                              prodname_ms = 'ws_boundary__94')
-
-
-    #mapping onto spencer's code
-    rain_raw <- read_feather(mfiles[i]) %>%
-        rename(date = datetime, ID = site_name)
-    # watersheds <- sf::st_read('data/lter/hbef/munged/ws_boundary__94/')
+    projstring <- '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'#4326: not projected
     wbprod <- 'ws_boundary__94'
-    # projstring <- "+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
-    wb_sf_paths <- list.files(glue('data/{n}/{d}/munged/{wb}',
+    rgprod <- 'rain_gauge_locations__100'
+    sgprod <- 'stream_gauge_locations__107'
+    # rain_location <- st_read('data_in/hbef_raingage')
+    # watersheds <- st_read('data_in/hbef_wsheds')
+    # rain_raw <- read_csv('data_in/hbef_precip.csv') %>%
+    #     rename(date = 1, ID = 2, precip = 3)
+
+    gaugefiles <- list_munged_files(network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms)
+    raindata <- tibble()
+    for(i in 1:length(gaugefiles)){
+        raindata <- read_feather(gaugefiles[i]) %>%
+            bind_rows(raindata)
+    }
+    rain_raw = raindata
+
+    wb_paths <- list.files(glue('data/{n}/{d}/munged/{wb}',
                                    n = network,
                                    d = domain,
                                    wb = wbprod),
                               recursive = TRUE,
                               full.names = TRUE,
                               pattern = '*.shp')
-    wb_sfs <- lapply(wb_sf_paths, function(x) sf::st_read(x))
-    wb_sf <- sw(Reduce(sf::st_union, wb_sfs))
-    watersheds <- wb_sf
-    rain_location <- sf::st_read('data/lter/hbef/munged/rain_gauge_locations__100/rg8/rg8.shp')
-    # st_set_crs(2154)
-    # write_sf()
+    wbs <- lapply(wb_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
+    # wb <- sw(Reduce(sf::st_union, wbs)) %>%
+    wb <- sw(Reduce(rbind, wbs)) %>%
+        st_transform(projstring)
+    watersheds <- wb
+    # watersheds <- sf::st_read('~/Downloads/hmm/hbef_wsheds/hbef_wsheds.shp')
+    rg_paths <- list.files(glue('data/{n}/{d}/munged/{rg}',
+                                   n = network,
+                                   d = domain,
+                                   rg = rgprod),
+                              recursive = TRUE,
+                              full.names = TRUE,
+                              pattern = '*.shp')
+    rgs <- lapply(rg_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
+    rg <- sw(Reduce(rbind, rgs)) %>%
+        st_transform(projstring)
+    rain_location <- rg
+    # rain_location <- sf::st_read('~/Downloads/hmm/hbef_raingage/hbef_raingage.shp')
 
-    ## Read in data
-    rain_location <- st_read('data_in/hbef_raingage')
-    watersheds <- st_read('data_in/hbef_wsheds')
-    rain_raw <- read_csv('data_in/hbef_precip.csv') %>%
-        rename(date = 1, ID = 2, precip = 3)
+    sg_paths <- list.files(glue('data/{n}/{d}/munged/{sg}',
+                                   n = network,
+                                   d = domain,
+                                   sg = sgprod),
+                              recursive = TRUE,
+                              full.names = TRUE,
+                              pattern = '*.shp')
+    sgs <- lapply(sg_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
+    sg <- sw(Reduce(rbind, sgs)) %>%
+        st_transform(projstring)
+    # st_set_crs(2154)
+
     ## Summarise data
     rain_annual <- rain_raw %>%
         # mutate(date = ymd(date)) %>%
-        filter(year(date) == 2004) %>%
-        group_by(ID) %>%
-        summarise(annual = sum(precip, na.rm = T))
-    rain_join <- left_join(rain_location, rain_annual) %>%
-        st_transform(projstring)
+        filter(year(datetime) == 2004) %>%
+        group_by(site_name) %>%
+        summarise(annual = sum(precip, na.rm = TRUE))
+    rain_join <- left_join(rain_location,
+                           rain_annual,
+                           by = c('ID' = 'site_name')) %>%
+        st_transform(projstring) #redund
     #?
-    dem <- elevatr::get_elev_raster(watersheds, z = 12) %>%
-        #project raster?
-        #st_transform(projstring)
-    projstring <- "+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+    dem <- elevatr::get_elev_raster(watersheds, z = 12)# %>%
+        # raster::projectRaster(crs = projstring)
+        # terra::rast(dem) %>%
+        # terra::project(projstring)
     gs <- gstat(formula = annual~1,
                 locations = rain_join)
+                # nmax = 5,
+                # set = list(idp = 0))
 
     idw <- raster::interpolate(dem, gs)
-    idw_mask <- mask(idw, watersheds)
-    idw_trm <- trim(idw_mask)
+    idw_mask <- raster::mask(idw, watersheds)
+    idw_trm <- raster::trim(idw_mask)
+    mapview(idw, maxpixels =  2757188)
+    mapview(idw)
+    mapview(idw_mask)
     ## Interpolation
-    v = variogram(annual~1, rain_join)
-    m = fit.variogram(v, vgm(1, 'Sph'))
+    # v = gstat::variogram(annual~1, rain_join)
+    v = gstat::variogram(gs, locations = rain_join)
+    m = gstat::fit.variogram(v, gstat::vgm(1, 'Sph'))
     ws_grid <- dem
     #May not work if you have an updated stars but not an updated sf
     ws_stars <- st_as_stars(ws_grid)
