@@ -346,115 +346,63 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
     return()
 }
 
-#derive kernels####
+#derive kernels ####
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_2_13 <- function(network, domain, prodname_ms){
     # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
 
-    projstring <- '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'#4326: not projected
-    wbprod <- 'ws_boundary__94'
-    rgprod <- 'rain_gauge_locations__100'
-    sgprod <- 'stream_gauge_locations__107'
-    # rain_location <- st_read('data_in/hbef_raingage')
-    # watersheds <- st_read('data_in/hbef_wsheds')
-    # rain_raw <- read_csv('data_in/hbef_precip.csv') %>%
-    #     rename(date = 1, ID = 2, precip = 3)
+    #EPSG code 4326; datum WGS84; not projected
+    projstring <- glue('+proj=longlat +datum=WGS84 +no_defs ',
+                       '+ellps=WGS84 +towgs84=0,0,0')
+    # projstring <- '+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
 
-    gaugefiles <- list_munged_files(network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms)
-    raindata <- tibble()
-    for(i in 1:length(gaugefiles)){
-        raindata <- read_feather(gaugefiles[i]) %>%
-            bind_rows(raindata)
+    raindata <- read_combine_feathers(network, domain, prodname_ms)
+    wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
+    wb <- sf::st_transform(wb, projstring)
+    rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
+    rg <- sf::st_transform(rg, projstring)
+    # sg <- read_combine_shapefiles(network, domain, 'stream_gauge_locations__107')
+    # sg <- sf::st_transform(sg, projstring)
+
+    # rain_annual <- raindata %>%
+    #     filter(year(datetime) == 2004) %>%
+    #     group_by(site_name) %>%
+    #     summarise(annual = sum(precip, na.rm = TRUE))
+    rain_st <- raindata %>%
+        mutate(year = lubridate::year(datetime)) %>%
+        select(-datetime) %>%
+        group_by(site_name, year) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        left_join(rg, by = c('site_name' = 'ID'))
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12))# %>%#projects itself
+        # raster::projectRaster(crs=projstring)
+    # idw <- terra::interpolate(dem, gs) #actually slower
+    # plot(idw_mask)
+    raster::extract(dem, rg) #get elevation at point
+
+    # for(w in wb$WS){ #find tidy way to do this
+    for(dt in unique(rain_st$datetime)){
+        rain_dt = filter(rain_st, datetime == dt)
+        if(length(unique(rain_dt$precip)) == 1){
+            #ALL OUTPUTS EQUAL
+        }
+        ms_status <- as.numeric(any(rain_dt$ms_status == 1))
+
+        idw <- rain_dt %>%
+            gstat::gstat(formula = precip~1,
+                         locations = .) %>%
+            raster::interpolate(dem, .)
+
+
+        #HOW CAN THIS BE MADE EFFICIENT?
+        wb_sub <- filter(wb, WS == w)
+        idw_mask <- raster::mask(idw, wb_sub) #trims itself by default
+        mean_precip <- raster::values(idw_mask) %>%
+            mean(., na.rm = TRUE)
     }
-    rain_raw = raindata
-
-    wb_paths <- list.files(glue('data/{n}/{d}/munged/{wb}',
-                                   n = network,
-                                   d = domain,
-                                   wb = wbprod),
-                              recursive = TRUE,
-                              full.names = TRUE,
-                              pattern = '*.shp')
-    wbs <- lapply(wb_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
-    # wb <- sw(Reduce(sf::st_union, wbs)) %>%
-    wb <- sw(Reduce(rbind, wbs)) %>%
-        st_transform(projstring)
-    watersheds <- wb
-    # watersheds <- sf::st_read('~/Downloads/hmm/hbef_wsheds/hbef_wsheds.shp')
-    rg_paths <- list.files(glue('data/{n}/{d}/munged/{rg}',
-                                   n = network,
-                                   d = domain,
-                                   rg = rgprod),
-                              recursive = TRUE,
-                              full.names = TRUE,
-                              pattern = '*.shp')
-    rgs <- lapply(rg_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
-    rg <- sw(Reduce(rbind, rgs)) %>%
-        st_transform(projstring)
-    rain_location <- rg
-    # rain_location <- sf::st_read('~/Downloads/hmm/hbef_raingage/hbef_raingage.shp')
-
-    sg_paths <- list.files(glue('data/{n}/{d}/munged/{sg}',
-                                   n = network,
-                                   d = domain,
-                                   sg = sgprod),
-                              recursive = TRUE,
-                              full.names = TRUE,
-                              pattern = '*.shp')
-    sgs <- lapply(sg_paths, function(x) sf::st_read(x, stringsAsFactors = FALSE))
-    sg <- sw(Reduce(rbind, sgs)) %>%
-        st_transform(projstring)
-    # st_set_crs(2154)
-
-    ## Summarise data
-    rain_annual <- rain_raw %>%
-        # mutate(date = ymd(date)) %>%
-        filter(year(datetime) == 2004) %>%
-        group_by(site_name) %>%
-        summarise(annual = sum(precip, na.rm = TRUE))
-    rain_join <- left_join(rain_location,
-                           rain_annual,
-                           by = c('ID' = 'site_name')) %>%
-        st_transform(projstring) #redund
-    #?
-    dem <- elevatr::get_elev_raster(watersheds, z = 12)# %>%
-        # raster::projectRaster(crs = projstring)
-        # terra::rast(dem) %>%
-        # terra::project(projstring)
-    gs <- gstat(formula = annual~1,
-                locations = rain_join)
-                # nmax = 5,
-                # set = list(idp = 0))
-
-    idw <- raster::interpolate(dem, gs)
-    idw_mask <- raster::mask(idw, watersheds)
-    idw_trm <- raster::trim(idw_mask)
-    mapview(idw, maxpixels =  2757188)
-    mapview(idw)
-    mapview(idw_mask)
-    ## Interpolation
-    # v = gstat::variogram(annual~1, rain_join)
-    v = gstat::variogram(gs, locations = rain_join)
-    m = gstat::fit.variogram(v, gstat::vgm(1, 'Sph'))
-    ws_grid <- dem
-    #May not work if you have an updated stars but not an updated sf
-    ws_stars <- st_as_stars(ws_grid)
-    interp = krige(formula = annual~1, rain_join, ws_stars, model = m)
-    plot(interp)
-    test <- st_as_sf(interp)
-    mapview(test, zcol = 'var1.pred', lwd = 0)
-    mapview(rain_join, zcol = 'annual')
-    # IDW
-    test <- dem
-    gs <- gstat(formula=annual~1, locations=rain_join)
-    idw <- interpolate(test, gs)
-    idw_mask <- mask(idw, ws8)
-    idw_trm <- trim(idw_mask)
-
 
 
     #this logic is temporary, and just gets precip into the format that works
@@ -484,6 +432,7 @@ process_2_13 <- function(network, domain, prodname_ms){
     unlink(portal_site_file)
     invisible(sw(file.link(to = portal_site_file, from = site_file)))
 
+    gc()
     return()
 }
 
