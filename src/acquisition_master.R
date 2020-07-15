@@ -1,14 +1,17 @@
 suppressPackageStartupMessages({
 
-    #spatial packages
-    library(gstat)
-    # library(terra)  #must load before gstat package
+    #we should be able to avoid librarying most or all of these,
+    #since we're referring to their functions directly with ::
+
+    # #spatial packages
+    library(gstat) #must load before raster package
+    # # library(terra)  #must load before gstat package
     library(raster) #raster has been replaced by terra (way faster)
-    library(stars)
-    library(sf)
-    library(sp)
-    library(mapview)
-    library(elevatr)
+    # library(stars)
+    # library(sf)
+    # library(sp)
+    # library(mapview)
+    # library(elevatr)
 
     #everything else
     library(httr)
