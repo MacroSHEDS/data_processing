@@ -1265,3 +1265,44 @@ calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
 
     return(flux)
 }
+
+#. handle_errors
+read_combine_shapefiles <- function(network, domain, prodname_ms){
+
+    prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
+                                 n = network,
+                                 d = domain,
+                                 p = prodname_ms),
+                            recursive = TRUE,
+                            full.names = TRUE,
+                            pattern = '*.shp')
+
+    shapes <- lapply(prodpaths,
+                     function(x){
+                         sf::st_read(x,
+                                     stringsAsFactors = FALSE,
+                                     quiet = TRUE)
+                     })
+
+    # wb <- sw(Reduce(sf::st_union, wbs)) %>%
+    combined <- sw(Reduce(rbind, shapes))
+        # sf::st_transform(projstring)
+
+    return(combined)
+}
+
+#. handle_errors
+read_combine_feathers <- function(network, domain, prodname_ms){
+
+    prodpaths <- list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms)
+
+    combined <- tibble()
+    for(i in 1:length(prodpaths)){
+        combined <- read_feather(prodpaths[i]) %>%
+            bind_rows(combined)
+    }
+
+    return(combined)
+}
