@@ -354,38 +354,97 @@ process_2_13 <- function(network, domain, prodname_ms){
     # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
 
     #EPSG code 4326; datum WGS84; not projected
-    projstring <- glue('+proj=longlat +datum=WGS84 +no_defs ',
-                       '+ellps=WGS84 +towgs84=0,0,0')
-    # projstring <- '+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
+    # projstring <- glue('+proj=longlat +datum=WGS84 +no_defs ',
+    #                    '+ellps=WGS84 +towgs84=0,0,0')
+    projstring <- '+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
 
-    raindata <- read_combine_feathers(network, domain, prodname_ms)
+    precip <- read_combine_feathers(network, domain, prodname_ms)
     wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
-    wb <- sf::st_transform(wb, projstring)
+    wb <- sf::st_transform(wb, projstring) %>%
+        select(-WSHEDS0_ID)
     rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
-    rg <- sf::st_transform(rg, projstring)
+    rg <- sf::st_transform(rg, projstring) %>%
+        select(-X, -Y, -GAGE_NUM)
     # sg <- read_combine_shapefiles(network, domain, 'stream_gauge_locations__107')
     # sg <- sf::st_transform(sg, projstring)
 
-    # rain_annual <- raindata %>%
-    #     filter(year(datetime) == 2004) %>%
-    #     group_by(site_name) %>%
-    #     summarise(annual = sum(precip, na.rm = TRUE))
-    rain_st <- raindata %>%
-        mutate(year = lubridate::year(datetime)) %>%
-        select(-datetime) %>%
-        group_by(site_name, year) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    precip <- precip %>%
+        mutate(datetime = lubridate::year(datetime)) %>% #temporary
+        group_by(site_name, datetime) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        left_join(rg, by = c('site_name' = 'ID'))
-    dem <- sm(elevatr::get_elev_raster(wb, z = 12))# %>%#projects itself
-        # raster::projectRaster(crs=projstring)
-    # idw <- terra::interpolate(dem, gs) #actually slower
-    # plot(idw_mask)
-    raster::extract(dem, rg) #get elevation at point
+        filter(site_name %in% rg$ID) %>% #may have to harmonize names
+        tidyr::pivot_wider(names_from = site_name,
+                           values_from = precip) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else numeric_any(.)) %>%
+        ungroup() %>%
+        mutate(ms_status = as.numeric(ms_status)) %>%
+        arrange(datetime)
 
+    precip_status <- precip$ms_status
+    precip_dt <- precip$datetime
+    precip$ms_status <- precip$datetime <- NULL
+    precip <- as.matrix(precip)
+        # left_join(rg, by = c('site_name' = 'ID'))
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
+
+    for(j in 1:nrow(wb)){
+
+        wbj <- slice(wb, j)
+        dem_wbj <- raster::crop(dem, wbj)
+        dem_wbj <- raster::mask(dem_wbj, wbj)
+
+        #rows sum to 1
+        #norm only applies to present gauges
+
+        inv_distmat <- matrix(NA, nrow = length(dem_wbj), ncol = nrow(rg),
+                          dimnames = list(NULL, rg$ID))
+        for(k in 1:nrow(rg)){
+            rgk <- slice(rg, k)
+            # elevs <- raster::values(dem_wbj) #incorporate this
+            inv_distmat[, k] <- raster::distanceFromPoints(dem_wbj, rgk) %>%
+                raster::values(.)
+        }
+
+        ws_mean_precip <- rep(NA, nrow(precip))
+        for(k in 1:nrow(precip)){
+            precip_k <- t(precip[k, , drop = FALSE])
+            inv_distmat_sub <- inv_distmat[, ! is.na(precip_k)]
+            precip_k <- precip_k[! is.na(precip_k)]
+            weightmat <- do.call(rbind, #avoids matrix transposition
+                                 unlist(apply(inv_distmat_sub,
+                                              1,
+                                              function(x) list(x / sum(x))),
+                                        recursive = FALSE))
+            precip_k[is.na(precip_k)] <- 0 #allows matrix multiplication
+            precip_interp <- weightmat %*% precip_k
+            ws_mean_precip[k] <- mean(precip_interp)
+        }
+
+        #WRITE THIS
+        tibble(datetime = precip_dt,
+               site_name = wbj$WS,
+               precip = ws_mean_precip,
+               ms_status = precip_status)
+
+    }
+
+        mean_precip <- raster::values(idw_mask) %>%
+            mean(., na.rm = TRUE)
+    }
+
+    raster::extract(dem, rg) #get elevation at point (NOT NEEDED, BUT RECORD IT)
+
+    #NOW TRY THE INTERP WAY AND COMPARE TIME
     # for(w in wb$WS){ #find tidy way to do this
     for(dt in unique(rain_st$datetime)){
-        rain_dt = filter(rain_st, datetime == dt)
+        rain_dt <- filter(rain_st, datetime == dt)
+
+
         if(length(unique(rain_dt$precip)) == 1){
             #ALL OUTPUTS EQUAL
         }
@@ -396,6 +455,8 @@ process_2_13 <- function(network, domain, prodname_ms){
                          locations = .) %>%
             raster::interpolate(dem, .)
 
+        rg$X
+
 
         #HOW CAN THIS BE MADE EFFICIENT?
         wb_sub <- filter(wb, WS == w)
@@ -404,6 +465,7 @@ process_2_13 <- function(network, domain, prodname_ms){
             mean(., na.rm = TRUE)
     }
 
+    #dont forget to interp final sg precip to a desirable interval?
 
     #this logic is temporary, and just gets precip into the format that works
     #with the portal. but once interp is working, we'll perform that here
