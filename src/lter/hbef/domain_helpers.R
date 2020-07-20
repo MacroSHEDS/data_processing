@@ -29,16 +29,14 @@ munge_hbef_site <- function(domain, site_name, prodname_ms, tracker,
 
     if(sum(dim(out)) > 0){
 
-        write_munged_file(d = out,
+        write_ms_file(d = out,
             network = network,
             domain = domain,
             prodname_ms = prodname_ms,
-            site_name = site_name)
-
-        create_portal_link(network = network,
-            domain = domain,
-            prodname_ms = prodname_ms,
-            site_name = site_name)
+            site_name = site_name,
+            level = 'munged',
+            shapefile = FALSE,
+            link_to_portal = TRUE)
     }
 
     update_data_tracker_m(network=network, domain=domain,
@@ -88,16 +86,14 @@ munge_hbef_combined <- function(domain, site_name, prodname_ms, tracker,
             filt_site <- sites[i]
             out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-            write_munged_file(d = out_comp_filt,
+            write_ms_file(d = out_comp_filt,
                 network = network,
                 domain = domain,
                 prodname_ms = prodname_ms,
-                site_name = filt_site)
-
-            create_portal_link(network = network,
-                domain = domain,
-                prodname_ms = prodname_ms,
-                site_name = filt_site)
+                site_name = filt_site,
+                level = 'munged',
+                shapefile = FALSE,
+                link_to_portal = TRUE)
         }
     }
 
