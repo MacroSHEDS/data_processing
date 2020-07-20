@@ -853,7 +853,7 @@ update_product_file <- function(network, domain, level, prodcode, status,
 update_product_statuses <- function(network, domain){
 
     #status_codes should maybe be defined globally, or in a file
-    status_codes = c('READY', 'PENDING', 'PAUSED')
+    status_codes = c('READY', 'PENDING', 'PAUSED', 'OBSOLETE', 'TEST')
     kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
     kernel_lines = read_lines(kf)
 
@@ -947,15 +947,21 @@ convert_unit <- function(val, input_unit, output_unit){
     return(new_val) }
 
 #. handle_errors
-write_munged_file <- function(d, network, domain, prodname_ms, site_name,
-                              shapefile=FALSE){
+write_ms_file <- function(d, network, domain, prodname_ms, site_name,
+                          level='munged', shapefile=FALSE,
+                          link_to_portal = TRUE){
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be "munged" or "derived"')
+    }
 
     if(shapefile){
 
-        site_dir = glue('{wd}/data/{n}/{d}/munged/{p}/{s}',
+        site_dir = glue('{wd}/data/{n}/{d}/{l}/{p}/{s}',
                          wd = getwd(),
                          n = network,
                          d = domain,
+                         l = level,
                          p = prodname_ms,
                          s = site_name)
 
@@ -967,14 +973,27 @@ write_munged_file <- function(d, network, domain, prodname_ms, site_name,
                         dsn = glue(site_dir, '/', site_name, '.shp'),
                         delete_dsn = TRUE,
                         quiet = TRUE))
+
     } else {
 
-        prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
-            p=prodname_ms)
+        prod_dir = glue('data/{n}/{d}/{l}/{p}',
+                        n = network,
+                        d = domain,
+                        l = level,
+                        p = prodname_ms)
         dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
 
         site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
         write_feather(d, site_file)
+    }
+
+    if(link_to_portal){
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = site_name,
+                           level = level,
+                           dir = shapefile)
     }
 
     return()
@@ -982,10 +1001,14 @@ write_munged_file <- function(d, network, domain, prodname_ms, site_name,
 
 #. handle_errors
 create_portal_link <- function(network, domain, prodname_ms, site_name,
-                               dir=FALSE){
+                               level='munged', dir=FALSE){
 
     #if dir=TRUE, treat site_name as a directory name, and link all files
         #within (necessary for e.g. shapefiles, which often come with other files)
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be "munged" or "derived"')
+    }
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
         d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
@@ -1003,15 +1026,16 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
         #create a link to the portal repo from the new site file
         #(note: really, to and from are equivalent, as they both
         #point to the same underlying structure in the filesystem)
-        site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
-            n=network, d=domain, p=prodname_ms, s=site_name)
+        site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
+            n=network, d=domain, l=level, p=prodname_ms, s=site_name)
         invisible(sw(file.link(to=portal_site_file, from=site_file)))
 
     } else {
 
-        site_dir <- glue('data/{n}/{d}/munged/{p}/{s}',
+        site_dir <- glue('data/{n}/{d}/{l}/{p}/{s}',
                          n = network,
                          d = domain,
+                         l = level,
                          p = prodname_ms,
                          s = site_name)
 
@@ -1305,4 +1329,26 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     }
 
     return(combined)
+}
+
+#. handle_errors
+choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
+
+    if(unprojected){
+        PROJ4 <- glue('+proj=longlat +datum=WGS84 +no_defs ',
+                      '+ellps=WGS84 +towgs84=0,0,0')
+        return(PROJ4)
+    }
+
+    if(is.null(lat) || is.null(long)){
+        stop('If projecting, lat and long are required.')
+    }
+
+    if(lat <= 15 && lat >= -15){ #equatorial
+        PROJ4 = glue('+proj=laea +lon_0=', long)
+    } else { #temperate or polar
+        PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    }
+
+    return(PROJ4)
 }
