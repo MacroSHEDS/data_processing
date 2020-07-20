@@ -224,33 +224,37 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    ws <- sf::st_read(rawdir,
+    projstring <- choose_projection(unprojected = TRUE)
+
+    wb <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                       quiet = TRUE) %>%
-        filter(!is.na(WS))
+        # mutate(WSHEDS0_ID = ifelse(is.na(WSHEDS0_ID), 0, WSHEDS0_ID)) %>%
+        filter(!is.na(WS)) %>% #ignore encompassing, non-experimental watershed
+        select(site_name = WSHEDS0_ID,
+               area = AREA,
+               perimeter = PERIMETER,
+               geometry = geometry) %>%
+        mutate(site_name = paste0('w', site_name)) %>%
+        sf::st_transform(projstring) %>%
+        arrange(site_name)
 
     unlink(zipped_files)
 
-    for(i in 1:nrow(ws)){
+    for(i in 1:nrow(wb)){
 
-        new_ws <- ws[i,]
+        new_wb <- wb[i,]
 
-        site_name <- as_tibble(new_ws) %>%
-            pull(WS) %>%
-            as.character() %>%
-            stringr::str_replace('WS', 'w') #harmonize hbef sitenames
+        site_name <- as_tibble(new_wb) %>%
+            pull(site_name)
 
-        write_munged_file(d = new_ws,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = site_name,
-                          shapefile = TRUE)
-
-        create_portal_link(network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms,
-                           site_name = site_name,
-                           dir = TRUE)
+        write_ms_file(d = new_wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = site_name,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = TRUE)
     }
 
     return()
@@ -269,9 +273,15 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    rg_all <- sf::st_read(rawdir,
+    projstring <- choose_projection(unprojected = TRUE)
+
+    rg_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                           quiet = TRUE) %>%
-        filter(! is.na(GAGE_NUM))
+        filter(! is.na(GAGE_NUM)) %>%
+        select(site_name = ID,
+               geometry = geometry) %>%
+        sf::st_transform(projstring) %>%
+        arrange(site_name)
 
     unlink(zipped_files)
 
@@ -280,22 +290,14 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
         rg <- rg_all[i,] %>%
             sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        gage_id <- as_tibble(rg) %>%
-            mutate(GAGE_NUM = paste0('rg', GAGE_NUM)) %>%
-            pull(GAGE_NUM)
-
-        write_munged_file(d = rg,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = gage_id,
-                          shapefile = TRUE)
-
-        create_portal_link(network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms,
-                           site_name = gage_id,
-                           dir = TRUE)
+        write_ms_file(d = rg,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = rg$site_name,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = TRUE)
     }
 
     return()
@@ -314,9 +316,16 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    weirs_all <- sf::st_read(rawdir,
+    projstring <- choose_projection(unprojected = TRUE)
+
+    weirs_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                              quiet = TRUE) %>%
-        filter(! is.na(WEIR_NUM))
+        filter(! is.na(WEIR_NUM)) %>%
+        select(site_name = WEIR_NUM,
+               geometry = geometry) %>%
+        mutate(site_name = paste0('w', site_name)) %>%
+        sf::st_transform(projstring) %>%
+        arrange(site_name)
 
     unlink(zipped_files)
 
@@ -325,22 +334,14 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
         w <- weirs_all[i,] %>%
              sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        site_name <- as_tibble(w) %>%
-            mutate(WEIR_NUM = paste0('w', WEIR_NUM)) %>%
-            pull(WEIR_NUM)
-
-        write_munged_file(d = w,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = site_name,
-                          shapefile = TRUE)
-
-        create_portal_link(network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms,
-                           site_name = site_name,
-                           dir = TRUE)
+        write_ms_file(d = w,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = w$site_name,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = TRUE)
     }
 
     return()
@@ -353,20 +354,20 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
 process_2_13 <- function(network, domain, prodname_ms){
     # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
 
-    #EPSG code 4326; datum WGS84; not projected
-    # projstring <- glue('+proj=longlat +datum=WGS84 +no_defs ',
-    #                    '+ellps=WGS84 +towgs84=0,0,0')
-    projstring <- '+proj=utm +zone=19 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
-
+    #load precipitation data, watershed boundaries, rain gauge locations
     precip <- read_combine_feathers(network, domain, prodname_ms)
     wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
-    wb <- sf::st_transform(wb, projstring) %>%
-        select(-WSHEDS0_ID)
     rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
-    rg <- sf::st_transform(rg, projstring) %>%
-        select(-X, -Y, -GAGE_NUM)
-    # sg <- read_combine_shapefiles(network, domain, 'stream_gauge_locations__107')
-    # sg <- sf::st_transform(sg, projstring)
+
+    #project based on average latlong of watershed boundaries
+    bbox <- as.list(sf::st_bbox(wb))
+    projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
+                                    long = mean(bbox$xmin, bbox$xmax))
+    wb <- sf::st_transform(wb, projstring)
+    rg <- sf::st_transform(rg, projstring)
+
+    #get a DEM that encompasses all watersheds
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
 
     precip <- precip %>%
         mutate(datetime = lubridate::year(datetime)) %>% #temporary
@@ -375,7 +376,7 @@ process_2_13 <- function(network, domain, prodname_ms){
             precip = mean(precip, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        filter(site_name %in% rg$ID) %>% #may have to harmonize names
+        filter(site_name %in% rg$site_name) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
         mutate(ms_status = as.logical(ms_status)) %>%
@@ -385,24 +386,22 @@ process_2_13 <- function(network, domain, prodname_ms){
         mutate(ms_status = as.numeric(ms_status)) %>%
         arrange(datetime)
 
+    #matrixify precip data so we can use matrix operations
     precip_status <- precip$ms_status
     precip_dt <- precip$datetime
     precip$ms_status <- precip$datetime <- NULL
     precip <- as.matrix(precip)
-        # left_join(rg, by = c('site_name' = 'ID'))
-    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
 
     for(j in 1:nrow(wb)){
 
         wbj <- slice(wb, j)
-        dem_wbj <- raster::crop(dem, wbj)
-        dem_wbj <- raster::mask(dem_wbj, wbj)
+        site_name <- wbj$site_name
+        dem_wbj <- terra::crop(dem, wbj)
+        dem_wbj <- terra::mask(dem_wbj, wbj)
 
-        #rows sum to 1
-        #norm only applies to present gauges
-
+        #compute distances from all dem cells to all rain gauges
         inv_distmat <- matrix(NA, nrow = length(dem_wbj), ncol = nrow(rg),
-                          dimnames = list(NULL, rg$ID))
+                              dimnames = list(NULL, rg$site_name))
         for(k in 1:nrow(rg)){
             rgk <- slice(rg, k)
             # elevs <- raster::values(dem_wbj) #incorporate this
@@ -410,6 +409,7 @@ process_2_13 <- function(network, domain, prodname_ms){
                 raster::values(.)
         }
 
+        #calculate mean watershed precipitation for every timestep
         ws_mean_precip <- rep(NA, nrow(precip))
         for(k in 1:nrow(precip)){
             precip_k <- t(precip[k, , drop = FALSE])
@@ -425,25 +425,102 @@ process_2_13 <- function(network, domain, prodname_ms){
             ws_mean_precip[k] <- mean(precip_interp)
         }
 
-        #WRITE THIS
-        tibble(datetime = precip_dt,
-               site_name = wbj$WS,
-               precip = ws_mean_precip,
-               ms_status = precip_status)
+        site_precip <- tibble(datetime = precip_dt,
+                              site_name = site_name,
+                              precip = ws_mean_precip,
+                              ms_status = precip_status)
 
+        write_ms_file(site_precip,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = site_name,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
     }
 
-        mean_precip <- raster::values(idw_mask) %>%
-            mean(., na.rm = TRUE)
-    }
+    #interp final precip to a desirable interval?
+    return()
+}
 
-    raster::extract(dem, rg) #get elevation at point (NOT NEEDED, BUT RECORD IT)
+process_2_13TEST <- function(network, domain, prodname_ms){
+    # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
+
+    #load precipitation data, watershed boundaries, rain gauge locations
+    precip2 <- read_combine_feathers(network, domain, prodname_ms)
+    wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
+    rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
+
+    #project based on average latlong of watershed boundaries
+    bbox <- as.list(sf::st_bbox(wb))
+    projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
+                                    long = mean(bbox$xmin, bbox$xmax))
+    wb <- sf::st_transform(wb, projstring)
+    rg <- sf::st_transform(rg, projstring)
+
+    #get a DEM that encompasses all watersheds
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
+
+    precip2 <- precip2 %>%
+        mutate(datetime = lubridate::year(datetime)) %>% #temporary
+        group_by(site_name, datetime) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup() %>%
+        filter(site_name %in% rg$site_name)
+
+    sttime = Sys.time() #TEMP
+    for(j in 1){
+    # for(j in 1:nrow(wb)){
+
+        wbj <- slice(wb, j)
+        site_name <- wbj$site_name
+        dem_wbj <- terra::crop(dem, wbj)
+        dem_wbj <- terra::mask(dem_wbj, wbj)
+
+        #calculate mean watershed precipitation for every timestep
+        ws_mean_precip <- rep(NA, nrow(precip))
+        timesteps <- unique(precip2$datetime)
+        for(k in 1:length(timesteps)){
+
+            precip_k <- precip2 %>%
+                filter(datetime == timesteps[k]) %>%
+                left_join(rg) %>%
+                sf::st_as_sf()
+
+            # zz <- bind_cols(precip_k, as_tibble(sf::st_coordinates(precip_k$geometry)))
+            # zz2 = sf::st_read('~/Downloads/hmm/hbef_raingage/hbef_raingage.shp')
+            gs <- gstat::gstat(formula = precip~1,
+                         locations = precip_k)
+            idw <- interpolate(dem, gs)
+            idw_mask <- raster::mask(idw, wbj)
+            ws_mean_precip[k] <- raster::values(idw_mask) %>%
+                mean(., na.rm = TRUE)
+        }
+
+        site_precip2 <- tibble(datetime = precip_dt,
+                              site_name = site_name,
+                              precip = ws_mean_precip,
+                              ms_status = precip_status)
+    }
+    Sys.time() - sttime #TEMP
+
+    #interp final precip to a desirable interval?
+    return()
+}
+
+#precipitation: STATUS=TEST
+process_2_13TEST <- function(network, domain, prodname_ms){
+
+    mean_precip <- raster::values(idw_mask) %>%
+        mean(., na.rm = TRUE)
 
     #NOW TRY THE INTERP WAY AND COMPARE TIME
     # for(w in wb$WS){ #find tidy way to do this
     for(dt in unique(rain_st$datetime)){
         rain_dt <- filter(rain_st, datetime == dt)
-
 
         if(length(unique(rain_dt$precip)) == 1){
             #ALL OUTPUTS EQUAL
@@ -455,17 +532,16 @@ process_2_13 <- function(network, domain, prodname_ms){
                          locations = .) %>%
             raster::interpolate(dem, .)
 
-        rg$X
-
-
         #HOW CAN THIS BE MADE EFFICIENT?
         wb_sub <- filter(wb, WS == w)
-        idw_mask <- raster::mask(idw, wb_sub) #trims itself by default
+        idw_mask <- raster::mask(idw, wb_sub)
         mean_precip <- raster::values(idw_mask) %>%
             mean(., na.rm = TRUE)
     }
+}
 
-    #dont forget to interp final sg precip to a desirable interval?
+#precipitation: STATUS=OBSOLETE
+process_2_13OBS <- function(network, domain, prodname_ms){
 
     #this logic is temporary, and just gets precip into the format that works
     #with the portal. but once interp is working, we'll perform that here
@@ -557,16 +633,14 @@ process_2_ms001 <- function(network, domain, prodname_ms){
                                   site_name = s,
                                   dt_round_interv = 'hours'))
 
-        write_munged_file(d = flux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = s)
-
-        create_portal_link(network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms,
-                           site_name = s)
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
     }
 
     return()
@@ -597,16 +671,14 @@ process_2_ms002 <- function(network, domain, prodname_ms){
                                   site_name = s,
                                   dt_round_interv = 'hours'))
 
-        write_munged_file(d = flux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = s)
-
-        create_portal_link(network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms,
-                           site_name = s)
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
     }
 
     return()
