@@ -366,11 +366,15 @@ process_2_13 <- function(network, domain, prodname_ms){
     wb <- sf::st_transform(wb, projstring)
     rg <- sf::st_transform(rg, projstring)
 
-    #get a DEM that encompasses all watersheds
-    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
+    #get a DEM that encompasses all watersheds; get elev at each rain gauge
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
+    site_elev <- tibble(site_name = rg$site_name,
+                        elevation = terra::extract(dem, rg))
 
+    #clean precip and arrange for matrixification
     precip <- precip %>%
-        mutate(datetime = lubridate::year(datetime)) %>% #temporary
+        mutate(datetime = lubridate::year(datetime)) %>% #finer? coarser?
+        # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
         group_by(site_name, datetime) %>%
         summarize(
             precip = mean(precip, na.rm=TRUE),
@@ -386,6 +390,7 @@ process_2_13 <- function(network, domain, prodname_ms){
         mutate(ms_status = as.numeric(ms_status)) %>%
         arrange(datetime)
 
+    #MOVE THIS INSIDE FUNC
     #matrixify precip data so we can use matrix operations
     precip_status <- precip$ms_status
     precip_dt <- precip$datetime
@@ -396,58 +401,21 @@ process_2_13 <- function(network, domain, prodname_ms){
 
         wbj <- slice(wb, j)
         site_name <- wbj$site_name
-        dem_wbj <- terra::crop(dem, wbj)
-        dem_wbj <- terra::mask(dem_wbj, wbj)
 
-        #compute distances from all dem cells to all rain gauges
-        inv_distmat <- matrix(NA, nrow = length(dem_wbj), ncol = nrow(rg),
-                              dimnames = list(NULL, rg$site_name))
-        for(k in 1:nrow(rg)){
-            rgk <- slice(rg, k)
-            # elevs <- raster::values(dem_wbj) #incorporate this
-            inv_distmat[, k] <- 1 / raster::distanceFromPoints(dem_wbj, rgk) %>%
-                raster::values(.)
-        }
+        ws_ave_precip <- shortcut_idw(encompassing_dem = dem,
+                                      wshd_bnd = wbj,
+                                      data_locations = rg,
+                                      data_matrix = precip,
+                                      stream_site_name = site_name)
 
-        #calculate mean watershed precipitation for every timestep
-        ws_mean_precip <- rep(NA, nrow(precip))
-        for(k in 1:nrow(precip)){
-            precip_k <- t(precip[k, , drop = FALSE])
-            inv_distmat_sub <- inv_distmat[, ! is.na(precip_k)]
-            precip_k <- precip_k[! is.na(precip_k)]
-            weightmat <- do.call(rbind, #avoids matrix transposition
-                                 unlist(apply(inv_distmat_sub,
-                                              1,
-                                              function(x) list(x / sum(x))),
-                                        recursive = FALSE))
-            precip_k[is.na(precip_k)] <- 0 #allows matrix multiplication
-            precip_interp <- weightmat %*% precip_k
+        #THIS SHOULD BE INSIDE FUNC ONLY (THERE ALREADY)
+        stream_site_precip <- tibble(datetime = precip_dt,
+                                     site_name = stream_site_name,
+                                     precip = ws_mean_precip,
+                                     ms_status = precip_status)
 
-            aa = as.matrix(dem_wbj)
-            dim(aa)
-            aa[1:5, 1:5]
-            vv = values(dem_wbj)
-            mm = matrix(as.vector(precip_interp), nrow=58, ncol=29, byrow=TRUE)
-            projstring2 = '+proj=laea +lat_0=43.9160330187567 +lon_0=-71.7729893372764 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs'
-            m2 = raster(mm, crs=projstring2)
-            raster(dem_wbj)
-            extent(m2) = c(3379.272, 3779.472, 4013.211, 4807.811)
-
-            idw_crop <- raster::crop(idw, wbj)
-            idw_mask2 <- raster::mask(idw_crop, wbj)
-            m3 <- raster::mask(m2, wbj)
-            par(mfrow=c(2, 2)); plot(dem_wbj); plot(m2); plot(m3); plot(idw_mask2)
-
-
-            ws_mean_precip[k] <- mean(precip_interp)
-        }
-
-        site_precip <- tibble(datetime = precip_dt,
-                              site_name = site_name,
-                              precip = ws_mean_precip,
-                              ms_status = precip_status)
-
-        write_ms_file(site_precip,
+        #interp final precip to a desirable interval?
+        write_ms_file(ws_ave_precip,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
@@ -456,8 +424,6 @@ process_2_13 <- function(network, domain, prodname_ms){
                       shapefile = FALSE,
                       link_to_portal = TRUE)
     }
-
-    #interp final precip to a desirable interval?
     return()
 }
 
