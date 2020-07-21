@@ -405,7 +405,7 @@ process_2_13 <- function(network, domain, prodname_ms){
         for(k in 1:nrow(rg)){
             rgk <- slice(rg, k)
             # elevs <- raster::values(dem_wbj) #incorporate this
-            inv_distmat[, k] <- raster::distanceFromPoints(dem_wbj, rgk) %>%
+            inv_distmat[, k] <- 1 / raster::distanceFromPoints(dem_wbj, rgk) %>%
                 raster::values(.)
         }
 
@@ -422,6 +422,23 @@ process_2_13 <- function(network, domain, prodname_ms){
                                         recursive = FALSE))
             precip_k[is.na(precip_k)] <- 0 #allows matrix multiplication
             precip_interp <- weightmat %*% precip_k
+
+            aa = as.matrix(dem_wbj)
+            dim(aa)
+            aa[1:5, 1:5]
+            vv = values(dem_wbj)
+            mm = matrix(as.vector(precip_interp), nrow=58, ncol=29, byrow=TRUE)
+            projstring2 = '+proj=laea +lat_0=43.9160330187567 +lon_0=-71.7729893372764 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs'
+            m2 = raster(mm, crs=projstring2)
+            raster(dem_wbj)
+            extent(m2) = c(3379.272, 3779.472, 4013.211, 4807.811)
+
+            idw_crop <- raster::crop(idw, wbj)
+            idw_mask2 <- raster::mask(idw_crop, wbj)
+            m3 <- raster::mask(m2, wbj)
+            par(mfrow=c(2, 2)); plot(dem_wbj); plot(m2); plot(m3); plot(idw_mask2)
+
+
             ws_mean_precip[k] <- mean(precip_interp)
         }
 
@@ -444,8 +461,10 @@ process_2_13 <- function(network, domain, prodname_ms){
     return()
 }
 
+#precipitation: STATUS=TEST
 process_2_13TEST <- function(network, domain, prodname_ms){
-    # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
+
+    #910.945x slower than shortcut method
 
     #load precipitation data, watershed boundaries, rain gauge locations
     precip2 <- read_combine_feathers(network, domain, prodname_ms)
@@ -471,7 +490,6 @@ process_2_13TEST <- function(network, domain, prodname_ms){
         ungroup() %>%
         filter(site_name %in% rg$site_name)
 
-    sttime = Sys.time() #TEMP
     for(j in 1){
     # for(j in 1:nrow(wb)){
 
@@ -505,39 +523,9 @@ process_2_13TEST <- function(network, domain, prodname_ms){
                               precip = ws_mean_precip,
                               ms_status = precip_status)
     }
-    Sys.time() - sttime #TEMP
 
     #interp final precip to a desirable interval?
     return()
-}
-
-#precipitation: STATUS=TEST
-process_2_13TEST <- function(network, domain, prodname_ms){
-
-    mean_precip <- raster::values(idw_mask) %>%
-        mean(., na.rm = TRUE)
-
-    #NOW TRY THE INTERP WAY AND COMPARE TIME
-    # for(w in wb$WS){ #find tidy way to do this
-    for(dt in unique(rain_st$datetime)){
-        rain_dt <- filter(rain_st, datetime == dt)
-
-        if(length(unique(rain_dt$precip)) == 1){
-            #ALL OUTPUTS EQUAL
-        }
-        ms_status <- as.numeric(any(rain_dt$ms_status == 1))
-
-        idw <- rain_dt %>%
-            gstat::gstat(formula = precip~1,
-                         locations = .) %>%
-            raster::interpolate(dem, .)
-
-        #HOW CAN THIS BE MADE EFFICIENT?
-        wb_sub <- filter(wb, WS == w)
-        idw_mask <- raster::mask(idw, wb_sub)
-        mean_precip <- raster::values(idw_mask) %>%
-            mean(., na.rm = TRUE)
-    }
 }
 
 #precipitation: STATUS=OBSOLETE
