@@ -1352,3 +1352,91 @@ choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
 
     return(PROJ4)
 }
+
+#. handle_errors
+reconstitute_raster <- function(x, template){
+
+    m = matrix(as.vector(x),
+               nrow=nrow(template),
+               ncol=ncol(template),
+               byrow=TRUE)
+    r <- raster(m,
+                crs=raster::projection(template))
+    extent(r) <- raster::extent(template)
+
+    return(r)
+}
+
+#. handle_errors
+precip_interp <- function(encompassing_dem, wshd_bnd, data_locations,
+                          data_matrix, stream_site_name){
+
+    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #wshd_bnd is an sf object with columns site_name and geometry
+        #it represents a single watershed boundary
+    #data_locations is an sf object with columns site_name and geometry
+        #it represents all sites (e.g. rain gauges) that will be used in
+        #the interpolation
+    #data_matrix is a matrix populated entirely with data values (e.g. precip)
+        #its rows correspond to dates or datetimes, and its columns correspond
+        #to the locations where those data were collected (e.g. rain gauges)
+
+    dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+    dem_wb <- terra::mask(dem_wb, wshd_bnd)
+    elevs <- terra::values(dem_wb)
+
+    #compute distances from all dem cells to all rain gauges
+    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = nrow(data_locations),
+                          dimnames = list(NULL, data_locations$site_name))
+    for(k in 1:nrow(data_locations)){
+        dk <- slice(data_locations, k)
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA #mask
+        inv_distmat[, k] <- inv_dist2
+    }
+
+    #calculate mean watershed precipitation for every timestep
+    ws_mean <- rep(NA, nrow(data_matrix))
+    # for(k in 24){
+    for(k in 1:nrow(data_matrix)){
+
+        #assign cell weights as normalized inverse squared distances
+        dk <- t(data_matrix[k, , drop = FALSE])
+        inv_distmat_sub <- inv_distmat[, ! is.na(dk)]
+        dk <- dk[! is.na(dk), , drop=FALSE]
+        weightmat <- do.call(rbind, #avoids matrix transposition
+                             unlist(apply(inv_distmat_sub, #normalize by row
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #determine precipitation-elevation relationship for interp weighting
+        d_elev <- tibble(site_name = rownames(dk),
+                        d = dk[,1]) %>%
+                  left_join(site_elev,
+                            by='site_name')
+        mod <- lm(d ~ elevation, data = d_elev)
+        ab <- as.list(mod$coefficients)
+
+        #perform vectorized idw and estimate precip from elevation
+        dk[is.na(dk)] <- 0 #allows matrix multiplication
+        d_idw <- weightmat %*% dk
+        d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+
+        #average both approaches (this should be weighted toward idw
+        #when close to any rain gauge, and weighted half and half when far)
+        d_interp <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+                           d_idw,
+                           d_from_elev)
+
+        ws_mean_d[k] <- mean(d_interp, na.rm=TRUE)
+    }
+    # compare_interp_methods()
+
+    #SHOULD BE BUILT FROM COMPONENTS THAT ARE MADE INSIDE THIS FUNC
+    stream_site_precip <- tibble(datetime = precip_dt,
+                                 site_name = stream_site_name,
+                                 precip = ws_mean_precip,
+                                 ms_status = precip_status)
+}
