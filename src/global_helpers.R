@@ -1605,3 +1605,74 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
     return(ws_means)
 }
+
+#. handle_errors
+adjust_timestep <- function(ms_df, desired_interval, impute_limit = 30){
+
+    #ms_df is a data.frame or tibble with columns datetime, site_name,
+    #ms_status, and one or more data columns. if ms_interp column is already
+    #included with input, its values will be carried through to the output.
+    #desired_interval is a character string that can be parsed by the "by"
+    #parameter to base::seq.POSIXt, e.g. "5 mins"
+    #impute_limit is the maximum number of consecutive points to
+    #inter/extrapolate. it's passed to imputeTS::na_interpolate
+
+    #output will include a numeric binary column called "ms_interp".
+    #0 for not interpolated, 1 for interpolated
+
+
+    # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
+    ws_mean_precip = readRDS('~/Desktop/ws_precip_temp.rds') %>%
+        mutate(datetime = as_datetime(as.character(datetime), format='%Y'))
+    w2 = w3 = ws_mean_precip
+    w2$datetime = as.POSIXct(1:nrow(w2), origin='2000-01-01', tz = 'UTC')
+    w3$precip[c(3:9, 15)] = NA
+
+    ms_df = w3
+
+    #neeeds:
+    #accept "interpolated" column as INPUT?
+    #naw, just remove if it exists
+    #only interp numerics
+    #phases:
+    #group by desired int
+    #join full series
+    #extrap/interp x ints
+    #remove na rows
+
+    non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
+
+    ms_df <- sw(ms_df %>%
+                    mutate(datetime = lubridate::as_datetime(datetime),
+                           datetime = lubridate::round_date(datetime,
+                                                            desired_interval)) %>%
+                    mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                              as.logical) %>%
+                    group_by(datetime, site_name) %>%
+                    summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+                    ungroup() %>%
+                    arrange(datetime))
+
+    daterange <- range(ms_df$datetime)
+    fulldt <- tibble(datetime = seq(daterange[1],
+                                    daterange[2],
+                                    by = desired_interval))
+
+    #ABOVE: GOTTA CARRY SITENAME THROUGH MERGE
+    #BELOW: INSERT MS_STATUS = 1 FOR INTERPS
+    ms_df %>%
+        right_join(fulldt,
+                   by = 'datetime') %>%
+        arrange(datetime) %>%
+        mutate_at(vars(-one_of(non_data_columns)),
+                  imputeTS::na_interpolation,
+                  maxgap = impute_limit) %>%
+        filter_at(vars(-one_of(non_data_columns)),
+                  any_vars(! is.na(.))) %>%
+        select(datetime, site_name, everything())
+
+    mutate_at(vars(one_of('ms_status', 'ms_interp')),
+              as.numeric))
+return(ms_df_adjusted)
+select_if(~(! all(is.na(.)))) %>%
+}
