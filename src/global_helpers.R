@@ -93,6 +93,13 @@ handle_errors = function(f){
     return(wrapper)
 }
 
+#ue stands for "unhandle_errors"; wrap this around any ms function
+#that is called inside a processing kernel
+ue <- function(o){
+    if(is_ms_err(o)) stop('The previous error has been unhandled.', call. = FALSE)
+    else return(o)
+}
+
 pprint_callstack = function(){
 
     #make callstack more informative. if we end up sourcing files rather than
@@ -121,6 +128,13 @@ pprint_callstack = function(){
     call_string_pretty = paste(call_vec, collapse=' -->\n\t')
 
     return(call_string_pretty)
+}
+
+#errors are not handled for this function because it is used inside pipelines that
+#are used inside processing kernels, so it can't be wrapped in ue(). Find a way to
+#make ue() pipelineable and this numeric_any can be decorated
+numeric_any <- function(num_vec){
+    return(as.numeric(any(as.logical(num_vec))))
 }
 
 #. handle_errors
@@ -158,11 +172,6 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
     d = select(d, -one_of(flagcolnames))
 
     return(d)
-}
-
-#. handle_errors
-numeric_any <- function(num_vec){
-    return(as.numeric(any(as.logical(num_vec))))
 }
 
 #. handle_errors
@@ -1368,8 +1377,9 @@ reconstitute_raster <- function(x, template){
 }
 
 #. handle_errors
-precip_interp <- function(encompassing_dem, wshd_bnd, data_locations,
-                          data_matrix, stream_site_name){
+shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
+                         data_values, stream_site_name, output_varname,
+                         elev_agnostic = FALSE){
 
     #encompassing_dem must cover the area of wshd_bnd and rain_gauges
     #wshd_bnd is an sf object with columns site_name and geometry
@@ -1377,26 +1387,35 @@ precip_interp <- function(encompassing_dem, wshd_bnd, data_locations,
     #data_locations is an sf object with columns site_name and geometry
         #it represents all sites (e.g. rain gauges) that will be used in
         #the interpolation
-    #data_matrix is a matrix populated entirely with data values (e.g. precip)
-        #its rows correspond to dates or datetimes, and its columns correspond
-        #to the locations where those data were collected (e.g. rain gauges)
+    #data_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each data location.
+    #output_varname is only used to name the column in the tibble that is returned
+    #elev_agnostic is a boolean that determines whether elevation should be
+        #included as a predictor of the variable being interpolated
 
+    #matrixify input data so we can use matrix operations
+    d_status <- data_values$ms_status
+    d_dt <- data_values$datetime
+    data_values$ms_status <- data_values$datetime <- NULL
+    data_matrix <- as.matrix(data_values)
+
+    #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
 
-    #compute distances from all dem cells to all rain gauges
-    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = nrow(data_locations),
-                          dimnames = list(NULL, data_locations$site_name))
-    for(k in 1:nrow(data_locations)){
-        dk <- slice(data_locations, k)
+    #compute distances from all dem cells to all data locations
+    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = ncol(data_matrix),
+                          dimnames = list(NULL, colnames(data_matrix)))
+    for(k in 1:ncol(data_matrix)){
+        dk <- filter(data_locations, site_name == colnames(data_matrix)[k])
         inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
             terra::values(.)
         inv_dist2[is.na(elevs)] <- NA #mask
         inv_distmat[, k] <- inv_dist2
     }
 
-    #calculate mean watershed precipitation for every timestep
+    #calculate watershed mean at every timestep
     ws_mean <- rep(NA, nrow(data_matrix))
     # for(k in 24){
     for(k in 1:nrow(data_matrix)){
@@ -1411,32 +1430,178 @@ precip_interp <- function(encompassing_dem, wshd_bnd, data_locations,
                                           function(x) list(x / sum(x))),
                                     recursive = FALSE))
 
-        #determine precipitation-elevation relationship for interp weighting
-        d_elev <- tibble(site_name = rownames(dk),
-                        d = dk[,1]) %>%
-                  left_join(site_elev,
-                            by='site_name')
-        mod <- lm(d ~ elevation, data = d_elev)
-        ab <- as.list(mod$coefficients)
-
-        #perform vectorized idw and estimate precip from elevation
+        #perform vectorized idw
         dk[is.na(dk)] <- 0 #allows matrix multiplication
         d_idw <- weightmat %*% dk
-        d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
 
-        #average both approaches (this should be weighted toward idw
-        #when close to any rain gauge, and weighted half and half when far)
-        d_interp <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
-                           d_idw,
-                           d_from_elev)
+        #determine data-elevation relationship for interp weighting
+        if(! elev_agnostic){
+            d_elev <- tibble(site_name = rownames(dk),
+                            d = dk[,1]) %>%
+                      left_join(data_locations,
+                                by = 'site_name')
+            mod <- lm(d ~ elevation, data = d_elev)
+            ab <- as.list(mod$coefficients)
 
-        ws_mean_d[k] <- mean(d_interp, na.rm=TRUE)
+            #estimate raster values from elevation alone
+            d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+
+            #average both approaches (this should be weighted toward idw
+            #when close to any data location, and weighted half and half when far)
+            d_idw <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+                            d_idw,
+                            d_from_elev)
+        }
+
+        ws_mean[k] <- mean(d_idw, na.rm=TRUE)
     }
     # compare_interp_methods()
 
-    #SHOULD BE BUILT FROM COMPONENTS THAT ARE MADE INSIDE THIS FUNC
-    stream_site_precip <- tibble(datetime = precip_dt,
-                                 site_name = stream_site_name,
-                                 precip = ws_mean_precip,
-                                 ms_status = precip_status)
+    ws_mean <- tibble(datetime = d_dt,
+                      site_name = stream_site_name,
+                      !!output_varname := ws_mean,
+                      ms_status = d_status)
+
+    return(ws_mean)
+}
+
+#. handle_errors
+shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
+                                  precip_values, chem_values, stream_site_name){
+
+    #this function is similar to shortcut_idw, but when it gets to the
+    #vectorized raster stage, it multiplies precip chem by precip volume
+    #to calculate flux for each cell. then it returns a list containing two
+    #derived values: watershed average concentration and ws ave flux.
+
+    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #wshd_bnd is an sf object with columns site_name and geometry
+        #it represents a single watershed boundary
+    #data_locations is an sf object with columns site_name and geometry
+        #it represents all sites (e.g. rain gauges) that will be used in
+        #the interpolation
+    #precip_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each precip location.
+    #chem_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each
+        #precip chemistry location.
+
+    common_dts <- base::intersect(as.character(precip_values$datetime),
+                                  as.character(chem_values$datetime))
+    precip_values <- filter(precip_values,
+           as.character(datetime) %in% common_dts)
+    chem_values <- filter(chem_values,
+           as.character(datetime) %in% common_dts)
+
+    #matrixify input data so we can use matrix operations
+    d_dt <- precip_values$datetime
+
+    p_status <- precip_values$ms_status
+    precip_values$ms_status <- precip_values$datetime <- NULL
+    p_matrix <- as.matrix(precip_values)
+
+    c_status <- chem_values$ms_status
+    chem_values$ms_status <- chem_values$datetime <- NULL
+    c_matrix <- as.matrix(chem_values)
+
+    d_status = bitwOr(p_status, c_status)
+
+    # gauges <- base::union(colnames(p_matrix),
+    #                       colnames(c_matrix))
+    # ngauges <- length(gauges)
+
+    #clean dem and get elevation values
+    dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+    dem_wb <- terra::mask(dem_wb, wshd_bnd)
+    elevs <- terra::values(dem_wb)
+
+    #compute distances from all dem cells to all precip locations
+    inv_distmat_p <- matrix(NA, nrow = length(dem_wb), ncol = ncol(p_matrix),
+                            dimnames = list(NULL, colnames(p_matrix)))
+    for(k in 1:ncol(p_matrix)){
+        dk <- filter(data_locations, site_name == colnames(p_matrix)[k])
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA #mask
+        inv_distmat_p[, k] <- inv_dist2
+    }
+
+    #compute distances from all dem cells to all chemistry locations
+    inv_distmat_c <- matrix(NA, nrow = length(dem_wb), ncol = ncol(c_matrix),
+                            dimnames = list(NULL, colnames(c_matrix)))
+    for(k in 1:ncol(c_matrix)){
+        dk <- filter(data_locations, site_name == colnames(c_matrix)[k])
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA
+        inv_distmat_c[, k] <- inv_dist2
+    }
+
+    #calculate watershed mean concentration and flux at every timestep
+    if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
+    ntimesteps <- nrow(p_matrix)
+    ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
+    for(k in 1:ntimesteps){
+
+        #assign cell weights as normalized inverse squared distances (p)
+        pk <- t(p_matrix[k, , drop = FALSE])
+        inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk)]
+        pk <- pk[! is.na(pk), , drop=FALSE]
+        weightmat_p <- do.call(rbind, #avoids matrix transposition
+                             unlist(apply(inv_distmat_p_sub, #normalize by row
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #assign cell weights as normalized inverse squared distances (c)
+        ck <- t(c_matrix[k, , drop = FALSE])
+        inv_distmat_c_sub <- inv_distmat_c[, ! is.na(ck)]
+        ck <- ck[! is.na(ck), , drop=FALSE]
+        weightmat_c <- do.call(rbind,
+                             unlist(apply(inv_distmat_c_sub,
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #determine data-elevation relationship for interp weighting (p only)
+        d_elev <- tibble(site_name = rownames(pk),
+                         precip = pk[,1]) %>%
+                  left_join(data_locations,
+                            by = 'site_name')
+        mod <- lm(precip ~ elevation, data = d_elev)
+        ab <- as.list(mod$coefficients)
+
+        #perform vectorized idw (p)
+        pk[is.na(pk)] <- 0 #allows matrix multiplication
+        p_idw <- weightmat_p %*% pk
+
+        #perform vectorized idw (c)
+        ck[is.na(ck)] <- 0
+        c_idw <- weightmat_c %*% ck
+
+        #estimate raster values from elevation alone (p only)
+        p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+
+        #average both approaches (p only; this should be weighted toward idw
+        #when close to any data location, and weighted half and half when far)
+        p_ensemb <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+                           p_idw,
+                           p_from_elev)
+
+        #calculate flux for every cell
+        flux_interp <- c_idw * p_ensemb
+
+        #calculate watershed averages
+        ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
+        ws_mean_flux[k] <- mean(flux_interp, na.rm=TRUE)
+    }
+    # compare_interp_methods()
+
+    ws_means <- tibble(datetime = d_dt,
+                       site_name = stream_site_name,
+                       concentration = ws_mean_conc,
+                       flux = ws_mean_flux,
+                       ms_status = d_status)
+
+    return(ws_means)
 }

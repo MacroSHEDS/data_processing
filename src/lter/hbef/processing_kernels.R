@@ -193,13 +193,13 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
             timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
             datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'),
             ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
-            DIC = convert_unit(DIC, 'uM', 'mM'),
-            NH4_N = convert_molecule(NH4, 'NH4', 'N'),
-            NO3_N = convert_molecule(NO3, 'NO3', 'N'),
-            PO4_P = convert_molecule(PO4, 'PO4', 'P')) %>%
+            DIC = ue(convert_unit(DIC, 'uM', 'mM')),
+            NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
+            NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
+            PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
         select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
         filter_at(vars(-site_name, -datetime),
-                   any_vars(! is.na(.))) %>%
+                  any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
@@ -224,7 +224,7 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- choose_projection(unprojected = TRUE)
+    projstring <- ue(choose_projection(unprojected = TRUE))
 
     wb <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                       quiet = TRUE) %>%
@@ -247,14 +247,14 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
         site_name <- as_tibble(new_wb) %>%
             pull(site_name)
 
-        write_ms_file(d = new_wb,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = site_name,
-                      level = 'munged',
-                      shapefile = TRUE,
-                      link_to_portal = TRUE)
+        ue(write_ms_file(d = new_wb,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = site_name,
+                         level = 'munged',
+                         shapefile = TRUE,
+                         link_to_portal = TRUE))
     }
 
     return()
@@ -273,7 +273,7 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- choose_projection(unprojected = TRUE)
+    projstring <- ue(choose_projection(unprojected = TRUE))
 
     rg_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                           quiet = TRUE) %>%
@@ -290,14 +290,14 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
         rg <- rg_all[i,] %>%
             sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        write_ms_file(d = rg,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = rg$site_name,
-                      level = 'munged',
-                      shapefile = TRUE,
-                      link_to_portal = TRUE)
+        ue(write_ms_file(d = rg,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = rg$site_name,
+                         level = 'munged',
+                         shapefile = TRUE,
+                         link_to_portal = TRUE))
     }
 
     return()
@@ -316,7 +316,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- choose_projection(unprojected = TRUE)
+    projstring <- ue(choose_projection(unprojected = TRUE))
 
     weirs_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                              quiet = TRUE) %>%
@@ -334,14 +334,14 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
         w <- weirs_all[i,] %>%
              sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        write_ms_file(d = w,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = w$site_name,
-                      level = 'munged',
-                      shapefile = TRUE,
-                      link_to_portal = TRUE)
+        ue(write_ms_file(d = w,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = w$site_name,
+                         level = 'munged',
+                         shapefile = TRUE,
+                         link_to_portal = TRUE))
     }
 
     return()
@@ -354,177 +354,72 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
 process_2_13 <- function(network, domain, prodname_ms){
     # network='lter'; domain='hbef'; prodname_ms='precipitation__13'; i=j=1
 
-    #load precipitation data, watershed boundaries, rain gauge locations
-    precip <- read_combine_feathers(network, domain, prodname_ms)
-    wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
-    rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
+    #load precip data, watershed boundaries, rain gauge locations
+    precip <- ue(read_combine_feathers(network = network,
+                                       domain = domain,
+                                       prodname_ms = prodname_ms))
+    wb <- ue(read_combine_shapefiles(network = network,
+                                     domain = domain,
+                                     prodname_ms = 'ws_boundary__94'))
+    rg <- ue(read_combine_shapefiles(network = network,
+                                     domain = domain,
+                                     prodname_ms = 'rain_gauge_locations__100'))
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
-    projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
-                                    long = mean(bbox$xmin, bbox$xmax))
+    projstring <- ue(choose_projection(lat = mean(bbox$ymin, bbox$ymax),
+                                       long = mean(bbox$xmin, bbox$xmax)))
     wb <- sf::st_transform(wb, projstring)
     rg <- sf::st_transform(rg, projstring)
 
-    #get a DEM that encompasses all watersheds; get elev at each rain gauge
+    #get a DEM that encompasses all watersheds; add elev column to rain gauges
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
-    site_elev <- tibble(site_name = rg$site_name,
-                        elevation = terra::extract(dem, rg))
+    rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
     precip <- precip %>%
-        mutate(datetime = lubridate::year(datetime)) %>% #finer? coarser?
-        # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+        filter(site_name %in% rg$site_name) %>%
+        # mutate(datetime = lubridate::year(datetime)) %>%
+        mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
         group_by(site_name, datetime) %>%
         summarize(
             precip = mean(precip, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        filter(site_name %in% rg$site_name) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
         mutate(ms_status = as.logical(ms_status)) %>%
         group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else numeric_any(.)) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
         mutate(ms_status = as.numeric(ms_status)) %>%
         arrange(datetime)
 
-    #MOVE THIS INSIDE FUNC
-    #matrixify precip data so we can use matrix operations
-    precip_status <- precip$ms_status
-    precip_dt <- precip$datetime
-    precip$ms_status <- precip$datetime <- NULL
-    precip <- as.matrix(precip)
-
+    #interpolate precipitation volume and write watershed averages
     for(j in 1:nrow(wb)){
 
         wbj <- slice(wb, j)
         site_name <- wbj$site_name
 
-        ws_ave_precip <- shortcut_idw(encompassing_dem = dem,
-                                      wshd_bnd = wbj,
-                                      data_locations = rg,
-                                      data_matrix = precip,
-                                      stream_site_name = site_name)
-
-        #THIS SHOULD BE INSIDE FUNC ONLY (THERE ALREADY)
-        stream_site_precip <- tibble(datetime = precip_dt,
-                                     site_name = stream_site_name,
-                                     precip = ws_mean_precip,
-                                     ms_status = precip_status)
+        ws_mean_precip <- ue(shortcut_idw(encompassing_dem = dem,
+                                          wshd_bnd = wbj,
+                                          data_locations = rg,
+                                          data_values = precip,
+                                          stream_site_name = site_name,
+                                          output_varname = 'precip',
+                                          elev_agnostic = FALSE))
 
         #interp final precip to a desirable interval?
-        write_ms_file(ws_ave_precip,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = site_name,
-                      level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
-    }
-    return()
-}
-
-#precipitation: STATUS=TEST
-process_2_13TEST <- function(network, domain, prodname_ms){
-
-    #910.945x slower than shortcut method
-
-    #load precipitation data, watershed boundaries, rain gauge locations
-    precip2 <- read_combine_feathers(network, domain, prodname_ms)
-    wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
-    rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
-
-    #project based on average latlong of watershed boundaries
-    bbox <- as.list(sf::st_bbox(wb))
-    projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
-                                    long = mean(bbox$xmin, bbox$xmax))
-    wb <- sf::st_transform(wb, projstring)
-    rg <- sf::st_transform(rg, projstring)
-
-    #get a DEM that encompasses all watersheds
-    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
-
-    precip2 <- precip2 %>%
-        mutate(datetime = lubridate::year(datetime)) %>% #temporary
-        group_by(site_name, datetime) %>%
-        summarize(
-            precip = mean(precip, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup() %>%
-        filter(site_name %in% rg$site_name)
-
-    for(j in 1){
-    # for(j in 1:nrow(wb)){
-
-        wbj <- slice(wb, j)
-        site_name <- wbj$site_name
-        dem_wbj <- terra::crop(dem, wbj)
-        dem_wbj <- terra::mask(dem_wbj, wbj)
-
-        #calculate mean watershed precipitation for every timestep
-        ws_mean_precip <- rep(NA, nrow(precip))
-        timesteps <- unique(precip2$datetime)
-        for(k in 1:length(timesteps)){
-
-            precip_k <- precip2 %>%
-                filter(datetime == timesteps[k]) %>%
-                left_join(rg) %>%
-                sf::st_as_sf()
-
-            # zz <- bind_cols(precip_k, as_tibble(sf::st_coordinates(precip_k$geometry)))
-            # zz2 = sf::st_read('~/Downloads/hmm/hbef_raingage/hbef_raingage.shp')
-            gs <- gstat::gstat(formula = precip~1,
-                         locations = precip_k)
-            idw <- interpolate(dem, gs)
-            idw_mask <- raster::mask(idw, wbj)
-            ws_mean_precip[k] <- raster::values(idw_mask) %>%
-                mean(., na.rm = TRUE)
-        }
-
-        site_precip2 <- tibble(datetime = precip_dt,
-                              site_name = site_name,
-                              precip = ws_mean_precip,
-                              ms_status = precip_status)
+        ue(write_ms_file(ws_mean_precip,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = site_name,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
     }
 
-    #interp final precip to a desirable interval?
-    return()
-}
-
-#precipitation: STATUS=OBSOLETE
-process_2_13OBS <- function(network, domain, prodname_ms){
-
-    #this logic is temporary, and just gets precip into the format that works
-    #with the portal. but once interp is working, we'll perform that here
-    #instead
-
-    mfiles <- list_munged_files(network = network,
-                                domain = domain,
-                                prodname_ms = prodname_ms)
-
-    combined <- tibble()
-    for(f in mfiles){
-        d = read_feather(f)
-        combined <- bind_rows(combined, d)
-    }
-
-    #this chunk will be replaced by create_portal_link when interp is ready
-    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
-                    p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
-         n = network,
-         d = domain,
-         p = prodname_ms)
-    write_feather(combined, site_file)
-    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
-    unlink(portal_site_file)
-    invisible(sw(file.link(to = portal_site_file, from = site_file)))
-
-    gc()
     return()
 }
 
@@ -532,32 +427,238 @@ process_2_13OBS <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_208 <- function(network, domain, prodname_ms){
 
-    #this logic is temporary, and just gets pchem into the format that works
-    #with the portal. but once interp is working, we'll perform that here
-    #instead
+    #load precip and pchem data, watershed boundaries, rain gauge locations
+    pchem <- ue(read_combine_feathers(network = network,
+                                      domain = domain,
+                                      prodname_ms = prodname_ms))
+    precip <- ue(read_combine_feathers(network = network,
+                                       domain = domain,
+                                       prodname_ms = 'precipitation__13'))
+    wb <- ue(read_combine_shapefiles(network = network,
+                                     domain = domain,
+                                     prodname_ms = 'ws_boundary__94'))
+    rg <- ue(read_combine_shapefiles(network = network,
+                                     domain = domain,
+                                     prodname_ms = 'rain_gauge_locations__100'))
 
-    mfiles <- list_munged_files(network = network,
-                                domain = domain,
-                                prodname_ms = prodname_ms)
+    #project based on average latlong of watershed boundaries
+    bbox <- as.list(sf::st_bbox(wb))
+    projstring <- ue(choose_projection(lat = mean(bbox$ymin, bbox$ymax),
+                                       long = mean(bbox$xmin, bbox$xmax)))
+    wb <- sf::st_transform(wb, projstring)
+    rg <- sf::st_transform(rg, projstring)
 
-    combined <- tibble()
-    for(f in mfiles){
-        d = read_feather(f)
-        combined <- bind_rows(combined, d)
+    #get a DEM that encompasses all watersheds; add elev column to rain gauges
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
+    rg$elevation <- terra::extract(dem, rg)
+
+    #clean precip and arrange for matrixification
+    precip <- precip %>%
+        filter(site_name %in% rg$site_name) %>%
+        # mutate(datetime = lubridate::year(datetime)) %>%
+        mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+        group_by(site_name, datetime) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup() %>%
+        tidyr::pivot_wider(names_from = site_name,
+                           values_from = precip) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        mutate(ms_status = as.numeric(ms_status)) %>%
+        arrange(datetime)
+
+    #organize variables by those that can be flux converted and those that can't
+    flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
+    pchem_vars_fluxable <- colnames(sw(select(pchem,
+                                              -datetime,
+                                              -site_name,
+                                              -ms_status,
+                                              one_of(flux_vars))))
+    pchem_vars_unfluxable <- colnames(sw(select(pchem,
+                                                -datetime,
+                                                -site_name,
+                                                -ms_status,
+                                                -one_of(flux_vars))))
+
+    #clean pchem one variable at a time, matrixify it, insert it into list
+    nvars_fluxable <- length(pchem_vars_fluxable)
+    pchem_setlist_fluxable <- as.list(rep(NA, nvars_fluxable))
+    for(i in 1:nvars_fluxable){
+
+        v <- pchem_vars_fluxable[i]
+
+        #clean data and arrange for matrixification
+        pchem_setlist_fluxable[[i]] <- pchem %>%
+            select(datetime, site_name, !!v, ms_status) %>%
+            filter(site_name %in% rg$site_name) %>%
+            # mutate(datetime = lubridate::year(datetime)) %>%
+            mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+            group_by(site_name, datetime) %>%
+            summarize(
+                !!v := mean(!!sym(v), na.rm=TRUE),
+                ms_status = numeric_any(ms_status)) %>%
+            ungroup() %>%
+            tidyr::pivot_wider(names_from = site_name,
+                               values_from = !!sym(v)) %>%
+            mutate(ms_status = as.logical(ms_status)) %>%
+            group_by(datetime) %>%
+            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+            ungroup() %>%
+            mutate(ms_status = as.numeric(ms_status)) %>%
+            arrange(datetime)
     }
 
-    #this chunk will be replaced by create_portal_link when interp is ready
-    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
-                    p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
-    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
-                      n = network,
-                      d = domain,
-                      p = prodname_ms)
-    write_feather(combined, site_file)
-    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
-    unlink(portal_site_file)
-    invisible(sw(file.link(to = portal_site_file, from = site_file)))
+    #send vars into flux interpolator with precip, one at a time;
+    #combine and write outputs by site
+    for(i in 1:nrow(wb)){
+
+        wbj <- slice(wb, i)
+        site_name <- wbj$site_name
+
+        ws_mean_conc <- ws_mean_flux <- tibble()
+        for(j in 1:nvars_fluxable){
+
+            v <- pchem_vars_fluxable[j]
+
+            ws_means <- ue(shortcut_idw_concflux(encompassing_dem = dem,
+                                                 wshd_bnd = wbj,
+                                                 data_locations = rg,
+                                                 precip_values = precip,
+                                                 chem_values = pchem_setlist_fluxable[[j]],
+                                                 stream_site_name = site_name))
+
+            if(j == 1){
+                datetime_out <- select(ws_means, datetime)
+                site_name_out <- select(ws_means, site_name)
+                ms_status_out <- ws_means$ms_status
+            }
+
+            ms_status_out <- bitwOr(ws_means$ms_status, ms_status_out)
+
+            ws_mean_conc <- ws_means %>%
+                select(concentration) %>%
+                rename(!!v := concentration) %>%
+                bind_cols(ws_mean_conc)
+
+            ws_mean_flux <- ws_means %>%
+                select(flux) %>%
+                rename(!!v := flux) %>%
+                bind_cols(ws_mean_flux)
+        }
+
+        #reassemble tibbles
+        ws_mean_conc <- bind_cols(datetime_out, site_name_out, ws_mean_conc)
+        ws_mean_flux <- bind_cols(datetime_out, site_name_out, ws_mean_flux)
+        ws_mean_conc$ms_status <- ws_mean_flux$ms_status <- ms_status_out
+
+        if(any(is.na(ws_mean_conc$datetime))){
+            stop('NA datetime found in ws_mean_conc')
+        }
+        if(any(is.na(ws_mean_flux$datetime))){
+            stop('NA datetime found in ws_mean_flux')
+        }
+
+        ue(write_ms_file(ws_mean_conc,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = site_name,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
+
+        ue(write_ms_file(ws_mean_flux,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = 'precip_flux_inst__ms002',
+                         site_name = site_name,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
+    }
+
+    #clean pchem one variable at a time, matrixify it, insert it into list
+    nvars_unfluxable <- length(pchem_vars_unfluxable)
+    pchem_setlist_unfluxable <- as.list(rep(NA, nvars_unfluxable))
+    for(i in 1:nvars_unfluxable){
+
+        v <- pchem_vars_unfluxable[i]
+
+        #clean data and arrange for matrixification
+        pchem_setlist_unfluxable[[i]] <- pchem %>%
+            select(datetime, site_name, !!v, ms_status) %>%
+            filter(site_name %in% rg$site_name) %>%
+            # mutate(datetime = lubridate::year(datetime)) %>%
+            mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+            group_by(site_name, datetime) %>%
+            summarize(
+                !!v := mean(!!sym(v), na.rm=TRUE),
+                ms_status = numeric_any(ms_status)) %>%
+            ungroup() %>%
+            tidyr::pivot_wider(names_from = site_name,
+                               values_from = !!sym(v)) %>%
+            mutate(ms_status = as.logical(ms_status)) %>%
+            group_by(datetime) %>%
+            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+            ungroup() %>%
+            mutate(ms_status = as.numeric(ms_status)) %>%
+            arrange(datetime)
+    }
+
+    #send vars into regular idw interpolator WITHOUT precip, one at a time;
+    #combine and write outputs by site
+    for(i in 1:nrow(wb)){
+
+        wbj <- slice(wb, i)
+        site_name <- wbj$site_name
+
+        ws_mean_d <- tibble()
+        for(j in 1:nvars_unfluxable){
+
+            v <- pchem_vars_unfluxable[j]
+
+            ws_mean <- ue(shortcut_idw(encompassing_dem = dem,
+                                       wshd_bnd = wbj,
+                                       data_locations = rg,
+                                       data_values = pchem_setlist_unfluxable[[j]],
+                                       stream_site_name = site_name,
+                                       output_varname = v,
+                                       elev_agnostic = TRUE))
+
+            if(j == 1){
+                datetime_out <- select(ws_mean, datetime)
+                site_name_out <- select(ws_mean, site_name)
+                ms_status_out <- ws_mean$ms_status
+            }
+
+            ms_status_out <- bitwOr(ws_mean$ms_status, ms_status_out)
+
+            ws_mean_d <- ws_mean %>%
+                select(!!v) %>%
+                bind_cols(ws_mean_d)
+        }
+
+        #reassemble tibbles
+        ws_mean_d <- bind_cols(datetime_out, site_name_out, ws_mean_d)
+        ws_mean_d$ms_status <- ms_status_out
+
+        if(any(is.na(ws_mean_d$datetime))){
+            stop('NA datetime found in ws_mean_d')
+        }
+
+        ue(write_ms_file(ws_mean_d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = site_name,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
+    }
 
     return()
 }
@@ -569,70 +670,32 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     chemprod <- 'stream_chemistry__208'
     qprod <- 'discharge__1'
 
-    chemfiles <- list_munged_files(network = network,
+    chemfiles <- ue(list_munged_files(network = network,
+                                      domain = domain,
+                                      prodname_ms = chemprod))
+    qfiles <- ue(list_munged_files(network = network,
                                    domain = domain,
-                                   prodname_ms = chemprod)
-    qfiles <- list_munged_files(network = network,
-                                domain = domain,
-                                prodname_ms = qprod)
+                                   prodname_ms = qprod))
 
     flux_sites <- generics::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
+        ue(fname_from_fpath(qfiles, include_fext = FALSE)),
+        ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
 
     for(s in flux_sites){
 
-        flux <- sw(calc_inst_flux(chemprod = chemprod,
-                                  qprod = qprod,
-                                  site_name = s,
-                                  dt_round_interv = 'hours'))
+        flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
+                                     qprod = qprod,
+                                     site_name = s,
+                                     dt_round_interv = 'hours')))
 
-        write_ms_file(d = flux,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = s,
-                      level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
-    }
-
-    return()
-}
-
-#precip_flux_inst: STATUS=PENDING (must localize precip to stream sites first)
-#. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){
-
-    chemprod <- 'precip_chemistry__208'
-    qprod <- 'precipitation__13'
-
-    chemfiles <- list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = chemprod)
-    qfiles <- list_munged_files(network = network,
-                                domain = domain,
-                                prodname_ms = qprod)
-
-    flux_sites <- generics::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
-
-    for(s in flux_sites){
-
-        flux <- sw(calc_inst_flux(chemprod = chemprod,
-                                  qprod = qprod,
-                                  site_name = s,
-                                  dt_round_interv = 'hours'))
-
-        write_ms_file(d = flux,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = s,
-                      level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
+        ue(write_ms_file(d = flux,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = s,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
     }
 
     return()
