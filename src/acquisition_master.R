@@ -1,4 +1,19 @@
 suppressPackageStartupMessages({
+
+    #we should be able to avoid librarying most or all of these,
+    #since we're referring to their functions directly with ::
+
+    # #spatial packages
+    library(gstat) #must load before raster package
+    # # library(terra)  #must load before gstat package
+    library(raster) #raster has been replaced by terra (way faster)
+    # library(stars)
+    # library(sf)
+    # library(sp)
+    # library(mapview)
+    # library(elevatr)
+
+    #everything else
     library(httr)
     library(jsonlite)
     library(tidyr)
@@ -15,6 +30,7 @@ suppressPackageStartupMessages({
     library(tinsel)
     library(PeriodicTable)
     library(imputeTS)
+
 })
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
@@ -28,7 +44,7 @@ logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing
+source('src/dev_helpers.R') #comment before pushing live
 source('src/global_helpers.R')
 source_decoratees('src/global_helpers.R') #parse decorators
 
@@ -56,7 +72,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ms_retrieve(network=network, domain=domain)
     ms_munge(network=network, domain=domain)
-    # ms_derive(network=network, domain=domain)
+    ms_derive(network=network, domain=domain)
 
     retain_ms_globals(ms_globals)
 }

@@ -2,10 +2,10 @@
 
 source('src/function_aliases.R')
 
-email_err_msgs = list()
-err_cnt = 0
-unique_errors = c()
-unique_exceptions = c()
+assign('email_err_msgs', list(), envir=.GlobalEnv)
+assign('err_cnt', 0, envir=.GlobalEnv)
+assign('unique_errors', c(), envir=.GlobalEnv)
+assign('unique_exceptions', c(), envir=.GlobalEnv)
 
 # flag systems (future use?; increasing user value and difficulty to manage):
 
@@ -93,6 +93,13 @@ handle_errors = function(f){
     return(wrapper)
 }
 
+#ue stands for "unhandle_errors"; wrap this around any ms function
+#that is called inside a processing kernel
+ue <- function(o){
+    if(is_ms_err(o)) stop('The previous error has been unhandled.', call. = FALSE)
+    else return(o)
+}
+
 pprint_callstack = function(){
 
     #make callstack more informative. if we end up sourcing files rather than
@@ -121,6 +128,13 @@ pprint_callstack = function(){
     call_string_pretty = paste(call_vec, collapse=' -->\n\t')
 
     return(call_string_pretty)
+}
+
+#errors are not handled for this function because it is used inside pipelines that
+#are used inside processing kernels, so it can't be wrapped in ue(). Find a way to
+#make ue() pipelineable and this numeric_any can be decorated
+numeric_any <- function(num_vec){
+    return(as.numeric(any(as.logical(num_vec))))
 }
 
 #. handle_errors
@@ -158,11 +172,6 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
     d = select(d, -one_of(flagcolnames))
 
     return(d)
-}
-
-#. handle_errors
-numeric_any <- function(num_vec){
-    return(as.numeric(any(as.logical(num_vec))))
 }
 
 #. handle_errors
@@ -551,23 +560,44 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 }
 
 #. handle_errors
-update_data_tracker_d <- function(network=domain, domain, tracker_name,
-    prodname_ms, site_name, new_status){
+update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
+    tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
 
     #this updates the derive section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
     #update_data_tracker_m for the munge section
 
-    tracker = get_data_tracker(network=network, domain=domain)
+    #if tracker is supplied, it will be used to write/overwrite the one on disk.
+    #if it is omitted or set to NULL, the appropriate tracker will be loaded
+    #from disk, updated, and then written back to disk.
 
-    dt = tracker[[prodname_ms]][[site_name]]$derive
+    if(is.null(tracker) && (
+        is.null(tracker_name) || is.null(prodname_ms) ||
+        is.null(new_status) || is.null(site_name)
+    )){
+        msg = paste0('If tracker is not supplied, these args must be:',
+                     'tracker_name, prodname_ms, new_status, new_status.')
+        logerror(msg, logger=logger_module)
+        stop(msg)
+    }
 
-    dt$status = new_status
-    dt$mtime = as.character(Sys.time())
+    if(is.null(tracker)){
 
-    tracker[[prodname_ms]][[site_name]]$derive = dt
+        tracker = get_data_tracker(network=network, domain=domain)
 
-    assign(tracker_name, tracker, pos=.GlobalEnv)
+        dt = tracker[[prodname_ms]][[site_name]]$derive
+
+        if(is.null(dt)){
+           return(generate_ms_exception('Product not yet tracked; no action taken.'))
+        }
+
+        dt$status = new_status
+        dt$mtime = as.character(Sys.time())
+
+        tracker[[prodname_ms]][[site_name]]$derive = dt
+
+        assign(tracker_name, tracker, pos=.GlobalEnv)
+    }
 
     trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
@@ -661,6 +691,20 @@ prodcode_from_prodname_ms <- function(prodname_ms){
     prodcode <- paste(prodcode, collapse = '__')
 
     return(prodcode)
+}
+
+#. handle_errors
+prodname_from_prodname_ms <- function(prodname_ms){
+
+    #prodname_ms consists of the macrosheds official name for a data
+    #category, e.g. discharge, and the source-specific code for that
+    #data product, e.g. DP1.20093. These two values are concatenated,
+    #separated by a double underscore. So long as we never use a double
+    #underscore in a macrosheds official data category name, this function
+    #will be able to split a prodname_ms into its two constituent parts.
+
+    prodname <- strsplit(prodname_ms, '__')[[1]][1]
+    return(prodname)
 }
 
 #. handle_errors
@@ -782,7 +826,8 @@ convert_molecule <- function(x, from, to){
 }
 
 #. handle_errors
-update_product_file <- function(network, domain, level, prod_code, status){
+update_product_file <- function(network, domain, level, prodcode, status,
+                                prodname){
 
     if(network == domain){
         prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
@@ -790,9 +835,17 @@ update_product_file <- function(network, domain, level, prod_code, status){
         prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
     }
 
-    for(i in 1:length(prod_code)) {
+    prodname_list <- strsplit(prodname, '; ')
+    names_matched <- sapply(prodname_list, function(x) all(x %in% prods$prodname))
+    if(! all(names_matched)){
+        stop(glue('All prodnames in processing_kernels.R must match ',
+                  'prodnames in products.csv'))
+    }
+
+    for(i in 1:length(prodcode)){
         col_name = as.character(glue(level[i], '_status'))
-        row_num = which(prods$prodcode == prod_code[i])
+        row_num <- which(prods$prodcode == prodcode[i] &
+                             prods$prodname %in% prodname_list[[i]])
         prods[row_num, col_name] = status[i]
     }
 
@@ -809,16 +862,18 @@ update_product_file <- function(network, domain, level, prod_code, status){
 update_product_statuses <- function(network, domain){
 
     #status_codes should maybe be defined globally, or in a file
-    status_codes = c('READY', 'PENDING', 'PAUSED')
+    status_codes = c('READY', 'PENDING', 'PAUSED', 'OBSOLETE', 'TEST')
     kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
     kernel_lines = read_lines(kf)
 
     status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
-    statuses = stringr::str_match(kernel_lines[status_line_inds],
-        'STATUS=([A-Z]+)')[, 2]
+    mch = stringr::str_match(kernel_lines[status_line_inds],
+        '#(.+?): STATUS=([A-Z]+)')[, 2:3]
+    prodnames = mch[, 1, drop=TRUE]
+    statuses = mch[, 2, drop=TRUE]
 
     if(any(! statuses %in% status_codes)){
-        stop('illegal status')
+        stop(glue('Illegal status in ', kf))
     }
 
     funcname_lines = kernel_lines[status_line_inds + 2]
@@ -834,14 +889,15 @@ update_product_statuses <- function(network, domain){
     func_lvls = func_codes[, 1, drop=TRUE]
     prodcodes = func_codes[, 2, drop=TRUE]
 
-    level_name = case_when(func_lvls == 0 ~ "retrieve",
+    level_names = case_when(func_lvls == 0 ~ "retrieve",
        func_lvls == 1 ~ "munge",
        func_lvls == 2 ~ "derive")
 
     status_names = tolower(statuses)
 
-    update_product_file(network=network, domain=domain, level=level_name,
-        prod_code=prodcodes, status=status_names)
+    update_product_file(network=network, domain=domain, level=level_names,
+                        prodcode=prodcodes, status=status_names,
+                        prodname=prodnames)
 
     return()
 }
@@ -900,38 +956,117 @@ convert_unit <- function(val, input_unit, output_unit){
     return(new_val) }
 
 #. handle_errors
-write_munged_file <- function(d, network, domain, prodname_ms, site_name){
+write_ms_file <- function(d, network, domain, prodname_ms, site_name,
+                          level='munged', shapefile=FALSE,
+                          link_to_portal = TRUE){
 
-    prod_dir = glue('data/{n}/{d}/munged/{p}', n=network, d=domain,
-        p=prodname_ms)
-    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be "munged" or "derived"')
+    }
 
-    site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
-    write_feather(d, site_file)
+    if(shapefile){
+
+        site_dir = glue('{wd}/data/{n}/{d}/{l}/{p}/{s}',
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         l = level,
+                         p = prodname_ms,
+                         s = site_name)
+
+        dir.create(site_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
+        sw(sf::st_write(obj = d,
+                        dsn = glue(site_dir, '/', site_name, '.shp'),
+                        delete_dsn = TRUE,
+                        quiet = TRUE))
+
+    } else {
+
+        prod_dir = glue('data/{n}/{d}/{l}/{p}',
+                        n = network,
+                        d = domain,
+                        l = level,
+                        p = prodname_ms)
+        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+
+        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
+        write_feather(d, site_file)
+    }
+
+    if(link_to_portal){
+        create_portal_link(network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms,
+                           site_name = site_name,
+                           level = level,
+                           dir = shapefile)
+    }
 
     return()
 }
 
 #. handle_errors
-create_portal_link <- function(network, domain, prodname_ms, site_name){
+create_portal_link <- function(network, domain, prodname_ms, site_name,
+                               level='munged', dir=FALSE){
+
+    #if dir=TRUE, treat site_name as a directory name, and link all files
+        #within (necessary for e.g. shapefiles, which often come with other files)
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be "munged" or "derived"')
+    }
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
         d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
 
-    portal_site_file = glue('{pd}/{s}.feather',
-        pd=portal_prod_dir, s=site_name)
+    if(! dir){
 
-    #if there's already a data file for this site-time-product in
-    #the portal repo, remove it
-    unlink(portal_site_file)
+        portal_site_file = glue('{pd}/{s}.feather',
+            pd=portal_prod_dir, s=site_name)
 
-    #create a link to the portal repo from the new site file
-    #(note: really, to and from are equivalent, as they both
-    #point to the same underlying structure in the filesystem)
-    site_file = glue('data/{n}/{d}/munged/{p}/{s}.feather',
-        n=network, d=domain, p=prodname_ms, s=site_name)
-    invisible(sw(file.link(to=portal_site_file, from=site_file)))
+        #if there's already a data file for this site-time-product in
+        #the portal repo, remove it
+        unlink(portal_site_file)
+
+        #create a link to the portal repo from the new site file
+        #(note: really, to and from are equivalent, as they both
+        #point to the same underlying structure in the filesystem)
+        site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
+            n=network, d=domain, l=level, p=prodname_ms, s=site_name)
+        invisible(sw(file.link(to=portal_site_file, from=site_file)))
+
+    } else {
+
+        site_dir <- glue('data/{n}/{d}/{l}/{p}/{s}',
+                         n = network,
+                         d = domain,
+                         l = level,
+                         p = prodname_ms,
+                         s = site_name)
+
+        portal_prod_dir <- glue('../portal/data/{d}/{p}', #ignore network
+                                d = domain,
+                                p = strsplit(prodname_ms, '__')[[1]][1])
+
+        dir.create(portal_prod_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
+        site_files <- list.files(site_dir)
+        for(s in site_files){
+
+            site_file <- glue(site_dir, '/', s)
+            portal_site_file <- glue(portal_prod_dir, '/', s)
+            unlink(portal_site_file)
+            invisible(sw(file.link(to = portal_site_file,
+                                   from = site_file)))
+        }
+
+    }
 
     return()
 }
@@ -975,4 +1110,498 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
     }
 
     return(fnames)
+}
+
+#still in progress
+delineate_watershed <- function(lat, long) {
+
+    site <- tibble(x = lat,
+                     y = long) %>%
+        sf::st_as_sf(coords = c("y", "x"), crs = 4269) %>%
+        sf::st_transform(102008)
+
+    start_comid <- nhdplusTools::discover_nhdplus_id(sf::st_sfc(
+        sf::st_point(c(long, lat)), crs = 4269))
+
+    flowline <- nhdplusTools::navigate_nldi(list(featureSource = "comid",
+                                                 featureID = start_comid),
+                                            mode = "upstreamTributaries",
+                                            data_source = "")
+
+    subset_file <- tempfile(fileext = ".gpkg")
+
+    subset <- nhdplusTools::subset_nhdplus(comids = flowline$nhdplus_comid,
+                                           output_file = subset_file,
+                                           nhdplus_data = "download",
+                                           return_data = TRUE)
+
+    flowlines <- subset$NHDFlowline_Network %>%
+        sf::st_transform(102008)
+
+    catchments <- subset$CatchmentSP %>%
+        sf::st_transform(102008)
+
+    upstream <- nhdplusTools::get_UT(flowlines, start_comid)
+
+    watershed <- catchments %>%
+        filter(featureid %in% upstream) %>%
+        sf::st_buffer(0.01) %>%
+        sf::st_union() %>%
+        sf::st_as_sf()
+
+    if(as.numeric(sf::st_area(watershed)) >= 60000000) {
+        return(watershed)
+        }
+    else {
+
+        outline = sf::st_as_sfc(sf::st_bbox(flowlines))
+
+        outline_buff <- outline %>%
+            sf::st_buffer(5000)
+
+        dem <- elevatr::get_elev_raster(as(outline_buff, 'Spatial'), z=12)
+
+        temp_raster <- tempfile(fileext = ".tif")
+
+        raster::writeRaster(dem, temp_raster, overwrite = T)
+
+        temp_point <- tempfile(fileext = ".shp")
+
+        sf::st_write(sf::st_zm(site), temp_point, delete_layer=TRUE)
+
+        temp_breash2 <- tempfile(fileext = ".tif")
+        whitebox::wbt_fill_single_cell_pits(temp_raster, temp_breash2)
+
+        temp_breached <- tempfile(fileext = ".tif")
+        whitebox::wbt_breach_depressions(temp_breash2,temp_breached,flat_increment=.01)
+
+        temp_d8_pntr <- tempfile(fileext = ".tif")
+        whitebox::wbt_d8_pointer(temp_breached,temp_d8_pntr)
+
+        temp_shed <- tempfile(fileext = ".tif")
+        whitebox::wbt_unnest_basins(temp_d8_pntr, temp_point, temp_shed)
+
+        # No idea why but wbt_unnest_basins() aves whatever file path with a _1 after the name so must add
+        file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
+
+        file_shed <- paste0(file_new[1], "_1.", file_new[2])
+
+        check <- raster::raster(file_shed)
+        values <- raster::getValues(check)
+        values[is.na(values)] <- 0
+
+
+    if(sum(values, na.rm = TRUE) < 100) {
+
+        flow <- tempfile(fileext = ".tif")
+        whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
+
+        snap <- tempfile(fileext = ".shp")
+        whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
+
+        temp_shed <- tempfile(fileext = ".tif")
+        whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
+
+        file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
+
+        file_shed <- paste0(file_new[1], "_1.", file_new[2])
+
+        check <- raster::raster(file_shed)
+        values <- raster::getValues(check)
+        values[is.na(values)] <- 0
+    }
+    watershed_raster <- raster::rasterToPolygons(raster::raster(file_shed))
+
+    #Convert shapefile to sf
+    watershed_df <- sf::st_as_sf(watershed_raster)
+
+    #buffer to join all pixles into one shape
+    watershed <- sf::st_buffer(watershed_df, 0.1) %>%
+        sf::st_union() %>%
+        sf::st_as_sf()
+
+    if(sum(values, na.rm = T) < 100) {
+        watershed <- watershed %>%
+            mutate(flag = "check")
+    }
+
+    #sf::st_write(watershed_union, dsn =
+     #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
+      #                    n = sites$network, d = sites$domain, s = sites$site_name))
+    return(watershed)
+
+    }
+}
+
+#. handle_errors
+calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
+
+    #chemprod is the prodname_ms for stream or precip chemistry
+    #qprod is the prodname_ms for stream discharge or precip volume over time
+    #dt_round_interv is a rounding interval passed to lubridate::round_date
+
+    qvar <- prodname_from_prodname_ms(qprod)
+    if(! qvar %in% c('precipitation', 'discharge')){
+        stop('Could not determine stream/precip')
+    }
+
+    flux_vars <- ms_vars %>% #ms_vars is global
+        filter(flux_convertible == 1) %>%
+        pull(variable_code)
+
+    chem <- read_feather(glue('data/{n}/{d}/munged/{cp}/{s}.feather',
+                              n = network,
+                              d = domain,
+                              cp = chemprod,
+                              s = site_name)) %>%
+        select(one_of(flux_vars), 'datetime', 'ms_status') %>%
+        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup()
+
+    daterange <- range(chem$datetime)
+    fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
+                                    by=dt_round_interv))
+
+    discharge <- read_feather(glue('data/{n}/{d}/munged/{qp}/{s}.feather',
+                                   n = network,
+                                   d = domain,
+                                   qp = qprod,
+                                   s = site_name)) %>%
+        select(-site_name) %>%
+        filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
+        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+        group_by(datetime) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup()
+
+    flux <- chem %>%
+        full_join(discharge,
+                  by = 'datetime') %>%
+        mutate(ms_status = numeric_any(c(ms_status.x, ms_status.y))) %>%
+        select(-ms_status.x, -ms_status.y) %>%
+        full_join(fulldt,
+                  by='datetime') %>%
+        arrange(datetime) %>%
+        select_if(~(! all(is.na(.)))) %>%
+        mutate_at(vars(-datetime, -ms_status),
+                  imputeTS::na_interpolation,
+                  maxgap = 30) %>%
+        mutate_at(vars(-datetime, -!!sym(qvar), -ms_status),
+                  ~(. * !!sym(qvar))) %>%
+        mutate(site_name = !!(site_name)) %>%
+        select(-!!sym(qvar)) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                   any_vars(! is.na(.))) %>%
+        select(datetime, site_name, everything())
+
+    return(flux)
+}
+
+#. handle_errors
+read_combine_shapefiles <- function(network, domain, prodname_ms){
+
+    prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
+                                 n = network,
+                                 d = domain,
+                                 p = prodname_ms),
+                            recursive = TRUE,
+                            full.names = TRUE,
+                            pattern = '*.shp')
+
+    shapes <- lapply(prodpaths,
+                     function(x){
+                         sf::st_read(x,
+                                     stringsAsFactors = FALSE,
+                                     quiet = TRUE)
+                     })
+
+    # wb <- sw(Reduce(sf::st_union, wbs)) %>%
+    combined <- sw(Reduce(rbind, shapes))
+        # sf::st_transform(projstring)
+
+    return(combined)
+}
+
+#. handle_errors
+read_combine_feathers <- function(network, domain, prodname_ms){
+
+    prodpaths <- list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms)
+
+    combined <- tibble()
+    for(i in 1:length(prodpaths)){
+        combined <- read_feather(prodpaths[i]) %>%
+            bind_rows(combined)
+    }
+
+    return(combined)
+}
+
+#. handle_errors
+choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
+
+    if(unprojected){
+        PROJ4 <- glue('+proj=longlat +datum=WGS84 +no_defs ',
+                      '+ellps=WGS84 +towgs84=0,0,0')
+        return(PROJ4)
+    }
+
+    if(is.null(lat) || is.null(long)){
+        stop('If projecting, lat and long are required.')
+    }
+
+    if(lat <= 15 && lat >= -15){ #equatorial
+        PROJ4 = glue('+proj=laea +lon_0=', long)
+    } else { #temperate or polar
+        PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    }
+
+    return(PROJ4)
+}
+
+#. handle_errors
+reconstitute_raster <- function(x, template){
+
+    m = matrix(as.vector(x),
+               nrow=nrow(template),
+               ncol=ncol(template),
+               byrow=TRUE)
+    r <- raster(m,
+                crs=raster::projection(template))
+    extent(r) <- raster::extent(template)
+
+    return(r)
+}
+
+#. handle_errors
+shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
+                         data_values, stream_site_name, output_varname,
+                         elev_agnostic = FALSE){
+
+    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #wshd_bnd is an sf object with columns site_name and geometry
+        #it represents a single watershed boundary
+    #data_locations is an sf object with columns site_name and geometry
+        #it represents all sites (e.g. rain gauges) that will be used in
+        #the interpolation
+    #data_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each data location.
+    #output_varname is only used to name the column in the tibble that is returned
+    #elev_agnostic is a boolean that determines whether elevation should be
+        #included as a predictor of the variable being interpolated
+
+    #matrixify input data so we can use matrix operations
+    d_status <- data_values$ms_status
+    d_dt <- data_values$datetime
+    data_values$ms_status <- data_values$datetime <- NULL
+    data_matrix <- as.matrix(data_values)
+
+    #clean dem and get elevation values
+    dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+    dem_wb <- terra::mask(dem_wb, wshd_bnd)
+    elevs <- terra::values(dem_wb)
+
+    #compute distances from all dem cells to all data locations
+    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = ncol(data_matrix),
+                          dimnames = list(NULL, colnames(data_matrix)))
+    for(k in 1:ncol(data_matrix)){
+        dk <- filter(data_locations, site_name == colnames(data_matrix)[k])
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA #mask
+        inv_distmat[, k] <- inv_dist2
+    }
+
+    #calculate watershed mean at every timestep
+    ws_mean <- rep(NA, nrow(data_matrix))
+    # for(k in 24){
+    for(k in 1:nrow(data_matrix)){
+
+        #assign cell weights as normalized inverse squared distances
+        dk <- t(data_matrix[k, , drop = FALSE])
+        inv_distmat_sub <- inv_distmat[, ! is.na(dk)]
+        dk <- dk[! is.na(dk), , drop=FALSE]
+        weightmat <- do.call(rbind, #avoids matrix transposition
+                             unlist(apply(inv_distmat_sub, #normalize by row
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #perform vectorized idw
+        dk[is.na(dk)] <- 0 #allows matrix multiplication
+        d_idw <- weightmat %*% dk
+
+        #determine data-elevation relationship for interp weighting
+        if(! elev_agnostic){
+            d_elev <- tibble(site_name = rownames(dk),
+                            d = dk[,1]) %>%
+                      left_join(data_locations,
+                                by = 'site_name')
+            mod <- lm(d ~ elevation, data = d_elev)
+            ab <- as.list(mod$coefficients)
+
+            #estimate raster values from elevation alone
+            d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+
+            #average both approaches (this should be weighted toward idw
+            #when close to any data location, and weighted half and half when far)
+            d_idw <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+                            d_idw,
+                            d_from_elev)
+        }
+
+        ws_mean[k] <- mean(d_idw, na.rm=TRUE)
+    }
+    # compare_interp_methods()
+
+    ws_mean <- tibble(datetime = d_dt,
+                      site_name = stream_site_name,
+                      !!output_varname := ws_mean,
+                      ms_status = d_status)
+
+    return(ws_mean)
+}
+
+#. handle_errors
+shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
+                                  precip_values, chem_values, stream_site_name){
+
+    #this function is similar to shortcut_idw, but when it gets to the
+    #vectorized raster stage, it multiplies precip chem by precip volume
+    #to calculate flux for each cell. then it returns a list containing two
+    #derived values: watershed average concentration and ws ave flux.
+
+    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #wshd_bnd is an sf object with columns site_name and geometry
+        #it represents a single watershed boundary
+    #data_locations is an sf object with columns site_name and geometry
+        #it represents all sites (e.g. rain gauges) that will be used in
+        #the interpolation
+    #precip_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each precip location.
+    #chem_values is a data.frame with one column each for datetime and ms_status,
+        #and an additional named column of data values for each
+        #precip chemistry location.
+
+    common_dts <- base::intersect(as.character(precip_values$datetime),
+                                  as.character(chem_values$datetime))
+    precip_values <- filter(precip_values,
+           as.character(datetime) %in% common_dts)
+    chem_values <- filter(chem_values,
+           as.character(datetime) %in% common_dts)
+
+    #matrixify input data so we can use matrix operations
+    d_dt <- precip_values$datetime
+
+    p_status <- precip_values$ms_status
+    precip_values$ms_status <- precip_values$datetime <- NULL
+    p_matrix <- as.matrix(precip_values)
+
+    c_status <- chem_values$ms_status
+    chem_values$ms_status <- chem_values$datetime <- NULL
+    c_matrix <- as.matrix(chem_values)
+
+    d_status = bitwOr(p_status, c_status)
+
+    # gauges <- base::union(colnames(p_matrix),
+    #                       colnames(c_matrix))
+    # ngauges <- length(gauges)
+
+    #clean dem and get elevation values
+    dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+    dem_wb <- terra::mask(dem_wb, wshd_bnd)
+    elevs <- terra::values(dem_wb)
+
+    #compute distances from all dem cells to all precip locations
+    inv_distmat_p <- matrix(NA, nrow = length(dem_wb), ncol = ncol(p_matrix),
+                            dimnames = list(NULL, colnames(p_matrix)))
+    for(k in 1:ncol(p_matrix)){
+        dk <- filter(data_locations, site_name == colnames(p_matrix)[k])
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA #mask
+        inv_distmat_p[, k] <- inv_dist2
+    }
+
+    #compute distances from all dem cells to all chemistry locations
+    inv_distmat_c <- matrix(NA, nrow = length(dem_wb), ncol = ncol(c_matrix),
+                            dimnames = list(NULL, colnames(c_matrix)))
+    for(k in 1:ncol(c_matrix)){
+        dk <- filter(data_locations, site_name == colnames(c_matrix)[k])
+        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+            terra::values(.)
+        inv_dist2[is.na(elevs)] <- NA
+        inv_distmat_c[, k] <- inv_dist2
+    }
+
+    #calculate watershed mean concentration and flux at every timestep
+    if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
+    ntimesteps <- nrow(p_matrix)
+    ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
+    for(k in 1:ntimesteps){
+
+        #assign cell weights as normalized inverse squared distances (p)
+        pk <- t(p_matrix[k, , drop = FALSE])
+        inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk)]
+        pk <- pk[! is.na(pk), , drop=FALSE]
+        weightmat_p <- do.call(rbind, #avoids matrix transposition
+                             unlist(apply(inv_distmat_p_sub, #normalize by row
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #assign cell weights as normalized inverse squared distances (c)
+        ck <- t(c_matrix[k, , drop = FALSE])
+        inv_distmat_c_sub <- inv_distmat_c[, ! is.na(ck)]
+        ck <- ck[! is.na(ck), , drop=FALSE]
+        weightmat_c <- do.call(rbind,
+                             unlist(apply(inv_distmat_c_sub,
+                                          1,
+                                          function(x) list(x / sum(x))),
+                                    recursive = FALSE))
+
+        #determine data-elevation relationship for interp weighting (p only)
+        d_elev <- tibble(site_name = rownames(pk),
+                         precip = pk[,1]) %>%
+                  left_join(data_locations,
+                            by = 'site_name')
+        mod <- lm(precip ~ elevation, data = d_elev)
+        ab <- as.list(mod$coefficients)
+
+        #perform vectorized idw (p)
+        pk[is.na(pk)] <- 0 #allows matrix multiplication
+        p_idw <- weightmat_p %*% pk
+
+        #perform vectorized idw (c)
+        ck[is.na(ck)] <- 0
+        c_idw <- weightmat_c %*% ck
+
+        #estimate raster values from elevation alone (p only)
+        p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+
+        #average both approaches (p only; this should be weighted toward idw
+        #when close to any data location, and weighted half and half when far)
+        p_ensemb <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+                           p_idw,
+                           p_from_elev)
+
+        #calculate flux for every cell
+        flux_interp <- c_idw * p_ensemb
+
+        #calculate watershed averages
+        ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
+        ws_mean_flux[k] <- mean(flux_interp, na.rm=TRUE)
+    }
+    # compare_interp_methods()
+
+    ws_means <- tibble(datetime = d_dt,
+                       site_name = stream_site_name,
+                       concentration = ws_mean_conc,
+                       flux = ws_mean_flux,
+                       ms_status = d_status)
+
+    return(ws_means)
 }
