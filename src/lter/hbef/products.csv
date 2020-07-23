@@ -1,10 +1,9 @@
-prodcode,prodname,type,retrieve_status,munge_status,derive_status,notes
-1,discharge,sensor,ready,ready,NA,NA
-13,precipitation,grab,ready,ready,ready,see also product 14
-208,precip_chemistry,grab,ready,ready,ready,NA
-208,stream_chemistry,grab,ready,ready,ready,NA
-5482,rain_gauge_locations,spatial,pending,pending,NA,NA
-3239,stream_gauge_locations,spatial,pending,pending,NA,NA
-100,rain_gauge_locations,spatial,ready,pending,NA,NA
-ms001,stream_flux,derived,NA,NA,ready,NA
-ms002,precip_flux,derived,NA,NA,pending,NA
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+1,discharge,sensor,ready,ready,NA,stream_flux_inst__ms001,NA
+100,rain_gauge_locations,spatial,ready,ready,NA,precipitation__13,NA
+94,ws_boundary,spatial,ready,ready,NA,precipitation__13,NA
+13,precipitation,grab,ready,ready,ready,precip_chemistry__208,see also product 14
+208,precip_chemistry,grab,ready,ready,ready,NA,formerly a precursor of abandoned kernel precip_flux_inst__ms002
+208,stream_chemistry,grab,ready,ready,NA,stream_flux_inst__ms001,NA
+107,stream_gauge_locations,spatial,ready,ready,NA,NA,NA
+ms001,stream_flux_inst,derived,NA,NA,ready,NA,NA

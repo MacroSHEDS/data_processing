@@ -5,7 +5,7 @@ prod_info = get_product_info(network=network, domain=domain,
     status_level='derive', get_statuses='ready') %>%
     arrange(prodcode)
 
-# i=4
+# i=1
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -22,6 +22,9 @@ for(i in 1:nrow(prod_info)){
                                              prodname_ms = prodname_ms,
                                              site_name = site_name,
                                              site_components = 'NA')
+            update_data_tracker_d(network = network,
+                                  domain = domain,
+                                  tracker = held_data)
         } else {
             logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
                 'it before deriving from it.', p=prodname_ms), logger=logger_module)
@@ -38,6 +41,10 @@ for(i in 1:nrow(prod_info)){
                      p=prodname_ms),
                 logger=logger_module)
         next
+    } else {
+        loginfo(glue('Deriving {p}',
+                     p=prodname_ms),
+                logger=logger_module)
     }
 
     prodcode = prodcode_from_prodname_ms(prodname_ms)
@@ -54,12 +61,14 @@ for(i in 1:nrow(prod_info)){
         tracker_name='held_data', prodname_ms=prodname_ms,
         site_name=site_name, new_status=stts)
 
-    msg = glue('Derived {p} ({n}/{d}/{s})',
-               p = prodname_ms,
-               n = network,
-               d = domain,
-               s = site_name)
-    loginfo(msg, logger=logger_module)
+    if(stts == 'ok'){
+        msg = glue('Derived {p} ({n}/{d}/{s})',
+                   p = prodname_ms,
+                   n = network,
+                   d = domain,
+                   s = site_name)
+        loginfo(msg, logger=logger_module)
+    }
 
     gc()
 }
