@@ -61,12 +61,14 @@ for(i in 1:nrow(prod_info)){
         tracker_name='held_data', prodname_ms=prodname_ms,
         site_name=site_name, new_status=stts)
 
-    msg = glue('Derived {p} ({n}/{d}/{s})',
-               p = prodname_ms,
-               n = network,
-               d = domain,
-               s = site_name)
-    loginfo(msg, logger=logger_module)
+    if(stts == 'ok'){
+        msg = glue('Derived {p} ({n}/{d}/{s})',
+                   p = prodname_ms,
+                   n = network,
+                   d = domain,
+                   s = site_name)
+        loginfo(msg, logger=logger_module)
+    }
 
     gc()
 }
