@@ -14,7 +14,7 @@ process_0_DP1.20093 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -30,7 +30,7 @@ process_0_DP1.20033 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -46,7 +46,7 @@ process_0_DP1.20042 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -62,7 +62,7 @@ process_0_DP1.20053 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -78,7 +78,7 @@ process_0_DP1.00004 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
     # out_sub = data_pile$BP_30min %>%
     #     mutate(site_name=paste0(set_details$site_name, updown)) %>%
@@ -97,7 +97,7 @@ process_0_DP1.20097 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -115,7 +115,7 @@ process_0_DP1.20016 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
     # out_sub = select(data_pile$EOS_5_min, startDateTime,
     #     surfacewaterElevMean, sWatElevFinalQF, verticalPosition,
@@ -153,7 +153,7 @@ process_0_DP1.20288 <- function(set_details, network, domain){
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -213,10 +213,10 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         # out_sub = rawd %>%
         #     select(collectDate, analyte, analyteConcentration, analyteUnits,
         #         shipmentWarmQF, externalLabDataQF, sampleCondition)
-        out_sub = sourceflags_to_ms_status(rawd,
+        out_sub = ue(sourceflags_to_ms_status(rawd,
             flagstatus_mappings = list(shipmentWarmQF = 0,
-                sampleCondition = 'GOOD',
-                externalLabDataQF = c('formatChange|legacyData', '', 'NA')))
+            sampleCondition = 'GOOD',
+            externalLabDataQF = c('formatChange|legacyData', '', 'NA'))))
     }
 
     if(! exists('out_sub')){
@@ -274,7 +274,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     relevant_file1 = 'NSW_15_minute.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0))
+        out_sub = ue(sourceflags_to_ms_status(rawd, list(finalQF = 0)))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -283,8 +283,8 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('All records failed QA'))
     }
 
-    updown = determine_upstream_downstream(out_sub)
-    N_mass = calculate_molar_mass('N')
+    updown = ue(determine_upstream_downstream(out_sub))
+    N_mass = ue(calculate_molar_mass('N'))
 
     out_sub = out_sub %>%
         mutate(
@@ -319,7 +319,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
 
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(PARFinalQF = 0))
+        out_sub = ue(sourceflags_to_ms_status(rawd, list(PARFinalQF = 0)))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -328,7 +328,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('All records failed QA'))
     }
 
-    updown = determine_upstream_downstream(out_sub)
+    updown = ue(determine_upstream_downstream(out_sub))
 
     out_sub = out_sub %>%
         mutate(
@@ -360,7 +360,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
 
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(finalQF = 0))
+        out_sub = ue(sourceflags_to_ms_status(rawd, list(finalQF = 0)))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -369,7 +369,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('All records failed QA'))
     }
 
-    updown = determine_upstream_downstream(out_sub)
+    updown = ue(determine_upstream_downstream(out_sub))
 
     out_sub = out_sub %>%
         mutate(
@@ -386,7 +386,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#air pres: STATUS=READY 
+#air pres: STATUS=READY
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -401,7 +401,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
 
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(staPresFinalQF = 0))
+        out_sub = ue(sourceflags_to_ms_status(rawd, list(staPresFinalQF = 0)))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -409,8 +409,8 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     if(all(out_sub$ms_status == 1)){
         return(generate_ms_exception('All records failed QA'))
     }
-    
-    updown = determine_upstream_downstream(out_sub)
+
+    updown = ue(determine_upstream_downstream(out_sub))
 
     out_sub = out_sub %>%
         mutate(
@@ -427,7 +427,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#gases: STATUS=READY 
+#gases: STATUS=READY
 #. handle_errors
 process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -438,32 +438,32 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
-    
+
     relevant_file1 = 'sdg_externalLabData.feather'
     error_file1 = 'sdg_fieldDataProc.feather'
-    error_file2 = 'sdg_fieldDataAir.feather' 
-    
+    error_file2 = 'sdg_fieldDataAir.feather'
+
     if(error_file1  %in% rawfiles) {
         error1 <- read_feather(glue(rawdir, '/', "sdg_fieldDataAir.feather")) %>%
             select(uid, sdgAirDataQF, lowAirVolumeQF) }
     else{
         return(generate_ms_exception('Relevant error file missing')) }
-    
+
     if(error_file2  %in% rawfiles) {
         error2 <- read_feather(glue(rawdir, '/', "sdg_fieldDataProc.feather")) %>%
             select(uid, sdgProcessDataQF, lowGasVolumeQF)
         errors <- full_join(error1, error2, by = "uid") }
     else{
         return(generate_ms_exception('Relevant error file missing'))}
-    
+
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1)) %>%
             left_join(errors, by = "uid")
-        out_sub = sourceflags_to_ms_status(rawd, flagstatus_mappings = list(
+        out_sub = ue(sourceflags_to_ms_status(rawd, flagstatus_mappings = list(
             gasCheckStandardQF = c(0, NA),
             lowGasVolumeQF = c(NA, 0),
-            sampleCondition = "OK", 
-            sdgProcessDataQF = c(NA, 0))) 
+            sampleCondition = "OK",
+            sdgProcessDataQF = c(NA, 0))) )
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -472,7 +472,7 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('All records failed QA'))
     }
 
-    updown = determine_upstream_downstream(out_sub)
+    updown = ue(determine_upstream_downstream(out_sub))
 
     out_sub = out_sub %>%
         mutate(
@@ -491,11 +491,11 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
             concentrationN2O_water = mean(concentrationN2O_water, na.rm=TRUE),
             ms_status = mean(ms_status, na.rm = T)) %>%
         ungroup() %>%
-        select(site_name=siteID, datetime, CH4_air=concentrationCH4_air, 
+        select(site_name=siteID, datetime, CH4_air=concentrationCH4_air,
             CH4_water=concentrationCH4_water, CO2_air=concentrationCO2_air,
-            CO2_water=concentrationCO2_water, N2O_air=concentrationN2O_air, 
-            N2O_water=concentrationN2O_water, ms_status) 
-    
+            CO2_water=concentrationCO2_water, N2O_air=concentrationN2O_air,
+            N2O_water=concentrationN2O_water, ms_status)
+
     return(out_sub)
 }
 
@@ -506,7 +506,7 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     NULL
 }
 
-#waterqual: STATUS=READY 
+#waterqual: STATUS=READY
 #. handle_errors
 process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -521,13 +521,13 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
      relevant_file1 = 'waq_instantaneous.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = sourceflags_to_ms_status(rawd, list(specificCondFinalQF = 0, 
-            dissolvedOxygenFinalQF = 0, dissolvedOxygenSatFinalQF = 0, 
-            pHFinalQF = 0, chlorophyllFinalQF = 0, turbidityFinalQF = 0, 
-            fDOMFinalQF = 0, specificCondFinalQFSciRvw = c(0, NA), 
-            dissolvedOxygenSatFinalQFSciRvw = c(0, NA), dissolvedOxygenFinalQFSciRvw = c(0, NA), 
-            pHFinalQFSciRvw = c(0, NA), chlorophyllFinalQFSciRvw = c(0, NA), 
-            turbidityFinalQFSciRvw  = c(0, NA), fDOMFinalQFSciRvw = c(0, NA))) 
+        out_sub = ue(sourceflags_to_ms_status(rawd, list(specificCondFinalQF = 0,
+            dissolvedOxygenFinalQF = 0, dissolvedOxygenSatFinalQF = 0,
+            pHFinalQF = 0, chlorophyllFinalQF = 0, turbidityFinalQF = 0,
+            fDOMFinalQF = 0, specificCondFinalQFSciRvw = c(0, NA),
+            dissolvedOxygenSatFinalQFSciRvw = c(0, NA), dissolvedOxygenFinalQFSciRvw = c(0, NA),
+            pHFinalQFSciRvw = c(0, NA), chlorophyllFinalQFSciRvw = c(0, NA),
+            turbidityFinalQFSciRvw  = c(0, NA), fDOMFinalQFSciRvw = c(0, NA))) )
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -538,7 +538,7 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     # }
 
     #MIGHT NOT WORK
-    updown = determine_upstream_downstream(out_sub)
+    updown = ue(determine_upstream_downstream(out_sub))
 
     #THIS CAN HELP WITH COLUMN SELECTION (COLS WITH ASSOC FLAGS ARE USEFUL COLS)
     #cn = colnames(out_sub)
