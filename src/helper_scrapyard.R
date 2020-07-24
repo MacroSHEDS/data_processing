@@ -345,3 +345,19 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
     return()
 }
+
+### test code####
+    desired_interval = '5 days'; impute_limit=30
+    # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
+    ws_mean_precip = readRDS('~/Desktop/ws_precip_temp.rds') %>%
+        mutate(datetime = as_datetime(as.character(datetime), format='%Y'))
+    w2 = w3 = ws_mean_precip
+    w2$datetime = as.POSIXct(1:nrow(w2), origin='2000-01-01', tz = 'UTC')
+    w3$precip[c(3:9, 15)] = NA
+    w4 = w3
+    w4$ms_interp = 0
+
+    ms_df = ws_mean_precip
+    ms_df = w2
+    ms_df = w3
+    ms_df = w4
