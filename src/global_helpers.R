@@ -1234,11 +1234,20 @@ delineate_watershed <- function(lat, long) {
 }
 
 #. handle_errors
-calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
+calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
+                           #impute_limit = 30){
 
     #chemprod is the prodname_ms for stream or precip chemistry
     #qprod is the prodname_ms for stream discharge or precip volume over time
     #dt_round_interv is a rounding interval passed to lubridate::round_date
+
+    #todo:
+    #1 incorporate read_combine_feather
+    #2 a lot of datetime management code has been commented. note that if
+        #you need to bring it back (because of some unforeseen problem
+        #with adjust_timestep), you'll need to change some of the any()
+        #calls to numeric_any, or convert ms_status and ms_interp to
+        #logical and then summarize with any()
 
     qvar <- prodname_from_prodname_ms(qprod)
     if(! qvar %in% c('precipitation', 'discharge')){
@@ -1254,15 +1263,15 @@ calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
                               d = domain,
                               cp = chemprod,
                               s = site_name)) %>%
-        select(one_of(flux_vars), 'datetime', 'ms_status') %>%
-        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup()
-
+        select(one_of(flux_vars), 'datetime', 'ms_status', 'ms_interp')
+    #     mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+    #     group_by(datetime) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup()
+    #
     daterange <- range(chem$datetime)
-    fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
-                                    by=dt_round_interv))
+    # fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
+    #                                 by=dt_round_interv))
 
     discharge <- read_feather(glue('data/{n}/{d}/munged/{qp}/{s}.feather',
                                    n = network,
@@ -1270,31 +1279,35 @@ calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv){
                                    qp = qprod,
                                    s = site_name)) %>%
         select(-site_name) %>%
-        filter(datetime >= daterange[1], datetime <= daterange[2]) %>%
-        mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup()
+        filter(datetime >= daterange[1], datetime <= daterange[2])
+        # mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+        # group_by(datetime) %>%
+        # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        # ungroup()
 
     flux <- chem %>%
         full_join(discharge,
                   by = 'datetime') %>%
-        mutate(ms_status = numeric_any(c(ms_status.x, ms_status.y))) %>%
-        select(-ms_status.x, -ms_status.y) %>%
-        full_join(fulldt,
-                  by='datetime') %>%
+        mutate(
+            ms_status = numeric_any(c(ms_status.x, ms_status.y)),
+            ms_interp = numeric_any(c(ms_interp.x, ms_interp.y))) %>%
+        select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
+        # full_join(fulldt,
+        #           by='datetime') %>%
         arrange(datetime) %>%
         select_if(~(! all(is.na(.)))) %>%
-        mutate_at(vars(-datetime, -ms_status),
-                  imputeTS::na_interpolation,
-                  maxgap = 30) %>%
-        mutate_at(vars(-datetime, -!!sym(qvar), -ms_status),
+        # mutate_at(vars(-datetime, -ms_status),
+        #           imputeTS::na_interpolation,
+        #           maxgap = impute_limit) %>%
+        mutate_at(vars(-datetime, -!!sym(qvar), -ms_status, -ms_interp),
                   ~(. * !!sym(qvar))) %>%
         mutate(site_name = !!(site_name)) %>%
         select(-!!sym(qvar)) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
+        filter_at(vars(-site_name, -datetime, -ms_status, -ms_interp),
                    any_vars(! is.na(.))) %>%
-        select(datetime, site_name, everything())
+        select(datetime, site_name, everything()) %>%
+        relocate(ms_status, .after = last_col()) %>%
+        relocate(ms_interp, .after = last_col())
 
     return(flux)
 }
@@ -1395,9 +1408,13 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
+    d_interp <- data_values$ms_interp
     d_dt <- data_values$datetime
-    data_values$ms_status <- data_values$datetime <- NULL
-    data_matrix <- as.matrix(data_values)
+    data_matrix <- select(data_values,
+                          -ms_status,
+                          -datetime,
+                          -ms_interp) %>%
+        as.matrix()
 
     #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
@@ -1460,7 +1477,8 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     ws_mean <- tibble(datetime = d_dt,
                       site_name = stream_site_name,
                       !!output_varname := ws_mean,
-                      ms_status = d_status)
+                      ms_status = d_status,
+                      ms_interp = d_interp)
 
     return(ws_mean)
 }
@@ -1497,14 +1515,23 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     d_dt <- precip_values$datetime
 
     p_status <- precip_values$ms_status
-    precip_values$ms_status <- precip_values$datetime <- NULL
-    p_matrix <- as.matrix(precip_values)
+    p_interp <- precip_values$ms_interp
+    p_matrix <- select(precip_values,
+                       -ms_status,
+                       -datetime,
+                       -ms_interp) %>%
+        as.matrix()
 
     c_status <- chem_values$ms_status
-    chem_values$ms_status <- chem_values$datetime <- NULL
-    c_matrix <- as.matrix(chem_values)
+    c_interp <- chem_values$ms_interp
+    c_matrix <- select(chem_values,
+                       -ms_status,
+                       -datetime,
+                       -ms_interp) %>%
+        as.matrix()
 
     d_status = bitwOr(p_status, c_status)
+    d_interp = bitwOr(p_interp, c_interp)
 
     # gauges <- base::union(colnames(p_matrix),
     #                       colnames(c_matrix))
@@ -1601,7 +1628,8 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                        site_name = stream_site_name,
                        concentration = ws_mean_conc,
                        flux = ws_mean_flux,
-                       ms_status = d_status)
+                       ms_status = d_status,
+                       ms_interp = d_interp)
 
     return(ws_means)
 }
@@ -1620,59 +1648,81 @@ adjust_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-
-    # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
-    ws_mean_precip = readRDS('~/Desktop/ws_precip_temp.rds') %>%
-        mutate(datetime = as_datetime(as.character(datetime), format='%Y'))
-    w2 = w3 = ws_mean_precip
-    w2$datetime = as.POSIXct(1:nrow(w2), origin='2000-01-01', tz = 'UTC')
-    w3$precip[c(3:9, 15)] = NA
-
-    ms_df = w3
-
-    #neeeds:
-    #accept "interpolated" column as INPUT?
-    #naw, just remove if it exists
-    #only interp numerics
-    #phases:
-    #group by desired int
-    #join full series
-    #extrap/interp x ints
-    #remove na rows
-
     non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
+    uniq_sites <- unique(ms_df$site_name)
 
+    #round to desired_interval
     ms_df <- sw(ms_df %>%
-                    mutate(datetime = lubridate::as_datetime(datetime),
-                           datetime = lubridate::round_date(datetime,
-                                                            desired_interval)) %>%
-                    mutate_at(vars(one_of('ms_status', 'ms_interp')),
-                              as.logical) %>%
-                    group_by(datetime, site_name) %>%
-                    summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-                    ungroup() %>%
-                    arrange(datetime))
+        filter(! is.na(datetime)) %>%
+        mutate(
+            datetime = lubridate::as_datetime(datetime),
+            datetime = lubridate::round_date(datetime,
+                                             desired_interval)) %>%
+        mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                  as.logical) %>%
+        group_by(datetime, site_name) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        arrange(datetime))
 
+    #fill in missing timepoints with NAs
     daterange <- range(ms_df$datetime)
-    fulldt <- tibble(datetime = seq(daterange[1],
-                                    daterange[2],
-                                    by = desired_interval))
+    fulldt = seq(daterange[1],
+                 daterange[2],
+                 by = desired_interval)
+    fulldt = tibble(site_name = rep(uniq_sites,
+                                    each = length(fulldt)),
+                    datetime = rep(fulldt,
+                                   times = length(uniq_sites)))
 
-    #ABOVE: GOTTA CARRY SITENAME THROUGH MERGE
-    #BELOW: INSERT MS_STATUS = 1 FOR INTERPS
-    ms_df %>%
-        right_join(fulldt,
-                   by = 'datetime') %>%
+    #if missing, add binary column to track which points are interped
+    if(! 'ms_interp'  %in% colnames(ms_df)) ms_df$ms_interp <- FALSE
+
+    #interpolate up to impute_limit; remove empty rows; populate ms_interp column
+    ms_df_adjusted <- ms_df %>%
+        full_join(fulldt, #right_join would be more efficient, but this is future-proof
+                   by = c('datetime', 'site_name')) %>%
         arrange(datetime) %>%
         mutate_at(vars(-one_of(non_data_columns)),
                   imputeTS::na_interpolation,
                   maxgap = impute_limit) %>%
         filter_at(vars(-one_of(non_data_columns)),
                   any_vars(! is.na(.))) %>%
-        select(datetime, site_name, everything())
+        mutate(
+            ms_status = ifelse(is.na(ms_status), FALSE, ms_status),
+            ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
+            ms_status = as.numeric(ms_status),
+            ms_interp = as.numeric(ms_interp)) %>%
+        relocate(ms_status, .after = last_col()) %>%
+        relocate(ms_interp, .after = last_col())
 
-    mutate_at(vars(one_of('ms_status', 'ms_interp')),
-              as.numeric))
-return(ms_df_adjusted)
-select_if(~(! all(is.na(.)))) %>%
+    return(ms_df_adjusted)
+}
+
+#. handle_errors
+recursive_list_update <- function(l, elem_name, new_val){
+
+    #needs tons of work. gotta read about tree traversal (returning upwards)
+
+    scan_next_level <- function(ll, elem_name, new_val){
+
+        lnms <- names(ll)
+        for(i in 1:length(ll)){
+            n <- lnms[i]
+            if(n == elem_name) ll[[n]] <- new_val
+
+            if(length(ll[[n]]){
+                ll <- scan_next_level(ll[[n]], elem_name, new_val)
+            }
+        }
+
+        return(ll)
+    }
+
+    nms <- names(l)
+    if(length(nms)){
+        l <- scan_next_level(l, elem_name, new_val)
+    }
+
+    return(l)
 }

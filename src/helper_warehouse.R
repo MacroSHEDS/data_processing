@@ -1,3 +1,5 @@
+select_if(~(! all(is.na(.)))) %>%
+
 #undeveloped
 zip_dir = function(){
     zip(glue(raw_data_dest, '.zip'), flags='-rj',

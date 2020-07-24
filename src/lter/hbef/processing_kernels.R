@@ -130,6 +130,10 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
             ms_status = numeric_any(ms_status)) %>%
         ungroup()
 
+    d <- ue(adjust_timestep(ms_df = d,
+                            desired_interval = '1 hour',
+                            impute_limit = 30))
+
     return(d)
 }
 
@@ -160,6 +164,10 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
             precip = mean(precip, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup()
+
+    d <- ue(adjust_timestep(ms_df = d,
+                            desired_interval = '1 day',
+                            impute_limit = 30))
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
@@ -207,6 +215,13 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
         select(-ms_status, everything())
 
     d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
+
+    intv <- ifelse(prodname_from_prodname_ms(prodname_ms) == 'precipitation',
+                   '1 day',
+                   '1_hour')
+    d <- ue(adjust_timestep(ms_df = d,
+                            desired_interval = intv,
+                            impute_limit = 30))
 
     return(d)
 }
@@ -379,20 +394,24 @@ process_2_13 <- function(network, domain, prodname_ms){
     #clean precip and arrange for matrixification
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>%
-        mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
-        group_by(site_name, datetime) %>%
-        summarize(
-            precip = mean(precip, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup() %>%
+        # # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+        # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+        # group_by(site_name, datetime) %>%
+        # summarize(
+        #     precip = mean(precip, na.rm=TRUE),
+        #     ms_status = numeric_any(ms_status)) %>%
+        # ungroup() %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
-        mutate(ms_status = as.logical(ms_status)) %>%
+        mutate(
+            ms_status = as.logical(ms_status),
+            ms_interp = as.logical(ms_interp)) %>%
         group_by(datetime) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status)) %>%
+        mutate(
+            ms_status = as.numeric(ms_status),
+            ms_interp = as.numeric(ms_interp)) %>%
         arrange(datetime)
 
     #interpolate precipitation volume and write watershed averages
@@ -455,33 +474,34 @@ process_2_208 <- function(network, domain, prodname_ms){
     #clean precip and arrange for matrixification
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>%
-        mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
-        group_by(site_name, datetime) %>%
-        summarize(
-            precip = mean(precip, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup() %>%
+        # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+        # group_by(site_name, datetime) %>%
+        # summarize(
+        #     precip = mean(precip, na.rm=TRUE),
+        #     ms_status = numeric_any(ms_status)) %>%
+        # ungroup() %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
-        mutate(ms_status = as.logical(ms_status)) %>%
+        mutate(
+            ms_status = as.logical(ms_status),
+            ms_interp = as.logical(ms_interp)) %>%
         group_by(datetime) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status)) %>%
+        mutate(
+            ms_status = as.numeric(ms_status),
+            ms_interp = as.numeric(ms_interp)) %>%
         arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
     flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
     pchem_vars_fluxable <- colnames(sw(select(pchem,
-                                              -datetime,
-                                              -site_name,
-                                              -ms_status,
                                               one_of(flux_vars))))
     pchem_vars_unfluxable <- colnames(sw(select(pchem,
                                                 -datetime,
                                                 -site_name,
                                                 -ms_status,
+                                                -ms_interp,
                                                 -one_of(flux_vars))))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
@@ -493,22 +513,25 @@ process_2_208 <- function(network, domain, prodname_ms){
 
         #clean data and arrange for matrixification
         pchem_setlist_fluxable[[i]] <- pchem %>%
-            select(datetime, site_name, !!v, ms_status) %>%
+            select(datetime, site_name, !!v, ms_status, ms_interp) %>%
             filter(site_name %in% rg$site_name) %>%
-            # mutate(datetime = lubridate::year(datetime)) %>%
-            mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
-            group_by(site_name, datetime) %>%
-            summarize(
-                !!v := mean(!!sym(v), na.rm=TRUE),
-                ms_status = numeric_any(ms_status)) %>%
-            ungroup() %>%
+            # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+            # group_by(site_name, datetime) %>%
+            # summarize(
+            #     !!v := mean(!!sym(v), na.rm=TRUE),
+            #     ms_status = numeric_any(ms_status)) %>%
+            # ungroup() %>%
             tidyr::pivot_wider(names_from = site_name,
                                values_from = !!sym(v)) %>%
-            mutate(ms_status = as.logical(ms_status)) %>%
+            mutate(
+                ms_status = as.logical(ms_status),
+                ms_interp = as.logical(ms_interp)) %>%
             group_by(datetime) %>%
             summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
             ungroup() %>%
-            mutate(ms_status = as.numeric(ms_status)) %>%
+            mutate(
+                ms_status = as.numeric(ms_status),
+                ms_interp = as.numeric(ms_interp)) %>%
             arrange(datetime)
     }
 
@@ -535,9 +558,11 @@ process_2_208 <- function(network, domain, prodname_ms){
                 datetime_out <- select(ws_means, datetime)
                 site_name_out <- select(ws_means, site_name)
                 ms_status_out <- ws_means$ms_status
+                ms_interp_out <- ws_means$ms_interp
             }
 
             ms_status_out <- bitwOr(ws_means$ms_status, ms_status_out)
+            ms_interp_out <- bitwOr(ws_means$ms_interp, ms_interp_out)
 
             ws_mean_conc <- ws_means %>%
                 select(concentration) %>%
@@ -554,6 +579,7 @@ process_2_208 <- function(network, domain, prodname_ms){
         ws_mean_conc <- bind_cols(datetime_out, site_name_out, ws_mean_conc)
         ws_mean_flux <- bind_cols(datetime_out, site_name_out, ws_mean_flux)
         ws_mean_conc$ms_status <- ws_mean_flux$ms_status <- ms_status_out
+        ws_mean_conc$ms_interp <- ws_mean_flux$ms_interp <- ms_interp_out
 
         if(any(is.na(ws_mean_conc$datetime))){
             stop('NA datetime found in ws_mean_conc')
@@ -590,22 +616,26 @@ process_2_208 <- function(network, domain, prodname_ms){
 
         #clean data and arrange for matrixification
         pchem_setlist_unfluxable[[i]] <- pchem %>%
-            select(datetime, site_name, !!v, ms_status) %>%
+            select(datetime, site_name, !!v, ms_status, ms_interp) %>%
             filter(site_name %in% rg$site_name) %>%
-            # mutate(datetime = lubridate::year(datetime)) %>%
-            mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
-            group_by(site_name, datetime) %>%
-            summarize(
-                !!v := mean(!!sym(v), na.rm=TRUE),
-                ms_status = numeric_any(ms_status)) %>%
-            ungroup() %>%
+            # # mutate(datetime = lubridate::year(datetime)) %>%
+            # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+            # group_by(site_name, datetime) %>%
+            # summarize(
+            #     !!v := mean(!!sym(v), na.rm=TRUE),
+            #     ms_status = numeric_any(ms_status)) %>%
+            # ungroup() %>%
             tidyr::pivot_wider(names_from = site_name,
                                values_from = !!sym(v)) %>%
-            mutate(ms_status = as.logical(ms_status)) %>%
+            mutate(
+                ms_status = as.logical(ms_status),
+                ms_interp = as.logical(ms_interp)) %>%
             group_by(datetime) %>%
             summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
             ungroup() %>%
-            mutate(ms_status = as.numeric(ms_status)) %>%
+            mutate(
+                ms_status = as.numeric(ms_status),
+                ms_interp = as.numeric(ms_interp)) %>%
             arrange(datetime)
     }
 
@@ -633,9 +663,11 @@ process_2_208 <- function(network, domain, prodname_ms){
                 datetime_out <- select(ws_mean, datetime)
                 site_name_out <- select(ws_mean, site_name)
                 ms_status_out <- ws_mean$ms_status
+                ms_interp_out <- ws_mean$ms_interp
             }
 
             ms_status_out <- bitwOr(ws_mean$ms_status, ms_status_out)
+            ms_interp_out <- bitwOr(ws_mean$ms_interp, ms_interp_out)
 
             ws_mean_d <- ws_mean %>%
                 select(!!v) %>%
@@ -645,6 +677,7 @@ process_2_208 <- function(network, domain, prodname_ms){
         #reassemble tibbles
         ws_mean_d <- bind_cols(datetime_out, site_name_out, ws_mean_d)
         ws_mean_d$ms_status <- ms_status_out
+        ws_mean_d$ms_interp <- ms_interp_out
 
         if(any(is.na(ws_mean_d$datetime))){
             stop('NA datetime found in ws_mean_d')
@@ -685,8 +718,8 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 
         flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
                                      qprod = qprod,
-                                     site_name = s,
-                                     dt_round_interv = 'hours')))
+                                     site_name = s)))
+                                     # dt_round_interv = 'hours')))
 
         ue(write_ms_file(d = flux,
                          network = network,
