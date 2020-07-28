@@ -133,3 +133,19 @@ compare_interp_methods <- function(){
     plot(m2, main='elev only')
     plot(m3, main='idw^2 and elev')
 }
+
+invalidate_tracked_data <- function(network, domain, level){
+
+    #level is one of 'munge' or 'derive'. that level will be reset
+    #not currently set up to invalidate level='retrieve'
+
+    tracker <- get_data_tracker(network = network,
+                                domain = domain)
+
+    invalidated <- recursive_tracker_update(l = tracker,
+                                            elem_name = level,
+                                            new_val = list(status = 'pending',
+                                                           mtime = '1500-01-01'))
+
+    return(invalidated)
+}
