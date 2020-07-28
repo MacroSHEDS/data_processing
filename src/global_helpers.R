@@ -1439,8 +1439,8 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
-        inv_distmat_sub <- inv_distmat[, ! is.na(dk)]
-        dk <- dk[! is.na(dk), , drop=FALSE]
+        inv_distmat_sub <- inv_distmat[, ! is.na(dk), drop = FALSE]
+        dk <- dk[! is.na(dk), , drop = FALSE]
         weightmat <- do.call(rbind, #avoids matrix transposition
                              unlist(apply(inv_distmat_sub, #normalize by row
                                           1,
@@ -1572,7 +1572,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
         #assign cell weights as normalized inverse squared distances (p)
         pk <- t(p_matrix[k, , drop = FALSE])
-        inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk)]
+        inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk), drop=FALSE]
         pk <- pk[! is.na(pk), , drop=FALSE]
         weightmat_p <- do.call(rbind, #avoids matrix transposition
                              unlist(apply(inv_distmat_p_sub, #normalize by row
@@ -1582,13 +1582,13 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
         #assign cell weights as normalized inverse squared distances (c)
         ck <- t(c_matrix[k, , drop = FALSE])
-        inv_distmat_c_sub <- inv_distmat_c[, ! is.na(ck)]
+        inv_distmat_c_sub <- inv_distmat_c[, ! is.na(ck), drop=FALSE]
         ck <- ck[! is.na(ck), , drop=FALSE]
         weightmat_c <- do.call(rbind,
-                             unlist(apply(inv_distmat_c_sub,
-                                          1,
-                                          function(x) list(x / sum(x))),
-                                    recursive = FALSE))
+                               unlist(apply(inv_distmat_c_sub,
+                                            1,
+                                            function(x) list(x / sum(x))),
+                                      recursive = FALSE))
 
         #determine data-elevation relationship for interp weighting (p only)
         d_elev <- tibble(site_name = rownames(pk),
