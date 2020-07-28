@@ -255,8 +255,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             `UV Absorbance (280 nm)`='abs280') %>%
         select(site_name, datetime, everything())
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -304,8 +304,8 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
         select(site_name, datetime=startDateTime, NO3_N=surfWaterNitrateMean,
             ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -349,8 +349,8 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
         ungroup() %>%
         select(site_name, datetime=startDateTime, PAR=PARMean, ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -395,8 +395,8 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
         select(site_name, datetime=startDateTime, temp=surfWaterTempMean,
             ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -440,8 +440,8 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
         select(site_name, datetime=startDateTime, airpressure=staPresMean,
             ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -516,8 +516,8 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
             CO2_water=concentrationCO2_water, N2O_air=concentrationN2O_air,
             N2O_water=concentrationN2O_water, ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)
@@ -590,8 +590,8 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
         select(site_name, datetime=startDateTime, spCond=specificConductance,
             DO=dissolvedOxygen, CHL=chlorophyll, turbid=turbidity, FDOM=fDOM, ms_status)
 
-    out_sub <- ue(adjust_timestep(ms_df = out_sub,
-                                  desired_interval = '1 hour',
+    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
+                                  desired_interval = '15 min',
                                   impute_limit = 30))
 
     return(out_sub)

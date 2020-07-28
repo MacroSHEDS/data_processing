@@ -1245,7 +1245,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     #1 incorporate read_combine_feather
     #2 a lot of datetime management code has been commented. note that if
         #you need to bring it back (because of some unforeseen problem
-        #with adjust_timestep), you'll need to change some of the any()
+        #with synchronize_timestep), you'll need to change some of the any()
         #calls to numeric_any, or convert ms_status and ms_interp to
         #logical and then summarize with any()
 
@@ -1635,7 +1635,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 }
 
 #. handle_errors
-adjust_timestep <- function(ms_df, desired_interval, impute_limit = 30){
+synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
 
     #ms_df is a data.frame or tibble with columns datetime, site_name,
     #ms_status, and one or more data columns. if ms_interp column is already
@@ -1654,6 +1654,7 @@ adjust_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     #round to desired_interval
     ms_df <- sw(ms_df %>%
         filter(! is.na(datetime)) %>%
+        select_if(~( sum(! is.na(.)) > 1 )) %>%
         mutate(
             datetime = lubridate::as_datetime(datetime),
             datetime = lubridate::round_date(datetime,
@@ -1700,28 +1701,24 @@ adjust_timestep <- function(ms_df, desired_interval, impute_limit = 30){
 }
 
 #. handle_errors
-recursive_list_update <- function(l, elem_name, new_val){
+recursive_tracker_update <- function(l, elem_name, new_val){
 
-    #needs tons of work. gotta read about tree traversal (returning upwards)
+    #implements depth-first tree traversal
 
-    scan_next_level <- function(ll, elem_name, new_val){
+    if(is.list(l)){
 
-        lnms <- names(ll)
-        for(i in 1:length(ll)){
-            n <- lnms[i]
-            if(n == elem_name) ll[[n]] <- new_val
+        nms <- names(l)
+        for(i in 1:length(l)){
 
-            if(length(ll[[n]]){
-                ll <- scan_next_level(ll[[n]], elem_name, new_val)
+            subl <- l[[i]]
+
+            if(nms[i] == elem_name){
+                l[[i]] <- new_val
+            } else if(is.list(subl)){
+                l[[i]] <- recursive_tracker_update(subl, elem_name, new_val)
             }
+
         }
-
-        return(ll)
-    }
-
-    nms <- names(l)
-    if(length(nms)){
-        l <- scan_next_level(l, elem_name, new_val)
     }
 
     return(l)
