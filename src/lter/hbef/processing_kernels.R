@@ -11,6 +11,7 @@ process_0_1 <- function(set_details, network, domain){
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
 
+    return()
 }
 
 #precipitation: STATUS=READY
@@ -23,11 +24,14 @@ process_0_13 <- function(set_details, network, domain){
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component, '.csv'),
         cacheOK=FALSE, method='curl')
+
+    return()
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_208 <- function(set_details, network, domain){
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name)
@@ -50,6 +54,8 @@ process_0_208 <- function(set_details, network, domain){
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component, fext),
         cacheOK=FALSE, method='curl')
+
+    return()
 }
 
 #stream_gauge_locations: STATUS=READY
@@ -62,6 +68,8 @@ process_0_107 <- function(set_details, network, domain){
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
+
+    return()
 }
 
 #rain_gauge_locations: STATUS=READY
@@ -74,6 +82,8 @@ process_0_100 <- function(set_details, network, domain){
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
+
+    return()
 }
 
 #ws_boundary: STATUS=READY
@@ -542,7 +552,7 @@ process_2_208 <- function(network, domain, prodname_ms){
         wbj <- slice(wb, i)
         site_name <- wbj$site_name
 
-        ws_mean_conc <- ws_mean_flux <- tibble()
+        # ws_mean_conc <- ws_mean_flux <- tibble()
         for(j in 1:nvars_fluxable){
 
             v <- pchem_vars_fluxable[j]
@@ -559,20 +569,28 @@ process_2_208 <- function(network, domain, prodname_ms){
                 site_name_out <- select(ws_means, site_name)
                 ms_status_out <- ws_means$ms_status
                 ms_interp_out <- ws_means$ms_interp
+
+                ws_mean_conc <- ws_means %>%
+                    select(concentration) %>%
+                    rename(!!v := concentration)
+
+                ws_mean_flux <- ws_means %>%
+                    select(flux) %>%
+                    rename(!!v := flux)
+            } else {
+                ws_mean_conc <- ws_means %>%
+                    select(concentration) %>%
+                    rename(!!v := concentration) %>%
+                    bind_cols(ws_mean_conc)
+
+                ws_mean_flux <- ws_means %>%
+                    select(flux) %>%
+                    rename(!!v := flux) %>%
+                    bind_cols(ws_mean_flux)
             }
 
             ms_status_out <- bitwOr(ws_means$ms_status, ms_status_out)
             ms_interp_out <- bitwOr(ws_means$ms_interp, ms_interp_out)
-
-            ws_mean_conc <- ws_means %>%
-                select(concentration) %>%
-                rename(!!v := concentration) %>%
-                bind_cols(ws_mean_conc)
-
-            ws_mean_flux <- ws_means %>%
-                select(flux) %>%
-                rename(!!v := flux) %>%
-                bind_cols(ws_mean_flux)
         }
 
         #reassemble tibbles
@@ -664,14 +682,17 @@ process_2_208 <- function(network, domain, prodname_ms){
                 site_name_out <- select(ws_mean, site_name)
                 ms_status_out <- ws_mean$ms_status
                 ms_interp_out <- ws_mean$ms_interp
+
+                ws_mean_d <- ws_mean %>%
+                    select(!!v)
+            } else {
+                ws_mean_d <- ws_mean %>%
+                    select(!!v) %>%
+                    bind_cols(ws_mean_d)
             }
 
             ms_status_out <- bitwOr(ws_mean$ms_status, ms_status_out)
             ms_interp_out <- bitwOr(ws_mean$ms_interp, ms_interp_out)
-
-            ws_mean_d <- ws_mean %>%
-                select(!!v) %>%
-                bind_cols(ws_mean_d)
         }
 
         #reassemble tibbles
