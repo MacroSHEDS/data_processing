@@ -36,7 +36,7 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
         version)
     reqdata = RCurl::getURLContent(name_request)
     reqdata = strsplit(reqdata, '\n')[[1]]
-    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE)
+    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE) #junk filter for hbef. might need flex
     reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
     element_ids = reqdata[,2]
