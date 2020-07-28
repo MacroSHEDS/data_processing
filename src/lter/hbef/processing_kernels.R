@@ -130,8 +130,8 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
             ms_status = numeric_any(ms_status)) %>%
         ungroup()
 
-    d <- ue(adjust_timestep(ms_df = d,
-                            desired_interval = '1 hour',
+    d <- ue(synchronize_timestep(ms_df = d,
+                            desired_interval = '15 min',
                             impute_limit = 30))
 
     return(d)
@@ -165,7 +165,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
             ms_status = numeric_any(ms_status)) %>%
         ungroup()
 
-    d <- ue(adjust_timestep(ms_df = d,
+    d <- ue(synchronize_timestep(ms_df = d,
                             desired_interval = '1 day',
                             impute_limit = 30))
 }
@@ -216,12 +216,12 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
 
-    intv <- ifelse(prodname_from_prodname_ms(prodname_ms) == 'precipitation',
+    intv <- ifelse(grepl('precip', prodname_ms),
                    '1 day',
-                   '1_hour')
-    d <- ue(adjust_timestep(ms_df = d,
-                            desired_interval = intv,
-                            impute_limit = 30))
+                   '1 hour')
+    d <- ue(synchronize_timestep(ms_df = d,
+                                 desired_interval = intv,
+                                 impute_limit = 30))
 
     return(d)
 }

@@ -4,9 +4,9 @@ suppressPackageStartupMessages({
     #since we're referring to their functions directly with ::
 
     # #spatial packages
-    library(gstat) #must load before raster package
+    # library(gstat) #must load before raster package
     # # library(terra)  #must load before gstat package
-    library(raster) #raster has been replaced by terra (way faster)
+    # library(raster) #raster has been replaced by terra (way faster)
     # library(stars)
     # library(sf)
     # library(sp)
