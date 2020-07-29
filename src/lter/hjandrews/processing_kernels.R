@@ -205,4 +205,94 @@ process_0_3239 <- function(set_details, network, domain) {
 
 #munge kernels ####
 
+#discharge: STATUS=PENDING (just copied from hbef. see comment within)
+#. handle_errors
+process_1_4341 <- function(network, domain, prodname_ms, site_name,
+                           components){
+
+    #discharge for hj comes from two sources, lter portal and
+    #http://andlter.forestry.oregonstate.edu/data/register/default.aspx?datapage=page2_static_ascii&enid=1519&entnum=5&dbcode=HF004
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
+                   n=network,
+                   d=domain,
+                   p=prodname_ms,
+                   s=site_name,
+                   c=component)
+    read_csv(rawfile)
+
+    d = sw(read_csv(rawfile, progress=FALSE,
+                    col_types=readr::cols_only(
+                        DATETIME='c', #can't parse 24:00
+                        WS='c',
+                        Discharge_ls='d'))) %>%
+        # Flag='c'))) %>% #all flags are acceptable for this product
+        rename(site_name = WS,
+               datetime = DATETIME,
+               discharge = Discharge_ls) %>%
+        mutate(
+            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
+            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
+            site_name = paste0('w', site_name),
+            ms_status = 0) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                  any_vars(! is.na(.))) %>%
+        group_by(datetime, site_name) %>%
+        summarize(
+            discharge = mean(discharge, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup()
+
+    d <- ue(synchronize_timestep(ms_df = d,
+                                 desired_interval = '15 min',
+                                 impute_limit = 30))
+
+    return(d)
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_5482 <- function(network, domain, prodname_ms, site_name,
+                         components){
+
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n=network,
+                    d=domain,
+                    p=prodname_ms,
+                    s=site_name,
+                    c=components[2])
+
+    d = sw(read_csv(rawfile1, progress=FALSE,
+                    col_types=readr::cols_only(
+                        DATE = 'D',
+                        SITECODE = 'c',
+                        # PRECIP_METHOD = 'c', #method information
+                        # QC_LEVEL = 'c', #derived, gapfilled, etc
+                        PRECIP_TOT_DAY = 'd',
+                        PRECIP_TOT_FLAG = 'c',
+                        EVENT_CODE = 'c')))
+
+    d = ue(sourceflags_to_ms_status(d,
+                                    flagstatus_mappings = list(
+                                        PRECIP_TOT_FLAG = c('A', 'E'),
+                                        EVENT_CODE = NA)))
+
+    d <- d %>%
+        rename(datetime = DATE,
+               site_name = SITECODE,
+               precip = PRECIP_TOT_DAY) %>%
+        mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
+        filter_at(vars(-site_name, -datetime, -ms_status),
+                  any_vars(! is.na(.))) %>%
+        group_by(datetime, site_name) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup()
+
+    d <- ue(synchronize_timestep(ms_df = d,
+                                 desired_interval = '1 day',
+                                 impute_limit = 30))
+}
+
 #derive kernels ####

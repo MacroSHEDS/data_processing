@@ -3,7 +3,7 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
-# i=5
+# i=3
 for(i in 1:nrow(prod_info)){
     # for(i in 2){
 
@@ -35,11 +35,16 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(grepl('(precip|stream_chemistry)', prodname_ms)){
-            munge_msg = munge_hbef_combined(domain, site_name, prodname_ms,
+        if(grepl('(discharge|flux|chemistry|boundary|locations)',
+                 prodname_ms)){
+            munge_msg = munge_lter_combined(domain, site_name, prodname_ms,
                 held_data)
+        } else if(grepl('(precip)',
+                 prodname_ms)){
+            munge_msg = munge_lter_combined_split(domain, site_name, prodname_ms,
+                                                  held_data)
         } else {
-            munge_msg = munge_hbef_site(domain, site_name, prodname_ms, held_data)
+            munge_msg = munge_lter_site(domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_msg)){
