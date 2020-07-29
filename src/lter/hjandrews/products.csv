@@ -6,7 +6,7 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,n
 4021,stream_flux_inst,unknown,ready,pending,pending,NA,NA
 3222,meteorology,unknown,paused,pending,pending,NA,NA
 5357,sc_temp,unknown,paused,pending,pending,NA,NA
-5482,precipitation,unknown,ready,pending,pending,NA,NA
+5482,precipitation,unknown,ready,ready,pending,NA,NA
 5482,precip_gauge_locations,unknown,ready,pending,pending,NA,NA
 4341,discharge,unknown,ready,pending,pending,NA,NA
 5453,discharge,unknown,paused,pending,pending,NA,"technically south_umpqua, which is affiliated with hjandrews"
