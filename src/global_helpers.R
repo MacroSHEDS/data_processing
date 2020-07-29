@@ -146,10 +146,10 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
         #vectors of values that might be encountered in those columns.
         #see exclude_mapvals.
     #exclude_mapvals: a boolean vector of length equal to the length of
-        #flagstatus_mappings. for each TRUE, values in the corresponding vector
+        #flagstatus_mappings. for each FALSE, values in the corresponding vector
         #are treated as OK values (mapped to ms_status 0). values
         #not in the vector are treated as flagged (mapped to ms_status 1).
-        #For each FALSE, this relationship is inverted, i.e. values *in* the
+        #For each TRUE, this relationship is inverted, i.e. values *in* the
         #corresponding vector are treated as flagged.
 
     flagcolnames = names(flagstatus_mappings)
