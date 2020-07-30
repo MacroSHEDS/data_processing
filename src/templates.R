@@ -1,4 +1,4 @@
-#a non_spatial munge kernel with nearly every bell and whistle ####
+#non_spatial munge kernel ####
 
 #product: STATUS=PENDING
 #. handle_errors
@@ -6,7 +6,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                           component){
                           # components){
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv', #rawfile1
     # rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
@@ -15,10 +15,11 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                    c = component)
                    # c = components[X])
 
-    d = sw(read_csv(rawfile,
+    # read_csv(rawfile)
+    d = sw(read_csv(rawfile, #rawfile1
                     progress = FALSE,
                     col_types = readr::cols_only(
-                        DATETIME = 'c',
+                        DATETIME = 'c', #manage timezones later
                         WS = 'c',
                         # PRECIP_METHOD = 'c', #method information
                         # QC_LEVEL = 'c', #derived, gapfilled, etc
@@ -37,12 +38,18 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
         #            precipCatch = 'precipitation_ns',
         #            flowGageHt = 'discharge_ns') %>%
         mutate(
-            # datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'), #don't think this is ever needed
-            datetime = lubridate::ymd(datetime, tz = 'UTC'),
-            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
+            #if timezone doesn't change with DST, specify it as a GMT offset:
+            datetime = with_tz(as_datetime(d$datetime[1],
+                                          tz = 'Etc/GMT-8'),
+                               tz = 'UTC'),
+            #if it does observe DST, use something like this:
+            # datetime = with_tz(as_datetime(d$datetime[1], 'US/Eastern'), 'UTC'),
+            #if just days:
+            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
             site_name = paste0('w', site_name),
             # ms_status = 0) %>% #only if you don't need sourceflags_to_ms_status
             # ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #same
+            # ms_status = as.logical(ms_status)) %>% #if you're summarizing_all
             DIC = ue(convert_unit(DIC, 'uM', 'mM')),
             NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
             NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
@@ -75,6 +82,143 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
     d <- ue(synchronize_timestep(ms_df = d,
                                  desired_interval = '15 min',
                                  impute_limit = 30))
+
+    return(d)
+}
+
+
+#spatial munge kernel ####
+
+#ws_boundary; stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_1_3239 <- function(network, domain, prodname_ms, site_name,
+                           components){
+
+    component <- ifelse(prodname_ms == 'stream_gauge_locations__3239',
+                        'hf01403',
+                        'hf01402')
+
+    rawdir1 = glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_name)
+    rawfile1 <- glue(rawdir1, '/', component)
+
+    zipped_files <- unzip(zipfile = rawfile1,
+                          exdir = rawdir1,
+                          overwrite = TRUE)
+
+    projstring <- ue(choose_projection(unprojected = TRUE))
+
+    if(prodname_ms == 'stream_gauge_locations__3239'){
+
+        d <- sf::st_read(rawdir1,
+                         stringsAsFactors = FALSE,
+                         quiet = TRUE) %>%
+            select(site_name = SITECODE,
+                   geometry = geometry) %>%
+            sf::st_transform(projstring) %>%
+            arrange(site_name) %>%
+            sf::st_zm(drop = TRUE,
+                      what = 'ZM')
+
+    } else {
+
+        d <- sf::st_read(rawdir1,
+                         stringsAsFactors = FALSE,
+                         quiet = TRUE) %>%
+            select(site_name = WS_,
+                   area = F_AREA,
+                   geometry = geometry) %>%
+            filter(! grepl('^[0-9][0-9]?a$', site_name)) %>% #remove areas below station
+            mutate(  #for consistency with name elsewhere
+                site_name = stringr::str_pad(site_name,
+                                             width = 2,
+                                             pad = '0'),
+                site_name = paste0('GSWS', site_name),
+                site_name = ifelse(site_name == 'GSWSMACK',
+                                   'GSMACK',
+                                   site_name),
+                site_name = ifelse(site_name == 'GSWS04',
+                                   'GSLOOK',
+                                   site_name)) %>%
+            sf::st_transform(projstring) %>%
+            arrange(site_name)
+    }
+
+    unlink(zipped_files)
+
+    return(d)
+}
+
+#spatial munge kernel starting from non-spatial data ####
+
+#precipitation; precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_1_5482 <- function(network, domain, prodname_ms, site_name,
+                           components){
+
+    component <- ifelse(prodname_ms == 'precip_gauge_locations__5482',
+                        'MS00401',
+                        'MS00403')
+
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n=network,
+                    d=domain,
+                    p=prodname_ms,
+                    s=site_name,
+                    c=component)
+
+    if(prodname_ms == 'precip_gauge_locations__5482'){
+
+        projstring <- ue(choose_projection(unprojected = TRUE))
+
+        d <- sw(read_csv(rawfile1, progress=FALSE,
+                         col_types = readr::cols_only(
+                             SITECODE = 'c',
+                             LATITUDE = 'd',
+                             LONGITUDE = 'd'))) %>%
+            rename(site_name = SITECODE)
+
+        sp::coordinates(d) <- ~LONGITUDE+LATITUDE
+        d <- sf::st_as_sf(d)
+        sf::st_crs(d) <- projstring #assuming. geodetic datum not given by lter
+
+    } else {
+
+        d = sw(read_csv(rawfile1, progress=FALSE,
+                        col_types=readr::cols_only(
+                            DATE = 'D',
+                            SITECODE = 'c',
+                            # PRECIP_METHOD = 'c', #method information
+                            # QC_LEVEL = 'c', #derived, gapfilled, etc
+                            PRECIP_TOT_DAY = 'd',
+                            PRECIP_TOT_FLAG = 'c',
+                            EVENT_CODE = 'c')))
+
+        d = ue(sourceflags_to_ms_status(d,
+                                        flagstatus_mappings = list(
+                                            PRECIP_TOT_FLAG = c('A', 'E'),
+                                            EVENT_CODE = NA)))
+
+        d <- d %>%
+            rename(datetime = DATE,
+                   site_name = SITECODE,
+                   precip = PRECIP_TOT_DAY) %>%
+            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
+            filter_at(vars(-site_name, -datetime, -ms_status),
+                      any_vars(! is.na(.))) %>%
+            group_by(datetime, site_name) %>%
+            summarize(
+                precip = mean(precip, na.rm=TRUE),
+                ms_status = numeric_any(ms_status)) %>%
+            ungroup()
+
+        d <- ue(synchronize_timestep(ms_df = d,
+                                     desired_interval = '1 day',
+                                     impute_limit = 30))
+    }
 
     return(d)
 }
