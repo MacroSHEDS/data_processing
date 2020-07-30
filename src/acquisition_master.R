@@ -55,7 +55,7 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
+ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 # dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
