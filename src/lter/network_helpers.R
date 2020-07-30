@@ -143,14 +143,24 @@ munge_lter_site <- function(domain, site_name, prodname_ms, tracker,
 
     if(sum(dim(out)) > 0){
 
+        ready_to_link <- ifelse(grepl('(precip_f|precip_c|precipi)',
+                                      prodname_ms),
+                                FALSE,
+                                TRUE)
+
+        is_spatial <- ifelse(grepl('(location|boundary)',
+                                   prodname_ms),
+                             TRUE,
+                             FALSE)
+
         write_ms_file(d = out,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
                       site_name = site_name,
                       level = 'munged',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      shapefile = is_spatial,
+                      link_to_portal = ready_to_link)
     }
 
     update_data_tracker_m(network=network, domain=domain,
@@ -200,7 +210,18 @@ munge_lter_combined <- function(domain, site_name, prodname_ms, tracker,
             filt_site <- sites[i]
             out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-            ready_to_link <- ifelse(grepl('precip', prodname_ms), FALSE, TRUE)
+            #make a portal link for precip gauge locations and pflux, but not for any
+            #other precip product, because the others need to be localized to
+            #watersheds
+            ready_to_link <- ifelse(grepl('(precip_c|precipi)',
+                                          prodname_ms),
+                                    FALSE,
+                                    TRUE)
+
+            is_spatial <- ifelse(grepl('(location|boundary)',
+                                       prodname_ms),
+                                 TRUE,
+                                 FALSE)
 
             write_ms_file(d = out_comp_filt,
                           network = network,
@@ -208,7 +229,7 @@ munge_lter_combined <- function(domain, site_name, prodname_ms, tracker,
                           prodname_ms = prodname_ms,
                           site_name = filt_site,
                           level = 'munged',
-                          shapefile = FALSE,
+                          shapefile = is_spatial,
                           link_to_portal = ready_to_link)
         }
     }
@@ -237,9 +258,6 @@ munge_lter_combined_split <- function(domain, site_name, prodname_ms, tracker,
         return(generate_ms_err('missing retrieval log'))
     }
 
-    # out = tibble()
-    # for(k in 1:nrow(retrieval_log)){
-
     prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     processing_func = get(paste0('process_1_', prodcode))
@@ -260,7 +278,18 @@ munge_lter_combined_split <- function(domain, site_name, prodname_ms, tracker,
         filt_site <- sites[i]
         out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-        ready_to_link <- ifelse(grepl('precip', prodname_ms), FALSE, TRUE)
+        #make a portal link for precip gauge locations and pflux, but not for any
+        #other precip product, because the others need to be localized to
+        #watersheds
+        ready_to_link <- ifelse(grepl('(precip_f|precip_c|precipi)',
+                                      prodname_ms),
+                                FALSE,
+                                TRUE)
+
+        is_spatial <- ifelse(grepl('(location|boundary)',
+                                   prodname_ms),
+                             TRUE,
+                             FALSE)
 
         write_ms_file(d = out_comp_filt,
                       network = network,
@@ -268,14 +297,16 @@ munge_lter_combined_split <- function(domain, site_name, prodname_ms, tracker,
                       prodname_ms = prodname_ms,
                       site_name = filt_site,
                       level = 'munged',
-                      shapefile = FALSE,
+                      shapefile = is_spatial,
                       link_to_portal = ready_to_link)
     }
-    # }
 
-    update_data_tracker_m(network=network, domain=domain,
-                          tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
-                          new_status='ok')
+    update_data_tracker_m(network = network,
+                          domain = domain,
+                          tracker_name = 'held_data',
+                          prodname_ms = prodname_ms,
+                          site_name = site_name,
+                          new_status = 'ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
                p=prodname_ms, n=network, d=domain, s=site_name)
