@@ -253,7 +253,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
 #precipitation; precip_gauge_locations: STATUS=READY
 #. handle_errors
 process_1_5482 <- function(network, domain, prodname_ms, site_name,
-                         components){
+                           components){
 
     component <- ifelse(prodname_ms == 'precip_gauge_locations__5482',
                         'MS00401',
@@ -559,3 +559,78 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 }
 
 #derive kernels ####
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms){
+
+    ue(precip_idw(precip_prodname = 'precipitation__5482',
+                  wb_prodname = 'ws_boundary__3239',
+                  pgauge_prodname = 'precip_gauge_locations__5482',
+                  precip_prodname_out = prodname_ms))
+
+    return()
+}
+
+#precip_chemistry: STATUS=READY
+#. handle_errors
+process_2_ms002 <- function(network, domain, prodname_ms){
+
+        ue(pchem_idw(pchem_prodname = 'precip_chemistry__4022',
+                     precip_prodname = 'precipitation__5482',
+                     wb_prodname = 'ws_boundary__3239',
+                     pgauge_prodname = 'precip_gauge_locations__5482',
+                     pchem_prodname_out = prodname_ms))
+
+    return()
+}
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms){
+
+    chemprod <- 'stream_chemistry__4021'
+    qprod <- 'discharge__4341'
+
+    chemfiles <- ue(list_munged_files(network = network,
+                                      domain = domain,
+                                      prodname_ms = chemprod))
+    qfiles <- ue(list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = qprod))
+
+    flux_sites <- generics::intersect(
+        ue(fname_from_fpath(qfiles, include_fext = FALSE)),
+        ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
+
+    for(s in flux_sites){
+
+        flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
+                                     qprod = qprod,
+                                     site_name = s)))
+
+        ue(write_ms_file(d = flux,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = s,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
+    }
+
+    return()
+}
+
+#precip_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms004 <- function(network, domain, prodname_ms){
+
+    ue(flux_idw(pchem_prodname = 'precip_chemistry__4022',
+                precip_prodname = 'precipitation__5482',
+                wb_prodname = 'ws_boundary__3239',
+                pgauge_prodname = 'precip_gauge_locations__5482',
+                flux_prodname_out = prodname_ms))
+
+    return()
+}
