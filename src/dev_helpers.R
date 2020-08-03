@@ -149,3 +149,16 @@ invalidate_tracked_data <- function(network, domain, level){
 
     return(invalidated)
 }
+
+assign_typical_test_variables <- function(){
+
+    try(assign('tracker', held_data, envir = .GlobalEnv))
+    try(assign('i', 1, envir = .GlobalEnv))
+    try(assign('j', 1, envir = .GlobalEnv))
+    try(assign('k', 1, envir = .GlobalEnv))
+    try(assign('sets', new_sets, envir = .GlobalEnv))
+    try(assign('s', sets[i, ], envir = .GlobalEnv))
+    try(assign('set_details', s, envir = .GlobalEnv))
+
+    return()
+}
