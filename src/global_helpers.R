@@ -1012,14 +1012,18 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
 create_portal_link <- function(network, domain, prodname_ms, site_name,
                                level='munged', dir=FALSE){
 
+    #level is one of 'munged', 'derived', corresponding to the
+        #location, within the data_acquisition system, of the data to be linked
     #if dir=TRUE, treat site_name as a directory name, and link all files
         #within (necessary for e.g. shapefiles, which often come with other files)
+
+    #todo: allow level='raw'; flexibility for linking arbitrary file extensions
 
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
     }
 
-    portal_prod_dir = glue('../portal/data/{d}/{p}', #ignore network
+    portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
         d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
 
@@ -1048,7 +1052,7 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
                          p = prodname_ms,
                          s = site_name)
 
-        portal_prod_dir <- glue('../portal/data/{d}/{p}', #ignore network
+        portal_prod_dir <- glue('../portal/data/{d}/{p}',
                                 d = domain,
                                 p = strsplit(prodname_ms, '__')[[1]][1])
 
@@ -2143,6 +2147,161 @@ invalidate_derived_products <- function(successor_string){
                                        site_name = 'sitename_NA',
                                        new_status = 'pending')
     }
+
+    return()
+}
+
+#. handle_errors
+write_metadata_r <- function(murl, network, domain, prodname_ms){
+
+    #this writes the metadata file for retrieved macrosheds data
+    #see write_metadata_m for munged macrosheds data and write_metadata_d
+    #for derived macrosheds data
+
+    #also see read_metadata_r and read_metadata_m
+
+    #create raw directory if necessary
+    raw_dir <- glue('data/{n}/{d}/raw/{p}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms)
+    dir.create(raw_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    #write metadata file
+    data_acq_file <- glue(raw_dir, '/raw_data_documentation_url.txt')
+    readr::write_file(murl,
+                      path = data_acq_file)
+
+    #create portal directory if necessary
+    portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
+                       d = domain,
+                       p = strsplit(prodname_ms, '__')[[1]][1])
+    dir.create(portal_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    #hardlink file
+    portal_file <- glue(portal_dir, '/raw_data_documentation_url.txt')
+    unlink(portal_file)
+    invisible(sw(file.link(to = portal_file,
+                           from = data_acq_file)))
+
+    return()
+}
+
+#special error handling
+read_metadata_r = function(network, domain, prodname_ms){
+
+    #this reads the metadata file for retrieved macrosheds data
+    #see read_metadata_m for munged macrosheds data
+
+    #also see write_metadata_r, write_metadata_m, and write_metadata_d
+
+    murlfile <- glue('data/{n}/{d}/raw/{p}/raw_data_documentation_url.txt',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms)
+    murl <- try(readr::read_file(murlfile), silent = TRUE)
+
+    if('try-error' %in% class(murl)){
+        return(NULL)
+    } else {
+        return(murl)
+    }
+}
+
+#special error handling
+document_code_m = function(network, domain, prodname_ms){
+
+    #this documents the code used to munge macrosheds data from raw source data.
+    #see document_code_d for derived macrosheds data
+
+    kernel_file <- glue('src/{n}/{d}/processing_kernels.R',
+                        n = network,
+                        d = domain)
+
+    thisenv <- environment()
+
+    sw(source(kernel_file, local = TRUE))
+
+    kernel_func <- tryCatch({
+        prodcode <- prodcode_from_prodname_ms(prodname_ms)
+        fnc <- mget(paste0('process_1_', prodcode),
+                    envir = thisenv,
+                    inherits = FALSE,
+                    ifnotfound = list(''))[[1]] #arg only available in mget
+        paste(deparse(fnc), collapse = '\n')
+    }, error = function(e) return(NULL))
+
+    return(kernel_func)
+}
+
+#. handle_errors
+write_metadata_m <- function(network, domain, prodname_ms, site_name){
+
+    #this writes the metadata file for munged macrosheds data
+    #see write_metadata_r for retrieved macrosheds data and write_metadata_d
+    #for derived macrosheds data
+
+    #also see read_metadata_r and read_metadata_m
+
+    #assemble metadata
+    display_args <- list(network = paste0("'", network, "'"),
+                         domain = paste0("'", domain, "'"),
+                         prodname_ms = paste0("'", prodname_ms, "'"),
+                         site_name = paste0("'", site_name, "'"),
+                         `component(s)` = glue("<each of: '",
+                                               paste(held_data[[prodname_ms]][[site_name]]$retrieve$component,
+                                                     collapse = "', '"),
+                                               "'>"))
+
+    metadata_r <- read_metadata_r(network = network,
+                                  domain = domain,
+                                  prodname_ms = prodname_ms)
+
+    code_m <- document_code_m(network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms)
+
+    mdoc <- read_file('src/templates/write_metadata_m_boilerplate.txt') %>%
+        glue(.,
+             p = prodname_ms,
+             mr = metadata_r,
+             k = code_m,
+             a = paste(names(display_args),
+                       display_args,
+                       sep = ' = ',
+                       collapse = '\n'))
+
+    #create munged directory if necessary
+    munged_dir <- glue('data/{n}/{d}/munged/{p}',
+                       n = network,
+                       d = domain,
+                       p = prodname_ms)
+    dir.create(munged_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    #write metadata file
+    data_acq_file <- glue(munged_dir, '/munged_data_documentation.txt')
+    readr::write_file(mdoc,
+                      path = data_acq_file)
+
+    #create portal directory if necessary
+    portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
+                       d = domain,
+                       p = strsplit(prodname_ms, '__')[[1]][1])
+    dir.create(portal_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    #hardlink file
+    portal_file <- glue(portal_dir, '/munged_data_documentation.txt')
+    unlink(portal_file)
+    invisible(sw(file.link(to = portal_file,
+                           from = data_acq_file)))
 
     return()
 }

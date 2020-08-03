@@ -69,6 +69,11 @@ for(i in 1:nrow(prod_info)){
 
             invalidate_derived_products(successor_string = prod_info$precursor_of)
         }
+
+        write_metadata_m(network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = site_name)
     }
 
     gc()
