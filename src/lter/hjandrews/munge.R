@@ -62,14 +62,7 @@ for(i in 1:nrow(prod_info)){
                                       new_status = 'pending')
             }
 
-            if(! is.na(prod_info$precursor_of[i])){
-                catch <- update_data_tracker_d(network = network,
-                                               domain = domain,
-                                               tracker_name = 'held_data',
-                                               prodname_ms = prod_info$precursor_of[i],
-                                               site_name = 'sitename_NA',
-                                               new_status = 'pending')
-            }
+            invalidate_derived_products(successor_string = prod_info$precursor_of)
         }
     }
 
