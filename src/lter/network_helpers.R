@@ -19,7 +19,6 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
     return(newest_vsn)
 }
 
-# version=latest_vsn; data_tracker=held_data
 #. handle_errors
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
@@ -53,7 +52,6 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     return(avail_sets)
 }
 
-# tracker=held_data; site_name='sitename_NA'; avail=avail_sets
 #. handle_errors
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
@@ -86,7 +84,6 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     return(retrieval_tracker)
 }
 
-# sets=new_sets; i=1; tracker=held_data
 #. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
@@ -113,10 +110,14 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
     }
 }
 
+# munge engines (consider moving to global helpers) ####
+
 #. handle_errors
 munge_lter_site <- function(domain, site_name, prodname_ms, tracker,
                             silent=TRUE){
-    # tracker=held_data; k=1
+    #for when a data product is neatly organized with one site per file,
+    #and all components will be munged
+    #(probably rare, but neon has this arrangement).
 
     retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name)
 
@@ -177,8 +178,8 @@ munge_lter_site <- function(domain, site_name, prodname_ms, tracker,
 #. handle_errors
 munge_lter_combined <- function(domain, site_name, prodname_ms, tracker,
                                 silent=TRUE){
-    # site_name=sites[j]; tracker=held_data; k=1
-
+    #for when a data product has multiple sites in each component, and
+    #all components will be munged
 
     retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name) %>%
         filter(component != "Analytical Methods")
@@ -248,8 +249,10 @@ munge_lter_combined <- function(domain, site_name, prodname_ms, tracker,
 #. handle_errors
 munge_lter_combined_split <- function(domain, site_name, prodname_ms, tracker,
                                       silent=TRUE){
-    # site_name=sites[j]; tracker=held_data; k=1
+    #for when a data product has multiple sites in each component, and
+    #logic governing the use of components will be handled within the kernel
 
+    # tracker=held_data; k=1
 
     retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name) %>%
         filter(component != "Analytical Methods")
