@@ -35,15 +35,20 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(grepl('(discharge|flux|chemistry|boundary|locations)',
+        if(grepl('(precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
-            munge_msg = munge_lter_combined(domain, site_name, prodname_ms,
-                held_data)
-        } else if(grepl('(precip)',
-                 prodname_ms)){
-            munge_msg = munge_lter_combined_split(domain, site_name, prodname_ms,
-                                                  held_data)
-        } else {
+            munge_msg = munge_lter_combined_split(domain = domain,
+                                                  site_name = site_name,
+                                                  prodname_ms = prodname_ms,
+                                                  tracker = held_data)
+        } else if(grepl('discharge', prodname_ms)){
+            #gotta figure out how to get hjandrews discharge product efficiently
+            stop('havent figured out how to munge this product yet')
+            # munge_msg = munge_lter_combined(domain = domain,
+            #                                 site_name = site_name,
+            #                                 prodname_ms = prodname_ms,
+            #                                 tracker = held_data)
+        } else { #probably won't ever use this munge engine for hjandrews
             munge_msg = munge_lter_site(domain, site_name, prodname_ms, held_data)
         }
 
