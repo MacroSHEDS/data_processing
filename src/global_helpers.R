@@ -2124,3 +2124,25 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
     return()
 }
+
+#. handle_errors
+invalidate_derived_products <- function(successor_string){
+
+    if(all(is.na(succesor_string)) || successor_string == ''){
+        return()
+    }
+
+    successors <- strsplit(successor_string, '\\|\\|')[[1]]
+
+    for(s in successors){
+
+        catch <- update_data_tracker_d(network = network,
+                                       domain = domain,
+                                       tracker_name = 'held_data',
+                                       prodname_ms = s,
+                                       site_name = 'sitename_NA',
+                                       new_status = 'pending')
+    }
+
+    return()
+}
