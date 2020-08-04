@@ -1,32 +1,5 @@
 #functions without the "#. handle_errors" decorator have special error handling
 
-source('src/function_aliases.R')
-
-assign('email_err_msgs', list(), envir=.GlobalEnv)
-assign('err_cnt', 0, envir=.GlobalEnv)
-assign('unique_errors', c(), envir=.GlobalEnv)
-assign('unique_exceptions', c(), envir=.GlobalEnv)
-
-# flag systems (future use?; increasing user value and difficulty to manage):
-
-# system1: binary status (0=chill, 1=unchill)
-# system2: 0=chill, 1=unit_unknown, 2=unit_concern, 4=other_concern
-# system3: 0=chill, 1=unit_unknown, 2=unit_concern,
-    #4=method_unknown, 8=method_concern, 16=other_concern
-# system4: 0=chill, 1=unit_unknown, 2=unit_concern,
-    #4=method_unknown, 8=method_concern, 16=sensor_concern, 32=general_concern
-flagmap = list(
-    clean=c(), #0
-    method_unknown=c(), #1; method not given
-    method_concern=c(), #2; method known to be lame
-    #--- flagsum <= 3: ok
-    #--- flagsum > 3: dirty
-    sensor_concern=c(), #4; keywords: sensor*, expos*, detect*
-    unit_unknown=c(), #8; unit not given
-    unit_concern=c(), #16; unit unclear or inconvertible
-    general_concern=c() #32; keywords:
-)
-
 handle_errors = function(f){
 
     #decorator function. takes any function as argument and executes it.
@@ -60,10 +33,10 @@ handle_errors = function(f){
             if(! exists('prodname_ms')) prodname_ms = 'NO PRODUCT'
 
             full_message = glue('{ec}\n\n',
-                'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
-                'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
-                ec=err_cnt, n=network, d=domain, s=site_name, p=prodname_ms,
-                e=err_msg, c=pretty_callstack)
+                                'NETWORK: {n}\nDOMAIN: {d}\nSITE: {s}\n',
+                                'PRODUCT: {p}\nERROR_MSG: {e}\nMS_CALLSTACK: {c}\n\n_',
+                                ec=err_cnt, n=network, d=domain, s=site_name, p=prodname_ms,
+                                e=err_msg, c=pretty_callstack)
 
             logerror(full_message, logger=logger_module)
 
@@ -81,7 +54,7 @@ handle_errors = function(f){
             if(! exception_msg %in% unique_exceptions){
                 unique_exceptions_new = append(unique_exceptions, exception_msg)
                 assign('unique_exceptions', unique_exceptions_new,
-                    pos=.GlobalEnv)
+                       pos=.GlobalEnv)
             }
 
             message(glue('MS Exception: ', exception_msg))
@@ -92,6 +65,34 @@ handle_errors = function(f){
 
     return(wrapper)
 }
+
+source('src/global/function_aliases.R')
+source_decoratees('src/global/munge_engines.R')
+
+assign('email_err_msgs', list(), envir=.GlobalEnv)
+assign('err_cnt', 0, envir=.GlobalEnv)
+assign('unique_errors', c(), envir=.GlobalEnv)
+assign('unique_exceptions', c(), envir=.GlobalEnv)
+
+# flag systems (future use?; increasing user value and difficulty to manage):
+
+# system1: binary status (0=chill, 1=unchill)
+# system2: 0=chill, 1=unit_unknown, 2=unit_concern, 4=other_concern
+# system3: 0=chill, 1=unit_unknown, 2=unit_concern,
+#4=method_unknown, 8=method_concern, 16=other_concern
+# system4: 0=chill, 1=unit_unknown, 2=unit_concern,
+#4=method_unknown, 8=method_concern, 16=sensor_concern, 32=general_concern
+flagmap = list(
+    clean=c(), #0
+    method_unknown=c(), #1; method not given
+    method_concern=c(), #2; method known to be lame
+    #--- flagsum <= 3: ok
+    #--- flagsum > 3: dirty
+    sensor_concern=c(), #4; keywords: sensor*, expos*, detect*
+    unit_unknown=c(), #8; unit not given
+    unit_concern=c(), #16; unit unclear or inconvertible
+    general_concern=c() #32; keywords:
+)
 
 #ue stands for "unhandle_errors"; wrap this around any ms function
 #that is called inside a processing kernel
@@ -121,9 +122,9 @@ pprint_callstack = function(){
     # call_list_cleaned = call_list[-((l - 4):l)]
     call_list_cleaned = call_list[ms_calls_bool]
     call_vec = unlist(lapply(call_list_cleaned,
-        function(x){
-            paste(deparse(x), collapse='\n')
-        }))
+                             function(x){
+                                 paste(deparse(x), collapse='\n')
+                             }))
 
     call_string_pretty = paste(call_vec, collapse=' -->\n\t')
 
@@ -139,18 +140,18 @@ numeric_any <- function(num_vec){
 
 #. handle_errors
 sourceflags_to_ms_status <- function(d, flagstatus_mappings,
-    exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
+                                     exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
 
     #d is a df/tibble with flag and/or status columns
     #flagstatus_mappings is a list of flag or status column names mapped to
-        #vectors of values that might be encountered in those columns.
-        #see exclude_mapvals.
+    #vectors of values that might be encountered in those columns.
+    #see exclude_mapvals.
     #exclude_mapvals: a boolean vector of length equal to the length of
-        #flagstatus_mappings. for each FALSE, values in the corresponding vector
-        #are treated as OK values (mapped to ms_status 0). values
-        #not in the vector are treated as flagged (mapped to ms_status 1).
-        #For each TRUE, this relationship is inverted, i.e. values *in* the
-        #corresponding vector are treated as flagged.
+    #flagstatus_mappings. for each FALSE, values in the corresponding vector
+    #are treated as OK values (mapped to ms_status 0). values
+    #not in the vector are treated as flagged (mapped to ms_status 1).
+    #For each TRUE, this relationship is inverted, i.e. values *in* the
+    #corresponding vector are treated as flagged.
 
     flagcolnames = names(flagstatus_mappings)
     d = mutate(d, ms_status = 0)
@@ -229,7 +230,7 @@ get_all_local_helpers <- function(network=domain, domain){
     rm(location1, location2, location3, location4)
 
     export_to_global(from_env=environment(),
-        exclude=c('network', 'domain', 'thisenv'))
+                     exclude=c('network', 'domain', 'thisenv'))
 
     return()
 }
@@ -249,7 +250,7 @@ set_up_logger <- function(network=domain, domain){
     logger_module = glue(logger_name, '.module')
 
     logging::addHandler(logging::writeToFile, logger=logger_name,
-        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+                        file=glue('logs/{n}_{d}.log', n=network, d=domain))
 
     return(logger_module)
 }
@@ -352,9 +353,9 @@ email_err = function(msgs, addrs, pw){
                 text(text_body)
 
             smtp = server(host='smtp.gmail.com',
-                port=587, #or 465 for SMTPS
-                username='grdouser@gmail.com',
-                password=pw)
+                          port=587, #or 465 for SMTPS
+                          username='grdouser@gmail.com',
+                          password=pw)
 
             smtp(email, verbose=FALSE)
         }
@@ -381,7 +382,7 @@ email_err = function(msgs, addrs, pw){
 get_data_tracker = function(network=domain, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
-        #assumed to be identical to the domain string.
+    #assumed to be identical to the domain string.
     #domain is a macrosheds domain string
 
     thisenv = environment()
@@ -389,7 +390,7 @@ get_data_tracker = function(network=domain, domain){
     tryCatch({
 
         tracker_data = glue('data/{n}/{d}/data_tracker.json',
-                n=network, d=domain) %>%
+                            n=network, d=domain) %>%
             readr::read_file() %>%
             jsonlite::fromJSON()
 
@@ -420,7 +421,7 @@ make_tracker_skeleton <- function(retrieval_chunks){
 
 #. handle_errors
 insert_site_skeleton <- function(tracker, prodname_ms, site_name,
-    site_components){
+                                 site_components){
 
     tracker[[prodname_ms]][[site_name]] =
         make_tracker_skeleton(retrieval_chunks=site_components)
@@ -478,7 +479,7 @@ filter_unneeded_sets <- function(tracker_with_details){
 
     if(any(is.na(new_sets$needed))){
         msg = paste0('Must run `track_new_site_components` and ',
-            '`populate_set_details` before running `populate_set_details`')
+                     '`populate_set_details` before running `populate_set_details`')
         logerror(msg, logger=logger_module)
         stop(msg)
     }
@@ -488,7 +489,7 @@ filter_unneeded_sets <- function(tracker_with_details){
 
 #. handle_errors
 update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
-    tracker_name=NULL, set_details=NULL, new_status=NULL){
+                                  tracker_name=NULL, set_details=NULL, new_status=NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
     #see update_data_tracker_m for the munge section and update_data_tracker_d
@@ -499,10 +500,10 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
     #from disk, updated, and then written back to disk.
 
     if(is.null(tracker) && (
-            is.null(tracker_name) || is.null(set_details) || is.null(new_status)
+        is.null(tracker_name) || is.null(set_details) || is.null(new_status)
     )){
         msg = paste0('If tracker is not supplied, these args must be:',
-            'tracker_name, set_details, new_status.')
+                     'tracker_name, set_details, new_status.')
         logerror(msg, logger=logger_module)
         stop(msg)
     }
@@ -535,7 +536,7 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 
 #. handle_errors
 update_data_tracker_m <- function(network=domain, domain, tracker_name,
-    prodname_ms, site_name, new_status){
+                                  prodname_ms, site_name, new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
@@ -561,7 +562,7 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 
 #. handle_errors
 update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
-    tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
+                                  tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
 
     #this updates the derive section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
@@ -588,7 +589,7 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
         dt = tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-           return(generate_ms_exception('Product not yet tracked; no action taken.'))
+            return(generate_ms_exception('Product not yet tracked; no action taken.'))
         }
 
         dt$status = new_status
@@ -610,14 +611,14 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
 backup_tracker <- function(path){
 
     mch = stringr::str_match(path,
-        '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+                             '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
 
     if(any(is.na(mch))){
         stop('Invalid tracker path or name')
     }
 
     dir.create(glue(mch[1], '/tracker_backups'),
-        recursive=TRUE, showWarnings=FALSE)
+               recursive=TRUE, showWarnings=FALSE)
 
     tstamp = Sys.time() %>%
         with_tz(tzone='UTC') %>%
@@ -628,14 +629,14 @@ backup_tracker <- function(path){
 
     #remove tracker backups older than 7 days
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
-        '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
+                      '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
 
     return()
 }
 
 #. handle_errors
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
-    keep_status='ok'){
+                                  keep_status='ok'){
 
     retrieved_data = tracker[[prodname_ms]][[site_name]]$retrieve %>%
         tibble::as_tibble() %>%
@@ -736,7 +737,7 @@ serialize_list_to_dir <- function(l, dest){
     elemclasses = lapply(l, class)
 
     handled = lapply(elemclasses,
-        function(x) any(c('character', 'data.frame') %in% x))
+                     function(x) any(c('character', 'data.frame') %in% x))
 
     if(! all(unlist(handled))){
         stop('Unhandled class encountered')
@@ -780,7 +781,7 @@ parse_molecular_formulae <- function(formulae){
     one_let_symb = str_extract_all(conc_vars, '([A-Z])')
 
     constituents = mapply(c, SIMPLIFY=FALSE,
-        two_let_symb_num, one_let_symb_num, two_let_symb, one_let_symb)
+                          two_let_symb_num, one_let_symb_num, two_let_symb, one_let_symb)
 
     return(constituents) # a list of vectors
 }
@@ -791,7 +792,7 @@ combine_atomic_masses <- function(molecular_constituents){
     #`molecular_constituents` is a vector
 
     xmat = str_match(molecular_constituents,
-        '([A-Z][a-z]?)([0-9]+)?')[, -1, drop=FALSE]
+                     '([A-Z][a-z]?)([0-9]+)?')[, -1, drop=FALSE]
     elems = xmat[,1]
     mults = as.numeric(xmat[,2])
     mults[is.na(mults)] = 1
@@ -868,7 +869,7 @@ update_product_statuses <- function(network, domain){
 
     status_line_inds = grep('STATUS=([A-Z]+)', kernel_lines)
     mch = stringr::str_match(kernel_lines[status_line_inds],
-        '#(.+?): STATUS=([A-Z]+)')[, 2:3]
+                             '#(.+?): STATUS=([A-Z]+)')[, 2:3]
     prodnames = mch[, 1, drop=TRUE]
     statuses = mch[, 2, drop=TRUE]
 
@@ -880,18 +881,18 @@ update_product_statuses <- function(network, domain){
 
     if(any(! grep('process_[0-2]_.+?', funcname_lines))){
         stop(glue('function definition must begin exactly two lines after STATUS',
-            ' indicator. function must be named "process_<level>_<prodcode>"'))
+                  ' indicator. function must be named "process_<level>_<prodcode>"'))
     }
 
     func_codes = stringr::str_match(funcname_lines,
-        'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
+                                    'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
 
     func_lvls = func_codes[, 1, drop=TRUE]
     prodcodes = func_codes[, 2, drop=TRUE]
 
     level_names = case_when(func_lvls == 0 ~ "retrieve",
-       func_lvls == 1 ~ "munge",
-       func_lvls == 2 ~ "derive")
+                            func_lvls == 1 ~ "munge",
+                            func_lvls == 2 ~ "derive")
 
     status_names = tolower(statuses)
 
@@ -906,8 +907,8 @@ update_product_statuses <- function(network, domain){
 convert_unit <- function(val, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
-        convert_factor = c(0.000000001, 0.000001, 0.001, 0.01, 0.1, 100,
-            1000, 1000000))
+                    convert_factor = c(0.000000001, 0.000001, 0.001, 0.01, 0.1, 100,
+                                       1000, 1000000))
 
     old_fraction <- as.vector(str_split_fixed(input_unit, "/", n = Inf))
 
@@ -926,7 +927,7 @@ convert_unit <- function(val, input_unit, output_unit){
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
 
         old_bottom_conver <- ifelse(length(old_bottom) == 1, 1,
-            as.numeric(filter(units, prefix == old_bottom[1])[,2]))
+                                    as.numeric(filter(units, prefix == old_bottom[1])[,2]))
     } else{old_bottom_conver <- 1}
 
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
@@ -946,12 +947,12 @@ convert_unit <- function(val, input_unit, output_unit){
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
 
         new_bottom_conver <- ifelse(length(new_bottom) == 1, 1,
-            as.numeric(filter(units, prefix == new_bottom[1])[,2]))
+                                    as.numeric(filter(units, prefix == new_bottom[1])[,2]))
     } else{new_bottom_conver <- 1}
 
-        new_val <- val*old_top_conver*new_top_conver
+    new_val <- val*old_top_conver*new_top_conver
 
-        new_val <- new_val/(old_bottom_conver*new_bottom_conver)
+    new_val <- new_val/(old_bottom_conver*new_bottom_conver)
 
     return(new_val) }
 
@@ -967,12 +968,12 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     if(shapefile){
 
         site_dir = glue('{wd}/data/{n}/{d}/{l}/{p}/{s}',
-                         wd = getwd(),
-                         n = network,
-                         d = domain,
-                         l = level,
-                         p = prodname_ms,
-                         s = site_name)
+                        wd = getwd(),
+                        n = network,
+                        d = domain,
+                        l = level,
+                        p = prodname_ms,
+                        s = site_name)
 
         dir.create(site_dir,
                    showWarnings = FALSE,
@@ -1013,9 +1014,9 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
                                level='munged', dir=FALSE){
 
     #level is one of 'munged', 'derived', corresponding to the
-        #location, within the data_acquisition system, of the data to be linked
+    #location, within the data_acquisition system, of the data to be linked
     #if dir=TRUE, treat site_name as a directory name, and link all files
-        #within (necessary for e.g. shapefiles, which often come with other files)
+    #within (necessary for e.g. shapefiles, which often come with other files)
 
     #todo: allow level='raw'; flexibility for linking arbitrary file extensions
 
@@ -1024,13 +1025,13 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     }
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
-        d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
+                           d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
 
     if(! dir){
 
         portal_site_file = glue('{pd}/{s}.feather',
-            pd=portal_prod_dir, s=site_name)
+                                pd=portal_prod_dir, s=site_name)
 
         #if there's already a data file for this site-time-product in
         #the portal repo, remove it
@@ -1040,7 +1041,7 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
         #(note: really, to and from are equivalent, as they both
         #point to the same underlying structure in the filesystem)
         site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
-            n=network, d=domain, l=level, p=prodname_ms, s=site_name)
+                         n=network, d=domain, l=level, p=prodname_ms, s=site_name)
         invisible(sw(file.link(to=portal_site_file, from=site_file)))
 
     } else {
@@ -1120,7 +1121,7 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
 delineate_watershed <- function(lat, long) {
 
     site <- tibble(x = lat,
-                     y = long) %>%
+                   y = long) %>%
         sf::st_as_sf(coords = c("y", "x"), crs = 4269) %>%
         sf::st_transform(102008)
 
@@ -1155,7 +1156,7 @@ delineate_watershed <- function(lat, long) {
 
     if(as.numeric(sf::st_area(watershed)) >= 60000000) {
         return(watershed)
-        }
+    }
     else {
 
         outline = sf::st_as_sfc(sf::st_bbox(flowlines))
@@ -1195,51 +1196,51 @@ delineate_watershed <- function(lat, long) {
         values[is.na(values)] <- 0
 
 
-    if(sum(values, na.rm = TRUE) < 100) {
+        if(sum(values, na.rm = TRUE) < 100) {
 
-        flow <- tempfile(fileext = ".tif")
-        whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
+            flow <- tempfile(fileext = ".tif")
+            whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
 
-        snap <- tempfile(fileext = ".shp")
-        whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
+            snap <- tempfile(fileext = ".shp")
+            whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
 
-        temp_shed <- tempfile(fileext = ".tif")
-        whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
+            temp_shed <- tempfile(fileext = ".tif")
+            whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
 
-        file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
+            file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
 
-        file_shed <- paste0(file_new[1], "_1.", file_new[2])
+            file_shed <- paste0(file_new[1], "_1.", file_new[2])
 
-        check <- raster::raster(file_shed)
-        values <- raster::getValues(check)
-        values[is.na(values)] <- 0
-    }
-    watershed_raster <- raster::rasterToPolygons(raster::raster(file_shed))
+            check <- raster::raster(file_shed)
+            values <- raster::getValues(check)
+            values[is.na(values)] <- 0
+        }
+        watershed_raster <- raster::rasterToPolygons(raster::raster(file_shed))
 
-    #Convert shapefile to sf
-    watershed_df <- sf::st_as_sf(watershed_raster)
+        #Convert shapefile to sf
+        watershed_df <- sf::st_as_sf(watershed_raster)
 
-    #buffer to join all pixles into one shape
-    watershed <- sf::st_buffer(watershed_df, 0.1) %>%
-        sf::st_union() %>%
-        sf::st_as_sf()
+        #buffer to join all pixles into one shape
+        watershed <- sf::st_buffer(watershed_df, 0.1) %>%
+            sf::st_union() %>%
+            sf::st_as_sf()
 
-    if(sum(values, na.rm = T) < 100) {
-        watershed <- watershed %>%
-            mutate(flag = "check")
-    }
+        if(sum(values, na.rm = T) < 100) {
+            watershed <- watershed %>%
+                mutate(flag = "check")
+        }
 
-    #sf::st_write(watershed_union, dsn =
-     #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
-      #                    n = sites$network, d = sites$domain, s = sites$site_name))
-    return(watershed)
+        #sf::st_write(watershed_union, dsn =
+        #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
+        #                    n = sites$network, d = sites$domain, s = sites$site_name))
+        return(watershed)
 
     }
 }
 
 #. handle_errors
 calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
-                           #impute_limit = 30){
+    #impute_limit = 30){
 
     #chemprod is the prodname_ms for stream or precip chemistry
     #qprod is the prodname_ms for stream discharge or precip volume over time
@@ -1248,10 +1249,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     #todo:
     #1 incorporate read_combine_feather
     #2 a lot of datetime management code has been commented. note that if
-        #you need to bring it back (because of some unforeseen problem
-        #with synchronize_timestep), you'll need to change some of the any()
-        #calls to numeric_any, or convert ms_status and ms_interp to
-        #logical and then summarize with any()
+    #you need to bring it back (because of some unforeseen problem
+    #with synchronize_timestep), you'll need to change some of the any()
+    #calls to numeric_any, or convert ms_status and ms_interp to
+    #logical and then summarize with any()
 
     qvar <- prodname_from_prodname_ms(qprod)
     if(! qvar %in% c('precipitation', 'discharge')){
@@ -1284,10 +1285,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
                                    s = site_name)) %>%
         select(-site_name) %>%
         filter(datetime >= daterange[1], datetime <= daterange[2])
-        # mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-        # group_by(datetime) %>%
-        # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        # ungroup()
+    # mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
+    # group_by(datetime) %>%
+    # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    # ungroup()
 
     flux <- chem %>%
         full_join(discharge,
@@ -1308,7 +1309,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
         mutate(site_name = !!(site_name)) %>%
         select(-!!sym(qvar)) %>%
         filter_at(vars(-site_name, -datetime, -ms_status, -ms_interp),
-                   any_vars(! is.na(.))) %>%
+                  any_vars(! is.na(.))) %>%
         select(datetime, site_name, everything()) %>%
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
@@ -1336,7 +1337,7 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
 
     # wb <- sw(Reduce(sf::st_union, wbs)) %>%
     combined <- sw(Reduce(rbind, shapes))
-        # sf::st_transform(projstring)
+    # sf::st_transform(projstring)
 
     return(combined)
 }
@@ -1400,15 +1401,15 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
     #encompassing_dem must cover the area of wshd_bnd and rain_gauges
     #wshd_bnd is an sf object with columns site_name and geometry
-        #it represents a single watershed boundary
+    #it represents a single watershed boundary
     #data_locations is an sf object with columns site_name and geometry
-        #it represents all sites (e.g. rain gauges) that will be used in
-        #the interpolation
+    #it represents all sites (e.g. rain gauges) that will be used in
+    #the interpolation
     #data_values is a data.frame with one column each for datetime and ms_status,
-        #and an additional named column of data values for each data location.
+    #and an additional named column of data values for each data location.
     #output_varname is only used to name the column in the tibble that is returned
     #elev_agnostic is a boolean that determines whether elevation should be
-        #included as a predictor of the variable being interpolated
+    #included as a predictor of the variable being interpolated
 
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
@@ -1458,9 +1459,9 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
         #determine data-elevation relationship for interp weighting
         if(! elev_agnostic){
             d_elev <- tibble(site_name = rownames(dk),
-                            d = dk[,1]) %>%
-                      left_join(data_locations,
-                                by = 'site_name')
+                             d = dk[,1]) %>%
+                left_join(data_locations,
+                          by = 'site_name')
             mod <- lm(d ~ elevation, data = d_elev)
             ab <- as.list(mod$coefficients)
 
@@ -1498,22 +1499,22 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
     #encompassing_dem must cover the area of wshd_bnd and rain_gauges
     #wshd_bnd is an sf object with columns site_name and geometry
-        #it represents a single watershed boundary
+    #it represents a single watershed boundary
     #data_locations is an sf object with columns site_name and geometry
-        #it represents all sites (e.g. rain gauges) that will be used in
-        #the interpolation
+    #it represents all sites (e.g. rain gauges) that will be used in
+    #the interpolation
     #precip_values is a data.frame with one column each for datetime and ms_status,
-        #and an additional named column of data values for each precip location.
+    #and an additional named column of data values for each precip location.
     #chem_values is a data.frame with one column each for datetime and ms_status,
-        #and an additional named column of data values for each
-        #precip chemistry location.
+    #and an additional named column of data values for each
+    #precip chemistry location.
 
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
     precip_values <- filter(precip_values,
-           as.character(datetime) %in% common_dts)
+                            as.character(datetime) %in% common_dts)
     chem_values <- filter(chem_values,
-           as.character(datetime) %in% common_dts)
+                          as.character(datetime) %in% common_dts)
 
     #matrixify input data so we can use matrix operations
     d_dt <- precip_values$datetime
@@ -1579,10 +1580,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk), drop=FALSE]
         pk <- pk[! is.na(pk), , drop=FALSE]
         weightmat_p <- do.call(rbind, #avoids matrix transposition
-                             unlist(apply(inv_distmat_p_sub, #normalize by row
-                                          1,
-                                          function(x) list(x / sum(x))),
-                                    recursive = FALSE))
+                               unlist(apply(inv_distmat_p_sub, #normalize by row
+                                            1,
+                                            function(x) list(x / sum(x))),
+                                      recursive = FALSE))
 
         #assign cell weights as normalized inverse squared distances (c)
         ck <- t(c_matrix[k, , drop = FALSE])
@@ -1597,8 +1598,8 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         #determine data-elevation relationship for interp weighting (p only)
         d_elev <- tibble(site_name = rownames(pk),
                          precip = pk[,1]) %>%
-                  left_join(data_locations,
-                            by = 'site_name')
+            left_join(data_locations,
+                      by = 'site_name')
         mod <- lm(precip ~ elevation, data = d_elev)
         ab <- as.list(mod$coefficients)
 
@@ -1657,18 +1658,18 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
 
     #round to desired_interval
     ms_df <- sw(ms_df %>%
-        filter(! is.na(datetime)) %>%
-        select_if(~( sum(! is.na(.)) > 1 )) %>%
-        mutate(
-            datetime = lubridate::as_datetime(datetime),
-            datetime = lubridate::round_date(datetime,
-                                             desired_interval)) %>%
-        mutate_at(vars(one_of('ms_status', 'ms_interp')),
-                  as.logical) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        arrange(datetime))
+                    filter(! is.na(datetime)) %>%
+                    select_if(~( sum(! is.na(.)) > 1 )) %>%
+                    mutate(
+                        datetime = lubridate::as_datetime(datetime),
+                        datetime = lubridate::round_date(datetime,
+                                                         desired_interval)) %>%
+                    mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                              as.logical) %>%
+                    group_by(datetime, site_name) %>%
+                    summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+                    ungroup() %>%
+                    arrange(datetime))
 
     #fill in missing timepoints with NAs
     daterange <- range(ms_df$datetime)
@@ -1686,7 +1687,7 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
     ms_df_adjusted <- ms_df %>%
         full_join(fulldt, #right_join would be more efficient, but this is future-proof
-                   by = c('datetime', 'site_name')) %>%
+                  by = c('datetime', 'site_name')) %>%
         arrange(datetime) %>%
         mutate_at(vars(-one_of(non_data_columns)),
                   imputeTS::na_interpolation,
@@ -2239,7 +2240,7 @@ document_code_m = function(network, domain, prodname_ms){
 }
 
 #. handle_errors
-write_metadata_m <- function(network, domain, prodname_ms, site_name){
+write_metadata_m <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for munged macrosheds data
     #see write_metadata_r for retrieved macrosheds data and write_metadata_d
@@ -2248,14 +2249,29 @@ write_metadata_m <- function(network, domain, prodname_ms, site_name){
     #also see read_metadata_r and read_metadata_m
 
     #assemble metadata
+    sitelist <- names(held_data[[prodname_ms]])
+    complist <- lapply(sitelist,
+                       function(x){
+                           held_data[[prodname_ms]][[x]]$retrieve$component
+                       })
+    compsbysite <- mapply(function(s, c){
+        glue('\tfor site: {s}\n\t\tcomp(s): {c}',
+             s = s,
+             c = paste(c, collapse = ', '),
+             .trim = FALSE)
+    }, sitelist, complist)
+
     display_args <- list(network = paste0("'", network, "'"),
                          domain = paste0("'", domain, "'"),
                          prodname_ms = paste0("'", prodname_ms, "'"),
-                         site_name = paste0("'", site_name, "'"),
-                         `component(s)` = glue("<each of: '",
-                                               paste(held_data[[prodname_ms]][[site_name]]$retrieve$component,
-                                                     collapse = "', '"),
-                                               "'>"))
+                         # site_name = paste0("'", site_name, "'"),
+                         site_name = glue("<each of: '",
+                                          paste(sitelist,
+                                                collapse = "', '"),
+                                          "'>"),
+                         `component(s)` = paste0('\n',
+                                                 paste(compsbysite,
+                                                       collapse = '\n')))
 
     metadata_r <- read_metadata_r(network = network,
                                   domain = domain,
