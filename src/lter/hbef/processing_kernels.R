@@ -190,6 +190,8 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     #processed herein. once we work out rain interpolation, we might have to
     #add a conditional and some divergent processing here.
 
+    if(component == 'Analytical Methods') return()
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 

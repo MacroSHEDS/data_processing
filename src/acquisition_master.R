@@ -45,8 +45,8 @@ logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
 source('src/dev_helpers.R') #comment before pushing live
-source('src/global_helpers.R')
-source_decoratees('src/global_helpers.R') #parse decorators
+source('src/global/global_helpers.R')
+source_decoratees('src/global/global_helpers.R') #parse decorators
 
 ms_vars <- sm(read_csv('data/general/variables.csv'))
 network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
