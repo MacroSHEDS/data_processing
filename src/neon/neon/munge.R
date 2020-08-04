@@ -33,22 +33,22 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        munge_msg = munge_neon_site(domain, sites[j], prodname_ms, held_data)
+        munge_rtn = munge_neon_site(domain, sites[j], prodname_ms, held_data)
 
-        if(is_ms_err(munge_msg)){
+        if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network=network, domain=domain,
                 tracker_name='held_data', prodname_ms=prodname_ms, site_name=sites[j],
                 new_status='error')
         } else {
 
-            if(! is.na(prod_info$derive_status[i])){
-                update_data_tracker_d(network = network,
-                                      domain = domain,
-                                      tracker_name = 'held_data',
-                                      prodname_ms = prodname_ms,
-                                      site_name = site_name,
-                                      new_status = 'pending')
-            }
+           # if(! is.na(prod_info$derive_status[i])){
+           #     update_data_tracker_d(network = network,
+           #                           domain = domain,
+           #                           tracker_name = 'held_data',
+           #                           prodname_ms = prodname_ms,
+           #                           site_name = site_name,
+           #                           new_status = 'pending')
+           # }
 
             invalidate_derived_products(successor_string = prod_info$precursor_of)
         }
