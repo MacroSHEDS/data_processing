@@ -69,6 +69,10 @@ for(i in 1:nrow(prod_info)){
         loginfo(msg, logger=logger_module)
     }
 
+    write_metadata_d(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms)
+
     gc()
 }
 
