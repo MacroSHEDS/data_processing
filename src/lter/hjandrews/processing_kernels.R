@@ -219,7 +219,6 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                    p=prodname_ms,
                    s=site_name,
                    c=component)
-    read_csv(rawfile)
 
     d = sw(read_csv(rawfile, progress=FALSE,
                     col_types=readr::cols_only(
@@ -229,7 +228,11 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
         # Flag='c'))) %>% #all flags are acceptable for this product
         rename(site_name = WS,
                datetime = DATETIME,
-               discharge = Discharge_ls) %>%
+               discharge = Discharge_ls)
+
+    detlims <- ue(get_detection_limit(d))
+
+    d <- d %>%
         mutate(
             datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
             # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
@@ -247,6 +250,8 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '15 min',
                                  impute_limit = 30))
 
+    d <- ue(apply_detection_limit(d, detlims))
+
     return(d)
 }
 
@@ -260,11 +265,11 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                         'MS00403')
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n=network,
-                    d=domain,
-                    p=prodname_ms,
-                    s=site_name,
-                    c=component)
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
 
     if(prodname_ms == 'precip_gauge_locations__5482'){
 
@@ -291,17 +296,19 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                             # QC_LEVEL = 'c', #derived, gapfilled, etc
                             PRECIP_TOT_DAY = 'd',
                             PRECIP_TOT_FLAG = 'c',
-                            EVENT_CODE = 'c')))
+                            EVENT_CODE = 'c'))) %>%
+            rename(datetime = DATE,
+                   site_name = SITECODE,
+                   precip = PRECIP_TOT_DAY)
 
         d = ue(sourceflags_to_ms_status(d,
                                         flagstatus_mappings = list(
                                             PRECIP_TOT_FLAG = c('A', 'E'),
                                             EVENT_CODE = NA)))
 
+        detlims <- ue(get_detection_limit(d))
+
         d <- d %>%
-            rename(datetime = DATE,
-                   site_name = SITECODE,
-                   precip = PRECIP_TOT_DAY) %>%
             mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
             filter_at(vars(-site_name, -datetime, -ms_status),
                       any_vars(! is.na(.))) %>%
@@ -314,6 +321,8 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
         d <- ue(synchronize_timestep(ms_df = d,
                                      desired_interval = '1 day',
                                      impute_limit = 30))
+
+        d <- ue(apply_detection_limit(d, detlims))
     }
 
     return(d)
@@ -352,23 +361,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                         NA_OUTPUT = 'd', K_OUTPUT='d', CA_OUTPUT='d',
                         MG_OUTPUT='d', SO4S_OUTPUT='d', CL_OUTPUT='d',
                         DOC_OUTPUT='d'))) %>%
-        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA'))
-
-                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
-                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
-                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
-                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
-                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
-                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
-                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
-                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
-                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
-                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
-                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
-
-    d = ue(sourceflags_to_ms_status(d,
-                                    flagstatus_mappings = list(TYPE = 'F')))
-    d <- d %>%
+        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
         rename(site_name = SITECODE,
                datetime = DATE_TIME) %>%
         rename_all(dplyr::recode,
@@ -384,7 +377,26 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                    UTP_OUTPUT='UTP', TDP_OUTPUT='TDP', UTN_OUTPUT='UTN',
                    TDN_OUTPUT='TDN', DON_OUTPUT='DON', UTKN_OUTPUT='UTKN',
                    TKN_OUTPUT='TKN', NA_OUTPUT='Na', K_OUTPUT='K',
-                   DOC_OUTPUT='DOC') %>%
+                   DOC_OUTPUT='DOC')
+
+                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
+                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
+                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
+                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
+                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
+                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
+                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
+                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
+                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
+                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
+                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
+
+    d = ue(sourceflags_to_ms_status(d,
+                                    flagstatus_mappings = list(TYPE = 'F')))
+
+    detlims <- ue(get_detection_limit(d))
+
+    d <- d %>%
         mutate(
             datetime = with_tz(as_datetime(datetime,
                                            tz = 'Etc/GMT-8'),
@@ -401,8 +413,10 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
 
     #constant interval
     d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '1 hour', #set back to '15 min' when we have server
+                                 desired_interval = '1 day', #set back to '15 min' when we have server
                                  impute_limit = 30))
+
+    d <- ue(apply_detection_limit(d, detlims))
 
     return(d)
 }
@@ -440,23 +454,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                         NA_INPUT = 'd', K_INPUT='d', CA_INPUT='d',
                         MG_INPUT='d', SO4S_INPUT='d', CL_INPUT='d',
                         DOC_INPUT='d'))) %>%
-        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA'))
-
-                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
-                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
-                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
-                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
-                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
-                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
-                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
-                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
-                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
-                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
-                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
-
-    d = ue(sourceflags_to_ms_status(d,
-                                    flagstatus_mappings = list(TYPE = 'F')))
-    d <- d %>%
+        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
         rename(site_name = SITECODE,
                datetime = DATE_TIME) %>%
         rename_all(dplyr::recode,
@@ -472,7 +470,26 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    UTP_INPUT='UTP', TDP_INPUT='TDP', UTN_INPUT='UTN',
                    TDN_INPUT='TDN', DON_INPUT='DON', UTKN_INPUT='UTKN',
                    TKN_INPUT='TKN', NA_INPUT='Na', K_INPUT='K',
-                   DOC_INPUT='DOC') %>%
+                   DOC_INPUT='DOC')
+
+                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
+                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
+                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
+                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
+                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
+                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
+                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
+                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
+                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
+                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
+                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
+
+    d = ue(sourceflags_to_ms_status(d,
+                                    flagstatus_mappings = list(TYPE = 'F')))
+
+    detlims <- ue(get_detection_limit(d))
+
+    d <- d %>%
         mutate(
             datetime = with_tz(as_datetime(datetime,
                                            tz = 'Etc/GMT-8'),
@@ -491,6 +508,8 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
     d <- ue(synchronize_timestep(ms_df = d,
                                  desired_interval = '1 day',
                                  impute_limit = 30))
+
+    d <- ue(apply_detection_limit(d, detlims))
 
     return(d)
 }
