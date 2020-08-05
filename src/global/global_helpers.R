@@ -1095,6 +1095,8 @@ list_munged_files <- function(network, domain, prodname_ms){
                    p = prodname_ms) %>%
         list.files(full.names = TRUE)
 
+    # mfiles <- mfiles[! grepl('documentation', mfiles)]
+
     return(mfiles)
 }
 
@@ -1756,10 +1758,12 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
+    detlim <- get_detection_limit(precip$precip)
+
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
         # mutate(datetime = lubridate::year(datetime)) %>% #for testing
-        # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+        # # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
         # group_by(site_name, datetime) %>%
         # summarize(
         #     precip = mean(precip, na.rm=TRUE),
@@ -1792,6 +1796,9 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                                        stream_site_name = site_name,
                                        output_varname = 'precip',
                                        elev_agnostic = FALSE)
+
+        ws_mean_precip$precip <- apply_detection_limit(ws_mean_precip$precip,
+                                                       detlim)
 
         #interp final precip to a desirable interval?
         write_ms_file(ws_mean_precip,
@@ -1837,13 +1844,16 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
+    detlim_p <- get_detection_limit(precip$precip)
+
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
         # mutate(datetime = lubridate::year(datetime)) %>% #for testing
         # group_by(site_name, datetime) %>%
         # summarize(
         #     precip = mean(precip, na.rm=TRUE),
-        #     ms_status = numeric_any(ms_status)) %>%
+        #     ms_status = numeric_any(ms_status),
+        #     ms_interp = numeric_any(ms_interp)) %>%
         # ungroup() %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
@@ -1883,7 +1893,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             # group_by(site_name, datetime) %>%
             # summarize(
             #     !!v := mean(!!sym(v), na.rm=TRUE),
-            #     ms_status = numeric_any(ms_status)) %>%
+            #     ms_status = numeric_any(ms_status),
+            #     ms_interp = numeric_any(ms_interp)) %>%
             # ungroup() %>%
             tidyr::pivot_wider(names_from = site_name,
                                values_from = !!sym(v)) %>%
@@ -2162,32 +2173,35 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
     #also see read_metadata_r
 
     #create raw directory if necessary
-    raw_dir <- glue('data/{n}/{d}/raw/{p}',
+
+    raw_dir <- glue('data/{n}/{d}/raw/documentation',
                     n = network,
-                    d = domain,
-                    p = prodname_ms)
+                    d = domain)
     dir.create(raw_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
     #write metadata file
-    data_acq_file <- glue(raw_dir, '/raw_data_documentation_url.txt')
+    data_acq_file <- glue('{rd}/documentation_{p}.txt',
+                          rd = raw_dir,
+                          p = prodname_ms)
+
     readr::write_file(murl,
                       path = data_acq_file)
 
-    #create portal directory if necessary
-    portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
-                       d = domain,
-                       p = strsplit(prodname_ms, '__')[[1]][1])
-    dir.create(portal_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    #hardlink file
-    portal_file <- glue(portal_dir, '/raw_data_documentation_url.txt')
-    unlink(portal_file)
-    invisible(sw(file.link(to = portal_file,
-                           from = data_acq_file)))
+    # #create portal directory if necessary
+    # portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
+    #                    d = domain,
+    #                    p = strsplit(prodname_ms, '__')[[1]][1])
+    # dir.create(portal_dir,
+    #            showWarnings = FALSE,
+    #            recursive = TRUE)
+    #
+    # #hardlink file
+    # portal_file <- glue(portal_dir, '/raw_data_documentation_url.txt')
+    # unlink(portal_file)
+    # invisible(sw(file.link(to = portal_file,
+    #                        from = data_acq_file)))
 
     return()
 }
@@ -2199,7 +2213,7 @@ read_metadata_r <- function(network, domain, prodname_ms){
 
     #also see write_metadata_r, write_metadata_m, and write_metadata_d
 
-    murlfile <- glue('data/{n}/{d}/raw/{p}/raw_data_documentation_url.txt',
+    murlfile <- glue('data/{n}/{d}/raw/documentation/documentation_{p}.txt',
                      n = network,
                      d = domain,
                      p = prodname_ms)
@@ -2328,29 +2342,31 @@ write_metadata_m <- function(network, domain, prodname_ms){
                        collapse = '\n'))
 
     #create munged directory if necessary
-    munged_dir <- glue('data/{n}/{d}/munged/{p}',
+    munged_dir <- glue('data/{n}/{d}/munged/documentation',
                        n = network,
-                       d = domain,
-                       p = prodname_ms)
+                       d = domain)
     dir.create(munged_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
     #write metadata file
-    data_acq_file <- glue(munged_dir, '/munged_data_documentation.txt')
+    data_acq_file <- glue('{md}/documentation_{p}.txt',
+                          md = munged_dir,
+                          p = prodname_ms)
     readr::write_file(mdoc,
                       path = data_acq_file)
 
     #create portal directory if necessary
-    portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
-                       d = domain,
-                       p = strsplit(prodname_ms, '__')[[1]][1])
+    portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
+                       d = domain)
     dir.create(portal_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
     #hardlink file
-    portal_file <- glue(portal_dir, '/munged_data_documentation.txt')
+    portal_file <- glue('{pd}/documentation_{p}.txt',
+                        pd = portal_dir,
+                        p = prodname_ms)
     unlink(portal_file)
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
@@ -2392,32 +2408,186 @@ write_metadata_d <- function(network, domain, prodname_ms){
                        collapse = '\n'))
 
     #create derived directory if necessary
-    derived_dir <- glue('data/{n}/{d}/derived/{p}',
+    derived_dir <- glue('data/{n}/{d}/derived/documentation',
                         n = network,
-                        d = domain,
-                        p = prodname_ms)
+                        d = domain)
+                        # p = prodname_ms)
     dir.create(derived_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
     #write metadata file
-    data_acq_file <- glue(derived_dir, '/derived_data_documentation.txt')
+    data_acq_file <- glue('{dd}/documentation_{p}.txt',
+                          dd = derived_dir,
+                          p = prodname_ms)
     readr::write_file(ddoc,
                       path = data_acq_file)
 
     #create portal directory if necessary
-    portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
-                       d = domain,
-                       p = strsplit(prodname_ms, '__')[[1]][1])
+    portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
+                       d = domain)
+                       # p = strsplit(prodname_ms, '__')[[1]][1])
     dir.create(portal_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
     #hardlink file
-    portal_file <- glue(portal_dir, '/derived_data_documentation.txt')
+    portal_file <- glue('{pd}/documentation_{p}.txt',
+                        pd = portal_dir,
+                        p = prodname_ms)
     unlink(portal_file) #this will overwrite any munged product supervened by derive
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
 
     return()
+}
+
+#. handle_errors
+get_detection_limit <- function(x){
+
+    #if x is a 2d array-like object, the average detection limit (number of
+    #decimal places) of each column is returned. non-numeric columns return NA.
+    #If x is a vector (or something that can be coerced to a vector),
+    #the detection limits is returned as a scalar.
+
+    #detection limit is computed as the median of the number of characters
+    #following each decimal place. NAs and zeros are ignored when computing
+    #detection limit.
+
+    get_detection_limit_v <- function(x){
+
+        #x is a vector, or it will be coerced to one.
+        #non-numeric vectors return NA vectors of the same length
+
+        x <- unname(unlist(x))
+        if(! is.numeric(x)) return(rep(NA, length(x)))
+
+        options(scipen = 100)
+        nas <- is.na(x) | x == 0
+
+        x <- as.character(x)
+        nsigdigs <- stringr::str_split_fixed(x, '\\.', 2)[, 2] %>%
+            nchar()
+
+        nsigdigs[nas] <- NA
+
+        options(scipen = 0)
+
+        return(nsigdigs)
+    }
+
+    if(! is.null(dim(x))){
+
+        detlim <- vapply(X = x,
+                         FUN = function(y){
+                             get_detection_limit_v(y) %>%
+                                 Mode(na.rm = TRUE)
+                         },
+                         FUN.VALUE = numeric(1))
+
+    } else if(is.atomic(x) && length(x)){
+        detlim <- get_detection_limit_v(x) %>%
+            Mode(na.rm=TRUE)
+    } else {
+        stop('x must be a vector or 2d array-like')
+    }
+
+    return(detlim)
+}
+
+#. handle_errors
+apply_detection_limit <- function(x, digits){
+
+    #x: a 2d array-like or a numeric vector
+    #digits: a numeric vector if x is a 2d array-like, or a numeric scalar if
+    #digits is a vector or vector-like, containing the detection limits (in
+    #digits after the decimal) to be applied to x. application of detection
+    #limits is handled by round.
+
+    #if x is a 2d array-like object, digits are applied column-wise
+    #If x is a vector (or something that can be coerced to a vector),
+    #digits is applied elementwise
+
+    #if x is a 2d array-like with named columns and digits is a named vector,
+    #values of digits are matched by name to columns of x. unmatched values
+    #of digits are ignored. unmatched columns of x are unaffected.
+    #if either x or digits is not named, all names are ignored.
+
+    #attempting to apply detection limits to non-numerics results in error
+
+    #NA values of digits are not used.
+
+    if(! is.numeric(digits) && ! all(is.na(digits))){
+        stop('digits must be numeric')
+    }
+
+    apply_detection_limit_v <- function(x, digits){
+
+        x <- unname(unlist(x))
+        if(is.na(digits)) return(x)
+        if(! is.numeric(x)) stop('all affected columns of x must be numeric.')
+        x <- round(x, digits)
+
+        return(x)
+    }
+
+    if(! is.null(dim(x))){
+
+        # if(length(digits) != ncol(x)){
+        #     stop('length of digits must equal number of columns in x')
+        # }
+
+        if(! is.null(names(digits)) && ! is.null(colnames(x))){
+
+            #if any columns don't have detection limits specified,
+            #fill in those missing specifications with NAs
+            missing_specifications <- setdiff(colnames(x), names(digits))
+            more_digits <- rep(NA, length(missing_specifications))
+            names(more_digits) <- missing_specifications
+            digits <- c(digits, more_digits)
+
+            #ignore detection limits whose names don't match names in x
+            reorder <- match(colnames(x), names(digits))
+            digits <- digits[! is.na(reorder)]
+            reorder <- reorder[! is.na(reorder)]
+            digits <- digits[reorder]
+
+        } else if(length(digits) != ncol(x)){
+            stop('length of digits must equal number of columns in x')
+        }
+
+        x <- mapply(FUN = function(y, z){
+                    apply_detection_limit_v(y, z)
+                },
+                y = x,
+                z = digits,
+                SIMPLIFY = FALSE) %>%
+            as_tibble()
+
+    } else if(is.atomic(x) && length(x)){
+
+        if(length(digits) != 1){
+            stop('length of digits must be 1 if x is a vector')
+        }
+
+        x <- apply_detection_limit_v(x, digits)
+
+    } else {
+        stop('x must be a vector or 2d array-like')
+    }
+
+    return(x)
+}
+
+#. handle_errors
+Mode <- function(x, na.rm = TRUE){
+
+    if(na.rm){
+        x <- na.omit(x)
+    }
+
+    ux <- unique(x)
+    mode_out <- ux[which.max(tabulate(match(x, ux)))]
+    return(mode_out)
+
 }

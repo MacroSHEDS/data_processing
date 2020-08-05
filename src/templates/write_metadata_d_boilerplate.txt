@@ -4,10 +4,11 @@ This macrosheds data product ({p}) was derived from the following munged product
 
 For a full history of every step macrosheds took to
 derive {p}, you'll also have to check out the documentation for
-those munged products. Using these notes, and assuming you have a good bit of R programming experience,
+those munged products (which refer back to the raw products we assimilated from various sources).
+Using these notes, and assuming you have a good bit of R programming experience,
 you can piece together exactly how {p} was generated and regenerate it yourself.
 You may have an easier time figuring out how {p} was generated
-by just studying the code inside the derive kernel and any relevant munge kernels
+by just studying the code inside the derive kernel (below) and any relevant munge kernels
 (including any macrosheds functions called within). That code will indicate all filtering,
 aggregating, renaming, reshaping, etc. steps that we took.
 
