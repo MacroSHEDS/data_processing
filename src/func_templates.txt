@@ -6,6 +6,9 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                           component){
                           # components){
 
+
+    ADD TO THIS: handling of detection limits, uncertainty, grab vs sensor vs spatial, time zone, etc
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv', #rawfile1
     # rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,

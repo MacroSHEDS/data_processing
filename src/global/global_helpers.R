@@ -1275,7 +1275,9 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     #     group_by(datetime) %>%
     #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
     #     ungroup()
-    #
+
+    detlims_c <- identify_detection_limit(chem)
+
     daterange <- range(chem$datetime)
     # fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
     #                                 by=dt_round_interv))
@@ -1315,6 +1317,8 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
         select(datetime, site_name, everything()) %>%
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
+
+    flux <- apply_detection_limit(flux, detlims_c)
 
     return(flux)
 }
@@ -1401,7 +1405,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                          data_values, stream_site_name, output_varname,
                          elev_agnostic = FALSE){
 
-    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #encompassing_dem must cover the area of wshd_bnd and precip_gauges
     #wshd_bnd is an sf object with columns site_name and geometry
     #it represents a single watershed boundary
     #data_locations is an sf object with columns site_name and geometry
@@ -1499,7 +1503,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     #to calculate flux for each cell. then it returns a list containing two
     #derived values: watershed average concentration and ws ave flux.
 
-    #encompassing_dem must cover the area of wshd_bnd and rain_gauges
+    #encompassing_dem must cover the area of wshd_bnd and precip_gauges
     #wshd_bnd is an sf object with columns site_name and geometry
     #it represents a single watershed boundary
     #data_locations is an sf object with columns site_name and geometry
@@ -1758,7 +1762,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
-    detlim <- get_detection_limit(precip$precip)
+    detlim <- identify_detection_limit(precip$precip)
 
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
@@ -1844,8 +1848,6 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
-    detlim_p <- get_detection_limit(precip$precip)
-
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
         # mutate(datetime = lubridate::year(datetime)) %>% #for testing
@@ -1878,6 +1880,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     # -one_of(flux_vars))))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
+    detlims <- identify_detection_limit(pchem)
     nvars <- length(pchem_vars)
     pchem_setlist <- as.list(rep(NA, nvars))
     for(i in 1:nvars){
@@ -1888,8 +1891,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         pchem_setlist[[i]] <- pchem %>%
             select(datetime, site_name, !!v, ms_status, ms_interp) %>%
             filter(site_name %in% rg$site_name) %>%
-            # # mutate(datetime = lubridate::year(datetime)) %>%
-            # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+            # mutate(datetime = lubridate::year(datetime)) %>%
+            # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
             # group_by(site_name, datetime) %>%
             # summarize(
             #     !!v := mean(!!sym(v), na.rm=TRUE),
@@ -1956,6 +1959,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         if(any(is.na(ws_mean_d$datetime))){
             stop('NA datetime found in ws_mean_d')
         }
+
+        ws_mean_d <- apply_detection_limit(ws_mean_d, detlims)
 
         write_ms_file(ws_mean_d,
                       network = network,
@@ -2027,6 +2032,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                               one_of(flux_vars))))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
+    detlims <- identify_detection_limit(pchem)
     nvars_fluxable <- length(pchem_vars_fluxable)
     pchem_setlist_fluxable <- as.list(rep(NA, nvars_fluxable))
     for(i in 1:nvars_fluxable){
@@ -2127,6 +2133,8 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  level = 'derived',
         #                  shapefile = FALSE,
         #                  link_to_portal = TRUE))
+
+        ws_mean_flux <- apply_detection_limit(ws_mean_flux, detlims)
 
         ue(write_ms_file(ws_mean_flux,
                          network = network,
@@ -2443,18 +2451,18 @@ write_metadata_d <- function(network, domain, prodname_ms){
 }
 
 #. handle_errors
-get_detection_limit <- function(x){
+identify_detection_limit <- function(x){
 
-    #if x is a 2d array-like object, the average detection limit (number of
+    #if x is a 2d array-like object, the mode detection limit (number of
     #decimal places) of each column is returned. non-numeric columns return NA.
     #If x is a vector (or something that can be coerced to a vector),
     #the detection limits is returned as a scalar.
 
-    #detection limit is computed as the median of the number of characters
+    #detection limit is computed as the mode of the number of characters
     #following each decimal place. NAs and zeros are ignored when computing
     #detection limit.
 
-    get_detection_limit_v <- function(x){
+    identify_detection_limit_v <- function(x){
 
         #x is a vector, or it will be coerced to one.
         #non-numeric vectors return NA vectors of the same length
@@ -2480,13 +2488,13 @@ get_detection_limit <- function(x){
 
         detlim <- vapply(X = x,
                          FUN = function(y){
-                             get_detection_limit_v(y) %>%
+                             identify_detection_limit_v(y) %>%
                                  Mode(na.rm = TRUE)
                          },
                          FUN.VALUE = numeric(1))
 
     } else if(is.atomic(x) && length(x)){
-        detlim <- get_detection_limit_v(x) %>%
+        detlim <- identify_detection_limit_v(x) %>%
             Mode(na.rm=TRUE)
     } else {
         stop('x must be a vector or 2d array-like')

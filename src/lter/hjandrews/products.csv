@@ -8,7 +8,7 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,n
 5357,sc_temp,unknown,paused,pending,pending,NA,NA
 5482,precipitation,unknown,ready,ready,pending,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
 5482,precip_gauge_locations,unknown,ready,ready,pending,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-4341,discharge,unknown,ready,pending,pending,stream_flux_inst__ms003,NA
+4341,discharge,unknown,ready,ready,pending,stream_flux_inst__ms003,NA
 5453,discharge,unknown,paused,pending,pending,NA,"technically south_umpqua, which is affiliated with hjandrews"
 4022,precip_chemistry,unknown,ready,ready,pending,precip_chemistry__ms002||precip_flux_inst__ms004,NA
 4022,precip_flux_inst,unknown,ready,ready,pending,NA,NA
