@@ -205,39 +205,41 @@ process_0_3239 <- function(set_details, network, domain) {
 
 #munge kernels ####
 
-#discharge: STATUS=PENDING (just copied from hbef. see comment within)
+#discharge: STATUS=READY
 #. handle_errors
 process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
 
-    #discharge for hj comes from two sources, lter portal and
-    #http://andlter.forestry.oregonstate.edu/data/register/default.aspx?datapage=page2_static_ascii&enid=1519&entnum=5&dbcode=HF004
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
-                   n=network,
-                   d=domain,
-                   p=prodname_ms,
-                   s=site_name,
-                   c=component)
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name)
+                    # c = component)
 
-    d = sw(read_csv(rawfile, progress=FALSE,
+    d = sw(read_csv(rawfile1, progress=FALSE,
                     col_types=readr::cols_only(
-                        DATETIME='c', #can't parse 24:00
-                        WS='c',
-                        Discharge_ls='d'))) %>%
-        # Flag='c'))) %>% #all flags are acceptable for this product
-        rename(site_name = WS,
-               datetime = DATETIME,
-               discharge = Discharge_ls)
+                        DATE_TIME = 'c',
+                        SITECODE = 'c',
+                        INST_Q = 'd',
+                        ESTCODE = 'c',
+                        EVENT_CODE = 'c'))) %>%
+        rename(datetime = DATE_TIME,
+               site_name = SITECODE,
+               discharge = INST_Q)
 
-    detlims <- ue(get_detection_limit(d))
+    d = ue(sourceflags_to_ms_status(d,
+                                    flagstatus_mappings = list(
+                                        ESTCODE = c('A', 'E', 'P'),
+                                        EVENT_CODE = c(NA, 'WEATHR'))))
+
+    detlim <- ue(identify_detection_limit(d$discharge))
 
     d <- d %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
-            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
-            site_name = paste0('w', site_name),
-            ms_status = 0) %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                           tz = 'Etc/GMT-8'),
+                               tz = 'UTC')) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
@@ -247,10 +249,10 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
         ungroup()
 
     d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '15 min',
+                                 desired_interval = '1 day', #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
 
     return(d)
 }
@@ -306,7 +308,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                                             PRECIP_TOT_FLAG = c('A', 'E'),
                                             EVENT_CODE = NA)))
 
-        detlims <- ue(get_detection_limit(d))
+        detlims <- ue(identify_detection_limit(d))
 
         d <- d %>%
             mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
@@ -394,7 +396,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(TYPE = 'F')))
 
-    detlims <- ue(get_detection_limit(d))
+    detlims <- ue(identify_detection_limit(d))
 
     d <- d %>%
         mutate(
@@ -487,7 +489,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(TYPE = 'F')))
 
-    detlims <- ue(get_detection_limit(d))
+    detlims <- ue(identify_detection_limit(d))
 
     d <- d %>%
         mutate(
@@ -506,7 +508,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
 
     #constant interval
     d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '1 day',
+                                 desired_interval = '1 day',  #set back to '15 min' when we have server
                                  impute_limit = 30))
 
     d <- ue(apply_detection_limit(d, detlims))
