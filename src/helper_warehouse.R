@@ -100,3 +100,87 @@ scrape_web <- function(){
         m = readMat('provisional/q_merged.mat')
     }
 }
+
+#. handle_errors
+zero_locf <- function (x, option = "locf", zero_remaining = "rev", maxgap = Inf){
+
+    #adapted from imputeTS::na_locf
+
+    data <- x
+    if (!is.null(dim(data)[2]) && dim(data)[2] > 1) {
+        for (i in 1:dim(data)[2]) {
+            if (!any(data[, i] == 0)) {
+                next
+            }
+            tryCatch(data[, i] <- zero_locf(data[, i], option,
+                                          na_remaining, maxgap), error = function(cond) {
+                                              warning(paste("imputeTS: No imputation performed for column",
+                                                            i, "because of this", cond), call. = FALSE)
+                                          })
+        }
+        return(data)
+    }
+    else {
+        missindx <- data == 0
+        if (!any(data == 0)) {
+            return(data)
+        }
+        if (any(class(data) == "tbl")) {
+            data <- as.vector(as.data.frame(data)[, 1])
+        }
+        if (all(missindx)) {
+            stop("Input data has only 0s. Input data needs at least 1 nonzero data point for applying zero_locf")
+        }
+        if (!is.null(dim(data)[2]) && !dim(data)[2] == 1) {
+            stop("Wrong input type for parameter x")
+        }
+        if (!is.null(dim(data)[2])) {
+            data <- data[, 1]
+        }
+        if (!is.numeric(data)) {
+            stop("Input x is not numeric")
+        }
+        data_vec <- as.vector(data)
+        if (option == "locf") {
+            imputed <- locf(data_vec, FALSE)
+        }
+        else if (option == "nocb") {
+            imputed <- locf(data_vec, TRUE)
+        }
+        else {
+            stop("Wrong parameter 'option' given. Value must be either 'locf' or 'nocb'.")
+        }
+        data[missindx] <- imputed[missindx]
+        if (!any(data == 0) || na_remaining == "keep") {
+        }
+        else if (na_remaining == "rev") {
+            if (option == "locf") {
+                data <- zero_locf(data, option = "nocb")
+            }
+            else if (option == "nocb") {
+                data <- zero_locf(data, option = "locf")
+            }
+        }
+        else if (na_remaining == "rm") {
+            data <- data[! data == 0]
+        }
+        else if (na_remaining == "mean") {
+            data[data == 0] <- mean(data, na.rm = TRUE)
+        }
+        else {
+            stop("Wrong parameter 'zero_remaining' given. Value must be either 'keep', 'rm', 'mean' or 'rev'.")
+        }
+        if (is.finite(maxgap) && maxgap >= 0) {
+            rlencoding <- rle(x == 0)
+            rlencoding$values[rlencoding$lengths <= maxgap] <- FALSE
+            en <- inverse.rle(rlencoding)
+            data[en == TRUE] <- 0
+        }
+        if (!is.null(dim(x)[2])) {
+            x[, 1] <- data
+            return(x)
+        }
+        return(data)
+    }
+}
+

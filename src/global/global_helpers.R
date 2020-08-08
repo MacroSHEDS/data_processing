@@ -2451,7 +2451,14 @@ write_metadata_d <- function(network, domain, prodname_ms){
 }
 
 #. handle_errors
-identify_detection_limit <- function(x){
+identify_detection_limit_s <- function(x){
+
+    #this is the scalar version of identify_detection_limit (_s).
+    #it was the first iteration, and has been superseded by the temporally-
+    #explicit version (identify_detection_limit_t).
+    #that version relies on stored data, so automatically
+    #writes to data/<network>/<domain>/detection_limits.json. This version
+    #just returns its output.
 
     #if x is a 2d array-like object, the mode detection limit (number of
     #decimal places) of each column is returned. non-numeric columns return NA.
@@ -2504,7 +2511,14 @@ identify_detection_limit <- function(x){
 }
 
 #. handle_errors
-apply_detection_limit <- function(x, digits){
+apply_detection_limit_s <- function(x, digits){
+
+    #this is the scalar version of apply_detection_limit (_s).
+    #it was the first iteration, and has been superseded by the temporally-
+    #explicit version (apply_detection_limit_t).
+    #that version relies on stored data, so automatically
+    #reads from data/<network>/<domain>/detection_limits.json. This version
+    #just accepts detection limits as an argument.
 
     #x: a 2d array-like or a numeric vector
     #digits: a numeric vector if x is a 2d array-like, or a numeric scalar if
@@ -2598,4 +2612,236 @@ Mode <- function(x, na.rm = TRUE){
     mode_out <- ux[which.max(tabulate(match(x, ux)))]
     return(mode_out)
 
+}
+
+#. handle_errors
+identify_detection_limit_t <- function(x, network, domain, prodname_ms){
+
+    #this is the temporally explicit version of identify_detection_limit (_t).
+    #it supersedes the scalar version (identify_detection_limit_s).
+    #that version just returns its output. This version relies on stored data,
+    #so automatically writes to data/<network>/<domain>/detection_limits.json.
+
+    #x is a 2d array-like object with column names. must have a datetime column
+    #and a site_name column.
+
+    #the detection limit (number of decimal places)
+    #of each column is written to data/<network>/<domain>/detection_limits.json
+    #as a nested list:
+    #prodname_ms
+    #    variable
+    #        startdt1: limit1
+    #        startdt2: limit2 ...
+    #non-numeric columns are not considered variables and are ignored, with the
+    #   exception of datetime, which is used to compute monthly mode detection
+    #   limits.
+
+    #detection limit for each site-variable is computed as the mode
+    #of the number of characters following each decimal place for each month.
+    #Each time the mode changes, a new startdt and limit are recorded.
+    #NAs and zeros are ignored when computing detection limit. For months when
+    #no data are recorded, the detection limit of the previous month is carried
+    #forward.
+
+    # d <- readRDS('~/Desktop/d.rds')
+    # x = d
+    # x <- arrange(x, site_name, datetime)
+    # sn = x$site_name
+    # dt = x$datetime
+    # # x <- x$TYPE
+    # x <- x$Cl
+    # x <- x$UTKN
+
+    identify_detection_limit_v <- function(x, dt, sn){
+
+        #x is a vector
+        #dt is a datetime vector
+
+        #non-numeric vectors return NA detection limits
+
+        sites <- unique(sn)
+
+        #for non-numerics, build a list of prodname -> site -> dt: lim
+        #where dt is always the earliest datetime and lim is always NA
+        if(! is.numeric(x)){
+
+            detlim <- list()
+            for(i in 1:length(sites)){
+                nulldt <- as.character(dt[sn == sites[i]][1])
+                detlim[[i]] <- list(startdt = nulldt,
+                                    lim = NA)
+            }
+
+            names(detlim) <- sites
+            return(detlim)
+        }
+
+        options(scipen = 100)
+        nas <- is.na(x) | x == 0
+
+        x <- as.character(x)
+        nsigdigs <- stringr::str_split_fixed(x, '\\.', 2)[, 2] %>%
+            nchar()
+
+        nsigdigs[nas] <- NA
+
+        #for each site, clean up the timeseries of detection limits:
+        #   first, fill NAs by locf, then by nocb
+        #   next, force positive monotonicity by locf
+        nsigdigs_l <- tibble(nsigdigs, dt, sn) %>%
+            base::split(sn) %>%
+            map(~ if(all(is.na(.x$nsigdigs))) .x else
+                mutate(.x,
+                       nsigdigs = imputeTS::na_locf(nsigdigs,
+                                                    na_remaining = 'rev') %>%
+                           force_monotonic_locf()))
+
+
+        #build datetime-detlim pairs for each change in detlim for each variable
+        detlims <- lapply(X = nsigdigs_l,
+                          FUN = function(z){
+
+                              #for sites with all-NA detlims, build the same
+                              #default list as above
+                              if(all(is.na(z$nsigdigs))){
+                                  detlims <- list(startdt = as.character(z$dt[1]),
+                                                  lim = NA)
+                                  return(detlims)
+                              }
+
+                              runs <- rle2(z$nsigdigs)
+
+                              #avoid the case where the first few detection lims
+                              #are artificially set low because their last
+                              #sigdig is 0
+                              if(runs$lengths[1] %in% 1:5 && nrow(runs) > 1){
+                                  runs <- runs[-1, ]
+                                  runs$starts[1] <- 1
+                              }
+
+                              detlims <- list(startdt = as.character(dt[runs$starts]),
+                                              lim = runs$values)
+                          })
+
+        options(scipen = 0)
+
+        return(detlims)
+    }
+
+    if(! is.null(dim(x))){
+
+        detlim <- lapply(X = x,
+                         FUN = function(y, dt, sn){
+                             identify_detection_limit_v(x = y,
+                                                        dt = dt,
+                                                        sn = sn)
+                         },
+                         dt = x$datetime,
+                         sn = x$site_name)
+        # FUN = function(y){
+        #     identify_detection_limit_v(y) %>%
+        #         Mode(na.rm = TRUE)
+        # })
+
+    } else {
+        stop('x must be a 2d array-like')
+    }
+
+    return(detlim)
+}
+
+#. handle_errors
+read_detection_limit <- function(network, domain, prodname_ms){
+
+    detlims <- glue('data/{n}/{d}/detection_limits.json',
+                    n = network,
+                    d = domain) %>%
+        readr::read_file() %>%
+        jsonlite::fromJSON()
+
+    detlims_prod <- detlims[[prodname_ms]]
+
+    return(detlims_prod)
+}
+
+#. handle_errors
+write_detection_limit <- function(network, domain, prodname_ms){
+
+    NULL
+    # tracker = get_data_tracker(network=network, domain=domain)
+    #
+    # mt = tracker[[prodname_ms]][[site_name]]$munge
+    #
+    # mt$status = new_status
+    # mt$mtime = as.character(Sys.time())
+    #
+    # tracker[[prodname_ms]][[site_name]]$munge = mt
+    #
+    # assign(tracker_name, tracker, pos=.GlobalEnv)
+    #
+    # trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    # readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    # backup_tracker(trackerfile)
+    #
+    #
+    # detlims <- glue('data/{n}/{d}/detection_limits.json',
+    #                 n = network,
+    #                 d = domain) %>%
+    #     readr::read_file() %>%
+    #     jsonlite::fromJSON()
+    #
+    # detlims_prod <- detlims[[prodname_ms]]
+    #
+    # return(detlims_prod)
+}
+
+#. handle_errors
+rle2 <- function(x){#, return_list = FALSE){
+
+    r <- rle(x)
+    ends <- cumsum(r$lengths)
+
+    # if(return_list){
+    #
+    #     r <- list(values = r$values,
+    #               starts = c(1, ends[-length(ends)] + 1),
+    #               stops = ends,
+    #               lengths = r$lengths)
+    #
+    # } else {
+
+    r <- tibble(values = r$values,
+                starts = c(1, ends[-length(ends)] + 1),
+                stops = ends,
+                lengths = r$lengths)
+    # }
+
+    return(r)
+}
+
+#. handle_errors
+force_monotonic_locf <- function(v, ascending = TRUE){
+
+    if(any(is.na(v))){
+        stop('v may not contain NAs')
+    }
+
+    if(ascending){
+        mv <- cummax(v)
+        adjust <- v < mv
+    } else {
+        mv <- cummin(v)
+        adjust <- v > mv
+    }
+
+    runs <- rle2(adjust)
+
+    for(i in which(runs$values)){
+        stt <- runs$starts[i]
+        stp <- runs$stops[i]
+        replc <- v[runs$stops[i - 1]]
+        v[stt:stp] <- replc
+    }
+
+    return(v)
 }
