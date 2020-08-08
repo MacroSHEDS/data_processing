@@ -219,7 +219,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                     # c = component)
 
     d = sw(read_csv(rawfile1, progress=FALSE,
-                    col_types=readr::cols_only(
+                    col_types = readr::cols_only(
                         DATE_TIME = 'c',
                         SITECODE = 'c',
                         INST_Q = 'd',
