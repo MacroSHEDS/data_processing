@@ -184,3 +184,19 @@ zero_locf <- function (x, option = "locf", zero_remaining = "rev", maxgap = Inf)
     }
 }
 
+#. handle_errors
+vround <- function(x, digits){
+
+    #just like base::round, but digits is a vector
+
+    if(length(x) != length(digits)){
+        stop('Lengths of x and digits must be equal')
+    }
+
+    for(d in unique(digits)){
+        d_inds <- digits == d
+        x[d_inds] <- round(x[d_inds], d)
+    }
+
+    return(x)
+}

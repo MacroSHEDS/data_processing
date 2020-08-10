@@ -2615,14 +2615,14 @@ Mode <- function(x, na.rm = TRUE){
 }
 
 #. handle_errors
-identify_detection_limit_t <- function(x, network, domain, prodname_ms){
+identify_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
     #that version just returns its output. This version relies on stored data,
     #so automatically writes to data/<network>/<domain>/detection_limits.json.
 
-    #x is a 2d array-like object with column names. must have a datetime column
+    #X is a 2d array-like object with column names. must have a datetime column
     #and a site_name column.
 
     #the detection limit (number of decimal places)
@@ -2632,25 +2632,16 @@ identify_detection_limit_t <- function(x, network, domain, prodname_ms){
     #    variable
     #        startdt1: limit1
     #        startdt2: limit2 ...
-    #non-numeric columns are not considered variables and are ignored, with the
-    #   exception of datetime, which is used to compute monthly mode detection
-    #   limits.
+    #non-numeric columns are not considered variables and are ignored
 
-    #detection limit for each site-variable is computed as the mode
-    #of the number of characters following each decimal place for each month.
-    #Each time the mode changes, a new startdt and limit are recorded.
-    #NAs and zeros are ignored when computing detection limit. For months when
-    #no data are recorded, the detection limit of the previous month is carried
-    #forward.
+    #detection limit (detlim) for each site-variable-datetime is computed as the
+    #number of characters following each decimal place. NA detlims are filled
+    #by locf, followed by nocb. Then, to account for false detlims arising from
+    #trailing zeros, positive monotonicity is forced by carrying forward
+    #cumulative maximum detlims. Each time the detlim increases,
+    #a new startdt and limit are recorded.
 
-    # d <- readRDS('~/Desktop/d.rds')
-    # x = d
-    # x <- arrange(x, site_name, datetime)
-    # sn = x$site_name
-    # dt = x$datetime
-    # # x <- x$TYPE
-    # x <- x$Cl
-    # x <- x$UTKN
+    X <- as_tibble(X)
 
     identify_detection_limit_v <- function(x, dt, sn){
 
@@ -2719,7 +2710,7 @@ identify_detection_limit_t <- function(x, network, domain, prodname_ms){
                                   runs$starts[1] <- 1
                               }
 
-                              detlims <- list(startdt = as.character(dt[runs$starts]),
+                              detlims <- list(startdt = as.character(z$dt[runs$starts]),
                                               lim = runs$values)
                           })
 
@@ -2728,30 +2719,136 @@ identify_detection_limit_t <- function(x, network, domain, prodname_ms){
         return(detlims)
     }
 
-    if(! is.null(dim(x))){
+    if(! is.null(dim(X))){
 
-        detlim <- lapply(X = x,
+        detlim <- lapply(X = X,
                          FUN = function(y, dt, sn){
-                             identify_detection_limit_v(x = y,
+                             identify_detection_limit_v(y,
                                                         dt = dt,
                                                         sn = sn)
                          },
-                         dt = x$datetime,
-                         sn = x$site_name)
-        # FUN = function(y){
-        #     identify_detection_limit_v(y) %>%
-        #         Mode(na.rm = TRUE)
-        # })
+                         dt = X$datetime,
+                         sn = X$site_name)
 
     } else {
-        stop('x must be a 2d array-like')
+        stop('X must be a 2d array-like')
     }
 
-    return(detlim)
+    write_detection_limit(detlim,
+                          network = network,
+                          domain = domain)
+
+    return()
 }
 
 #. handle_errors
-read_detection_limit <- function(network, domain, prodname_ms){
+apply_detection_limit_t <- function(X, network, domain, prodname_ms){
+
+    #this is the temporally explicit version of identify_detection_limit (_t).
+    #it supersedes the scalar version (identify_detection_limit_s).
+    #that version just returns its output. This version relies on stored data,
+    #so automatically reads from data/<network>/<domain>/detection_limits.json.
+
+    #X is a 2d array-like object with column names. must have a datetime column
+
+    #attempting to apply detection limits to non-numerics results in error
+
+    # d <- readRDS('~/Desktop/d.rds')
+    # # d = slice(d, 1:10) %>% select(site_name, datetime, TYPE, pH, spCond)
+    # # d$site_name[6:10] = 'GSMACK'
+    # X = d
+    # X <- arrange(X, site_name, datetime)
+    # sn = X$site_name
+    # dt = X$datetime
+    # # x <- X$TYPE
+    # # x <- X$pH
+    # # x <- X$UTKN
+    # varnm = 'UTKN'
+
+    X <- as_tibble(X) %>%
+        arrange(site_name, datetime)
+
+    detlim <- read_detection_limit(network, domain)
+    if(is_ms_err(detlim)){
+        stop('problem reading detection limits from file')
+    }
+
+    apply_detection_limit_v <- function(x, varnm, dt, sn, detlim){
+
+        if(! is.numeric(x)) return(x)
+        if(is.numeric(x) && ! varnm %in% names(detlim)){
+            stop(glue('Missing detection limits for var: {v}', v = varnm))
+        }
+
+        detlim_var <- detlim[[varnm]]
+
+        site_lst <- tibble(dt, sn, x) %>%
+            base::split(sn)
+
+        # detlim_varsite = list(startdt=c("2005-05-31 05:10:00", "2005-08-03 01:40:00"),
+        #                       lim=c(1, 2))
+        # z = site_lst[[1]]
+
+        rounded <- lapply(X = site_lst,
+                          FUN = function(z){
+
+                              if(all(is.na(z$x))) return(z$x)
+
+                              detlim_varsite <- detlim_var[[z$sn[1]]]
+                              cutvec <- c(as.POSIXct(detlim_varsite$startdt,
+                                                     tz = 'UTC'),
+                                          as.POSIXct('2900-01-01 00:00:00'))
+
+                              roundvec <- cut(x = z$dt,
+                                              breaks = cutvec,
+                                              include.lowest = TRUE,
+                                              labels = detlim_varsite$lim) %>%
+                                              as.numeric()
+
+                              rounded <- mapply(FUN = function(a, b){
+                                                    round(a, b)
+                                                },
+                                                a = z$x,
+                                                b = roundvec,
+                                                USE.NAMES = FALSE)
+
+                              return(rounded)
+                          }) %>%
+            unlist() %>%
+            unname()
+
+        return(rounded)
+    }
+
+    if(! is.null(dim(X))){
+
+        X <- mapply(FUN = function(X, varnms, dt, sn, detlim){
+
+                        apply_detection_limit_v(x = X,
+                                                varnm = varnms,
+                                                dt = dt,
+                                                sn = sn,
+                                                detlim = detlim)
+
+                    },
+                    X = X,
+                    varnms = colnames(X),
+                    MoreArgs = list(dt = X$datetime,
+                                    sn = X$site_name,
+                                    detlim = detlim),
+                    SIMPLIFY = FALSE)
+
+        X = as_tibble(X)
+
+    } else {
+        stop('X must be a 2d array-like')
+    }
+
+    return(X)
+}
+
+#. handle_errors
+read_detection_limit <- function(network, domain){
 
     detlims <- glue('data/{n}/{d}/detection_limits.json',
                     n = network,
@@ -2759,40 +2856,21 @@ read_detection_limit <- function(network, domain, prodname_ms){
         readr::read_file() %>%
         jsonlite::fromJSON()
 
-    detlims_prod <- detlims[[prodname_ms]]
+    # detlims_prod <- detlims[[prodname_ms]]
 
-    return(detlims_prod)
+    return(detlims)
 }
 
 #. handle_errors
-write_detection_limit <- function(network, domain, prodname_ms){
+write_detection_limit <- function(detlim, network, domain){
 
-    NULL
-    # tracker = get_data_tracker(network=network, domain=domain)
-    #
-    # mt = tracker[[prodname_ms]][[site_name]]$munge
-    #
-    # mt$status = new_status
-    # mt$mtime = as.character(Sys.time())
-    #
-    # tracker[[prodname_ms]][[site_name]]$munge = mt
-    #
-    # assign(tracker_name, tracker, pos=.GlobalEnv)
-    #
-    # trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
-    # readr::write_file(jsonlite::toJSON(tracker), trackerfile)
-    # backup_tracker(trackerfile)
-    #
-    #
-    # detlims <- glue('data/{n}/{d}/detection_limits.json',
-    #                 n = network,
-    #                 d = domain) %>%
-    #     readr::read_file() %>%
-    #     jsonlite::fromJSON()
-    #
-    # detlims_prod <- detlims[[prodname_ms]]
-    #
-    # return(detlims_prod)
+    detlims_file <- glue('data/{n}/{d}/detection_limits.json',
+                         n = network,
+                         d = domain)
+
+    readr::write_file(jsonlite::toJSON(detlim), detlims_file)
+
+    return()
 }
 
 #. handle_errors
@@ -2845,3 +2923,8 @@ force_monotonic_locf <- function(v, ascending = TRUE){
 
     return(v)
 }
+
+#all kernels would also have to be modified so that datetime is determined
+#before detection limit is decided. an accurate datetime column
+#is needed to calculate temporally explicit detlims
+
