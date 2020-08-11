@@ -69,7 +69,8 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
         # mutate(ms_status = as.numeric(ms_status)) %>% #only if you had to convert it to logical
         # select(-ms_status, everything()) #old way
         relocate(ms_status, .after = last_col()) %>% #new way
-        relocate(ms_interp, .after = last_col()) #sometimes gotta call twice
+        relocate(ms_interp, .after = last_col()) %>% #sometimes gotta call twice
+        arrange(site_name, datetime)
 
     d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
 
