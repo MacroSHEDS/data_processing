@@ -2615,7 +2615,7 @@ Mode <- function(x, na.rm = TRUE){
 }
 
 #. handle_errors
-identify_detection_limit_t <- function(X, network, domain, prodname_ms){
+identify_detection_limit_t <- function(X, network, domain){
 
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
@@ -2640,6 +2640,10 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms){
     #trailing zeros, positive monotonicity is forced by carrying forward
     #cumulative maximum detlims. Each time the detlim increases,
     #a new startdt and limit are recorded.
+
+    # if(missing(network) || missing(domain)){
+    #     stop('network, domain, and prodname_ms args must be supplied')
+    # }
 
     X <- as_tibble(X)
 
@@ -2742,7 +2746,7 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms){
 }
 
 #. handle_errors
-apply_detection_limit_t <- function(X, network, domain, prodname_ms){
+apply_detection_limit_t <- function(X, network, domain){
 
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
@@ -2751,19 +2755,9 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     #X is a 2d array-like object with column names. must have a datetime column
 
-    #attempting to apply detection limits to non-numerics results in error
-
-    # d <- readRDS('~/Desktop/d.rds')
-    # # d = slice(d, 1:10) %>% select(site_name, datetime, TYPE, pH, spCond)
-    # # d$site_name[6:10] = 'GSMACK'
-    # X = d
-    # X <- arrange(X, site_name, datetime)
-    # sn = X$site_name
-    # dt = X$datetime
-    # # x <- X$TYPE
-    # # x <- X$pH
-    # # x <- X$UTKN
-    # varnm = 'UTKN'
+    #attempting to apply detection limits to non-numerics results in error. The
+    #following macrosheds-canonical column names are automatically skipped:
+    #ms_status, ms_interp, site_name, datetime
 
     X <- as_tibble(X) %>%
         arrange(site_name, datetime)
@@ -2774,6 +2768,10 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
     }
 
     apply_detection_limit_v <- function(x, varnm, dt, sn, detlim){
+
+        if(varnm %in% c('ms_status', 'ms_interp', 'site_name', 'datetime')){
+            return(x)
+        }
 
         if(! is.numeric(x)) return(x)
         if(is.numeric(x) && ! varnm %in% names(detlim)){
@@ -2795,6 +2793,8 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
                               if(all(is.na(z$x))) return(z$x)
 
                               detlim_varsite <- detlim_var[[z$sn[1]]]
+                              if(all(is.na(detlim_varsite$lim))) return(z$x)
+
                               cutvec <- c(as.POSIXct(detlim_varsite$startdt,
                                                      tz = 'UTC'),
                                           as.POSIXct('2900-01-01 00:00:00'))
@@ -2803,6 +2803,7 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
                                               breaks = cutvec,
                                               include.lowest = TRUE,
                                               labels = detlim_varsite$lim) %>%
+                                              as.character() %>%
                                               as.numeric()
 
                               rounded <- mapply(FUN = function(a, b){
@@ -2923,8 +2924,3 @@ force_monotonic_locf <- function(v, ascending = TRUE){
 
     return(v)
 }
-
-#all kernels would also have to be modified so that datetime is determined
-#before detection limit is decided. an accurate datetime column
-#is needed to calculate temporally explicit detlims
-

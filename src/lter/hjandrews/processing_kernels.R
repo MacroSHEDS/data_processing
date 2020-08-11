@@ -379,7 +379,10 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                    UTP_OUTPUT='UTP', TDP_OUTPUT='TDP', UTN_OUTPUT='UTN',
                    TDN_OUTPUT='TDN', DON_OUTPUT='DON', UTKN_OUTPUT='UTKN',
                    TKN_OUTPUT='TKN', NA_OUTPUT='Na', K_OUTPUT='K',
-                   DOC_OUTPUT='DOC')
+                   DOC_OUTPUT='DOC') %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                              tz = 'Etc/GMT-8'),
+                                              tz = 'UTC'))
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
@@ -393,23 +396,22 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                         # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
                         # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
 
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
+
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(TYPE = 'F')))
 
-    detlims <- ue(identify_detection_limit(d))
-
     d <- d %>%
-        mutate(
-            datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC'),
-            ms_status = as.logical(ms_status)) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status))
+        mutate(ms_status = as.numeric(ms_status)) %>%
+        arrange(site_name, datetime)
 
     d[is.na(d)] = NA
 
@@ -418,7 +420,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '1 day', #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }
