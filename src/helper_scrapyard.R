@@ -183,7 +183,7 @@ process_2_13TEST <- function(network, domain, prodname_ms){
     #load precipitation data, watershed boundaries, rain gauge locations
     precip2 <- read_combine_feathers(network, domain, prodname_ms)
     wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
-    rg <- read_combine_shapefiles(network, domain, 'rain_gauge_locations__100')
+    rg <- read_combine_shapefiles(network, domain, 'precip_gauge_locations__100')
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -345,3 +345,26 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
     return()
 }
+
+### test code####
+    desired_interval = '5 days'; impute_limit=30
+    # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
+    ws_mean_precip = readRDS('~/Desktop/ws_precip_temp.rds') %>%
+        mutate(datetime = as_datetime(as.character(datetime), format='%Y'))
+    w2 = w3 = ws_mean_precip
+    w2$datetime = as.POSIXct(1:nrow(w2), origin='2000-01-01', tz = 'UTC')
+    w3$precip[c(3:9, 15)] = NA
+    w4 = w3
+    w4$ms_interp = 0
+
+    ms_df = ws_mean_precip
+    ms_df = w2
+    ms_df = w3
+    ms_df = w4
+
+#in case we ever want to track changes in detection limits through time ####
+
+#all kernels would also have to be modified so that datetime is determined
+    #before detection limit is decided. an accurate datetime column
+    #is needed to calculate temporally explicit detlims
+

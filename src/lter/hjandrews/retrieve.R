@@ -1,13 +1,11 @@
-prod_info = get_product_info(network=network,
+
+prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
 
-# i=5; j=1
+# i=3
 for(i in 1:nrow(prod_info)){
-# for(i in 4){
 
-    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
-    prod_specs = get_neon_product_specs(prod_info$prodcode[i])
-    if(is_ms_err(prod_specs)) next
+    prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data = get_data_tracker(network=network, domain=domain)
 
@@ -15,13 +13,22 @@ for(i in 1:nrow(prod_info)){
         held_data = track_new_product(held_data, prodname_ms)
     }
 
-    avail_sets = sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
+    latest_vsn = get_latest_product_version(prodname_ms=prodname_ms,
+        domain=domain, data_tracker=held_data)
+    if(is_ms_err(latest_vsn)) next
+
+    avail_sets = get_avail_lter_product_sets(prodname_ms=prodname_ms,
+        version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
 
-    #retrieve data by site; log acquisitions and revisions
+    if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
+             prodname_ms)){
+        avail_sets$site_name <- 'sitename_NA'
+    }
     avail_sites = unique(avail_sets$site_name)
-    for(j in 1){
-    # for(j in 1:length(avail_sites)){
+
+    # j=1
+    for(j in 1:length(avail_sites)){
 
         site_name = avail_sites[j]
         avail_site_sets = avail_sets[avail_sets$site_name == site_name, ,
@@ -37,7 +44,7 @@ for(i in 1:nrow(prod_info)){
         if(is_ms_err(held_data)) next
 
         retrieval_details = populate_set_details(held_data, prodname_ms,
-            site_name, avail_site_sets)
+            site_name, avail_site_sets, latest_vsn)
         if(is_ms_err(retrieval_details)) next
 
         new_sets = filter_unneeded_sets(retrieval_details)
@@ -53,7 +60,7 @@ for(i in 1:nrow(prod_info)){
 
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
-        get_neon_data(domain=domain, new_sets, held_data)
+        get_lter_data(domain=domain, new_sets, held_data)
 
         if(! is.na(prod_info$munge_status[i])){
             update_data_tracker_m(network = network,
@@ -65,8 +72,19 @@ for(i in 1:nrow(prod_info)){
         }
     }
 
+    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
+                         'packageid=knb-lter-and.{p}.{v}',
+                         p = prodcode_from_prodname_ms(prodname_ms),
+                         v = latest_vsn)
+
+    write_metadata_r(murl = metadata_url,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms)
+
     gc()
 }
 
 loginfo('Retrieval complete for all sites and products',
     logger=logger_module)
+

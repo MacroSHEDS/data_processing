@@ -1,7 +1,6 @@
 
 prod_info = get_product_info(network=network, domain=domain,
-    status_level='retrieve', get_statuses='ready') %>%
-    arrange(prodcode)
+    status_level='retrieve', get_statuses='ready')
 
 # i=7
 for(i in 1:nrow(prod_info)){
@@ -73,6 +72,15 @@ for(i in 1:nrow(prod_info)){
         }
     }
 
+    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
+                         'packageid=knb-lter-hbr.{p}.{v}',
+                         p = prodcode_from_prodname_ms(prodname_ms),
+                         v = latest_vsn)
+    
+    write_metadata_r(murl = metadata_url,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms)
     gc()
 }
 

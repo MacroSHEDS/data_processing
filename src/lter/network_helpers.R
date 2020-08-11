@@ -19,7 +19,6 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
     return(newest_vsn)
 }
 
-# version=latest_vsn; data_tracker=held_data
 #. handle_errors
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
@@ -36,7 +35,7 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
         version)
     reqdata = RCurl::getURLContent(name_request)
     reqdata = strsplit(reqdata, '\n')[[1]]
-    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE)
+    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE) #junk filter for hbef. might need flex
     reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
     element_ids = reqdata[,2]
@@ -53,7 +52,6 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     return(avail_sets)
 }
 
-# tracker=held_data; site_name='sitename_NA'; avail=avail_sets
 #. handle_errors
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
@@ -86,7 +84,6 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     return(retrieval_tracker)
 }
 
-# sets=new_sets; i=1; tracker=held_data
 #. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
