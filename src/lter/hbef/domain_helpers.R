@@ -86,6 +86,8 @@ munge_hbef_combined <- function(domain, site_name, prodname_ms, tracker,
             filt_site <- sites[i]
             out_comp_filt <- filter(out_comp, site_name == filt_site)
 
+            ready_to_link <- ifelse(grepl('precip', prodname_ms), FALSE, TRUE)
+
             write_ms_file(d = out_comp_filt,
                 network = network,
                 domain = domain,
@@ -93,7 +95,7 @@ munge_hbef_combined <- function(domain, site_name, prodname_ms, tracker,
                 site_name = filt_site,
                 level = 'munged',
                 shapefile = FALSE,
-                link_to_portal = TRUE)
+                link_to_portal = ready_to_link)
         }
     }
 
