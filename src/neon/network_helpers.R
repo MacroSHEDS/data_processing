@@ -9,8 +9,8 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {s}, {p}, {c}',
-            s=s$site_name, p=s$prodname_ms, c=s$component)
+        msg = glue('Processing {st}, {p}, {c}',
+            st=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -58,16 +58,14 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
 
     }
 
-    write_munged_file(d = out,
+    write_ms_file(d = out,
         network = network,
         domain = domain,
         prodname_ms = prodname_ms,
-        site_name = site_name)
-
-    create_portal_link(network = network,
-        domain = domain,
-        prodname_ms = prodname_ms,
-        site_name = site_name)
+        site_name = site_name,
+        level = 'munged',
+        shapefile = FALSE,
+        link_to_portal = TRUE)
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,

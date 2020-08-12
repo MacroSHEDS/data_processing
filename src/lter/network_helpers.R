@@ -12,14 +12,13 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
     prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
 
     vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
-    newest_vsn = RCurl::getURLContent(vsn_request)
+    newest_vsn = RCurl::getURLContent(vsn_request, timeout=10)
     newest_vsn = as.numeric(stringr::str_match(newest_vsn,
         '[0-9]+$')[1])
 
     return(newest_vsn)
 }
 
-# version=latest_vsn; data_tracker=held_data
 #. handle_errors
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
@@ -36,7 +35,7 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
         version)
     reqdata = RCurl::getURLContent(name_request)
     reqdata = strsplit(reqdata, '\n')[[1]]
-    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE)
+    reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE) #junk filter for hbef. might need flex
     reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
     element_ids = reqdata[,2]
@@ -44,39 +43,8 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
         '/', element_ids)
 
     names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
+    names[names %in% c(domain, network)] = 'sitename_NA'
 
-    # #check to see if site information is included in lter informaiton
-    # if(any(is.na(names))) {
-    #     #replace components names with _ rather than spaces
-    #     if(length(str_split_fixed(reqdata[,3], " ", n = Inf)) > 1){
-    #
-    #         names_new <- replace_na(names, "sites_combined_or_missing")
-    #
-    #         components <- str_replace_all(reqdata[,3], " ", "_")
-    #
-    #         avail_sets = tibble(url=dl_urls,
-    #             site_name=names_new,
-    #             component=components)
-    #     } else {
-    #
-    #         names_new <- replace_na(names, "sites_combined_or_missing")
-    #         avail_sets = tibble(url=dl_urls,
-    #             site_name=names_new,
-    #             component=reqdata[,3])
-    #     }
-    #     #some names do not include file endings. Add .csv if no files path is there
-    #     if(length(str_split_fixed(avail_sets$component[1], "[.]", n = Inf)) == 1) {
-    #         components <- paste0(components, ".csv")
-    #
-    #         avail_sets = tibble(url=dl_urls,
-    #             site_name=names_new,
-    #             component=components)
-    #     }
-    # } else {
-    #     avail_sets = tibble(url=dl_urls,
-    #         site_name=names,
-    #         component=reqdata[,3])
-    # }
     avail_sets = tibble(url=dl_urls,
         site_name=names,
         component=reqdata[,3])
@@ -84,7 +52,6 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     return(avail_sets)
 }
 
-# tracker=held_data; site_name='sitename_NA'; avail=avail_sets
 #. handle_errors
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
@@ -117,7 +84,6 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     return(retrieval_tracker)
 }
 
-# sets=new_sets; i=1; tracker=held_data
 #. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
@@ -129,8 +95,8 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {si}, {p}, {c}',
-            si=s$site_name, p=s$prodname_ms, c=s$component)
+        msg = glue('Processing {st}, {p}, {c}',
+            st=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
