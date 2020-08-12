@@ -1,4 +1,19 @@
 suppressPackageStartupMessages({
+
+    #we should be able to avoid librarying most or all of these,
+    #since we're referring to their functions directly with ::
+
+    # #spatial packages
+    # library(gstat) #must load before raster package
+    # # library(terra)  #must load before gstat package
+    # library(raster) #raster has been replaced by terra (way faster)
+    # library(stars)
+    # library(sf)
+    # library(sp)
+    # library(mapview)
+    # library(elevatr)
+
+    #everything else
     library(httr)
     library(jsonlite)
     library(tidyr)
@@ -15,6 +30,7 @@ suppressPackageStartupMessages({
     library(tinsel)
     library(PeriodicTable)
     library(imputeTS)
+
 })
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
@@ -28,9 +44,9 @@ logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing
-source('src/global_helpers.R')
-source_decoratees('src/global_helpers.R') #parse decorators
+source('src/dev_helpers.R') #comment before pushing live
+source('src/global/global_helpers.R')
+source_decoratees('src/global/global_helpers.R') #parse decorators
 
 ms_vars <- sm(read_csv('data/general/variables.csv'))
 network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
@@ -39,11 +55,9 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
+ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
-
-
-# dmnrow=1
+# dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]

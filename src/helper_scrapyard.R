@@ -175,3 +175,196 @@ determine_upstream_downstream_api_OBSOLETE = function(d_, data_inds_, set_detail
     return(site_with_suffixes)
 }
 
+#precipitation: STATUS=TEST (hbef)
+process_2_13TEST <- function(network, domain, prodname_ms){
+
+    #910.945x slower than shortcut method
+
+    #load precipitation data, watershed boundaries, rain gauge locations
+    precip2 <- read_combine_feathers(network, domain, prodname_ms)
+    wb <- read_combine_shapefiles(network, domain, 'ws_boundary__94')
+    rg <- read_combine_shapefiles(network, domain, 'precip_gauge_locations__100')
+
+    #project based on average latlong of watershed boundaries
+    bbox <- as.list(sf::st_bbox(wb))
+    projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
+                                    long = mean(bbox$xmin, bbox$xmax))
+    wb <- sf::st_transform(wb, projstring)
+    rg <- sf::st_transform(rg, projstring)
+
+    #get a DEM that encompasses all watersheds
+    dem <- sm(elevatr::get_elev_raster(wb, z = 12))
+
+    precip2 <- precip2 %>%
+        mutate(datetime = lubridate::year(datetime)) %>% #temporary
+        group_by(site_name, datetime) %>%
+        summarize(
+            precip = mean(precip, na.rm=TRUE),
+            ms_status = numeric_any(ms_status)) %>%
+        ungroup() %>%
+        filter(site_name %in% rg$site_name)
+
+    for(j in 1){
+        # for(j in 1:nrow(wb)){
+
+        wbj <- slice(wb, j)
+        site_name <- wbj$site_name
+        dem_wbj <- terra::crop(dem, wbj)
+        dem_wbj <- terra::mask(dem_wbj, wbj)
+
+        #calculate mean watershed precipitation for every timestep
+        ws_mean_precip <- rep(NA, nrow(precip))
+        timesteps <- unique(precip2$datetime)
+        for(k in 1:length(timesteps)){
+
+            precip_k <- precip2 %>%
+                filter(datetime == timesteps[k]) %>%
+                left_join(rg) %>%
+                sf::st_as_sf()
+
+            # zz <- bind_cols(precip_k, as_tibble(sf::st_coordinates(precip_k$geometry)))
+            # zz2 = sf::st_read('~/Downloads/hmm/hbef_raingage/hbef_raingage.shp')
+            gs <- gstat::gstat(formula = precip~1,
+                               locations = precip_k)
+            idw <- interpolate(dem, gs)
+            idw_mask <- raster::mask(idw, wbj)
+            ws_mean_precip[k] <- raster::values(idw_mask) %>%
+                mean(., na.rm = TRUE)
+        }
+
+        site_precip2 <- tibble(datetime = precip_dt,
+                               site_name = site_name,
+                               precip = ws_mean_precip,
+                               ms_status = precip_status)
+    }
+
+    #interp final precip to a desirable interval?
+    return()
+}
+
+#precipitation: STATUS=OBSOLETE (hbef)
+process_2_13OBS <- function(network, domain, prodname_ms){
+
+    #this logic is temporary, and just gets precip into the format that works
+    #with the portal. but once interp is working, we'll perform that here
+    #instead
+
+    mfiles <- list_munged_files(network = network,
+                                domain = domain,
+                                prodname_ms = prodname_ms)
+
+    combined <- tibble()
+    for(f in mfiles){
+        d = read_feather(f)
+        combined <- bind_rows(combined, d)
+    }
+
+    #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms)
+    write_feather(combined, site_file)
+    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
+    unlink(portal_site_file)
+    invisible(sw(file.link(to = portal_site_file, from = site_file)))
+
+    gc()
+    return()
+}
+
+#precip_chemistry: STATUS=OBSOLETE (hbef)
+process_2_208OBS <- function(network, domain, prodname_ms){
+
+    #this logic is temporary, and just gets pchem into the format that works
+    #with the portal. but once interp is working, we'll perform that here
+    #instead
+
+    mfiles <- ue(list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms))
+
+    combined <- tibble()
+    for(f in mfiles){
+        d = read_feather(f)
+        combined <- bind_rows(combined, d)
+    }
+
+    #this chunk will be replaced by create_portal_link when interp is ready
+    prod_dir = glue('data/{n}/{d}/derived/{p}', n=network, d=domain,
+                    p=prodname_ms)
+    dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+    site_file <- glue('data/{n}/{d}/derived/{p}/precip.feather',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms)
+    write_feather(combined, site_file)
+    portal_site_file <- glue('../portal/data/{d}/precip.feather', d = domain)
+    unlink(portal_site_file)
+    invisible(sw(file.link(to = portal_site_file, from = site_file)))
+
+    return()
+}
+
+#precip_flux_inst: STATUS=OBSOLETE (hbef; must localize precip to stream sites first)
+process_2_ms002 <- function(network, domain, prodname_ms){
+
+    chemprod <- 'precip_chemistry__208'
+    qprod <- 'precipitation__13'
+
+    chemfiles <- ue(list_munged_files(network = network,
+                                      domain = domain,
+                                      prodname_ms = chemprod))
+    qfiles <- ue(list_munged_files(network = network,
+                                   domain = domain,
+                                   prodname_ms = qprod))
+
+    flux_sites <- generics::intersect(
+        ue(fname_from_fpath(qfiles, include_fext = FALSE)),
+        ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
+
+    for(s in flux_sites){
+
+        flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
+                                     qprod = qprod,
+                                     site_name = s,
+                                     dt_round_interv = 'hours')))
+
+        ue(write_ms_file(d = flux,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         site_name = s,
+                         level = 'derived',
+                         shapefile = FALSE,
+                         link_to_portal = TRUE))
+    }
+
+    return()
+}
+
+### test code####
+    desired_interval = '5 days'; impute_limit=30
+    # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
+    ws_mean_precip = readRDS('~/Desktop/ws_precip_temp.rds') %>%
+        mutate(datetime = as_datetime(as.character(datetime), format='%Y'))
+    w2 = w3 = ws_mean_precip
+    w2$datetime = as.POSIXct(1:nrow(w2), origin='2000-01-01', tz = 'UTC')
+    w3$precip[c(3:9, 15)] = NA
+    w4 = w3
+    w4$ms_interp = 0
+
+    ms_df = ws_mean_precip
+    ms_df = w2
+    ms_df = w3
+    ms_df = w4
+
+#in case we ever want to track changes in detection limits through time ####
+
+#all kernels would also have to be modified so that datetime is determined
+    #before detection limit is decided. an accurate datetime column
+    #is needed to calculate temporally explicit detlims
+
