@@ -44,3 +44,4 @@ bind_cols = dplyr::bind_cols
 bind_rows = dplyr::bind_rows
 map = purrr::map
 map2 = purrr::map
+st_read = sf::st_read
