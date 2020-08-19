@@ -368,3 +368,62 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     #before detection limit is decided. an accurate datetime column
     #is needed to calculate temporally explicit detlims
 
+
+gee_to_timeseries <- function(gee_id, band, com_name, start, end, ws_bound,
+                              scale) {
+        
+        col_name <- paste0(com_name, 'X')
+        
+        sheds<- sf::st_transform(sheds,4326) %>%
+            sf::st_set_crs(4326)
+        
+        ws_ee <- sf_as_ee(sheds)
+        
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            #filterBounds(ws_ee)$
+            filterDate(start, end)$
+            select(band)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                #name <- ee$String$cat(col_name, date)
+                #x$select(band)$reproject("EPSG:4326")$set("RGEE_NAME", name)
+                x$set("RGEE_NAME", date)
+            })
+        
+        ee_ws_table <- ee_extract(
+            x = gee_imcol,
+            y = sheds,
+            scale = scale,
+            fun = ee$Reducer$median(),
+            sf = FALSE
+        )
+        
+        table_nrow <- sheds %>%
+            mutate(nrow = row_number()) %>%
+            as.data.frame() %>%
+            #need common col name for watershed
+            dplyr::select(site_name, nrow)
+        
+        table <- ee_ws_table %>%
+            mutate(nrow = row_number()) %>%
+            full_join(table_nrow) %>%
+            dplyr::select(-nrow)
+        
+        col_names <- colnames(table)
+        
+        leng <- length(col_names) -1
+        
+        table_time <- table %>%
+            pivot_longer(col_names[1:leng])
+        
+        for(i in 1:nrow(table_time)) {
+            table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2], pattern = 'X', n = 2)[2]
+        }
+        
+        table_fin <- table_time %>%
+            dplyr::select(-name) %>%
+            mutate(date = ymd(date)) %>%
+            rename(!!com_name := value)
+        
+        return(table_fin)
+    }

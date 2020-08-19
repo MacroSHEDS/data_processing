@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
 
     #everything else
     library(httr)
+    library(rgee)
     library(jsonlite)
     library(tidyr)
     library(plyr)
@@ -36,6 +37,9 @@ suppressPackageStartupMessages({
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
 try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+
+#connect rgee to earth engine and python 
+try(ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
 
