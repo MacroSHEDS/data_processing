@@ -470,3 +470,93 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     return()
 }
 
+#npp: STATUS=READY 
+#. handle_errors
+process_2_ms005 <- function(network, domain) {
+    
+    npp <- get_gee_standard(network=network, 
+                            domain=domain, 
+                            var = 'npp')
+    return()
+}
+
+#gpp: STATUS=READY 
+#. handle_errors
+process_2_ms006 <- function(network, domain) {
+    
+    gpp <- get_gee_standard(network = network, 
+                            domain = domain, 
+                            var = 'gpp')
+    return()
+}
+
+#lai: STATUS=READY 
+#. handle_errors
+process_2_ms007 <- function(network, domain) {
+    
+    lai <- get_gee_standard(network = network, 
+                            domain = domain, 
+                            var = 'lai')
+    return()
+}
+
+#fpar: STATUS=READY 
+#. handle_errors
+process_2_ms008 <- function(network, domain) {
+    
+    fpar <- get_gee_standard(network = network, 
+                             domain = domain, 
+                             var = 'fpar')
+    return()
+}
+
+#tree_cover: STATUS=READY 
+#. handle_errors
+process_2_ms009 <- function(network, domain) {
+    
+    tree_cover <- get_gee_standard(network = network,
+                                   domain = domain, 
+                                   var = 'tree_cover')
+    return()
+}
+
+#veg_cover: STATUS=READY 
+#. handle_errors
+process_2_ms010 <- function(network, domain) {
+    
+    veg_cover <- get_gee_standard(network = network, 
+                                  domain = domain, 
+                                   var = 'veg_cover')
+    return()
+
+}
+
+#bare_cover: STATUS=READY 
+#. handle_errors
+process_2_ms011 <- function(network, domain) {
+    
+    bare_cover <- get_gee_standard(network = network, 
+                                   domain = domain, 
+                                  var = 'bare_cover')
+    return()
+}
+
+#prism_precip: STATUS=READY 
+#. handle_errors
+process_2_ms012 <- function(network, domain) {
+    
+    precip <- get_gee_large(network = network, 
+                                   domain = domain, 
+                                   var = 'prism_precip')
+    return()
+}
+
+#prism_temp_mean: STATUS=READY 
+#. handle_errors
+process_2_ms013 <- function(network, domain) {
+    
+    temp_mean <- get_gee_large(network = network, 
+                            domain = domain, 
+                            var = 'prism_temp_mean')
+    return()
+}
