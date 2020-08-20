@@ -30,6 +30,7 @@ suppressPackageStartupMessages({
     library(tinsel)
     library(PeriodicTable)
     library(imputeTS)
+    library(errors)
 
 })
 

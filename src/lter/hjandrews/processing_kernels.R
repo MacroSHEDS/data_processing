@@ -227,19 +227,21 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                         EVENT_CODE = 'c'))) %>%
         rename(datetime = DATE_TIME,
                site_name = SITECODE,
-               discharge = INST_Q)
+               discharge = INST_Q) %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                              tz = 'Etc/GMT-8'),
+                                  tz = 'UTC'))
 
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(
                                         ESTCODE = c('A', 'E', 'P'),
                                         EVENT_CODE = c(NA, 'WEATHR'))))
 
-    detlim <- ue(identify_detection_limit(d$discharge))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC')) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
@@ -252,7 +254,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '1 day', #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }
@@ -301,17 +303,20 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                             EVENT_CODE = 'c'))) %>%
             rename(datetime = DATE,
                    site_name = SITECODE,
-                   precip = PRECIP_TOT_DAY)
+                   precip = PRECIP_TOT_DAY) %>%
+            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC'))
 
         d = ue(sourceflags_to_ms_status(d,
                                         flagstatus_mappings = list(
                                             PRECIP_TOT_FLAG = c('A', 'E'),
                                             EVENT_CODE = NA)))
 
-        detlims <- ue(identify_detection_limit(d))
+        # detlims <- ue(identify_detection_limit(d))
+        ue(identify_detection_limit_t(d,
+                                      network = network,
+                                      domain = domain))
 
         d <- d %>%
-            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
             filter_at(vars(-site_name, -datetime, -ms_status),
                       any_vars(! is.na(.))) %>%
             group_by(datetime, site_name) %>%
@@ -324,7 +329,8 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                                      desired_interval = '1 day',
                                      impute_limit = 30))
 
-        d <- ue(apply_detection_limit(d, detlims))
+        # d <- ue(apply_detection_limit(d, detlims))
+        d <- ue(apply_detection_limit_t(d, network, domain))
     }
 
     return(d)
@@ -400,8 +406,8 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                   network = network,
                                   domain = domain))
 
-    d = ue(sourceflags_to_ms_status(d,
-                                    flagstatus_mappings = list(TYPE = 'F')))
+    d <- ue(sourceflags_to_ms_status(d,
+                                     flagstatus_mappings = list(TYPE = 'F')))
 
     d <- d %>%
         mutate(ms_status = as.logical(ms_status)) %>%
@@ -474,7 +480,10 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    UTP_INPUT='UTP', TDP_INPUT='TDP', UTN_INPUT='UTN',
                    TDN_INPUT='TDN', DON_INPUT='DON', UTKN_INPUT='UTKN',
                    TKN_INPUT='TKN', NA_INPUT='Na', K_INPUT='K',
-                   DOC_INPUT='DOC')
+                   DOC_INPUT='DOC') %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                              tz = 'Etc/GMT-8'),
+                                  tz = 'UTC')
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
@@ -491,14 +500,12 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(TYPE = 'F')))
 
-    detlims <- ue(identify_detection_limit(d))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(
-            datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC'),
-            ms_status = as.logical(ms_status)) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
@@ -513,7 +520,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '1 day',  #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }

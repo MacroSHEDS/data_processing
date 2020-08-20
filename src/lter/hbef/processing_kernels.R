@@ -126,18 +126,23 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
             # Flag='c'))) %>% #all flags are acceptable for this product
         rename(site_name = WS,
             datetime = DATETIME,
-            discharge = Discharge_ls)
+            discharge = Discharge_ls) %>%
+        mutate(
+            datetime = with_tz(force_tz(as.POSIXct(datetime),
+                                        'US/Eastern'),
+                               'UTC'),
+            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
+            site_name = paste0('w', site_name))
 
-    detlim <- ue(identify_detection_limit(d$discharge))
+    # detlim <- ue(identify_detection_limit(d$discharge))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
-            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
-            site_name = paste0('w', site_name),
-            ms_status = 0) %>%
+        mutate(ms_status = 0) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
-                   any_vars(! is.na(.))) %>%
+                  any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
         summarize(
             discharge = mean(discharge, na.rm=TRUE),
@@ -148,7 +153,8 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
                             desired_interval = '15 min',
                             impute_limit = 30))
 
-    d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
+    # d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }
@@ -169,14 +175,17 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
         # Flag='c'))) %>% #all flags are acceptable for this product
         rename(datetime = DATE,
             site_name = rainGage,
-            precip = Precip)
+            precip = Precip) %>%
+        mutate(datetime = with_tz(force_tz(as.POSIXct(datetime),
+                                           'US/Eastern'),
+                                  'UTC'))
 
-    detlim <- ue(identify_detection_limit(d$precip))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
-            ms_status = 0) %>%
+        mutate(ms_status = 0) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                    any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
@@ -189,7 +198,9 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
                             desired_interval = '1 day',
                             impute_limit = 30))
 
-    d$precip <- ue(apply_detection_limit(d$precip, detlim))
+    d <- ue(apply_detection_limit_t(d, network, domain))
+
+    return(d)
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
@@ -218,16 +229,19 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
         rename(site_name = site) %>%
         rename_all(dplyr::recode, #essentially rename_if_exists
                    precipCatch='precipitation_ns',
-                   flowGageHt='discharge_ns')
+                   flowGageHt='discharge_ns') %>%
+        mutate(
+            site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
+                                  tolower(site_name), site_name),
+            timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
+            datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
 
-        detlims <- ue(identify_detection_limit(d))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
-            tolower(site_name), site_name)) %>%
         mutate(
-            timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
-            datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'),
             ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
             DIC = ue(convert_unit(DIC, 'uM', 'mM')),
             NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
@@ -251,7 +265,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = intv,
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }

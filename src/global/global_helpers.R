@@ -1276,7 +1276,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
     #     ungroup()
 
-    detlims_c <- identify_detection_limit(chem)
+    # detlims_c <- identify_detection_limit(chem)
+    # ue(identify_detection_limit_t(chem,
+    #                               network = network,
+    #                               domain = domain))
 
     daterange <- range(chem$datetime)
     # fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
@@ -1318,7 +1321,8 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
 
-    flux <- apply_detection_limit(flux, detlims_c)
+    # flux <- apply_detection_limit(flux, detlims_c)
+    flux <- ue(apply_detection_limit_t(flux, network, domain))
 
     return(flux)
 }
@@ -1762,7 +1766,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     rg$elevation <- terra::extract(dem, rg)
 
     #clean precip and arrange for matrixification
-    detlim <- identify_detection_limit(precip$precip)
+    detlim <- identify_detection_limit_s(precip$precip)
 
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
@@ -1801,8 +1805,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                                        output_varname = 'precip',
                                        elev_agnostic = FALSE)
 
-        ws_mean_precip$precip <- apply_detection_limit(ws_mean_precip$precip,
-                                                       detlim)
+        ws_mean_precip$precip <- apply_detection_limit_s(ws_mean_precip$precip,
+                                                        detlim)
 
         #interp final precip to a desirable interval?
         write_ms_file(ws_mean_precip,
@@ -1880,7 +1884,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     # -one_of(flux_vars))))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
-    detlims <- identify_detection_limit(pchem)
+    detlims <- identify_detection_limit_s(pchem)
     nvars <- length(pchem_vars)
     pchem_setlist <- as.list(rep(NA, nvars))
     for(i in 1:nvars){
@@ -1960,7 +1964,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             stop('NA datetime found in ws_mean_d')
         }
 
-        ws_mean_d <- apply_detection_limit(ws_mean_d, detlims)
+        ws_mean_d <- apply_detection_limit_s(ws_mean_d, detlims)
 
         write_ms_file(ws_mean_d,
                       network = network,
@@ -2032,7 +2036,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                               one_of(flux_vars))))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
-    detlims <- identify_detection_limit(pchem)
+    detlims <- identify_detection_limit_s(pchem)
     nvars_fluxable <- length(pchem_vars_fluxable)
     pchem_setlist_fluxable <- as.list(rep(NA, nvars_fluxable))
     for(i in 1:nvars_fluxable){
@@ -2134,7 +2138,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  shapefile = FALSE,
         #                  link_to_portal = TRUE))
 
-        ws_mean_flux <- apply_detection_limit(ws_mean_flux, detlims)
+        ws_mean_flux <- apply_detection_limit_s(ws_mean_flux, detlims)
 
         ue(write_ms_file(ws_mean_flux,
                          network = network,
@@ -2458,14 +2462,17 @@ identify_detection_limit_s <- function(x){
     #explicit version (identify_detection_limit_t).
     #that version relies on stored data, so automatically
     #writes to data/<network>/<domain>/detection_limits.json. This version
-    #just returns its output.
+    #just returns its output. This version is still used for idw (where input
+    #sites != output sites), but we should find a way to get the minimum input
+    #detection limit for all sites being averaged and apply that detlim to the
+    #output.)
 
-    #if x is a 2d array-like object, the mode detection limit (number of
+    #if x is a 2d array-like object, the detection limit (number of
     #decimal places) of each column is returned. non-numeric columns return NA.
     #If x is a vector (or something that can be coerced to a vector),
-    #the detection limits is returned as a scalar.
+    #the detection limit is returned as a scalar.
 
-    #detection limit is computed as the mode of the number of characters
+    #detection limit is computed as the 10th percentile of the number of characters
     #following each decimal place. NAs and zeros are ignored when computing
     #detection limit.
 
@@ -2496,13 +2503,19 @@ identify_detection_limit_s <- function(x){
         detlim <- vapply(X = x,
                          FUN = function(y){
                              identify_detection_limit_v(y) %>%
-                                 Mode(na.rm = TRUE)
+                                 # Mode(na.rm = TRUE)
+                                 quantile(probs = 0.1,
+                                          na.rm = TRUE,
+                                          names = FALSE)
                          },
                          FUN.VALUE = numeric(1))
 
     } else if(is.atomic(x) && length(x)){
         detlim <- identify_detection_limit_v(x) %>%
-            Mode(na.rm=TRUE)
+            # Mode(na.rm=TRUE)
+            quantile(probs = 0.1,
+                     na.rm = TRUE,
+                     names = FALSE)
     } else {
         stop('x must be a vector or 2d array-like')
     }
@@ -2519,6 +2532,10 @@ apply_detection_limit_s <- function(x, digits){
     #that version relies on stored data, so automatically
     #reads from data/<network>/<domain>/detection_limits.json. This version
     #just accepts detection limits as an argument.
+    #This version is still used for idw (where input
+    #sites != output sites), but we should find a way to get the minimum input
+    #detection limit for all sites being averaged and apply that detlim to the
+    #output.)
 
     #x: a 2d array-like or a numeric vector
     #digits: a numeric vector if x is a 2d array-like, or a numeric scalar if
@@ -2622,8 +2639,9 @@ identify_detection_limit_t <- function(X, network, domain){
     #that version just returns its output. This version relies on stored data,
     #so automatically writes to data/<network>/<domain>/detection_limits.json.
 
-    #X is a 2d array-like object with column names. must have a datetime column
-    #and a site_name column.
+    #X is a 2d array-like object with column names. must have datetime and
+    #site_name columns.
+    # #site_name column will be used if supplied.
 
     #the detection limit (number of decimal places)
     #of each column is written to data/<network>/<domain>/detection_limits.json
@@ -2646,6 +2664,13 @@ identify_detection_limit_t <- function(X, network, domain){
     # }
 
     X <- as_tibble(X)
+
+    # if(! 'site_name' %in% colnames(X)){
+    #     sitename_present <- FALSE
+    #     X$site_name = '0'
+    # } else {
+    #     sitename_present <- TRUE
+    # }
 
     identify_detection_limit_v <- function(x, dt, sn){
 
@@ -2757,7 +2782,10 @@ apply_detection_limit_t <- function(X, network, domain){
 
     #attempting to apply detection limits to non-numerics results in error. The
     #following macrosheds-canonical column names are automatically skipped:
-    #ms_status, ms_interp, site_name, datetime
+    #ms_status, ms_interp, site_name, datetime. Attempting to apply detection
+    #limits to a variable for which detection limits are not known (not present
+    #in detection_limits.json) results in error. Superfluous variable entries in
+    #detection_limits.json are ignored.
 
     X <- as_tibble(X) %>%
         arrange(site_name, datetime)
