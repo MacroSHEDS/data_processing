@@ -1212,9 +1212,9 @@ calc_inst_flux <- function(chemprod, qprod, site_name, dt_round_interv) {
 }
 
 #. handle_errors
-get_gee_imgcol <- function(gee_id, band, com_name, start, end) {
+get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
     
-    col_name <- paste0(com_name, 'X')
+    col_name <- paste0(prodname, 'X')
 
     gee_imcol <- ee$ImageCollection(gee_id)$
         filterDate(start, end)$
@@ -1280,19 +1280,13 @@ read_ws_combine <- function(network, domain) {
 }
 
 #. handle_errors
-get_gee_standard <- function(network, domain, var) {
+get_gee_standard <- function(network, domain, gee_id, band, prodname, rez) {
     
     sheds <- sm(read_ws_combine(network, domain)) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
     
-    gee <- sm(read_csv('data/general/gee_products.csv')) %>%
-        filter(com_name == var) 
-    
-    rez <- pull(gee[1,5])
-    
-    imgcol <- get_gee_imgcol(pull(gee[1,1]), pull(gee[1,2]), pull(gee[1,3]), 
-                                 '1957-10-04', '2040-01-01')
+    imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
     
     median <- ee_extract(
         x = imgcol,
@@ -1317,12 +1311,12 @@ get_gee_standard <- function(network, domain, var) {
         fun = ee$Reducer$count(),
         sf = FALSE
     )
-    median_name <- glue('{c}_median', c = var)
-    count_name <- glue('{c}_count', c = var)
+    median_name <- glue('{c}_median', c = prodname)
+    count_name <- glue('{c}_count', c = prodname)
     
     median <- clean_gee_tabel(median, sheds, median_name) 
     
-    sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = var))
+    sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
     
     count <- clean_gee_tabel(count, sheds, count_name)
     
@@ -1333,7 +1327,7 @@ get_gee_standard <- function(network, domain, var) {
     #     mutate(!!median_name := ifelse(.data[[count_name]] == 0, 'NA', .data[[median_name]]))
      
      path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
-                  n = network, d = domain, v = var)
+                  n = network, d = domain, v = prodname)
      
      write_feather(fin, path)
     
@@ -1341,16 +1335,11 @@ get_gee_standard <- function(network, domain, var) {
 }
 
 #. handle_errors
-get_gee_large <- function(network, domain, var) {
+get_gee_large <- function(network, domain, gee_id, band, prodname, rez, start, end) {
     
     sheds <- sm(read_ws_combine(network, domain)) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
-    
-    gee <- sm(read_csv('data/general/gee_products.csv')) %>%
-        filter(com_name == var) 
-    
-    rez <- pull(gee[1,5])
     
     start <- pull(gee[1,4])
     current <- Sys.Date() + years(5)

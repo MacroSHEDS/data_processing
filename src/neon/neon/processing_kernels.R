@@ -596,3 +596,112 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
 
     return(out_sub)
 }
+
+#derive kernels ####
+
+#npp: STATUS=PENDING 
+#. handle_errors
+process_2_NPP <- function(network, domain, prodname_ms) {
+    
+    get_gee_standard(network=network, 
+                     domain=domain, 
+                     gee_id='UMT/NTSG/v2/LANDSAT/NPP', 
+                     band='annualNPP', 
+                     prodname='npp', 
+                     rez=30)
+    return()
+}
+
+#gpp: STATUS=PENDING 
+#. handle_errors
+process_2_GPP <- function(network, domain, prodname_ms) {
+    
+    get_gee_standard(network=network, 
+                     domain=domain, 
+                     gee_id='UMT/NTSG/v2/LANDSAT/GPP', 
+                     band='GPP', 
+                     prodname='gpp', 
+                     rez=30)
+    return()
+}
+
+#lai; fpar: STATUS=PENDING 
+#. handle_errors
+process_2_MOD15A2H <- function(network, domain, prodname_ms) {
+    
+    if(prodname_ms == 'lai__MOD15A2H') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='MODIS/006/MOD15A2H', 
+                         band='Lai_500m', 
+                         prodname='lai', 
+                         rez=500) 
+    }
+    
+    if(prodname_ms == 'fpar__MOD15A2H') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='MODIS/006/MOD15A2H', 
+                         band='Fpar_500m', 
+                         prodname='fpar', 
+                         rez=500) 
+    }
+    return()
+}
+
+#tree_cover; veg_cover; bare_cover: STATUS=PENDING 
+#. handle_errors
+process_2_MOD44B <- function(network, domain, prodname_ms) {
+    
+    if(prodname_ms == 'tree_cover__MOD44B') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='MODIS/006/MOD44B', 
+                         band='Percent_Tree_Cover', 
+                         prodname='tree_cover', 
+                         rez=500) 
+    }
+    
+    if(prodname_ms == 'veg_cover__MOD44B') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='MODIS/006/MOD44B', 
+                         band='Percent_NonTree_Vegetation', 
+                         prodname='veg_cover', 
+                         rez=500) 
+    }
+    
+    if(prodname_ms == 'bare_cover__MOD44B') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='MODIS/006/MOD44B', 
+                         band='Percent_NonVegetated', 
+                         prodname='bare_cover', 
+                         rez=500) 
+    }
+    return()
+}
+
+#prism_precip; prism_temp_mean: STATUS=PENDING 
+#. handle_errors
+process_2_AN81d <- function(network, domain, prodname_ms) {
+    
+    if(prodname_ms == 'prism_precip__AN81d') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='OREGONSTATE/PRISM/AN81d', 
+                         band='ppt', 
+                         prodname='prism_precip', 
+                         rez=4000) 
+    }
+    
+    if(prodname_ms == 'prism_temp_mean__AN81d') {
+        get_gee_standard(network=network, 
+                         domain=domain, 
+                         gee_id='OREGONSTATE/PRISM/AN81d', 
+                         band='tmean', 
+                         prodname='prism_temp_mean', 
+                         rez=4000) 
+    }
+    return()
+}
