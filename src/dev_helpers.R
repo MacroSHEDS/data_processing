@@ -162,3 +162,97 @@ assign_typical_test_variables <- function(){
 
     return()
 }
+
+compare_efficiency <- function(f, g, stepstart=10, stepstop=1e5, outfile){
+
+    #f and g are expressions to be compared. they must both contain a variable
+    #   `s` that will take a value of `step` for each iteration.
+    #stepstart and stepstop are powers of 10. step is a sequence from stepstart
+    #   to stepstop, increasing by powers of 10.
+
+    #ratio easier to grasp if you make f the slower function (then it can be read
+    #   as "f is this much slower than g")
+
+    if(stepstart >= stepstop){
+        stop('stepstart must be less than stepstop')
+    }
+
+    if(length(stepstart) != 1 || length(stepstop) != 1){
+        stop('both stepstart and stepstop must be integers')
+    }
+
+    if(log10(stepstart) %% 1 != 0 || log10(stepstop) %% 1 != 0){
+        stop('both stepstart and stepstop must be powers of 10')
+    }
+
+    step = 10 ^ seq(log10(stepstart), log10(stepstop))
+
+    ftimes = gtimes = ratios = rep(NA, length = length(step))
+    cnt = 1
+    for(s in step){
+
+        tt = Sys.time()
+        eval(f)
+        tt1 = difftime(Sys.time(), tt, units = 'sec')
+
+        tt = Sys.time()
+        eval(g)
+        tt2 = difftime(Sys.time(), tt, units = 'sec')
+
+        ftimes[cnt] = as.numeric(tt1)
+        gtimes[cnt] = as.numeric(tt2)
+        ratios[cnt] = as.numeric(tt1)/as.numeric(tt2)
+
+        cnt = cnt + 1
+
+        # print(paste0('err is ',
+        #              round(as.numeric(tt2)/as.numeric(tt1), 2),
+        #              'X slower'))
+    }
+
+    logstep = log(step)
+    plotseq = seq(logstep[1], logstep[length(logstep)], 0.1)
+    if(! missing(outfile)){
+        mainlab = str_match(outfile, '.*/(.+)?\\.png$')[, 2]
+    } else {
+        mainlab = ''
+    }
+
+    # mf = lm(ftimes ~ logstep + I(logstep^2))
+    # mg = lm(log(gtimes) ~ logstep)
+    # mr = lm(ratios ~ logstep + I(logstep^2))
+    # # p = predict(m, data.frame(x=plotseq))
+    # # lines(plotseq, p)
+
+    if(! missing(outfile)){
+        png(width=5, height=5, units='in', res=300, filename=outfile,
+            type='cairo')
+    }
+
+    par(mar=c(4, 4, 3, 4), oma=c(0, 0, 0, 0))
+    ylims = range(c(ftimes, gtimes), na.rm=TRUE)
+    # ylims = range(c(fitted(mf), fitted(mg)), na.rm=TRUE)
+    plot(logstep, ftimes, col='red', ylim=ylims, type='l',
+    # plot(logstep, fitted(mf), col='red', ylim=ylims, type='l',
+         xlab = 'length', ylab = 'sec', xaxt='n', main=mainlab)
+    options(scipen=-1000)
+    axis(1, at=logstep, labels=step, las=3)
+    options(scipen=0)
+    lines(logstep, gtimes, col='blue')
+    # lines(logstep, fitted(mg), col='blue')
+    par(new = TRUE)
+    plot(logstep, ratios, col='gray', type='l', yaxt='n', xaxt='n', xlab='',
+    # plot(logstep, fitted(mr), col='gray', type='l', yaxt='n', xaxt='n', xlab='',
+         ylab='', lty=3)
+    axis(4)
+    mtext('f-g ratio', 4, line=2.5, col='gray40')
+
+    legend('top', legend=c('f', 'g', 'f:g'), col=c('red', 'blue', 'gray'),
+           lty=c(1, 1, 3), bty='n')
+
+    if(! missing(outfile)){
+        dev.off()
+    }
+
+    return()
+}
