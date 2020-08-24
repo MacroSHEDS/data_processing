@@ -1,3 +1,17 @@
+#stuff to add to all templates: ####
+
+#this, commented.
+# discharge = case_when(
+#     length(discharge) > 1 ~ mean(discharge, na.rm=TRUE),
+#     TRUE ~ discharge),
+
+# handling of detection limits, uncertainty, grab vs sensor vs spatial, time
+#zone, etc also note: datetime and site_name mutations must happen before
+#identification of detlims (process_1_1).
+# any other initial mutuations should happen after
+
+#anything new from process_1_4341, including carry_uncertainty
+
 #non_spatial munge kernel ####
 
 #product: STATUS=PENDING
@@ -6,10 +20,6 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                           component){
                           # components){
 
-
-    ADD TO THIS: handling of detection limits, uncertainty, grab vs sensor vs spatial, time zone, etc
-        also note: datetime and site_name mutations must happen before identification of detlims (process_1_1).
-        any other initial mutuations should happen after
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv', #rawfile1
     # rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',

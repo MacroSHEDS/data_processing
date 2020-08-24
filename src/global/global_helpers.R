@@ -994,6 +994,10 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
         dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
 
         site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
+        #HERE
+        #READ UNCERT INTO LIST, REMOVE NULLS, WRITE TO FEATHER WITH SUFFIX
+        # d_uncert <- lapply(d,
+        #             function(x) if(is.numeric(x)) errors::errors(x))
         write_feather(d, site_file)
     }
 
@@ -2632,16 +2636,18 @@ Mode <- function(x, na.rm = TRUE){
 }
 
 #. handle_errors
-identify_detection_limit_t <- function(X, network, domain){
+identify_detection_limit_t <- function(X, network, domain,
+                                       return_detlims = FALSE){
 
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
     #that version just returns its output. This version relies on stored data,
-    #so automatically writes to data/<network>/<domain>/detection_limits.json.
+    #so automatically writes to data/<network>/<domain>/detection_limits.json,
+    #and, if return_detlims = TRUE, returns its output as an integer matrix
+    #of detection limits with size equal to that of X.
 
     #X is a 2d array-like object with column names. must have datetime and
     #site_name columns.
-    # #site_name column will be used if supplied.
 
     #the detection limit (number of decimal places)
     #of each column is written to data/<network>/<domain>/detection_limits.json
@@ -2650,7 +2656,11 @@ identify_detection_limit_t <- function(X, network, domain){
     #    variable
     #        startdt1: limit1
     #        startdt2: limit2 ...
-    #non-numeric columns are not considered variables and are ignored
+    #non-numeric columns are not considered variables and are given detlims of
+    #NA, beginning at the earliest datetime for each site. If
+    #return_detlims == TRUE, these columns are populated with NAs.
+    #macrosheds-canonical columns (datetime, site_name, ms_status, ms_interp)
+    #are recognized as non-variables and given detection limits of NA
 
     #detection limit (detlim) for each site-variable-datetime is computed as the
     #number of characters following each decimal place. NA detlims are filled
@@ -2659,11 +2669,10 @@ identify_detection_limit_t <- function(X, network, domain){
     #cumulative maximum detlims. Each time the detlim increases,
     #a new startdt and limit are recorded.
 
-    # if(missing(network) || missing(domain)){
-    #     stop('network, domain, and prodname_ms args must be supplied')
-    # }
+    #X will be sorted ascendingly by site_name and then datetime.
 
-    X <- as_tibble(X)
+    X <- as_tibble(X) %>%
+        arrange(site_name, datetime)
 
     # if(! 'site_name' %in% colnames(X)){
     #     sitename_present <- FALSE
@@ -2672,10 +2681,18 @@ identify_detection_limit_t <- function(X, network, domain){
     #     sitename_present <- TRUE
     # }
 
-    identify_detection_limit_v <- function(x, dt, sn){
+    identify_detection_limit_v <- function(x, varnm, dt, sn, output = 'list'){
 
         #x is a vector
+        #varnm is the name of the column that became x
         #dt is a datetime vector
+        #sn is a site name vector
+        #output is either 'list' or 'vector'. If 'list', this function
+        #   summarizes x by site, returning a list of site names, each containing
+        #   two elements, a vector of start dates, and a vector of corresponding
+        #   detection limits. Detection limits are only recorded for the first
+        #   value and for any change that follows. If output is 'vector', this
+        #   function returns a vector of detection limits the same length as x.
 
         #non-numeric vectors return NA detection limits
 
@@ -2683,7 +2700,13 @@ identify_detection_limit_t <- function(X, network, domain){
 
         #for non-numerics, build a list of prodname -> site -> dt: lim
         #where dt is always the earliest datetime and lim is always NA
-        if(! is.numeric(x)){
+        ms_canonicals <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
+        if(varnm %in% ms_canonicals || ! is.numeric(x)){
+
+            if(output == 'vector'){
+                detlim <- rep(NA, length(x))
+                return(detlim)
+            }
 
             detlim <- list()
             for(i in 1:length(sites)){
@@ -2716,6 +2739,35 @@ identify_detection_limit_t <- function(X, network, domain){
                                                     na_remaining = 'rev') %>%
                            force_monotonic_locf()))
 
+        if(output == 'vector'){
+
+            #avoid the case where the first few detection lims
+            #are artificially set low because their last sigdig is 0
+            nsigdigs_l <- lapply(X = nsigdigs_l,
+                                 FUN = function(z){
+
+                                     #for sites with all-NA detlims, return as-is
+                                     if(all(is.na(z$nsigdigs))){
+                                         return(z)
+                                     }
+
+                                     if(length(z$nsigdigs) > 5 &&
+                                        length(unique(z$nsigdigs[1:5]) > 1)){
+                                         z$nsigdigs[1:5] <- z$nsigdigs[6]
+                                     }
+
+                                     return(z)
+                                 })
+
+            nsigdigs_df <- Reduce(bind_rows, nsigdigs_l) %>%
+                arrange(sn, dt) #probably superfluous, but safe
+
+            options(scipen = 0)
+
+            detlims <- nsigdigs_df$nsigdigs
+
+            return(detlims)
+        }
 
         #build datetime-detlim pairs for each change in detlim for each variable
         detlims <- lapply(X = nsigdigs_l,
@@ -2750,14 +2802,17 @@ identify_detection_limit_t <- function(X, network, domain){
 
     if(! is.null(dim(X))){
 
-        detlim <- lapply(X = X,
-                         FUN = function(y, dt, sn){
-                             identify_detection_limit_v(y,
+        detlim <- mapply(FUN = function(X, varnms, dt, sn){
+                             identify_detection_limit_v(x = X,
+                                                        varnm = varnms,
                                                         dt = dt,
                                                         sn = sn)
                          },
-                         dt = X$datetime,
-                         sn = X$site_name)
+                         X = X,
+                         varnms = colnames(X),
+                         MoreArgs = list(dt = X$datetime,
+                                         sn = X$site_name),
+                         SIMPLIFY = FALSE)
 
     } else {
         stop('X must be a 2d array-like')
@@ -2766,6 +2821,34 @@ identify_detection_limit_t <- function(X, network, domain){
     write_detection_limit(detlim,
                           network = network,
                           domain = domain)
+
+    if(return_detlims){
+
+        # detlim <- lapply(X = X,
+        #                  FUN = function(y, dt, sn){
+        #                      identify_detection_limit_v(y,
+        #                                                 dt = dt,
+        #                                                 sn = sn,
+        #                                                 output = 'vector')
+        #                  },
+        #                  dt = X$datetime,
+        #                  sn = X$site_name) %>%
+        detlim <- mapply(FUN = function(X, varnms, dt, sn){
+                             identify_detection_limit_v(x = X,
+                                                        varnm = varnms,
+                                                        dt = dt,
+                                                        sn = sn,
+                                                        output = 'vector')
+                         },
+                         X = X,
+                         varnms = colnames(X),
+                         MoreArgs = list(dt = X$datetime,
+                                         sn = X$site_name),
+                         SIMPLIFY = FALSE) %>%
+            as_tibble()
+
+        return(detlim)
+    }
 
     return()
 }
@@ -2951,4 +3034,45 @@ force_monotonic_locf <- function(v, ascending = TRUE){
     }
 
     return(v)
+}
+
+#. handle_errors
+detection_limit_as_uncertainty <- function(detlim){
+
+    uncert <- lapply(detlim,
+                     FUN = function(x) 1 / 10^x) %>%
+                  as_tibble()
+
+    return(uncert)
+}
+
+#. handle_errors
+insert_uncertainty_df <- function(x, uncert){
+
+    #x is a data.frame of data values
+    #uncert is a data.frame of corresponding uncertainty values to be inserted
+
+    if(! base::setequal(colnames(x), colnames(uncert))){
+        stop('column names of x and uncert must match')
+    }
+
+    for(n in colnames(x)){
+        if(all(is.na(uncert[[n]]))) next
+        errors::errors(x[[n]]) <- uncert[[n]]
+    }
+
+    return(x)
+}
+
+#. handle_errors
+carry_uncertainty <- function(d, network, domain){
+
+    u <- identify_detection_limit_t(d,
+                                    network = network,
+                                    domain = domain,
+                                    return_detlims = TRUE)
+    u <- detection_limit_as_uncertainty(u)
+    d <- insert_uncertainty_df(d, u)
+
+    return(d)
 }
