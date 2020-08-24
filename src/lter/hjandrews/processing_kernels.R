@@ -209,7 +209,7 @@ process_0_3239 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
-
+    # site_name = 'sitename_NA'; prodname_ms = 'discharge__4341'
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
                     n = network,
@@ -237,16 +237,17 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                                         ESTCODE = c('A', 'E', 'P'),
                                         EVENT_CODE = c(NA, 'WEATHR'))))
 
-    ue(identify_detection_limit_t(d,
-                                  network = network,
-                                  domain = domain))
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain))
 
     d <- d %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
+        mutate(discharge = first(na.omit(discharge))) %>%
         summarize(
-            discharge = mean(discharge, na.rm=TRUE),
+            discharge = first(na.omit(discharge)),
             ms_status = numeric_any(ms_status)) %>%
         ungroup()
 
@@ -483,7 +484,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    DOC_INPUT='DOC') %>%
         mutate(datetime = with_tz(as_datetime(datetime,
                                               tz = 'Etc/GMT-8'),
-                                  tz = 'UTC')
+                                  tz = 'UTC'))
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
