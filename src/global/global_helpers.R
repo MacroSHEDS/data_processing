@@ -2928,3 +2928,194 @@ force_monotonic_locf <- function(v, ascending = TRUE){
 #before detection limit is decided. an accurate datetime column
 #is needed to calculate temporally explicit detlims
 
+#. handle_errors
+get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
+    
+    col_name <- paste0(prodname, 'X')
+    
+    gee_imcol <- ee$ImageCollection(gee_id)$
+        filterDate(start, end)$
+        select(band)$
+        map(function(x){
+            date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+            x$set("RGEE_NAME", date)
+        })
+}
+
+#. handle_errors
+clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
+    
+    table_nrow <- sheds %>%
+        mutate(nrow = row_number()) %>%
+        as.data.frame() %>%
+        select(site_name, nrow)
+    
+    sm(table <- ee_ws_table %>%
+        mutate(nrow = row_number()) %>%
+        full_join(table_nrow) %>%
+        select(-nrow))
+    
+    col_names <- colnames(table)
+    
+    leng <- length(col_names) -1
+    
+    table_time <- table %>%
+        pivot_longer(col_names[1:leng])
+    
+    for(i in 1:nrow(table_time)) {
+        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2], 
+                                                         pattern = 'X', n = 2)[2]
+    }
+    
+    table_fin <- table_time %>%
+        dplyr::select(-name) %>%
+        mutate(date = ymd(date)) %>%
+        rename(!!com_name := value)
+    
+    return(table_fin)
+}
+
+#. handle_errors
+get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
+                             ws_prodname) {
+    
+    sheds <- try(read_combine_shapefiles(network=network, domain=domain, 
+                                     prodname_ms=ws_prodname))
+    
+    if(class(sheds)[1] == 'ms_err') {
+        stop('Watershed boundaries are required for gee products')
+    }
+    sheds <- sheds %>%
+        as.data.frame() %>%
+        sf::st_as_sf() %>%
+        select(site_name) %>%
+        sf::st_transform(4326) %>%
+        sf::st_set_crs(4326)
+    
+    imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
+    
+    median <- ee_extract(
+        x = imgcol,
+        y = sheds,
+        scale = rez,
+        fun = ee$Reducer$median(),
+        sf = FALSE
+    )
+    
+    sd <- ee_extract(
+        x = imgcol,
+        y = sheds,
+        scale = rez,
+        fun = ee$Reducer$stdDev(),
+        sf = FALSE
+    )
+    
+    count <- ee_extract(
+        x = imgcol,
+        y = sheds,
+        scale = rez,
+        fun = ee$Reducer$count(),
+        sf = FALSE
+    )
+    median_name <- glue('{c}_median', c = prodname)
+    count_name <- glue('{c}_count', c = prodname)
+    
+    median <- clean_gee_tabel(median, sheds, median_name) 
+    
+    sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
+    
+    count <- clean_gee_tabel(count, sheds, count_name)
+    
+    fin <- sm(full_join(median, sd)) %>%
+        sm(full_join(count))
+    
+    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
+                 n = network, d = domain, v = prodname)
+    
+    write_feather(fin, path)
+    
+    return()
+}
+
+#. handle_errors
+get_gee_large <- function(network, domain, gee_id, band, prodname, rez, 
+                          start, ws_prodname) {
+   
+     sheds <- try(read_combine_shapefiles(network=network, domain=domain, 
+                                         prodname_ms=ws_prodname))
+    
+    if(class(sheds)[1] == 'ms_err') {
+        stop('Watershed boundaries are required for gee products')
+    }
+     
+    sheds <- sheds %>%
+        as.data.frame() %>%
+        sf::st_as_sf() %>%
+        select(site_name) %>%
+        sf::st_transform(4326) %>%
+        sf::st_set_crs(4326)
+    
+    start <- pull(gee[1,4])
+    current <- Sys.Date() + years(5)
+    dates <- seq(start, current, by = 'years')
+    
+    date_ranges <- dates[seq(0, 100, by = 5)]
+    date_ranges <- date_ranges[!is.na(date_ranges)]
+    date_ranges <- append(start, date_ranges) 
+    
+    for(i in 1:(length(date_ranges)-1)) {
+        imgcol <- get_gee_imgcol(pull(gee[1,1]), pull(gee[1,2]), pull(gee[1,3]), 
+                                 paste0(date_ranges[i]), paste0(date_ranges[i+1]))
+        
+        
+        median <- ee_extract(
+            x = imgcol,
+            y = sheds,
+            scale = rez,
+            fun = ee$Reducer$median(),
+            sf = FALSE
+        )
+        
+        sd <- ee_extract(
+            x = imgcol,
+            y = sheds,
+            scale = rez,
+            fun = ee$Reducer$stdDev(),
+            sf = FALSE
+        )
+        
+        count <- ee_extract(
+            x = imgcol,
+            y = sheds,
+            scale = rez,
+            fun = ee$Reducer$count(),
+            sf = FALSE
+        )
+        
+        median_name <- glue('{c}_median', c = var)
+        count_name <- glue('{c}_count', c = var)
+        
+        median <- clean_gee_tabel(median, sheds, median_name) 
+        
+        sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = var))
+        
+        count <- clean_gee_tabel(count, sheds, count_name)
+        
+        fin <- sm(full_join(median, sd)) %>%
+            sm(full_join(count))
+        
+        if(i == 1) {
+            final <- filter(fin, date == '1900-01-1')
+        }
+        
+        final <- rbind(final, fin)
+    }
+    
+    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
+                 n = network, d = domain, v = var)
+    
+    write_feather(final, path)
+    
+    return()
+    
+}
