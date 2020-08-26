@@ -244,12 +244,18 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
     d <- d %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        mutate(discharge = first(na.omit(discharge))) %>%
-        summarize(
-            discharge = first(na.omit(discharge)),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
+        rowwise(datetime, site_name) %>%
+        mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
+        ungroup() %>%
+        arrange(datetime, site_name, NAsum) %>%
+        select(-NAsum) %>%
+        distinct(datetime, site_name, .keep_all = TRUE) %>%
+        arrange(site_name, datetime)
+        # group_by(datetime, site_name) %>%
+        # summarize(
+        #     discharge = first(na.omit(discharge)),
+        #     ms_status = numeric_any(ms_status)) %>%
+        # ungroup()
 
     d <- ue(synchronize_timestep(ms_df = d,
                                  desired_interval = '1 day', #set back to '15 min' when we have server
