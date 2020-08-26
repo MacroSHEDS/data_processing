@@ -256,3 +256,15 @@ compare_efficiency <- function(f, g, stepstart=10, stepstop=1e5, outfile){
 
     return()
 }
+
+manufacture_uncert_msdf <- function(df, errval = 0.1){
+
+    colnames <- colnames(df)
+    noncan_colnames <- colnames[! colnames %in% ms_canonicals]
+
+    for(n in noncan_colnames){
+        errors::errors(df[[n]]) <- errval
+    }
+
+    return(df)
+}

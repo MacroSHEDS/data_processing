@@ -46,6 +46,31 @@ gg = expression({d[1:s,] %>%
 compare_efficiency(ff, gg, 10, 1e5,
                    outfile='plots/efficiency_comparisons/first_nonNA_duplicate.png')
 
+#munge pipeline 1 (least-NA row duplicate via rowwise) ####
+
+ff <- expression({dd[1:s,] %>%
+    filter_at(vars(-site_name, -datetime, -ms_status),
+              any_vars(! is.na(.))) %>%
+    rowwise(datetime, site_name) %>%
+    mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
+    ungroup() %>%
+    arrange(datetime, site_name, NAsum) %>%
+    select(-NAsum) %>%
+    distinct(datetime, site_name, .keep_all = TRUE) %>%
+    arrange(site_name, datetime)})
+gg <- expression({d[1:s,] %>%
+    filter_at(vars(-site_name, -datetime, -ms_status),
+              any_vars(! is.na(.))) %>%
+    rowwise(datetime, site_name) %>%
+    mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
+    ungroup() %>%
+    arrange(datetime, site_name, NAsum) %>%
+    select(-NAsum) %>%
+    distinct(datetime, site_name, .keep_all = TRUE) %>%
+    arrange(site_name, datetime)})
+compare_efficiency(ff, gg, 10, 1e5,
+                   outfile='plots/efficiency_comparisons/Xleast_NA_rowwise.png')
+
 #synchronize_timestep ####
 ff = expression(synchronize_timestep(ms_df = d[1:s,],
                                      desired_interval = '1 day',

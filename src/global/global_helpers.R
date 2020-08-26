@@ -74,6 +74,13 @@ assign('err_cnt', 0, envir=.GlobalEnv)
 assign('unique_errors', c(), envir=.GlobalEnv)
 assign('unique_exceptions', c(), envir=.GlobalEnv)
 
+#these are column names that are in every non-spatial macrosheds dataset by the
+#time it reaches its final formatted/cleaned state. we sometimes want to ignore
+#these columns when operating on ms tibbles/feathers. this list may also grow.
+assign('ms_canonicals',
+       c('datetime', 'site_name', 'ms_status', 'ms_interp'),
+       envir = .GlobalEnv)
+
 # flag systems (future use?; increasing user value and difficulty to manage):
 
 # system1: binary status (0=chill, 1=unchill)
@@ -961,6 +968,15 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                           level='munged', shapefile=FALSE,
                           link_to_portal = TRUE){
 
+    #write an ms tibble or shapefile to its appropriate destination based on
+    #network, domain, prodname_ms, site_name, and processing level. If a tibble,
+    #write as a feather file (site_name.feather),
+    #and write any uncertainty included in the tibble as a separate feather
+    #site_name_uncert.feather. by default, create a hardlink to the file
+    #from the data portal as well as from the data_acquisition storage system,
+    #assuming the portal directory is a sibling of the data_acquision directory
+    #and is named "portal"
+
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
     }
@@ -991,13 +1007,27 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                         d = domain,
                         l = level,
                         p = prodname_ms)
-        dir.create(prod_dir, showWarnings=FALSE, recursive=TRUE)
+        dir.create(prod_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
 
-        site_file = glue('{pd}/{s}.feather', pd=prod_dir, s=site_name)
-        #HERE
-        #READ UNCERT INTO LIST, REMOVE NULLS, WRITE TO FEATHER WITH SUFFIX
-        # d_uncert <- lapply(d,
-        #             function(x) if(is.numeric(x)) errors::errors(x))
+        site_file = glue('{pd}/{s}.feather',
+                         pd = prod_dir,
+                         s = site_name)
+        site_file_uncert = glue('{pd}/{s}_uncert.feather',
+                                pd = prod_dir,
+                                s = site_name)
+
+        d_uncert <- lapply(d,
+                           function(x){
+                               if(is.numeric(x) && any(errors::errors(x) != 0)){
+                                   errors::errors(x)
+                               }
+                            })
+        d_uncert <- as_tibble(d_uncert[! sapply(d_uncert, is.null)])
+        write_feather(d_uncert, site_file_uncert)
+
+        #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
     }
 
@@ -1015,7 +1045,7 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
 
 #. handle_errors
 create_portal_link <- function(network, domain, prodname_ms, site_name,
-                               level='munged', dir=FALSE){
+                               level = 'munged', dir = FALSE){
 
     #level is one of 'munged', 'derived', corresponding to the
     #location, within the data_acquisition system, of the data to be linked
@@ -1029,24 +1059,49 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     }
 
     portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
-                           d=domain, p=strsplit(prodname_ms, '__')[[1]][1])
-    dir.create(portal_prod_dir, showWarnings=FALSE, recursive=TRUE)
+                           d = domain,
+                           p = strsplit(prodname_ms, '__')[[1]][1])
+    dir.create(portal_prod_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
 
     if(! dir){
 
         portal_site_file = glue('{pd}/{s}.feather',
-                                pd=portal_prod_dir, s=site_name)
+                                pd = portal_prod_dir,
+                                s = site_name)
+        portal_site_file_uncert = glue('{pd}/{s}_uncert.feather',
+                                       pd = portal_prod_dir,
+                                       s = site_name)
 
         #if there's already a data file for this site-time-product in
         #the portal repo, remove it
         unlink(portal_site_file)
+        unlink(portal_site_file_uncert)
 
         #create a link to the portal repo from the new site file
         #(note: really, to and from are equivalent, as they both
         #point to the same underlying structure in the filesystem)
         site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
-                         n=network, d=domain, l=level, p=prodname_ms, s=site_name)
-        invisible(sw(file.link(to=portal_site_file, from=site_file)))
+                         n = network,
+                         d = domain,
+                         l = level,
+                         p = prodname_ms,
+                         s = site_name)
+        site_file_uncert = glue('data/{n}/{d}/{l}/{p}/{s}_uncert.feather',
+                                n = network,
+                                d = domain,
+                                l = level,
+                                p = prodname_ms,
+                                s = site_name)
+
+        invisible(sw(file.link(to = portal_site_file,
+                               from = site_file)))
+
+        if(file.exists(site_file_uncert)){
+            invisible(sw(file.link(to = portal_site_file_uncert,
+                                   from = site_file_uncert)))
+        }
 
     } else {
 
@@ -1091,7 +1146,8 @@ is_ms_prodcode <- function(prodcode){
 }
 
 #. handle_errors
-list_munged_files <- function(network, domain, prodname_ms){
+list_munged_files <- function(network, domain, prodname_ms,
+                              omit_uncertainty_files = FALSE){
 
     mfiles <- glue('data/{n}/{d}/munged/{p}',
                    n = network,
@@ -1099,7 +1155,11 @@ list_munged_files <- function(network, domain, prodname_ms){
                    p = prodname_ms) %>%
         list.files(full.names = TRUE)
 
-    # mfiles <- mfiles[! grepl('documentation', mfiles)]
+    if(omit_uncertainty_files){
+        mfiles <- mfiles[! grepl('_uncert.feather$',
+                                 mfiles,
+                                 perl = TRUE)]
+    }
 
     return(mfiles)
 }
@@ -1359,14 +1419,35 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
 #. handle_errors
 read_combine_feathers <- function(network, domain, prodname_ms){
 
+    #read all data feathers associated with a network-domain-product,
+    #separately read any accompanying uncertainty files, insert uncertainty
+    #into each tibble after it is read, row bind all tibbles, arrange by
+    #site_name, datetime columns if they exist
+
     prodpaths <- list_munged_files(network = network,
                                    domain = domain,
-                                   prodname_ms = prodname_ms)
+                                   prodname_ms = prodname_ms,
+                                   omit_uncertainty_files = TRUE)
 
     combined <- tibble()
     for(i in 1:length(prodpaths)){
-        combined <- read_feather(prodpaths[i]) %>%
-            bind_rows(combined)
+        # combined <- read_feather(prodpaths[i]) %>%
+        #     bind_rows(combined)
+        part <- read_feather(prodpaths[i])
+        uncert_filepath <- sub('\\.feather$',
+                               '_uncert.feather',
+                               prodpaths[i],
+                               perl = TRUE)
+        if(file.exists(uncert_filepath)){
+            part_uncert <- read_feather(uncert_filepath)
+            part <- insert_uncertainty_df(part, part_uncert)
+        }
+
+        combined <- bind_rows(combined, part)
+    }
+
+    if(all(c('datetime', 'site_name') %in% colnames(combined))){
+        combined <- arrange(combined, datetime, site_name)
     }
 
     return(combined)
@@ -1751,6 +1832,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     precip <- read_combine_feathers(network = network,
                                     domain = domain,
                                     prodname_ms = precip_prodname)
+    # precip = filter(precip, site_name %in% c("GSWS01", "SPOTFI", "UNIT3B", "WS1SDL", "WS3JRD"))
+    # precip = manufacture_uncert_msdf(precip)
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
@@ -1772,28 +1855,38 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     #clean precip and arrange for matrixification
     detlim <- identify_detection_limit_s(precip$precip)
 
+    #this avoids a lot of slow summarizing
+    status_cols <- precip %>%
+        select(datetime, ms_status, ms_interp) %>%
+        group_by(datetime) %>%
+        summarize(
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp))
+
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>% #for testing
-        # # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
+
+        #this block is for testing only (runs faster)
+        # mutate(datetime = lubridate::year(datetime)) %>% #by year
+        # # # mutate(datetime = lubridate::as_date(datetime)) %>% #by day
         # group_by(site_name, datetime) %>%
         # summarize(
         #     precip = mean(precip, na.rm=TRUE),
         #     ms_status = numeric_any(ms_status),
         #     ms_interp = numeric_any(ms_status)) %>%
         # ungroup() %>%
+
+        select(-ms_status, -ms_interp) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
-        mutate(
-            ms_status = as.logical(ms_status),
-            ms_interp = as.logical(ms_interp)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(
-            ms_status = as.numeric(ms_status),
-            ms_interp = as.numeric(ms_interp)) %>%
-        arrange(datetime)
+        left_join(status_cols,
+                  by = 'datetime')
+
+        #kept this here in case it's actually somehow faster? (never benchmarked)
+        # group_by(datetime) %>%
+        # summarize_all(max, na.rm = FALSE) %>%
+        # ungroup() %>%
+        # arrange(datetime)
 
     #interpolate precipitation volume and write watershed averages
     for(j in 1:nrow(wb)){
@@ -2700,7 +2793,6 @@ identify_detection_limit_t <- function(X, network, domain,
 
         #for non-numerics, build a list of prodname -> site -> dt: lim
         #where dt is always the earliest datetime and lim is always NA
-        ms_canonicals <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
         if(varnm %in% ms_canonicals || ! is.numeric(x)){
 
             if(output == 'vector'){
@@ -3050,13 +3142,23 @@ detection_limit_as_uncertainty <- function(detlim){
 insert_uncertainty_df <- function(x, uncert){
 
     #x is a data.frame of data values
-    #uncert is a data.frame of corresponding uncertainty values to be inserted
+    #uncert is a data.frame of corresponding uncertainty values to be inserted.
+    #   column names of uncert will be matched to those of x. columns in x that
+    #   are not in uncert are ignored (with a warning if they're non-canonical).
+    #   columns of uncert that are not in x raise an error.
 
-    if(! base::setequal(colnames(x), colnames(uncert))){
-        stop('column names of x and uncert must match')
+    # if(! base::setequal(colnames(x), colnames(uncert))){
+    if( length(base::setdiff(colnames(uncert), colnames(x))) ){
+        stop('uncert cannot contain columns that are not in x')
     }
 
-    for(n in colnames(x)){
+    xonlycols <- base::setdiff(colnames(x), colnames(uncert))
+    if(any(! xonlycols %in% ms_canonicals)){
+        warning("x contains non-canonical columns that aren't in uncert.")
+    }
+
+    # for(n in colnames(x)){
+    for(n in colnames(uncert)){
         if(all(is.na(uncert[[n]]))) next
         errors::errors(x[[n]]) <- uncert[[n]]
     }
@@ -3075,4 +3177,23 @@ carry_uncertainty <- function(d, network, domain){
     d <- insert_uncertainty_df(d, u)
 
     return(d)
+}
+
+err_df_to_matrix <- function(df){
+
+    #write this check
+    all(sapply(df, class) == 'errors')
+
+    #write this body
+    lapply(df, errors)
+    errors(df)
+
+    return(M)
+}
+
+err_matrix_to_tb <- function(M){
+
+    stuff
+
+    return(tb)
 }
