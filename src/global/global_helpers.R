@@ -1020,8 +1020,8 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
 
         d_uncert <- lapply(d,
                            function(x){
-                               if(is.numeric(x) && any(errors::errors(x) != 0)){
-                                   errors::errors(x)
+                               if(is.numeric(x) && any(errors(x) != 0)){
+                                   errors(x)
                                }
                             })
         d_uncert <- as_tibble(d_uncert[! sapply(d_uncert, is.null)])
@@ -1361,11 +1361,26 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
     # ungroup()
 
+    # discharge = manufacture_uncert_msdf(discharge)
+    # chem = manufacture_uncert_msdf(chem)
+    # discharge = filter(discharge, datetime < as.POSIXct('1980-01-01'))
+    # chem = filter(chem, datetime < as.POSIXct('1980-01-01'))
+
+    #INCORPORATE ROWWISE HERE TO SOLVE THE NUMERIC_ANY ISSUE (AND RESULTING
+    #MS_STATUS ISSUE)
+    # save.image('~/Desktop/fluxdev20200827.rda')
+    #HERE (and just above)
+    load('~/Desktop/fluxdev20200827.rda')
+
     flux <- chem %>%
         full_join(discharge,
                   by = 'datetime') %>%
+        rowwise(one_of('ms_status.x', 'ms_status.y')) %>%
         mutate(
-            ms_status = numeric_any(c(ms_status.x, ms_status.y)),
+            xxx = ), numeric_any))
+        mutate(
+            ms_status = numeric_any(across(vars(ms_status.x, ms_status.y)))),
+            # ms_status = numeric_any(c(ms_status.x, ms_status.y)),
             ms_interp = numeric_any(c(ms_interp.x, ms_interp.y))) %>%
         select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
         # full_join(fulldt,
@@ -1514,7 +1529,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                           -ms_status,
                           -datetime,
                           -ms_interp) %>%
-        as.matrix()
+        err_df_to_matrix()
 
     #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
@@ -1551,6 +1566,9 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
         dk[is.na(dk)] <- 0 #allows matrix multiplication
         d_idw <- weightmat %*% dk
 
+        #reapply uncertainty dropped by `%*%`
+        errors(d_idw) <- sum(get_relative_uncert(dk))
+
         #determine data-elevation relationship for interp weighting
         if(! elev_agnostic){
             d_elev <- tibble(site_name = rownames(dk),
@@ -1565,12 +1583,14 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
             #average both approaches (this should be weighted toward idw
             #when close to any data location, and weighted half and half when far)
-            d_idw <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
-                            d_idw,
-                            d_from_elev)
+            # d_idw <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
+            #                 d_idw,
+            #                 d_from_elev)
+            d_idw <- (d_idw + d_from_elev) / 2
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
+        errors(ws_mean)[k] <- mean(errors(d_idw), na.rm=TRUE)
     }
     # compare_interp_methods()
 
@@ -1620,7 +1640,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                        -ms_status,
                        -datetime,
                        -ms_interp) %>%
-        as.matrix()
+        err_df_to_matrix()
 
     c_status <- chem_values$ms_status
     c_interp <- chem_values$ms_interp
@@ -1628,7 +1648,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                        -ms_status,
                        -datetime,
                        -ms_interp) %>%
-        as.matrix()
+        err_df_to_matrix()
 
     d_status = bitwOr(p_status, c_status)
     d_interp = bitwOr(p_interp, c_interp)
@@ -1706,21 +1726,25 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         ck[is.na(ck)] <- 0
         c_idw <- weightmat_c %*% ck
 
+        #reapply uncertainty dropped by `%*%`
+        errors(p_idw) <- sum(get_relative_uncert(pk))
+        errors(c_idw) <- sum(get_relative_uncert(ck))
+
         #estimate raster values from elevation alone (p only)
         p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
 
         #average both approaches (p only; this should be weighted toward idw
         #when close to any data location, and weighted half and half when far)
-        p_ensemb <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
-                           p_idw,
-                           p_from_elev)
+        p_ensemb <- (p_idw + p_from_elev) / 2
 
         #calculate flux for every cell
         flux_interp <- c_idw * p_ensemb
 
-        #calculate watershed averages
+        #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
         ws_mean_flux[k] <- mean(flux_interp, na.rm=TRUE)
+        errors(ws_mean_conc)[k] <- mean(errors(c_idw), na.rm=TRUE)
+        errors(ws_mean_flux)[k] <- mean(errors(flux_interp), na.rm=TRUE)
     }
     # compare_interp_methods()
 
@@ -1866,7 +1890,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     precip <- precip %>%
         filter(site_name %in% rg$site_name) %>%
 
-        #this block is for testing only (runs faster)
+        #this block is for testing only (makes dataset smaller)
         # mutate(datetime = lubridate::year(datetime)) %>% #by year
         # # # mutate(datetime = lubridate::as_date(datetime)) %>% #by day
         # group_by(site_name, datetime) %>%
@@ -1880,7 +1904,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
         left_join(status_cols,
-                  by = 'datetime')
+                  by = 'datetime') %>%
+        arrange(datetime)
 
         #kept this here in case it's actually somehow faster? (never benchmarked)
         # group_by(datetime) %>%
@@ -1923,19 +1948,25 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
 pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       pgauge_prodname, pchem_prodname_out){
 
-    #load precip and pchem data, watershed boundaries, rain gauge locations
-    pchem <- read_combine_feathers(network = network,
-                                   domain = domain,
-                                   prodname_ms = pchem_prodname)
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname)
+    #load watershed boundaries, rain gauge locations, precip and pchem data
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
     rg <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = pgauge_prodname)
+    pchem <- read_combine_feathers(network = network,
+                                   domain = domain,
+                                   prodname_ms = pchem_prodname) %>%
+        filter(site_name %in% rg$site_name)
+    # pchem = filter(pchem, site_name %in% c())
+    # pchem = manufacture_uncert_msdf(pchem)
+    precip <- read_combine_feathers(network = network,
+                                    domain = domain,
+                                    prodname_ms = precip_prodname) %>%
+        filter(site_name %in% rg$site_name)
+    # precip = filter(precip, site_name %in% c("GSWS01", "SPOTFI", "UNIT3B", "WS1SDL", "WS3JRD"))
+    # precip = manufacture_uncert_msdf(precip)
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -1948,27 +1979,32 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
+    #this avoids a lot of slow summarizing
+    status_cols <- precip %>%
+        select(datetime, ms_status, ms_interp) %>%
+        group_by(datetime) %>%
+        summarize(
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp))
+
     #clean precip and arrange for matrixification
     precip <- precip %>%
-        filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+        # filter(site_name %in% rg$site_name) %>%
+
+        #this block is for testing only (makes dataset smaller)
+        # mutate(datetime = lubridate::year(datetime)) %>%
         # group_by(site_name, datetime) %>%
         # summarize(
         #     precip = mean(precip, na.rm=TRUE),
         #     ms_status = numeric_any(ms_status),
         #     ms_interp = numeric_any(ms_interp)) %>%
         # ungroup() %>%
+
+        select(-ms_status, -ms_interp) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
-        mutate(
-            ms_status = as.logical(ms_status),
-            ms_interp = as.logical(ms_interp)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(
-            ms_status = as.numeric(ms_status),
-            ms_interp = as.numeric(ms_interp)) %>%
+        left_join(status_cols,
+                  by = 'datetime') %>%
         arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
@@ -1980,6 +2016,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                   -ms_interp))
     # -one_of(flux_vars))))
 
+    #this avoids a lot of slow summarizing
+    status_cols <- pchem %>%
+        select(datetime, ms_status, ms_interp) %>%
+        group_by(datetime) %>%
+        summarize(
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp))
+
     #clean pchem one variable at a time, matrixify it, insert it into list
     detlims <- identify_detection_limit_s(pchem)
     nvars <- length(pchem_vars)
@@ -1990,8 +2034,10 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
         #clean data and arrange for matrixification
         pchem_setlist[[i]] <- pchem %>%
-            select(datetime, site_name, !!v, ms_status, ms_interp) %>%
-            filter(site_name %in% rg$site_name) %>%
+            select(datetime, site_name, !!v) %>%#, ms_status, ms_interp) %>%
+            # filter(site_name %in% rg$site_name) %>%
+
+            #testing block
             # mutate(datetime = lubridate::year(datetime)) %>%
             # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
             # group_by(site_name, datetime) %>%
@@ -2002,15 +2048,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             # ungroup() %>%
             tidyr::pivot_wider(names_from = site_name,
                                values_from = !!sym(v)) %>%
-            mutate(
-                ms_status = as.logical(ms_status),
-                ms_interp = as.logical(ms_interp)) %>%
-            group_by(datetime) %>%
-            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-            ungroup() %>%
-            mutate(
-                ms_status = as.numeric(ms_status),
-                ms_interp = as.numeric(ms_interp)) %>%
+            left_join(status_cols,
+                      by = 'datetime') %>%
             arrange(datetime)
     }
 
@@ -2080,19 +2119,23 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                      pgauge_prodname, flux_prodname_out){
 
-    #load precip and pchem data, watershed boundaries, rain gauge locations
-    pchem <- read_combine_feathers(network = network,
-                                   domain = domain,
-                                   prodname_ms = pchem_prodname)
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname)
+    #load watershed boundaries, rain gauge locations, precip and pchem data
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
     rg <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = pgauge_prodname)
+    pchem <- read_combine_feathers(network = network,
+                                   domain = domain,
+                                   prodname_ms = pchem_prodname) %>%
+        filter(site_name %in% rg$site_name)
+    # pchem = manufacture_uncert_msdf(pchem)
+    precip <- read_combine_feathers(network = network,
+                                    domain = domain,
+                                    prodname_ms = precip_prodname) %>%
+        filter(site_name %in% rg$site_name)
+    # precip = manufacture_uncert_msdf(precip)
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -2105,32 +2148,45 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
+    #this avoids a lot of slow summarizing
+    status_cols <- precip %>%
+        select(datetime, ms_status, ms_interp) %>%
+        group_by(datetime) %>%
+        summarize(
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp))
+
     #clean precip and arrange for matrixification
     precip <- precip %>%
-        filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+        # filter(site_name %in% rg$site_name) %>%
+
+        #testing block
+        # mutate(datetime = lubridate::year(datetime)) %>%
         # group_by(site_name, datetime) %>%
         # summarize(
         #     precip = mean(precip, na.rm=TRUE),
         #     ms_status = numeric_any(ms_status)) %>%
         # ungroup() %>%
+
+        select(-ms_status, -ms_interp) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = precip) %>%
-        mutate(
-            ms_status = as.logical(ms_status),
-            ms_interp = as.logical(ms_interp)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(
-            ms_status = as.numeric(ms_status),
-            ms_interp = as.numeric(ms_interp)) %>%
+        left_join(status_cols,
+                  by = 'datetime') %>%
         arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
     flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
     pchem_vars_fluxable <- colnames(sw(select(pchem,
                                               one_of(flux_vars))))
+
+    #this avoids a lot of slow summarizing
+    status_cols <- pchem %>%
+        select(datetime, ms_status, ms_interp) %>%
+        group_by(datetime) %>%
+        summarize(
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
     detlims <- identify_detection_limit_s(pchem)
@@ -2142,25 +2198,21 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
         #clean data and arrange for matrixification
         pchem_setlist_fluxable[[i]] <- pchem %>%
-            select(datetime, site_name, !!v, ms_status, ms_interp) %>%
-            filter(site_name %in% rg$site_name) %>%
-            # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+            select(datetime, site_name, !!v) %>%
+            # filter(site_name %in% rg$site_name) %>%
+
+            #testing block
+            # mutate(datetime = lubridate::year(datetime)) %>%
             # group_by(site_name, datetime) %>%
             # summarize(
             #     !!v := mean(!!sym(v), na.rm=TRUE),
             #     ms_status = numeric_any(ms_status)) %>%
             # ungroup() %>%
+
             tidyr::pivot_wider(names_from = site_name,
                                values_from = !!sym(v)) %>%
-            mutate(
-                ms_status = as.logical(ms_status),
-                ms_interp = as.logical(ms_interp)) %>%
-            group_by(datetime) %>%
-            summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-            ungroup() %>%
-            mutate(
-                ms_status = as.numeric(ms_status),
-                ms_interp = as.numeric(ms_interp)) %>%
+            left_join(status_cols,
+                      by = 'datetime') %>%
             arrange(datetime)
     }
 
@@ -3160,7 +3212,7 @@ insert_uncertainty_df <- function(x, uncert){
     # for(n in colnames(x)){
     for(n in colnames(uncert)){
         if(all(is.na(uncert[[n]]))) next
-        errors::errors(x[[n]]) <- uncert[[n]]
+        errors(x[[n]]) <- uncert[[n]]
     }
 
     return(x)
@@ -3179,21 +3231,30 @@ carry_uncertainty <- function(d, network, domain){
     return(d)
 }
 
+#. handle_errors
 err_df_to_matrix <- function(df){
 
-    #write this check
-    all(sapply(df, class) == 'errors')
+    if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
+        stop('all columns of df must be of class "errors" or "numeric"')
+    }
 
-    #write this body
-    lapply(df, errors)
-    errors(df)
+    errmat <- as.matrix(as.data.frame(lapply(df, errors)))
+    M <- as.matrix(df)
+    errors(M) <- errmat
 
     return(M)
 }
 
-err_matrix_to_tb <- function(M){
+#. handle_errors
+get_relative_uncert <- function(x){
 
-    stuff
+    if(any(class(x) %in% c('list', 'data.frame', 'array'))){
+        stop(glue('this function not yet adapted for class {cl}',
+                  cl = paste(class(tibble(x=1:3)),
+                             collapse = ', ')))
+    }
 
-    return(tb)
+    ru <- errors(x) / errors::drop_errors(x) * 100
+
+    return(ru)
 }
