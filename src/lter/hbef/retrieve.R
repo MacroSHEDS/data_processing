@@ -1,8 +1,8 @@
 
 prod_info = get_product_info(network=network, domain=domain,
-    status_level='retrieve', get_statuses='ready') %>%
-    arrange(prodcode)
-# i=6
+    status_level='retrieve', get_statuses='ready')
+
+ i=4
 for(i in 1:nrow(prod_info)){
 # for(i in 1){
 
@@ -27,8 +27,7 @@ for(i in 1:nrow(prod_info)){
     }
     avail_sites = unique(avail_sets$site_name)
 
-    j=1
-    # for(j in 1){
+    # j=1
     for(j in 1:length(avail_sites)){
 
         site_name = avail_sites[j]
@@ -59,20 +58,29 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        #if(! is.na(prod_info$munge_status[i])){
-         #   update_data_tracker_m(network = network,
-          #                        domain = domain,
-           #                       tracker_name = 'held_data',
-            #                      prodname_ms = prodname_ms,
-             #                     site_name = site_name,
-              #                    new_status = 'pending')
-        # }
-
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
         get_lter_data(domain=domain, new_sets, held_data)
+
+        if(! is.na(prod_info$munge_status[i])){
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'pending')
+        }
     }
 
+    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
+                         'packageid=knb-lter-hbr.{p}.{v}',
+                         p = prodcode_from_prodname_ms(prodname_ms),
+                         v = latest_vsn)
+    
+    write_metadata_r(murl = metadata_url,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms)
     gc()
 }
 
