@@ -1,5 +1,21 @@
 suppressPackageStartupMessages({
+
+    #we should be able to avoid librarying most or all of these,
+    #since we're referring to their functions directly with ::
+
+    # #spatial packages
+    # library(gstat) #must load before raster package
+    # # library(terra)  #must load before gstat package
+    # library(raster) #raster has been replaced by terra (way faster)
+    # library(stars)
+    # library(sf)
+    # library(sp)
+    # library(mapview)
+    # library(elevatr)
+
+    #everything else
     library(httr)
+    library(rgee)
     library(jsonlite)
     library(tidyr)
     library(plyr)
@@ -15,11 +31,15 @@ suppressPackageStartupMessages({
     library(tinsel)
     library(PeriodicTable)
     library(imputeTS)
+
 })
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
 try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+
+#connect rgee to earth engine and python 
+try(ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
 
@@ -28,9 +48,9 @@ logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing
-source('src/global_helpers.R')
-source_decoratees('src/global_helpers.R') #parse decorators
+source('src/dev_helpers.R') #comment before pushing live
+source('src/global/global_helpers.R')
+source_decoratees('src/global/global_helpers.R') #parse decorators
 
 ms_vars <- sm(read_csv('data/general/variables.csv'))
 network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
@@ -39,9 +59,7 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'email_err_msgs')
-
-
+ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 # dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){

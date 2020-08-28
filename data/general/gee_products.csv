@@ -1,0 +1,16 @@
+gee_id,band,com_name,data_start,resolution,time_scale
+OREGONSTATE/PRISM/AN81d,ppt,prism_precip,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,tmin,prism_temp_min,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,tmax,prism_temp_max,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,tdmean,prism_dew_point,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,vpdmin,prism_vpd_min,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,vpdmax,prism_vpd_max,1981-01-01,4000,daily
+OREGONSTATE/PRISM/AN81d,tmean,prism_temp_mean,1981-01-01,4000,daily
+MODIS/006/MOD10A1,NDSI_Snow_Cover,ndsi,2000-02-24,500,daily
+UMT/NTSG/v2/LANDSAT/NPP,annualNPP,npp,1986-01-01,30,annual
+UMT/NTSG/v2/LANDSAT/GPP,GPP,gpp,1986-01-01,30,8 day
+MODIS/006/MOD44B,Percent_Tree_Cover,tree_cover,2000-03-05,250,annual
+MODIS/006/MOD44B,Percent_NonTree_Vegetation,veg_cover,2000-03-05,250,annual
+MODIS/006/MOD44B,Percent_NonVegetated,bare_cover,2000-03-05,250,annual
+MODIS/006/MOD15A2H,Lai_500m,lai,2000-02-18,500,8 day
+MODIS/006/MOD15A2H,Fpar_500m,fpar,2000-02-18,500,8day
