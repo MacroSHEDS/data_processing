@@ -12,6 +12,8 @@
 
 #anything new from process_1_4341, including carry_uncertainty
 
+#the one case where we had to build a shapefile from a tibble (hj precip gauges?)
+
 #non_spatial munge kernel ####
 
 #product: STATUS=PENDING

@@ -256,6 +256,10 @@ set_up_logger <- function(network=domain, domain){
     logger_name = glue('ms.{n}.{d}', n=network, d=domain)
     logger_module = glue(logger_name, '.module')
 
+    if(! dir.exists('logs')){
+        dir.create('logs')
+    }
+
     logging::addHandler(logging::writeToFile, logger=logger_name,
                         file=glue('logs/{n}_{d}.log', n=network, d=domain))
 
