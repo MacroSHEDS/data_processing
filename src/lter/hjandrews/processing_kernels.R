@@ -483,7 +483,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    DOC_INPUT='DOC') %>%
         mutate(datetime = with_tz(as_datetime(datetime,
                                               tz = 'Etc/GMT-8'),
-                                  tz = 'UTC')
+                                  tz = 'UTC'))
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
