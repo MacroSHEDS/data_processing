@@ -527,7 +527,12 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -553,7 +558,12 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -600,7 +610,12 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -1789,6 +1804,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         mutate(
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
+        filter_at(vars(-datetime, -ms_status, -ms_interp),
+            any_vars(! is.na(.))) %>%
         arrange(datetime)
 
     #interpolate precipitation volume and write watershed averages
@@ -1872,6 +1889,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         mutate(
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
+        filter_at(vars(-datetime, -ms_status, -ms_interp),
+            any_vars(! is.na(.))) %>%
         arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
@@ -1914,6 +1933,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             mutate(
                 ms_status = as.numeric(ms_status),
                 ms_interp = as.numeric(ms_interp)) %>%
+            filter_at(vars(-datetime, -ms_status, -ms_interp),
+                any_vars(! is.na(.))) %>%
             arrange(datetime)
     }
 
@@ -2028,6 +2049,8 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         mutate(
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
+        filter_at(vars(-datetime, -ms_status, -ms_interp),
+            any_vars(! is.na(.))) %>%
         arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
@@ -2064,6 +2087,8 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             mutate(
                 ms_status = as.numeric(ms_status),
                 ms_interp = as.numeric(ms_interp)) %>%
+            filter_at(vars(-datetime, -ms_status, -ms_interp),
+                any_vars(! is.na(.))) %>%
             arrange(datetime)
     }
 
@@ -2156,7 +2181,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 #. handle_errors
 invalidate_derived_products <- function(successor_string){
 
-    if(all(is.na(succesor_string)) || successor_string == ''){
+    if(all(is.na(successor_string)) || successor_string == ''){
         return()
     }
 

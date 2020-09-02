@@ -211,7 +211,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
 
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
