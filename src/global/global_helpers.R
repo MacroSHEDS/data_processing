@@ -1847,9 +1847,9 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     pchem <- read_combine_feathers(network = network,
                                    domain = domain,
                                    prodname_ms = pchem_prodname)
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname)
+    # precip <- read_combine_feathers(network = network,
+    #                                 domain = domain,
+    #                                 prodname_ms = precip_prodname)
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
@@ -1868,30 +1868,30 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
-    #clean precip and arrange for matrixification
-    precip <- precip %>%
-        filter(site_name %in% rg$site_name) %>%
-        # mutate(datetime = lubridate::year(datetime)) %>% #for testing
-        # group_by(site_name, datetime) %>%
-        # summarize(
-        #     precip = mean(precip, na.rm=TRUE),
-        #     ms_status = numeric_any(ms_status),
-        #     ms_interp = numeric_any(ms_interp)) %>%
-        # ungroup() %>%
-        tidyr::pivot_wider(names_from = site_name,
-                           values_from = precip) %>%
-        mutate(
-            ms_status = as.logical(ms_status),
-            ms_interp = as.logical(ms_interp)) %>%
-        group_by(datetime) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(
-            ms_status = as.numeric(ms_status),
-            ms_interp = as.numeric(ms_interp)) %>%
-        filter_at(vars(-datetime, -ms_status, -ms_interp),
-            any_vars(! is.na(.))) %>%
-        arrange(datetime)
+    # #clean precip and arrange for matrixification (nvm. precip not needed for this)
+    # precip <- precip %>%
+    #     filter(site_name %in% rg$site_name) %>%
+    #     # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+    #     # group_by(site_name, datetime) %>%
+    #     # summarize(
+    #     #     precip = mean(precip, na.rm=TRUE),
+    #     #     ms_status = numeric_any(ms_status),
+    #     #     ms_interp = numeric_any(ms_interp)) %>%
+    #     # ungroup() %>%
+    #     tidyr::pivot_wider(names_from = site_name,
+    #                        values_from = precip) %>%
+    #     mutate(
+    #         ms_status = as.logical(ms_status),
+    #         ms_interp = as.logical(ms_interp)) %>%
+    #     group_by(datetime) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup() %>%
+    #     mutate(
+    #         ms_status = as.numeric(ms_status),
+    #         ms_interp = as.numeric(ms_interp)) %>%
+    #     filter_at(vars(-datetime, -ms_status, -ms_interp),
+    #         any_vars(! is.na(.))) %>%
+    #     arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
     # flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]

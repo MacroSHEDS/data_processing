@@ -483,7 +483,16 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    DOC_INPUT='DOC') %>%
         mutate(datetime = with_tz(as_datetime(datetime,
                                               tz = 'Etc/GMT-8'),
-                                  tz = 'UTC'))
+                                  tz = 'UTC'),
+            site_name = case_when(
+                site_name == 'RCADMN' ~ 'PRIMET',
+                grepl('^RCHI..$', site_name, perl = TRUE) ~ 'CENMET',
+                TRUE ~ NA)) #may be tripped if they add a new dry dep gauge
+
+    if(any(is.na(d$site_name))){
+        stop(glue('hjandrews has added a new pchem gauge that we havent mapped',
+            ' to a location'))
+    }
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
