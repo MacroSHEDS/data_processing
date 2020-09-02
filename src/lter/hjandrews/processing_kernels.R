@@ -487,9 +487,9 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
             site_name = case_when(
                 site_name == 'RCADMN' ~ 'PRIMET',
                 grepl('^RCHI..$', site_name, perl = TRUE) ~ 'CENMET',
-                TRUE ~ NA)) #may be tripped if they add a new dry dep gauge
+                TRUE ~ '_ERR')) #may be tripped if they add a new dry dep gauge
 
-    if(any(is.na(d$site_name))){
+    if(any(d$site_name == '_ERR')){
         stop(glue('hjandrews has added a new pchem gauge that we havent mapped',
             ' to a location'))
     }
