@@ -31,6 +31,8 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
     library(imputeTS)
     library(errors)
+    library(foreach)
+    library(doParallel)
 
 })
 

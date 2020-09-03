@@ -1436,6 +1436,9 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     #elev_agnostic is a boolean that determines whether elevation should be
     #included as a predictor of the variable being interpolated
 
+    loginfo(glue('shortcut_idw: working on {ss}', ss=stream_site_name),
+        logger = logger_module)
+
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
     d_interp <- data_values$ms_interp
@@ -1464,8 +1467,16 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
     #calculate watershed mean at every timestep
     ws_mean <- rep(NA, nrow(data_matrix))
-    # for(k in 24){
-    for(k in 1:nrow(data_matrix)){
+    ntimesteps <- nrow(data_matrix)
+    for(k in 1:ntimesteps){
+
+        if(k %% 1000 == 0){
+            msg <- glue('giant loop: {kk}/{nt}',
+                kk = k,
+                nt = ncells)
+            loginfo(msg,
+                logger = logger_module)
+        }
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -1534,6 +1545,9 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     #and an additional named column of data values for each
     #precip chemistry location.
 
+    loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_name),
+        logger = logger_module)
+
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
     precip_values <- filter(precip_values,
@@ -1599,6 +1613,14 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     ntimesteps <- nrow(p_matrix)
     ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
     for(k in 1:ntimesteps){
+
+        if(k %% 1000 == 0){
+            msg <- glue('giant loop: {kk}/{nt}',
+                kk = k,
+                nt = ntimesteps)
+            loginfo(msg,
+                logger = logger_module)
+        }
 
         #assign cell weights as normalized inverse squared distances (p)
         pk <- t(p_matrix[k, , drop = FALSE])
@@ -1808,11 +1830,32 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
             any_vars(! is.na(.))) %>%
         arrange(datetime)
 
+    #uncomment the `- 1` below to save yourself a core if local testing.
+    #we'll also need to find a way to protect some cores for serving the portal
+    #if we end up processing data and serving the portal on the same machine/cluster.
+    #we can use taskset to assign the shiny process to 1-3 cores and this process
+    #to any others.
+    ncores <- parallel::detectCores()# - 1
+    if(.Platform$OS.type == 'windows'){
+        clst <- makeCluster(ncores, type = 'PSOCK')
+    } else {
+        clst <- makeCluster(ncores, type = 'FORK')
+    }
+    doParallel::registerDoParallel(clst)
+
     #interpolate precipitation volume and write watershed averages
-    for(j in 1:nrow(wb)){
+    catchout <- foreach::foreach(j = 1:nrow(wb)) %dopar% {
+    # for(j in 1:nrow(wb)){
 
         wbj <- slice(wb, j)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {jj}/{w}',
+            s = site_name,
+            jj = j,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         ws_mean_precip <- shortcut_idw(encompassing_dem = dem,
                                        wshd_bnd = wbj,
@@ -1835,6 +1878,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                       shapefile = FALSE,
                       link_to_portal = TRUE)
     }
+
+    parallel::stopCluster(clst)
 
     return()
 }
@@ -1938,12 +1983,33 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             arrange(datetime)
     }
 
+    #uncomment the `- 1` below to save yourself a core if local testing.
+    #we'll also need to find a way to protect some cores for serving the portal
+    #if we end up processing data and serving the portal on the same machine/cluster.
+    #we can use taskset to assign the shiny process to 1-3 cores and this process
+    #to any others.
+    ncores <- parallel::detectCores()# - 1
+    if(.Platform$OS.type == 'windows'){
+        clst <- makeCluster(ncores, type = 'PSOCK')
+    } else {
+        clst <- makeCluster(ncores, type = 'FORK')
+    }
+    doParallel::registerDoParallel(clst)
+
     #send vars into regular idw interpolator WITHOUT precip, one at a time;
     #combine and write outputs by site
-    for(i in 1:nrow(wb)){
+    catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+    # for(i in 1:nrow(wb)){
 
         wbj <- slice(wb, i)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {ii}/{w}',
+            s = site_name,
+            ii = i,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         ws_mean_d <- tibble()
         for(j in 1:nvars){
@@ -1996,6 +2062,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       shapefile = FALSE,
                       link_to_portal = TRUE)
     }
+
+    parallel::stopCluster(clst)
 
     return()
 }
@@ -2091,13 +2159,33 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                 any_vars(! is.na(.))) %>%
             arrange(datetime)
     }
+    #uncomment the `- 1` below to save yourself a core if local testing.
+    #we'll also need to find a way to protect some cores for serving the portal
+    #if we end up processing data and serving the portal on the same machine/cluster.
+    #we can use taskset to assign the shiny process to 1-3 cores and this process
+    #to any others.
+    ncores <- parallel::detectCores()# - 1
+    if(.Platform$OS.type == 'windows'){
+        clst <- makeCluster(ncores, type = 'PSOCK')
+    } else {
+        clst <- makeCluster(ncores, type = 'FORK')
+    }
+    doParallel::registerDoParallel(clst)
 
     #send vars into flux interpolator with precip, one at a time;
     #combine and write outputs by site
-    for(i in 1:nrow(wb)){
+    catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+    # for(i in 1:nrow(wb)){
 
         wbj <- slice(wb, i)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {ii}/{w}',
+            s = site_name,
+            ii = i,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         for(j in 1:nvars_fluxable){
 
@@ -2174,6 +2262,8 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                          shapefile = FALSE,
                          link_to_portal = TRUE))
     }
+
+    parallel::stopCluster(clst)
 
     return()
 }
