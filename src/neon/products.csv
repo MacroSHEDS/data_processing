@@ -1,17 +1,17 @@
-"prodcode","prodname","type","retrieve_status","munge_status","derive_status","precursor_of","notes"
-"DP1.20093","chemistry","grab","ready","pending","pending",,"NA"
-"DP1.20288","waterqual","sensor","ready","ready","pending",,"NA"
-"DP?.20267","gageht","grab","paused","pending","pending",,"verify DP#"
-"DP?.00133","zqcurve","other","paused","pending","pending",,"verify DP#"
-"DP?.00130","Q","sensor","paused","pending","pending",,"verify DP#"
-"DP?.20048","Qflowmeter","grab","paused","pending","pending",,"verify DP#"
-"DP?.20193","Qsalt","grab","paused","pending","pending",,"verify DP#"
-"DP?.20008","speccond","sensor","unavailiable","unavailiable","unavailiable",,"verify DP#"
-"DP1.20033","nitrate","sensor","ready","ready","pending",,"NA"
-"DP1.00004","airpressure","sensor","ready","ready","pending",,"NA"
-"DP1.20097","gases","grab","ready","ready","pending",,"NA"
-"DP1.20016","surfaceElev","sensor","paused","pending","pending",,"NA"
-"DP1.20053","watertemp","sensor","ready","ready","pending",,"NA"
-"DP1.20042","PAR","sensor","ready","ready","pending",,"NA"
-"xx0","precipitation","unknown","pending","pending","pending",,"NA"
-"xx1","precipChem","unknown","pending","pending","pending",,"NA"
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+DP1.20093,stream_chemistry,grab,ready,pending,pending,NA,NA
+DP1.20288,stream_quality,sensor,ready,ready,pending,NA,NA
+DP?.20267,gageht,grab,paused,pending,pending,NA,verify DP#
+DP?.00133,zqcurve,other,paused,pending,pending,NA,verify DP#
+DP?.00130,discharge,sensor,paused,pending,pending,NA,verify DP#
+DP?.20048,Qflowmeter,grab,paused,pending,pending,NA,verify DP#
+DP?.20193,Qsalt,grab,paused,pending,pending,NA,verify DP#
+DP?.20008,spec_cond,sensor,unavailiable,unavailiable,unavailiable,NA,verify DP#
+DP1.20033,stream_nitrate,sensor,ready,ready,pending,NA,NA
+DP1.00004,air_pressure,sensor,ready,ready,pending,NA,NA
+DP1.20097,stream_gases,grab,ready,ready,pending,NA,NA
+DP1.20016,surface_elevation,sensor,paused,pending,pending,NA,NA
+DP1.20053,stream_temperature,sensor,ready,ready,pending,NA,NA
+DP1.20042,stream_PAR,sensor,ready,ready,pending,NA,NA
+xx0,precipitation,unknown,pending,pending,pending,NA,NA
+xx1,precip_chemistry,unknown,pending,pending,pending,NA,NA

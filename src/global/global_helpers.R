@@ -1681,20 +1681,26 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
     uniq_sites <- unique(ms_df$site_name)
 
+    ms_df <- ms_df %>%
+        filter(! is.na(datetime)) %>%
+        select_if(~( sum(! is.na(.)) > 1 ))
+
+    if(ncol(ms_df) < 4){
+        stop('no data to synchronize. bypassing processing.')
+    }
+
     #round to desired_interval
     ms_df <- sw(ms_df %>%
-                    filter(! is.na(datetime)) %>%
-                    select_if(~( sum(! is.na(.)) > 1 )) %>%
-                    mutate(
-                        datetime = lubridate::as_datetime(datetime),
-                        datetime = lubridate::round_date(datetime,
-                                                         desired_interval)) %>%
-                    mutate_at(vars(one_of('ms_status', 'ms_interp')),
-                              as.logical) %>%
-                    group_by(datetime, site_name) %>%
-                    summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-                    ungroup() %>%
-                    arrange(datetime))
+        mutate(
+            datetime = lubridate::as_datetime(datetime),
+            datetime = lubridate::round_date(datetime,
+                                             desired_interval)) %>%
+        mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                  as.logical) %>%
+        group_by(datetime, site_name) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        arrange(datetime))
 
     #fill in missing timepoints with NAs
     daterange <- range(ms_df$datetime)
