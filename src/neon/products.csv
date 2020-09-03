@@ -1,5 +1,5 @@
 prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
-DP1.20093,stream_chemistry,grab,ready,pending,pending,NA,NA
+DP1.20093,stream_chemistry,grab,ready,ready,pending,NA,NA
 DP1.20288,stream_quality,sensor,ready,ready,pending,NA,NA
 DP?.20267,gageht,grab,paused,pending,pending,NA,verify DP#
 DP?.00133,zqcurve,other,paused,pending,pending,NA,verify DP#
