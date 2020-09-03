@@ -77,9 +77,11 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_retrieve(network=network, domain=domain)
     ms_munge(network=network, domain=domain)
     ms_derive(network=network, domain=domain)
+    ms_general(network=network, domain=domain)
 
     retain_ms_globals(ms_globals)
 }
+
 
 if(length(email_err_msgs)){
     email_err(email_err_msgs, conf$report_emails, conf$gmail_pw)
