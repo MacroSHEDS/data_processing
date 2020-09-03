@@ -1683,7 +1683,7 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
 
     ms_df <- ms_df %>%
         filter(! is.na(datetime)) %>%
-        select_if(~( sum(! is.na(.)) > 1 ))
+        select_if(~( sum(! is.na(.)) >= 1 ))
 
     if(ncol(ms_df) < 4){
         stop('no data to synchronize. bypassing processing.')
@@ -1715,12 +1715,20 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     #if missing, add binary column to track which points are interped
     if(! 'ms_interp'  %in% colnames(ms_df)) ms_df$ms_interp <- FALSE
 
+    #find columns that don't have enough data to do interpolation
+    insufficient_data_cols <- ms_df %>%
+        select(-non_data_columns) %>%
+        summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
+        unlist() %>%
+        which() %>%
+        names()
+
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
     ms_df_adjusted <- ms_df %>%
         full_join(fulldt, #right_join would be more efficient, but this is future-proof
                   by = c('datetime', 'site_name')) %>%
         arrange(datetime) %>%
-        mutate_at(vars(-one_of(non_data_columns)),
+        mutate_at(vars(-one_of(c(non_data_columns, insufficient_data_cols))),
                   imputeTS::na_interpolation,
                   maxgap = impute_limit) %>%
         filter_at(vars(-one_of(non_data_columns)),
@@ -1730,6 +1738,7 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
             ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
+        select(site_name, datetime, everything()) %>%
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
 

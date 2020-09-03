@@ -171,7 +171,7 @@ process_0_xx1 <- function(set_details, network, domain){
 
 #munge kernels ####
 
-#stream_chemistry: STATUS=PENDING (how to handle flags after spread?)
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -238,11 +238,15 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         #     -sampleCondition) %>%
         select(collectDate, analyte, analyteConcentration, ms_status) %>%
         group_by(collectDate, analyte) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
         summarize(
             analyteConcentration = mean(analyteConcentration, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
+            ms_status = any(ms_status)) %>%
         ungroup() %>% #SPREAD LATER INSTEAD?
         spread(analyte, analyteConcentration) %>%
+        group_by(collectDate) %>% #DEAL WITH THIS WHEN WE SWITCH WIDE->LONG
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(
@@ -253,7 +257,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             `NO3+NO2 - N`='NO3_NO2_N', `Ortho - P`='PO4_P',
             `UV Absorbance (250 nm)`='abs250',
             `UV Absorbance (280 nm)`='abs280') %>%
-        select(site_name, datetime, everything())
+        select(site_name, datetime, everything()) %>%
+        relocate(ms_status, .after = last_col())
 
     out_sub <- ue(synchronize_timestep(ms_df = out_sub,
                                   desired_interval = '15 min',

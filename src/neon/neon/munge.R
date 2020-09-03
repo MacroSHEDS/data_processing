@@ -3,7 +3,7 @@ prod_info = get_product_info(network=network,
 
 # i=1; j=1; k=2
 for(i in 1:nrow(prod_info)){
-# for(i in 2){
+# for(i in c(1, 3, 6)){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
