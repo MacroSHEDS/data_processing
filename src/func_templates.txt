@@ -7,7 +7,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                           # components){
 
 
-    ADD TO THIS: handling of detection limits, uncertainty, grab vs sensor vs spatial, time zone, etc
+    ADD TO THIS: handling of detection limits, uncertainty, grab vs sensor vs spatial, etc
         also note: datetime and site_name mutations must happen before identification of detlims (process_1_1).
         any other initial mutuations should happen after
 

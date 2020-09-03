@@ -58,7 +58,7 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
 
 ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
-# dmnrow=2
+# dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
