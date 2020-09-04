@@ -1436,8 +1436,8 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     #elev_agnostic is a boolean that determines whether elevation should be
     #included as a predictor of the variable being interpolated
 
-    loginfo(glue('shortcut_idw: working on {ss}', ss=stream_site_name),
-        logger = logger_module)
+    # loginfo(glue('shortcut_idw: working on {ss}', ss=stream_site_name),
+    #     logger = logger_module)
 
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
@@ -1473,7 +1473,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
         if(k %% 1000 == 0){
             msg <- glue('giant loop: {kk}/{nt}',
                 kk = k,
-                nt = ncells)
+                nt = ntimesteps)
             loginfo(msg,
                 logger = logger_module)
         }
@@ -1545,8 +1545,8 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     #and an additional named column of data values for each
     #precip chemistry location.
 
-    loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_name),
-        logger = logger_module)
+    # loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_name),
+    #     logger = logger_module)
 
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
@@ -1845,18 +1845,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
             any_vars(! is.na(.))) %>%
         arrange(datetime)
 
-    #uncomment the `- 1` below to save yourself a core if local testing.
-    #we'll also need to find a way to protect some cores for serving the portal
-    #if we end up processing data and serving the portal on the same machine/cluster.
-    #we can use taskset to assign the shiny process to 1-3 cores and this process
-    #to any others.
-    ncores <- parallel::detectCores()# - 1
-    if(.Platform$OS.type == 'windows'){
-        clst <- makeCluster(ncores, type = 'PSOCK')
-    } else {
-        clst <- makeCluster(ncores, type = 'FORK')
-    }
-    doParallel::registerDoParallel(clst)
+    clst <- ms_parallelize()
 
     #interpolate precipitation volume and write watershed averages
     catchout <- foreach::foreach(j = 1:nrow(wb)) %dopar% {
@@ -1897,6 +1886,37 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     parallel::stopCluster(clst)
 
     return()
+}
+
+
+#. handle_errors
+ms_parallelize <- function(maxcores = Inf){
+
+    #maxcores is the maximum number of processor cores to use for R tasks.
+    #   you may want to leave a few aside for other processes.
+
+    #value: a cluster object. you'll need this to return to serial mode and
+    #   free up the cores that were employed by R. Be sure to run
+    #parallel::stopCluster(<cluster object>) after the parallel tasks are complete.
+
+    #be sure to call
+
+    #we need to find a way to protect some cores for serving the portal
+    #if we end up processing data and serving the portal on the same
+    #machine/cluster. we can use taskset to assign the shiny process
+    #to 1-3 cores and this process to any others.
+
+    ncores <- min(parallel::detectCores(), maxcores)
+
+    if(.Platform$OS.type == 'windows'){
+        clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+    } else {
+        clst <- parallel::makeCluster(ncores, type = 'FORK')
+    }
+
+    doParallel::registerDoParallel(clst)
+
+    return(clst)
 }
 
 #. handle_errors
@@ -1998,18 +2018,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             arrange(datetime)
     }
 
-    #uncomment the `- 1` below to save yourself a core if local testing.
-    #we'll also need to find a way to protect some cores for serving the portal
-    #if we end up processing data and serving the portal on the same machine/cluster.
-    #we can use taskset to assign the shiny process to 1-3 cores and this process
-    #to any others.
-    ncores <- parallel::detectCores()# - 1
-    if(.Platform$OS.type == 'windows'){
-        clst <- makeCluster(ncores, type = 'PSOCK')
-    } else {
-        clst <- makeCluster(ncores, type = 'FORK')
-    }
-    doParallel::registerDoParallel(clst)
+    clst <- ms_parallelize()
 
     #send vars into regular idw interpolator WITHOUT precip, one at a time;
     #combine and write outputs by site
@@ -2030,6 +2039,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         for(j in 1:nvars){
 
             v <- pchem_vars[j]
+
+            msg <- glue('site: {s}; var: {vv}; {jj}/{nv}',
+                s = site_name,
+                vv = v,
+                jj = j,
+                nv = nvars)
+            loginfo(msg,
+                logger = logger_module)
 
             ws_mean <- shortcut_idw(encompassing_dem = dem,
                                     wshd_bnd = wbj,
@@ -2067,6 +2084,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         }
 
         ws_mean_d <- apply_detection_limit_s(ws_mean_d, detlims)
+
+        msg <- glue('{w}, {n}, {d}, {p}',
+            w = nrow(ws_mean_d),
+            n = network,
+            d = domain,
+            p = prodname_ms)
+        loginfo(msg,
+            logger = logger_module)
 
         write_ms_file(ws_mean_d,
                       network = network,
@@ -2174,18 +2199,8 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                 any_vars(! is.na(.))) %>%
             arrange(datetime)
     }
-    #uncomment the `- 1` below to save yourself a core if local testing.
-    #we'll also need to find a way to protect some cores for serving the portal
-    #if we end up processing data and serving the portal on the same machine/cluster.
-    #we can use taskset to assign the shiny process to 1-3 cores and this process
-    #to any others.
-    ncores <- parallel::detectCores()# - 1
-    if(.Platform$OS.type == 'windows'){
-        clst <- makeCluster(ncores, type = 'PSOCK')
-    } else {
-        clst <- makeCluster(ncores, type = 'FORK')
-    }
-    doParallel::registerDoParallel(clst)
+
+    clst <- ms_parallelize()
 
     #send vars into flux interpolator with precip, one at a time;
     #combine and write outputs by site
