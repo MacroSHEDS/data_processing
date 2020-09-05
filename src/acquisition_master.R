@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
 
 try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
 try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
+try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
 
 conf = jsonlite::fromJSON('config.json')
@@ -59,6 +60,8 @@ network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
     arrange(network, domain)
 
 ms_globals = c(ls(all.names=TRUE), 'ms_globals')
+
+dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
