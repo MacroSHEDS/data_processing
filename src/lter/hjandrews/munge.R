@@ -35,19 +35,12 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(grepl('(precip|flux|chemistry|boundary|locations)',
+        if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
             munge_rtn = munge_combined_split(domain = domain,
                                              site_name = site_name,
                                              prodname_ms = prodname_ms,
                                              tracker = held_data)
-        } else if(grepl('discharge', prodname_ms)){
-            #gotta figure out how to get hjandrews discharge product efficiently
-            stop('havent figured out how to retrieve this product yet')
-            # munge_rtn = munge_combined(domain = domain,
-            #                            site_name = site_name,
-            #                            prodname_ms = prodname_ms,
-            #                            tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
             munge_rtn = munge_site(domain, site_name, prodname_ms, held_data)
         }
