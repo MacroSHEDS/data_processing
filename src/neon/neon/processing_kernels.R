@@ -1,6 +1,6 @@
 #retrieval kernels ####
 
-#chem: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_DP1.20093 <- function(set_details, network, domain){
     # set_details=s
@@ -18,7 +18,7 @@ process_0_DP1.20093 <- function(set_details, network, domain){
 
 }
 
-#nitrate: STATUS=READY
+#stream_nitrate: STATUS=READY
 #. handle_errors
 process_0_DP1.20033 <- function(set_details, network, domain){
 
@@ -34,7 +34,7 @@ process_0_DP1.20033 <- function(set_details, network, domain){
 
 }
 
-#photosynthetically active radiation (PAR): STATUS=READY
+#stream_PAR: STATUS=READY
 #. handle_errors
 process_0_DP1.20042 <- function(set_details, network, domain){
 
@@ -50,7 +50,7 @@ process_0_DP1.20042 <- function(set_details, network, domain){
 
 }
 
-#water temperature: STATUS=READY
+#stream_temperature: STATUS=READY
 #. handle_errors
 process_0_DP1.20053 <- function(set_details, network, domain){
 
@@ -66,7 +66,7 @@ process_0_DP1.20053 <- function(set_details, network, domain){
 
 }
 
-#air pressure: STATUS=READY
+#air_pressure: STATUS=READY
 #. handle_errors
 process_0_DP1.00004 <- function(set_details, network, domain){
 
@@ -85,7 +85,7 @@ process_0_DP1.00004 <- function(set_details, network, domain){
     #     select(site_name, startDateTime, staPresMean, staPresFinalQF)
 }
 
-#gases: STATUS=READY
+#stream_gases: STATUS=READY
 #. handle_errors
 process_0_DP1.20097 <- function(set_details, network, domain){
 
@@ -101,7 +101,7 @@ process_0_DP1.20097 <- function(set_details, network, domain){
 
 }
 
-#stage: STATUS=PAUSED
+#surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20016 <- function(set_details, network, domain){
 
@@ -141,7 +141,7 @@ process_0_DP1.20016 <- function(set_details, network, domain){
 
 }
 
-#water quality: STATUS=READY
+#stream_quality: STATUS=READY
 #. handle_errors
 process_0_DP1.20288 <- function(set_details, network, domain){
 
@@ -157,21 +157,21 @@ process_0_DP1.20288 <- function(set_details, network, domain){
 
 }
 
-#precip: STATUS=PENDING
+#precipitation: STATUS=PENDING
 #. handle_errors
-process_0_ <- function(set_details, network, domain){
+process_0_xx0 <- function(set_details, network, domain){
 
 }
 
-#precip chem: STATUS=PENDING
+#precip_chemistry: STATUS=PENDING
 #. handle_errors
-process_0_ <- function(set_details, network, domain){
+process_0_xx1 <- function(set_details, network, domain){
 
 }
 
 #munge kernels ####
 
-#chem: STATUS=PENDING (how to handle flags after spread?)
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -238,11 +238,15 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         #     -sampleCondition) %>%
         select(collectDate, analyte, analyteConcentration, ms_status) %>%
         group_by(collectDate, analyte) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
         summarize(
             analyteConcentration = mean(analyteConcentration, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
+            ms_status = any(ms_status)) %>%
         ungroup() %>% #SPREAD LATER INSTEAD?
         spread(analyte, analyteConcentration) %>%
+        group_by(collectDate) %>% #DEAL WITH THIS WHEN WE SWITCH WIDE->LONG
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
         mutate_at(vars(one_of('ANC')), function(x) x / 1000) %>% #meq/L -> eq/L
         mutate_at(vars(one_of('conductivity')), function(x) x / 1e6) %>% #uS/cm -> S/cm
         mutate(
@@ -253,7 +257,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             `NO3+NO2 - N`='NO3_NO2_N', `Ortho - P`='PO4_P',
             `UV Absorbance (250 nm)`='abs250',
             `UV Absorbance (280 nm)`='abs280') %>%
-        select(site_name, datetime, everything())
+        select(site_name, datetime, everything()) %>%
+        relocate(ms_status, .after = last_col())
 
     out_sub <- ue(synchronize_timestep(ms_df = out_sub,
                                   desired_interval = '15 min',
@@ -262,7 +267,7 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#nitrate: STATUS=READY
+#stream_nitrate: STATUS=READY
 #. handle_errors
 process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -311,7 +316,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#par: STATUS=READY
+#stream_PAR: STATUS=READY
 #. handle_errors
 process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -356,7 +361,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#water temp: STATUS=READY
+#stream_temperature: STATUS=READY
 #. handle_errors
 process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -402,7 +407,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#air pres: STATUS=READY
+#air_pressure: STATUS=READY
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -447,7 +452,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#gases: STATUS=READY
+#stream_gases: STATUS=READY
 #. handle_errors
 process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -523,14 +528,14 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stage: STATUS=PENDING (not yet needed. waiting on neon)
+#surface_elevation: STATUS=PENDING (not yet needed. waiting on neon)
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     component){
     NULL
 }
 
-#waterqual: STATUS=READY
+#stream_quality: STATUS=READY
 #. handle_errors
 process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -542,7 +547,7 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-     relevant_file1 = 'waq_instantaneous.feather'
+    relevant_file1 = 'waq_instantaneous.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
         out_sub = ue(sourceflags_to_ms_status(rawd, list(specificCondFinalQF = 0,
@@ -556,7 +561,6 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    #LOTS OF FLAG COLUMNS FOR THIS PRODUCT. WILL NEED A MORE ELABORATE FLAG FILTER
     # if(){
     #     return(generate_ms_exception('All records failed QA'))
     # }

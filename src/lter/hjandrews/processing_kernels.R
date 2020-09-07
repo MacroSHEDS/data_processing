@@ -211,7 +211,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
     # site_name = 'sitename_NA'; prodname_ms = 'discharge__4341'
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -490,7 +490,16 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    DOC_INPUT='DOC') %>%
         mutate(datetime = with_tz(as_datetime(datetime,
                                               tz = 'Etc/GMT-8'),
-                                  tz = 'UTC'))
+                                  tz = 'UTC'),
+            site_name = case_when(
+                site_name == 'RCADMN' ~ 'PRIMET',
+                grepl('^RCHI..$', site_name, perl = TRUE) ~ 'CENMET',
+                TRUE ~ '_ERR')) #may be tripped if they add a new dry dep gauge
+
+    if(any(d$site_name == '_ERR')){
+        stop(glue('hjandrews has added a new pchem gauge that we havent mapped',
+            ' to a location'))
+    }
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
