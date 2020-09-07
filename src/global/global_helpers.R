@@ -538,7 +538,12 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -564,7 +569,12 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 
     assign(tracker_name, tracker, pos=.GlobalEnv)
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -611,7 +621,12 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
 
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    if(! dir.exists('trackerdir')){
+        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    }
+
+    trackerfile = glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
@@ -1525,6 +1540,9 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     #elev_agnostic is a boolean that determines whether elevation should be
     #included as a predictor of the variable being interpolated
 
+    # loginfo(glue('shortcut_idw: working on {ss}', ss=stream_site_name),
+    #     logger = logger_module)
+
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
     d_interp <- data_values$ms_interp
@@ -1553,8 +1571,16 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
     #calculate watershed mean at every timestep
     ws_mean <- rep(NA, nrow(data_matrix))
-    # for(k in 24){
-    for(k in 1:nrow(data_matrix)){
+    ntimesteps <- nrow(data_matrix)
+    for(k in 1:ntimesteps){
+
+        if(k %% 1000 == 0){
+            msg <- glue('giant loop: {kk}/{nt}',
+                kk = k,
+                nt = ntimesteps)
+            loginfo(msg,
+                logger = logger_module)
+        }
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -1628,6 +1654,9 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     #and an additional named column of data values for each
     #precip chemistry location.
 
+    # loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_name),
+    #     logger = logger_module)
+
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
     precip_values <- filter(precip_values,
@@ -1693,6 +1722,14 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     ntimesteps <- nrow(p_matrix)
     ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
     for(k in 1:ntimesteps){
+
+        if(k %% 1000 == 0){
+            msg <- glue('giant loop: {kk}/{nt}',
+                kk = k,
+                nt = ntimesteps)
+            loginfo(msg,
+                logger = logger_module)
+        }
 
         #assign cell weights as normalized inverse squared distances (p)
         pk <- t(p_matrix[k, , drop = FALSE])
@@ -1779,20 +1816,26 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
     uniq_sites <- unique(ms_df$site_name)
 
+    ms_df <- ms_df %>%
+        filter(! is.na(datetime)) %>%
+        select_if(~( sum(! is.na(.)) >= 1 ))
+
+    if(ncol(ms_df) < 4){
+        stop('no data to synchronize. bypassing processing.')
+    }
+
     #round to desired_interval
     ms_df <- sw(ms_df %>%
-                    filter(! is.na(datetime)) %>%
-                    select_if(~( sum(! is.na(.)) > 1 )) %>%
-                    mutate(
-                        datetime = lubridate::as_datetime(datetime),
-                        datetime = lubridate::round_date(datetime,
-                                                         desired_interval)) %>%
-                    mutate_at(vars(one_of('ms_status', 'ms_interp')),
-                              as.logical) %>%
-                    group_by(datetime, site_name) %>%
-                    summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-                    ungroup() %>%
-                    arrange(datetime))
+        mutate(
+            datetime = lubridate::as_datetime(datetime),
+            datetime = lubridate::round_date(datetime,
+                                             desired_interval)) %>%
+        mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                  as.logical) %>%
+        group_by(datetime, site_name) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        arrange(datetime))
 
     #fill in missing timepoints with NAs
     daterange <- range(ms_df$datetime)
@@ -1807,12 +1850,20 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
     #if missing, add binary column to track which points are interped
     if(! 'ms_interp'  %in% colnames(ms_df)) ms_df$ms_interp <- FALSE
 
+    #find columns that don't have enough data to do interpolation
+    insufficient_data_cols <- ms_df %>%
+        select(-non_data_columns) %>%
+        summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
+        unlist() %>%
+        which() %>%
+        names()
+
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
     ms_df_adjusted <- ms_df %>%
         full_join(fulldt, #right_join would be more efficient, but this is future-proof
                   by = c('datetime', 'site_name')) %>%
         arrange(datetime) %>%
-        mutate_at(vars(-one_of(non_data_columns)),
+        mutate_at(vars(-one_of(c(non_data_columns, insufficient_data_cols))),
                   imputeTS::na_interpolation,
                   maxgap = impute_limit) %>%
         filter_at(vars(-one_of(non_data_columns)),
@@ -1822,6 +1873,7 @@ synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
             ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
+        select(site_name, datetime, everything()) %>%
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
 
@@ -1911,17 +1963,41 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                   by = 'datetime') %>%
         arrange(datetime)
 
-        #kept this here in case it's actually somehow faster? (never benchmarked)
+        # #kept this here in case it's actually somehow faster? (never benchmarked)
         # group_by(datetime) %>%
         # summarize_all(max, na.rm = FALSE) %>%
         # ungroup() %>%
         # arrange(datetime)
 
+        # # and this is the clunky way to summarize status cols (left jic)
+        #mutate(
+        #    ms_status = as.logical(ms_status),
+        #    ms_interp = as.logical(ms_interp)) %>%
+        #group_by(datetime) %>%
+        #summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        #ungroup() %>%
+        #mutate(
+        #    ms_status = as.numeric(ms_status),
+        #    ms_interp = as.numeric(ms_interp)) %>%
+        #filter_at(vars(-datetime, -ms_status, -ms_interp),
+        #    any_vars(! is.na(.))) %>%
+        #arrange(datetime)
+
+    clst <- ms_parallelize()
+
     #interpolate precipitation volume and write watershed averages
-    for(j in 1:nrow(wb)){
+    catchout <- foreach::foreach(j = 1:nrow(wb)) %dopar% {
+    # for(j in 1:nrow(wb)){
 
         wbj <- slice(wb, j)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {jj}/{w}',
+            s = site_name,
+            jj = j,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         ws_mean_precip <- shortcut_idw(encompassing_dem = dem,
                                        wshd_bnd = wbj,
@@ -1945,7 +2021,40 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                       link_to_portal = TRUE)
     }
 
+    parallel::stopCluster(clst)
+
     return()
+}
+
+
+#. handle_errors
+ms_parallelize <- function(maxcores = Inf){
+
+    #maxcores is the maximum number of processor cores to use for R tasks.
+    #   you may want to leave a few aside for other processes.
+
+    #value: a cluster object. you'll need this to return to serial mode and
+    #   free up the cores that were employed by R. Be sure to run
+    #parallel::stopCluster(<cluster object>) after the parallel tasks are complete.
+
+    #be sure to call
+
+    #we need to find a way to protect some cores for serving the portal
+    #if we end up processing data and serving the portal on the same
+    #machine/cluster. we can use taskset to assign the shiny process
+    #to 1-3 cores and this process to any others.
+
+    ncores <- min(parallel::detectCores(), maxcores)
+
+    if(.Platform$OS.type == 'windows'){
+        clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+    } else {
+        clst <- parallel::makeCluster(ncores, type = 'FORK')
+    }
+
+    doParallel::registerDoParallel(clst)
+
+    return(clst)
 }
 
 #. handle_errors
@@ -1963,14 +2072,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                    domain = domain,
                                    prodname_ms = pchem_prodname) %>%
         filter(site_name %in% rg$site_name)
-    # pchem = filter(pchem, site_name %in% c())
     # pchem = manufacture_uncert_msdf(pchem)
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname) %>%
-        filter(site_name %in% rg$site_name)
-    # precip = filter(precip, site_name %in% c("GSWS01", "SPOTFI", "UNIT3B", "WS1SDL", "WS3JRD"))
-    # precip = manufacture_uncert_msdf(precip)
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -1983,33 +2085,30 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
-    #this avoids a lot of slow summarizing
-    status_cols <- precip %>%
-        select(datetime, ms_status, ms_interp) %>%
-        group_by(datetime) %>%
-        summarize(
-            ms_status = numeric_any(ms_status),
-            ms_interp = numeric_any(ms_interp))
-
-    #clean precip and arrange for matrixification
-    precip <- precip %>%
-        # filter(site_name %in% rg$site_name) %>%
-
-        #this block is for testing only (makes dataset smaller)
-        # mutate(datetime = lubridate::year(datetime)) %>%
-        # group_by(site_name, datetime) %>%
-        # summarize(
-        #     precip = mean(precip, na.rm=TRUE),
-        #     ms_status = numeric_any(ms_status),
-        #     ms_interp = numeric_any(ms_interp)) %>%
-        # ungroup() %>%
-
-        select(-ms_status, -ms_interp) %>%
-        tidyr::pivot_wider(names_from = site_name,
-                           values_from = precip) %>%
-        left_join(status_cols,
-                  by = 'datetime') %>%
-        arrange(datetime)
+    # #clean precip and arrange for matrixification (nvm. precip not needed for this)
+    # precip <- precip %>%
+    #     filter(site_name %in% rg$site_name) %>%
+    #     # mutate(datetime = lubridate::year(datetime)) %>% #for testing
+    #     # group_by(site_name, datetime) %>%
+    #     # summarize(
+    #     #     precip = mean(precip, na.rm=TRUE),
+    #     #     ms_status = numeric_any(ms_status),
+    #     #     ms_interp = numeric_any(ms_interp)) %>%
+    #     # ungroup() %>%
+    #     tidyr::pivot_wider(names_from = site_name,
+    #                        values_from = precip) %>%
+    #     mutate(
+    #         ms_status = as.logical(ms_status),
+    #         ms_interp = as.logical(ms_interp)) %>%
+    #     group_by(datetime) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup() %>%
+    #     mutate(
+    #         ms_status = as.numeric(ms_status),
+    #         ms_interp = as.numeric(ms_interp)) %>%
+    #     filter_at(vars(-datetime, -ms_status, -ms_interp),
+    #         any_vars(! is.na(.))) %>%
+    #     arrange(datetime)
 
     #organize variables by those that can be flux converted and those that can't
     # flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
@@ -2057,17 +2156,35 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             arrange(datetime)
     }
 
+    clst <- ms_parallelize()
+
     #send vars into regular idw interpolator WITHOUT precip, one at a time;
     #combine and write outputs by site
-    for(i in 1:nrow(wb)){
+    catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+    # for(i in 1:nrow(wb)){
 
         wbj <- slice(wb, i)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {ii}/{w}',
+            s = site_name,
+            ii = i,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         ws_mean_d <- tibble()
         for(j in 1:nvars){
 
             v <- pchem_vars[j]
+
+            msg <- glue('site: {s}; var: {vv}; {jj}/{nv}',
+                s = site_name,
+                vv = v,
+                jj = j,
+                nv = nvars)
+            loginfo(msg,
+                logger = logger_module)
 
             ws_mean <- shortcut_idw(encompassing_dem = dem,
                                     wshd_bnd = wbj,
@@ -2106,6 +2223,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
         ws_mean_d <- apply_detection_limit_s(ws_mean_d, detlims)
 
+        msg <- glue('{w}, {n}, {d}, {p}',
+            w = nrow(ws_mean_d),
+            n = network,
+            d = domain,
+            p = prodname_ms)
+        loginfo(msg,
+            logger = logger_module)
+
         write_ms_file(ws_mean_d,
                       network = network,
                       domain = domain,
@@ -2115,6 +2240,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       shapefile = FALSE,
                       link_to_portal = TRUE)
     }
+
+    parallel::stopCluster(clst)
 
     return()
 }
@@ -2220,12 +2347,22 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             arrange(datetime)
     }
 
+    clst <- ms_parallelize()
+
     #send vars into flux interpolator with precip, one at a time;
     #combine and write outputs by site
-    for(i in 1:nrow(wb)){
+    catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+    # for(i in 1:nrow(wb)){
 
         wbj <- slice(wb, i)
         site_name <- wbj$site_name
+
+        msg <- glue('site: {s}; {ii}/{w}',
+            s = site_name,
+            ii = i,
+            w = nrow(wb))
+        loginfo(msg,
+            logger = logger_module)
 
         for(j in 1:nvars_fluxable){
 
@@ -2303,13 +2440,15 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                          link_to_portal = TRUE))
     }
 
+    parallel::stopCluster(clst)
+
     return()
 }
 
 #. handle_errors
 invalidate_derived_products <- function(successor_string){
 
-    if(all(is.na(succesor_string)) || successor_string == ''){
+    if(all(is.na(successor_string)) || successor_string == ''){
         return()
     }
 
