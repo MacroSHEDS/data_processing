@@ -268,3 +268,9 @@ manufacture_uncert_msdf <- function(df, errval = 0.1){
 
     return(df)
 }
+
+testtb <- tibble(site_name = c('a','a','b','b'),
+                 datetime = as.POSIXct(1:4, origin='2000-01-01'),
+                 pH__val = 1:4, pHCODE = c('y','y','y','n'),
+                 alk__val = 1:4, alkCODE = c('n','y','y','y'),
+                 TYPE = c('g','b','g','b'))

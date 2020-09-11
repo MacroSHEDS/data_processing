@@ -359,58 +359,96 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    d = sw(read_csv(rawfile1,
-                    progress = FALSE,
-                    col_types = readr::cols_only(
-                        DATE_TIME='c', SITECODE='c', TYPE='c', MEAN_LPS='d',
-                        PH='d', COND='d',
-                        ALK='d', SSED='d', SI='d', UTP='d', TDP='d', PARTP='d',
-                        PO4P='d', UTN='d', TDN='d', DON='d', PARTN='d', UTKN='d',
-                        TKN='d', NH3N='d', NO3N='d', `NA` = 'd', K='d', CA='d',
-                        MG='d', SO4S='d', CL='d', DOC='d', ANCA='d',
-                        ALK_OUTPUT='d', SSED_OUTPUT='d', SI_OUTPUT='d',
-                        UTP_OUTPUT='d', TDP_OUTPUT='d', PARTP_OUTPUT='d',
-                        PO4P_OUTPUT='d', UTN_OUTPUT='d', TDN_OUTPUT='d',
-                        DON_OUTPUT='d', PARTN_OUTPUT='d', UTKN_OUTPUT='d',
-                        TKN_OUTPUT='d', NH3N_OUTPUT='d', NO3N_OUTPUT='d',
-                        NA_OUTPUT = 'd', K_OUTPUT='d', CA_OUTPUT='d',
-                        MG_OUTPUT='d', SO4S_OUTPUT='d', CL_OUTPUT='d',
-                        DOC_OUTPUT='d'))) %>%
-        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
-        rename(site_name = SITECODE,
-               datetime = DATE_TIME) %>%
-        rename_all(dplyr::recode,
-                   MEAN_LPS='discharge_ns', PH='pH', COND='spCond', ALK='alk',
-                   SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
-                   PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca', MG='Mg',
-                   SO4S='SO4_S', CL='Cl', ANCA='AnCaR', `NA`='Na',
-                   ALK_OUTPUT='alk',
-                   SSED_OUTPUT='suspSed', SI_OUTPUT='Si', PARTP_OUTPUT='TPP',
-                   PO4P_OUTPUT='PO4_P', PARTN_OUTPUT='TPN', NH3N_OUTPUT='NH3_N',
-                   NO3N_OUTPUT='NO3_N', CA_OUTPUT='Ca', MG_OUTPUT='Mg',
-                   SO4S_OUTPUT='SO4_S', CL_OUTPUT='Cl',
-                   UTP_OUTPUT='UTP', TDP_OUTPUT='TDP', UTN_OUTPUT='UTN',
-                   TDN_OUTPUT='TDN', DON_OUTPUT='DON', UTKN_OUTPUT='UTKN',
-                   TKN_OUTPUT='TKN', NA_OUTPUT='Na', K_OUTPUT='K',
-                   DOC_OUTPUT='DOC') %>%
-        mutate(datetime = with_tz(as_datetime(datetime,
-                                              tz = 'Etc/GMT-8'),
-                                              tz = 'UTC'))
+    d <- ms_read_raw_csv(filepath = rawfile1,
+                         datetime_col = 'DATE_TIME',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(PH='pH', COND='spCond', ALK='alk',
+                             SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+                             PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca', MG='Mg',
+                             SO4S='SO4_S', CL='Cl', ANCA='AnCaR', `NA`='Na', 'UTP',
+                             'TDP', 'UTN', 'TDN', 'DON', 'UTKN', 'TKN', 'K', 'DOC'),
+                         data_col_pattern = '#V#',
+                         alt_datacol_pattern = '#V#_OUTPUT',
+                         var_flagcol_pattern = '#V#CODE',
+                         alt_varflagcol_pattern = NULL,
+                         summary_flagcols = c('TYPE'))
 
-                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
-                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
-                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
-                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
-                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
-                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
-                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
-                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
-                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
-                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
-                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
+    # d = sw(read_csv(rawfile1,
+    #                 progress = FALSE,
+    #                 col_types = readr::cols_only(
+    #                     DATE_TIME='c', SITECODE='c', TYPE='c', MEAN_LPS='d',
+    #                     PH='d', COND='d',
+    #                     ALK='d', SSED='d', SI='d', UTP='d', TDP='d', PARTP='d',
+    #                     PO4P='d', UTN='d', TDN='d', DON='d', PARTN='d', UTKN='d',
+    #                     TKN='d', NH3N='d', NO3N='d', `NA` = 'd', K='d', CA='d',
+    #                     MG='d', SO4S='d', CL='d', DOC='d', ANCA='d',
+    #                     #flux-only cols
+    #                     ALK_OUTPUT='d', SSED_OUTPUT='d', SI_OUTPUT='d',
+    #                     UTP_OUTPUT='d', TDP_OUTPUT='d', PARTP_OUTPUT='d',
+    #                     PO4P_OUTPUT='d', UTN_OUTPUT='d', TDN_OUTPUT='d',
+    #                     DON_OUTPUT='d', PARTN_OUTPUT='d', UTKN_OUTPUT='d',
+    #                     TKN_OUTPUT='d', NH3N_OUTPUT='d', NO3N_OUTPUT='d',
+    #                     NA_OUTPUT = 'd', K_OUTPUT='d', CA_OUTPUT='d',
+    #                     MG_OUTPUT='d', SO4S_OUTPUT='d', CL_OUTPUT='d',
+    #                     DOC_OUTPUT='d',
+    #                     #flag cols
+    #                     PHCODE='c', CONDCODE='c', ALKCODE='c',
+    #                     SSEDCODE='c', SICODE='c',
+    #                     UTPCODE='c', TDPCODE='c', PARTPCODE='c',
+    #                     PO4PCODE='c', UTNCODE='c',
+    #                     TDNCODE='c', DONCODE='c',
+    #                     PARTNCODE='c', UTKNCODE='c',
+    #                     TKNCODE='c', NH3NCODE='c',
+    #                     NO3NCODE='c', NACODE='c', KCODE='c',
+    #                     CACODE='c', MGCODE='c',
+    #                     SO4SCODE='c', CLCODE='c', DOCCODE='c',
+    #                     PVOLCODE='c', ANCACODE='c'))) %>%
+    #     filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
+    #     rename(site_name = SITECODE,
+    #            datetime = DATE_TIME) %>%
+    #     rename_all(dplyr::recode,
+    #                #conc colnames
+    #                # MEAN_LPS='discharge_ns',
+    #                PH='pH', COND='spCond', ALK='alk',
+    #                SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+    #                PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca', MG='Mg',
+    #                SO4S='SO4_S', CL='Cl', ANCA='AnCaR', `NA`='Na',
+    #                #flux colnames
+    #                ALK_OUTPUT='alk',
+    #                SSED_OUTPUT='suspSed', SI_OUTPUT='Si', PARTP_OUTPUT='TPP',
+    #                PO4P_OUTPUT='PO4_P', PARTN_OUTPUT='TPN', NH3N_OUTPUT='NH3_N',
+    #                NO3N_OUTPUT='NO3_N', CA_OUTPUT='Ca', MG_OUTPUT='Mg',
+    #                SO4S_OUTPUT='SO4_S', CL_OUTPUT='Cl',
+    #                UTP_OUTPUT='UTP', TDP_OUTPUT='TDP', UTN_OUTPUT='UTN',
+    #                TDN_OUTPUT='TDN', DON_OUTPUT='DON', UTKN_OUTPUT='UTKN',
+    #                TKN_OUTPUT='TKN', NA_OUTPUT='Na', K_OUTPUT='K',
+    #                DOC_OUTPUT='DOC',
+    #                #varflag_colnames
+    #                PHCODE='pH!!!', CONDCODE='spCond!!!', ALKCODE='alk!!!',
+    #                SSEDCODE='suspSed!!!', SICODE='Si!!!',
+    #                PARTPCODE='TPP!!!', UTPCODE='UTP!!!'
+    #                PO4PCODE='PO4_P!!!',
+    #                PARTNCODE='TPN!!!',
+    #                NH3NCODE='NH3_N!!!',
+    #                NO3NCODE='NO3_N!!!', NACODE='Na!!!', KCODE='K!!!',
+    #                CACODE='Ca!!!', MGCODE='Mg!!!',
+    #                SO4SCODE='SO4_S!!!', CLCODE='Cl!!!', DOCCODE='DOC!!!',
+    #                ANCACODE='ANCA!!!') %>%
+    #     mutate(datetime = with_tz(as_datetime(datetime,
+    #                                           tz = 'Etc/GMT-8'),
+    #                                           tz = 'UTC'))
 
-    d <- ue(sourceflags_to_ms_status(d,
-                                     flagstatus_mappings = list(TYPE = 'F')))
+    # DOC='DOC', UTP='UTP', TDP='TDP', UTN='UTN', TDN='TDN,
+    #at this point d should contain only datetime, site_name, data columns,
+    #   and flag columns that will be merged during ms_cast_and_reflag
+
+    d <- ue(ms_cast_and_reflag(d,
+                               input_shape = 'wide',
+                               summary_flag_mappings = list(TYPE = 'F'),
+                               variable_flag_mappings =
+                                   list('#*CODE' = c('A', 'E', 'D', 'DE'))))
+    # d <- ue(sourceflags_to_ms_status(d,
+    #                                  flagstatus_mappings = list(TYPE = 'F')))
 
     d <- ue(carry_uncertainty(d,
                               network = network,
