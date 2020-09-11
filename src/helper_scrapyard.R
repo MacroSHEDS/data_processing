@@ -426,3 +426,41 @@ idw_log <- function(phase, from_env, ...){
     #before detection limit is decided. an accurate datetime column
     #is needed to calculate temporally explicit detlims
 
+#### sourceflags_to_ms_status (pre-longform-cast) ####
+#. handle_errors
+sourceflags_to_ms_status <- function(d, flagstatus_mappings,
+                                     exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
+
+    #d is a df/tibble with flag and/or status columns
+    #flagstatus_mappings is a list of flag or status column names mapped to
+    #vectors of values that might be encountered in those columns.
+    #see exclude_mapvals.
+    #exclude_mapvals: a boolean vector of length equal to the length of
+    #flagstatus_mappings. for each FALSE, values in the corresponding vector
+    #are treated as OK values (mapped to ms_status 0). values
+    #not in the vector are treated as flagged (mapped to ms_status 1).
+    #For each TRUE, this relationship is inverted, i.e. values *in* the
+    #corresponding vector are treated as flagged.
+
+    flagcolnames = names(flagstatus_mappings)
+    d = mutate(d, ms_status = 0)
+
+    for(i in 1:length(flagstatus_mappings)){
+        # d = filter(d, !! sym(flagcolnames[i]) %in% flagcols[[i]])
+        # d = mutate(d,
+        #     ms_status = ifelse(flagcolnames[i] %in% flagcols[[i]], 0, 1))
+
+        if(exclude_mapvals[i]){
+            ok_bool = ! d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        } else {
+            ok_bool = d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        }
+
+        d$ms_status[! ok_bool] = 1
+    }
+
+    d = select(d, -one_of(flagcolnames))
+
+    return(d)
+}
+
