@@ -152,38 +152,273 @@ numeric_any <- function(num_vec){
 }
 
 #. handle_errors
-sourceflags_to_ms_status <- function(d, flagstatus_mappings,
-                                     exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
+gsub_v <- function(pattern, replacement_vec, x){
 
-    #d is a df/tibble with flag and/or status columns
-    #flagstatus_mappings is a list of flag or status column names mapped to
-    #vectors of values that might be encountered in those columns.
-    #see exclude_mapvals.
-    #exclude_mapvals: a boolean vector of length equal to the length of
-    #flagstatus_mappings. for each FALSE, values in the corresponding vector
-    #are treated as OK values (mapped to ms_status 0). values
-    #not in the vector are treated as flagged (mapped to ms_status 1).
-    #For each TRUE, this relationship is inverted, i.e. values *in* the
-    #corresponding vector are treated as flagged.
+    #just like the first three arguments to gsub, except that
+    #   replacement is now a vector of replacements.
+    #return a vector of the same length as replacement_vec, where
+    #   each element in replacement_vec has been used once
 
-    flagcolnames = names(flagstatus_mappings)
+    subbed <- sapply(replacement_vec,
+                     function(v) gsub(pattern = pattern,
+                                      replacement = v,
+                                      x = x),
+                     USE.NAMES = FALSE)
+
+    return(subbed)
+}
+
+#. handle_errors
+ms_read_raw_csv <- function(filepath,
+                            datetime_col,
+                            site_name_col,
+                            data_cols,
+                            data_col_pattern,
+                            alt_datacol_pattern,
+                            var_flagcol_pattern,
+                            alt_varflagcol_pattern,
+                            summary_flagcols){
+
+    #TODO: adapt for other file formats
+
+    #deal with missing cases
+    alt_datacols <- varflagcols <- alt_varflagcols <- NA
+    alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
+
+    #fill in missing names in data_cols (for columns that are already
+    #   canonically named)
+    datacol_names0 <- names(data_cols)
+    datacol_names0[datacol_names0 == ''] <-
+        unname(data_cols[datacol_names0 == ''])
+
+    #expand data columnname wildcards and rename data_cols
+    datacol_names <- gsub_v(pattern = '#V#',
+                            replacement_vec = datacol_names0,
+                            x = data_col_pattern)
+    names(data_cols) <- datacol_names
+
+    #expand alternative data columnname wildcards and populate alt_datacols
+    if(! missing(alt_datacol_pattern) && ! is.null(alt_datacol_pattern)){
+        alt_datacols <- data_cols
+        alt_datacol_names <- gsub_v(pattern = '#V#',
+                                    replacement_vec = datacol_names0,
+                                    x = alt_datacol_pattern)
+        names(alt_datacols) <- alt_datacol_names
+    }
+
+    #expand varflag columnname wildcards and populate var_flagcols
+    if(! missing(var_flagcol_pattern) && ! is.null(var_flagcol_pattern)){
+        var_flagcols <- data_cols
+        var_flagcol_names <- gsub_v(pattern = '#V#',
+                                    replacement_vec = datacol_names0,
+                                    x = var_flagcol_pattern)
+        names(var_flagcols) <- var_flagcol_names
+    }
+
+    #expand alt varflag columnname wildcards and populate var_flagcols
+    if(! missing(alt_varflagcol_pattern) && ! is.null(alt_varflagcol_pattern)){
+        alt_varflagcols <- data_cols
+        alt_varflagcol_names <- gsub_v(pattern = '#V#',
+                                       replacement_vec = datacol_names0,
+                                       x = alt_varflagcol_pattern)
+        names(alt_varflagcols) <- alt_varflagcol_names
+    }
+
+    #combine all available column name mappings; assemble new name vector
+    colnames_all <- c(data_cols, alt_datacols, var_flagcols, alt_varflagcols)
+    na_inds <- is.na(colnames_all)
+    colnames_all <- colnames_all[! na_inds]
+
+    suffixes <- rep(c('__|dat', '__|dat', '__|flg', '__|flg'),
+                    times = c(length(data_cols),
+                              length(alt_datacols),
+                              length(var_flagcols),
+                              length(alt_varflagcols)))
+    colnames_new <- paste0(colnames_all, suffixes)
+    colnames_new <- colnames_new[! na_inds]
+
+    if(! missing(datetime_col) && ! is.null(datetime_col)){
+        colnames_all <- c('datetime', colnames_all)
+        names(colnames_all)[1] <- datetime_col
+        colnames_new <- c('datetime', colnames_new)
+    }
+
+    if(! missing(site_name_col) && ! is.null(site_name_col)){
+        colnames_all <- c('site_name', colnames_all)
+        names(colnames_all)[1] <- site_name_col
+        colnames_new <- c('site_name', colnames_new)
+    }
+
+    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
+        nsumcol <- length(summary_flagcols)
+        summary_flagcols_named <- summary_flagcols
+        names(summary_flagcols_named) <- summary_flagcols
+        colnames_all <- c(colnames_all, summary_flagcols_named)
+        colnames_new <- c(colnames_new, summary_flagcols)
+    }
+
+    #assemble colClasses argument to read.csv
+    classes_d1 <- rep('numeric', length(data_cols))
+    names(classes_d1) <- datacol_names
+
+    classes_d2 <- rep('numeric', length(alt_datacols))
+    names(classes_d2) <- alt_datacol_names
+
+    classes_f1 <- rep('character', length(var_flagcols))
+    names(classes_f1) <- var_flagcol_names
+
+    classes_f2 <- rep('character', length(alt_varflagcols))
+    names(classes_f2) <- alt_varflagcol_names
+
+    if(! missing(datetime_col) && ! is.null(datetime_col)){
+        class_dt <- 'character'
+        names(class_dt) <- datetime_col
+    }
+
+    if(! missing(site_name_col) && ! is.null(site_name_col)){
+        class_sn <- 'character'
+        names(class_sn) <- site_name_col
+    }
+
+    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
+        classes_f3 <- rep('character', length(summary_flagcols))
+        names(classes_f3) <- summary_flagcols
+    }
+
+    classes_all <- c(class_dt, class_sn, classes_d1, classes_d2, classes_f1,
+                     classes_f2, classes_f3)
+    classes_all <- classes_all[! is.na(names(classes_all))]
+
+    # read data
+    d <- read.csv(filepath,
+                  stringsAsFactors = FALSE,
+                  colClasses = classes_all) %>%
+        as_tibble() %>%
+        select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
+    if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric'
+
+    #rename cols to canonical names
+    colnames_d <- colnames(d)
+
+    for(i in 1:ncol(d)){
+
+        if(colnames_d[i] == 'NA.'){
+            colnames_d[i] <- 'Na__|dat'
+            next
+        }
+
+        canonical_name_ind <- names(colnames_all) == colnames_d[i]
+        if(any(canonical_name_ind)){
+            colnames_d[i] <- colnames_new[canonical_name_ind]
+        }
+    }
+
+    colnames(d) <- colnames_d
+
+    return(d)
+}
+
+#. handle_errors
+ms_cast_and_reflag <- function(d,
+                               input_shape = 'wide',
+                               summary_flag_mappings,
+                               variable_flag_mappings,
+                               exclude_summary_mapvals =
+                                   rep(FALSE, length(summary_flag_mappings)),
+                               exclude_variable_mapvals =
+                                   rep(FALSE, length(variable_flag_mappings))){
+
+    #d is a df/tibble with ONLY a site_name column, a datetime column,
+    #   flag and/or status columns, and data columns. There must be no
+    #   columns with grouping data, variable names, units, methods, etc.
+    #input_shape is the format ('wide'/'long') of d
+    #summary_flag_mappings is a list of name-value pairs. Names must be the
+    #   column names of flag or status columns that pertain to all data columns.
+    #   Values must be character vectors of values that might be encountered in
+    #   those columns. See exclude_summary_mapvals.
+    #variable_flag_mappings is a list of name-value pairs. Names can either be
+    #   the full names of columns or name patterns combined with the wildcard
+    #   characters octothorpe + asterisk (#*). If full names, they must name
+    #   columns containing flag or status information for a specific data column.
+    #   If partial names with wildcards, they will be expanded to match any data
+    #   column masked by the wildcards, i.e. any masked characters will be
+    #   assumed to contain the name of another column, possibly including other
+    #   superfluous characters like _. Values must be character vectors of values
+    #   that might be encountered in the columns specified. See exclude_variable_mapvals.
+    #exclude_summary_mapvals: a boolean vector of length equal to the length of
+    #   summary_flag_mappings. for each FALSE, values specified by summary_flag_mappings
+    #   are treated as OK values (mapped to ms_status 0), and values
+    #   not specified are treated as flagged (mapped to ms_status 1).
+    #   For each TRUE, this relationship is inverted, i.e. values specified by
+    #   summary_flag_mappings are treated as flagged.
+    #exclude_variable_mapvals: a boolean vector of length equal to the length of
+    #   variable_flag_mappings. for each FALSE, values specified by variable_flag_mappings
+    #   are treated as OK values (mapped to ms_status 0), and values
+    #   not specified are treated as flagged (mapped to ms_status 1).
+    #   For each TRUE, this relationship is inverted, i.e. values specified by
+    #   variable_flag_mappings are treated as flagged.
+
+    if(! input_shape == 'wide'){
+        stop('ms_cast_and_reflag only implemented for input_shape = "wide"')
+    }
+
+    columns <- colnames(d)
+    varflag_keyword <- gsub(pattern = '#\\*',
+                            replacement = '',
+                            names(variable_flag_mappings))
+
+    varflag_pattern <- gsub(pattern = '#\\*',
+                            replacement = '(?:.*)?',
+                            names(variable_flag_mappings))
+    variable_flagcols <- grep(pattern = varflag_pattern,
+                              x = columns)
+                              # value = TRUE)
+
+    summary_flagcols <- which(columns %in% names(summary_flag_mappings))
+
+    varcols <- setdiff(1:length(columns),
+                       c(variable_flagcols,
+                         summary_flagcols,
+                         which(columns %in% ms_canonicals)))
+
+    colnames(d)[varcols] <- paste0(columns[varcols],
+                                   '__|val')
+
+    colnames(d)[variable_flagcols] <- gsub(pattern = varflag_keyword,
+                                           replacement = '',
+                                           columns[variable_flagcols]) %>%
+        paste0('__|var')
+
+    pivot_longer(data = d,
+                 cols = ends_with(c('__|var', '__|val')),
+                 names_pattern = '([a-zA-Z0-9_]+)(?:__|)(var|val)',
+                 names_to = c('var', 'val'))
+
+    pivot_longer(data = qq, #d
+                 # cols = c(pH__val, alk__val, pHCODE, alkCODE),
+                 cols = ends_with(c('__val', 'CODE')),
+                 names_pattern = '([a-zA-Z0-9]+)(?:__)?(val|CODE)',
+                 names_to = c('var', '.value'))
+
+    #handle summary flagcols
+    sumflag_cols = names(summary_flag_mappings)
     d = mutate(d, ms_status = 0)
 
-    for(i in 1:length(flagstatus_mappings)){
-        # d = filter(d, !! sym(flagcolnames[i]) %in% flagcols[[i]])
+    for(i in 1:length(summary_flag_mappings)){
+        # d = filter(d, !! sym(sumflag_cols[i]) %in% flagcols[[i]])
         # d = mutate(d,
-        #     ms_status = ifelse(flagcolnames[i] %in% flagcols[[i]], 0, 1))
+        #     ms_status = ifelse(sumflag_cols[i] %in% flagcols[[i]], 0, 1))
 
         if(exclude_mapvals[i]){
-            ok_bool = ! d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+            ok_bool = ! d[[sumflag_cols[i]]] %in% summary_flag_mappings[[i]]
         } else {
-            ok_bool = d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+            ok_bool = d[[sumflag_cols[i]]] %in% summary_flag_mappings[[i]]
         }
 
         d$ms_status[! ok_bool] = 1
     }
 
-    d = select(d, -one_of(flagcolnames))
+    d = select(d, -one_of(sumflag_cols))
 
     return(d)
 }
