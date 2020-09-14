@@ -179,7 +179,38 @@ ms_read_raw_csv <- function(filepath,
                             alt_varflagcol_pattern,
                             summary_flagcols){
 
+    #filepath: string
+    #datetime_col: name of column containing datetime information
+    #site_name_col: name of column containing site name information
+    #data_cols: vector of names of columns containing data. if this vector is
+    #   named, names are taken to be the column names as they exist in the file,
+    #   and values are used to replace those names.
+    #data_col_pattern: a string containing the wildcard "#V#",
+    #   which represents any number of characters. If data column names will be
+    #   used as-is, this wildcard is all you need. if data columns contain
+    #   recurring, superfluous characters, you can omit them with regex. for
+    #   example, if data columns are named input_x, input_y, input_...., use
+    #   data_col_pattern = 'input_#V#' and the new names will be x, y, ....
+    #alt_datacol_pattern: same mechanics as data_col_pattern. use this if there
+    #   might be a second way in which column names are generated, e.g.
+    #   output_x, output_y, output_....
+    #var_flagcol_pattern: same mechanics as the other pattern parameters. this
+    #   one is for columns containing flag information that is specific to
+    #   one variable
+    #alt_varflagcol_pattern: just in case there are two naming conventions for
+    #   variable-specific flag columns
+    #summary_flagcols: an unnamed vector of column names for flag columns
+    #   that pertain to all variables
+
+    #return value: a tibble of ordered and renamed columns, omitting any columns
+    #   from the original file that do not contain data, flag/qaqc information,
+    #   datetime, or site_name. data columns are given type double. all other
+    #   columns are given type character. data and flag/qaqc columns are given
+    #   suffixes (__|flg and __|dat) that allow them to be cast into long format
+    #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
+
     #TODO: adapt for other file formats
+    #   might also need to adapt for files with long format. currently assumes wide
 
     #deal with missing cases
     alt_datacols <- varflagcols <- alt_varflagcols <- NA
@@ -319,106 +350,244 @@ ms_read_raw_csv <- function(filepath,
 }
 
 #. handle_errors
+escape_special_regex <- function(x){
+
+    #x is a character vector. any special characters in x will be escaped with
+    #   a double backslash, e.g. "air.pressure.kpa" will become
+    #   "air\\.pressure\\.kpa"
+
+    #this function currently only escapes "." and "|", because they're the
+    #   special regex characters that can appear in column names.
+
+    special_regex_colchars <- c('.', '|')
+    special_regex <- paste0('([\\',
+                            paste(special_regex_colchars,
+                                  collapse = '\\'),
+                            '])')
+
+    escaped <- gsub(pattern = special_regex,
+                    replacement = '\\\\\\1',
+                    x,
+                    perl = TRUE)
+
+    return(escaped)
+}
+
+#. handle_errors
 ms_cast_and_reflag <- function(d,
                                input_shape = 'wide',
-                               summary_flag_mappings,
-                               variable_flag_mappings,
-                               exclude_summary_mapvals =
-                                   rep(FALSE, length(summary_flag_mappings)),
-                               exclude_variable_mapvals =
-                                   rep(FALSE, length(variable_flag_mappings))){
+                               data_col_pattern = '#V#__|dat',
+                               varflag_col_pattern = '#V#__|flg',
+                               variable_flags_to_drop,
+                               variable_flags_clean,
+                               variable_flags_dirty,
+                               summary_flags_to_drop,
+                               summary_flags_clean,
+                               summary_flags_dirty)
+
+    #TODO: handle cases of no summary flag columns, no flag columns at all.
+    #allow for alternative pattern specifications.
 
     #d is a df/tibble with ONLY a site_name column, a datetime column,
     #   flag and/or status columns, and data columns. There must be no
     #   columns with grouping data, variable names, units, methods, etc.
-    #input_shape is the format ('wide'/'long') of d
-    #summary_flag_mappings is a list of name-value pairs. Names must be the
-    #   column names of flag or status columns that pertain to all data columns.
-    #   Values must be character vectors of values that might be encountered in
-    #   those columns. See exclude_summary_mapvals.
-    #variable_flag_mappings is a list of name-value pairs. Names can either be
-    #   the full names of columns or name patterns combined with the wildcard
-    #   characters octothorpe + asterisk (#*). If full names, they must name
-    #   columns containing flag or status information for a specific data column.
-    #   If partial names with wildcards, they will be expanded to match any data
-    #   column masked by the wildcards, i.e. any masked characters will be
-    #   assumed to contain the name of another column, possibly including other
-    #   superfluous characters like _. Values must be character vectors of values
-    #   that might be encountered in the columns specified. See exclude_variable_mapvals.
-    #exclude_summary_mapvals: a boolean vector of length equal to the length of
-    #   summary_flag_mappings. for each FALSE, values specified by summary_flag_mappings
-    #   are treated as OK values (mapped to ms_status 0), and values
-    #   not specified are treated as flagged (mapped to ms_status 1).
-    #   For each TRUE, this relationship is inverted, i.e. values specified by
-    #   summary_flag_mappings are treated as flagged.
-    #exclude_variable_mapvals: a boolean vector of length equal to the length of
-    #   variable_flag_mappings. for each FALSE, values specified by variable_flag_mappings
-    #   are treated as OK values (mapped to ms_status 0), and values
-    #   not specified are treated as flagged (mapped to ms_status 1).
-    #   For each TRUE, this relationship is inverted, i.e. values specified by
-    #   variable_flag_mappings are treated as flagged.
+    #   Data columns must be suffixed identically. Variable flag columns
+    #   must be suffixed identically and differently from data columns.
+    #   If d was generated by ms_read_raw_csv, it will be good to go.
+    #input_shape is the format ("wide"/"long") of d
+    #   (currently only "wide" supported).
+    #data_col_pattern: a string containing the wildcard "#V#",
+    #   which represents any number of characters, and the suffix that pertains
+    #   to data columns (currently this must be '#V#__|dat'.
+    #varflag_col_pattern: a string containing the wildcard "#V#",
+    #   which represents any number of characters, and the suffix that pertains
+    #   to variable flag/status columns (currently this must be '#V#__|flg'.
+    #   Or set this to NA if there are no variable-specific flag/status columns.
+    #variable_flags_to_drop: a character vector of values that might appear in
+    #   the variable flag columns. Elements of this vector are treated as
+    #   bad data and are removed. This argument is optional, though at least 2
+    #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
+    #   must be supplied.
+    #variable_flags_clean: a character vector of values that might appear in
+    #   the variable flag columns. Elements of this vector are given an
+    #   ms_status of 0, meaning clean. This argument is optional, though at least 2
+    #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
+    #   must be supplied.
+    #variable_flags_dirty: a character vector of values that might appear in
+    #   the variable flag columns. Elements of this vector are given an
+    #   ms_status of 1, meaning dirty This argument is optional, though at least 2
+    #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
+    #   must be supplied.
+    #summary_flags_to_drop: a named list. names correspond to columns in d that
+    #   contain summary flag/status information. values must be character vectors
+    #   of values that might appear in
+    #   the summary flag/status columns. Elements of these vectors are treated as
+    #   bad data and are removed. This argument is optional, though at least 2
+    #   of summary_flags_to_drop, summary_flags_clean, and summary_flags_dirty
+    #   must be supplied.
+    #   make sure list elements for summary flags are in the same order!
+    #   there is currently no check for this.
+    #summary_flags_clean: a named list. names correspond to columns in d that
+    #   contain summary flag/status information. values must be character vectors
+    #   of values that might appear in the summary flag/status columns.
+    #   Elements of these vectors are given an ms_status of 0, meaning clean.
+    #   This argument is optional, though at least 2 of summary_flags_to_drop,
+    #   summary_flags_clean, and summary_flags_dirty must be supplied.
+    #   make sure list elements for summary flags are in the same order!
+    #   there is currently no check for this.
+    #summary_flags_dirty: a named list. names correspond to columns in d that
+    #   contain summary flag/status information. values must be character vectors
+    #   of values that might appear in the summary flag/status columns.
+    #   Elements of these vectors are given an ms_status of 1, meaning dirty.
+    #   This argument is optional, though at least 2 of summary_flags_to_drop,
+    #   summary_flags_clean, and summary_flags_dirty must be supplied.
+    #   make sure list elements for summary flags are in the same order!
+    #   there is currently no check for this.
 
+    #return value: a long-format tibble with 5 columns: datetime, site_name,
+    #   var, val, ms_status.
+
+    #arg checks
     if(! input_shape == 'wide'){
         stop('ms_cast_and_reflag only implemented for input_shape = "wide"')
     }
 
-    columns <- colnames(d)
-    varflag_keyword <- gsub(pattern = '#\\*',
-                            replacement = '',
-                            names(variable_flag_mappings))
+    sumdrop <- ! missing(summary_flags_to_drop) && ! is.null(summary_flags_to_drop)
+    sumclen <- ! missing(summary_flags_clean) && ! is.null(summary_flags_clean)
+    sumdirt <- ! missing(summary_flags_dirty) && ! is.null(summary_flags_dirty)
 
-    varflag_pattern <- gsub(pattern = '#\\*',
-                            replacement = '(?:.*)?',
-                            names(variable_flag_mappings))
-    variable_flagcols <- grep(pattern = varflag_pattern,
-                              x = columns)
-                              # value = TRUE)
-
-    summary_flagcols <- which(columns %in% names(summary_flag_mappings))
-
-    varcols <- setdiff(1:length(columns),
-                       c(variable_flagcols,
-                         summary_flagcols,
-                         which(columns %in% ms_canonicals)))
-
-    colnames(d)[varcols] <- paste0(columns[varcols],
-                                   '__|val')
-
-    colnames(d)[variable_flagcols] <- gsub(pattern = varflag_keyword,
-                                           replacement = '',
-                                           columns[variable_flagcols]) %>%
-        paste0('__|var')
-
-    pivot_longer(data = d,
-                 cols = ends_with(c('__|var', '__|val')),
-                 names_pattern = '([a-zA-Z0-9_]+)(?:__|)(var|val)',
-                 names_to = c('var', 'val'))
-
-    pivot_longer(data = qq, #d
-                 # cols = c(pH__val, alk__val, pHCODE, alkCODE),
-                 cols = ends_with(c('__val', 'CODE')),
-                 names_pattern = '([a-zA-Z0-9]+)(?:__)?(val|CODE)',
-                 names_to = c('var', '.value'))
-
-    #handle summary flagcols
-    sumflag_cols = names(summary_flag_mappings)
-    d = mutate(d, ms_status = 0)
-
-    for(i in 1:length(summary_flag_mappings)){
-        # d = filter(d, !! sym(sumflag_cols[i]) %in% flagcols[[i]])
-        # d = mutate(d,
-        #     ms_status = ifelse(sumflag_cols[i] %in% flagcols[[i]], 0, 1))
-
-        if(exclude_mapvals[i]){
-            ok_bool = ! d[[sumflag_cols[i]]] %in% summary_flag_mappings[[i]]
-        } else {
-            ok_bool = d[[sumflag_cols[i]]] %in% summary_flag_mappings[[i]]
-        }
-
-        d$ms_status[! ok_bool] = 1
+    if(sum(c(sumdrop, sumclen, sumdirt)) < 2){
+        stop(paste0('Must supply at least 2 of summary_flags_to_drop, ',
+                    'summary_flags_clean, summary_flags_dirty'))
     }
 
-    d = select(d, -one_of(sumflag_cols))
+    vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
+    varclen <- ! missing(variable_flags_clean) && ! is.null(variable_flags_clean)
+    vardirt <- ! missing(variable_flags_dirty) && ! is.null(variable_flags_dirty)
+    no_varflags <- ! is.na(varflag_col_pattern)
+
+    if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags){
+        stop(paste0('Must supply at least 2 of variable_flags_to_drop, ',
+                    'variable_flags_clean, variable_flags_dirty (or set',
+                    'varflag_col_pattern = NA)'))
+    }
+
+    if(sumdrop){
+        summary_colnames <- names(summary_flags_to_drop)
+    } else {
+        summary_colnames <- names(summary_flags_clean)
+    }
+
+    #categorize columns
+    # columns <- colnames(d)
+
+    data_col_keyword <- gsub(pattern = '#V#',
+                             replacement = '',
+                             data_col_pattern)
+    # data_col_pattern <- gsub(pattern = '#V#',
+    #                          replacement = '(?:.*)?',
+    #                          escape_special_regex(data_col_pattern))
+    # data_col_inds <- grep(pattern = data_col_pattern,
+    #                       x = columns)
+
+    varflag_keyword <- gsub(pattern = '#V#',
+                            replacement = '',
+                            varflag_col_pattern)
+    # varflag_pattern <- gsub(pattern = '#V#',
+    #                         replacement = '(?:.*)?',
+    #                         escape_special_regex(varflag_col_pattern))
+    # varflag_inds <- grep(pattern = varflag_pattern,
+    #                      x = columns)
+
+    # sumflag_inds <- which(columns %in% summary_colnames)
+
+    # varcols <- setdiff(1:length(columns),
+    #                    c(varflag_inds,
+    #                      ,
+    #                      which(columns %in% ms_canonicals)))
+
+    # colnames(d)[varcols] <- paste0(columns[varcols],
+    #                                '__|val')
+
+    # colnames(d)[variable_flagcols] <- gsub(pattern = varflag_keyword,
+    #                                        replacement = '',
+    #                                        columns[variable_flagcols]) %>%
+    #     paste0('__|var')
+
+    #cast to long format (would have to auto-generatae names_pattern regex
+    #   to allow for data_col_pattern and varflag_col_pattern to vary)
+    if(no_varflags){
+        d <- pivot_longer(data = d,
+                          cols = ends_with(data_col_keyword),
+                          names_pattern = '^(.+?)__\\|(dat)$',
+                          names_to = c('var', 'dat'))
+    } else {
+        d <- pivot_longer(data = d,
+                          cols = ends_with(c(data_col_keyword, varflag_keyword)),
+                          names_pattern = '^(.+?)__\\|(dat|flg)$',
+                          names_to = c('var', '.value'))
+    }
+
+    #filter rows with summary flags indicating bad data (data to drop)
+    if(sumdrop){
+        for(i in 1:length(summary_flags_to_drop)){
+            d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
+                            summary_flags_to_drop[[i]])
+        }
+    } else {
+        for(i in 1:length(summary_flags_clean)){
+            d <- filter(d, (!!sym(names(summary_flags_clean)[i])) %in%
+                            c(summary_flags_clean[[i]],
+                              summary_flags_dirty[[i]]))
+        }
+    }
+
+    #filter rows with variable flags indicating bad data (data to drop)
+    if(! no_varflags){
+        if(vardrop){
+            d <- filter(d, ! flg %in% variable_flags_to_drop)
+        } else {
+            d <- filter(d, flg %in% c(variable_flags_clean, variable_flags_dirty))
+        }
+    }
+
+    #binarize remaining flag information (0 = clean, 1 = dirty)
+    if(! no_varflags){
+        if(varclen){
+            d <- mutate(d, ms_status = case_when(
+                flg %in% variable_flags_clean ~ 0,
+                TRUE ~ 1))
+        } else {
+            d <- mutate(d, ms_status = case_when(
+                flg %in% variable_flags_dirty ~ 1,
+                TRUE ~ 0))
+        }
+    }
+
+    if(sumclen){
+
+        for(i in 1:length(summary_flags_clean)){
+            si <- summary_flags_clean[i]
+            flg_bool <- ! d[[names(si)]] %in% si[[i]]
+        }
+
+    } else {
+
+        for(i in 1:length(summary_flags_dirty)){
+            si <- summary_flags_dirty[i]
+            flg_bool <- d[[names(si)]] %in% si[[i]]
+        }
+    }
+
+    d$ms_status[flg_bool] <- 1
+
+    #rearrange columns (this also would have to be flexified if we ever want
+    #   to pass something other than the default for data_col_pattern or
+    #   varflag_col_pattern
+    d <- d %>%
+        select(-one_of(c(summary_colnames, 'flg'))) %>%
+        select(datetime, site_name, var, dat, ms_status) %>%
+        rename(val = dat)
 
     return(d)
 }
