@@ -359,19 +359,20 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_col = 'DATE_TIME',
-                         site_name_col = 'SITECODE',
-                         data_cols =  c(PH='pH', COND='spCond', ALK='alk',
-                             SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
-                             PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca', MG='Mg',
-                             SO4S='SO4_S', CL='Cl', ANCA='AnCaR', `NA`='Na', 'UTP',
-                             'TDP', 'UTN', 'TDN', 'DON', 'UTKN', 'TKN', 'K', 'DOC'),
-                         data_col_pattern = '#V#',
-                         alt_datacol_pattern = '#V#_OUTPUT',
-                         var_flagcol_pattern = '#V#CODE',
-                         alt_varflagcol_pattern = NULL,
-                         summary_flagcols = c('TYPE'))
+    d <- ue(ms_read_raw_csv(filepath = rawfile1,
+                            datetime_col = 'DATE_TIME',
+                            site_name_col = 'SITECODE',
+                            data_cols =  c(PH='pH', COND='spCond', ALK='alk',
+                                SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+                                PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
+                                MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
+                                `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
+                                'UTKN', 'TKN', 'K', 'DOC'),
+                            data_col_pattern = '#V#',
+                            alt_datacol_pattern = '#V#_OUTPUT',
+                            var_flagcol_pattern = '#V#CODE',
+                            alt_varflagcol_pattern = NULL,
+                            summary_flagcols = c('TYPE')))
 
     # d = sw(read_csv(rawfile1,
     #                 progress = FALSE,
@@ -438,15 +439,17 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     #                                           tz = 'Etc/GMT-8'),
     #                                           tz = 'UTC'))
 
-    # DOC='DOC', UTP='UTP', TDP='TDP', UTN='UTN', TDN='TDN,
     #at this point d should contain only datetime, site_name, data columns,
     #   and flag columns that will be merged during ms_cast_and_reflag
 
     d <- ue(ms_cast_and_reflag(d,
                                input_shape = 'wide',
-                               summary_flag_mappings = list(TYPE = 'F'),
-                               variable_flag_mappings =
-                                   list('#*CODE' = c('A', 'E', 'D', 'DE'))))
+                               variable_flags_to_drop = 'N',
+                               variable_flags_clean =
+                                   c('A', 'E', 'D', 'DE', '*', 'D*'),
+                               summary_flags_to_drop = list(
+                                   TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
+                               summary_flags_clean = list(TYPE = 'F')))
     # d <- ue(sourceflags_to_ms_status(d,
     #                                  flagstatus_mappings = list(TYPE = 'F')))
 
