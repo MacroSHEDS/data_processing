@@ -396,22 +396,22 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                                tz = 'Etc/GMT-8'),
                                                tz = 'UTC'))
 
+    #consider doing this after synchronize?
     d <- ue(carry_uncertainty(d,
                               network = network,
                               domain = domain,
                               prodname_ms = prodname_ms))
 
-    d <- d %>%
-        mutate(ms_status = as.logical(ms_status)) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                  any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status)) %>%
-        arrange(site_name, datetime)
+    # d <- d %>%
+    #     filter_at(vars(-site_name, -datetime, -ms_status),
+    #               any_vars(! is.na(.))) %>%
+    #     group_by(datetime, site_name) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup() %>%
+    #     mutate(ms_status = as.numeric(ms_status)) %>%
+    #     arrange(site_name, datetime)
 
-    d[is.na(d)] = NA
+    # d[is.na(d)] = NA
 
     d <- ue(synchronize_timestep(ms_df = d,
                                  desired_interval = '1 day', #set back to '15 min' when we have server
