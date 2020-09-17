@@ -180,6 +180,11 @@ ms_read_raw_csv <- function(filepath,
                             summary_flagcols){
 
     #TODO: what about when datetime is generated from a date and a time column?
+    #if file to be read is stored in long format, this function will not work!
+    #could also add a drop_empty_rows and/or drop_empty_datacols parameter.
+    #   atm those things happen automatically
+    #likewise, a remove_duplicates param could be nice. atm, for duplicated rows,
+    #   the one with the fewest NA values is kept automatically
 
     #filepath: string
     #datetime_col: name of column containing datetime information
@@ -206,7 +211,10 @@ ms_read_raw_csv <- function(filepath,
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flag/qaqc information,
-    #   datetime, or site_name. data columns are given type double. all other
+    #   datetime, or site_name. All-NA data columns and their corresponding
+    #   flag columns will also be omitted, as will rows where all data values
+    #   are NA. Rows with NA in the datetime or site_name column are dropped.
+    #   data columns are given type double. all other
     #   columns are given type character. data and flag/qaqc columns are given
     #   suffixes (__|flg and __|dat) that allow them to be cast into long format
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
@@ -214,7 +222,7 @@ ms_read_raw_csv <- function(filepath,
     #TODO: adapt for other file formats
     #   might also need to adapt for files with long format. currently assumes wide
 
-    #deal with missing cases
+    #deal with missing args
     alt_datacols <- varflagcols <- alt_varflagcols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
 
@@ -248,7 +256,7 @@ ms_read_raw_csv <- function(filepath,
         names(var_flagcols) <- var_flagcol_names
     }
 
-    #expand alt varflag columnname wildcards and populate var_flagcols
+    #expand alt varflag columnname wildcards and populate alt_varflagcols
     if(! missing(alt_varflagcol_pattern) && ! is.null(alt_varflagcol_pattern)){
         alt_varflagcols <- data_cols
         alt_varflagcol_names <- gsub_v(pattern = '#V#',
@@ -347,6 +355,41 @@ ms_read_raw_csv <- function(filepath,
     }
 
     colnames(d) <- colnames_d
+
+    #remove rows with datetime == NA or site_name == NA
+    d <- d %>%
+        filter(! is.na(datetime) & ! is.na(site_name))
+
+    #remove columns and rows with all NAs. also remove flag columns for all-NA
+    #   data columns
+    all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
+                              MARGIN = 2,
+                              function(x) all(is.na(x)))
+    all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
+    all_na_cols <- c(all_na_cols,
+                     sub(pattern = '__\\|dat',
+                         replacement = '__|flg',
+                         all_na_cols))
+
+    d <- d %>%
+        select(-one_of(all_na_cols)) %>%
+        # select(where(~ ! all(is.na(.)) & ends_with('__|dat') ))
+        filter_at(vars(ends_with('__|dat')),
+                  any_vars(! is.na(.)))
+
+    #for duplicated datetime-site_name pairs, keep the row with the fewest NA
+    #   values. We could instead do something more sophisticated.
+    d <- d %>%
+        rowwise(one_of(c('datetime', 'site_name'))) %>%
+        mutate(NAsum = sum(is.na(c_across(ends_with('__|dat'))))) %>%
+        ungroup() %>%
+        arrange(datetime, site_name, NAsum) %>%
+        select(-NAsum) %>%
+        distinct(datetime, site_name, .keep_all = TRUE) %>%
+        arrange(site_name, datetime)
+
+    #convert NaNs to NAs, just in case.
+    d[is.na(d)] <- NA
 
     return(d)
 }
@@ -2218,84 +2261,108 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 }
 
 #. handle_errors
-synchronize_timestep <- function(ms_df, desired_interval, impute_limit = 30){
+synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
 
-    #ms_df is a data.frame or tibble with columns datetime, site_name,
-    #ms_status, and one or more data columns. if ms_interp column is already
-    #included with input, its values will be carried through to the output.
+    #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
     #desired_interval is a character string that can be parsed by the "by"
-    #parameter to base::seq.POSIXt, e.g. "5 mins"
+    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day"
     #impute_limit is the maximum number of consecutive points to
-    #inter/extrapolate. it's passed to imputeTS::na_interpolate
+    #   inter/extrapolate. it's passed to imputeTS::na_interpolate
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-    non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
-    uniq_sites <- unique(ms_df$site_name)
+    # non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
+    uniq_sites <- unique(d$site_name)
 
-    ms_df <- ms_df %>%
-        filter(! is.na(datetime)) %>%
-        select_if(~( sum(! is.na(.)) >= 1 ))
+    # d <- d %>%
+    #     filter(! is.na(datetime)) %>%
+    #     select_if(~( sum(! is.na(.)) >= 1 ))
 
-    if(ncol(ms_df) < 4){
+    if(nrow(d) < 2 || sum(is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
     #round to desired_interval
-    ms_df <- sw(ms_df %>%
-        mutate(
-            datetime = lubridate::as_datetime(datetime),
-            datetime = lubridate::round_date(datetime,
-                                             desired_interval)) %>%
-        mutate_at(vars(one_of('ms_status', 'ms_interp')),
-                  as.logical) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    d <- sw(d %>%
+        mutate(datetime = lubridate::round_date(datetime,
+                                                desired_interval)) %>%
+            # datetime = lubridate::as_datetime(datetime),
+        # mutate_at(vars(one_of('ms_status', 'ms_interp')),
+        #           as.logical) %>%
+        group_by(site_name, var, datetime) %>%
+        # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        summarize(
+            val = if(n() > 1) mean(val, na.rm = TRUE) else first(val),
+            ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        arrange(datetime))
+        select(datetime, site_name, var, val, ms_status))
+        # arrange(datetime))
 
     #fill in missing timepoints with NAs
-    daterange <- range(ms_df$datetime)
-    fulldt = seq(daterange[1],
-                 daterange[2],
-                 by = desired_interval)
-    fulldt = tibble(site_name = rep(uniq_sites,
-                                    each = length(fulldt)),
-                    datetime = rep(fulldt,
-                                   times = length(uniq_sites)))
+    # d = filter(d, site_name %in% c('GSLOOK', 'GSWS01') &
+    #                 var %in% c('alk', 'pH'))
+    fulldt <- d %>%
+        group_by(site_name, var) %>%
+        summarize(
+            dtmin = min(datetime),
+            dtmax = max(datetime)) %>%
+        ungroup() %>%
+        rowwise() %>%
+        do(tibble(site_name = .$site_name,
+                      var = .$var,
+                      datetime = seq(.$dtmin,
+                                     .$dtmax,
+                                     by = desired_interval))) %>%
+        ungroup()
 
-    #if missing, add binary column to track which points are interped
-    if(! 'ms_interp'  %in% colnames(ms_df)) ms_df$ms_interp <- FALSE
 
-    #find columns that don't have enough data to do interpolation
-    insufficient_data_cols <- ms_df %>%
-        select(-non_data_columns) %>%
-        summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
-        unlist() %>%
-        which() %>%
-        names()
+    # daterange <- range(d$datetime)
+    # fulldt = seq(daterange[1],
+    #              daterange[2],
+    #              by = desired_interval)
+    # fulldt = tibble(site_name = rep(uniq_sites,
+    #                                 each = length(fulldt)),
+    #                 datetime = rep(fulldt,
+    #                                times = length(uniq_sites)))
+
+    # #find columns that don't have enough data to do interpolation
+    # insufficient_data_cols <- d %>%
+    #     select(-non_data_columns) %>%
+    #     summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
+    #     unlist() %>%
+    #     which() %>%
+    #     names()
 
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
-    ms_df_adjusted <- ms_df %>%
-        full_join(fulldt, #right_join would be more efficient, but this is future-proof
-                  by = c('datetime', 'site_name')) %>%
+    d_adjusted <- d %>%
+        full_join(fulldt, #fill in missing datetime intervals
+                  by = c('datetime', 'site_name', 'var')) %>%
+        group_by(site_name, var) %>%
         arrange(datetime) %>%
-        mutate_at(vars(-one_of(c(non_data_columns, insufficient_data_cols))),
-                  imputeTS::na_interpolation,
-                  maxgap = impute_limit) %>%
-        filter_at(vars(-one_of(non_data_columns)),
-                  any_vars(! is.na(.))) %>%
         mutate(
-            ms_status = ifelse(is.na(ms_status), FALSE, ms_status),
-            ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
-            ms_status = as.numeric(ms_status),
-            ms_interp = as.numeric(ms_interp)) %>%
-        select(site_name, datetime, everything()) %>%
-        relocate(ms_status, .after = last_col()) %>%
-        relocate(ms_interp, .after = last_col())
+            ms_interp = case_when(
+                is.na(ms_status) ~ 1,
+                TRUE ~ 0), #add binary column to track which points are interped
+            ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
+                                          na_remaining = 'rev'),
+            val = imputeTS::na_interpolation(val, #linear interp NA vals
+                                             maxgap = impute_limit),
+            err = errors(val), #extract error from data vals
+            err = case_when(
+                err == 0 ~ NA_real_, #change 0 errors (default) to NA...
+                TRUE ~ err),
+            val = set_errors(val, #and then carry error to interped rows
+                             imputeTS::na_locf(err,
+                                               na_remaining = 'rev'))) %>%
+        ungroup() %>%
+        select(-err) %>%
+        group_by(datetime, site_name) %>%
+        filter(any(! is.na(val))) %>%
+        ungroup() %>%
+        arrange(site_name, var, datetime)
 
-    return(ms_df_adjusted)
+    return(d_adjusted)
 }
 
 #. handle_errors
@@ -3825,39 +3892,13 @@ force_monotonic_locf <- function(v, ascending = TRUE){
 #. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
-    uncert <- lapply(detlim,
-                     FUN = function(x) 1 / 10^x) %>%
-                  as_tibble()
+    # uncert <- lapply(detlim,
+    #                  FUN = function(x) 1 / 10^x) %>%
+    #               as_tibble()
+
+    uncert <- 1 / 10^detlim
 
     return(uncert)
-}
-
-#. handle_errors
-insert_uncertainty_df <- function(x, uncert){
-
-    #x is a data.frame of data values
-    #uncert is a data.frame of corresponding uncertainty values to be inserted.
-    #   column names of uncert will be matched to those of x. columns in x that
-    #   are not in uncert are ignored (with a warning if they're non-canonical).
-    #   columns of uncert that are not in x raise an error.
-
-    # if(! base::setequal(colnames(x), colnames(uncert))){
-    if( length(base::setdiff(colnames(uncert), colnames(x))) ){
-        stop('uncert cannot contain columns that are not in x')
-    }
-
-    xonlycols <- base::setdiff(colnames(x), colnames(uncert))
-    if(any(! xonlycols %in% ms_canonicals)){
-        warning("x contains non-canonical columns that aren't in uncert.")
-    }
-
-    # for(n in colnames(x)){
-    for(n in colnames(uncert)){
-        if(all(is.na(uncert[[n]]))) next
-        errors(x[[n]]) <- uncert[[n]]
-    }
-
-    return(x)
 }
 
 #. handle_errors
@@ -3869,7 +3910,8 @@ carry_uncertainty <- function(d, network, domain, prodname_ms){
                                     prodname_ms = prodname_ms,
                                     return_detlims = TRUE)
     u <- detection_limit_as_uncertainty(u)
-    d <- insert_uncertainty_df(d, u)
+    errors(d$val) <- u
+    # d <- insert_uncertainty_df(d, u)
 
     return(d)
 }
