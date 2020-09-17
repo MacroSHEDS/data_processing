@@ -418,3 +418,124 @@ identify_detection_limit_t <- function(X, network, domain,
 
     return()
 }
+
+#this version of synchronize_timestep is from the old wide-format days
+synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
+
+    #d is a data.frame or tibble with columns datetime, site_name,
+    #ms_status, and one or more data columns. if ms_interp column is already
+    #included with input, its values will be carried through to the output.
+    #desired_interval is a character string that can be parsed by the "by"
+    #parameter to base::seq.POSIXt, e.g. "5 mins"
+    #impute_limit is the maximum number of consecutive points to
+    #inter/extrapolate. it's passed to imputeTS::na_interpolate
+
+    #output will include a numeric binary column called "ms_interp".
+    #0 for not interpolated, 1 for interpolated
+
+    non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
+    uniq_sites <- unique(d$site_name)
+
+    d <- d %>%
+        filter(! is.na(datetime)) %>%
+        select_if(~( sum(! is.na(.)) >= 1 ))
+
+    if(ncol(d) < 4){
+        stop('no data to synchronize. bypassing processing.')
+    }
+
+    #round to desired_interval
+    d <- sw(d %>%
+        mutate(
+            datetime = lubridate::as_datetime(datetime),
+            datetime = lubridate::round_date(datetime,
+                                             desired_interval)) %>%
+        mutate_at(vars(one_of('ms_status', 'ms_interp')),
+                  as.logical) %>%
+        group_by(datetime, site_name) %>%
+        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+        ungroup() %>%
+        arrange(datetime))
+
+    #fill in missing timepoints with NAs
+    daterange <- range(d$datetime)
+    fulldt = seq(daterange[1],
+                 daterange[2],
+                 by = desired_interval)
+    fulldt = tibble(site_name = rep(uniq_sites,
+                                    each = length(fulldt)),
+                    datetime = rep(fulldt,
+                                   times = length(uniq_sites)))
+
+    #if missing, add binary column to track which points are interped
+    if(! 'ms_interp'  %in% colnames(d)) d$ms_interp <- FALSE
+
+    #find columns that don't have enough data to do interpolation
+    insufficient_data_cols <- d %>%
+        select(-non_data_columns) %>%
+        summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
+        unlist() %>%
+        which() %>%
+        names()
+
+    #interpolate up to impute_limit; remove empty rows; populate ms_interp column
+    d_adjusted <- d %>%
+        full_join(fulldt, #right_join would be more efficient, but this is future-proof
+                  by = c('datetime', 'site_name')) %>%
+        arrange(datetime) %>%
+        mutate_at(vars(-one_of(c(non_data_columns, insufficient_data_cols))),
+                  imputeTS::na_interpolation,
+                  maxgap = impute_limit) %>%
+        filter_at(vars(-one_of(non_data_columns)),
+                  any_vars(! is.na(.))) %>%
+        mutate(
+            ms_status = ifelse(is.na(ms_status), FALSE, ms_status),
+            ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
+            ms_status = as.numeric(ms_status),
+            ms_interp = as.numeric(ms_interp)) %>%
+        select(site_name, datetime, everything()) %>%
+        relocate(ms_status, .after = last_col()) %>%
+        relocate(ms_interp, .after = last_col())
+
+    return(d_adjusted)
+}
+
+#this is no longer needed now that we're using long format
+insert_uncertainty_df <- function(x, uncert){
+
+    #x is a data.frame of data values
+    #uncert is a data.frame of corresponding uncertainty values to be inserted.
+    #   column names of uncert will be matched to those of x. columns in x that
+    #   are not in uncert are ignored (with a warning if they're non-canonical).
+    #   columns of uncert that are not in x raise an error.
+
+    # #i started updating this to work with longform, but then realized
+    # #we don't need a function for that
+    #x is a standard macrosheds dataframe/tibble with columns: datetime,
+    #   site_name, var, val, ms_status, (ms_interp optional)
+    #uncert is a vector of uncertainty values to be inserted as error into the
+    #   val column.
+
+    # shared_cols <- base::intersect(ms_canonicals, colnames(x))
+    # if(! setequal(c(shared_cols, 'ms_interp'), ms_canonicals)){
+    #     stop('columns of x must be macrosheds-canonical')
+    # }
+
+    # if(! base::setequal(colnames(x), colnames(uncert))){
+    if( length(base::setdiff(colnames(uncert), colnames(x))) ){
+        stop('uncert cannot contain columns that are not in x')
+    }
+
+    xonlycols <- base::setdiff(colnames(x), colnames(uncert))
+    if(any(! xonlycols %in% ms_canonicals)){
+        warning("x contains non-canonical columns that aren't in uncert.")
+    }
+
+    # for(n in colnames(x)){
+    for(n in colnames(uncert)){
+        if(all(is.na(uncert[[n]]))) next
+        errors(x[[n]]) <- uncert[[n]]
+    }
+
+    return(x)
+}
