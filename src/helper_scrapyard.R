@@ -464,3 +464,53 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
     return(d)
 }
 
+
+#working on automatic determination of data column regimen now, but here's some starter
+#code (and documentation) for doing it manually if we ever want to go that route####
+    #data_col_regimen: either a character vector of the same length as data_cols,
+    #   or a character vector of length one, which will be applied to all data columns.
+    #   Elements of this vector must be either "grab" for periodically sampled
+    #   data or "sensor" for data collected on an automated, regular schedule
+    #   by a mechanical/electrical device. This information will be stored in
+    #   data/<network>/<domain>/sample_regimens.json as a nested list:
+    #   prodname_ms
+    #       variable
+    #           startdt: datetime1, datetime2, datetimeN...
+    #           regimen: regimen1,  regimen2,  regimenN...
+    #   TODO: handle the case of multiple regimens for the same variable in the same file
+    #   TODO: what about different regimens for different sites?
+
+
+    if(! length(data_col_regimen) %in% c(1, length(data_cols))){
+        stop('data_col_regimen must have length 1 or length(data_cols)')
+    }
+
+    #save sample collection regimens to file
+    if(length(data_col_regimen) == 1){
+        data_col_regimen <- rep(data_col_regimen, length(data_cols))
+    }
+
+    names(data_col_regimen) <- unname(data_cols)
+    remaining_data_cols <- na.omit(str_match(string = colnames(d),
+                                             pattern = '^(.*?)__\\|dat$')[, 2])
+    data_col_regimen <- data_col_regimen[names(data_col_regimen) %in%
+                                             remaining_data_cols]
+
+    thisenv <- environment()
+    cnt <- 0
+    first_nonNA_inds <- d %>%
+        arrange(datetime) %>%
+        select(ends_with('__|dat')) %>%
+        dplyr::rename_with(~ sub('__\\|dat', '', .x)) %>%
+        purrr::map(function(z, reg = data_col_regimen){
+            ind <- Position(function(w) ! is.na(w), z)
+            assign('cnt', cnt + 1, envir = thisenv)
+            list(startdt = as.character(d$datetime[ind]),
+                 regimen = unname(reg[cnt]))
+        })
+
+    write_sample_regimens(regimens,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms)
+
