@@ -242,7 +242,7 @@ munge_combined_split <- function(domain, site_name, prodname_ms, tracker,
         filt_site <- sites[i]
         out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-        #make a portal link for precip gauge locations and pflux, but not for any
+        #make a portal link for precip gauge locations, but not for any
         #other precip product, because the others need to be localized to
         #watersheds
         ready_to_link <- ifelse(grepl(nolink_regex,
