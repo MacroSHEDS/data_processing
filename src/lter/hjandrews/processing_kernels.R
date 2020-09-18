@@ -374,12 +374,10 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                 'UTKN', 'TKN', 'K', 'DOC'),
                             data_col_pattern = '#V#',
                             alt_datacol_pattern = '#V#_OUTPUT',
-                            data_col_regimen = 'grab',
                             var_flagcol_pattern = '#V#CODE',
                             summary_flagcols = c('TYPE')))
 
     d <- ue(ms_cast_and_reflag(d,
-                               input_shape = 'wide',
                                variable_flags_to_drop = 'N',
                                variable_flags_clean =
                                    c('A', 'E', 'D', 'DE', '*', 'D*'),

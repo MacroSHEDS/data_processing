@@ -178,7 +178,7 @@ ms_read_raw_csv <- function(filepath,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
-                            data_col_regimen,
+                            # data_col_regimen,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
@@ -226,18 +226,6 @@ ms_read_raw_csv <- function(filepath,
     #alt_datacol_pattern: same mechanics as data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
     #   output_x, output_y, output_....
-    #data_col_regimen: either a character vector of the same length as data_cols,
-    #   or a character vector of length one, which will be applied to all data columns.
-    #   Elements of this vector must be either "grab" for periodically sampled
-    #   data or "sensor" for data collected on an automated, regular schedule
-    #   by a mechanical/electrical device. This information will be stored in
-    #   data/<network>/<domain>/sample_regimens.json as a nested list:
-    #   prodname_ms
-    #       variable
-    #           startdt: datetime1, datetime2, datetimeN...
-    #           regimen: regimen1,  regimen2,  regimenN...
-    #   TODO: handle the case of multiple regimens for the same variable in the same file
-    #   TODO: what about different regimens for different sites?
     #var_flagcol_pattern: same mechanics as the other pattern parameters. this
     #   one is for columns containing flag information that is specific to
     #   one variable
@@ -277,10 +265,6 @@ ms_read_raw_csv <- function(filepath,
         if(! date_col$tz %in% OlsonNames()){
             stop('date_col$tz must be included in OlsonNames()')
         }
-    }
-
-    if(! length(data_col_regimen) %in% c(1, length(data_cols))){
-        stop('data_col_regimen must have length 1 or length(data_cols)')
     }
 
     #deal with missing args
@@ -506,35 +490,6 @@ ms_read_raw_csv <- function(filepath,
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
 
-    # #save sample collection regimens to file
-    # if(length(data_col_regimen) == 1){
-    #     data_col_regimen <- rep(data_col_regimen, length(data_cols))
-    # }
-    #
-    # names(data_col_regimen) <- unname(data_cols)
-    # remaining_data_cols <- na.omit(str_match(string = colnames(d),
-    #                                          pattern = '^(.*?)__\\|dat$')[, 2])
-    # data_col_regimen <- data_col_regimen[names(data_col_regimen) %in%
-    #                                          remaining_data_cols]
-    #
-    # thisenv <- environment()
-    # cnt <- 0
-    # first_nonNA_inds <- d %>%
-    #     arrange(datetime) %>%
-    #     select(ends_with('__|dat')) %>%
-    #     dplyr::rename_with(~ sub('__\\|dat', '', .x)) %>%
-    #     purrr::map(function(z, reg = data_col_regimen){
-    #         ind <- Position(function(w) ! is.na(w), z)
-    #         assign('cnt', cnt + 1, envir = thisenv)
-    #         list(startdt = as.character(d$datetime[ind]),
-    #              regimen = unname(reg[cnt]))
-    #     })
-    #
-    # write_sample_regimens(regimens,
-    #                       network = network,
-    #                       domain = domain,
-    #                       prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -717,6 +672,24 @@ ms_cast_and_reflag <- function(d,
                           names_to = c('var', '.value'))
     }
 
+    # #determine sample regimen (sensor/grab) for each site-var
+    # dsplt <- split(d,
+    #                f = list(d$site_name, d$var),
+    #                sep = '___')
+    # lapply(dsplt,
+    # )
+    #
+    # dsplt[[1]] -> x
+    # rle(diff(as.numeric(x$datetime)))
+    # var(diff(as.numeric(x$datetime)))
+    # dtdiffs <- diff(as.numeric(x$datetime))
+    # dtcv <- sd(dtdiffs) / mean(dtdiffs)
+    # zz = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    # sd(zz) / mean(zz)
+
+
+
+
     #filter rows with summary flags indicating bad data (data to drop)
     if(sumdrop){
         for(i in 1:length(summary_flags_to_drop)){
@@ -777,6 +750,44 @@ ms_cast_and_reflag <- function(d,
         arrange(site_name, var, datetime)
 
     return(d)
+}
+
+#. handle_errors
+query_status <- function(status_code_vec, component = 'flag'){
+
+    #TODO: investigate r packages for bitmapping in C*/FORTRAN
+
+    #currently, status code integers have three digits. The first digit
+    #represents qa/qc flags. 0 means unflagged and 1 means flagged. The
+    #second digit is for datapoints that have been interpolated by macrosheds --
+    #0 means original and 1 means interpolated. The third digit is for sensor (0)
+    #versus grab (1) data.
+
+    if(! component %in% c('flag', 'interp', 'regimen')){
+        stop('component must be one of "flag", "interp", "regimen"')
+    }
+
+    #if we add status codes, they'll get tacked on to the right side of the
+    #status code integer, and the following conditional will need to be updated.
+    #just add the condition at the end, make it yield pos = 1, and increment the
+    #positions yielded by the other conditions by 1.
+    pos <- case_when(
+        component == 'flag' ~ 3,
+        component == 'interp' ~ 2,
+        component == 'regimen' ~ 1)
+    #component == 'new component' ~ 1
+
+    #convert "binary" int to decimal int
+    dec <- strtoi(as.character(status_code_vec), base = 2L)
+
+    #get bit of interest as a decimal representation of a one-hot binary integer
+    onehot <- bitwShiftL(1, (pos - 1))
+
+    #if bit of interest is 0 in the status code, bitwise AND with the onehot
+    #   will yield zero. if the bit of interest is 1, result will be nonzero
+    bit_is_on <- bitwAnd(dec, onehot) != 0
+
+    return(bit_is_on)
 }
 
 #. handle_errors
