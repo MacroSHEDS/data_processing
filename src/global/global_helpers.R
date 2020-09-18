@@ -83,6 +83,7 @@ assign('unique_exceptions', c(), envir=.GlobalEnv)
 #these are column names that are in every non-spatial macrosheds dataset by the
 #time it reaches its final formatted/cleaned state. we sometimes want to ignore
 #these columns when operating on ms tibbles/feathers. this list may also grow.
+#OBSOLETE now that we're using long format storage. remove this when possible.
 assign('ms_canonicals',
        c('datetime', 'site_name', 'ms_status', 'ms_interp'),
        envir = .GlobalEnv)
@@ -170,37 +171,73 @@ gsub_v <- function(pattern, replacement_vec, x){
 
 #. handle_errors
 ms_read_raw_csv <- function(filepath,
+                            date_col,
+                            time_col,
                             datetime_col,
                             site_name_col,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
+                            data_col_regimen,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
 
-    #TODO: what about when datetime is generated from a date and a time column?
+    #TODO:
+    #write more checks for improper specification.
     #if file to be read is stored in long format, this function will not work!
+    #this could easily be adapted to read other delimited filetypes.
     #could also add a drop_empty_rows and/or drop_empty_datacols parameter.
     #   atm those things happen automatically
     #likewise, a remove_duplicates param could be nice. atm, for duplicated rows,
     #   the one with the fewest NA values is kept automatically
 
     #filepath: string
-    #datetime_col: name of column containing datetime information
+    #date_col: optional named list of length 3. Names must be "name", "format",
+    #   and "tz". Corresponding elements must be the name of the column,
+    #   the date format (e.g. '%Y-%m-%d'), and the time zone
+    #   (which must be among those provided by OlsonNames()). If
+    #   time_col is also supplied, the time zone component of this argument
+    #   can be omitted, as it will be ignored. Either date_col
+    #   or datetime_col must be supplied.
+    #time_col: optional named list of length 3. Names must be "name", "format",
+    #   and "tz". Corresponding elements must be the name of the column,
+    #   the time format (e.g. '%H:%M:%S'), and the time zone
+    #   (which must be among those provided by OlsonNames()).
+    #datetime_col: optional named list of length 3. Names must be "name", "format",
+    #   and "tz". Corresponding elements must be the name of the column,
+    #   the datetime format (e.g. '%Y-%m-%dT%H:%M:%SZ'), and the time zone
+    #   (which must be among those provided by OlsonNames()). If
+    #   datetime_col is supplied, date_col and time_col will be ignored.
+    #   Either date_col or datetime_col must be supplied.
     #site_name_col: name of column containing site name information
-    #data_cols: vector of names of columns containing data. if this vector is
-    #   named, names are taken to be the column names as they exist in the file,
-    #   and values are used to replace those names.
+    #data_cols: vector of names of columns containing data. If elements of this
+    #   vector are named, names are taken to be the column names as they exist
+    #   in the file, and values are used to replace those names. Data columns that
+    #   aren't referred to in this argument will be omitted from the output,
+    #   as will their associated flag columns (if any).
     #data_col_pattern: a string containing the wildcard "#V#",
     #   which represents any number of characters. If data column names will be
     #   used as-is, this wildcard is all you need. if data columns contain
     #   recurring, superfluous characters, you can omit them with regex. for
-    #   example, if data columns are named input_x, input_y, input_...., use
-    #   data_col_pattern = 'input_#V#' and the new names will be x, y, ....
+    #   example, if data columns are named outflow_x, outflow_y, outflow_...., use
+    #   data_col_pattern = 'outflow_#V#' and then you don't have to bother
+    #   typing the full names in your argument to data_cols.
     #alt_datacol_pattern: same mechanics as data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
     #   output_x, output_y, output_....
+    #data_col_regimen: either a character vector of the same length as data_cols,
+    #   or a character vector of length one, which will be applied to all data columns.
+    #   Elements of this vector must be either "grab" for periodically sampled
+    #   data or "sensor" for data collected on an automated, regular schedule
+    #   by a mechanical/electrical device. This information will be stored in
+    #   data/<network>/<domain>/sample_regimens.json as a nested list:
+    #   prodname_ms
+    #       variable
+    #           startdt: datetime1, datetime2, datetimeN...
+    #           regimen: regimen1,  regimen2,  regimenN...
+    #   TODO: handle the case of multiple regimens for the same variable in the same file
+    #   TODO: what about different regimens for different sites?
     #var_flagcol_pattern: same mechanics as the other pattern parameters. this
     #   one is for columns containing flag information that is specific to
     #   one variable
@@ -219,8 +256,32 @@ ms_read_raw_csv <- function(filepath,
     #   suffixes (__|flg and __|dat) that allow them to be cast into long format
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
-    #TODO: adapt for other file formats
-    #   might also need to adapt for files with long format. currently assumes wide
+    date_supplied <- ! missing(date_col) && ! is.null(date_col)
+    time_supplied <- ! missing(time_col) && ! is.null(time_col)
+    datetime_supplied <- ! missing(datetime_col) && ! is.null(datetime_col)
+
+    #checks
+    if(! date_supplied && ! datetime_supplied){
+        stop('Either date_col or datetime_col must be supplied')
+    }
+
+    if(datetime_supplied){
+        if(! datetime_col$tz %in% OlsonNames()){
+            stop('datetime_col$tz must be included in OlsonNames()')
+        }
+    } else if(time_supplied){
+        if(! time_col$tz %in% OlsonNames()){
+            stop('time_col$tz must be included in OlsonNames()')
+        }
+    } else {
+        if(! date_col$tz %in% OlsonNames()){
+            stop('date_col$tz must be included in OlsonNames()')
+        }
+    }
+
+    if(! length(data_col_regimen) %in% c(1, length(data_cols))){
+        stop('data_col_regimen must have length 1 or length(data_cols)')
+    }
 
     #deal with missing args
     alt_datacols <- varflagcols <- alt_varflagcols <- NA
@@ -278,10 +339,23 @@ ms_read_raw_csv <- function(filepath,
     colnames_new <- paste0(colnames_all, suffixes)
     colnames_new <- colnames_new[! na_inds]
 
-    if(! missing(datetime_col) && ! is.null(datetime_col)){
+    if(datetime_supplied){
+
         colnames_all <- c('datetime', colnames_all)
-        names(colnames_all)[1] <- datetime_col
+        names(colnames_all)[1] <- datetime_col$name
         colnames_new <- c('datetime', colnames_new)
+
+    } else {
+
+        if(time_supplied){
+            colnames_all <- c('time', colnames_all)
+            names(colnames_all)[1] <- time_col$name
+            colnames_new <- c('time', colnames_new)
+        }
+
+        colnames_all <- c('date', colnames_all)
+        names(colnames_all)[1] <- date_col$name
+        colnames_new <- c('date', colnames_new)
     }
 
     if(! missing(site_name_col) && ! is.null(site_name_col)){
@@ -311,9 +385,20 @@ ms_read_raw_csv <- function(filepath,
     classes_f2 <- rep('character', length(alt_varflagcols))
     names(classes_f2) <- alt_varflagcol_names
 
-    if(! missing(datetime_col) && ! is.null(datetime_col)){
+    if(datetime_supplied){
+
         class_dt <- 'character'
-        names(class_dt) <- datetime_col
+        names(class_dt) <- datetime_col$name
+
+    } else {
+
+        class_dt <- 'character'
+        names(class_dt) <- date_col$name
+
+        if(time_supplied){
+            class_dt <- c(class_dt, 'character')
+            names(class_dt)[2] <- time_col$name
+        }
     }
 
     if(! missing(site_name_col) && ! is.null(site_name_col)){
@@ -356,9 +441,39 @@ ms_read_raw_csv <- function(filepath,
 
     colnames(d) <- colnames_d
 
-    #remove rows with datetime == NA or site_name == NA
-    d <- d %>%
-        filter(! is.na(datetime) & ! is.na(site_name))
+    #remove rows with NA in datetime, date, or site_name (NA time is okay)
+    d <- filter(d,
+                across(any_of(c('datetime', 'date', 'site_name')),
+                       ~ ! is.na(.x)))
+
+    #parse datetime, date + time, or just date from character to datetime class
+    if(datetime_supplied){
+
+        dtformat <- datetime_col$format
+        dttz <- datetime_col$tz
+
+    } else if(time_supplied){
+
+        d$datetime <- paste(d$date, d$time)
+        d$date <- d$time <- NULL
+
+        dtformat <- paste(date_col$format,
+                          time_col$format)
+        dttz <- time_col$tz
+
+    } else {
+
+        d <- rename(d, datetime = date)
+
+        dtformat <- date_col$format
+        dttz <- date_col$tz
+    }
+
+    d <- mutate(d,
+                datetime = with_tz(as_datetime(datetime,
+                                               format = dtformat,
+                                               tz = dttz),
+                                   tz = 'UTC'))
 
     #remove columns and rows with all NAs. also remove flag columns for all-NA
     #   data columns
@@ -390,6 +505,35 @@ ms_read_raw_csv <- function(filepath,
 
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
+
+    # #save sample collection regimens to file
+    # if(length(data_col_regimen) == 1){
+    #     data_col_regimen <- rep(data_col_regimen, length(data_cols))
+    # }
+    #
+    # names(data_col_regimen) <- unname(data_cols)
+    # remaining_data_cols <- na.omit(str_match(string = colnames(d),
+    #                                          pattern = '^(.*?)__\\|dat$')[, 2])
+    # data_col_regimen <- data_col_regimen[names(data_col_regimen) %in%
+    #                                          remaining_data_cols]
+    #
+    # thisenv <- environment()
+    # cnt <- 0
+    # first_nonNA_inds <- d %>%
+    #     arrange(datetime) %>%
+    #     select(ends_with('__|dat')) %>%
+    #     dplyr::rename_with(~ sub('__\\|dat', '', .x)) %>%
+    #     purrr::map(function(z, reg = data_col_regimen){
+    #         ind <- Position(function(w) ! is.na(w), z)
+    #         assign('cnt', cnt + 1, envir = thisenv)
+    #         list(startdt = as.character(d$datetime[ind]),
+    #              regimen = unname(reg[cnt]))
+    #     })
+    #
+    # write_sample_regimens(regimens,
+    #                       network = network,
+    #                       domain = domain,
+    #                       prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1437,17 +1581,17 @@ convert_unit <- function(val, input_unit, output_unit){
 
 #. handle_errors
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
-                          level='munged', shapefile=FALSE,
+                          level = 'munged', shapefile = FALSE,
                           link_to_portal = TRUE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
-    #write as a feather file (site_name.feather),
-    #and write any uncertainty included in the tibble as a separate feather
-    #site_name_uncert.feather. by default, create a hardlink to the file
-    #from the data portal as well as from the data_acquisition storage system,
-    #assuming the portal directory is a sibling of the data_acquision directory
-    #and is named "portal"
+    #write as a feather file (site_name.feather). Uncertainty (error) associated
+    #with the val column will be extracted into a separate column called
+    #val_err. Write the file to the appropriate location within the data
+    #acquisition repository if link_to_portal == TRUE, create a hard link to the
+    #file from the portal repository, which is assumed to be a sibling of the
+    #data_acquision directory and to be named "portal".
 
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
@@ -1486,18 +1630,20 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
         site_file = glue('{pd}/{s}.feather',
                          pd = prod_dir,
                          s = site_name)
-        site_file_uncert = glue('{pd}/{s}_uncert.feather',
-                                pd = prod_dir,
-                                s = site_name)
+        # site_file_uncert = glue('{pd}/{s}_uncert.feather',
+        #                         pd = prod_dir,
+        #                         s = site_name)
 
-        d_uncert <- lapply(d,
-                           function(x){
-                               if(is.numeric(x) && any(errors(x) != 0)){
-                                   errors(x)
-                               }
-                            })
-        d_uncert <- as_tibble(d_uncert[! sapply(d_uncert, is.null)])
-        write_feather(d_uncert, site_file_uncert)
+        d$val_err <- errors(d$val)
+        d$val <- errors::drop_errors(d$val)
+        # d_uncert <- lapply(d,
+        #                    function(x){
+        #                        if(is.numeric(x) && any(errors(x) != 0)){
+        #                            errors(x)
+        #                        }
+        #                     })
+        # d_uncert <- as_tibble(d_uncert[! sapply(d_uncert, is.null)])
+        # write_feather(d_uncert, site_file_uncert)
 
         #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
@@ -1618,8 +1764,8 @@ is_ms_prodcode <- function(prodcode){
 }
 
 #. handle_errors
-list_munged_files <- function(network, domain, prodname_ms,
-                              omit_uncertainty_files = FALSE){
+list_munged_files <- function(network, domain, prodname_ms){
+                              # omit_uncertainty_files = FALSE){
 
     mfiles <- glue('data/{n}/{d}/munged/{p}',
                    n = network,
@@ -1627,11 +1773,11 @@ list_munged_files <- function(network, domain, prodname_ms,
                    p = prodname_ms) %>%
         list.files(full.names = TRUE)
 
-    if(omit_uncertainty_files){
-        mfiles <- mfiles[! grepl('_uncert.feather$',
-                                 mfiles,
-                                 perl = TRUE)]
-    }
+    # if(omit_uncertainty_files){
+    #     mfiles <- mfiles[! grepl('_uncert.feather$',
+    #                              mfiles,
+    #                              perl = TRUE)]
+    # }
 
     return(mfiles)
 }
@@ -1900,35 +2046,37 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
 read_combine_feathers <- function(network, domain, prodname_ms){
 
     #read all data feathers associated with a network-domain-product,
-    #separately read any accompanying uncertainty files, insert uncertainty
-    #into each tibble after it is read, row bind all tibbles, arrange by
-    #site_name, datetime columns if they exist
+    #row bind them, arrange by site_name, var, datetime. insert val_err column
+    #into the val column as errors attribute and then remove val_err column
+    #(error/uncertainty is handled by the errors package as an attribute,
+    #so it must be written/read as a separate column).
 
     prodpaths <- list_munged_files(network = network,
                                    domain = domain,
-                                   prodname_ms = prodname_ms,
-                                   omit_uncertainty_files = TRUE)
+                                   prodname_ms = prodname_ms)
+                                   # omit_uncertainty_files = TRUE)
 
     combined <- tibble()
     for(i in 1:length(prodpaths)){
-        # combined <- read_feather(prodpaths[i]) %>%
-        #     bind_rows(combined)
+
         part <- read_feather(prodpaths[i])
-        uncert_filepath <- sub('\\.feather$',
-                               '_uncert.feather',
-                               prodpaths[i],
-                               perl = TRUE)
-        if(file.exists(uncert_filepath)){
-            part_uncert <- read_feather(uncert_filepath)
-            part <- insert_uncertainty_df(part, part_uncert)
-        }
+        # uncert_filepath <- sub('\\.feather$',
+        #                        '_uncert.feather',
+        #                        prodpaths[i],
+        #                        perl = TRUE)
+
+        # if(file.exists(uncert_filepath)){
+        #     part_uncert <- read_feather(uncert_filepath)
+        #     part <- insert_uncertainty_df(part, part_uncert)
+        # }
 
         combined <- bind_rows(combined, part)
     }
 
-    if(all(c('datetime', 'site_name') %in% colnames(combined))){
-        combined <- arrange(combined, datetime, site_name)
-    }
+    combined <- combined %>%
+        mutate(val = errors::set_errors(val, val_err)) %>%
+        select(-val_err) %>%
+        arrange(site_name, var, datetime)
 
     return(combined)
 }
@@ -2272,12 +2420,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-    # non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
     uniq_sites <- unique(d$site_name)
-
-    # d <- d %>%
-    #     filter(! is.na(datetime)) %>%
-    #     select_if(~( sum(! is.na(.)) >= 1 ))
 
     if(nrow(d) < 2 || sum(is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
@@ -2287,21 +2430,14 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     d <- sw(d %>%
         mutate(datetime = lubridate::round_date(datetime,
                                                 desired_interval)) %>%
-            # datetime = lubridate::as_datetime(datetime),
-        # mutate_at(vars(one_of('ms_status', 'ms_interp')),
-        #           as.logical) %>%
         group_by(site_name, var, datetime) %>%
-        # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         summarize(
             val = if(n() > 1) mean(val, na.rm = TRUE) else first(val),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
         select(datetime, site_name, var, val, ms_status))
-        # arrange(datetime))
 
     #fill in missing timepoints with NAs
-    # d = filter(d, site_name %in% c('GSLOOK', 'GSWS01') &
-    #                 var %in% c('alk', 'pH'))
     fulldt <- d %>%
         group_by(site_name, var) %>%
         summarize(
@@ -2316,24 +2452,6 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
                                      by = desired_interval))) %>%
         ungroup()
 
-
-    # daterange <- range(d$datetime)
-    # fulldt = seq(daterange[1],
-    #              daterange[2],
-    #              by = desired_interval)
-    # fulldt = tibble(site_name = rep(uniq_sites,
-    #                                 each = length(fulldt)),
-    #                 datetime = rep(fulldt,
-    #                                times = length(uniq_sites)))
-
-    # #find columns that don't have enough data to do interpolation
-    # insufficient_data_cols <- d %>%
-    #     select(-non_data_columns) %>%
-    #     summarize_all( ~(sum(! is.na(.)) < 2) ) %>%
-    #     unlist() %>%
-    #     which() %>%
-    #     names()
-
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
     d_adjusted <- d %>%
         full_join(fulldt, #fill in missing datetime intervals
@@ -2346,8 +2464,10 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
                 TRUE ~ 0), #add binary column to track which points are interped
             ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
                                           na_remaining = 'rev'),
-            val = imputeTS::na_interpolation(val, #linear interp NA vals
-                                             maxgap = impute_limit),
+            val = if(sum(! is.na(val)) > 1){
+                    imputeTS::na_interpolation(val, #linear interp NA vals
+                                               maxgap = impute_limit)
+                } else val, #unless not enough data in group; then do nothing
             err = errors(val), #extract error from data vals
             err = case_when(
                 err == 0 ~ NA_real_, #change 0 errors (default) to NA...
@@ -3554,8 +3674,8 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     #as a nested list:
     #prodname_ms
     #    variable
-    #        startdt1: limit1
-    #        startdt2: limit2 ...
+    #        startdt: datetime1, datetime2, datetimeN...
+    #        lim:     limit1,    limit2,    limitN...
 
     #detection limit (detlim) is computed as the
     #number of characters following the decimal. NA detlims are filled
