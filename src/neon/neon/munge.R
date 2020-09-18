@@ -3,7 +3,7 @@ prod_info = get_product_info(network=network,
 
 # i=1; j=1; k=2
 for(i in 1:nrow(prod_info)){
-# for(i in 2){
+# for(i in c(1, 3, 6)){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -20,6 +20,8 @@ for(i in 1:nrow(prod_info)){
     for(j in 1:length(sites)){
     # for(j in 2){
 
+        site_name <- sites[j]
+
         munge_status <- get_munge_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_name = site_name)
@@ -33,7 +35,10 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        munge_rtn = munge_neon_site(domain, sites[j], prodname_ms, held_data)
+        munge_rtn = munge_neon_site(domain = domain,
+                                    site_name = sites[j],
+                                    prodname_ms = prodname_ms,
+                                    tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network=network, domain=domain,
