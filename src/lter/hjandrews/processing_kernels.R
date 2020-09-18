@@ -362,7 +362,9 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
     d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_col = 'DATE_TIME',
+                            datetime_col = list(name = 'DATE_TIME',
+                                                format = '%Y-%m-%d %H:%M:%S',
+                                                tz = 'Etc/GMT-8'),
                             site_name_col = 'SITECODE',
                             data_cols =  c(PH='pH', COND='spCond', ALK='alk',
                                 SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
@@ -372,13 +374,10 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                 'UTKN', 'TKN', 'K', 'DOC'),
                             data_col_pattern = '#V#',
                             alt_datacol_pattern = '#V#_OUTPUT',
+                            data_col_regimen = 'grab',
                             var_flagcol_pattern = '#V#CODE',
-                            alt_varflagcol_pattern = NULL,
                             summary_flagcols = c('TYPE')))
 
-
-    #at this point d should contain only datetime, site_name, data columns,
-    #   and flag columns that will be merged during ms_cast_and_reflag
     d <- ue(ms_cast_and_reflag(d,
                                input_shape = 'wide',
                                variable_flags_to_drop = 'N',
@@ -387,34 +386,14 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                summary_flags_to_drop = list(
                                    TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
                                summary_flags_clean = list(TYPE = 'F')))
-    # d <- ue(sourceflags_to_ms_status(d,
-    #                                  flagstatus_mappings = list(TYPE = 'F')))
 
-    #TODO: put this inside ms_read_raw_csv
-    d <- mutate(d,
-                datetime = with_tz(as_datetime(datetime,
-                                               tz = 'Etc/GMT-8'),
-                                               tz = 'UTC'))
-
-    #consider doing this after synchronize?
     d <- ue(carry_uncertainty(d,
                               network = network,
                               domain = domain,
                               prodname_ms = prodname_ms))
 
-    # d <- d %>%
-    #     filter_at(vars(-site_name, -datetime, -ms_status),
-    #               any_vars(! is.na(.))) %>%
-    #     group_by(datetime, site_name) %>%
-    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    #     ungroup() %>%
-    #     mutate(ms_status = as.numeric(ms_status)) %>%
-    #     arrange(site_name, datetime)
-
-    # d[is.na(d)] = NA
-
-    d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '1 day', #set back to '15 min' when we have server
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
                                  impute_limit = 30))
 
     d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
