@@ -86,3 +86,15 @@ ff = expression(apply_detection_limit_t(dd[1:s,], network, domain))
 gg = expression(apply_detection_limit_t(d[1:s,], network, domain))
 compare_efficiency(ff, gg, 10, 1e6,
                    outfile='plots/efficiency_comparisons/apply_detection_limit_t.png')
+
+#status as binary integer ####
+
+ff = expression({
+    query_status(rep(c(101, 111, 000, 010), s))
+})
+gg = expression({
+    as.logical(rep(c(1, 1, 0, 0), s))
+})
+
+compare_efficiency(ff, gg, 10, 1e6,
+                   outfile='plots/efficiency_comparisons/bin_int_status.png')
