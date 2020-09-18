@@ -3076,13 +3076,9 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
     fin <- sm(full_join(median, sd)) %>%
         sm(full_join(count))
     
-    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
-                 n = network, d = domain, v = prodname)
-    
-    write_feather(fin, path)
-    
-    return()
-}
+    return(fin)
+
+    }
 
 #. handle_errors
 get_gee_large <- function(network, domain, gee_id, band, prodname, rez, 
@@ -3151,12 +3147,7 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
         final <- rbind(final, fin)
     }
     
-    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
-                 n = network, d = domain, v = var)
-    
-    write_feather(final, path)
-    
-    return()
+    return(final)
     
 }
 
