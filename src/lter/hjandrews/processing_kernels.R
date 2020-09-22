@@ -209,9 +209,9 @@ process_0_3239 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
+    # site_name = 'sitename_NA'; prodname_ms = 'discharge__4341'
 
-
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -227,32 +227,41 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                         EVENT_CODE = 'c'))) %>%
         rename(datetime = DATE_TIME,
                site_name = SITECODE,
-               discharge = INST_Q)
+               discharge = INST_Q) %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                              tz = 'Etc/GMT-8'),
+                                  tz = 'UTC'))
 
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(
                                         ESTCODE = c('A', 'E', 'P'),
                                         EVENT_CODE = c(NA, 'WEATHR'))))
 
-    detlim <- ue(identify_detection_limit(d$discharge))
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain))
 
     d <- d %>%
-        mutate(datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC')) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize(
-            discharge = mean(discharge, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
+        rowwise(datetime, site_name) %>%
+        mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
+        ungroup() %>%
+        arrange(datetime, site_name, NAsum) %>%
+        select(-NAsum) %>%
+        distinct(datetime, site_name, .keep_all = TRUE) %>%
+        arrange(site_name, datetime)
+        # group_by(datetime, site_name) %>%
+        # summarize(
+        #     discharge = first(na.omit(discharge)),
+        #     ms_status = numeric_any(ms_status)) %>%
+        # ungroup()
 
     d <- ue(synchronize_timestep(ms_df = d,
                                  desired_interval = '1 day', #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }
@@ -301,17 +310,20 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                             EVENT_CODE = 'c'))) %>%
             rename(datetime = DATE,
                    site_name = SITECODE,
-                   precip = PRECIP_TOT_DAY)
+                   precip = PRECIP_TOT_DAY) %>%
+            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC'))
 
         d = ue(sourceflags_to_ms_status(d,
                                         flagstatus_mappings = list(
                                             PRECIP_TOT_FLAG = c('A', 'E'),
                                             EVENT_CODE = NA)))
 
-        detlims <- ue(identify_detection_limit(d))
+        # detlims <- ue(identify_detection_limit(d))
+        ue(identify_detection_limit_t(d,
+                                      network = network,
+                                      domain = domain))
 
         d <- d %>%
-            mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
             filter_at(vars(-site_name, -datetime, -ms_status),
                       any_vars(! is.na(.))) %>%
             group_by(datetime, site_name) %>%
@@ -324,7 +336,8 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                                      desired_interval = '1 day',
                                      impute_limit = 30))
 
-        d <- ue(apply_detection_limit(d, detlims))
+        # d <- ue(apply_detection_limit(d, detlims))
+        d <- ue(apply_detection_limit_t(d, network, domain))
     }
 
     return(d)
@@ -346,79 +359,42 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    d = sw(read_csv(rawfile1,
-                    progress = FALSE,
-                    col_types = readr::cols_only(
-                        DATE_TIME='c', SITECODE='c', TYPE='c', MEAN_LPS='d',
-                        PH='d', COND='d',
-                        ALK='d', SSED='d', SI='d', UTP='d', TDP='d', PARTP='d',
-                        PO4P='d', UTN='d', TDN='d', DON='d', PARTN='d', UTKN='d',
-                        TKN='d', NH3N='d', NO3N='d', `NA` = 'd', K='d', CA='d',
-                        MG='d', SO4S='d', CL='d', DOC='d', ANCA='d',
-                        ALK_OUTPUT='d', SSED_OUTPUT='d', SI_OUTPUT='d',
-                        UTP_OUTPUT='d', TDP_OUTPUT='d', PARTP_OUTPUT='d',
-                        PO4P_OUTPUT='d', UTN_OUTPUT='d', TDN_OUTPUT='d',
-                        DON_OUTPUT='d', PARTN_OUTPUT='d', UTKN_OUTPUT='d',
-                        TKN_OUTPUT='d', NH3N_OUTPUT='d', NO3N_OUTPUT='d',
-                        NA_OUTPUT = 'd', K_OUTPUT='d', CA_OUTPUT='d',
-                        MG_OUTPUT='d', SO4S_OUTPUT='d', CL_OUTPUT='d',
-                        DOC_OUTPUT='d'))) %>%
-        filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
-        rename(site_name = SITECODE,
-               datetime = DATE_TIME) %>%
-        rename_all(dplyr::recode,
-                   MEAN_LPS='discharge_ns', PH='pH', COND='spCond', ALK='alk',
-                   SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
-                   PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca', MG='Mg',
-                   SO4S='SO4_S', CL='Cl', ANCA='AnCaR', `NA`='Na',
-                   ALK_OUTPUT='alk',
-                   SSED_OUTPUT='suspSed', SI_OUTPUT='Si', PARTP_OUTPUT='TPP',
-                   PO4P_OUTPUT='PO4_P', PARTN_OUTPUT='TPN', NH3N_OUTPUT='NH3_N',
-                   NO3N_OUTPUT='NO3_N', CA_OUTPUT='Ca', MG_OUTPUT='Mg',
-                   SO4S_OUTPUT='SO4_S', CL_OUTPUT='Cl',
-                   UTP_OUTPUT='UTP', TDP_OUTPUT='TDP', UTN_OUTPUT='UTN',
-                   TDN_OUTPUT='TDN', DON_OUTPUT='DON', UTKN_OUTPUT='UTKN',
-                   TKN_OUTPUT='TKN', NA_OUTPUT='Na', K_OUTPUT='K',
-                   DOC_OUTPUT='DOC')
+    #look carefully at warnings from ms_read_raw_csv.
+    #they may indicate insufficiencies
+    d <- ue(ms_read_raw_csv(filepath = rawfile1,
+                            datetime_col = list(name = 'DATE_TIME',
+                                                format = '%Y-%m-%d %H:%M:%S',
+                                                tz = 'Etc/GMT-8'),
+                            site_name_col = 'SITECODE',
+                            data_cols =  c(PH='pH', COND='spCond', ALK='alk',
+                                SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+                                PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
+                                MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
+                                `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
+                                'UTKN', 'TKN', 'K', 'DOC'),
+                            data_col_pattern = '#V#',
+                            alt_datacol_pattern = '#V#_OUTPUT',
+                            var_flagcol_pattern = '#V#CODE',
+                            summary_flagcols = c('TYPE')))
 
-                        # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
-                        # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
-                        # UTPCODE='c', TDP='d', TDPCODE='c', PARTP='d', PARTPCODE='c',
-                        # PO4P='d', PO4PCODE='c', UTN='d', UTNCODE='c', TDN='d',
-                        # TDNCODE='c', DON='d', DONCODE='c', PARTN='d',
-                        # PARTNCODE='c', UTKN='d', UTKNCODE='c', TKN='d',
-                        # TKNCODE='c', NH3N='d', NH3NCODE='c', NO3N='d',
-                        # NO3NCODE='c', `NA`='d', NACODE='c', K='d', KCODE='c',
-                        # CA='d', CACODE='c', MG='d', MGCODE='c', SO4S='d',
-                        # SO4SCODE='c', CL='d', CLCODE='c', DOC='d', DOCCODE='c',
-                        # PVOL='d', PVOLCODE='c', ANCA='d', ANCACODE='c'))) %>%
+    d <- ue(ms_cast_and_reflag(d,
+                               variable_flags_to_drop = 'N',
+                               variable_flags_clean =
+                                   c('A', 'E', 'D', 'DE', '*', 'D*'),
+                               summary_flags_to_drop = list(
+                                   TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
+                               summary_flags_clean = list(TYPE = 'F')))
 
-    d = ue(sourceflags_to_ms_status(d,
-                                    flagstatus_mappings = list(TYPE = 'F')))
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
 
-    detlims <- ue(identify_detection_limit(d))
-
-    d <- d %>%
-        mutate(
-            datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC'),
-            ms_status = as.logical(ms_status)) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                  any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status))
-
-    d[is.na(d)] = NA
-
-    #constant interval
-    d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '1 day', #set back to '15 min' when we have server
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
 }
@@ -472,7 +448,19 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                    UTP_INPUT='UTP', TDP_INPUT='TDP', UTN_INPUT='UTN',
                    TDN_INPUT='TDN', DON_INPUT='DON', UTKN_INPUT='UTKN',
                    TKN_INPUT='TKN', NA_INPUT='Na', K_INPUT='K',
-                   DOC_INPUT='DOC')
+                   DOC_INPUT='DOC') %>%
+        mutate(datetime = with_tz(as_datetime(datetime,
+                                              tz = 'Etc/GMT-8'),
+                                  tz = 'UTC'),
+            site_name = case_when(
+                site_name == 'RCADMN' ~ 'PRIMET',
+                grepl('^RCHI..$', site_name, perl = TRUE) ~ 'CENMET',
+                TRUE ~ '_ERR')) #may be tripped if they add a new dry dep gauge
+
+    if(any(d$site_name == '_ERR')){
+        stop(glue('hjandrews has added a new pchem gauge that we havent mapped',
+            ' to a location'))
+    }
 
                         # PHCODE='c', COND='d', CONDCODE='c', ALK='d', ALKCODE='c',
                         # SSED='d', SSEDCODE='c', SI='d', SICODE='c', UTP='d',
@@ -489,14 +477,12 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
     d = ue(sourceflags_to_ms_status(d,
                                     flagstatus_mappings = list(TYPE = 'F')))
 
-    detlims <- ue(identify_detection_limit(d))
+    ue(identify_detection_limit_t(d,
+                                  network = network,
+                                  domain = domain))
 
     d <- d %>%
-        mutate(
-            datetime = with_tz(as_datetime(datetime,
-                                           tz = 'Etc/GMT-8'),
-                               tz = 'UTC'),
-            ms_status = as.logical(ms_status)) %>%
+        mutate(ms_status = as.logical(ms_status)) %>%
         filter_at(vars(-site_name, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>%
         group_by(datetime, site_name) %>%
@@ -511,7 +497,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '1 day',  #set back to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain))
 
     return(d)
 }
