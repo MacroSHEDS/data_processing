@@ -1271,6 +1271,53 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
 }
 
 #. handle_errors
+update_data_tracker_g <- function(network=domain, domain, tracker=NULL,
+                                  tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
+    
+    #this updates the general section of a data tracker in memory and on disk.
+    #see update_data_tracker_r for the retrieval section and
+    #update_data_tracker_m for the munge section
+    
+    #if tracker is supplied, it will be used to write/overwrite the one on disk.
+    #if it is omitted or set to NULL, the appropriate tracker will be loaded
+    #from disk, updated, and then written back to disk.
+    
+    if(is.null(tracker) && (
+        is.null(tracker_name) || is.null(prodname_ms) ||
+        is.null(new_status) || is.null(site_name)
+    )){
+        msg = paste0('If tracker is not supplied, these args must be:',
+                     'tracker_name, prodname_ms, new_status, new_status.')
+        logerror(msg, logger=logger_module)
+        stop(msg)
+    }
+    
+    if(is.null(tracker)){
+        
+        tracker = get_data_tracker(network=network, domain=domain)
+        
+        dt = tracker[[prodname_ms]][[site_name]]$general
+        
+        if(is.null(dt)){
+            return(generate_ms_exception('Product not yet tracked; no action taken.'))
+        }
+        
+        dt$status = new_status
+        dt$mtime = as.character(Sys.time())
+        
+        tracker[[prodname_ms]][[site_name]]$general = dt
+        
+        assign(tracker_name, tracker, pos=.GlobalEnv)
+    }
+    
+    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
+    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    backup_tracker(trackerfile)
+    
+    return()
+}
+
+#. handle_errors
 backup_tracker <- function(path){
 
     mch = stringr::str_match(path,
@@ -1318,6 +1365,12 @@ get_munge_status <- function(tracker, prodname_ms, site_name){
 get_derive_status <- function(tracker, prodname_ms, site_name){
     derive_status = tracker[[prodname_ms]][[site_name]]$derive$status
     return(derive_status)
+}
+
+#. handle_errors
+get_general_status <- function(tracker, prodname_ms, site_name){
+    general_status = tracker[[prodname_ms]][[site_name]]$general$status
+    return(general_status)
 }
 
 #. handle_errors
@@ -4294,4 +4347,81 @@ get_relative_uncert <- function(x){
     ru <- errors(x) / errors::drop_errors(x) * 100
 
     return(ru)
+}
+
+#. handle_errors
+get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
+    
+    sheds <- ws_boundry %>%
+        as.data.frame() %>%
+        sf::st_as_sf() %>%
+        select(site_name) %>%
+        sf::st_transform(4326) %>%
+        sf::st_set_crs(4326)
+    
+    sheds_point <- sheds[1,] %>%
+        sf::st_centroid() %>%
+        sf::st_bbox()
+    
+    long <- as.numeric(sheds_point[2])
+    
+    place <- ifelse(long > 97.5, 'west', 'east')
+    
+    year_files <- list.files(glue('data/general_raw/phenology/{u}/{p}',
+                             p = place,
+                             u = time)) 
+    
+    years <- as.numeric(str_split_fixed(year_files, '[.]', n = 2)[,1])
+        
+    final <- tibble()
+        for(y in 1:length(years)) {
+            
+            path <- glue('data/general_raw/phenology/{u}/{p}/{t}.tif',
+                         u = time, p = place, t = years[y]) 
+            
+            phenology <- terra::rast(path)
+            
+            terra::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+
+            sheds_vect <- sheds %>%
+                terra::vect() %>%
+                terra::project('+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+            
+            look <- terra::extract(phenology, sheds_vect) %>%
+                as.data.frame() 
+            
+            name <- names(look)[2]
+            
+            col_name <- case_when(time == 'start_season' ~ 'sos',
+                                   time == 'end_season' ~ 'eos',
+                                   time == 'max_season' ~ 'mos')
+            
+            mean_name <- glue('{n}_mean', n = col_name)
+            sd_name <- glue('{n}_sd', n = col_name)
+            
+            look <- look %>%
+                group_by(ID) %>%
+                summarize(!!mean_name := round(mean(.data[[name]], na.rm = TRUE)),
+                          !!sd_name := sd(.data[[name]], na.rm = TRUE)) 
+            
+            sheds_name <- sheds %>%
+                as_tibble() %>%
+                select(-geometry) %>%
+                mutate(ID = row_number()) %>%
+                mutate(year = !!years[y])
+            
+            final_y <- full_join(look, sheds_name, by = 'ID') %>%
+                select(-ID)
+            
+            final <- rbind(final, final_y)
+        }
+    
+    final_path <- glue('data/{n}/{d}/ws_traits/{p}.feather',
+                       n = network,
+                       d = domain, 
+                       p = time)
+    
+    write_feather(final, final_path)
+    
+    return()
 }
