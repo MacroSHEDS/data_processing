@@ -223,15 +223,19 @@ ms_read_raw_csv <- function(filepath,
     #   example, if data columns are named outflow_x, outflow_y, outflow_...., use
     #   data_col_pattern = 'outflow_#V#' and then you don't have to bother
     #   typing the full names in your argument to data_cols.
-    #alt_datacol_pattern: same mechanics as data_col_pattern. use this if there
+    #alt_datacol_pattern: optional string with same mechanics as
+    #   data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
     #   output_x, output_y, output_....
-    #var_flagcol_pattern: same mechanics as the other pattern parameters. this
-    #   one is for columns containing flag information that is specific to
-    #   one variable
-    #alt_varflagcol_pattern: just in case there are two naming conventions for
+    #var_flagcol_pattern: optional string with same mechanics as the other
+    #   pattern parameters. this one is for columns containing flag
+    #   information that is specific to one variable. If there's only one
+    #   data column, omit this argument and use summary_flagcols for all
+    #   flag information.
+    #alt_varflagcol_pattern: optional string with same mechanics as the other
+    #   pattern parameters. just in case there are two naming conventions for
     #   variable-specific flag columns
-    #summary_flagcols: an unnamed vector of column names for flag columns
+    #summary_flagcols: optional unnamed vector of column names for flag columns
     #   that pertain to all variables
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
@@ -267,8 +271,14 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    if(length(data_cols) == 1 &&
+       ! (missing(var_flagcol_pattern) || is.null(var_flagcol_pattern))){
+        stop(paste0('Only one data column. Use summary_flagcols instead ',
+                    'of var_flagcol_pattern.'))
+    }
+
     #deal with missing args
-    alt_datacols <- varflagcols <- alt_varflagcols <- NA
+    alt_datacols <- var_flagcols <- alt_varflagcols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
 
     #fill in missing names in data_cols (for columns that are already
@@ -612,7 +622,7 @@ ms_cast_and_reflag <- function(d,
 
     if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags){
         stop(paste0('Must supply at least 2 of variable_flags_to_drop, ',
-                    'variable_flags_clean, variable_flags_dirty (or set',
+                    'variable_flags_clean, variable_flags_dirty (or set ',
                     'varflag_col_pattern = NA)'))
     }
 
@@ -659,17 +669,36 @@ ms_cast_and_reflag <- function(d,
     #     paste0('__|var')
 
     #cast to long format (would have to auto-generatae names_pattern regex
-    #   to allow for data_col_pattern and varflag_col_pattern to vary)
-    if(no_varflags){
-        d <- pivot_longer(data = d,
-                          cols = ends_with(data_col_keyword),
-                          names_pattern = '^(.+?)__\\|(dat)$',
-                          names_to = c('var', 'dat'))
+    #   to allow for data_col_pattern and varflag_col_pattern to vary) if
+    #   there's more than one data column. otherwise just remove data column
+    #   suffix.
+    ndatacols <- sum(grepl(escape_special_regex(data_col_keyword),
+                           colnames(d)))
+    if(ndatacols > 1){
+
+        if(no_varflags){
+            d <- pivot_longer(data = d,
+                              cols = ends_with(data_col_keyword),
+                              names_pattern = '^(.+?)__\\|(dat)$',
+                              names_to = c('var', 'dat'))
+        } else {
+            d <- pivot_longer(data = d,
+                              cols = ends_with(c(data_col_keyword, varflag_keyword)),
+                              names_pattern = '^(.+?)__\\|(dat|flg)$',
+                              names_to = c('var', '.value'))
+        }
+
     } else {
-        d <- pivot_longer(data = d,
-                          cols = ends_with(c(data_col_keyword, varflag_keyword)),
-                          names_pattern = '^(.+?)__\\|(dat|flg)$',
-                          names_to = c('var', '.value'))
+
+        data_ind <- grep(pattern = escape_special_regex(data_col_keyword),
+             x = colnames(d))
+
+        varname  <- gsub(pattern = escape_special_regex(data_col_keyword),
+                         replacement = '',
+                         x = colnames(d)[data_ind])
+
+        colnames(d)[data_ind] <- 'dat'
+        d$var <- varname
     }
 
     # #determine sample regimen (sensor/grab) for each site-var
@@ -686,8 +715,6 @@ ms_cast_and_reflag <- function(d,
     # dtcv <- sd(dtdiffs) / mean(dtdiffs)
     # zz = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
     # sd(zz) / mean(zz)
-
-
 
 
     #filter rows with summary flags indicating bad data (data to drop)
@@ -724,21 +751,23 @@ ms_cast_and_reflag <- function(d,
                 flg %in% variable_flags_dirty ~ 1,
                 TRUE ~ 0))
         }
+    } else {
+        d$ms_status <- 0
     }
 
     if(sumclen){
         for(i in 1:length(summary_flags_clean)){
             si <- summary_flags_clean[i]
-            flg_bool <- ! d[[names(si)]] %in% si[[i]]
+            flg_bool <- ! d[[names(si)]] %in% si[[1]]
+            d$ms_status[flg_bool] <- 1
         }
     } else {
         for(i in 1:length(summary_flags_dirty)){
             si <- summary_flags_dirty[i]
-            flg_bool <- d[[names(si)]] %in% si[[i]]
+            flg_bool <- d[[names(si)]] %in% si[[1]]
+            d$ms_status[flg_bool] <- 1
         }
     }
-
-    d$ms_status[flg_bool] <- 1
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
@@ -2433,7 +2462,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
 
     uniq_sites <- unique(d$site_name)
 
-    if(nrow(d) < 2 || sum(is.na(d$val)) < 2){
+    if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
@@ -4022,9 +4051,9 @@ force_monotonic_locf <- function(v, ascending = TRUE){
 
 #. handle_errors
 get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
-    
+
     col_name <- paste0(prodname, 'X')
-    
+
     gee_imcol <- ee$ImageCollection(gee_id)$
         filterDate(start, end)$
         select(band)$
@@ -4036,44 +4065,44 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
 
 #. handle_errors
 clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
-    
+
     table_nrow <- sheds %>%
         mutate(nrow = row_number()) %>%
         as.data.frame() %>%
         select(site_name, nrow)
-    
+
     sm(table <- ee_ws_table %>%
         mutate(nrow = row_number()) %>%
         full_join(table_nrow) %>%
         select(-nrow))
-    
+
     col_names <- colnames(table)
-    
+
     leng <- length(col_names) -1
-    
+
     table_time <- table %>%
         pivot_longer(col_names[1:leng])
-    
+
     for(i in 1:nrow(table_time)) {
-        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2], 
+        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2],
                                                          pattern = 'X', n = 2)[2]
     }
-    
+
     table_fin <- table_time %>%
         dplyr::select(-name) %>%
         mutate(date = ymd(date)) %>%
         rename(!!com_name := value)
-    
+
     return(table_fin)
 }
 
 #. handle_errors
 get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
                              ws_prodname) {
-    
-    sheds <- try(read_combine_shapefiles(network=network, domain=domain, 
+
+    sheds <- try(read_combine_shapefiles(network=network, domain=domain,
                                      prodname_ms=ws_prodname))
-    
+
     if(class(sheds)[1] == 'ms_err') {
         stop('Watershed boundaries are required for gee products')
     }
@@ -4083,9 +4112,9 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
         select(site_name) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
-    
+
     imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
-    
+
     median <- ee_extract(
         x = imgcol,
         y = sheds,
@@ -4093,7 +4122,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
         fun = ee$Reducer$median(),
         sf = FALSE
     )
-    
+
     sd <- ee_extract(
         x = imgcol,
         y = sheds,
@@ -4101,7 +4130,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
         fun = ee$Reducer$stdDev(),
         sf = FALSE
     )
-    
+
     count <- ee_extract(
         x = imgcol,
         y = sheds,
@@ -4111,55 +4140,55 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
     )
     median_name <- glue('{c}_median', c = prodname)
     count_name <- glue('{c}_count', c = prodname)
-    
-    median <- clean_gee_tabel(median, sheds, median_name) 
-    
+
+    median <- clean_gee_tabel(median, sheds, median_name)
+
     sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
-    
+
     count <- clean_gee_tabel(count, sheds, count_name)
-    
+
     fin <- sm(full_join(median, sd)) %>%
         sm(full_join(count))
-    
+
     path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
                  n = network, d = domain, v = prodname)
-    
+
     write_feather(fin, path)
-    
+
     return()
 }
 
 #. handle_errors
-get_gee_large <- function(network, domain, gee_id, band, prodname, rez, 
+get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
                           start, ws_prodname) {
-   
-     sheds <- try(read_combine_shapefiles(network=network, domain=domain, 
+
+     sheds <- try(read_combine_shapefiles(network=network, domain=domain,
                                          prodname_ms=ws_prodname))
-    
+
     if(class(sheds)[1] == 'ms_err') {
         stop('Watershed boundaries are required for gee products')
     }
-     
+
     sheds <- sheds %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
-    
+
     start <- pull(gee[1,4])
     current <- Sys.Date() + years(5)
     dates <- seq(start, current, by = 'years')
-    
+
     date_ranges <- dates[seq(0, 100, by = 5)]
     date_ranges <- date_ranges[!is.na(date_ranges)]
-    date_ranges <- append(start, date_ranges) 
-    
+    date_ranges <- append(start, date_ranges)
+
     for(i in 1:(length(date_ranges)-1)) {
-        imgcol <- get_gee_imgcol(pull(gee[1,1]), pull(gee[1,2]), pull(gee[1,3]), 
+        imgcol <- get_gee_imgcol(pull(gee[1,1]), pull(gee[1,2]), pull(gee[1,3]),
                                  paste0(date_ranges[i]), paste0(date_ranges[i+1]))
-        
-        
+
+
         median <- ee_extract(
             x = imgcol,
             y = sheds,
@@ -4167,7 +4196,7 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
             fun = ee$Reducer$median(),
             sf = FALSE
         )
-        
+
         sd <- ee_extract(
             x = imgcol,
             y = sheds,
@@ -4175,7 +4204,7 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
             fun = ee$Reducer$stdDev(),
             sf = FALSE
         )
-        
+
         count <- ee_extract(
             x = imgcol,
             y = sheds,
@@ -4183,33 +4212,35 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
             fun = ee$Reducer$count(),
             sf = FALSE
         )
-        
+
         median_name <- glue('{c}_median', c = var)
         count_name <- glue('{c}_count', c = var)
-        
-        median <- clean_gee_tabel(median, sheds, median_name) 
-        
+
+        median <- clean_gee_tabel(median, sheds, median_name)
+
         sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = var))
-        
+
         count <- clean_gee_tabel(count, sheds, count_name)
-        
+
         fin <- sm(full_join(median, sd)) %>%
             sm(full_join(count))
-        
+
         if(i == 1) {
             final <- filter(fin, date == '1900-01-1')
         }
-        
+
         final <- rbind(final, fin)
     }
-    
+
     path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
                  n = network, d = domain, v = var)
-    
+
     write_feather(final, path)
-    
+
     return()
-    
+
+}
+
 #. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
