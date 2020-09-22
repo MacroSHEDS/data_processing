@@ -1,5 +1,6 @@
-zz = read_combine_feathers('neon',
-    'neon', 'stream_quality__DP1.20288')
+zz = read_combine_feathers(network = 'neon',
+                           domain = 'neon',
+                           prodname_ms = 'stream_quality__DP1.20288')
 spc = zz %>%
     select(site_name, datetime, spCond)
 
