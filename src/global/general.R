@@ -18,7 +18,7 @@ if(class(sheds)[1] == 'ms_err' | is.null(sheds[1])) {
   stop('Watershed boundaries are required for general products')
 }
 
-# i <- 10
+# i <- 7
 for(i in 1:nrow(unprod)){
   
   prodname_ms = glue(unprod$prodname[i], '__', unprod$prodcode[i])
