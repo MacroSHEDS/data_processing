@@ -55,7 +55,6 @@ munge_hbef_combined <- function(domain, site_name, prodname_ms, tracker,
     silent=TRUE){
     # site_name=sites[j]; tracker=held_data; k=1
 
-
     retrieval_log = extract_retrieval_log(tracker, prodname_ms, site_name) %>%
         filter(component != "Analytical Methods")
 

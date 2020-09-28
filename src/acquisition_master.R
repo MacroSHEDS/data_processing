@@ -12,10 +12,10 @@ suppressPackageStartupMessages({
     # library(sp)
     # library(mapview)
     # library(elevatr)
+    # library(rgee)
 
     #everything else
     library(httr)
-    library(rgee)
     library(jsonlite)
     library(tidyr)
     library(plyr)
@@ -42,7 +42,7 @@ try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
 try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
 
-#connect rgee to earth engine and python 
+#connect rgee to earth engine and python
 try(ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
@@ -68,8 +68,9 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+# dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
+# for(dmnrow in 2){
 
     network = network_domain$network[dmnrow]
     domain = network_domain$domain[dmnrow]
