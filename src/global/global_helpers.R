@@ -170,6 +170,173 @@ gsub_v <- function(pattern, replacement_vec, x){
 }
 
 #. handle_errors
+identify_sampling <- function(df,  date_col='datetime', network, domain, 
+                              prodname_ms) {
+    
+    sampling_dir <- glue('data/{n}/{d}',
+                         n = network,
+                         d = domain)
+    
+    sampling_file <- glue('data/{n}/{d}/sampling_type.json',
+                          n = network,
+                          d = domain)
+    
+    if(file.exists(sampling_file)){
+        master <- jsonlite::fromJSON(readr::read_file(sampling_file))
+    } else {
+        dir.create(sampling_dir, recursive=TRUE)
+        file.create(sampling_file)
+        master <- list()
+    }
+    
+    col_names <- colnames(df)
+    
+    data_cols <- grep(pattern = '__[|]dat', col_names, value = TRUE)
+    
+    flg_cols <- grep(pattern = '__[|]flg', col_names, value = TRUE)
+    
+    for(p in 1:length(data_cols)) {
+        
+        var_name <- str_split_fixed(data_cols[p], '__', 2)[1]
+        
+        df_var <- df %>%
+            select(datetime, !!var_name := .data[[data_cols[p]]], site_name)
+        
+        site_names <- df$site_name %>%
+            unique()
+        
+        all_sites <- tibble()
+        for(i in 1:length(site_names)) {
+            
+            df_site <- df_var %>%
+                filter(site_name == !!site_names[i]) %>%
+                filter(!is.na(.data[[date_col]])) %>%
+                filter(!is.na(.data[[var_name]]))
+            
+            dates <- df_site[[date_col]]
+            
+            dif <- diff(dates)
+            
+            unit <- attr(dif, 'units')
+            
+            conver = case_when(unit == 'seconds' ~ 0.01666667,
+                               unit == 'secs' ~ 0.01666667,
+                               unit == 'minutes' ~ 1,
+                               unit == 'mins' ~ 1,
+                               unit == 'hours' ~ 60,
+                               unit == 'days' ~ 1440)
+            
+            dif <- as.numeric(dif)*conver
+            
+            table <- rle2(dif) %>%
+                mutate(site_name = !!site_names[i]) %>%
+                mutate(starts := dates[starts],
+                       stops := dates[stops]) %>%
+                mutate(sum = sum(lengths, na.rm = T)) %>%
+                mutate(porportion = lengths/sum) %>%
+                mutate(time = difftime(stops, starts, units = 'days'))
+            
+            test <- table %>%
+                filter(time > 60,
+                       lengths > 60)
+            
+            # Sites with no record
+            if(nrow(table) == 0) {
+                g_a <- tibble('site_name' = site_names[i],
+                              'type' = NA,
+                              'starts' = ymd_hms(NA),
+                              'interval' = NA)
+            } else {
+                #Sites where there are not at least 60 consecutive records, record
+                #for at least 60 consecutive days, and have an average interval of
+                #more than 1 day are assumed to be grab samples
+                if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) > 1440) {
+                    
+                    g_a <- tibble('site_name' = site_names[i],
+                                  'type' = 'grab',
+                                  'starts' = min(table$starts, na.rm = TRUE),
+                                  'interval' = round(median(table$values, na.rm = TRUE)))
+                }
+                
+                #Sites with consecutive samples are have a consistent interval
+                if(nrow(test) != 0 & nrow(table) < 20) {
+                    
+                    g_a <- test %>%
+                        select(site_name, starts, interval=values) %>%
+                        group_by(site_name, interval) %>%
+                        summarise(starts = min(starts, na.rm = TRUE)) %>%
+                        mutate(type = 'automatic')
+                    
+                }
+                
+                #Sites where they do not have a consistent recording interval but
+                #the average interval is less than one day are assumed to be automatic
+                # (such as HBEF discharge that is automatic but lacks a consistent
+                #recording interval)
+                if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) < 1440 |
+                   nrow(test) != 0 & nrow(table) > 20) {
+                    
+                    table_ <- table %>%
+                        filter(porportion >= 0.05) %>%
+                        mutate(type = 'automatic') %>%
+                        select(starts, site_name, type, interval=values) %>%
+                        mutate(interval = as.character(round(interval)))
+                    
+                    table_var <- table %>%
+                        filter(porportion <= 0.05)  %>%
+                        group_by(site_name) %>%
+                        summarise(starts = min(starts, na.rm = TRUE)) %>%
+                        mutate(type = 'automatic',
+                               interval = 'variable') %>%
+                        select(starts, site_name, type, interval)
+                    
+                    g_a <- rbind(table_, table_var)
+                }
+            }
+            
+            g_a<- mutate(g_a, var = !!var_name)
+            
+            all_sites <- rbind(all_sites, g_a) 
+            
+            
+            master[[prodname_ms]][[var_name]][[site_names[i]]] <- list('starts'=g_a$starts,
+                                                                       'type'=g_a$type,
+                                                                       'interval'=g_a$interval)
+            
+        }
+        var_type <- all_sites %>%
+            filter(!is.na(type)) %>%
+            pull(type) %>%
+            unique() 
+        
+        if(length(var_type) == 1) {
+            label <- case_when(var_type == 'grab'~'g',
+                               var_type == 'automatic'~'a')
+            
+            new_data_name <- glue('{v}_{l}__|dat',
+                             v=var_name, l = label) 
+            
+            new_flg_name <- glue('{v}_{l}__|flg',
+                                 v=var_name, l=label)
+            
+            if(!new_flg_name %in% colnames(df)) {
+                df <- df %>%
+                    rename(!!new_data_name := .data[[data_cols[p]]])
+            } else {
+            
+            df <- df %>%
+                rename(!!new_data_name := .data[[data_cols[p]]]) %>%
+                rename(!!new_flg_name := .data[[flg_cols[p]]])
+            }
+        }
+    }
+    
+    readr::write_file(jsonlite::toJSON(master), sampling_file)
+    
+    return(df)
+}
+
+#. handle_errors
 ms_read_raw_csv <- function(filepath,
                             date_col,
                             time_col,
@@ -181,7 +348,7 @@ ms_read_raw_csv <- function(filepath,
                             # data_col_regimen,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
-                            summary_flagcols){
+                            summary_flagcols=NULL){
 
     #TODO:
     #write more checks for improper specification.
@@ -378,6 +545,9 @@ ms_read_raw_csv <- function(filepath,
 
     classes_f2 <- rep('character', length(alt_varflagcols))
     names(classes_f2) <- alt_varflagcol_names
+    
+    classes_f3 <- rep('character', length(summary_flagcols))
+    names(classes_f3) <- summary_flagcols
 
     if(datetime_supplied){
 
@@ -468,6 +638,9 @@ ms_read_raw_csv <- function(filepath,
                                                format = dtformat,
                                                tz = dttz),
                                    tz = 'UTC'))
+    
+    d <- d %>%
+        filter(!is.na(datetime))
 
     #remove columns and rows with all NAs. also remove flag columns for all-NA
     #   data columns
@@ -499,6 +672,9 @@ ms_read_raw_csv <- function(filepath,
 
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
+    
+    d <- sm(identify_sampling(d, 'datetime', domain=domain, network=network,
+                           prodname_ms=prodname_ms))
 
     return(d)
 }
@@ -4202,14 +4378,11 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     fin <- sm(full_join(median, sd)) %>%
         sm(full_join(count))
+    
+    return(fin)
 
-    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
-                 n = network, d = domain, v = prodname)
-
-    write_feather(fin, path)
-
-    return()
 }
+
 
 #. handle_errors
 get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
@@ -4284,14 +4457,9 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
 
         final <- rbind(final, fin)
     }
-
-    path <- glue('data/{n}/{d}/ws_traits/{v}.feather',
-                 n = network, d = domain, v = var)
-
-    write_feather(final, path)
-
-    return()
-
+    
+    return(final)
+    
 }
 
 #. handle_errors
@@ -4363,8 +4531,8 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
         sf::st_centroid() %>%
         sf::st_bbox()
     
-    long <- as.numeric(sheds_point[2])
-    
+    long <- as.numeric(sheds_point[2])    
+
     place <- ifelse(long > 97.5, 'west', 'east')
     
     year_files <- list.files(glue('data/general_raw/phenology/{u}/{p}',
@@ -4424,4 +4592,60 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
     write_feather(final, final_path)
     
     return()
+}
+
+#. handle_errors
+detection_limit_as_uncertainty <- function(detlim){
+
+    # uncert <- lapply(detlim,
+    #                  FUN = function(x) 1 / 10^x) %>%
+    #               as_tibble()
+
+    uncert <- 1 / 10^detlim
+
+    return(uncert)
+}
+
+#. handle_errors
+carry_uncertainty <- function(d, network, domain, prodname_ms){
+
+    u <- identify_detection_limit_t(d,
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms,
+                                    return_detlims = TRUE)
+    u <- detection_limit_as_uncertainty(u)
+    errors(d$val) <- u
+    # d <- insert_uncertainty_df(d, u)
+
+    return(d)
+}
+
+#. handle_errors
+err_df_to_matrix <- function(df){
+
+    if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
+        stop('all columns of df must be of class "errors" or "numeric"')
+    }
+
+    errmat <- as.matrix(as.data.frame(lapply(df, errors)))
+    M <- as.matrix(df)
+    errors(M) <- errmat
+
+    return(M)
+}
+
+#. handle_errors
+get_relative_uncert <- function(x){
+
+    if(any(class(x) %in% c('list', 'data.frame', 'array'))){
+        stop(glue('this function not yet adapted for class {cl}',
+                  cl = paste(class(tibble(x=1:3)),
+                             collapse = ', ')))
+    }
+
+    ru <- errors(x) / errors::drop_errors(x) * 100
+
+    return(ru)
+
 }
