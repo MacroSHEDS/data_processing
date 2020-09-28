@@ -623,10 +623,11 @@ ms_read_raw_csv <- function(filepath,
             mutate(
                 timechars = nchar(time),
                 time = case_when(
-                    timechars == 0 | is.na(timechars) ~ '12:00:00',
-                    timechars == 2 ~ paste0(time, ':00:00'),
-                    timechars == 5 ~ paste0(time, ':00'),
                     timechars == 8 ~ time,
+                    timechars == 5 ~ paste0(time, ':00'),
+                    timechars == 0 | is.na(timechars) ~ '12:00:00',
+                    timechars > 8 ~ substr(time, 1, 8),
+                    timechars == 2 ~ paste0(time, ':00:00'),
                     TRUE ~ NA_character_)) %>%
             select(-timechars)
 
