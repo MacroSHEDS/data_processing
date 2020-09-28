@@ -170,17 +170,17 @@ gsub_v <- function(pattern, replacement_vec, x){
 }
 
 #. handle_errors
-identify_sampling <- function(df,  date_col='datetime', network, domain, 
+identify_sampling <- function(df,  date_col='datetime', network, domain,
                               prodname_ms) {
-    
+
     sampling_dir <- glue('data/{n}/{d}',
                          n = network,
                          d = domain)
-    
+
     sampling_file <- glue('data/{n}/{d}/sampling_type.json',
                           n = network,
                           d = domain)
-    
+
     if(file.exists(sampling_file)){
         master <- jsonlite::fromJSON(readr::read_file(sampling_file))
     } else {
@@ -188,46 +188,46 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
         file.create(sampling_file)
         master <- list()
     }
-    
+
     col_names <- colnames(df)
-    
+
     data_cols <- grep(pattern = '__[|]dat', col_names, value = TRUE)
-    
+
     flg_cols <- grep(pattern = '__[|]flg', col_names, value = TRUE)
-    
+
     for(p in 1:length(data_cols)) {
-        
+
         var_name <- str_split_fixed(data_cols[p], '__', 2)[1]
-        
+
         df_var <- df %>%
             select(datetime, !!var_name := .data[[data_cols[p]]], site_name)
-        
+
         site_names <- df$site_name %>%
             unique()
-        
+
         all_sites <- tibble()
         for(i in 1:length(site_names)) {
-            
+
             df_site <- df_var %>%
                 filter(site_name == !!site_names[i]) %>%
                 filter(!is.na(.data[[date_col]])) %>%
                 filter(!is.na(.data[[var_name]]))
-            
+
             dates <- df_site[[date_col]]
-            
+
             dif <- diff(dates)
-            
+
             unit <- attr(dif, 'units')
-            
+
             conver = case_when(unit == 'seconds' ~ 0.01666667,
                                unit == 'secs' ~ 0.01666667,
                                unit == 'minutes' ~ 1,
                                unit == 'mins' ~ 1,
                                unit == 'hours' ~ 60,
                                unit == 'days' ~ 1440)
-            
+
             dif <- as.numeric(dif)*conver
-            
+
             table <- rle2(dif) %>%
                 mutate(site_name = !!site_names[i]) %>%
                 mutate(starts := dates[starts],
@@ -235,11 +235,11 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                 mutate(sum = sum(lengths, na.rm = T)) %>%
                 mutate(porportion = lengths/sum) %>%
                 mutate(time = difftime(stops, starts, units = 'days'))
-            
+
             test <- table %>%
                 filter(time > 60,
                        lengths > 60)
-            
+
             # Sites with no record
             if(nrow(table) == 0) {
                 g_a <- tibble('site_name' = site_names[i],
@@ -251,37 +251,37 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                 #for at least 60 consecutive days, and have an average interval of
                 #more than 1 day are assumed to be grab samples
                 if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) > 1440) {
-                    
+
                     g_a <- tibble('site_name' = site_names[i],
                                   'type' = 'grab',
                                   'starts' = min(table$starts, na.rm = TRUE),
                                   'interval' = round(median(table$values, na.rm = TRUE)))
                 }
-                
+
                 #Sites with consecutive samples are have a consistent interval
                 if(nrow(test) != 0 & nrow(table) < 20) {
-                    
+
                     g_a <- test %>%
                         select(site_name, starts, interval=values) %>%
                         group_by(site_name, interval) %>%
                         summarise(starts = min(starts, na.rm = TRUE)) %>%
                         mutate(type = 'automatic')
-                    
+
                 }
-                
+
                 #Sites where they do not have a consistent recording interval but
                 #the average interval is less than one day are assumed to be automatic
                 # (such as HBEF discharge that is automatic but lacks a consistent
                 #recording interval)
                 if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) < 1440 |
                    nrow(test) != 0 & nrow(table) > 20) {
-                    
+
                     table_ <- table %>%
                         filter(porportion >= 0.05) %>%
                         mutate(type = 'automatic') %>%
                         select(starts, site_name, type, interval=values) %>%
                         mutate(interval = as.character(round(interval)))
-                    
+
                     table_var <- table %>%
                         filter(porportion <= 0.05)  %>%
                         group_by(site_name) %>%
@@ -289,50 +289,50 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                         mutate(type = 'automatic',
                                interval = 'variable') %>%
                         select(starts, site_name, type, interval)
-                    
+
                     g_a <- rbind(table_, table_var)
                 }
             }
-            
+
             g_a<- mutate(g_a, var = !!var_name)
-            
-            all_sites <- rbind(all_sites, g_a) 
-            
-            
+
+            all_sites <- rbind(all_sites, g_a)
+
+
             master[[prodname_ms]][[var_name]][[site_names[i]]] <- list('starts'=g_a$starts,
                                                                        'type'=g_a$type,
                                                                        'interval'=g_a$interval)
-            
+
         }
         var_type <- all_sites %>%
             filter(!is.na(type)) %>%
             pull(type) %>%
-            unique() 
-        
+            unique()
+
         if(length(var_type) == 1) {
             label <- case_when(var_type == 'grab'~'g',
                                var_type == 'automatic'~'a')
-            
+
             new_data_name <- glue('{v}_{l}__|dat',
-                             v=var_name, l = label) 
-            
+                             v=var_name, l = label)
+
             new_flg_name <- glue('{v}_{l}__|flg',
                                  v=var_name, l=label)
-            
+
             if(!new_flg_name %in% colnames(df)) {
                 df <- df %>%
                     rename(!!new_data_name := .data[[data_cols[p]]])
             } else {
-            
+
             df <- df %>%
                 rename(!!new_data_name := .data[[data_cols[p]]]) %>%
                 rename(!!new_flg_name := .data[[flg_cols[p]]])
             }
         }
     }
-    
+
     readr::write_file(jsonlite::toJSON(master), sampling_file)
-    
+
     return(df)
 }
 
@@ -345,10 +345,10 @@ ms_read_raw_csv <- function(filepath,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
-                            # data_col_regimen,
+                            # sensor_vs_analytical,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
-                            summary_flagcols=NULL){
+                            summary_flagcols){
 
     #TODO:
     #write more checks for improper specification.
@@ -367,10 +367,10 @@ ms_read_raw_csv <- function(filepath,
     #   time_col is also supplied, the time zone component of this argument
     #   can be omitted, as it will be ignored. Either date_col
     #   or datetime_col must be supplied.
-    #time_col: optional named list of length 3. Names must be "name", "format",
+    #time_col: optional named list of length 2. Names must be "name"
     #   and "tz". Corresponding elements must be the name of the column,
-    #   the time format (e.g. '%H:%M:%S'), and the time zone
-    #   (which must be among those provided by OlsonNames()).
+    #   and the time zone (which must be among those provided by OlsonNames()).
+    #   Time format is handled internally and need not be specified.
     #datetime_col: optional named list of length 3. Names must be "name", "format",
     #   and "tz". Corresponding elements must be the name of the column,
     #   the datetime format (e.g. '%Y-%m-%dT%H:%M:%SZ'), and the time zone
@@ -394,6 +394,7 @@ ms_read_raw_csv <- function(filepath,
     #   data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
     #   output_x, output_y, output_....
+    #sensor_vs_analytical:
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -447,10 +448,14 @@ ms_read_raw_csv <- function(filepath,
     #deal with missing args
     alt_datacols <- var_flagcols <- alt_varflagcols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
+    if(missing(summary_flagcols)){
+        summary_flagcols <- NULL
+    }
 
     #fill in missing names in data_cols (for columns that are already
     #   canonically named)
     datacol_names0 <- names(data_cols)
+    if(is.null(datacol_names0)) datacol_names0 <- rep('', length(data_cols))
     datacol_names0[datacol_names0 == ''] <-
         unname(data_cols[datacol_names0 == ''])
 
@@ -525,7 +530,7 @@ ms_read_raw_csv <- function(filepath,
         colnames_new <- c('site_name', colnames_new)
     }
 
-    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
+    if(! is.null(summary_flagcols)){
         nsumcol <- length(summary_flagcols)
         summary_flagcols_named <- summary_flagcols
         names(summary_flagcols_named) <- summary_flagcols
@@ -545,7 +550,7 @@ ms_read_raw_csv <- function(filepath,
 
     classes_f2 <- rep('character', length(alt_varflagcols))
     names(classes_f2) <- alt_varflagcol_names
-    
+
     classes_f3 <- rep('character', length(summary_flagcols))
     names(classes_f3) <- summary_flagcols
 
@@ -568,11 +573,6 @@ ms_read_raw_csv <- function(filepath,
     if(! missing(site_name_col) && ! is.null(site_name_col)){
         class_sn <- 'character'
         names(class_sn) <- site_name_col
-    }
-
-    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
-        classes_f3 <- rep('character', length(summary_flagcols))
-        names(classes_f3) <- summary_flagcols
     }
 
     classes_all <- c(class_dt, class_sn, classes_d1, classes_d2, classes_f1,
@@ -618,11 +618,29 @@ ms_read_raw_csv <- function(filepath,
 
     } else if(time_supplied){
 
+        #harmonize time formats to %H:%M:%S'
+        d <- d %>%
+            mutate(
+                timechars = nchar(time),
+                time = case_when(
+                    timechars == 8 ~ time,
+                    timechars == 5 ~ paste0(time, ':00'),
+                    timechars == 0 | is.na(timechars) ~ '12:00:00',
+                    timechars > 8 ~ substr(time, 1, 8),
+                    timechars == 2 ~ paste0(time, ':00:00'),
+                    TRUE ~ NA_character_)) %>%
+            select(-timechars)
+
+        if(any(is.na(d$time))){
+            stop(paste('Weird time format encountered. Either time_col format',
+                       'was misspecified, or helper modification needed'))
+        }
+
         d$datetime <- paste(d$date, d$time)
         d$date <- d$time <- NULL
 
         dtformat <- paste(date_col$format,
-                          time_col$format)
+                          '%H:%M:%S')
         dttz <- time_col$tz
 
     } else {
@@ -638,7 +656,7 @@ ms_read_raw_csv <- function(filepath,
                                                format = dtformat,
                                                tz = dttz),
                                    tz = 'UTC'))
-    
+
     d <- d %>%
         filter(!is.na(datetime))
 
@@ -672,7 +690,7 @@ ms_read_raw_csv <- function(filepath,
 
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
-    
+
     d <- sm(identify_sampling(d, 'datetime', domain=domain, network=network,
                            prodname_ms=prodname_ms))
 
@@ -1449,15 +1467,15 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
 #. handle_errors
 update_data_tracker_g <- function(network=domain, domain, tracker=NULL,
                                   tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
-    
+
     #this updates the general section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
     #update_data_tracker_m for the munge section
-    
+
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
     #from disk, updated, and then written back to disk.
-    
+
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(prodname_ms) ||
         is.null(new_status) || is.null(site_name)
@@ -1467,29 +1485,29 @@ update_data_tracker_g <- function(network=domain, domain, tracker=NULL,
         logerror(msg, logger=logger_module)
         stop(msg)
     }
-    
+
     if(is.null(tracker)){
-        
+
         tracker = get_data_tracker(network=network, domain=domain)
-        
+
         dt = tracker[[prodname_ms]][[site_name]]$general
-        
+
         if(is.null(dt)){
             return(generate_ms_exception('Product not yet tracked; no action taken.'))
         }
-        
+
         dt$status = new_status
         dt$mtime = as.character(Sys.time())
-        
+
         tracker[[prodname_ms]][[site_name]]$general = dt
-        
+
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
-    
+
     trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-    
+
     return()
 }
 
@@ -2277,11 +2295,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
 
-    # qq = identify_detection_limit_s(flux)
-    # identify_detection_limit_t(flux, network, domain)
-    # jj <- ue(apply_detection_limit_t(flux, network, domain))
-    flux <- ue(apply_detection_limit_t(flux, network, domain))
-    # identify_detection_limit_s(jj)
+    flux <- ue(apply_detection_limit_t(flux, network, domain, prodname_ms))
 
     return(flux)
 }
@@ -2442,15 +2456,6 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                          v = output_varname,
                          k = k,
                          ntimesteps = ntimesteps)
-        # if(verbose){
-        #     if(k %% 1000 == 0){
-        #         msg <- glue('giant loop: {kk}/{nt}',
-        #             kk = k,
-        #             nt = ntimesteps)
-        #         loginfo(msg,
-        #             logger = logger_module)
-        #     }
-        # }
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -2467,7 +2472,8 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
         d_idw <- weightmat %*% dk
 
         #reapply uncertainty dropped by `%*%`
-        errors(d_idw) <- sum(get_relative_uncert(dk))
+        errors(d_idw) <- weightmat %*% matrix(errors(dk),
+                                              nrow = nrow(dk))
 
         #determine data-elevation relationship for interp weighting
         if(! elev_agnostic){
@@ -2496,7 +2502,9 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
     ws_mean <- tibble(datetime = d_dt,
                       site_name = stream_site_name,
-                      !!output_varname := ws_mean,
+                      var = output_varname,
+                      val = ws_mean,
+                      # !!output_varname := ws_mean,
                       ms_status = d_status,
                       ms_interp = d_interp)
 
@@ -2599,15 +2607,6 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                          v = '      ',
                          k = k,
                          ntimesteps = ntimesteps)
-        # if(verbose){
-        #     if(k %% 1000 == 0){
-        #         msg <- glue('giant loop: {kk}/{nt}',
-        #             kk = k,
-        #             nt = ntimesteps)
-        #         loginfo(msg,
-        #             logger = logger_module)
-        #     }
-        # }
 
         #assign cell weights as normalized inverse squared distances (p)
         pk <- t(p_matrix[k, , drop = FALSE])
@@ -2646,8 +2645,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         c_idw <- weightmat_c %*% ck
 
         #reapply uncertainty dropped by `%*%`
-        errors(p_idw) <- sum(get_relative_uncert(pk))
-        errors(c_idw) <- sum(get_relative_uncert(ck))
+        errors(p_idw) <- weightmat %*% matrix(errors(pk),
+                                              nrow = nrow(pk))
+        errors(c_idw) <- weightmat %*% matrix(errors(ck),
+                                              nrow = nrow(ck))
 
         #estimate raster values from elevation alone (p only)
         p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
@@ -2883,18 +2884,18 @@ idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
 precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                        precip_prodname_out, verbose = TRUE){
 
-    #load precip data, watershed boundaries, rain gauge locations
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname)
-    # precip = filter(precip, site_name %in% c("GSWS01", "SPOTFI", "UNIT3B", "WS1SDL", "WS3JRD"))
-    # precip = manufacture_uncert_msdf(precip)
+    #load watershed boundaries, rain gauge locations, precip data
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
     rg <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = pgauge_prodname)
+    precip <- read_combine_feathers(network = network,
+                                    domain = domain,
+                                    prodname_ms = precip_prodname) %>%
+        filter(site_name %in% rg$site_name)
+    # precip = manufacture_uncert_msdf(precip)
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -2907,10 +2908,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
-    #clean precip and arrange for matrixification
-    detlim <- identify_detection_limit_s(precip$precip)
-
-    #this avoids a lot of slow summarizing
+    #this avoids a lot of slow summarizing during the next step
     status_cols <- precip %>%
         select(datetime, ms_status, ms_interp) %>%
         group_by(datetime) %>%
@@ -2918,8 +2916,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
             ms_status = numeric_any(ms_status),
             ms_interp = numeric_any(ms_interp))
 
+    #clean precip and arrange for matrixification
     precip <- precip %>%
-        filter(site_name %in% rg$site_name) %>%
 
         #this block is for testing only (makes dataset smaller)
         # mutate(datetime = lubridate::year(datetime)) %>% #by year
@@ -2931,9 +2929,9 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         #     ms_interp = numeric_any(ms_status)) %>%
         # ungroup() %>%
 
-        select(-ms_status, -ms_interp) %>%
+        select(-ms_status, -ms_interp, -var) %>%
         tidyr::pivot_wider(names_from = site_name,
-                           values_from = precip) %>%
+                           values_from = val) %>%
         left_join(status_cols,
                   by = 'datetime') %>%
         arrange(datetime)
@@ -2992,8 +2990,17 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                                        elev_agnostic = FALSE,
                                        verbose = verbose)
 
-        ws_mean_precip$precip <- apply_detection_limit_s(ws_mean_precip$precip,
-                                                        detlim)
+        # ws_mean_precip$precip <- apply_detection_limit_s(ws_mean_precip$precip,
+        #                                                 detlim)
+        # identify_detection_limit_s(ws_mean_precip$val)
+        precursor_prodname <- get_detlim_precursor(network = network,
+                                                   domain = domain,
+                                                   prodname_ms = prodname_ms)
+
+        ws_mean_precip <- apply_detection_limit_t(ws_mean_precip,
+                                                  network = network,
+                                                  domain = domain,
+                                                  prodname_ms = precursor_prodname)
 
         #interp final precip to a desirable interval?
         write_ms_file(ws_mean_precip,
@@ -3009,6 +3016,39 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     parallel::stopCluster(clst)
 
     return()
+}
+
+#. handle_errors
+get_detlim_precursor <- function(network, domain, prodname_ms){
+
+    #this gets the prodname_ms for the direct precursor of a derived
+    #product. for example, for hjandrews 'precipitation__ms001' it would return
+    #'precipitation__5482'. This is necessary when applying detection limits
+    #to a derived product, because those limits were defined on the direct
+    #precursor
+
+    #for precip flux products, the direct precursor is considered to be precip chem
+
+    if(network == domain){
+        prods <- sm(read_csv(glue('src/{n}/products.csv',
+                                  n = network)))
+    } else {
+        prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                                  n = network,
+                                  d = domain)))
+    }
+
+    prodname <- prodname_from_prodname_ms(prodname_ms)
+    if(grepl('precip_flux', prodname)) prodname <- 'precip_chemistry'
+
+    precursor <- prods %>%
+        filter(
+            !!prodname == prodname,
+            ! grepl('^ms[0-9]{3}$', prodcode)) %>%
+        mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+        pull(prodname_ms)
+
+    return(precursor)
 }
 
 #. handle_errors
@@ -3039,41 +3079,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     dem <- sm(elevatr::get_elev_raster(wb, z = 12)) #res should adjust with area
     rg$elevation <- terra::extract(dem, rg)
 
-    # #clean precip and arrange for matrixification (nvm. precip not needed for this)
-    # precip <- precip %>%
-    #     filter(site_name %in% rg$site_name) %>%
-    #     # mutate(datetime = lubridate::year(datetime)) %>% #for testing
-    #     # group_by(site_name, datetime) %>%
-    #     # summarize(
-    #     #     precip = mean(precip, na.rm=TRUE),
-    #     #     ms_status = numeric_any(ms_status),
-    #     #     ms_interp = numeric_any(ms_interp)) %>%
-    #     # ungroup() %>%
-    #     tidyr::pivot_wider(names_from = site_name,
-    #                        values_from = precip) %>%
-    #     mutate(
-    #         ms_status = as.logical(ms_status),
-    #         ms_interp = as.logical(ms_interp)) %>%
-    #     group_by(datetime) %>%
-    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    #     ungroup() %>%
-    #     mutate(
-    #         ms_status = as.numeric(ms_status),
-    #         ms_interp = as.numeric(ms_interp)) %>%
-    #     filter_at(vars(-datetime, -ms_status, -ms_interp),
-    #         any_vars(! is.na(.))) %>%
-    #     arrange(datetime)
-
-    #organize variables by those that can be flux converted and those that can't
-    # flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
-    pchem_vars <- colnames(select(pchem,
-                                  -datetime,
-                                  -site_name,
-                                  -ms_status,
-                                  -ms_interp))
-    # -one_of(flux_vars))))
-
-    #this avoids a lot of slow summarizing (IGNORES SITE!)
+    #this avoids a lot of slow summarizing
     status_cols <- pchem %>%
         select(datetime, ms_status, ms_interp) %>%
         group_by(datetime) %>%
@@ -3082,7 +3088,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             ms_interp = numeric_any(ms_interp))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
-    detlims <- identify_detection_limit_s(pchem)
+    pchem_vars <- unique(pchem$var)
     nvars <- length(pchem_vars)
     pchem_setlist <- as.list(rep(NA, nvars))
     for(i in 1:nvars){
@@ -3091,20 +3097,10 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
         #clean data and arrange for matrixification
         pchem_setlist[[i]] <- pchem %>%
-            select(datetime, site_name, !!v) %>%#, ms_status, ms_interp) %>%
-            # filter(site_name %in% rg$site_name) %>%
-
-            #testing block
-            # mutate(datetime = lubridate::year(datetime)) %>%
-            # # mutate(datetime = lubridate::as_date(datetime)) %>% #finer? coarser?
-            # group_by(site_name, datetime) %>%
-            # summarize(
-            #     !!v := mean(!!sym(v), na.rm=TRUE),
-            #     ms_status = numeric_any(ms_status),
-            #     ms_interp = numeric_any(ms_interp)) %>%
-            # ungroup() %>%
+            filter(var == v) %>%
+            select(-var, -ms_status, -ms_interp) %>%
             tidyr::pivot_wider(names_from = site_name,
-                               values_from = !!sym(v)) %>%
+                               values_from = val) %>%
             left_join(status_cols,
                       by = 'datetime') %>%
             arrange(datetime)
@@ -3201,7 +3197,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             stop('NA datetime found in ws_mean_d')
         }
 
-        ws_mean_d <- apply_detection_limit_s(ws_mean_d, detlims)
+        precursor_prodname <- get_detlim_precursor(network = network,
+                                                   domain = domain,
+                                                   prodname_ms = prodname_ms)
+        ws_mean_d <- apply_detection_limit_t(ws_mean_d,
+                                             network = network,
+                                             domain = domain,
+                                             prodname_ms = precursor_prodname)
+
 
         # msg <- glue('{w}, {n}, {d}, {p}',
         #     w = nrow(ws_mean_d),
@@ -3269,27 +3272,16 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
     #clean precip and arrange for matrixification
     precip <- precip %>%
-        # filter(site_name %in% rg$site_name) %>%
-
-        #testing block
-        # mutate(datetime = lubridate::year(datetime)) %>%
-        # group_by(site_name, datetime) %>%
-        # summarize(
-        #     precip = mean(precip, na.rm=TRUE),
-        #     ms_status = numeric_any(ms_status)) %>%
-        # ungroup() %>%
-
-        select(-ms_status, -ms_interp) %>%
+        select(-ms_status, -ms_interp, -var) %>%
         tidyr::pivot_wider(names_from = site_name,
-                           values_from = precip) %>%
+                           values_from = val) %>%
         left_join(status_cols,
                   by = 'datetime') %>%
         arrange(datetime)
 
-    #organize variables by those that can be flux converted and those that can't
+    #determine which variables can be flux converted
     flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
-    pchem_vars_fluxable <- colnames(sw(select(pchem,
-                                              one_of(flux_vars))))
+    pchem_vars_fluxable <- base::intersect(unique(pchem$var), flux_vars)
 
     #this avoids a lot of slow summarizing
     status_cols <- pchem %>%
@@ -3300,7 +3292,6 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             ms_interp = numeric_any(ms_interp))
 
     #clean pchem one variable at a time, matrixify it, insert it into list
-    detlims <- identify_detection_limit_s(pchem)
     nvars_fluxable <- length(pchem_vars_fluxable)
     pchem_setlist_fluxable <- as.list(rep(NA, nvars_fluxable))
     for(i in 1:nvars_fluxable){
@@ -3309,19 +3300,10 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
         #clean data and arrange for matrixification
         pchem_setlist_fluxable[[i]] <- pchem %>%
-            select(datetime, site_name, !!v) %>%
-            # filter(site_name %in% rg$site_name) %>%
-
-            #testing block
-            # mutate(datetime = lubridate::year(datetime)) %>%
-            # group_by(site_name, datetime) %>%
-            # summarize(
-            #     !!v := mean(!!sym(v), na.rm=TRUE),
-            #     ms_status = numeric_any(ms_status)) %>%
-            # ungroup() %>%
-
+            filter(var == v) %>%
+            select(-var, -ms_status, -ms_interp) %>%
             tidyr::pivot_wider(names_from = site_name,
-                               values_from = !!sym(v)) %>%
+                               values_from = val) %>%
             left_join(status_cols,
                       by = 'datetime') %>%
             arrange(datetime)
@@ -3341,14 +3323,6 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                    site_name = site_name,
                    i = i,
                    nw = nrow(wb))
-        # if(verbose){
-        #     msg <- glue('site: {s}; {ii}/{w}',
-        #         s = site_name,
-        #         ii = i,
-        #         w = nrow(wb))
-        #     loginfo(msg,
-        #         logger = logger_module)
-        # }
 
         ws_mean_flux <- foreach::foreach(j = 1:nvars_fluxable,
                                          .combine = idw_parallel_combine,
@@ -3427,7 +3401,13 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  shapefile = FALSE,
         #                  link_to_portal = TRUE))
 
-        ws_mean_flux <- apply_detection_limit_s(ws_mean_flux, detlims)
+        precursor_prodname <- get_detlim_precursor(network = network,
+                                                   domain = domain,
+                                                   prodname_ms = prodname_ms)
+        ws_mean_flux <- apply_detection_limit_t(ws_mean_flux,
+                                                network = network,
+                                                domain = domain,
+                                                prodname_ms = precursor_prodname)
 
         ue(write_ms_file(ws_mean_flux,
                          network = network,
@@ -4378,7 +4358,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     fin <- sm(full_join(median, sd)) %>%
         sm(full_join(count))
-    
+
     return(fin)
 
 }
@@ -4457,9 +4437,9 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
 
         final <- rbind(final, fin)
     }
-    
+
     return(final)
-    
+
 }
 
 #. handle_errors
@@ -4512,85 +4492,85 @@ get_relative_uncert <- function(x){
                              collapse = ', ')))
     }
 
-    ru <- errors(x) / errors::drop_errors(x) * 100
+    ru <- errors(x) / abs(errors::drop_errors(x)) * 100
 
     return(ru)
 }
 
 #. handle_errors
 get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
-    
+
     sheds <- ws_boundry %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
-    
+
     sheds_point <- sheds[1,] %>%
         sf::st_centroid() %>%
         sf::st_bbox()
-    
-    long <- as.numeric(sheds_point[2])    
+
+    long <- as.numeric(sheds_point[2])
 
     place <- ifelse(long > 97.5, 'west', 'east')
-    
+
     year_files <- list.files(glue('data/general_raw/phenology/{u}/{p}',
                              p = place,
-                             u = time)) 
-    
+                             u = time))
+
     years <- as.numeric(str_split_fixed(year_files, '[.]', n = 2)[,1])
-        
+
     final <- tibble()
         for(y in 1:length(years)) {
-            
+
             path <- glue('data/general_raw/phenology/{u}/{p}/{t}.tif',
-                         u = time, p = place, t = years[y]) 
-            
+                         u = time, p = place, t = years[y])
+
             phenology <- terra::rast(path)
-            
+
             terra::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
 
             sheds_vect <- sheds %>%
                 terra::vect() %>%
                 terra::project('+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
-            
+
             look <- terra::extract(phenology, sheds_vect) %>%
-                as.data.frame() 
-            
+                as.data.frame()
+
             name <- names(look)[2]
-            
+
             col_name <- case_when(time == 'start_season' ~ 'sos',
                                    time == 'end_season' ~ 'eos',
                                    time == 'max_season' ~ 'mos')
-            
+
             mean_name <- glue('{n}_mean', n = col_name)
             sd_name <- glue('{n}_sd', n = col_name)
-            
+
             look <- look %>%
                 group_by(ID) %>%
                 summarize(!!mean_name := round(mean(.data[[name]], na.rm = TRUE)),
-                          !!sd_name := sd(.data[[name]], na.rm = TRUE)) 
-            
+                          !!sd_name := sd(.data[[name]], na.rm = TRUE))
+
             sheds_name <- sheds %>%
                 as_tibble() %>%
                 select(-geometry) %>%
                 mutate(ID = row_number()) %>%
                 mutate(year = !!years[y])
-            
+
             final_y <- full_join(look, sheds_name, by = 'ID') %>%
                 select(-ID)
-            
+
             final <- rbind(final, final_y)
         }
-    
+
     final_path <- glue('data/{n}/{d}/ws_traits/{p}.feather',
                        n = network,
-                       d = domain, 
+                       d = domain,
                        p = time)
-    
+
     write_feather(final, final_path)
-    
+
     return()
 }
 

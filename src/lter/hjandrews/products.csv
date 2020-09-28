@@ -18,3 +18,12 @@ ms001,precipitation,unknown,NA,NA,ready,NA,NA
 ms002,precip_chemistry,unknown,NA,NA,ready,NA,NA
 ms003,stream_flux_inst,unknown,NA,NA,ready,NA,NA
 ms004,precip_flux_inst,unknown,NA,NA,ready,NA,NA
+ms005,npp,gee,NA,NA,ready,NA,NA
+ms006,gpp,gee,NA,NA,ready,NA,NA
+ms007,lai,gee,NA,NA,ready,NA,NA
+ms007,fpar,gee,NA,NA,ready,NA,NA
+ms008,tree_cover,gee,NA,NA,ready,NA,NA
+ms008,veg_cover,gee,NA,NA,ready,NA,NA
+ms008,bare_cover,gee,NA,NA,ready,NA,NA
+ms009,prism_precip,gee,NA,NA,ready,NA,NA
+ms009,prism_temp_mean,gee,NA,NA,ready,NA,NA
