@@ -1,7 +1,7 @@
 prod_info = get_product_info(network=network,
     status_level='retrieve', get_statuses='ready')
 
-# i=5; j=1
+# i=7; j=1
 for(i in 1:nrow(prod_info)){
 # for(i in 4){
 
@@ -69,3 +69,8 @@ for(i in 1:nrow(prod_info)){
 
 loginfo('Retrieval complete for all sites and products',
     logger=logger_module)
+
+
+
+
+
