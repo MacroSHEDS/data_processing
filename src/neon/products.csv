@@ -6,6 +6,8 @@ DP?.00133,zqcurve,other,paused,pending,pending,NA,verify DP#
 DP?.00130,discharge,sensor,paused,pending,pending,NA,verify DP#
 DP?.20048,Qflowmeter,grab,paused,pending,pending,NA,verify DP#
 DP?.20193,Qsalt,grab,paused,pending,pending,NA,verify DP#
+DP?.20008,speccond,sensor,unavailiable,unavailiable,unavailiable,NA,verify DP#
+DP1.20016,surfaceElev,sensor,paused,pending,pending,NA,NA
 DP?.20008,spec_cond,sensor,unavailiable,unavailiable,unavailiable,NA,verify DP#
 DP1.20033,stream_nitrate,sensor,ready,ready,pending,NA,NA
 DP1.00004,air_pressure,sensor,ready,ready,pending,NA,NA
@@ -15,12 +17,3 @@ DP1.20053,stream_temperature,sensor,ready,ready,pending,NA,NA
 DP1.20042,stream_PAR,sensor,ready,ready,pending,NA,NA
 xx0,precipitation,unknown,pending,pending,pending,NA,NA
 xx1,precip_chemistry,unknown,pending,pending,pending,NA,NA
-ms005,npp,gee,NA,NA,ready,NA,NA
-ms006,gpp,gee,NA,NA,ready,NA,NA
-ms007,lai,gee,NA,NA,ready,NA,NA
-ms007,fpar,gee,NA,NA,ready,NA,NA
-ms008,tree_cover,gee,NA,NA,ready,NA,NA
-ms008,veg_cover,gee,NA,NA,ready,NA,NA
-ms008,bare_cover,gee,NA,NA,ready,NA,NA
-ms009,prism_precip,gee,NA,NA,ready,NA,NA
-ms009,prism_temp_mean,gee,NA,NA,ready,NA,NA
