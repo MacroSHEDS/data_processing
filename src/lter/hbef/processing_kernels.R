@@ -117,44 +117,31 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-
-    d = sw(read_csv(rawfile, progress=FALSE,
-        col_types=readr::cols_only(
-            DATETIME='c', #can't parse 24:00
-            WS='c',
-            Discharge_ls='d'))) %>%
-            # Flag='c'))) %>% #all flags are acceptable for this product
-        rename(site_name = WS,
-            datetime = DATETIME,
-            discharge = Discharge_ls) %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime),
-                                        'US/Eastern'),
-                               'UTC'),
-            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
-            site_name = paste0('w', site_name))
-
-    # detlim <- ue(identify_detection_limit(d$discharge))
-    ue(identify_detection_limit_t(d,
-                                  network = network,
-                                  domain = domain))
-
+    
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                       datetime_col = list(name = 'DATETIME',
+                                           format = '%Y-%m-%d %H:%M:%S',
+                                           tz = 'US/Eastern'),
+                       site_name_col = 'WS',
+                       data_cols = c(Discharge_ls = 'discharge'),
+                       data_col_pattern = '#V#'))
+    
+    #Would use ms_cast_and_reflag but there is only one data column and no flags
     d <- d %>%
-        mutate(ms_status = 0) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                  any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize(
-            discharge = mean(discharge, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
-
-    d <- ue(synchronize_timestep(ms_df = d,
-                            desired_interval = '15 min',
-                            impute_limit = 30))
-
-    # d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
-    d <- ue(apply_detection_limit_t(d, network, domain))
+        rename(val = 3) %>%
+        mutate(var = 'discharge_a',
+               ms_status = 0)
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
 }
@@ -166,39 +153,31 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-
-    d = sw(read_csv(rawfile, progress=FALSE,
-        col_types=readr::cols_only(
-            DATE='c', #can't parse 24:00
-            rainGage='c',
-            Precip='d'))) %>%
-        # Flag='c'))) %>% #all flags are acceptable for this product
-        rename(datetime = DATE,
-            site_name = rainGage,
-            precip = Precip) %>%
-        mutate(datetime = with_tz(force_tz(as.POSIXct(datetime),
-                                           'US/Eastern'),
-                                  'UTC'))
-
-    ue(identify_detection_limit_t(d,
-                                  network = network,
-                                  domain = domain))
-
+    
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                            date_col = list(name = 'DATE',
+                                                format = '%Y-%m-%d',
+                                                tz = 'US/Eastern'),
+                            site_name_col = 'rainGage',
+                            data_cols = c(Precip = 'precipitation'),
+                            data_col_pattern = '#V#'))
+    
+    #Would use ms_cast_and_reflag but there is only one data column and no flags
     d <- d %>%
-        mutate(ms_status = 0) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                   any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize(
-            precip = mean(precip, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
-
-    d <- ue(synchronize_timestep(ms_df = d,
-                            desired_interval = '1 day',
-                            impute_limit = 30))
-
-    d <- ue(apply_detection_limit_t(d, network, domain))
+        rename(val = 3) %>%
+        mutate(var = 'precipitation_a',
+               ms_status = 0)
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
 }
@@ -217,7 +196,49 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    
+    # Need to fix issues of when there is a NA time col but not NA date col 
+    # and the whole row gets removed 
+    
+    # Also would be ideal to not hve to name the data_cols as their names are 
+    # all macrosheds var names 
+    
+    # Also identify_sampling is writing sites names as 1 not w1
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                            date_col = list(name = 'date',
+                                                format = '%Y-%m-%d',
+                                                tz = 'US/Eastern'),
+                            time_col = list(name = 'timeEST',
+                                            format = '%H:%M',
+                                            tz = 'US/Eastern'),
+                            site_name_col = 'site',
+                            data_cols =  c('pH' = 'pH', 'DIC', 'spCond', 'temp', 'ANC960', 'ANCMet',
+                                           'Ca', 'Mh', 'K', 'Na', 'TMAL', 'OMAL', 'AL_ICP', 'NH4', 
+                                           'SO4', 'NO3', 'Cl', 'PO4', 'DOC', 'TDN', 'DON', 'SiO2',
+                                           'Mn', 'Fe', 'F', 'cationCharge', 'anionCharge',
+                                           'theoryCond', 'ionError', 'ionBalance', 
+                                           'pHmetrohm'),
+                            data_col_pattern = '#V#',
+                            summary_flagcols = 'fieldCode'))
+    
+    d <- ue(ms_cast_and_reflag(d,
+                               variable_flags_clean = list(
+                                   fieldCode = NA)))
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    
+    return(d)
 
+    ### OLD CODE 
     d <- sw(read_csv(rawfile, col_types=readr::cols_only(
             site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
             temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
