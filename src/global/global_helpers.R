@@ -170,17 +170,17 @@ gsub_v <- function(pattern, replacement_vec, x){
 }
 
 #. handle_errors
-identify_sampling <- function(df,  date_col='datetime', network, domain, 
+identify_sampling <- function(df,  date_col='datetime', network, domain,
                               prodname_ms) {
-    
+
     sampling_dir <- glue('data/{n}/{d}',
                          n = network,
                          d = domain)
-    
+
     sampling_file <- glue('data/{n}/{d}/sampling_type.json',
                           n = network,
                           d = domain)
-    
+
     if(file.exists(sampling_file)){
         master <- jsonlite::fromJSON(readr::read_file(sampling_file))
     } else {
@@ -188,46 +188,46 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
         file.create(sampling_file)
         master <- list()
     }
-    
+
     col_names <- colnames(df)
-    
+
     data_cols <- grep(pattern = '__[|]dat', col_names, value = TRUE)
-    
+
     flg_cols <- grep(pattern = '__[|]flg', col_names, value = TRUE)
-    
+
     for(p in 1:length(data_cols)) {
-        
+
         var_name <- str_split_fixed(data_cols[p], '__', 2)[1]
-        
+
         df_var <- df %>%
             select(datetime, !!var_name := .data[[data_cols[p]]], site_name)
-        
+
         site_names <- df$site_name %>%
             unique()
-        
+
         all_sites <- tibble()
         for(i in 1:length(site_names)) {
-            
+
             df_site <- df_var %>%
                 filter(site_name == !!site_names[i]) %>%
                 filter(!is.na(.data[[date_col]])) %>%
                 filter(!is.na(.data[[var_name]]))
-            
+
             dates <- df_site[[date_col]]
-            
+
             dif <- diff(dates)
-            
+
             unit <- attr(dif, 'units')
-            
+
             conver = case_when(unit == 'seconds' ~ 0.01666667,
                                unit == 'secs' ~ 0.01666667,
                                unit == 'minutes' ~ 1,
                                unit == 'mins' ~ 1,
                                unit == 'hours' ~ 60,
                                unit == 'days' ~ 1440)
-            
+
             dif <- as.numeric(dif)*conver
-            
+
             table <- rle2(dif) %>%
                 mutate(site_name = !!site_names[i]) %>%
                 mutate(starts := dates[starts],
@@ -235,11 +235,11 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                 mutate(sum = sum(lengths, na.rm = T)) %>%
                 mutate(porportion = lengths/sum) %>%
                 mutate(time = difftime(stops, starts, units = 'days'))
-            
+
             test <- table %>%
                 filter(time > 60,
                        lengths > 60)
-            
+
             # Sites with no record
             if(nrow(table) == 0) {
                 g_a <- tibble('site_name' = site_names[i],
@@ -251,37 +251,37 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                 #for at least 60 consecutive days, and have an average interval of
                 #more than 1 day are assumed to be grab samples
                 if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) > 1440) {
-                    
+
                     g_a <- tibble('site_name' = site_names[i],
                                   'type' = 'grab',
                                   'starts' = min(table$starts, na.rm = TRUE),
                                   'interval' = round(median(table$values, na.rm = TRUE)))
                 }
-                
+
                 #Sites with consecutive samples are have a consistent interval
                 if(nrow(test) != 0 & nrow(table) < 20) {
-                    
+
                     g_a <- test %>%
                         select(site_name, starts, interval=values) %>%
                         group_by(site_name, interval) %>%
                         summarise(starts = min(starts, na.rm = TRUE)) %>%
                         mutate(type = 'automatic')
-                    
+
                 }
-                
+
                 #Sites where they do not have a consistent recording interval but
                 #the average interval is less than one day are assumed to be automatic
                 # (such as HBEF discharge that is automatic but lacks a consistent
                 #recording interval)
                 if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) < 1440 |
                    nrow(test) != 0 & nrow(table) > 20) {
-                    
+
                     table_ <- table %>%
                         filter(porportion >= 0.05) %>%
                         mutate(type = 'automatic') %>%
                         select(starts, site_name, type, interval=values) %>%
                         mutate(interval = as.character(round(interval)))
-                    
+
                     table_var <- table %>%
                         filter(porportion <= 0.05)  %>%
                         group_by(site_name) %>%
@@ -289,50 +289,50 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                         mutate(type = 'automatic',
                                interval = 'variable') %>%
                         select(starts, site_name, type, interval)
-                    
+
                     g_a <- rbind(table_, table_var)
                 }
             }
-            
+
             g_a<- mutate(g_a, var = !!var_name)
-            
-            all_sites <- rbind(all_sites, g_a) 
-            
-            
+
+            all_sites <- rbind(all_sites, g_a)
+
+
             master[[prodname_ms]][[var_name]][[site_names[i]]] <- list('starts'=g_a$starts,
                                                                        'type'=g_a$type,
                                                                        'interval'=g_a$interval)
-            
+
         }
         var_type <- all_sites %>%
             filter(!is.na(type)) %>%
             pull(type) %>%
-            unique() 
-        
+            unique()
+
         if(length(var_type) == 1) {
             label <- case_when(var_type == 'grab'~'g',
                                var_type == 'automatic'~'a')
-            
+
             new_data_name <- glue('{v}_{l}__|dat',
-                             v=var_name, l = label) 
-            
+                             v=var_name, l = label)
+
             new_flg_name <- glue('{v}_{l}__|flg',
                                  v=var_name, l=label)
-            
+
             if(!new_flg_name %in% colnames(df)) {
                 df <- df %>%
                     rename(!!new_data_name := .data[[data_cols[p]]])
             } else {
-            
+
             df <- df %>%
                 rename(!!new_data_name := .data[[data_cols[p]]]) %>%
                 rename(!!new_flg_name := .data[[flg_cols[p]]])
             }
         }
     }
-    
+
     readr::write_file(jsonlite::toJSON(master), sampling_file)
-    
+
     return(df)
 }
 
@@ -345,10 +345,10 @@ ms_read_raw_csv <- function(filepath,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
-                            sensor_vs_analytical,
+                            # sensor_vs_analytical,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
-                            summary_flagcols=NULL){
+                            summary_flagcols){
 
     #TODO:
     #write more checks for improper specification.
@@ -367,10 +367,10 @@ ms_read_raw_csv <- function(filepath,
     #   time_col is also supplied, the time zone component of this argument
     #   can be omitted, as it will be ignored. Either date_col
     #   or datetime_col must be supplied.
-    #time_col: optional named list of length 3. Names must be "name", "format",
+    #time_col: optional named list of length 2. Names must be "name"
     #   and "tz". Corresponding elements must be the name of the column,
-    #   the time format (e.g. '%H:%M:%S'), and the time zone
-    #   (which must be among those provided by OlsonNames()).
+    #   and the time zone (which must be among those provided by OlsonNames()).
+    #   Time format is handled internally and need not be specified.
     #datetime_col: optional named list of length 3. Names must be "name", "format",
     #   and "tz". Corresponding elements must be the name of the column,
     #   the datetime format (e.g. '%Y-%m-%dT%H:%M:%SZ'), and the time zone
@@ -448,10 +448,14 @@ ms_read_raw_csv <- function(filepath,
     #deal with missing args
     alt_datacols <- var_flagcols <- alt_varflagcols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
+    if(missing(summary_flagcols)){
+        summary_flagcols <- NULL
+    }
 
     #fill in missing names in data_cols (for columns that are already
     #   canonically named)
     datacol_names0 <- names(data_cols)
+    if(is.null(datacol_names0)) datacol_names0 <- rep('', length(data_cols))
     datacol_names0[datacol_names0 == ''] <-
         unname(data_cols[datacol_names0 == ''])
 
@@ -526,7 +530,7 @@ ms_read_raw_csv <- function(filepath,
         colnames_new <- c('site_name', colnames_new)
     }
 
-    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
+    if(! is.null(summary_flagcols)){
         nsumcol <- length(summary_flagcols)
         summary_flagcols_named <- summary_flagcols
         names(summary_flagcols_named) <- summary_flagcols
@@ -546,7 +550,7 @@ ms_read_raw_csv <- function(filepath,
 
     classes_f2 <- rep('character', length(alt_varflagcols))
     names(classes_f2) <- alt_varflagcol_names
-    
+
     classes_f3 <- rep('character', length(summary_flagcols))
     names(classes_f3) <- summary_flagcols
 
@@ -569,11 +573,6 @@ ms_read_raw_csv <- function(filepath,
     if(! missing(site_name_col) && ! is.null(site_name_col)){
         class_sn <- 'character'
         names(class_sn) <- site_name_col
-    }
-
-    if(! missing(summary_flagcols) && ! is.null(summary_flagcols)){
-        classes_f3 <- rep('character', length(summary_flagcols))
-        names(classes_f3) <- summary_flagcols
     }
 
     classes_all <- c(class_dt, class_sn, classes_d1, classes_d2, classes_f1,
@@ -619,11 +618,28 @@ ms_read_raw_csv <- function(filepath,
 
     } else if(time_supplied){
 
+        #harmonize time formats to %H:%M:%S'
+        d <- d %>%
+            mutate(
+                timechars = nchar(time),
+                time = case_when(
+                    timechars == 0 | is.na(timechars) ~ '12:00:00',
+                    timechars == 2 ~ paste0(time, ':00:00'),
+                    timechars == 5 ~ paste0(time, ':00'),
+                    timechars == 8 ~ time,
+                    TRUE ~ NA_character_)) %>%
+            select(-timechars)
+
+        if(any(is.na(d$time))){
+            stop(paste('Weird time format encountered. Either time_col format',
+                       'was misspecified, or helper modification needed'))
+        }
+
         d$datetime <- paste(d$date, d$time)
         d$date <- d$time <- NULL
 
         dtformat <- paste(date_col$format,
-                          time_col$format)
+                          '%H:%M:%S')
         dttz <- time_col$tz
 
     } else {
@@ -639,7 +655,7 @@ ms_read_raw_csv <- function(filepath,
                                                format = dtformat,
                                                tz = dttz),
                                    tz = 'UTC'))
-    
+
     d <- d %>%
         filter(!is.na(datetime))
 
@@ -673,7 +689,7 @@ ms_read_raw_csv <- function(filepath,
 
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
-    
+
     d <- sm(identify_sampling(d, 'datetime', domain=domain, network=network,
                            prodname_ms=prodname_ms))
 
@@ -4341,7 +4357,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     fin <- sm(full_join(median, sd)) %>%
         sm(full_join(count))
-    
+
     return(fin)
 
 }
@@ -4420,9 +4436,9 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
 
         final <- rbind(final, fin)
     }
-    
+
     return(final)
-    
+
 }
 
 #. handle_errors
