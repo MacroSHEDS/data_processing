@@ -5,7 +5,7 @@ prod_info = get_product_info(network=network, domain=domain,
 
 # i=1
 for(i in 1:nrow(prod_info)){
-    # for(i in 2){
+# for(i in 5){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
