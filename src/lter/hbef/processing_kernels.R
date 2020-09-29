@@ -160,12 +160,13 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
                                                 tz = 'US/Eastern'),
                             site_name_col = 'rainGage',
                             data_cols = c(Precip = 'precipitation'),
-                            data_col_pattern = '#V#'))
+                            data_col_pattern = '#V#',
+                            is_sensor = FALSE))
 
     #Would use ms_cast_and_reflag but there is only one data column and no flags
     d <- d %>%
         rename(val = 3) %>%
-        mutate(var = 'precipitation_a',
+        mutate(var = strsplit(colnames(d)[3], '__\\|')[[1]][1],
                ms_status = 0)
 
     d <- ue(carry_uncertainty(d,
@@ -218,6 +219,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                                            'theoryCond', 'ionError', 'ionBalance',
                                            'pHmetrohm'),
                             data_col_pattern = '#V#',
+                            is_sensor = FALSE,
                             summary_flagcols = 'fieldCode'))
 
     d <- ue(ms_cast_and_reflag(d,

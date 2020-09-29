@@ -225,7 +225,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                             site_name_col = 'SITECODE',
                             data_cols =  c(INST_Q = 'discharge'),
                             data_col_pattern = '#V#',
-                            sensor_vs_analytical = c(INST_Q = 's'),
+                            # sensor_vs_analytical = c(INST_Q = 's'),
                             summary_flagcols = c('ESTCODE', 'EVENT_CODE')))
 
     d <- ue(ms_cast_and_reflag(d,
