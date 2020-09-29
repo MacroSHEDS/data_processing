@@ -193,12 +193,11 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-    rawfiles = list.files(rawdir, full.names = TRUE)
+    rawfiles = list.files(rawdir)
 
     #this has alc and anc, which we want!
     relevant_file1 = 'swc_domainLabData.feather'
     if(relevant_file1 %in% rawfiles){
-        #build this!
         NULL
     }
 
