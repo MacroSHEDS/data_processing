@@ -3,10 +3,8 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
-# All ready but stream and precip chem 
-# i=7
+# i=6
 for(i in 1:nrow(prod_info)){
-    # for(i in 2){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -37,10 +35,10 @@ for(i in 1:nrow(prod_info)){
         }
 
         if(grepl('(precip|stream_chemistry)', prodname_ms)){
-            munge_rtn = munge_hbef_combined(domain, site_name, prodname_ms,
+            munge_rtn = munge_combined(domain, site_name, prodname_ms,
                 held_data)
         } else {
-            munge_rtn = munge_hbef_site(domain, site_name, prodname_ms, held_data)
+            munge_rtn = munge_site(domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){
