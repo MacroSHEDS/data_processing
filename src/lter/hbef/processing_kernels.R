@@ -239,57 +239,57 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     return(d)
 
-    ### OLD CODE
-    d <- sw(read_csv(rawfile, col_types=readr::cols_only(
-            site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-            temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
-            Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
-            Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
-            `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
-            theoryCond='n', ionError='n', ionBalance='n'))) %>%
-        rename(site_name = site) %>%
-        rename_all(dplyr::recode, #essentially rename_if_exists
-                   precipCatch='precipitation_ns',
-                   flowGageHt='discharge_ns') %>%
-        mutate(
-            site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
-                                  tolower(site_name), site_name),
-            timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
-            datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
-
-    ue(identify_detection_limit_t(d,
-                                  network = network,
-                                  domain = domain))
-
-    d <- d %>%
-        mutate(
-            ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
-            DIC = ue(convert_unit(DIC, 'uM', 'mM')),
-            NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
-            NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
-            PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
-        select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
-        filter_at(vars(-site_name, -datetime),
-                  any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status)) %>%
-        select(-ms_status, everything())
-
-    d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
-
-    intv <- ifelse(grepl('precip', prodname_ms),
-                   '1 day',
-                   '1 hour')
-    d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = intv,
-                                 impute_limit = 30))
-
-    d <- ue(apply_detection_limit_t(d, network, domain))
-
-    return(d)
+    # ### OLD CODE
+    # d <- sw(read_csv(rawfile, col_types=readr::cols_only(
+    #         site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
+    #         temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
+    #         Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
+    #         Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
+    #         DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
+    #         `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
+    #         theoryCond='n', ionError='n', ionBalance='n'))) %>%
+    #     rename(site_name = site) %>%
+    #     rename_all(dplyr::recode, #essentially rename_if_exists
+    #                precipCatch='precipitation_ns',
+    #                flowGageHt='discharge_ns') %>%
+    #     mutate(
+    #         site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
+    #                               tolower(site_name), site_name),
+    #         timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
+    #         datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
+    #
+    # ue(identify_detection_limit_t(d,
+    #                               network = network,
+    #                               domain = domain))
+    #
+    # d <- d %>%
+    #     mutate(
+    #         ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
+    #         DIC = ue(convert_unit(DIC, 'uM', 'mM')),
+    #         NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
+    #         NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
+    #         PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
+    #     select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
+    #     filter_at(vars(-site_name, -datetime),
+    #               any_vars(! is.na(.))) %>%
+    #     group_by(datetime, site_name) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup() %>%
+    #     mutate(ms_status = as.numeric(ms_status)) %>%
+    #     select(-ms_status, everything())
+    #
+    # d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
+    #
+    # intv <- ifelse(grepl('precip', prodname_ms),
+    #                '1 day',
+    #                '1 hour')
+    # d <- ue(synchronize_timestep(ms_df = d,
+    #                              desired_interval = intv,
+    #                              impute_limit = 30))
+    #
+    # d <- ue(apply_detection_limit_t(d, network, domain))
+    #
+    # return(d)
 }
 
 #ws_boundary: STATUS=READY
