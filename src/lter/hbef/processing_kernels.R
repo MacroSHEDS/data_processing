@@ -155,12 +155,9 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-<<<<<<< HEAD
     
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
-=======
 
->>>>>>> 808f1e2ca23c0c8bdb66157518fc631e6e505487
     d <- ue(ms_read_raw_csv(filepath = rawfile,
                             date_col = list(name = 'DATE',
                                                 format = '%Y-%m-%d',
@@ -203,15 +200,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-<<<<<<< HEAD
-    
-    # Need to fix issues of when there is a NA time col but not NA date col 
-    # and the whole row gets removed 
-    
-    # Also would be ideal to not have to name the data_cols as their names are 
-    # all macrosheds var names 
-    
-=======
+
 
     # Need to fix issues of when there is a NA time col but not NA date col
     # and the whole row gets removed
@@ -219,7 +208,6 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     # Also would be ideal to not hve to name the data_cols as their names are
     # all macrosheds var names
 
->>>>>>> 808f1e2ca23c0c8bdb66157518fc631e6e505487
     # Also identify_sampling is writing sites names as 1 not w1
     
     # SAMPLE: analytical 
