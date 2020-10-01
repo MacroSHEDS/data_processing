@@ -402,9 +402,9 @@ extract_var_prefix <- function(x){
 
 #. handle_errors
 ms_read_raw_csv <- function(filepath,
-                            date_col,
-                            time_col,
-                            datetime_col,
+                            datetime_cols,
+                            datetime_tz,
+                            datetime_optional_chars = ':',
                             site_name_col,
                             data_cols,
                             data_col_pattern,
@@ -415,6 +415,8 @@ ms_read_raw_csv <- function(filepath,
                             summary_flagcols){
 
     #TODO:
+    #allow a vector of possible matches for each element of datetime_cols
+    #   (i.e. make it take a list of named vectors)
     #write more checks for improper specification.
     #if file to be read is stored in long format, this function will not work!
     #this could easily be adapted to read other delimited filetypes.
@@ -424,23 +426,15 @@ ms_read_raw_csv <- function(filepath,
     #   the one with the fewest NA values is kept automatically
 
     #filepath: string
-    #date_col: optional named list of length 3. Names must be "name", "format",
-    #   and "tz". Corresponding elements must be the name of the column,
-    #   the date format (e.g. '%Y-%m-%d'), and the time zone
-    #   (which must be among those provided by OlsonNames()). If
-    #   time_col is also supplied, the time zone component of this argument
-    #   can be omitted, as it will be ignored. Either date_col
-    #   or datetime_col must be supplied.
-    #time_col: optional named list of length 2. Names must be "name"
-    #   and "tz". Corresponding elements must be the name of the column,
+    #datetime_cols: a named character vector. names are column names that
+    #   contain components of a datetime. values are format strings (e.g.
+    #   '%Y-%m-%d', '%H') corresponding to the datetime components in those
+    #   columns.
     #   and the time zone (which must be among those provided by OlsonNames()).
     #   Time format is handled internally and need not be specified.
-    #datetime_col: optional named list of length 3. Names must be "name", "format",
-    #   and "tz". Corresponding elements must be the name of the column,
-    #   the datetime format (e.g. '%Y-%m-%dT%H:%M:%SZ'), and the time zone
-    #   (which must be among those provided by OlsonNames()). If
-    #   datetime_col is supplied, date_col and time_col will be ignored.
-    #   Either date_col or datetime_col must be supplied.
+    #datetime_tz: string specifying time zone. this specification must be
+    #   among those provided by OlsonNames()
+    #datetime_optional_chars: see "optional" argument to dt_format_to_regex
     #site_name_col: name of column containing site name information
     #data_cols: vector of names of columns containing data. If elements of this
     #   vector are named, names are taken to be the column names as they exist
@@ -489,27 +483,9 @@ ms_read_raw_csv <- function(filepath,
     #   suffixes (__|flg and __|dat) that allow them to be cast into long format
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
-    date_supplied <- ! missing(date_col) && ! is.null(date_col)
-    time_supplied <- ! missing(time_col) && ! is.null(time_col)
-    datetime_supplied <- ! missing(datetime_col) && ! is.null(datetime_col)
-
     #checks
-    if(! date_supplied && ! datetime_supplied){
-        stop('Either date_col or datetime_col must be supplied')
-    }
-
-    if(datetime_supplied){
-        if(! datetime_col$tz %in% OlsonNames()){
-            stop('datetime_col$tz must be included in OlsonNames()')
-        }
-    } else if(time_supplied){
-        if(! time_col$tz %in% OlsonNames()){
-            stop('time_col$tz must be included in OlsonNames()')
-        }
-    } else {
-        if(! date_col$tz %in% OlsonNames()){
-            stop('date_col$tz must be included in OlsonNames()')
-        }
+    if(! datetime_tz %in% OlsonNames()){
+        stop('datetime_tz must be included in OlsonNames()')
     }
 
     if(length(data_cols) == 1 &&
@@ -530,7 +506,10 @@ ms_read_raw_csv <- function(filepath,
         stop('if is_sensor is not length 1, all elements must be named.')
     }
 
-    #deal with missing args
+    #parse args; deal with missing args
+    datetime_colnames <- names(datetime_cols)
+    datetime_formats <- unname(datetime_cols)
+
     alt_datacols <- var_flagcols <- alt_varflagcols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
@@ -590,24 +569,9 @@ ms_read_raw_csv <- function(filepath,
     colnames_new <- paste0(colnames_all, suffixes)
     colnames_new <- colnames_new[! na_inds]
 
-    if(datetime_supplied){
-
-        colnames_all <- c('datetime', colnames_all)
-        names(colnames_all)[1] <- datetime_col$name
-        colnames_new <- c('datetime', colnames_new)
-
-    } else {
-
-        if(time_supplied){
-            colnames_all <- c('time', colnames_all)
-            names(colnames_all)[1] <- time_col$name
-            colnames_new <- c('time', colnames_new)
-        }
-
-        colnames_all <- c('date', colnames_all)
-        names(colnames_all)[1] <- date_col$name
-        colnames_new <- c('date', colnames_new)
-    }
+    colnames_all <- c(datetime_colnames, colnames_all)
+    names(colnames_all)[1:length(datetime_cols)] <- datetime_colnames
+    colnames_new <- c(datetime_colnames, colnames_new)
 
     if(! missing(site_name_col) && ! is.null(site_name_col)){
         colnames_all <- c('site_name', colnames_all)
@@ -639,21 +603,8 @@ ms_read_raw_csv <- function(filepath,
     classes_f3 <- rep('character', length(summary_flagcols))
     names(classes_f3) <- summary_flagcols
 
-    if(datetime_supplied){
-
-        class_dt <- 'character'
-        names(class_dt) <- datetime_col$name
-
-    } else {
-
-        class_dt <- 'character'
-        names(class_dt) <- date_col$name
-
-        if(time_supplied){
-            class_dt <- c(class_dt, 'character')
-            names(class_dt)[2] <- time_col$name
-        }
-    }
+    class_dt <- rep('character', length(datetime_cols))
+    names(class_dt) <- datetime_colnames
 
     if(! missing(site_name_col) && ! is.null(site_name_col)){
         class_sn <- 'character'
@@ -690,63 +641,17 @@ ms_read_raw_csv <- function(filepath,
 
     colnames(d) <- colnames_d
 
-    #remove rows with NA in datetime, date, or site_name (NA time is okay)
+    #resolve datetime structure into POSIXct
+    d <- resolve_datetime(d = d,
+                          datetime_colnames = datetime_colnames,
+                          datetime_formats = datetime_formats,
+                          datetime_tz = datetime_tz,
+                          optional = datetime_optional_chars)
+
+    #remove rows with NA in datetime or site_name
     d <- filter(d,
-                across(any_of(c('datetime', 'date', 'site_name')),
+                across(any_of(c('datetime', 'site_name')),
                        ~ ! is.na(.x)))
-
-    #parse datetime, date + time, or just date from character to datetime class
-    if(datetime_supplied){
-
-        dtformat <- datetime_col$format
-        dttz <- datetime_col$tz
-
-    } else if(time_supplied){
-
-        #harmonize time formats to %H:%M:%S'
-        d <- d %>%
-            mutate(
-                timechars = nchar(time),
-                time = case_when(
-                    timechars == 8 ~ time,
-                    timechars == 5 ~ paste0(time, ':00'),
-                    timechars == 0 | is.na(timechars) ~ '12:00:00',
-                    timechars > 8 ~ substr(time, 1, 8),
-                    timechars == 2 ~ paste0(time, ':00:00'),
-                    TRUE ~ NA_character_)) %>%
-            select(-timechars)
-
-        if(any(is.na(d$time))){
-            stop(paste('Weird time format encountered. Either time_col format',
-                       'was misspecified, or helper modification needed'))
-        }
-
-        d$datetime <- paste(d$date, d$time)
-        d$date <- d$time <- NULL
-
-        dtformat <- paste(date_col$format,
-                          '%H:%M:%S')
-        dttz <- time_col$tz
-
-    } else {
-
-        d <- d %>%
-            rename(datetime = date) %>%
-            mutate(datetime = paste(datetime, '12:00:00'))
-
-        dtformat <- date_col$format
-        dttz <- date_col$tz
-    }
-
-    d <- mutate(d,
-                datetime = with_tz(as_datetime(datetime,
-                                               format = dtformat,
-                                               tz = dttz),
-                                   tz = 'UTC'))
-
-    #NAs here are indicative of bugs we want to fix, so let's let them through
-    # d <- d %>%
-    #     filter(! is.na(datetime))
 
     #remove all-NA data columns and rows with NA in all data columns.
     #also remove flag columns for all-NA data columns.
@@ -801,6 +706,167 @@ ms_read_raw_csv <- function(filepath,
                               prodname_ms = prodname_ms))
 
     return(d)
+}
+
+# d=tibble(Y=c('2020', '2020'),
+#          md=c('02-01', '03-02'),
+#          hms=c('01:02:03', '04:05'))
+# resolve_datetime(d,
+#                  datetime_colnames=c('Y', 'md', 'hms'),
+#                  datetime_formats=c('%Y', '%m-%d', '%H:%M:%S'),
+#                  datetime_tz='UTC')
+#. handle_errors
+resolve_datetime <- function(d,
+                             datetime_colnames,
+                             datetime_formats,
+                             datetime_tz,
+                             optional){
+
+    #d is a data.frame or tibble with at least one date or time column
+    #   (all date and/or time columns must contain character strings,
+    #   not parsed date/time/datetime objects)
+    #datetime_colnames is a character vector of column names that contain
+    #   relevantdatetime information
+    #datetime_formats is a character vector of datetime parsing tokens
+    #   (like '%A, %Y-%m-%d %I:%M:%S %p' or '%j') corresponding to the
+    #   elements of datetime_colnames
+    #   datetime_tz is the time zone of the returned datetime column
+    #optional: see dt_format_to_regex
+
+    #return value: d, but with a "datetime" column containing POSIXct datetimes
+    #   and without the input datetime columns
+
+    dt_tb <- tibble(basecol = rep(NA, nrow(d)))
+    for(i in 1:length(datetime_colnames)){
+
+        dt_comps <- str_match_all(string = datetime_formats[i],
+                                  pattern = '%([a-zA-Z])')[[1]][,2]
+        dt_regex <- dt_format_to_regex(datetime_formats[i],
+                                       optional = optional)
+
+        dt_tb <- d %>%
+            select(one_of(datetime_colnames[i])) %>%
+            tidyr::extract(col = !!datetime_colnames[i],
+                           into = dt_comps,
+                           regex = dt_regex,
+                           remove = TRUE,
+                           convert = FALSE) %>%
+            bind_cols(dt_tb)
+    }
+
+    dt_tb$basecol = NULL
+
+    #fill in defaults if applicable:
+    #(12 for hour, 00 for minute and second, PM for AM/PM)
+    dt_tb <- dt_tb %>%
+        mutate(
+            across(any_of(c('H', 'I')), ~ifelse(is.na(.x), '12', .x)),
+            across(any_of(c('M', 'S')), ~ifelse(is.na(.x), '00', .x)),
+            across(any_of('p'), ~ifelse(is.na(.x), 'PM', .x)))
+
+    #resolve datetime structure into POSIXct
+    datetime_formats_split <- stringr::str_extract_all(datetime_formats,
+                                                       '%[a-zA-Z]') %>%
+        unlist()
+
+    dt_col_order <- match(paste0('%',
+                                 colnames(dt_tb)),
+                          datetime_formats_split)
+
+    dt_tb <- dt_tb %>%
+        tidyr::unite(col = 'datetime',
+                     everything(),
+                     sep = ' ',
+                     remove = TRUE) %>%
+        mutate(datetime = as_datetime(datetime,
+                                      format = paste(datetime_formats_split[dt_col_order],
+                                                     collapse = ' '),
+                                      tz = datetime_tz) %>%
+                   with_tz(tz = 'UTC'))
+
+    d <- d %>%
+        bind_cols(dt_tb) %>%
+        select(-one_of(datetime_colnames), datetime) %>%#in case 'datetime' is in datetime_colnames
+        relocate(datetime)
+
+    return(d)
+}
+
+#. handle_errors
+dt_format_to_regex <- function(fmt, optional){
+
+    #fmt is a character vector of datetime formatting strings, such as
+    #   '%A, %Y-%m-%d %I:%M:%S %p' or '%j'. each element of fmt that is a
+    #   datetime token is replaced with a regex string that matches
+    #   the what the token represents. For example, '%Y' matches a 4-digit
+    #   year and '[0-9]{4}' matches a 4-digit numeric sequence. non-token
+    #   characters (anything not following a %) are not modified. Note that
+    #   tokens B, b, h, A, and a are replaced by '[a-zA-Z]+', which matches
+    #   any sequence of one or more alphabetic characters of either case,
+    #   not just meaningful month/day names 'Weds' or 'january'. Also note
+    #   that these tokens are not currently accepted: g, G, n, t, c, r, R, T.
+    #optional is a character vector of characters that should be made
+    #   optional in the exported regex (succeeded by a ?). This is useful if
+    #   e.g. fmt is '%H:%M:%S' and elements to be matched may either appear in
+    #   HH:MM:SS or HH:MM format. making the ":" character optional here
+    #   (via optional = ':') allows the hour and minute data to be retained,
+    #   whereas the regex engine would otherwise expect two ":"s, find
+    #   only one, and return NA.
+
+    dt_format_regex <- list(Y = '([0-9]{4})?',
+                            y = '([0-9]{2})?',
+                            B = '([a-zA-Z]+)?',
+                            b = '([a-zA-Z]+)?',
+                            h = '([a-zA-Z]+)?',
+                            m = '([0-9]{1,2})?',
+                            e = '([0-9]{1,2})?',
+                            d = '([0-9]{2})?',
+                            j = '([0-9]{3})?',
+                            A = '([a-zA-Z]+)?',
+                            a = '([a-zA-Z]+)?',
+                            u = '([0-9]{1})?',
+                            w = '([0-9]{1})?',
+                            U = '([0-9]{2})?',
+                            W = '([0-9]{2})?',
+                            V = '([0-9]{2})?',
+                            C = '([0-9]{2})?',
+                            H = '([0-9]{2})?',
+                            I = '([0-9]{2})?',
+                            M = '([0-9]{2})?',
+                            S = '([0-9]{2})?',
+                            p = '([AP]M)?',
+                            z = '([+\\-][0-9]{4})?',
+                            `F` = '([0-9]{4}-[0-9]{2}-[0-9]{2})')
+
+    for(i in 1:length(fmt)){
+        fmt_components <- str_match_all(string = fmt[i],
+                                        pattern = '%([a-zA-Z])')[[1]][,2]
+
+        if(any(fmt_components %in% c('g', 'G', 'n', 't', 'c'))){
+            stop(paste('Tokens g, G, n, and t are not yet accepted.',
+                       'enhance dt_format_to_regex if you want to use them!'))
+        }
+        if(any(fmt_components %in% c('r', 'R', 'T'))){
+            stop('Tokens r, R, and T are not accepted. Use a different specification.')
+        }
+
+        for(j in 1:length(fmt_components)){
+            component <- fmt_components[j]
+            fmt[i] <- sub(pattern = paste0('%', component),
+                          replacement = dt_format_regex[[component]],
+                          x = fmt[i])
+        }
+    }
+
+    if(! missing(optional)){
+        for(o in optional){
+            fmt <- gsub(pattern = o,
+                        replacement = paste0(o, '?'),
+                        x = fmt)
+        }
+    }
+
+    return(fmt)
 }
 
 #. handle_errors
