@@ -206,12 +206,10 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
     # Also identify_sampling is writing sites names as 1 not w1
     d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            date_col = list(name = 'date',
-                                                format = '%Y-%m-%d',
-                                                tz = 'US/Eastern'),
-                            time_col = list(name = 'timeEST',
-                                            tz = 'US/Eastern'),
-                            site_name_col = 'site',
+                            datetime_cols = c(date = '%Y-%m-%d',
+                                              timeEST = '%H:%M'),
+                            datetime_tz = 'US/Eastern',
+                            site_name_col = 'site', #eventually will work like datetime_cols
                             data_cols =  c('pH', 'DIC', 'spCond', 'temp', 'ANC960', 'ANCMet',
                                            'Ca', 'Mg', 'K', 'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
                                            'SO4', 'NO3', 'Cl', 'PO4', 'DOC', 'TDN', 'DON', 'SiO2',
