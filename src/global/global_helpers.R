@@ -170,9 +170,33 @@ gsub_v <- function(pattern, replacement_vec, x){
 }
 
 #. handle_errors
-identify_sampling <- function(df,  date_col='datetime', network, domain,
-                              prodname_ms) {
+identify_sampling <- function(df,
+                              is_sensor,
+                              date_col = 'datetime',
+                              network,
+                              domain,
+                              prodname_ms){
 
+    #is_sensor: named logical vector. see documention for
+    #   ms_read_raw_csv, but note that an unnamed logical vector of length one
+    #   cannot be used here. also note that the original variable/flag column names
+    #   from the raw file are converted to canonical macrosheds names by
+    #   ms_read_raw_csv before it passes is_sensor to identify_sampling.
+
+    #checks
+    if(any(! is.logical(is_sensor))){
+        stop('all values in is_sensor must be logical.')
+    }
+
+    svh_names <- names(is_sensor)
+    if(is.null(svh_names) || any(is.na(svh_names))){
+        stop('all elements of is_sensor must be named.')
+    }
+
+    #parse is_sensor into a character vector of sample regimen codes
+    is_sensor <- ifelse(is_sensor, 'S', 'N')
+
+    #set up directory system to store sample regimen metadata
     sampling_dir <- glue('data/{n}/{d}',
                          n = network,
                          d = domain)
@@ -184,88 +208,103 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
     if(file.exists(sampling_file)){
         master <- jsonlite::fromJSON(readr::read_file(sampling_file))
     } else {
-        dir.create(sampling_dir, recursive=TRUE)
+        dir.create(sampling_dir, recursive = TRUE)
         file.create(sampling_file)
         master <- list()
     }
 
+    #determine and record sample regimen for each variable
     col_names <- colnames(df)
 
-    data_cols <- grep(pattern = '__[|]dat', col_names, value = TRUE)
+    data_cols <- grep(pattern = '__[|]dat',
+                      col_names,
+                      value = TRUE)
 
-    flg_cols <- grep(pattern = '__[|]flg', col_names, value = TRUE)
+    flg_cols <- grep(pattern = '__[|]flg',
+                     col_names,
+                     value = TRUE)
 
-    for(p in 1:length(data_cols)) {
+    site_names <- unique(df$site_name)
 
-        var_name <- str_split_fixed(data_cols[p], '__', 2)[1]
+    for(p in 1:length(data_cols)){
 
-        df_var <- df %>%
-            select(datetime, !!var_name := .data[[data_cols[p]]], site_name)
+        # var_name <- str_split_fixed(data_cols[p], '__', 2)[1]
 
-        site_names <- df$site_name %>%
-            unique()
+        # df_var <- df %>%
+        #     select(datetime, !!var_name := .data[[data_cols[p]]], site_name)
 
         all_sites <- tibble()
-        for(i in 1:length(site_names)) {
+        for(i in 1:length(site_names)){
 
-            df_site <- df_var %>%
+            # df_site <- df_var %>%
+            df_site <- df %>%
                 filter(site_name == !!site_names[i]) %>%
-                filter(!is.na(.data[[date_col]])) %>%
-                filter(!is.na(.data[[var_name]]))
+                arrange(datetime)
+                    # ! is.na(.data[[date_col]]), #NAs here are indicative of bugs we want to fix, so let's let them through
+                    # ! is.na(.data[[var_name]])) #NAs here are indicative of bugs we want to fix, so let's let them through
 
             dates <- df_site[[date_col]]
-
             dif <- diff(dates)
-
             unit <- attr(dif, 'units')
 
-            conver = case_when(unit == 'seconds' ~ 0.01666667,
-                               unit == 'secs' ~ 0.01666667,
-                               unit == 'minutes' ~ 1,
-                               unit == 'mins' ~ 1,
-                               unit == 'hours' ~ 60,
-                               unit == 'days' ~ 1440)
+            conver <- case_when(
+                unit %in% c('seconds', 'secs') ~ 0.01666667,
+                unit %in% c('minutes', 'mins') ~ 1,
+                unit == 'hours' ~ 60,
+                unit == 'days' ~ 1440,
+                TRUE ~ NA_real_)
 
-            dif <- as.numeric(dif)*conver
+            if(is.na(conver)) stop('Weird time unit encountered. address this.')
 
-            table <- rle2(dif) %>%
-                mutate(site_name = !!site_names[i]) %>%
-                mutate(starts := dates[starts],
-                       stops := dates[stops]) %>%
-                mutate(sum = sum(lengths, na.rm = T)) %>%
-                mutate(porportion = lengths/sum) %>%
-                mutate(time = difftime(stops, starts, units = 'days'))
+            dif_minutes <- as.numeric(dif) * conver
 
-            test <- table %>%
-                filter(time > 60,
-                       lengths > 60)
+            # table <- rle2(dif_minutes) %>% #table is a commonly used function
+            run_table <- rle2(dif_minutes) %>%
+                mutate(
+                    site_name = !!site_names[i],
+                    starts := dates[starts],
+                    stops := dates[stops],
+                    # sum = sum(lengths, na.rm = TRUE), #superfluous
+                    porportion = lengths / sum(lengths, na.rm = TRUE),
+                    time = difftime(stops, starts, units = 'days'))
 
             # Sites with no record
-            if(nrow(table) == 0) {
+            if(nrow(run_table) == 0){
+
                 g_a <- tibble('site_name' = site_names[i],
-                              'type' = NA,
-                              'starts' = ymd_hms(NA),
-                              'interval' = NA)
+                              'type' = 'NA',
+                              'starts' = lubridate::NA_POSIXct_,
+                              'interval' = NA_real_)
+
             } else {
+
+                test <- filter(run_table,
+                               time > 60,
+                               lengths > 60)
+
                 #Sites where there are not at least 60 consecutive records, record
                 #for at least 60 consecutive days, and have an average interval of
                 #more than 1 day are assumed to be grab samples
-                if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) > 1440) {
+                if(nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) > 1440){
 
                     g_a <- tibble('site_name' = site_names[i],
-                                  'type' = 'grab',
-                                  'starts' = min(table$starts, na.rm = TRUE),
-                                  'interval' = round(median(table$values, na.rm = TRUE)))
+                                  'type' = 'G',
+                                  'starts' = min(run_table$starts,
+                                                 na.rm = TRUE),
+                                  'interval' = round(Mode(run_table$values,
+                                                          na.rm = TRUE)))
                 }
 
                 #Sites with consecutive samples are have a consistent interval
-                if(nrow(test) != 0 & nrow(table) < 20) {
+                if(nrow(test) != 0 && nrow(run_table) < 20){
 
                     g_a <- test %>%
-                        select(site_name, starts, interval=values) %>%
+                        select(site_name, starts, interval = values) %>%
                         group_by(site_name, interval) %>%
-                        summarise(starts = min(starts, na.rm = TRUE)) %>%
-                        mutate(type = 'automatic')
+                        summarise(starts = min(starts,
+                                               na.rm = TRUE)) %>%
+                        mutate(type = 'I') %>%
+                        arrange(starts)
 
                 }
 
@@ -273,67 +312,92 @@ identify_sampling <- function(df,  date_col='datetime', network, domain,
                 #the average interval is less than one day are assumed to be automatic
                 # (such as HBEF discharge that is automatic but lacks a consistent
                 #recording interval)
-                if(nrow(test) == 0 & mean(table$values, na.rm = TRUE) < 1440 |
-                   nrow(test) != 0 & nrow(table) > 20) {
+                if(
+                    (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) < 1440) ||
+                    (nrow(test) != 0 && nrow(run_table) > 20)
+                ){ #could this be handed with else?
 
-                    table_ <- table %>%
+                    table_ <- run_table %>%
                         filter(porportion >= 0.05) %>%
-                        mutate(type = 'automatic') %>%
-                        select(starts, site_name, type, interval=values) %>%
+                        mutate(type = 'I') %>%
+                        select(starts, site_name, type, interval = values) %>%
                         mutate(interval = as.character(round(interval)))
 
-                    table_var <- table %>%
+                    table_var <- run_table %>%
                         filter(porportion <= 0.05)  %>%
                         group_by(site_name) %>%
-                        summarise(starts = min(starts, na.rm = TRUE)) %>%
-                        mutate(type = 'automatic',
-                               interval = 'variable') %>%
+                        summarise(starts = min(starts,
+                                               na.rm = TRUE)) %>%
+                        mutate(
+                            type = 'I',
+                            interval = 'variable') %>%
                         select(starts, site_name, type, interval)
 
-                    g_a <- rbind(table_, table_var)
+                    g_a <- rbind(table_, table_var) %>%
+                        arrange(starts)
                 }
             }
 
-            g_a<- mutate(g_a, var = !!var_name)
+            var_name_base <- str_split(string = data_cols[p],
+                                       pattern = '__\\|')[[1]][1]
+
+            interval_changes <- rle2(g_a$interval)$starts
+
+            g_a <- g_a %>%
+                mutate(
+                    type = paste0(type,
+                                  !!is_sensor[var_name_base]),
+                    var = glue('{ty}_{vb}',
+                               ty = type,
+                               vb = var_name_base)) %>%
+                slice(interval_changes)
+
+            master[[prodname_ms]][[var_name_base]][[site_names[i]]] <-
+                list('startdt' = g_a$starts,
+                     'type' = g_a$type,
+                     'interval' = g_a$interval)
 
             all_sites <- rbind(all_sites, g_a)
-
-
-            master[[prodname_ms]][[var_name]][[site_names[i]]] <- list('starts'=g_a$starts,
-                                                                       'type'=g_a$type,
-                                                                       'interval'=g_a$interval)
-
         }
-        var_type <- all_sites %>%
-            filter(!is.na(type)) %>%
-            pull(type) %>%
-            unique()
 
-        if(length(var_type) == 1) {
-            label <- case_when(var_type == 'grab'~'g',
-                               var_type == 'automatic'~'a')
+        #include new prefixes in df column names
+        prefixed_varname <- all_sites$var[1]
 
-            new_data_name <- glue('{v}_{l}__|dat',
-                             v=var_name, l = label)
+        dat_colname <- paste0(drop_var_prefix(prefixed_varname),
+                              '__|dat')
+        flg_colname <- paste0(drop_var_prefix(prefixed_varname),
+                              '__|flg')
 
-            new_flg_name <- glue('{v}_{l}__|flg',
-                                 v=var_name, l=label)
+        data_col_ind <- match(dat_colname,
+                              colnames(df))
+        flag_col_ind <- match(flg_colname,
+                              colnames(df))
 
-            if(!new_flg_name %in% colnames(df)) {
-                df <- df %>%
-                    rename(!!new_data_name := .data[[data_cols[p]]])
-            } else {
-
-            df <- df %>%
-                rename(!!new_data_name := .data[[data_cols[p]]]) %>%
-                rename(!!new_flg_name := .data[[flg_cols[p]]])
-            }
-        }
+        colnames(df)[data_col_ind] <- paste0(prefixed_varname,
+                                             '__|dat')
+        colnames(df)[flag_col_ind] <- paste0(prefixed_varname,
+                                             '__|flg')
     }
 
     readr::write_file(jsonlite::toJSON(master), sampling_file)
 
     return(df)
+}
+
+#. handle_errors
+drop_var_prefix <- function(x){
+
+    unprefixed <- substr(x, 4, nchar(x))
+
+    return(unprefixed)
+}
+
+#. handle_errors
+extract_var_prefix <- function(x){
+
+    prefix <- substr(x, 1, 2)
+
+    return(prefix)
 }
 
 #. handle_errors
@@ -345,7 +409,7 @@ ms_read_raw_csv <- function(filepath,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
-                            # sensor_vs_analytical,
+                            is_sensor,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
@@ -394,7 +458,13 @@ ms_read_raw_csv <- function(filepath,
     #   data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
     #   output_x, output_y, output_....
-    #sensor_vs_analytical:
+    #is_sensor: either a single logical value, which will be applied to all
+    #   variable columns OR a named logical vector with the same length and names as
+    #   data_cols. Names correspond to variable names in the file to be read.
+    #   values are either TRUE, meaning the corresponding variable was
+    #   measured with a sensor (which may be susceptible to drift and/or fouling),
+    #   or FALSE, meaning the measurement was not recorded by a sensor. This
+    #   category includes analytical measurement in a lab, visual recording, etc.
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -412,7 +482,10 @@ ms_read_raw_csv <- function(filepath,
     #   flag columns will also be omitted, as will rows where all data values
     #   are NA. Rows with NA in the datetime or site_name column are dropped.
     #   data columns are given type double. all other
-    #   columns are given type character. data and flag/qaqc columns are given
+    #   columns are given type character. data and flag/qaqc columns are
+    #   given two-letter prefixes representing sample regimen
+    #   (I = installed vs. G = grab; S = sensor vs N = non-sensor).
+    #   Data and flag/qaqc columns are also given
     #   suffixes (__|flg and __|dat) that allow them to be cast into long format
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
@@ -443,6 +516,18 @@ ms_read_raw_csv <- function(filepath,
        ! (missing(var_flagcol_pattern) || is.null(var_flagcol_pattern))){
         stop(paste0('Only one data column. Use summary_flagcols instead ',
                     'of var_flagcol_pattern.'))
+    }
+
+    if(any(! is.logical(is_sensor))){
+        stop('all values in is_sensor must be logical.')
+    }
+
+    svh_names <- names(is_sensor)
+    if(
+        length(is_sensor) != 1 &&
+        (is.null(svh_names) || any(is.na(svh_names)))
+    ){
+        stop('if is_sensor is not length 1, all elements must be named.')
     }
 
     #deal with missing args
@@ -645,7 +730,9 @@ ms_read_raw_csv <- function(filepath,
 
     } else {
 
-        d <- rename(d, datetime = date)
+        d <- d %>%
+            rename(datetime = date) %>%
+            mutate(datetime = paste(datetime, '12:00:00'))
 
         dtformat <- date_col$format
         dttz <- date_col$tz
@@ -657,11 +744,12 @@ ms_read_raw_csv <- function(filepath,
                                                tz = dttz),
                                    tz = 'UTC'))
 
-    d <- d %>%
-        filter(!is.na(datetime))
+    #NAs here are indicative of bugs we want to fix, so let's let them through
+    # d <- d %>%
+    #     filter(! is.na(datetime))
 
-    #remove columns and rows with all NAs. also remove flag columns for all-NA
-    #   data columns
+    #remove all-NA data columns and rows with NA in all data columns.
+    #also remove flag columns for all-NA data columns.
     all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
                               MARGIN = 2,
                               function(x) all(is.na(x)))
@@ -673,7 +761,6 @@ ms_read_raw_csv <- function(filepath,
 
     d <- d %>%
         select(-one_of(all_na_cols)) %>%
-        # select(where(~ ! all(is.na(.)) & ends_with('__|dat') ))
         filter_at(vars(ends_with('__|dat')),
                   any_vars(! is.na(.)))
 
@@ -691,8 +778,27 @@ ms_read_raw_csv <- function(filepath,
     #convert NaNs to NAs, just in case.
     d[is.na(d)] <- NA
 
-    d <- sm(identify_sampling(d, 'datetime', domain=domain, network=network,
-                           prodname_ms=prodname_ms))
+    #either assemble or reorder is_sensor to match names in data_cols
+    if(length(is_sensor) == 1){
+
+        is_sensor <- rep(is_sensor,
+                         length(data_cols))
+        names(is_sensor) <- unname(data_cols)
+
+    } else {
+
+        data_col_order <- match(names(is_sensor),
+                                names(data_cols))
+        is_sensor <- is_sensor[data_col_order]
+    }
+
+    #prepend two-letter code to each variable representing sample regimen and
+    #record sample regimen metadata
+    d <- sm(identify_sampling(df = d,
+                              is_sensor = is_sensor,
+                              domain = domain,
+                              network = network,
+                              prodname_ms = prodname_ms))
 
     return(d)
 }
