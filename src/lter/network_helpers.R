@@ -1,6 +1,7 @@
 ms_pasta_domain_refmap = list(
     hbef = 'knb-lter-hbr',
-    hjandrews = 'knb-lter-and'
+    hjandrews = 'knb-lter-and',
+    konza = 'knb-lter-knz'
 )
 
 #. handle_errors
@@ -108,4 +109,26 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
         update_data_tracker_r(network=network, domain=domain,
             tracker_name='held_data', set_details=s, new_status=new_status)
     }
+}
+
+#. handle_errors
+download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         p = set_details$prodname_ms,
+                         s = set_details$site_name)
+    
+    dir.create(raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+    
+    download.file(url = set_details$url,
+                  destfile = glue(raw_data_dest,
+                                  '/',
+                                  set_details$component,
+                                  file_type),
+                  cacheOK = FALSE,
+                  method = 'curl')
 }
