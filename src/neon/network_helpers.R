@@ -48,9 +48,11 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
         in_comp = retrieval_log[k, 'component']
 
         out_comp = sw(do.call(processing_func,
-            # args=list(set=comp, network=network, domain=domain,site_name=site_name)))
-            args=list(network=network, domain=domain, prodname_ms=prodname_ms,
-                site_name=site_name, component=in_comp)))
+                              args=list(network = network,
+                                        domain = domain,
+                                        prodname_ms = prodname_ms,
+                                        site_name = site_name,
+                                        component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
