@@ -67,7 +67,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=3
+# dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
 # for(dmnrow in 2){
 
@@ -95,3 +95,4 @@ if(length(email_err_msgs)){
 }
 
 loginfo('Run complete', logger='ms.module')
+
