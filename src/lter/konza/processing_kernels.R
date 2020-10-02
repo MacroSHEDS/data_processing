@@ -156,17 +156,18 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
   
   look <- read_csv(rawfile1)
   
-  #look carefully at warnings from ms_read_raw_csv.
-  #they may indicate insufficiencies
+  #Time in this format HM no leading 0s or sep between hour and minute still janky 
   d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                          datetime_col = list(name = 'DATE_TIME',
-                                              format = '%Y-%m-%d %H:%M:%S',
-                                              tz = 'Etc/GMT-8'),
-                          site_name_col = 'SITECODE',
-                          data_cols =  c(INST_Q = 'discharge'),
+                          datetime_cols = list('RecYear' = '%Y',
+                                               'RecMonth' = '%m',
+                                               'Recday' = '%d',
+                                               'RecHour' = '%H%M'),
+                          datetime_tz = 'US/Central',
+                          site_name_col = 'Watershed',
+                          data_cols =  c('Discharge' = 'discharge'),
                           data_col_pattern = '#V#',
-                          sensor_vs_analytical = c(INST_Q = 's'),
-                          summary_flagcols = c('ESTCODE', 'EVENT_CODE')))
+                          summary_flagcols = 'QualFlag',
+                          is_sensor = TRUE))
   
   d <- ue(ms_cast_and_reflag(d,
                              varflag_col_pattern = NA,
