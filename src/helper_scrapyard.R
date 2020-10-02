@@ -346,6 +346,64 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     return()
 }
 
+### attempt to bundle all idw loggers (environment issues) ####
+#. handle_errors
+idw_log <- function(phase, from_env, ...){
+
+    #phase is one of "wb" (watershed boundary), "var" (variable), or
+    #   "ts" (timestep), corresponding to the phase of idw processing that
+    #   should be logged.
+    #from_env is the environment in which to look for variables passed as
+    #   positional arguments. This will usually be the parent environment of
+    #   idw_log and can be specified in the call as from_env = environment()
+    #... must contain any variables needed inside the subsection of
+    #   idw_log specified by phase.
+
+    if(! verbose) return()
+
+    #populate positional arguments in local environment
+    dots = match.call(expand.dots = FALSE)$...
+    names = vapply(dots, as.character, '')
+    vars = mget(names, inherits = TRUE)
+    thisenv = environment()
+    mapply(function(n, v) assign(n, v, envir = thisenv),
+           names,
+           vars)
+
+    #log the specified phase of idw processing
+    if(phase == 'wb'){
+
+        msg <- glue('site: {s}; {ii}/{w}',
+                    s = site_name,
+                    ii = i,
+                    w = nrow(wb))
+
+    } else if(phase == 'var'){
+
+        msg <- glue('site: {s}; var: {vv}; {jj}/{nv}',
+                    s = site_name,
+                    vv = v,
+                    jj = j,
+                    nv = nvars)
+
+    } else if(phase == 'ts'){
+
+        if(k == 1 || k %% 1000 == 0){
+            msg <- glue('timestep: {kk}/{nt}',
+                        kk = k,
+                        nt = ntimesteps)
+        }
+
+    } else {
+        stop('phase must be one of "wb", "var", "ts"')
+    }
+
+    loginfo(msg,
+            logger = logger_module)
+
+    return()
+}
+
 ### test code####
     desired_interval = '5 days'; impute_limit=30
     # saveRDS(ws_mean_precip, '~/Desktop/ws_precip_temp.rds')
@@ -367,4 +425,152 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 #all kernels would also have to be modified so that datetime is determined
     #before detection limit is decided. an accurate datetime column
     #is needed to calculate temporally explicit detlims
+
+# gee stuff ####
+gee_to_timeseries <- function(gee_id, band, com_name, start, end, ws_bound,
+                              scale) {
+        
+        col_name <- paste0(com_name, 'X')
+        
+        sheds<- sf::st_transform(sheds,4326) %>%
+            sf::st_set_crs(4326)
+        
+        ws_ee <- sf_as_ee(sheds)
+        
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            #filterBounds(ws_ee)$
+            filterDate(start, end)$
+            select(band)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                #name <- ee$String$cat(col_name, date)
+                #x$select(band)$reproject("EPSG:4326")$set("RGEE_NAME", name)
+                x$set("RGEE_NAME", date)
+            })
+        
+        ee_ws_table <- ee_extract(
+            x = gee_imcol,
+            y = sheds,
+            scale = scale,
+            fun = ee$Reducer$median(),
+            sf = FALSE
+        )
+        
+        table_nrow <- sheds %>%
+            mutate(nrow = row_number()) %>%
+            as.data.frame() %>%
+            #need common col name for watershed
+            dplyr::select(site_name, nrow)
+        
+        table <- ee_ws_table %>%
+            mutate(nrow = row_number()) %>%
+            full_join(table_nrow) %>%
+            dplyr::select(-nrow)
+        
+        col_names <- colnames(table)
+        
+        leng <- length(col_names) -1
+        
+        table_time <- table %>%
+            pivot_longer(col_names[1:leng])
+        
+        for(i in 1:nrow(table_time)) {
+            table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2], pattern = 'X', n = 2)[2]
+        }
+        
+        table_fin <- table_time %>%
+            dplyr::select(-name) %>%
+            mutate(date = ymd(date)) %>%
+            rename(!!com_name := value)
+        
+        return(table_fin)
+    }
+
+#### sourceflags_to_ms_status (pre-longform-cast) ####
+#. handle_errors
+sourceflags_to_ms_status <- function(d, flagstatus_mappings,
+                                     exclude_mapvals = rep(FALSE, length(flagstatus_mappings))){
+
+    #d is a df/tibble with flag and/or status columns
+    #flagstatus_mappings is a list of flag or status column names mapped to
+    #vectors of values that might be encountered in those columns.
+    #see exclude_mapvals.
+    #exclude_mapvals: a boolean vector of length equal to the length of
+    #flagstatus_mappings. for each FALSE, values in the corresponding vector
+    #are treated as OK values (mapped to ms_status 0). values
+    #not in the vector are treated as flagged (mapped to ms_status 1).
+    #For each TRUE, this relationship is inverted, i.e. values *in* the
+    #corresponding vector are treated as flagged.
+
+    flagcolnames = names(flagstatus_mappings)
+    d = mutate(d, ms_status = 0)
+
+    for(i in 1:length(flagstatus_mappings)){
+        # d = filter(d, !! sym(flagcolnames[i]) %in% flagcols[[i]])
+        # d = mutate(d,
+        #     ms_status = ifelse(flagcolnames[i] %in% flagcols[[i]], 0, 1))
+
+        if(exclude_mapvals[i]){
+            ok_bool = ! d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        } else {
+            ok_bool = d[[flagcolnames[i]]] %in% flagstatus_mappings[[i]]
+        }
+
+        d$ms_status[! ok_bool] = 1
+    }
+
+    d = select(d, -one_of(flagcolnames))
+
+    return(d)
+}
+
+
+#working on automatic determination of data column regimen now, but here's some starter
+#code (and documentation) for doing it manually if we ever want to go that route####
+    #data_col_regimen: either a character vector of the same length as data_cols,
+    #   or a character vector of length one, which will be applied to all data columns.
+    #   Elements of this vector must be either "grab" for periodically sampled
+    #   data or "sensor" for data collected on an automated, regular schedule
+    #   by a mechanical/electrical device. This information will be stored in
+    #   data/<network>/<domain>/sample_regimens.json as a nested list:
+    #   prodname_ms
+    #       variable
+    #           startdt: datetime1, datetime2, datetimeN...
+    #           regimen: regimen1,  regimen2,  regimenN...
+    #   TODO: handle the case of multiple regimens for the same variable in the same file
+    #   TODO: what about different regimens for different sites?
+
+
+    if(! length(data_col_regimen) %in% c(1, length(data_cols))){
+        stop('data_col_regimen must have length 1 or length(data_cols)')
+    }
+
+    #save sample collection regimens to file
+    if(length(data_col_regimen) == 1){
+        data_col_regimen <- rep(data_col_regimen, length(data_cols))
+    }
+
+    names(data_col_regimen) <- unname(data_cols)
+    remaining_data_cols <- na.omit(str_match(string = colnames(d),
+                                             pattern = '^(.*?)__\\|dat$')[, 2])
+    data_col_regimen <- data_col_regimen[names(data_col_regimen) %in%
+                                             remaining_data_cols]
+
+    thisenv <- environment()
+    cnt <- 0
+    first_nonNA_inds <- d %>%
+        arrange(datetime) %>%
+        select(ends_with('__|dat')) %>%
+        dplyr::rename_with(~ sub('__\\|dat', '', .x)) %>%
+        purrr::map(function(z, reg = data_col_regimen){
+            ind <- Position(function(w) ! is.na(w), z)
+            assign('cnt', cnt + 1, envir = thisenv)
+            list(startdt = as.character(d$datetime[ind]),
+                 regimen = unname(reg[cnt]))
+        })
+
+    write_sample_regimens(regimens,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms)
 
