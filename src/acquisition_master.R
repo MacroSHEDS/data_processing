@@ -43,7 +43,7 @@ try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
 
 #connect rgee to earth engine and python
-try(ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
+try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
 
@@ -95,3 +95,4 @@ if(length(email_err_msgs)){
 }
 
 loginfo('Run complete', logger='ms.module')
+
