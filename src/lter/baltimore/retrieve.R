@@ -3,7 +3,7 @@ loginfo('Beginning retrieve', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='retrieve', get_statuses='ready')
 
-# i=1
+# i=5
 for(i in 1:nrow(prod_info)){
         
         prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -22,15 +22,6 @@ for(i in 1:nrow(prod_info)){
                                                  version = latest_vsn, 
                                                  domain = domain, 
                                                  data_tracker = held_data)
-        
-        needed_components <- pull(prod_info[i,'components'])
-        if(!is.na(needed_components)) {
-                needed_components <- str_split_fixed(needed_components, ',', n = Inf)[1,]
-                
-                avail_sets <- filter(avail_sets, component %in% needed_components)
-                
-                
-        }
         
         
         if(is_ms_err(avail_sets)) next
@@ -99,4 +90,27 @@ for(i in 1:nrow(prod_info)){
 
 loginfo('Retrieval complete for all sites and products',
         logger=logger_module)
+
+# 
+# b_old <- read_csv('src/lter/baltimore/products.csv') %>%
+#         filter(prodname == 'pk') %>%
+#         add_row(prodcode=700, prodname='stream_chemistry_gwynns', type='grab',
+#                 retrieve_status='ready', munge_status='ready', derive_status='ready',
+#                 precursor_of='stream_flux_inst__ms003', notes=NA) %>%
+#         add_row(prodcode=900, prodname='stream_chemistry_club', type='grab',
+#                 retrieve_status='ready', munge_status='ready', derive_status='ready',
+#                 precursor_of='stream_flux_inst__ms003', notes=NA) %>%
+#         add_row(prodcode=800, prodname='stream_chemistry_gwynns_up', type='grab',
+#                 retrieve_status='ready', munge_status='ready', derive_status='ready',
+#                 precursor_of='stream_flux_inst__ms003', notes=NA) %>%
+#         add_row(prodcode=950, prodname='stream_chemistry_263', type='grab',
+#                 retrieve_status='ready', munge_status='ready', derive_status='ready',
+#                 precursor_of='stream_flux_inst__ms003', notes=NA) %>%
+#         add_row(prodcode=3110, prodname='precipitation', type='sensor',
+#                 retrieve_status='ready', munge_status='ready', derive_status='ready',
+#                 precursor_of='precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004',
+#                 notes=NA)
+# 
+# write_csv(b_old, 'src/lter/baltimore/products.csv')
+
 

@@ -3,7 +3,7 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='munge', get_statuses='ready')
 
-# i=1
+# i=2
 for(i in 1:nrow(prod_info)){
   # for(i in 5){
   
@@ -19,7 +19,7 @@ for(i in 1:nrow(prod_info)){
   
   sites = names(held_data[[prodname_ms]])
   
-  #j <- 1
+  # j <- 1
   for(j in 1:length(sites)){
     
     site_name <- sites[j]
@@ -36,15 +36,7 @@ for(i in 1:nrow(prod_info)){
                    s=site_name, p=prodname_ms), logger=logger_module)
     }
     
-
-    if(grepl('discharge', prodname_ms)) {
-    munge_rtn = munge_by_site(domain = domain, 
-                              site_name = site_name, 
-                              prodname_ms = prodname_ms, 
-                              tracker = held_data)
-    }
-    
-      munge_rtn = munge_combined_split(domain = domain,
+      munge_rtn = munge_combined(domain = domain,
                                        site_name = site_name,
                                        prodname_ms = prodname_ms,
                                        tracker = held_data)

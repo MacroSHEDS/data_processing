@@ -1,7 +1,8 @@
 ms_pasta_domain_refmap = list(
     hbef = 'knb-lter-hbr',
     hjandrews = 'knb-lter-and',
-    konza = 'knb-lter-knz'
+    konza = 'knb-lter-knz',
+    baltimore = 'knb-lter-bes'
 )
 
 #. handle_errors
@@ -87,6 +88,7 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
 
 #. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
+    # sets <- new_sets; tracker <- held_data
 
     if(nrow(sets) == 0) return()
 
