@@ -11,4 +11,6 @@ data_acquisition.Rproj
 /probsolete
 .DS_Store
 OBSOLETE
+*.DS_Store
 *.png
+transfer_data
