@@ -410,6 +410,7 @@ ms_read_raw_csv <- function(filepath,
                             data_col_pattern,
                             alt_datacol_pattern,
                             is_sensor,
+                            set_to_NA,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
@@ -515,6 +516,10 @@ ms_read_raw_csv <- function(filepath,
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
     }
+    
+    if(missing(set_to_NA)) {
+        set_to_NA <- NULL
+    }
 
     #fill in missing names in data_cols (for columns that are already
     #   canonically named)
@@ -615,14 +620,24 @@ ms_read_raw_csv <- function(filepath,
                      classes_f2, classes_f3)
     classes_all <- classes_all[! is.na(names(classes_all))]
 
-    # read data
     d <- read.csv(filepath,
                   stringsAsFactors = FALSE,
-                  colClasses = classes_all) %>%
+                  colClasses = "character") %>%
         as_tibble() %>%
         select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
     if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric'
 
+    # Set values to NA if used as a flag or missing data indication 
+    # Not sure why %in% does not work, seem to only operate on one row 
+    if(! is.null(set_to_NA)) {
+    for(i in 1:length(set_to_NA)) {
+        d[d == set_to_NA[i]] <- NA
+    }
+    }
+    
+    #Set correct class to each column 
+    d[] <- Map(`class<-`, d, classes_all)
+        
     #rename cols to canonical names
     colnames_d <- colnames(d)
 
@@ -638,7 +653,7 @@ ms_read_raw_csv <- function(filepath,
             colnames_d[i] <- colnames_new[canonical_name_ind]
         }
     }
-
+    
     colnames(d) <- colnames_d
 
     #resolve datetime structure into POSIXct
