@@ -117,8 +117,8 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-    
-    # SAMPLE: Sensor 
+
+    # SAMPLE: Sensor
 
     d <- ue(ms_read_raw_csv(filepath = rawfile,
                        datetime_col = list(name = 'DATETIME',
@@ -155,7 +155,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-    
+
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
 
     d <- ue(ms_read_raw_csv(filepath = rawfile,
@@ -202,27 +202,22 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
+    #TODO: identify_sampling is writing sites names as 1 not w1
 
-    # Need to fix issues of when there is a NA time col but not NA date col
-    # and the whole row gets removed
-
-    # Also would be ideal to not hve to name the data_cols as their names are
-    # all macrosheds var names
-
-    # Also identify_sampling is writing sites names as 1 not w1
-    
-    # SAMPLE: analytical 
     d <- ue(ms_read_raw_csv(filepath = rawfile,
                             datetime_cols = c(date = '%Y-%m-%d',
                                               timeEST = '%H:%M'),
                             datetime_tz = 'US/Eastern',
                             site_name_col = 'site', #eventually will work like datetime_cols
-                            data_cols =  c('pH', 'DIC', 'spCond', 'temp', 'ANC960', 'ANCMet',
-                                           'Ca', 'Mg', 'K', 'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
-                                           'SO4', 'NO3', 'Cl', 'PO4', 'DOC', 'TDN', 'DON', 'SiO2',
-                                           'Mn', 'Fe', 'F', 'cationCharge', 'anionCharge',
-                                           'theoryCond', 'ionError', 'ionBalance',
-                                           'pHmetrohm'),
+                            data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                          'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
+                                          'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
+                                          'SO4', 'NO3', 'Cl',
+                                          'PO4', 'DOC', 'TDN', 'DON',
+                                          'SiO2', 'Mn', 'Fe', 'F',
+                                          'cationCharge', 'anionCharge',
+                                          'theoryCond', 'ionError', 'ionBalance',
+                                          'pHmetrohm'),
                             data_col_pattern = '#V#',
                             is_sensor = FALSE,
                             summary_flagcols = 'fieldCode'))
@@ -230,6 +225,12 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     d <- ue(ms_cast_and_reflag(d,
                                variable_flags_clean = list(
                                    fieldCode = NA)))
+
+    d <- ue(ms_conversions(d,
+                           convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                                                 'NH4'),
+                           convert_units_from = c(DIC = 'uM'),
+                           convert_units_to = c(DIC = 'mM')))
 
     d <- ue(carry_uncertainty(d,
                               network = network,
