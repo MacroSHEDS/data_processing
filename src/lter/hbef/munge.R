@@ -3,7 +3,7 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
-# i=6
+# i=1
 for(i in 1:nrow(prod_info)){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
