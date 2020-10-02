@@ -940,44 +940,49 @@ ms_cast_and_reflag <- function(d,
     #   Or set this to NA if there are no variable-specific flag/status columns.
     #variable_flags_to_drop: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are treated as
-    #   bad data and are removed. This argument is optional, though at least 2
-    #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied.
+    #   bad data and are removed. Use '#*#' to refer to all values not
+    #   included in variable_flags_clean. This parameter is optional,
+    #   though at least 2 of variable_flags_to_drop, variable_flags_clean,
+    #   and variable_flags_dirty must be supplied.
+    #   If '#*#' is used, variable_flags_clean must be supplied.
     #variable_flags_clean: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
-    #   ms_status of 0, meaning clean. This argument is optional, though at least 2
+    #   ms_status of 0, meaning clean. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied.
+    #   must be supplied. This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
-    #   ms_status of 1, meaning dirty This argument is optional, though at least 2
+    #   ms_status of 1, meaning dirty This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied.
+    #   must be supplied. This parameter does not use the '#*#' wildcard.
     #summary_flags_to_drop: a named list. names correspond to columns in d that
-    #   contain summary flag/status information. values must be character vectors
+    #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in
     #   the summary flag/status columns. Elements of these vectors are treated as
-    #   bad data and are removed. This argument is optional, though at least 2
+    #   bad data and are removed. Use '#*#' to refer to all values not
+    #   included in summary_flags_clean. This parameter is optional, though at least 2
     #   of summary_flags_to_drop, summary_flags_clean, and summary_flags_dirty
-    #   must be supplied.
+    #   must be supplied. If '#*#' is used, summary_flags_clean must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #summary_flags_clean: a named list. names correspond to columns in d that
-    #   contain summary flag/status information. values must be character vectors
+    #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
     #   Elements of these vectors are given an ms_status of 0, meaning clean.
-    #   This argument is optional, though at least 2 of summary_flags_to_drop,
+    #   This parameter is optional, though at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
+    #   Note: This parameter does not use the '#*#' wildcard.
     #summary_flags_dirty: a named list. names correspond to columns in d that
-    #   contain summary flag/status information. values must be character vectors
+    #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
     #   Elements of these vectors are given an ms_status of 1, meaning dirty.
-    #   This argument is optional, though at least 2 of summary_flags_to_drop,
+    #   This parameter is optional, though at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
+    #   Note: This parameter does not use the '#*#' wildcard.
 
     #return value: a long-format tibble with 5 columns: datetime, site_name,
     #   var, val, ms_status.
@@ -996,6 +1001,34 @@ ms_cast_and_reflag <- function(d,
                     'summary_flags_clean, summary_flags_dirty'))
     }
 
+    if(sumclen){
+        if(any(sapply(summary_flags_clean, function(x) '#*#' %in% x))){
+            stop(glue('the #*# wildcard may only be used in ',
+                      'summary_flags_to_drop and variable_flags_to_drop'))
+        }
+    }
+    if(sumdirt){
+        if(any(sapply(summary_flags_dirty, function(x) '#*#' %in% x))){
+            stop(glue('the #*# wildcard may only be used in ',
+                      'summary_flags_to_drop and variable_flags_to_drop'))
+        }
+    }
+
+    if(sumdrop){
+
+        drop_wildcard_bool <- sapply(summary_flags_to_drop, function(x) '#*#' %in% x)
+        if(any(drop_wildcard_bool) && ! sumclen){
+            stop(glue('if #*# wildcard is used in summary_flags_to_drop, ',
+                      'summary_flags_clean must be supplied'))
+        }
+
+        drop_multicode_bool <- sapply(summary_flags_to_drop, function(x) length(x) > 1)
+        if(any(drop_wildcard_bool & drop_multicode_bool)){
+            stop(glue('if #*# wildcard is supplied as part of summary_flags_to_drop,',
+                      ' it must be in a character vector of length 1'))
+        }
+    }
+
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
     varclen <- ! missing(variable_flags_clean) && ! is.null(variable_flags_clean)
     vardirt <- ! missing(variable_flags_dirty) && ! is.null(variable_flags_dirty)
@@ -1007,47 +1040,32 @@ ms_cast_and_reflag <- function(d,
                     'varflag_col_pattern = NA)'))
     }
 
+    if(vardrop){
+
+        if('#*#' %in% variable_flags_to_drop && length(variable_flags_to_drop) > 1){
+            stop(glue('if #*# wildcard is used in variable_flags_to_drop,',
+                      ' it must be the only element in its argument vector'))
+        }
+
+        if(variable_flags_to_drop == '#*#' && ! varclen){
+            stop(glue('if #*# wildcard is used in variable_flags_to_drop, ',
+                      'variable_flags_clean must be supplied'))
+        }
+    }
+
     if(sumdrop){
         summary_colnames <- names(summary_flags_to_drop)
     } else {
         summary_colnames <- names(summary_flags_clean)
     }
 
-    #categorize columns
-    # columns <- colnames(d)
-
     data_col_keyword <- gsub(pattern = '#V#',
                              replacement = '',
                              data_col_pattern)
-    # data_col_pattern <- gsub(pattern = '#V#',
-    #                          replacement = '(?:.*)?',
-    #                          escape_special_regex(data_col_pattern))
-    # data_col_inds <- grep(pattern = data_col_pattern,
-    #                       x = columns)
 
     varflag_keyword <- gsub(pattern = '#V#',
                             replacement = '',
                             varflag_col_pattern)
-    # varflag_pattern <- gsub(pattern = '#V#',
-    #                         replacement = '(?:.*)?',
-    #                         escape_special_regex(varflag_col_pattern))
-    # varflag_inds <- grep(pattern = varflag_pattern,
-    #                      x = columns)
-
-    # sumflag_inds <- which(columns %in% summary_colnames)
-
-    # varcols <- setdiff(1:length(columns),
-    #                    c(varflag_inds,
-    #                      ,
-    #                      which(columns %in% ms_canonicals)))
-
-    # colnames(d)[varcols] <- paste0(columns[varcols],
-    #                                '__|val')
-
-    # colnames(d)[variable_flagcols] <- gsub(pattern = varflag_keyword,
-    #                                        replacement = '',
-    #                                        columns[variable_flagcols]) %>%
-    #     paste0('__|var')
 
     #cast to long format (would have to auto-generatae names_pattern regex
     #   to allow for data_col_pattern and varflag_col_pattern to vary) if
@@ -1061,7 +1079,7 @@ ms_cast_and_reflag <- function(d,
             d <- pivot_longer(data = d,
                               cols = ends_with(data_col_keyword),
                               names_pattern = '^(.+?)__\\|(dat)$',
-                              names_to = c('var', 'dat'))
+                              names_to = c('var', '.value'))
         } else {
             d <- pivot_longer(data = d,
                               cols = ends_with(c(data_col_keyword, varflag_keyword)),
@@ -1082,29 +1100,21 @@ ms_cast_and_reflag <- function(d,
         d$var <- varname
     }
 
-    # #determine sample regimen (sensor/grab) for each site-var
-    # dsplt <- split(d,
-    #                f = list(d$site_name, d$var),
-    #                sep = '___')
-    # lapply(dsplt,
-    # )
-    #
-    # dsplt[[1]] -> x
-    # rle(diff(as.numeric(x$datetime)))
-    # var(diff(as.numeric(x$datetime)))
-    # dtdiffs <- diff(as.numeric(x$datetime))
-    # dtcv <- sd(dtdiffs) / mean(dtdiffs)
-    # zz = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-    # sd(zz) / mean(zz)
-
-
     #filter rows with summary flags indicating bad data (data to drop)
     if(sumdrop){
         for(i in 1:length(summary_flags_to_drop)){
-            d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
-                            summary_flags_to_drop[[i]])
+
+            if(summary_flags_to_drop[[i]] == '#*#'){
+                d <- filter(d, (!!sym(names(summary_flags_to_drop)[i])) %in%
+                                summary_flags_clean[[i]])
+            } else {
+                d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
+                                summary_flags_to_drop[[i]])
+            }
         }
+
     } else {
+
         for(i in 1:length(summary_flags_clean)){
             d <- filter(d, (!!sym(names(summary_flags_clean)[i])) %in%
                             c(summary_flags_clean[[i]],
@@ -1115,7 +1125,13 @@ ms_cast_and_reflag <- function(d,
     #filter rows with variable flags indicating bad data (data to drop)
     if(! no_varflags){
         if(vardrop){
-            d <- filter(d, ! flg %in% variable_flags_to_drop)
+
+            if(variable_flags_to_drop == '#*#'){
+                d <- filter(d, flg %in% variable_flags_clean)
+            } else {
+                d <- filter(d, ! flg %in% variable_flags_to_drop)
+            }
+
         } else {
             d <- filter(d, flg %in% c(variable_flags_clean, variable_flags_dirty))
         }
@@ -1158,6 +1174,91 @@ ms_cast_and_reflag <- function(d,
         select(datetime, site_name, var, dat, ms_status) %>%
         rename(val = dat) %>%
         arrange(site_name, var, datetime)
+
+    return(d)
+}
+
+#. handle_errors
+ms_conversions <- function(d,
+                           convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                                                 'NH4', 'NH3'),
+                           convert_units_from,
+                           convert_units_to){
+
+    #d: a macrosheds tibble that has aready been through ms_cast_and_reflag
+    #convert molecules: a character vector of molecular formulae to be
+    #   converted from molecular mass to atomic mass of the main constituent.
+    #   for example, NO3 should be converted to NO3-N within macrosheds, so pass
+    #   'NO3' to convert_molecules and it will take care of everything. by default,
+    #   all molecules we want to convert are already passed. The only time
+    #   you might want to change this default argument is if a domain provides
+    #   both forms (e.g. PO4 and PO4-P). In that case, we might want to keep both,
+    #   so we would omit 'PO4' from the argument vector to convert_molecules.
+    #convert_units_from: a named character vector. Names are variable names
+    #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
+    #   and values are the units of those variables. Omit variables that don't
+    #   need to be converted.
+    #convert_units_to: a named character vector. Names are variable names
+    #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
+    #   and values are the units those variables should be converted to.
+    #   Omit variables that don't need to be converted.
+
+    #checks
+    cm <- ! missing(convert_molecules) && ! is.na(convert_molecules)
+    cuF <- ! missing(convert_units_from) && ! is.na(convert_units_from)
+    cuT <- ! missing(convert_units_to) && ! is.na(convert_units_to)
+
+    if(sum(cuF, cuT) == 1){
+        stop('convert_units_from and convert_units_to must be supplied together')
+    }
+    if(length(convert_units_from) != length(convert_units_to)){
+        stop('convert_units_from and convert_units_to must have the same length')
+    }
+    cu_shared_names <- base::intersect(names(convert_units_from),
+                                       names(convert_units_to))
+    if(length(cu_shared_names) != length(convert_units_to)){
+        stop('names of convert_units_from and convert_units_to must match')
+    }
+
+    #handle molecular conversions, like NO3 -> NO3_N
+    if(cm){
+
+        molecular_conversion_map <- list(
+            NH4 = 'N',
+            NO3 = 'N',
+            NH3 = 'N',
+            SiO2 = 'Si',
+            SO4 = 'S',
+            PO4 = 'P')
+
+        if(! all(convert_molecules %in% names(molecular_conversion_map))){
+            miss <- convert_molecules[! convert_molecules %in%
+                                          names(molecular_conversion_map)]
+            stop(glue('These molecules either need to be added to ',
+                      'molecular_conversion_map, or they should not be converted: ',
+                      paste(miss, collapse = ', ')))
+        }
+
+        vars <- drop_var_prefix(d$var)
+        for(m in convert_molecules){
+
+            d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
+                                                 from = m,
+                                                 to = unname(molecular_conversion_map[m]))
+        }
+    }
+
+    #handle unit conversions
+    if(cuF){
+
+        for(i in 1:length(convert_units_from)){
+
+            v = names(convert_units_from)[i]
+            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
+                                             input_unit = convert_units_from[i],
+                                             output_unit = convert_units_to[i])
+        }
+    }
 
     return(d)
 }
@@ -2001,7 +2102,7 @@ update_product_statuses <- function(network, domain){
 }
 
 #. handle_errors
-convert_unit <- function(val, input_unit, output_unit){
+convert_unit <- function(x, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
                     convert_factor = c(0.000000001, 0.000001, 0.001, 0.01, 0.1, 100,
@@ -2047,11 +2148,12 @@ convert_unit <- function(val, input_unit, output_unit){
                                     as.numeric(filter(units, prefix == new_bottom[1])[,2]))
     } else{new_bottom_conver <- 1}
 
-    new_val <- val*old_top_conver*new_top_conver
+    new_val <- x*old_top_conver*new_top_conver
 
     new_val <- new_val/(old_bottom_conver*new_bottom_conver)
 
-    return(new_val) }
+    return(new_val)
+}
 
 #. handle_errors
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
