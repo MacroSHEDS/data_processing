@@ -223,12 +223,11 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                             summary_flagcols = 'fieldCode'))
 
     d <- ue(ms_cast_and_reflag(d,
-                               variable_flags_clean = list(
-                                   fieldCode = NA)))
+                               summary_flags_clean = list(fieldCode = NA),
+                               summary_flags_to_drop = list(fieldCode = '#*#'),
+                               varflag_col_pattern = NA))
 
     d <- ue(ms_conversions(d,
-                           convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                                 'NH4'),
                            convert_units_from = c(DIC = 'uM'),
                            convert_units_to = c(DIC = 'mM')))
 
