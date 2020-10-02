@@ -117,38 +117,33 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    
+    # SAMPLE: Sensor 
 
-    d = sw(read_csv(rawfile, progress=FALSE,
-        col_types=readr::cols_only(
-            DATETIME='c', #can't parse 24:00
-            WS='c',
-            Discharge_ls='d'))) %>%
-            # Flag='c'))) %>% #all flags are acceptable for this product
-        rename(site_name = WS,
-            datetime = DATETIME,
-            discharge = Discharge_ls)
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                       datetime_col = list(name = 'DATETIME',
+                                           format = '%Y-%m-%d %H:%M:%S',
+                                           tz = 'US/Eastern'),
+                       site_name_col = 'WS',
+                       data_cols = c(Discharge_ls = 'discharge'),
+                       data_col_pattern = '#V#'))
 
-    detlim <- ue(identify_detection_limit(d$discharge))
-
+    #Would use ms_cast_and_reflag but there is only one data column and no flags
     d <- d %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
-            # datetime = with_tz(as_datetime(datetime, 'US/Eastern'), 'UTC'),
-            site_name = paste0('w', site_name),
-            ms_status = 0) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                   any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize(
-            discharge = mean(discharge, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
+        rename(val = 3) %>%
+        mutate(var = 'discharge_a',
+               ms_status = 0)
 
-    d <- ue(synchronize_timestep(ms_df = d,
-                            desired_interval = '15 min',
-                            impute_limit = 30))
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
 
-    d$discharge <- ue(apply_detection_limit(d$discharge, detlim))
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
 }
@@ -160,36 +155,36 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    
+    # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
 
-    d = sw(read_csv(rawfile, progress=FALSE,
-        col_types=readr::cols_only(
-            DATE='c', #can't parse 24:00
-            rainGage='c',
-            Precip='d'))) %>%
-        # Flag='c'))) %>% #all flags are acceptable for this product
-        rename(datetime = DATE,
-            site_name = rainGage,
-            precip = Precip)
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                            date_col = list(name = 'DATE',
+                                                format = '%Y-%m-%d',
+                                                tz = 'US/Eastern'),
+                            site_name_col = 'rainGage',
+                            data_cols = c(Precip = 'precipitation'),
+                            data_col_pattern = '#V#',
+                            is_sensor = FALSE))
 
-    detlim <- ue(identify_detection_limit(d$precip))
-
+    #Would use ms_cast_and_reflag but there is only one data column and no flags
     d <- d %>%
-        mutate(
-            datetime = with_tz(force_tz(as.POSIXct(datetime), 'US/Eastern'), 'UTC'),
-            ms_status = 0) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
-                   any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize(
-            precip = mean(precip, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup()
+        rename(val = 3) %>%
+        mutate(var = strsplit(colnames(d)[3], '__\\|')[[1]][1],
+               ms_status = 0)
 
-    d <- ue(synchronize_timestep(ms_df = d,
-                            desired_interval = '1 day',
-                            impute_limit = 30))
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
 
-    d$precip <- ue(apply_detection_limit(d$precip, detlim))
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+
+    return(d)
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
@@ -207,53 +202,99 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
         n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-    d <- sw(read_csv(rawfile, col_types=readr::cols_only(
-            site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-            temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
-            Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
-            Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-            DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
-            `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
-            theoryCond='n', ionError='n', ionBalance='n'))) %>%
-        rename(site_name = site) %>%
-        rename_all(dplyr::recode, #essentially rename_if_exists
-                   precipCatch='precipitation_ns',
-                   flowGageHt='discharge_ns')
 
-        detlims <- ue(identify_detection_limit(d))
+    # Need to fix issues of when there is a NA time col but not NA date col
+    # and the whole row gets removed
 
-    d <- d %>%
-        mutate(site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
-            tolower(site_name), site_name)) %>%
-        mutate(
-            timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
-            datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'),
-            ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
-            DIC = ue(convert_unit(DIC, 'uM', 'mM')),
-            NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
-            NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
-            PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
-        select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
-        filter_at(vars(-site_name, -datetime),
-                  any_vars(! is.na(.))) %>%
-        group_by(datetime, site_name) %>%
-        summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-        ungroup() %>%
-        mutate(ms_status = as.numeric(ms_status)) %>%
-        select(-ms_status, everything())
+    # Also would be ideal to not hve to name the data_cols as their names are
+    # all macrosheds var names
 
-    d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
+    # Also identify_sampling is writing sites names as 1 not w1
+    
+    # SAMPLE: analytical 
+    d <- ue(ms_read_raw_csv(filepath = rawfile,
+                            datetime_cols = c(date = '%Y-%m-%d',
+                                              timeEST = '%H:%M'),
+                            datetime_tz = 'US/Eastern',
+                            site_name_col = 'site', #eventually will work like datetime_cols
+                            data_cols =  c('pH', 'DIC', 'spCond', 'temp', 'ANC960', 'ANCMet',
+                                           'Ca', 'Mg', 'K', 'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
+                                           'SO4', 'NO3', 'Cl', 'PO4', 'DOC', 'TDN', 'DON', 'SiO2',
+                                           'Mn', 'Fe', 'F', 'cationCharge', 'anionCharge',
+                                           'theoryCond', 'ionError', 'ionBalance',
+                                           'pHmetrohm'),
+                            data_col_pattern = '#V#',
+                            is_sensor = FALSE,
+                            summary_flagcols = 'fieldCode'))
 
-    intv <- ifelse(grepl('precip', prodname_ms),
-                   '1 day',
-                   '1 hour')
-    d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = intv,
+    d <- ue(ms_cast_and_reflag(d,
+                               variable_flags_clean = list(
+                                   fieldCode = NA)))
+
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit(d, detlims))
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
+
+    # ### OLD CODE
+    # d <- sw(read_csv(rawfile, col_types=readr::cols_only(
+    #         site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
+    #         temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
+    #         Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
+    #         Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
+    #         DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
+    #         `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
+    #         theoryCond='n', ionError='n', ionBalance='n'))) %>%
+    #     rename(site_name = site) %>%
+    #     rename_all(dplyr::recode, #essentially rename_if_exists
+    #                precipCatch='precipitation_ns',
+    #                flowGageHt='discharge_ns') %>%
+    #     mutate(
+    #         site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
+    #                               tolower(site_name), site_name),
+    #         timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
+    #         datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
+    #
+    # ue(identify_detection_limit_t(d,
+    #                               network = network,
+    #                               domain = domain))
+    #
+    # d <- d %>%
+    #     mutate(
+    #         ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
+    #         DIC = ue(convert_unit(DIC, 'uM', 'mM')),
+    #         NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
+    #         NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
+    #         PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
+    #     select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
+    #     filter_at(vars(-site_name, -datetime),
+    #               any_vars(! is.na(.))) %>%
+    #     group_by(datetime, site_name) %>%
+    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
+    #     ungroup() %>%
+    #     mutate(ms_status = as.numeric(ms_status)) %>%
+    #     select(-ms_status, everything())
+    #
+    # d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
+    #
+    # intv <- ifelse(grepl('precip', prodname_ms),
+    #                '1 day',
+    #                '1 hour')
+    # d <- ue(synchronize_timestep(ms_df = d,
+    #                              desired_interval = intv,
+    #                              impute_limit = 30))
+    #
+    # d <- ue(apply_detection_limit_t(d, network, domain))
+    #
+    # return(d)
 }
 
 #ws_boundary: STATUS=READY
@@ -469,4 +510,3 @@ process_2_ms004 <- function(network, domain, prodname_ms){
 
     return()
 }
-
