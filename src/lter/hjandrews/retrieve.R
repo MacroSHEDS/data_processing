@@ -2,9 +2,8 @@
 prod_info = get_product_info(network=network, domain=domain,
     status_level='retrieve', get_statuses='ready')
 
-# i=2
+# i=1
 for(i in 1:nrow(prod_info)){
-# for(i in 1){
 
     prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -22,7 +21,8 @@ for(i in 1:nrow(prod_info)){
         version=latest_vsn, domain=domain, data_tracker=held_data)
     if(is_ms_err(avail_sets)) next
 
-    if(grepl('(precip|stream_chemistry)', prodname_ms)){
+    if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
+             prodname_ms)){
         avail_sets$site_name <- 'sitename_NA'
     }
     avail_sites = unique(avail_sets$site_name)
@@ -73,14 +73,15 @@ for(i in 1:nrow(prod_info)){
     }
 
     metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
-                         'packageid=knb-lter-hbr.{p}.{v}',
+                         'packageid=knb-lter-and.{p}.{v}',
                          p = prodcode_from_prodname_ms(prodname_ms),
                          v = latest_vsn)
-    
+
     write_metadata_r(murl = metadata_url,
                      network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
+
     gc()
 }
 
