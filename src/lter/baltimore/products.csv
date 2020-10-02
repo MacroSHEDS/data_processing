@@ -1,0 +1,6 @@
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+700,stream_chemistry_gwynns,grab,ready,ready,ready,stream_flux_inst__ms003,NA
+900,stream_chemistry_club,grab,ready,ready,ready,stream_flux_inst__ms003,NA
+800,stream_chemistry_gwynns_up,grab,ready,ready,ready,stream_flux_inst__ms003,NA
+950,stream_chemistry_263,grab,ready,ready,ready,stream_flux_inst__ms003,NA
+3110,precipitation,sensor,ready,ready,ready,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
