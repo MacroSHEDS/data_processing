@@ -102,8 +102,6 @@ konza,Konza,lter,LTER,N20B,N20B,?,stream_gauge,39.08858,-96.57654,NA,1,NA
 konza,Konza,lter,LTER,N01B,N01B,?,stream_gauge,39.08668,-96.577,NA,1,NA
 konza,Konza,lter,LTER,N02B,N02B,?,stream_gauge,39.08982,-96.58862,NA,1,NA
 konza,Konza,lter,LTER,HIKN,HIKN,Hiking Trail,stream_sampling_point,39.10713,-96.60664,NA,1,NA
-konza,Konza,lter,LTER,ESH,ESH,Edler Spring Horse Tank,stream_sampling_point,39.1017,-96.60612,NA,1,NA
-konza,Konza,lter,LTER,ESF,ESF,Edler Spring Faucet,stream_sampling_point,39.1039,-96.60575,NA,1,NA
 konza,Konza,lter,LTER,HOKN,HOKN,Hokanson,stream_sampling_point,39.10376,-96.59542,NA,1,NA
 konza,Konza,lter,LTER,NFKC,NFKC,North Fork Kings Creek,stream_sampling_point,39.10155,-96.59239,NA,1,NA
 konza,Konza,lter,LTER,SFKC,SFKC,South Fork Kings Creek,stream_sampling_point,39.10128,-96.59239,NA,1,NA
@@ -123,4 +121,4 @@ konza,Konza,lter,LTER,NA,020B,?,rain_gauge,39.0756,-96.5758,NA,1,Rain gauge name
 konza,Konza,lter,LTER,NA,K01B,?,rain_gauge,39.0862,-96.5631,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,N01B,?,rain_gauge,39.0849,-96.571,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,N4DF,?,rain_gauge,39.0876,-96.5843,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-baltimore,Baltimore,lter,LTER,NA,NA,NA,NA,NA,NA,NA,1,NA
+konza,Konza,lter,LTER,Kings Creek,HIKX,Hiking Trail,stream_sampling_point,39.107,-96.6068,NA,1,"Not included in stream gauge location product, but lat/long listed in stream_chem metadata"
