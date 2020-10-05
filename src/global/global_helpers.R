@@ -1006,7 +1006,8 @@ ms_cast_and_reflag <- function(d,
     #   of values that might appear in
     #   the summary flag/status columns. Elements of these vectors are treated as
     #   bad data and are removed. Use '#*#' to refer to all values not
-    #   included in summary_flags_clean. This parameter is optional, though at least 2
+    #   included in summary_flags_clean. This parameter is optional, though
+    #   if there are summary flag columns, at least 2
     #   of summary_flags_to_drop, summary_flags_clean, and summary_flags_dirty
     #   must be supplied. If '#*#' is used, summary_flags_clean must be supplied.
     #   make sure list elements for summary flags are in the same order!
@@ -1015,7 +1016,8 @@ ms_cast_and_reflag <- function(d,
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
     #   Elements of these vectors are given an ms_status of 0, meaning clean.
-    #   This parameter is optional, though at least 2 of summary_flags_to_drop,
+    #   This parameter is optional, though
+    #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
@@ -1024,7 +1026,8 @@ ms_cast_and_reflag <- function(d,
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
     #   Elements of these vectors are given an ms_status of 1, meaning dirty.
-    #   This parameter is optional, though at least 2 of summary_flags_to_drop,
+    #   This parameter is optional, though
+    #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
@@ -1041,9 +1044,10 @@ ms_cast_and_reflag <- function(d,
     sumdrop <- ! missing(summary_flags_to_drop) && ! is.null(summary_flags_to_drop)
     sumclen <- ! missing(summary_flags_clean) && ! is.null(summary_flags_clean)
     sumdirt <- ! missing(summary_flags_dirty) && ! is.null(summary_flags_dirty)
+    no_sumflags <- all(c(sumdrop, sumclen, sumdirt) == FALSE)
 
-    if(sum(c(sumdrop, sumclen, sumdirt)) < 2){
-        stop(paste0('Must supply at least 2 of summary_flags_to_drop, ',
+    if(sum(c(sumdrop, sumclen, sumdirt)) == 1){
+        stop(paste0('Must supply 2 (or none) of summary_flags_to_drop, ',
                     'summary_flags_clean, summary_flags_dirty'))
     }
 
@@ -1099,10 +1103,14 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
-    if(sumdrop){
-        summary_colnames <- names(summary_flags_to_drop)
+    if(! no_sumflags){
+        if(sumdrop){
+            summary_colnames <- names(summary_flags_to_drop)
+        } else {
+            summary_colnames <- names(summary_flags_clean)
+        }
     } else {
-        summary_colnames <- names(summary_flags_clean)
+        summary_colnames <- NULL
     }
 
     data_col_keyword <- gsub(pattern = '#V#',
@@ -1147,24 +1155,26 @@ ms_cast_and_reflag <- function(d,
     }
 
     #filter rows with summary flags indicating bad data (data to drop)
-    if(sumdrop){
-        for(i in 1:length(summary_flags_to_drop)){
+    if(! no_sumflags){
+        if(sumdrop){
+            for(i in 1:length(summary_flags_to_drop)){
 
-            if(summary_flags_to_drop[[i]] == '#*#'){
-                d <- filter(d, (!!sym(names(summary_flags_to_drop)[i])) %in%
-                                summary_flags_clean[[i]])
-            } else {
-                d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
-                                summary_flags_to_drop[[i]])
+                if(summary_flags_to_drop[[i]] == '#*#'){
+                    d <- filter(d, (!!sym(names(summary_flags_to_drop)[i])) %in%
+                                    summary_flags_clean[[i]])
+                } else {
+                    d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
+                                    summary_flags_to_drop[[i]])
+                }
             }
-        }
 
-    } else {
+        } else {
 
-        for(i in 1:length(summary_flags_clean)){
-            d <- filter(d, (!!sym(names(summary_flags_clean)[i])) %in%
-                            c(summary_flags_clean[[i]],
-                              summary_flags_dirty[[i]]))
+            for(i in 1:length(summary_flags_clean)){
+                d <- filter(d, (!!sym(names(summary_flags_clean)[i])) %in%
+                                c(summary_flags_clean[[i]],
+                                  summary_flags_dirty[[i]]))
+            }
         }
     }
 
@@ -1198,17 +1208,19 @@ ms_cast_and_reflag <- function(d,
         d$ms_status <- 0
     }
 
-    if(sumclen){
-        for(i in 1:length(summary_flags_clean)){
-            si <- summary_flags_clean[i]
-            flg_bool <- ! d[[names(si)]] %in% si[[1]]
-            d$ms_status[flg_bool] <- 1
-        }
-    } else {
-        for(i in 1:length(summary_flags_dirty)){
-            si <- summary_flags_dirty[i]
-            flg_bool <- d[[names(si)]] %in% si[[1]]
-            d$ms_status[flg_bool] <- 1
+    if(! no_sumflags){
+        if(sumclen){
+            for(i in 1:length(summary_flags_clean)){
+                si <- summary_flags_clean[i]
+                flg_bool <- ! d[[names(si)]] %in% si[[1]]
+                d$ms_status[flg_bool] <- 1
+            }
+        } else {
+            for(i in 1:length(summary_flags_dirty)){
+                si <- summary_flags_dirty[i]
+                flg_bool <- d[[names(si)]] %in% si[[1]]
+                d$ms_status[flg_bool] <- 1
+            }
         }
     }
 
@@ -1961,6 +1973,73 @@ ms_retrieve <- function(network=domain, domain){
 #. handle_errors
 ms_munge <- function(network=domain, domain){
     source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
+    return()
+}
+
+#. handle_errors
+ms_delineate <- function(network=domain, domain){
+
+    site_locations <- sm(read_csv('data/general/site_data.csv')) %>%
+        filter(
+            as.logical(in_workflow),
+            network == !!network,
+            domain == !!domain,
+            ! is.na(latitude),
+            ! is.na(longitude),
+            site_type == 'stream_gauge') %>%
+        select(site_name, latitude, longitude, CRS, ws_area_ha)
+
+    if(any(is.na(site_locations$CRS))){
+        missing_crs <- site_locations$site_name[is.na(site_locations$CRS)]
+        stop(glue('Missing CRS for:\nnetwork: {n}\ndomain: {d}\n',
+                  'site(s): {ss}\n(data/general/site_data.csv)',
+                  n = network,
+                  d = domain,
+                  ss = paste(missing_crs,
+                             collapse = ', ')))
+    }
+
+    #locate or create the directory that contains watershed boundaries
+    munged_dirs <- list.dirs(glue('data/{n}/{d}/munged',
+                                  n = network,
+                                  d = domain),
+                             recursive = FALSE,
+                             full.names = FALSE)
+
+    ws_boundary_dir <- grep(pattern = '^ws_boundary.*',
+                            x = munged_dirs,
+                            value = TRUE)
+
+    if(! length(ws_boundary_dir)){
+        ws_boundary_dir <- 'ws_boundary__ms000'
+        dir.create('data/{n}/{d}/munged/{w}',
+                   n = network,
+                   d = domain,
+                   w = ws_boundary_dir)
+    }
+
+    #for each stream gauge site, check for existing wb file. if none, delineate
+    for(i in 1:nrow(site_locations)){
+
+        site <- site_locations$site_name[i]
+
+        site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+                         n = network,
+                         d = domain,
+                         w = ws_boundary_dir,
+                         s = site)
+
+        if(! dir.exists(site_dir) || ! length(dir(site_dir))){
+            delin <- delineate_watershed(lat = site_locations$latitude[i],
+                                         long = site_locations$longitude[i],
+                                         crs = site_locations$CRS[i])
+            #HERE
+        }
+
+        #WRITE OUTPUT FILES (GOT A FUNC FOR THIS ALREADY)
+        #IF WS_AREA_HA NOT YET CALCED, CALC IT
+    }
+
     return()
 }
 
