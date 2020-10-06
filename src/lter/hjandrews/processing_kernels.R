@@ -219,13 +219,12 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
     d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_col = list(name = 'DATE_TIME',
-                                                format = '%Y-%m-%d %H:%M:%S',
-                                                tz = 'Etc/GMT-8'),
+                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S').
+                            datetime_tz = 'Etc/GMT-8',
                             site_name_col = 'SITECODE',
                             data_cols =  c(INST_Q = 'discharge'),
                             data_col_pattern = '#V#',
-                            # sensor_vs_analytical = c(INST_Q = 's'),
+                            is_sensor = TRUE,
                             summary_flagcols = c('ESTCODE', 'EVENT_CODE')))
 
     d <- ue(ms_cast_and_reflag(d,
@@ -285,12 +284,12 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
     } else if(prodname_ms == 'precipitation__5482'){
 
         d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                                date_col = list(name = 'DATE',
-                                                format = '%Y-%m-%d',
-                                                tz = 'UTC'),
+                                datetime_cols = c(DATE = '%Y-%m-%d').
+                                datetime_tz = 'UTC',
                                 site_name_col = 'SITECODE',
                                 data_cols =  c(PRECIP_TOT_DAY = 'precip'),
                                 data_col_pattern = '#V#',
+                                is_sensor = FALSE,
                                 summary_flagcols = c('PRECIP_TOT_FLAG',
                                                      'EVENT_CODE')))
 
@@ -338,9 +337,8 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
     d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_col = list(name = 'DATE_TIME',
-                                                format = '%Y-%m-%d %H:%M:%S',
-                                                tz = 'Etc/GMT-8'),
+                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                            datetime_tz = 'Etc/GMT-8',
                             site_name_col = 'SITECODE',
                             data_cols =  c(PH='pH', COND='spCond', ALK='alk',
                                 SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
@@ -349,6 +347,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
                                 `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
                                 'UTKN', 'TKN', 'K', 'DOC'),
                             data_col_pattern = '#V#',
+                            is_sensor = FALSE,
                             alt_datacol_pattern = '#V#_OUTPUT',
                             var_flagcol_pattern = '#V#CODE',
                             summary_flagcols = c('TYPE')))
@@ -392,9 +391,8 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                     c = component)
 
     d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_col = list(name = 'DATE_TIME',
-                                                format = '%Y-%m-%d %H:%M:%S',
-                                                tz = 'Etc/GMT-8'),
+                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                            datetime_tz = 'Etc/GMT-8',
                             site_name_col = 'SITECODE',
                             data_cols =  c(PH='pH', COND='spCond', ALK='alk',
                                            SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
@@ -404,6 +402,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                                            'UTKN', 'TKN', 'K', 'DOC'),
                                            # PRECIP_CM='precip_ns'),
                             data_col_pattern = '#V#',
+                            is_sensor = FALSE,
                             alt_datacol_pattern = '#V#_INPUT',
                             var_flagcol_pattern = '#V#CODE',
                             summary_flagcols = c('TYPE')))
