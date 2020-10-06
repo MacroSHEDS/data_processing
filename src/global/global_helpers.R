@@ -430,8 +430,6 @@ ms_read_raw_csv <- function(filepath,
     #   contain components of a datetime. values are format strings (e.g.
     #   '%Y-%m-%d', '%H') corresponding to the datetime components in those
     #   columns.
-    #   and the time zone (which must be among those provided by OlsonNames()).
-    #   Time format is handled internally and need not be specified.
     #datetime_tz: string specifying time zone. this specification must be
     #   among those provided by OlsonNames()
     #datetime_optional_chars: see "optional" argument to dt_format_to_regex
@@ -1098,12 +1096,13 @@ ms_cast_and_reflag <- function(d,
         if(sumdrop){
             for(i in 1:length(summary_flags_to_drop)){
 
-                if(summary_flags_to_drop[[i]] == '#*#'){
-                    d <- filter(d, (!!sym(names(summary_flags_to_drop)[i])) %in%
+                smtd <- summary_flags_to_drop[i]
+
+                if(length(smtd[[1]]) == 1 && smtd[[1]] == '#*#'){
+                    d <- filter(d, (!!sym(names(smtd))) %in%
                                     summary_flags_clean[[i]])
                 } else {
-                    d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
-                                    summary_flags_to_drop[[i]])
+                    d <- filter(d, ! (!!sym(names(smtd))) %in% smtd)
                 }
             }
 

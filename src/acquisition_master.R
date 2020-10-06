@@ -13,6 +13,8 @@ suppressPackageStartupMessages({
     # library(mapview)
     # library(elevatr)
     # library(rgee)
+    # remotes::install_github("giswqs/whiteboxR")
+    # library(whitebox)
 
     #everything else
     library(httr)
@@ -82,11 +84,13 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network=network, domain=domain)
 
     # prodname_ms="stream_chemistry__208"
+    # prodname_ms="stream_chemistry__4021"
     # component="stream chemistry"
     # site_name='sitename_NA'
 
     ms_retrieve(network=network, domain=domain)
     ms_munge(network=network, domain=domain)
+    ms_delineate(network=network, domain=domain)
     ms_derive(network=network, domain=domain)
     ms_general(network=network, domain=domain)
 
