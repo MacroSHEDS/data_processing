@@ -402,14 +402,17 @@ extract_var_prefix <- function(x){
 
 #. handle_errors
 ms_read_raw_csv <- function(filepath,
+                            preprocessed_tibble,
                             datetime_cols,
                             datetime_tz,
                             datetime_optional_chars = ':',
                             site_name_col,
+                            alt_site_name,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
                             is_sensor,
+                            set_to_NA,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
@@ -426,6 +429,10 @@ ms_read_raw_csv <- function(filepath,
     #   the one with the fewest NA values is kept automatically
 
     #filepath: string
+    #preprocessed_tibble: if data requires notification before it can be processed
+    #   such as when time/dates are stored in odd ways, this can be a dataframe 
+    #   with all columns as characters. Either filepath or preprocessed_tibble
+    #   must be supplied but not both. 
     #datetime_cols: a named character vector. names are column names that
     #   contain components of a datetime. values are format strings (e.g.
     #   '%Y-%m-%d', '%H') corresponding to the datetime components in those
@@ -436,6 +443,9 @@ ms_read_raw_csv <- function(filepath,
     #   among those provided by OlsonNames()
     #datetime_optional_chars: see "optional" argument to dt_format_to_regex
     #site_name_col: name of column containing site name information
+    #alt_site_name: optional list where names are the desired site name and a
+    #   vector of possible names this site may be also called. Used when sites are
+    #   misnamed or need to be changed due to inconsistencies in dataset.
     #data_cols: vector of names of columns containing data. If elements of this
     #   vector are named, names are taken to be the column names as they exist
     #   in the file, and values are used to replace those names. Data columns that
@@ -459,6 +469,7 @@ ms_read_raw_csv <- function(filepath,
     #   measured with a sensor (which may be susceptible to drift and/or fouling),
     #   or FALSE, meaning the measurement was not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
+    #set_to_NA: For values such as 9999 that are proxies for NA values.
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -484,6 +495,14 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
     #checks
+    filepath_supplied <- ! missing(filepath) && ! is.null(filepath)
+    tibble_supplied <- ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
+    if(filepath_supplied && tibble_supplied){
+        stop(glue('Only one of filepath and preprocessed_tibble can be supplied. ',
+                  'preprocessed_tibble is for rare circumstances only.'))
+    }
+    
+    
     if(! datetime_tz %in% OlsonNames()){
         stop('datetime_tz must be included in OlsonNames()')
     }
@@ -514,6 +533,14 @@ ms_read_raw_csv <- function(filepath,
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
+    }
+    
+    if(missing(set_to_NA)) {
+        set_to_NA <- NULL
+    }
+    
+    if(missing(alt_site_name)) {
+        alt_site_name <- NULL
     }
 
     #fill in missing names in data_cols (for columns that are already
@@ -614,15 +641,38 @@ ms_read_raw_csv <- function(filepath,
     classes_all <- c(class_dt, class_sn, classes_d1, classes_d2, classes_f1,
                      classes_f2, classes_f3)
     classes_all <- classes_all[! is.na(names(classes_all))]
+    
+    if(filepath_supplied) {
 
-    # read data
     d <- read.csv(filepath,
                   stringsAsFactors = FALSE,
-                  colClasses = classes_all) %>%
+                  colClasses = "character") %>%
         as_tibble() %>%
         select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
-    if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric'
+    if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric' 
+    
+    } else {
+        d <- preprocessed_tibble %>%
+            select(one_of(names(colnames_all)))
+    }
+    
+    # Remove any variable flags created by pattern but do not exist in data 
+    # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
+    # classes_all <- classes_all[names(classes_all) %in% names(d)]
 
+    # Set values to NA if used as a flag or missing data indication 
+    # Not sure why %in% does not work, seem to only operate on one row 
+    if(! is.null(set_to_NA)) {
+    for(i in 1:length(set_to_NA)) {
+        d[d == set_to_NA[i]] <- NA
+    }
+    }
+    
+    #Set correct class to each column 
+    # suppressWarnings because it warns that NA are created by changing the class 
+    # of a column, this is what is wanted when there are character is a numeric 
+    d[] <- suppressWarnings(Map(`class<-`, d, classes_all))
+        
     #rename cols to canonical names
     colnames_d <- colnames(d)
 
@@ -638,7 +688,7 @@ ms_read_raw_csv <- function(filepath,
             colnames_d[i] <- colnames_new[canonical_name_ind]
         }
     }
-
+    
     colnames(d) <- colnames_d
 
     #resolve datetime structure into POSIXct
@@ -695,6 +745,17 @@ ms_read_raw_csv <- function(filepath,
         data_col_order <- match(names(is_sensor),
                                 names(data_cols))
         is_sensor <- is_sensor[data_col_order]
+    }
+    
+    #fix sites names if multiple names refer to the same site 
+    if(!is.null(alt_site_name)) {
+        
+        for(z in 1:length(alt_site_name)) {
+            
+            d <- d %>%
+                mutate(site_name = ifelse(site_name %in% !!alt_site_name[[z]], 
+                                          !!names(alt_site_name)[z], site_name))
+        }
     }
 
     #prepend two-letter code to each variable representing sample regimen and
@@ -2212,9 +2273,11 @@ convert_unit <- function(x, input_unit, output_unit){
                                     as.numeric(filter(units, prefix == new_bottom[1])[,2]))
     } else{new_bottom_conver <- 1}
 
-    new_val <- x*old_top_conver*new_top_conver
-
-    new_val <- new_val/(old_bottom_conver*new_bottom_conver)
+    new_val <- x*old_top_conver
+    new_val <- new_val/new_top_conver
+    
+    new_val <- new_val/old_bottom_conver
+    new_val <- new_val*new_bottom_conver
 
     return(new_val)
 }
