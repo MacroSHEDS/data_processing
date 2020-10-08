@@ -402,14 +402,17 @@ extract_var_prefix <- function(x){
 
 #. handle_errors
 ms_read_raw_csv <- function(filepath,
+                            preprocessed_tibble,
                             datetime_cols,
                             datetime_tz,
                             datetime_optional_chars = ':',
                             site_name_col,
+                            alt_site_name,
                             data_cols,
                             data_col_pattern,
                             alt_datacol_pattern,
                             is_sensor,
+                            set_to_NA,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols){
@@ -426,6 +429,12 @@ ms_read_raw_csv <- function(filepath,
     #   the one with the fewest NA values is kept automatically
 
     #filepath: string
+    #preprocessed_tibble: a tibble with all character columns. Supply this
+    #   argument if a dataset requires modification before it can be processed
+    #   by ms_read_raw_csv. This may be necessary if, e.g.
+    #   time is stored in a format that can't be parsed by standard datetime
+    #   format strings. Either filepath or preprocessed_tibble
+    #   must be supplied, but not both.
     #datetime_cols: a named character vector. names are column names that
     #   contain components of a datetime. values are format strings (e.g.
     #   '%Y-%m-%d', '%H') corresponding to the datetime components in those
@@ -434,6 +443,10 @@ ms_read_raw_csv <- function(filepath,
     #   among those provided by OlsonNames()
     #datetime_optional_chars: see "optional" argument to dt_format_to_regex
     #site_name_col: name of column containing site name information
+    #alt_site_name: optional list. Names of list elements are desired site_names
+    #   within MacroSheds. List elements are character vectors of alternative
+    #   names that might be encountered. Used when sites are misnamed or need
+    #   to be changed due to inconsistencies within and across datasets.
     #data_cols: vector of names of columns containing data. If elements of this
     #   vector are named, names are taken to be the column names as they exist
     #   in the file, and values are used to replace those names. Data columns that
@@ -457,6 +470,7 @@ ms_read_raw_csv <- function(filepath,
     #   measured with a sensor (which may be susceptible to drift and/or fouling),
     #   or FALSE, meaning the measurement was not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
+    #set_to_NA: For values such as 9999 that are proxies for NA values.
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -482,6 +496,14 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
     #checks
+    filepath_supplied <- ! missing(filepath) && ! is.null(filepath)
+    tibble_supplied <- ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
+    if(filepath_supplied && tibble_supplied){
+        stop(glue('Only one of filepath and preprocessed_tibble can be supplied. ',
+                  'preprocessed_tibble is for rare circumstances only.'))
+    }
+
+
     if(! datetime_tz %in% OlsonNames()){
         stop('datetime_tz must be included in OlsonNames()')
     }
@@ -512,6 +534,14 @@ ms_read_raw_csv <- function(filepath,
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
+    }
+
+    if(missing(set_to_NA)) {
+        set_to_NA <- NULL
+    }
+
+    if(missing(alt_site_name)) {
+        alt_site_name <- NULL
     }
 
     #fill in missing names in data_cols (for columns that are already
@@ -613,13 +643,35 @@ ms_read_raw_csv <- function(filepath,
                      classes_f2, classes_f3)
     classes_all <- classes_all[! is.na(names(classes_all))]
 
-    # read data
-    d <- read.csv(filepath,
-                  stringsAsFactors = FALSE,
-                  colClasses = classes_all) %>%
+    if(filepath_supplied){
+        d <- read.csv(filepath,
+                      stringsAsFactors = FALSE,
+                      colClasses = "character")
+    } else {
+        d <- preprocessed_tibble
+    }
+
+    d <- d %>%
         as_tibble() %>%
         select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
-    if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric'
+    if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
+
+    # Remove any variable flags created by pattern but do not exist in data
+    # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
+    # classes_all <- classes_all[names(classes_all) %in% names(d)]
+
+    # Set values to NA if used as a flag or missing data indication
+    # Not sure why %in% does not work, seem to only operate on one row
+    if(! is.null(set_to_NA)){
+        for(i in 1:length(set_to_NA)){
+            d[d == set_to_NA[i]] <- NA
+        }
+    }
+
+    #Set correct class to each column
+    # suppressWarnings because it warns that NA are created by changing the class
+    # of a column, this is what is wanted when there are character is a numeric
+    d[] <- sw(Map(`class<-`, d, classes_all))
 
     #rename cols to canonical names
     colnames_d <- colnames(d)
@@ -693,6 +745,17 @@ ms_read_raw_csv <- function(filepath,
         data_col_order <- match(names(is_sensor),
                                 names(data_cols))
         is_sensor <- is_sensor[data_col_order]
+    }
+
+    #fix sites names if multiple names refer to the same site
+    if(!is.null(alt_site_name)) {
+
+        for(z in 1:length(alt_site_name)) {
+
+            d <- d %>%
+                mutate(site_name = ifelse(site_name %in% !!alt_site_name[[z]],
+                                          !!names(alt_site_name)[z], site_name))
+        }
     }
 
     #prepend two-letter code to each variable representing sample regimen and
@@ -1200,9 +1263,9 @@ ms_conversions <- function(d,
     #   Omit variables that don't need to be converted.
 
     #checks
-    cm <- ! missing(convert_molecules) && ! is.na(convert_molecules)
-    cuF <- ! missing(convert_units_from) && ! is.na(convert_units_from)
-    cuT <- ! missing(convert_units_to) && ! is.na(convert_units_to)
+    cm <- ! missing(convert_molecules)
+    cuF <- ! missing(convert_units_from) && ! is.null(convert_units_from)
+    cuT <- ! missing(convert_units_to) && ! is.null(convert_units_to)
 
     if(sum(cuF, cuT) == 1){
         stop('convert_units_from and convert_units_to must be supplied together')
@@ -1215,6 +1278,8 @@ ms_conversions <- function(d,
     if(length(cu_shared_names) != length(convert_units_to)){
         stop('names of convert_units_from and convert_units_to must match')
     }
+
+    vars <- drop_var_prefix(d$var)
 
     #handle molecular conversions, like NO3 -> NO3_N
     if(cm){
@@ -1235,7 +1300,6 @@ ms_conversions <- function(d,
                       paste(miss, collapse = ', ')))
         }
 
-        vars <- drop_var_prefix(d$var)
         for(m in convert_molecules){
 
             d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
@@ -2211,9 +2275,11 @@ convert_unit <- function(x, input_unit, output_unit){
                                     as.numeric(filter(units, prefix == new_bottom[1])[,2]))
     } else{new_bottom_conver <- 1}
 
-    new_val <- x*old_top_conver*new_top_conver
+    new_val <- x*old_top_conver
+    new_val <- new_val/new_top_conver
 
-    new_val <- new_val/(old_bottom_conver*new_bottom_conver)
+    new_val <- new_val/old_bottom_conver
+    new_val <- new_val*new_bottom_conver
 
     return(new_val)
 }
