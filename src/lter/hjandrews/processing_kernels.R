@@ -219,7 +219,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
     d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S').
+                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                             datetime_tz = 'Etc/GMT-8',
                             site_name_col = 'SITECODE',
                             data_cols =  c(INST_Q = 'discharge'),
@@ -284,7 +284,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
     } else if(prodname_ms == 'precipitation__5482'){
 
         d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                                datetime_cols = c(DATE = '%Y-%m-%d').
+                                datetime_cols = c(DATE = '%Y-%m-%d'),
                                 datetime_tz = 'UTC',
                                 site_name_col = 'SITECODE',
                                 data_cols =  c(PRECIP_TOT_DAY = 'precip'),
