@@ -1979,7 +1979,7 @@ ms_munge <- function(network=domain, domain){
 }
 
 #. handle_errors
-ms_delineate <- function(network=domain, domain){
+ms_delineate <- function(network = domain, domain){
 
     site_locations <- sm(read_csv('data/general/site_data.csv')) %>%
         filter(
@@ -2507,7 +2507,22 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
 }
 
 #still in progress
-delineate_watershed <- function(lat, long) {
+delineate_watershed_nhd <- function(lat, long) {
+
+    #this function delineates a watershed from a point first using NHD tools.
+    #if that fails, it falls back on a more general whitebox method, which is
+    #implemented in delineate_watershed. the NHD method, if implemented, should
+    #correct for reach proportional distance of each site location. see
+    # https://github.com/vlahm/watershed_tools/blob/master/2_batch_summary_nhd.R
+    #also at that link, there's a function for retrieving COMID by lat/long, which
+    #could replace discover_nhdplus_id below (which doesn't always seem to work?)
+
+    #there's also this streamstats approach (fully packaged),
+    #   but that's incomplete even for CONUS
+    # x = streamstats::delineateWatershed(xlocation = long,
+    #                                     ylocation = lat,
+    #                                     crs = crs)
+    # streamstats::leafletWatershed(x)
 
     site <- tibble(x = lat,
                    y = long) %>%
@@ -5046,4 +5061,44 @@ get_relative_uncert <- function(x){
 
     return(ru)
 
+}
+
+#. handle_errors
+raster_intersection_summary <- function(wb, dem){
+
+    #wb is a delineated watershed boundary as a rasterLayer
+    #dem is a DEM rasterLayer
+
+    summary_out <- list()
+
+    #convert wb to sf object
+    wb <- wb %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    #get edge of DEM as sf object
+    dem_edge <- raster::boundaries(dem) %>%
+        raster::reclassify(matrix(c(0, NA),
+                                  ncol = 2)) %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    #tally raster cells
+    summary_out$n_wb_cells <- length(wb$geometry)
+    summary_out$n_dem_cells <- length(dem_edge$geometry)
+
+    #tally intersections; calc percent of wb cells that overlap
+    intersections <- sf::st_intersects(wb, dem_edge) %>%
+        as.matrix() %>%
+        apply(MARGIN = 2,
+              FUN = sum) %>%
+        table()
+
+    true_intersections <- sum(intersections[names(intersections) > 0])
+
+    summary_out$n_intersections <- true_intersections
+    summary_out$pct_wb_cells_intersect <- true_intersections /
+        summary_out$n_wb_cells * 100
+
+    return(summary_out)
 }
