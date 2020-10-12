@@ -43,7 +43,7 @@ try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
 try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
 
 #connect rgee to earth engine and python
-try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
+#try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
 
@@ -67,7 +67,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=3
+#dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 # for(dmnrow in 2){
 
@@ -99,4 +99,3 @@ if(length(email_err_msgs)){
 }
 
 loginfo('Run complete', logger='ms.module')
-
