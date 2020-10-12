@@ -116,9 +116,42 @@ konza,Konza,lter,LTER,NA,N02B,?,rain_gauge,39.0877,-96.5954,NA,1,Rain gauge name
 konza,Konza,lter,LTER,NA,R01A,?,rain_gauge,39.0692,-96.6107,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,004B,?,rain_gauge,39.0776,-96.5954,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,N4DU,?,rain_gauge,39.0778,-96.5898,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,002c,?,rain_gauge,39.0678,-96.5792,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
+konza,Konza,lter,LTER,NA,002C,?,rain_gauge,39.0678,-96.5792,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,020B,?,rain_gauge,39.0756,-96.5758,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,K01B,?,rain_gauge,39.0862,-96.5631,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,N01B,?,rain_gauge,39.0849,-96.571,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,NA,N4DF,?,rain_gauge,39.0876,-96.5843,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
 konza,Konza,lter,LTER,Kings Creek,HIKX,Hiking Trail,stream_sampling_point,39.107,-96.6068,NA,1,"Not included in stream gauge location product, but lat/long listed in stream_chem metadata"
+baltimore,Baltimore,lter,LTER,NA,WXCMNC,Carrie Murray Nature Center,rain_gauge,39.30724722,-76.69507222,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXCPGC,Carroll Park Golf Course,rain_gauge,39.27359167,-76.64858611,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXDRNC,Dead Run Near Cantonsville,rain_gauge,39.29588611,-76.74402778,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXGFGL,Glyndon Elementary School,rain_gauge,39.46822222,-76.8105,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXGFND,Gwynns Falls Near Delight,rain_gauge,39.44389167,-76.78266944,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXMCDO,McDonogh School,rain_gauge,39.39633611,-76.77140833,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXORDG,Oregon Ridge Park,rain_gauge,39.49656944,-76.68900556,NA,1,NA
+baltimore,Baltimore,lter,LTER,NA,WXUMBC,UMBC Campus,rain_gauge,39.2543,-76.70233889,NA,1,NA
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GFCP,Gwynns Falls at Carroll Park,stream_gauge,39.2715,-76.649,NA,1,Collocated with USGS gauge 01589352
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GFGB,Gwynns Falls at Gwynnbrook Avenue,stream_gauge,39.443,-76.783,NA,1,Collocated with USGS gauge 01589197
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GFGL,Gwynns Falls at Glyndon,stream_gauge,39.4718,-76.817,NA,1,Collocated with USGS gauge 01589180
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GFVN,Gwynns Falls at Villa Nova,stream_gauge,39.3458,-76.733,NA,1,Collocated with USGS gauge 01589300
+baltimore,Baltimore,lter,LTER,Pond Branch,POBR,Pond Branch forested reference site,stream_gauge,39.4803,-76.688,NA,1,Collocated with USGS gauge 01583570
+baltimore,Baltimore,lter,LTER,Dead Run,DRKR,Dead Run at Krome Avenue,stream_gauge,39.3112,-76.717,NA,1,Collocated with USGS gauge 01589330
+baltimore,Baltimore,lter,LTER,Baisman Run,BARN,Baisman Run at Ivy Hill Road,stream_gauge,39.4794,-76.678,NA,1,Collocated with USGS gauge 01583580
+baltimore,Baltimore,lter,LTER,NA,RGHT,Rognel Heights,stream_gauge,39.2547,-76.69,NA,1,"Collocated with USGS gauge 01589340. 
+                  This may only be a stom drain."
+baltimore,Baltimore,lter,LTER,NA,MCDN,McDonogh agricultural site,stream_gauge,39.4004,-76.77,NA,1,Collocated with USGS gauge 01589238.
+baltimore,Baltimore,lter,LTER,Gwynns Run,GRGF,Gwynns Run at Gwynns Run,stream_sampling_point,NA,NA,NA,0,"In baltimore meta data but cant find coordinates, maybe collocated with USGS gauge 0158935180"
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GFuGR,Gwynns Falls above Gwynns Run,stream_sampling_point,NA,NA,NA,0,In baltimore meta data but cant find coordinates
+baltimore,Baltimore,lter,LTER,Maidens Choice,MAWI,Maidens Choice at Wilkens Avenue,stream_gauge,39.2755,-76.666,NA,1,"Was collocated with USGS gauge 01589351, but sampling and gauging only overlap for a short time"
+baltimore,Baltimore,lter,LTER,Gwynns Run,GRuTW,Gwynns Run above trash weir,stream_sampling_point,NA,NA,NA,0,In baltimore meta data but cant find coordinates
+baltimore,Baltimore,lter,LTER,NA,CBLM,NA,stream_sampling_point,NA,NA,NA,0,In baltimore meta data but cant find coordinates
+baltimore,Baltimore,lter,LTER,Red Run,RR1,"Red Run at Painters Mill Bridge Road, Suburban",stream_sampling_point,39.404756,-76.779566,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Red Run,RR2,"Red Run at Painters Mill Bridge Road, Suburban",stream_sampling_point,39.4113889,-76.8130556,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Scotts Level Branch,SL1,"Scotts Level Branch at Gwynns Falls, Suburban",stream_sampling_point,39.360495,-76.745558,NA,1,Collocated with USGS gauge 01589290 (possibly)
+baltimore,Baltimore,lter,LTER,Scotts Level Branch,SL2,"Scotts Level Branch at McDonogh Road,Suburban",stream_sampling_point,39.373866,-76.791005,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Horsehead Branch,HH,"Horsehead Branch at McDonogh Road, Suburban",stream_sampling_point,39.389581,-76.779703,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Holly Branch,HLB,"Holly Branch at Gwynnbrook Avenue, Suburban",stream_sampling_point,39.1027778,-76.791111,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Gwynns Falls,GF5,"Gwynns Falls at McDonogh Road, Suburban",stream_sampling_point,39.39121,-76.765326,NA,1,Cant find collocated USGS gauge
+baltimore,Baltimore,lter,LTER,Jennifer Branch,JBHH,Jennifer Branch at Hartford Hills,stream_sampling_point,39.3993,-76.52,NA,1,NA
+baltimore,Baltimore,lter,LTER,Jennifer Branch,JBNW,Jennifer Branch at Northwind,stream_sampling_point,NA,NA,NA,1,Cant find location
+baltimore,Baltimore,lter,LTER,Jennifer Branch,JBON,Jennifer Branch at Ontario,stream_sampling_point,NA,NA,NA,1,Cant find location
