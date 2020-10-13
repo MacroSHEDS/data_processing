@@ -96,7 +96,7 @@ ms_setwd <- function(){
 ms_instance <- ms_setwd()
 
 #connect rgee to earth engine and python
-try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
+#try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
 conf = jsonlite::fromJSON('config.json')
 
@@ -120,9 +120,8 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+#dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
-# for(dmnrow in 2){
 
     network = network_domain$network[dmnrow]
     domain = network_domain$domain[dmnrow]
@@ -160,4 +159,3 @@ if(length(email_err_msgs)){
 }
 
 loginfo('Run complete', logger='ms.module')
-
