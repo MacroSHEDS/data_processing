@@ -3,7 +3,7 @@ loginfo('Beginning retrieve', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='retrieve', get_statuses='ready')
 
-# i=5
+# i=8
 for(i in 1:nrow(prod_info)){
         
         prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -99,4 +99,3 @@ for(i in 1:nrow(prod_info)){
 
 loginfo('Retrieval complete for all sites and products',
         logger=logger_module)
-
