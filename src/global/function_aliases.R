@@ -3,6 +3,7 @@
 #this will make packaging easier and more professional
 
 read_csv = readr::read_csv
+write_csv = readr::write_csv
 read_feather = feather::read_feather
 write_feather = feather::write_feather
 glue = glue::glue
