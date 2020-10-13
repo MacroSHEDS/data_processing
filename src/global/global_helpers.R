@@ -2193,16 +2193,17 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
 
 #. handle_errors
 write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
-                                 snap_method, snap_distance){
+                                 snap_method, snap_distance, dem_resolution){
 
     new_entry <- tibble(network = network,
                         domain = domain,
                         site_name = site_name,
                         buffer_radius_m = buffer_radius,
                         snap_method = snap_method,
-                        snap_distance_m = snap_distance)
+                        snap_distance_m = snap_distance,
+                        dem_resolution = dem_resolution)
 
-    ds <- tryCatch(read_csv('data/general/watershed_delineation_specs.csv'),
+    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
                    error = function(e) tibble())
 
     ds <- bind_rows(ds, new_entry)
@@ -2222,10 +2223,16 @@ read_wb_delin_specs <- function(network, domain, site_name){
                                               site_name = 'a',
                                               buffer_radius_m = 1,
                                               snap_method = 'a',
-                                              snap_distance_m = 1)
+                                              snap_distance_m = 1,
+                                              dem_resolution = 1)
 
                        return(empty_tibble[-1, ])
                    })
+
+    ds <- filter(ds,
+                 network == !!network,
+                 domain == !!domain,
+                 site_name == !!site_name)
 
     return(ds)
 }
