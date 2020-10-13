@@ -18,16 +18,16 @@
 "hjandrews","H. J. Andrews","lter","LTER","Lookout Creek","GSLOOK","?","stream_gauge",44.2101255022,-122.257145776,4326,6229.80738777065,1,NA
 "hjandrews","H. J. Andrews","lter","LTER","Stream 1","GSWS01","?","stream_gauge",44.2073394042,-122.258027394,4326,101.025016707045,1,NA
 "hjandrews","H. J. Andrews","lter","LTER","Stream 2","GSWS02","?","stream_gauge",44.2120146041,-122.244875675,4326,63.633839788666,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Stream 3","GSWS03","?","stream_gauge",44.2194395724,-122.24300003,4326,101,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Stream 6","GSWS06","?","stream_gauge",44.2615081253,-122.180706523,4326,13,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Stream 7","GSWS07","?","stream_gauge",44.2646368258,-122.175264862,4326,15,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Stream 8","GSWS08","?","stream_gauge",44.266294258,-122.170792538,4326,21,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Stream 9","GSWS09","?","stream_gauge",44.2011898244,-122.258801374,4326,8.4,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","stream 10","GSWS10","?","stream_gauge",44.2170569856,-122.261055512,4326,10,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMA","?","stream_gauge",44.217,-122.171,4326,556,1,"estimated ws area from Q and gage location by eyeballing"
-"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMC","?","stream_gauge",44.2194360697,-122.16744705,4326,580,1,NA
-"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMF","?","stream_gauge",44.212,-122.16,4326,35,1,"estimated ws area from Q and gage location by eyeballing"
-"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSMACK","?","stream_gauge",44.21944,-122.1674,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 3","GSWS03","?","stream_gauge",44.2194395724,-122.24300003,4326,99.2176965790093,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 6","GSWS06","?","stream_gauge",44.2615081253,-122.180706523,4326,11.7721652780831,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 7","GSWS07","?","stream_gauge",44.2646368258,-122.175264862,4326,17.5020613421041,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 8","GSWS08","?","stream_gauge",44.266294258,-122.170792538,4326,11.1693576468396,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 9","GSWS09","?","stream_gauge",44.2011898244,-122.258801374,4326,1.51798148310201,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","stream 10","GSWS10","?","stream_gauge",44.2170569856,-122.261055512,4326,12.6774734607502,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMA","?","stream_gauge",44.217,-122.171,4326,1.81938153727259,1,"estimated ws area from Q and gage location by eyeballing"
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMC","?","stream_gauge",44.2194360697,-122.16744705,4326,579.719595588988,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMF","?","stream_gauge",44.212,-122.16,4326,3.32856265012411,1,"estimated ws area from Q and gage location by eyeballing"
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSMACK","?","stream_gauge",44.21944,-122.1674,4326,579.719595702577,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"RD1507","1507 Road Storage RG","rain_gauge",44.205599,-122.166083,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"L523RG","Hi-15 Unit L523 Storage RG","rain_gauge",44.265333,-122.18207,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"BLUERD","Blue Ridge Standard RG","rain_gauge",44.234765,-122.230991,4326,NA,1,NA
@@ -37,7 +37,7 @@
 "hjandrews","H. J. Andrews","lter","LTER",NA,"FORKS_","Forks Standard RG","rain_gauge",44.22249,-122.240035,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"FRISEL","Frissell Ridge Storage RG","rain_gauge",44.227168,-122.10624,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"WS3GRD","WS#3 G Road Standard RG","rain_gauge",44.216648,-122.231448,4326,NA,1,NA
-"hjandrews","H. J. Andrews","lter","LTER",NA,"GSMACK","Mack Creek Gaging Station Standard RG","rain_gauge",44.21928,-122.167472,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"GSMACK","Mack Creek Gaging Station Standard RG","rain_gauge",44.21928,-122.167472,4326,579.719595702577,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"WS3JRD","WS#3 J Road Standard RG","rain_gauge",44.211035,-122.233762,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"MCRAEB","McRae Bridge Standard RG","rain_gauge",44.232959,-122.209223,4326,NA,1,NA
 "hjandrews","H. J. Andrews","lter","LTER",NA,"MIDWAY","Midway Standard RG","rain_gauge",44.251137,-122.185031,4326,NA,1,NA
