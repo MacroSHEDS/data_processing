@@ -1276,7 +1276,6 @@ ms_conversions <- function(d,
 
     #handle molecular conversions, like NO3 -> NO3_N
     if(cm){
-
         molecular_conversion_map <- list(
             NH4 = 'N',
             NO3 = 'N',
@@ -1284,7 +1283,6 @@ ms_conversions <- function(d,
             SiO2 = 'Si',
             SO4 = 'S',
             PO4 = 'P')
-
         if(! all(convert_molecules %in% names(molecular_conversion_map))){
             miss <- convert_molecules[! convert_molecules %in%
                                           names(molecular_conversion_map)]
@@ -1294,25 +1292,20 @@ ms_conversions <- function(d,
         }
 
         for(m in convert_molecules){
-
             d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
                                                  from = m,
                                                  to = unname(molecular_conversion_map[m]))
         }
     }
-
     #handle unit conversions
     if(cuF){
-
         for(i in 1:length(convert_units_from)){
-
             v = names(convert_units_from)[i]
             d$val[vars == v] <- convert_unit(x = d$val[vars == v],
                                              input_unit = convert_units_from[i],
                                              output_unit = convert_units_to[i])
         }
     }
-
     return(d)
 }
 
@@ -3024,9 +3017,13 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
         # site_file_uncert = glue('{pd}/{s}_uncert.feather',
         #                         pd = prod_dir,
         #                         s = site_name)
-
-        d$val_err <- errors(d$val)
-        d$val <- errors::drop_errors(d$val)
+        
+        # Added to allow funciton to be used in derive if munge has already 
+        # removed errors 
+        if(is.null(d$val_err)) {
+            d$val_err <- errors(d$val)
+            d$val <- errors::drop_errors(d$val)
+        }
         # d_uncert <- lapply(d,
         #                    function(x){
         #                        if(is.numeric(x) && any(errors(x) != 0)){
@@ -3171,6 +3168,25 @@ list_munged_files <- function(network, domain, prodname_ms){
     # }
 
     return(mfiles)
+}
+
+#. handle_errors
+list_derived_files <- function(network, domain, prodname_ms){
+    # omit_uncertainty_files = FALSE){
+    
+    dfiles <- glue('data/{n}/{d}/derived/{p}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms) %>%
+        list.files(full.names = TRUE)
+    
+    # if(omit_uncertainty_files){
+    #     mfiles <- mfiles[! grepl('_uncert.feather$',
+    #                              mfiles,
+    #                              perl = TRUE)]
+    # }
+    
+    return(dfiles)
 }
 
 #. handle_errors
@@ -3329,7 +3345,7 @@ delineate_watershed_nhd <- function(lat, long) {
 }
 
 #. handle_errors
-calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
+calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){#, dt_round_interv,
     #impute_limit = 30){
 
     #chemprod is the prodname_ms for stream or precip chemistry
@@ -3353,12 +3369,16 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
         filter(flux_convertible == 1) %>%
         pull(variable_code)
 
-    chem <- read_feather(glue('data/{n}/{d}/munged/{cp}/{s}.feather',
+    chem <- read_feather(glue('data/{n}/{d}/{l}/{cp}/{s}.feather',
                               n = network,
                               d = domain,
+                              l = level,
                               cp = chemprod,
-                              s = site_name)) %>%
-        select(one_of(flux_vars), 'datetime', 'ms_status', 'ms_interp')
+                              s = site_name)) 
+    
+    chem <- chem %>%
+        pivot_wider(names_from = 'var', values_from = 'val') %>%
+        select(contains(flux_vars), 'datetime', 'ms_status', 'ms_interp')
     #     mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
     #     group_by(datetime) %>%
     #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
@@ -3374,9 +3394,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){#, dt_round_interv,
     # fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
     #                                 by=dt_round_interv))
 
-    discharge <- read_feather(glue('data/{n}/{d}/munged/{qp}/{s}.feather',
+    discharge <- read_feather(glue('data/{n}/{d}/{l}/{qp}/{s}.feather',
                                    n = network,
                                    d = domain,
+                                   l = level,
                                    qp = qprod,
                                    s = site_name)) %>%
         select(-site_name) %>%
@@ -5787,4 +5808,15 @@ raster_intersection_summary <- function(wb, dem){
         summary_out$n_wb_cells * 100
 
     return(summary_out)
+
+#. handle_errors 
+remove_all_na_sites <- function(d) {
+    d_test <- d %>%
+        mutate(na = ifelse(!is.na(val), 1, 0)) %>%
+        group_by(site_name, var) %>%
+        summarise(non_na = sum(na))
+    
+    d <- left_join(d, d_test,  by = c("site_name", "var")) %>%
+        filter(non_na > 10) %>%
+        select(-non_na)
 }
