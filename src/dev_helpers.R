@@ -274,3 +274,175 @@ testtb <- tibble(site_name = c('a','a','b','b'),
                  pH__val = 1:4, pHCODE = c('y','y','y','n'),
                  alk__val = 1:4, alkCODE = c('n','y','y','y'),
                  TYPE = c('g','b','g','b'))
+
+delineate_watershed_test2 <- function(temp_dir = tmp,
+                                      site_location_file = point_f,
+                                      flow_accum_file = flow_f,
+                                      d8_pointer_file = d8_f,
+                                      snap_method,
+                                      snap_dist){
+
+    #this test func depends on environment variables that only exist at a
+    #   certain point within delineate_watershed_apriori. scan through till
+    #   you find the commented call to delineate_watershed_test2. it doesn't
+    #   require re-download of a DEM, so is faster than delineate_watershed_test1.
+
+    #temp_dir is created by tempdir() inside delineate_watershed_apriori
+    #   or delineate_watershed_from_specs. its variable name is always "tmp"
+    #site_location_file, flow_accum_file, and d8_pointer_file are
+    #   created in delineate_watershed_apriori and
+    #   delineate_watershed_from_specs.
+    #snap_method is one of "jenson" or "standard"
+    #snap_dist is the snapping distance in meters
+
+    #returns an object that can be viewed with mapview::mapview()
+
+    require(whitebox)
+
+    test_file_base <- glue('{tem}/test_{typ}_dist{dst}',
+                           tem = temp_dir,
+                           typ = snap_method,
+                           dst = snap_dist)
+
+    test_snap_f <- paste0(test_file_base,
+                          '.shp')
+    test_wb_f <- paste0(test_file_base,
+                        '.tif')
+
+    if(snap_method == 'standard'){
+        args <- list('pour_pts' = site_location_file,
+                     'flow_accum' = flow_accum_file,
+                     'output' = test_snap_f,
+                     'snap_dist' = snap_dist)
+        desired_func <- 'wbt_snap_pour_points'
+    } else if(snap_method == 'jenson'){
+        args <- list('pour_pts' = site_location_file,
+                     'streams' = flow_accum_file,
+                     'output' = test_snap_f,
+                     'snap_dist' = snap_dist)
+        desired_func <- 'wbt_jenson_snap_pour_points'
+    } else {
+        stop('snap_method must be "standard" or "jenson"')
+    }
+
+    do.call(desired_func, args)
+
+    whitebox::wbt_watershed(d8_pntr = d8_pointer_file,
+                            pour_pts = test_snap_f,
+                            output = test_wb_f)
+
+    test_wb_sf <- raster::raster(test_wb_f) %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    map_out <- mapview::mapview(test_wb_sf)
+
+    return(map_out)
+}
+
+
+delineate_watershed_test1 <- function(lat, long, crs,
+                                      buffer_radius, dem_resolution,
+                                      snap_method, snap_dist){
+
+    #lat: numeric representing latitude in decimal degrees
+    #   (negative indicates southern hemisphere)
+    #long: numeric representing longitude in decimal degrees
+    #   (negative indicates west of prime meridian)
+    #crs: numeric representing the coordinate reference system (e.g. WSG84)
+
+    #returns the location of the candidate watershed boundary file
+
+    require(whitebox)
+    require(mapview)
+
+    tmp <- tempdir()
+    inspection_dir <- glue(tmp, '/INSPECT_THESE')
+    dem_f <- glue(tmp, '/dem.tif')
+    point_f <- glue(tmp, '/point.shp')
+    d8_f <- glue(tmp, '/d8_pntr.tif')
+    flow_f <- glue(tmp, '/flow.tif')
+
+    dir.create(path = inspection_dir,
+               showWarnings = FALSE)
+
+    proj <- choose_projection(lat = lat,
+                              long = long)
+
+    site <- tibble(x = lat,
+                   y = long) %>%
+        sf::st_as_sf(coords = c("y", "x"),
+                     crs = crs) %>%
+        sf::st_transform(proj)
+
+    site_buf <- sf::st_buffer(x = site,
+                              dist = buffer_radius)
+    dem <- elevatr::get_elev_raster(locations = site_buf,
+                                    z = dem_resolution)
+
+    raster::writeRaster(x = dem,
+                        filename = dem_f,
+                        overwrite = TRUE)
+
+    sf::st_write(obj = site,
+                 dsn = point_f,
+                 delete_layer = TRUE,
+                 quiet = TRUE)
+
+    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                        output = dem_f)
+
+    whitebox::wbt_breach_depressions(dem = dem_f,
+                                     output = dem_f,
+                                     flat_increment = 0.01)
+
+    whitebox::wbt_d8_pointer(dem = dem_f,
+                             output = d8_f)
+
+    whitebox::wbt_d8_flow_accumulation(input = dem_f,
+                                       output = flow_f,
+                                       out_type = 'catchment area')
+
+    test_file_base <- glue('{tem}/test_{typ}_dist{dst}',
+                           tem = tmp,
+                           typ = snap_method,
+                           dst = snap_dist)
+
+    test_snap_f <- paste0(test_file_base,
+                          '.shp')
+    test_wb_f <- paste0(test_file_base,
+                        '.tif')
+
+    if(snap_method == 'standard'){
+        args <- list('pour_pts' = point_f,
+                     'flow_accum' = flow_f,
+                     'output' = test_snap_f,
+                     'snap_dist' = snap_dist)
+        desired_func <- 'wbt_snap_pour_points'
+    } else if(snap_method == 'jenson'){
+        args <- list('pour_pts' = point_f,
+                     'streams' = flow_f,
+                     'output' = test_snap_f,
+                     'snap_dist' = snap_dist)
+        desired_func <- 'wbt_jenson_snap_pour_points'
+    } else {
+        stop('snap_method must be "standard" or "jenson"')
+    }
+
+    do.call(desired_func, args)
+
+    whitebox::wbt_watershed(d8_pntr = d8_f,
+                            pour_pts = test_snap_f,
+                            output = test_wb_f)
+
+    test_wb_sf <- raster::raster(test_wb_f) %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    map_out <- mapview(test_wb_sf) + mapview(dem)
+
+    return(map_out)
+}
+# delineate_watershed_test1(lat, long, crs, buffer_radius = 100,
+#                           dem_resolution = 10, snap_method = 'standard',
+#                           snap_dist = 150)
