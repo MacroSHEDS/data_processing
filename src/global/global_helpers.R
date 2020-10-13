@@ -2052,6 +2052,185 @@ ms_derive <- function(network=domain, domain){
 }
 
 #. handle_errors
+move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
+
+    #shp_files is a character vector of filenames with .shp extension
+    #   (.shx, .prj, .dbf are handled internally and don't need to be listed)
+    #from_dir and to_dir are strings representing the source and destination
+    #   directories, respectively
+    #new_name_vec is an optional character vector of new names for each shape file.
+    #   these can end in ".shp", but don't need to
+
+    if(any(! grepl('\\.shp$', shp_files))){
+        stop('All components of shp_files must end in ".shp"')
+    }
+
+    if(length(shp_files) != length(new_name_vec)){
+        stop('new_name_vec must have the same length as shp_files')
+    }
+
+    for(i in 1:length(shp_files)){
+
+        shapefile_base <- strsplit(shp_files[i], '\\.shp')[[1]]
+
+        files_to_move <- list.files(path = from_dir,
+                                    pattern = shapefile_base)
+
+        extensions <- str_match(files_to_move,
+                                paste0(shapefile_base, '(\\.[a-z]{3})'))[, 2]
+
+        if(is.null(new_name_vec)){
+            new_name_base <- rep(shapefile_base, length(files_to_move))
+        } else {
+            new_name_base <- strsplit(new_name_vec[i], '\\.shp$')[[1]]
+            new_name_base <- rep(new_name_base, length(files_to_move))
+        }
+
+        mapply(function(x, nm, ext) file.rename(from = paste(from_dir,
+                                                             x,
+                                                             sep = '/'),
+                                                to = glue('{td}/{n}{ex}',
+                                                          td = to_dir,
+                                                          n = nm,
+                                                          ex = ext)),
+               x = files_to_move,
+               nm = new_name_base,
+               ext = extensions)
+    }
+
+    return()
+}
+
+#. handle_errors
+get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
+
+    #msg: character. a message that will be used to prompt the user
+    #possible_chars: character vector of acceptable single-character responses
+
+    if(subsequent_prompt){
+        cat(paste('Please choose one of:',
+                  paste(possible_chars,
+                        collapse = ', '),
+                  '\n> '))
+    } else {
+        cat(msg)
+    }
+
+    ch <- as.character(readLines(con = stdin(), 1))
+
+    if(length(ch) == 1 && ch %in% possible_chars){
+        return(ch)
+    } else {
+        get_response_1char(msg, possible_chars, subsequent_prompt = TRUE)
+    }
+}
+
+#. handle_errors
+ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
+
+    #reads watershed boundary shapefile from macrosheds directory and calculates
+    #   watershed area with sf::st_area
+
+    #update_site_file: logical. if true, calculated watershed area is written
+    #   to the ws_area_ha column in data/general/site_data.csv
+
+    #returns area in hectares
+
+    munge_dir <- glue('data/{n}/{d}/munged',
+                      n = network,
+                      d = domain)
+
+    munged_dirs <- list.dirs(munge_dir,
+                             recursive = FALSE,
+                             full.names = FALSE)
+
+    ws_boundary_dir <- grep(pattern = '^ws_boundary.*',
+                            x = munged_dirs,
+                            value = TRUE)
+
+    if(! length(ws_boundary_dir)){
+        stop(glue('No ws_boundary directory found in ', munge_dir))
+    }
+
+    site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+                     n = network,
+                     d = domain,
+                     w = ws_boundary_dir,
+                     s = site_name)
+
+    if(! dir.exists(site_dir) || ! length(dir(site_dir))){
+        stop(glue('{s} directory missing or absent (data/{n}/{d}/munged/{w})',
+                  s = site_name,
+                  n = network,
+                  d = domain,
+                  w = ws_boundary_dir))
+    }
+
+    wb <- sf::st_read(glue('data/{n}/{d}/munged/{w}/{s}/{s}.shp',
+                           n = network,
+                           d = domain,
+                           w = ws_boundary_dir,
+                           s = site_name),
+                    quiet = TRUE)
+
+    ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
+
+    if(update_site_file){
+
+        site_data <- sm(read_csv('data/general/site_data.csv'))
+
+        site_data$ws_area_ha[site_data$domain == domain &
+                                 site_data$network == network &
+                                 site_data$site_name == site_name] <- ws_area_ha
+
+        write.csv(site_data,
+                  file = 'data/general/site_data.csv',
+                  row.names = FALSE)
+    }
+
+    return(ws_area_ha)
+}
+
+#. handle_errors
+write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
+                                 snap_method, snap_distance){
+
+    new_entry <- tibble(network = network,
+                        domain = domain,
+                        site_name = site_name,
+                        buffer_radius_m = buffer_radius,
+                        snap_method = snap_method,
+                        snap_distance_m = snap_distance)
+
+    ds <- tryCatch(read_csv('data/general/watershed_delineation_specs.csv'),
+                   error = function(e) tibble())
+
+    ds <- bind_rows(ds, new_entry)
+
+    write_csv(ds, 'data/general/watershed_delineation_specs.csv')
+
+    return()
+}
+
+#. handle_errors
+read_wb_delin_specs <- function(network, domain, site_name){
+
+    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
+                   error = function(e){
+                       empty_tibble <- tibble(network = 'a',
+                                              domain = 'a',
+                                              site_name = 'a',
+                                              buffer_radius_m = 1,
+                                              snap_method = 'a',
+                                              snap_distance_m = 1)
+
+                       return(empty_tibble[-1, ])
+                   })
+
+    return(ds)
+}
+
+#. handle_errors
 serialize_list_to_dir <- function(l, dest){
 
     #l must be a named list
