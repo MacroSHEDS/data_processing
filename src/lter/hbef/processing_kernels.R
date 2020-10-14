@@ -113,26 +113,33 @@ process_0_94 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_1 <- function(network, domain, prodname_ms, site_name,
     component){
-    # site_name=site_name; component=in_comp
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-
-    # SAMPLE: Sensor
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
 
     d <- ue(ms_read_raw_csv(filepath = rawfile,
-                       datetime_col = list(name = 'DATETIME',
-                                           format = '%Y-%m-%d %H:%M:%S',
-                                           tz = 'US/Eastern'),
-                       site_name_col = 'WS',
-                       data_cols = c(Discharge_ls = 'discharge'),
-                       data_col_pattern = '#V#'))
+                            datetime_cols = c(DATETIME = '%Y-%m-%d %H:%M:%S'),
+                            datetime_tz = 'US/Eastern',
+                            site_name_col = 'WS',
+                            alt_site_name = list('w1' = c('1', 'W1'),
+                                                 'w2' = c('2', 'W2'),
+                                                 'w3' = c('3', 'W3'),
+                                                 'w4' = c('4', 'W4'),
+                                                 'w5' = c('5', 'W5'),
+                                                 'w6' = c('6', 'W6'),
+                                                 'w7' = c('7', 'W7'),
+                                                 'w8' = c('8', 'W8'),
+                                                 'w9' = c('9', 'W9')),
+                            data_cols = c(Discharge_ls = 'discharge'),
+                            data_col_pattern = '#V#',
+                            is_sensor = TRUE))
 
-    #Would use ms_cast_and_reflag but there is only one data column and no flags
-    d <- d %>%
-        rename(val = 3) %>%
-        mutate(var = 'discharge_a',
-               ms_status = 0)
+    d <- ue(ms_cast_and_reflag(d,
+                               varflag_col_pattern = NA))
 
     d <- ue(carry_uncertainty(d,
                               network = network,
@@ -153,25 +160,24 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 process_1_13 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
 
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
-
     d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            date_col = list(name = 'DATE',
-                                                format = '%Y-%m-%d',
-                                                tz = 'US/Eastern'),
+                            datetime_cols = c(DATE = '%Y-%m-%d'),
+                            datetime_tz = 'US/Eastern',
                             site_name_col = 'rainGage',
                             data_cols = c(Precip = 'precipitation'),
                             data_col_pattern = '#V#',
                             is_sensor = FALSE))
 
-    #Would use ms_cast_and_reflag but there is only one data column and no flags
-    d <- d %>%
-        rename(val = 3) %>%
-        mutate(var = strsplit(colnames(d)[3], '__\\|')[[1]][1],
-               ms_status = 0)
+    d <- ue(ms_cast_and_reflag(d,
+                               varflag_col_pattern = NA))
 
     d <- ue(carry_uncertainty(d,
                               network = network,
@@ -192,23 +198,20 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 process_1_208 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    #this product includes precip chem and stream chem, which have the same
-    #data structure. so for now, the component argument governs which one is
-    #processed herein. once we work out rain interpolation, we might have to
-    #add a conditional and some divergent processing here.
-
     if(component == 'Analytical Methods') return()
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-
-    #TODO: identify_sampling is writing sites names as 1 not w1
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
 
     d <- ue(ms_read_raw_csv(filepath = rawfile,
                             datetime_cols = c(date = '%Y-%m-%d',
                                               timeEST = '%H:%M'),
                             datetime_tz = 'US/Eastern',
-                            site_name_col = 'site', #eventually will work like datetime_cols
+                            site_name_col = 'site',
                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
                                           'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
                                           'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
@@ -243,58 +246,6 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
     d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
     return(d)
-
-    # ### OLD CODE
-    # d <- sw(read_csv(rawfile, col_types=readr::cols_only(
-    #         site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-    #         temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
-    #         Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
-    #         Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-    #         DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
-    #         `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
-    #         theoryCond='n', ionError='n', ionBalance='n'))) %>%
-    #     rename(site_name = site) %>%
-    #     rename_all(dplyr::recode, #essentially rename_if_exists
-    #                precipCatch='precipitation_ns',
-    #                flowGageHt='discharge_ns') %>%
-    #     mutate(
-    #         site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
-    #                               tolower(site_name), site_name),
-    #         timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
-    #         datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
-    #
-    # ue(identify_detection_limit_t(d,
-    #                               network = network,
-    #                               domain = domain))
-    #
-    # d <- d %>%
-    #     mutate(
-    #         ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
-    #         DIC = ue(convert_unit(DIC, 'uM', 'mM')),
-    #         NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
-    #         NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
-    #         PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
-    #     select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
-    #     filter_at(vars(-site_name, -datetime),
-    #               any_vars(! is.na(.))) %>%
-    #     group_by(datetime, site_name) %>%
-    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    #     ungroup() %>%
-    #     mutate(ms_status = as.numeric(ms_status)) %>%
-    #     select(-ms_status, everything())
-    #
-    # d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
-    #
-    # intv <- ifelse(grepl('precip', prodname_ms),
-    #                '1 day',
-    #                '1 hour')
-    # d <- ue(synchronize_timestep(ms_df = d,
-    #                              desired_interval = intv,
-    #                              impute_limit = 30))
-    #
-    # d <- ue(apply_detection_limit_t(d, network, domain))
-    #
-    # return(d)
 }
 
 #ws_boundary: STATUS=READY
@@ -437,7 +388,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){ #13
+process_2_ms001 <- function(network, domain, prodname_ms){
 
     ue(precip_idw(precip_prodname = 'precipitation__13',
                   wb_prodname = 'ws_boundary__94',
@@ -449,7 +400,7 @@ process_2_ms001 <- function(network, domain, prodname_ms){ #13
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){ #208
+process_2_ms002 <- function(network, domain, prodname_ms){
 
     ue(pchem_idw(pchem_prodname = 'precip_chemistry__208',
                  precip_prodname = 'precipitation__13',
