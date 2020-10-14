@@ -1,7 +1,7 @@
 prod_info = get_product_info(network=network,
     status_level='munge', get_statuses='ready')
 
-# i=1; j=1; k=1
+# i=6; j=1; k=1
 for(i in 1:nrow(prod_info)){
 # for(i in c(1, 3, 6)){
 

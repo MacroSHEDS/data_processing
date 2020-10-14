@@ -28,7 +28,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
     # site_name=sites[j]; tracker=held_data
 
-    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site_name)
+    retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_name)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -36,18 +36,14 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
 
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
+    #for(k in 1:15){
 
-        # sitemonth = retrieval_log[k, 'component']
-        # comp = read_feather(glue('data/{n}/{d}/raw/',
-        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site_name,
-        #     sm=sitemonth))
+        prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
-        prodcode = prodcode_from_prodname_ms(prodname_ms)
+        processing_func <- get(paste0('process_1_', prodcode))
+        in_comp <- retrieval_log[k, 'component']
 
-        processing_func = get(paste0('process_1_', prodcode))
-        in_comp = retrieval_log[k, 'component']
-
-        out_comp = sw(do.call(processing_func,
+        out_comp <- sw(do.call(processing_func,
                               args=list(network = network,
                                         domain = domain,
                                         prodname_ms = prodname_ms,
@@ -55,12 +51,123 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                                         component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out = bind_rows(out, out_comp)
+            out <- bind_rows(out, out_comp)
         }
 
     }
 
-    write_ms_file(d = out,
+    if(prodname_ms %in% c('stream_chemistry__DP1.20093')) {
+    # convert to wide to create sampling json and get sampling prefix (G,I,S,N)
+    out_detect <- out %>%
+        group_by(var) %>%
+        pivot_wider(names_from = var, names_glue = '{var}__|dat', values_from = val) 
+    
+    col_names <- str_split_fixed(colnames(out_detect), '__', n = Inf)[,1]
+    
+    is_sensor <- rep(FALSE,
+                     length(col_names))
+    names(is_sensor) <- unname(col_names)
+    
+    detected <- identify_sampling(df = out_detect,
+                      is_sensor =  is_sensor,
+                      domain = domain,
+                      network = network,
+                      prodname_ms = prodname_ms)
+    
+    # apply prefix to original table 
+    new_names <- str_split_fixed(grep('__|dat', colnames(detected), value = TRUE, 
+                                      fixed = TRUE), '__', n = Inf)[,1]
+    
+    old_list <- sapply(strsplit(new_names, "_"),"[", -1)
+    
+    old_names <- sapply(old_list, paste0,sep ="_", collapse= "")
+    
+    old_names <- substr(old_names, 1, nchar(old_names)-1)
+    
+    
+    for(i in 1:length(old_names)) {
+        out$var[out$var == old_names[i]] <- new_names[i]
+    } 
+    
+    d <- out
+    
+    }
+    
+    if(prodname_ms %in% c('stream_quality__DP1.20288')){
+        
+        col_names <- unique(str_split_fixed(colnames(out), '__', n = Inf)[,1])
+        
+        is_sensor <- rep(TRUE,
+                         length(col_names))
+        names(is_sensor) <- unname(col_names)
+        
+        d <- identify_sampling(df = out,
+                                      is_sensor =  is_sensor,
+                                      domain = domain,
+                                      network = network,
+                                      prodname_ms = prodname_ms)
+        
+        d <- ms_cast_and_reflag(d,
+                           variable_flags_clean = 0,
+                           variable_flags_dirty = 1)
+    }
+    
+    if(prodname_ms %in% c('stream_nitrate__DP1.20033')) {
+        
+        col_names <- unique(str_split_fixed(colnames(out), '__', n = Inf)[,1])
+        
+        is_sensor <- rep(TRUE,
+                         length(col_names))
+        names(is_sensor) <- unname(col_names)
+        
+        d <- identify_sampling(df = out,
+                               is_sensor =  is_sensor,
+                               domain = domain,
+                               network = network,
+                               prodname_ms = prodname_ms) 
+        
+        d <- d %>%
+            rename(val=3) %>%
+            mutate(var = 'IS_NO3_N')
+    }
+    
+    if(prodname_ms %in% c('stream_gases__DP1.20097')) {
+        
+        col_names <- unique(str_split_fixed(colnames(out), '__', n = Inf)[,1])
+        
+        is_sensor <- rep(FALSE,
+                         length(col_names))
+        names(is_sensor) <- unname(col_names)
+        
+        d <- identify_sampling(df = out,
+                               is_sensor =  is_sensor,
+                               domain = domain,
+                               network = network,
+                               prodname_ms = prodname_ms) 
+        
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                variable_flags_to_drop = NA,
+                                variable_flags_clean = NA,
+                                summary_flags_clean = list('error' = 0),
+                                summary_flags_dirty = list('error' = 1))
+    }
+    
+    # carry out final munge steps 
+    d <- remove_all_na_sites(d)
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+
+    write_ms_file(d = d,
         network = network,
         domain = domain,
         prodname_ms = prodname_ms,
