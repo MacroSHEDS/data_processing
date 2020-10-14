@@ -2,8 +2,8 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,n
 1,discharge,sensor,ready,ready,NA,stream_flux_inst__ms003,NA
 100,precip_gauge_locations,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
 94,ws_boundary,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-13,precipitation,grab,ready,ready,ready,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
-208,precip_chemistry,grab,ready,ready,ready,precip_chemistry__ms002||precip_flux_inst__ms004,NA
+13,precipitation,grab,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
+208,precip_chemistry,grab,ready,ready,NA,precip_chemistry__ms002||precip_flux_inst__ms004,NA
 208,stream_chemistry,grab,ready,ready,NA,stream_flux_inst__ms003,NA
 107,stream_gauge_locations,spatial,ready,ready,NA,NA,NA
 ms001,precipitation,grab,NA,NA,ready,NA,NA

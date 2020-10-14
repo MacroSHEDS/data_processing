@@ -177,6 +177,8 @@ identify_sampling <- function(df,
                               domain,
                               prodname_ms){
 
+    #TODO: for hbef, identify_sampling is writing sites names as 1 not w1
+
     #is_sensor: named logical vector. see documention for
     #   ms_read_raw_csv, but note that an unnamed logical vector of length one
     #   cannot be used here. also note that the original variable/flag column names
@@ -418,6 +420,7 @@ ms_read_raw_csv <- function(filepath,
                             summary_flagcols){
 
     #TODO:
+    #add a silent = TRUE option. this would hide all warnings
     #allow a vector of possible matches for each element of datetime_cols
     #   (i.e. make it take a list of named vectors)
     #write more checks for improper specification.
@@ -427,6 +430,11 @@ ms_read_raw_csv <- function(filepath,
     #   atm those things happen automatically
     #likewise, a remove_duplicates param could be nice. atm, for duplicated rows,
     #   the one with the fewest NA values is kept automatically
+    #allow a third option in is_sensor for mixed sensor/nonsensor
+    #   (also change param name). check for comments inside munge kernels
+    #   indicating where this is needed
+    #site_name_col should eventually work like datetime_cols (in case site_name is
+    #   separated into multiple components)
 
     #filepath: string
     #preprocessed_tibble: a tibble with all character columns. Supply this
@@ -465,10 +473,10 @@ ms_read_raw_csv <- function(filepath,
     #   output_x, output_y, output_....
     #is_sensor: either a single logical value, which will be applied to all
     #   variable columns OR a named logical vector with the same length and names as
-    #   data_cols. Names correspond to variable names in the file to be read.
-    #   values are either TRUE, meaning the corresponding variable was
+    #   data_cols. If the latter, names correspond to variable names in the file to be read.
+    #   TRUE means the corresponding variable(s) was/were
     #   measured with a sensor (which may be susceptible to drift and/or fouling),
-    #   or FALSE, meaning the measurement was not recorded by a sensor. This
+    #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
     #set_to_NA: For values such as 9999 that are proxies for NA values.
     #var_flagcol_pattern: optional string with same mechanics as the other
@@ -748,13 +756,14 @@ ms_read_raw_csv <- function(filepath,
     }
 
     #fix sites names if multiple names refer to the same site
-    if(!is.null(alt_site_name)) {
+    if(! is.null(alt_site_name)){
 
-        for(z in 1:length(alt_site_name)) {
+        for(z in 1:length(alt_site_name)){
 
-            d <- d %>%
-                mutate(site_name = ifelse(site_name %in% !!alt_site_name[[z]],
-                                          !!names(alt_site_name)[z], site_name))
+            d <- mutate(d,
+                        site_name = ifelse(site_name %in% !!alt_site_name[[z]],
+                                           !!names(alt_site_name)[z],
+                                           site_name))
         }
     }
 
@@ -959,7 +968,7 @@ ms_cast_and_reflag <- function(d,
                                summary_flags_clean,
                                summary_flags_dirty){
 
-    #TODO: handle cases of no summary flag columns, no flag columns at all.
+    #TODO: add a silent = TRUE option. this would hide all warnings
     #allow for alternative pattern specifications.
 
     #d is a df/tibble with ONLY a site_name column, a datetime column,
@@ -982,18 +991,21 @@ ms_cast_and_reflag <- function(d,
     #   bad data and are removed. Use '#*#' to refer to all values not
     #   included in variable_flags_clean. This parameter is optional,
     #   though at least 2 of variable_flags_to_drop, variable_flags_clean,
-    #   and variable_flags_dirty must be supplied.
+    #   and variable_flags_dirty must be supplied if varflag_col_pattern is not
+    #   set to NA.
     #   If '#*#' is used, variable_flags_clean must be supplied.
     #variable_flags_clean: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
     #   ms_status of 0, meaning clean. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied. This parameter does not use the '#*#' wildcard.
+    #   must be supplied if varflag_col_pattern is not
+    #   set to NA. This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
-    #   ms_status of 1, meaning dirty This parameter is optional, though at least 2
+    #   ms_status of 1, meaning dirty. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied. This parameter does not use the '#*#' wildcard.
+    #   must be supplied if varflag_col_pattern is not
+    #   set to NA. This parameter does not use the '#*#' wildcard.
     #summary_flags_to_drop: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in
@@ -1002,7 +1014,8 @@ ms_cast_and_reflag <- function(d,
     #   included in summary_flags_clean. This parameter is optional, though
     #   if there are summary flag columns, at least 2
     #   of summary_flags_to_drop, summary_flags_clean, and summary_flags_dirty
-    #   must be supplied. If '#*#' is used, summary_flags_clean must be supplied.
+    #   must be supplied (omit this argument otherwise).
+    #   If '#*#' is used, summary_flags_clean must be supplied.
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #summary_flags_clean: a named list. names correspond to columns in d that
@@ -1011,7 +1024,8 @@ ms_cast_and_reflag <- function(d,
     #   Elements of these vectors are given an ms_status of 0, meaning clean.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
-    #   summary_flags_clean, and summary_flags_dirty must be supplied.
+    #   summary_flags_clean, and summary_flags_dirty must be supplied
+    #   (omit this argument otherwise).
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
@@ -1021,13 +1035,14 @@ ms_cast_and_reflag <- function(d,
     #   Elements of these vectors are given an ms_status of 1, meaning dirty.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
-    #   summary_flags_clean, and summary_flags_dirty must be supplied.
+    #   summary_flags_clean, and summary_flags_dirty must be supplied
+    #   (omit this argument otherwise).
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
 
     #return value: a long-format tibble with 5 columns: datetime, site_name,
-    #   var, val, ms_status.
+    #   var, val, ms_status. Rows with NA in any column are removed.
 
     #arg checks
     if(! input_shape == 'wide'){
@@ -1114,7 +1129,7 @@ ms_cast_and_reflag <- function(d,
                             replacement = '',
                             varflag_col_pattern)
 
-    #cast to long format (would have to auto-generatae names_pattern regex
+    #cast to long format (would have to auto-generate names_pattern regex
     #   to allow for data_col_pattern and varflag_col_pattern to vary) if
     #   there's more than one data column. otherwise just remove data column
     #   suffix.
@@ -1146,6 +1161,10 @@ ms_cast_and_reflag <- function(d,
         colnames(d)[data_ind] <- 'dat'
         d$var <- varname
     }
+
+    #remove rows with NA in the value column (these take up space and can be
+    #reconstructed by casting to wide form
+    d <- filter(d, ! is.na(dat))
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
@@ -3014,24 +3033,21 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
         site_file = glue('{pd}/{s}.feather',
                          pd = prod_dir,
                          s = site_name)
-        # site_file_uncert = glue('{pd}/{s}_uncert.feather',
-        #                         pd = prod_dir,
-        #                         s = site_name)
-        
-        # Added to allow funciton to be used in derive if munge has already 
-        # removed errors 
-        if(is.null(d$val_err)) {
-            d$val_err <- errors(d$val)
+
+        #separate uncertainty into a new column.
+        #remove errors attribute from val column if it exists (it always should)
+        d$val_err <- errors(d$val)
+        if('errors' %in% class(d$val)){
             d$val <- errors::drop_errors(d$val)
+        } else {
+            warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
+                         'That means this dataset has not passed through ',
+                         'carry_uncertainty yet. it should have.',
+                         n = network,
+                         d = domain,
+                         s = site_name,
+                         p = prodname_ms))
         }
-        # d_uncert <- lapply(d,
-        #                    function(x){
-        #                        if(is.numeric(x) && any(errors(x) != 0)){
-        #                            errors(x)
-        #                        }
-        #                     })
-        # d_uncert <- as_tibble(d_uncert[! sapply(d_uncert, is.null)])
-        # write_feather(d_uncert, site_file_uncert)
 
         #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
@@ -3173,19 +3189,19 @@ list_munged_files <- function(network, domain, prodname_ms){
 #. handle_errors
 list_derived_files <- function(network, domain, prodname_ms){
     # omit_uncertainty_files = FALSE){
-    
+
     dfiles <- glue('data/{n}/{d}/derived/{p}',
                    n = network,
                    d = domain,
                    p = prodname_ms) %>%
         list.files(full.names = TRUE)
-    
+
     # if(omit_uncertainty_files){
     #     mfiles <- mfiles[! grepl('_uncert.feather$',
     #                              mfiles,
     #                              perl = TRUE)]
     # }
-    
+
     return(dfiles)
 }
 
@@ -3374,8 +3390,8 @@ calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){#, dt_r
                               d = domain,
                               l = level,
                               cp = chemprod,
-                              s = site_name)) 
-    
+                              s = site_name))
+
     chem <- chem %>%
         pivot_wider(names_from = 'var', values_from = 'val') %>%
         select(contains(flux_vars), 'datetime', 'ms_status', 'ms_interp')
@@ -3477,22 +3493,10 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     prodpaths <- list_munged_files(network = network,
                                    domain = domain,
                                    prodname_ms = prodname_ms)
-                                   # omit_uncertainty_files = TRUE)
 
     combined <- tibble()
     for(i in 1:length(prodpaths)){
-
         part <- read_feather(prodpaths[i])
-        # uncert_filepath <- sub('\\.feather$',
-        #                        '_uncert.feather',
-        #                        prodpaths[i],
-        #                        perl = TRUE)
-
-        # if(file.exists(uncert_filepath)){
-        #     part_uncert <- read_feather(uncert_filepath)
-        #     part <- insert_uncertainty_df(part, part_uncert)
-        # }
-
         combined <- bind_rows(combined, part)
     }
 
@@ -3862,7 +3866,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
                                      by = desired_interval))) %>%
         ungroup()
 
-    #interpolate up to impute_limit; remove empty rows; populate ms_interp column
+    #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
     d_adjusted <- d %>%
         full_join(fulldt, #fill in missing datetime intervals
                   by = c('datetime', 'site_name', 'var')) %>%
@@ -3887,9 +3891,10 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
                                                na_remaining = 'rev'))) %>%
         ungroup() %>%
         select(-err) %>%
-        group_by(datetime, site_name) %>%
-        filter(any(! is.na(val))) %>%
-        ungroup() %>%
+        # group_by(datetime, site_name) %>%
+        # filter(any(! is.na(val))) %>%
+        # ungroup() %>%
+        filter(! is.na(val)) %>%
         arrange(site_name, var, datetime)
 
     return(d_adjusted)
@@ -4109,17 +4114,6 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                    site_name = site_name,
                    i = i,
                    nw = nrow(wb))
-        # idw_log(phase = 'wb',
-        #         from_env = environment(),
-        #         verbose, site_name, i, wb)
-        # if(verbose){
-        #     msg <- glue('site: {s}; {jj}/{w}',
-        #         s = site_name,
-        #         jj = j,
-        #         w = nrow(wb))
-        #     loginfo(msg,
-        #         logger = logger_module)
-        # }
 
         ws_mean_precip <- shortcut_idw(encompassing_dem = dem,
                                        wshd_bnd = wbi,
@@ -4268,6 +4262,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                    i = i,
                    nw = nrow(wb))
 
+        # for(j in 1:nvars){q
         ws_mean_d <- foreach::foreach(j = 1:nvars,
                                       .combine = idw_parallel_combine,
                                       .init = 'first iter') %dopar% {
@@ -4276,30 +4271,15 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                       # .errorhandling = 'remove',
                                       # .verbose = TRUE) %dopar% {
 
-        # for(j in 1:nvars){q
-
             v <- pchem_vars[j]
 
-            # idw_log(phase = 'var')
-            # idw_log(phase = 'var',
-            #         from_env = environment(),
-            #         verbose, site_name, v, j, nvars)
             idw_log_var(verbose = verbose,
                         site_name = site_name,
                         v = v,
                         j = j,
                         nvars = nvars)
-            # if(verbose){
-            #     msg <- glue('site: {s}; var: {vv}; {jj}/{nv}',
-            #         s = site_name,
-            #         vv = v,
-            #         jj = j,
-            #         nv = nvars)
-            #     loginfo(msg,
-            #         logger = logger_module)
-            # }
 
-            # ws_mean <- shortcut_idw(encompassing_dem = dem,
+            # ws_mean <- shortcut_idw(encompassing_dem = dem, (handled by foreach now)
             shortcut_idw(encompassing_dem = dem,
                          wshd_bnd = wbi,
                          data_locations = rg,
@@ -4344,15 +4324,6 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                              network = network,
                                              domain = domain,
                                              prodname_ms = precursor_prodname)
-
-
-        # msg <- glue('{w}, {n}, {d}, {p}',
-        #     w = nrow(ws_mean_d),
-        #     n = network,
-        #     d = domain,
-        #     p = prodname_ms)
-        # loginfo(msg,
-        #     logger = logger_module)
 
         write_ms_file(ws_mean_d,
                       network = network,
@@ -4419,9 +4390,13 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                   by = 'datetime') %>%
         arrange(datetime)
 
-    #determine which variables can be flux converted
+    #determine which variables can be flux converted (prefix handling clunky here)
     flux_vars <- ms_vars$variable_code[as.logical(ms_vars$flux_convertible)]
-    pchem_vars_fluxable <- base::intersect(unique(pchem$var), flux_vars)
+    pchem_vars <- unique(pchem$var)
+    pchem_vars_fluxable0 <- base::intersect(drop_var_prefix(pchem_vars),
+                                            flux_vars)
+    pchem_vars_fluxable <- pchem_vars[drop_var_prefix(pchem_vars) %in%
+                                          pchem_vars_fluxable0]
 
     #this avoids a lot of slow summarizing
     status_cols <- pchem %>%
@@ -5282,6 +5257,12 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
                                               as.character() %>%
                                               as.numeric()
 
+                              #sometimes synchronize_timestep will adjust a point
+                              #to a time before the earliest startdt recorded
+                              #in detection_limits.json. this handles that.
+                              roundvec <- imputeTS::na_locf(x = roundvec,
+                                                            option = 'nocb')
+
                               rounded <- mapply(FUN = function(a, b){
                                                     round(a, b)
                                                 },
@@ -5808,14 +5789,15 @@ raster_intersection_summary <- function(wb, dem){
         summary_out$n_wb_cells * 100
 
     return(summary_out)
+}
 
-#. handle_errors 
+#. handle_errors
 remove_all_na_sites <- function(d) {
     d_test <- d %>%
         mutate(na = ifelse(!is.na(val), 1, 0)) %>%
         group_by(site_name, var) %>%
         summarise(non_na = sum(na))
-    
+
     d <- left_join(d, d_test,  by = c("site_name", "var")) %>%
         filter(non_na > 10) %>%
         select(-non_na)
