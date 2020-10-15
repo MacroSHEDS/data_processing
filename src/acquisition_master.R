@@ -13,6 +13,8 @@ suppressPackageStartupMessages({
     # library(mapview)
     # library(elevatr)
     # library(rgee)
+    # remotes::install_github("giswqs/whiteboxR")
+    # library(whitebox)
 
     #everything else
     library(httr)
@@ -34,13 +36,64 @@ suppressPackageStartupMessages({
     library(errors)
     library(foreach)
     library(doParallel)
-
 })
 
-try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
-try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
-try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
-try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+ms_setwd <- function(){
+
+    #attempts to set working directory for various machines involved in the
+    #   macrosheds project. determines from success/failure whether the current
+    #   instance is a development instance (interactive) or a server
+    #   (production) instance.
+
+    #returns details about the current instance. these details can be
+    #   used to taylor run specifications (which code to run, and how to run it)
+    #   to the current machine:
+    #   "dev" or "server" accordingly
+
+    successes <- 0
+
+    res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        instance_type <- 'dev'
+        machine_status <- 'n00b'
+    }
+
+    res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        instance_type <- 'dev'
+        machine_status <- 'n00b'
+    }
+
+    # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
+    # if(! 'try-error' %in% class(res)){
+    #     successes <- successes + 1
+    #     instance_type <- 'dev'
+    #     machine_status <- '1337'
+    # }
+
+    res <- try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        instance_type <- 'server'
+        machine_status <- '1337'
+    }
+
+    if(successes > 1){
+        stop(glue('more than one working directory was available. must set the ',
+                  'correct one manually'))
+    } else if(successes == 0){
+        stop('failed to set working directory. update ms_setwd() with your wd path')
+    }
+
+    instance_details <- list(instance_type = instance_type,
+                             machine_status = machine_status)
+
+    return(instance_details)
+}
+
+ms_instance <- ms_setwd()
 
 #connect rgee to earth engine and python
 #try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
@@ -52,8 +105,8 @@ logging::basicConfig()
 logging::addHandler(logging::writeToFile, logger='ms',
     file='logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing live
 source('src/global/global_helpers.R')
+source('src/dev_helpers.R') #comment before pushing live
 source_decoratees('src/global/global_helpers.R') #parse decorators
 
 ms_vars <- sm(read_csv('data/general/variables.csv'))
@@ -69,7 +122,6 @@ dir.create('logs', showWarnings = FALSE)
 
 #dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
-# for(dmnrow in 2){
 
     network = network_domain$network[dmnrow]
     domain = network_domain$domain[dmnrow]
@@ -82,13 +134,21 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network=network, domain=domain)
 
     # prodname_ms="stream_chemistry__208"
+    # prodname_ms="stream_chemistry__4021"
     # component="stream chemistry"
     # site_name='sitename_NA'
 
-    ms_retrieve(network=network, domain=domain)
-    ms_munge(network=network, domain=domain)
-    ms_derive(network=network, domain=domain)
-    ms_general(network=network, domain=domain)
+    ms_retrieve(network = network,
+                domain = domain)
+    ms_munge(network = network,
+             domain = domain)
+    sw(ms_delineate(network = network, domain = domain,
+                    dev_machine_status = ms_instance$machine_status,
+                    verbose = TRUE))
+    ms_derive(network = network,
+              domain = domain)
+    ms_general(network = network,
+               domain = domain)
 
     retain_ms_globals(ms_globals)
 }
