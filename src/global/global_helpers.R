@@ -429,23 +429,24 @@ ms_read_raw_csv <- function(filepath,
     #   the one with the fewest NA values is kept automatically
 
     #filepath: string
-    #preprocessed_tibble: if data requires notification before it can be processed
-    #   such as when time/dates are stored in odd ways, this can be a dataframe 
-    #   with all columns as characters. Either filepath or preprocessed_tibble
-    #   must be supplied but not both. 
+    #preprocessed_tibble: a tibble with all character columns. Supply this
+    #   argument if a dataset requires modification before it can be processed
+    #   by ms_read_raw_csv. This may be necessary if, e.g.
+    #   time is stored in a format that can't be parsed by standard datetime
+    #   format strings. Either filepath or preprocessed_tibble
+    #   must be supplied, but not both.
     #datetime_cols: a named character vector. names are column names that
     #   contain components of a datetime. values are format strings (e.g.
     #   '%Y-%m-%d', '%H') corresponding to the datetime components in those
     #   columns.
-    #   and the time zone (which must be among those provided by OlsonNames()).
-    #   Time format is handled internally and need not be specified.
     #datetime_tz: string specifying time zone. this specification must be
     #   among those provided by OlsonNames()
     #datetime_optional_chars: see "optional" argument to dt_format_to_regex
     #site_name_col: name of column containing site name information
-    #alt_site_name: optional list where names are the desired site name and a
-    #   vector of possible names this site may be also called. Used when sites are
-    #   misnamed or need to be changed due to inconsistencies in dataset.
+    #alt_site_name: optional list. Names of list elements are desired site_names
+    #   within MacroSheds. List elements are character vectors of alternative
+    #   names that might be encountered. Used when sites are misnamed or need
+    #   to be changed due to inconsistencies within and across datasets.
     #data_cols: vector of names of columns containing data. If elements of this
     #   vector are named, names are taken to be the column names as they exist
     #   in the file, and values are used to replace those names. Data columns that
@@ -501,8 +502,8 @@ ms_read_raw_csv <- function(filepath,
         stop(glue('Only one of filepath and preprocessed_tibble can be supplied. ',
                   'preprocessed_tibble is for rare circumstances only.'))
     }
-    
-    
+
+
     if(! datetime_tz %in% OlsonNames()){
         stop('datetime_tz must be included in OlsonNames()')
     }
@@ -534,11 +535,11 @@ ms_read_raw_csv <- function(filepath,
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
     }
-    
+
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
     }
-    
+
     if(missing(alt_site_name)) {
         alt_site_name <- NULL
     }
@@ -641,43 +642,38 @@ ms_read_raw_csv <- function(filepath,
     classes_all <- c(class_dt, class_sn, classes_d1, classes_d2, classes_f1,
                      classes_f2, classes_f3)
     classes_all <- classes_all[! is.na(names(classes_all))]
-    
-    if(filepath_supplied) {
 
-    d <- read.csv(filepath,
-                  stringsAsFactors = FALSE,
-                  colClasses = "character") %>%
+    if(filepath_supplied){
+        d <- read.csv(filepath,
+                      stringsAsFactors = FALSE,
+                      colClasses = "character")
+    } else {
+        d <- preprocessed_tibble
+    }
+
+    d <- d %>%
         as_tibble() %>%
         select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
-    if('NA.' %in% colnames(d)) class(d$NA.) = 'numeric' 
-    
-    } else {
-        d <- preprocessed_tibble %>%
-            select(one_of(names(colnames_all)))
-    }
-    
-    # Remove any variable flags created by pattern but do not exist in data 
+    if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
+
+    # Remove any variable flags created by pattern but do not exist in data
     # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
     # classes_all <- classes_all[names(classes_all) %in% names(d)]
 
-    # Set values to NA if used as a flag or missing data indication 
-    # Not sure why %in% does not work, seem to only operate on one row 
-    if(! is.null(set_to_NA)) {
-    for(i in 1:length(set_to_NA)) {
-        d[d == set_to_NA[i]] <- NA
+    # Set values to NA if used as a flag or missing data indication
+    # Not sure why %in% does not work, seem to only operate on one row
+    if(! is.null(set_to_NA)){
+        for(i in 1:length(set_to_NA)){
+            d[d == set_to_NA[i]] <- NA
+        }
     }
-    }
     
-    #Set correct class to each column 
-    # suppressWarnings because it warns that NA are created by changing the class 
-    # of a column, this is what is wanted when there are character is a numeric 
-    
-    # In cases where ther may only be some varbale flags (not compatable with 
-    # ms_cast_and_reflag  probably)
-    #classes_all <- classes_all[names(classes_all) %in% names(d)]
-    
-    d[] <- suppressWarnings(Map(`class<-`, d, classes_all))
         
+    #Set correct class to each column
+    # suppressWarnings because it warns that NA are created by changing the class
+    # of a column, this is what is wanted when there are character is a numeric
+    d[] <- sw(Map(`class<-`, d, classes_all))
+
     #rename cols to canonical names
     colnames_d <- colnames(d)
 
@@ -693,7 +689,7 @@ ms_read_raw_csv <- function(filepath,
             colnames_d[i] <- colnames_new[canonical_name_ind]
         }
     }
-    
+
     colnames(d) <- colnames_d
 
     #resolve datetime structure into POSIXct
@@ -751,14 +747,14 @@ ms_read_raw_csv <- function(filepath,
                                 names(data_cols))
         is_sensor <- is_sensor[data_col_order]
     }
-    
-    #fix sites names if multiple names refer to the same site 
+
+    #fix sites names if multiple names refer to the same site
     if(!is.null(alt_site_name)) {
-        
+
         for(z in 1:length(alt_site_name)) {
-            
+
             d <- d %>%
-                mutate(site_name = ifelse(site_name %in% !!alt_site_name[[z]], 
+                mutate(site_name = ifelse(site_name %in% !!alt_site_name[[z]],
                                           !!names(alt_site_name)[z], site_name))
         }
     }
@@ -774,13 +770,6 @@ ms_read_raw_csv <- function(filepath,
     return(d)
 }
 
-# d=tibble(Y=c('2020', '2020'),
-#          md=c('02-01', '03-02'),
-#          hms=c('01:02:03', '04:05'))
-# resolve_datetime(d,
-#                  datetime_colnames=c('Y', 'md', 'hms'),
-#                  datetime_formats=c('%Y', '%m-%d', '%H:%M:%S'),
-#                  datetime_tz='UTC')
 #. handle_errors
 resolve_datetime <- function(d,
                              datetime_colnames,
@@ -1164,12 +1153,13 @@ ms_cast_and_reflag <- function(d,
         if(sumdrop){
             for(i in 1:length(summary_flags_to_drop)){
 
-                if(summary_flags_to_drop[[i]] == '#*#'){
-                    d <- filter(d, (!!sym(names(summary_flags_to_drop)[i])) %in%
+                smtd <- summary_flags_to_drop[i]
+
+                if(length(smtd[[1]]) == 1 && smtd[[1]] == '#*#'){
+                    d <- filter(d, (!!sym(names(smtd))) %in%
                                     summary_flags_clean[[i]])
                 } else {
-                    d <- filter(d, ! (!!sym(names(summary_flags_to_drop)[i])) %in%
-                                    summary_flags_to_drop[[i]])
+                    d <- filter(d, ! (!!sym(names(smtd))) %in% smtd)
                 }
             }
 
@@ -1247,6 +1237,7 @@ ms_conversions <- function(d,
                                                  'NH4', 'NH3'),
                            convert_units_from,
                            convert_units_to){
+
     #d: a macrosheds tibble that has aready been through ms_cast_and_reflag
     #convert molecules: a character vector of molecular formulae to be
     #   converted from molecular mass to atomic mass of the main constituent.
@@ -1264,10 +1255,12 @@ ms_conversions <- function(d,
     #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
     #   and values are the units those variables should be converted to.
     #   Omit variables that don't need to be converted.
+
     #checks
     cm <- ! missing(convert_molecules)
     cuF <- ! missing(convert_units_from) && ! is.null(convert_units_from)
     cuT <- ! missing(convert_units_to) && ! is.null(convert_units_to)
+
     if(sum(cuF, cuT) == 1){
         stop('convert_units_from and convert_units_to must be supplied together')
     }
@@ -1279,7 +1272,9 @@ ms_conversions <- function(d,
     if(length(cu_shared_names) != length(convert_units_to)){
         stop('names of convert_units_from and convert_units_to must match')
     }
+
     vars <- drop_var_prefix(d$var)
+
     #handle molecular conversions, like NO3 -> NO3_N
     if(cm){
         molecular_conversion_map <- list(
@@ -1296,6 +1291,7 @@ ms_conversions <- function(d,
                       'molecular_conversion_map, or they should not be converted: ',
                       paste(miss, collapse = ', ')))
         }
+
         for(m in convert_molecules){
             d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
                                                  from = m,
@@ -1970,25 +1966,53 @@ ms_munge <- function(network=domain, domain){
 }
 
 #. handle_errors
-ms_delineate <- function(network=domain, domain){
+ms_delineate <- function(network, domain,
+                         dev_machine_status,
+                         verbose = FALSE){
+
+    #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
+    #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
+    #   accordingly. passed to delineate_watershed_apriori
+    #verbose: logical. determines the amount of informative messaging during run
+
+    loginfo(msg = 'Beginning watershed delineation',
+            logger = logger_module)
 
     site_locations <- sm(read_csv('data/general/site_data.csv')) %>%
         filter(
             as.logical(in_workflow),
             network == !!network,
             domain == !!domain,
-            ! is.na(latitude),
-            ! is.na(longitude),
+            # ! is.na(latitude),
+            # ! is.na(longitude),
             site_type == 'stream_gauge') %>%
         select(site_name, latitude, longitude, CRS, ws_area_ha)
 
+    #checks
+    if(any(is.na(site_locations$latitude) | is.na(site_locations$longitude))){
+
+        missing_loc <- is.na(site_locations$latitude) |
+            is.na(site_locations$longitude)
+
+        missing_site_names <- site_locations$site_name[missing_loc]
+
+        stop(glue('Missing/incomplete site location for:\nnetwork: {n}\ndomain: {d}\n',
+                  'site(s): {ss}\n(data/general/site_data.csv)',
+                  n = network,
+                  d = domain,
+                  ss = paste(missing_site_names,
+                             collapse = ', ')))
+    }
+
     if(any(is.na(site_locations$CRS))){
-        missing_crs <- site_locations$site_name[is.na(site_locations$CRS)]
+
+        missing_site_names <- site_locations$site_name[is.na(site_locations$CRS)]
+
         stop(glue('Missing CRS for:\nnetwork: {n}\ndomain: {d}\n',
                   'site(s): {ss}\n(data/general/site_data.csv)',
                   n = network,
                   d = domain,
-                  ss = paste(missing_crs,
+                  ss = paste(missing_site_names,
                              collapse = ', ')))
     }
 
@@ -2005,10 +2029,10 @@ ms_delineate <- function(network=domain, domain){
 
     if(! length(ws_boundary_dir)){
         ws_boundary_dir <- 'ws_boundary__ms000'
-        dir.create('data/{n}/{d}/munged/{w}',
-                   n = network,
-                   d = domain,
-                   w = ws_boundary_dir)
+        dir.create(glue('data/{n}/{d}/munged/{w}',
+                        n = network,
+                        d = domain,
+                        w = ws_boundary_dir))
     }
 
     #for each stream gauge site, check for existing wb file. if none, delineate
@@ -2016,22 +2040,501 @@ ms_delineate <- function(network=domain, domain){
 
         site <- site_locations$site_name[i]
 
+        if(verbose){
+            print(glue('delineating {n}-{d}-{s} (site {sti} of {sl})',
+                       n = network,
+                       d = domain,
+                       s = site,
+                       sti = i,
+                       sl = nrow(site_locations)))
+        }
+
         site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
                          n = network,
                          d = domain,
                          w = ws_boundary_dir,
                          s = site)
 
-        if(! dir.exists(site_dir) || ! length(dir(site_dir))){
-            delin <- delineate_watershed(lat = site_locations$latitude[i],
-                                         long = site_locations$longitude[i],
-                                         crs = site_locations$CRS[i])
-            #HERE
+        if(dir.exists(site_dir) && length(dir(site_dir))){
+            message(glue('{s} already delineated ({d})',
+                         s = site,
+                         d = site_dir))
+            next
         }
 
-        #WRITE OUTPUT FILES (GOT A FUNC FOR THIS ALREADY)
-        #IF WS_AREA_HA NOT YET CALCED, CALC IT
+        dir.create(site_dir,
+                   showWarnings = FALSE)
+
+        specs <- read_wb_delin_specs(network = network,
+                                     domain = domain,
+                                     site_name = site) %>%
+            filter(
+                network == !!network,
+                domain == !!domain,
+                site_name == !!site)
+
+        if(nrow(specs) == 1){
+
+            message('Delineating from stored specifications')
+
+            catch <- delineate_watershed_by_specification(
+                lat = site_locations$latitude[i],
+                long = site_locations$longitude[i],
+                crs = site_locations$CRS[i],
+                buffer_radius = specs$buffer_radius_m,
+                snap_dist = specs$snap_distance_m,
+                snap_method = specs$snap_method,
+                dem_resolution = specs$dem_resolution,
+                write_dir = site_dir)
+
+            loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
+                               n = network,
+                               d = domain,
+                               s = site),
+                    logger = logger_module)
+
+            next
+            #everything that follows pertains to interactive selection of an
+            #appropriate delineation
+
+        } else if(nrow(specs) == 0){
+
+            if(ms_instance$instance_type != 'dev'){
+                stop(glue('Missing delineation specs for {n}-{d}-{s}. ',
+                          'Delineate locally and push changes.',
+                          n = network,
+                          d = domain,
+                          s = site))
+            }
+
+            inspection_dir <- delineate_watershed_apriori(
+                lat = site_locations$latitude[i],
+                long = site_locations$longitude[i],
+                crs = site_locations$CRS[i],
+                dev_machine_status = dev_machine_status,
+                verbose = verbose)
+
+        } else {
+            stop('Multiple entries for same network/domain/site in site_data.csv')
+        }
+
+        files_to_inspect <- list.files(path = inspection_dir,
+                                       pattern = '.shp')
+
+        #if only one delineation, write it into macrosheds storage
+        if(length(files_to_inspect) == 1){
+
+            selection <- files_to_inspect[1]
+
+            move_shapefiles(shp_files = selection,
+                            from_dir = inspection_dir,
+                            to_dir = site_dir)
+
+            message(glue('Delineation successful. Shapefile written to ',
+                         site_dir))
+
+            #otherwise, technician must inspect all delineations and choose one
+        } else {
+
+            nshapes <- length(files_to_inspect)
+
+            wb_selections <- paste(paste0('[',
+                                          c(1:nshapes, 'A'),
+                                          ']'),
+                                   c(files_to_inspect, 'Abort delineation'),
+                                   sep = ': ',
+                                   collapse = '\n')
+
+            helper_code <- glue('mapview::mapview(sf::st_read("{wd}/{f}"))',
+                                wd = inspection_dir,
+                                f = files_to_inspect) %>%
+                paste(collapse = '\n\n')
+
+            msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
+                        'in {td}, then enter the number corresponding to the ',
+                        'one that looks most legit. Here\'s some ',
+                        'helper code you can paste into an R instance running ',
+                        'in a shell (terminal):\n\n{hc}\n\nIf you aren\'t ',
+                        'sure which is correct, get a site manager to verify:\n',
+                        'request_site_manager_verification(type=\'wb delin\', ',
+                        'network, domain)\n\nChoices:\n{sel}\n\nEnter choice here > ',
+                        hc = helper_code,
+                        sel = wb_selections,
+                        td = inspection_dir)
+
+            resp <- get_response_1char(msg = msg,
+                                       possible_chars = c(1:nshapes, 'A'))
+
+            if(resp == 'A'){
+                message('Aborted. Completed delineations have been saved')
+                return()
+            }
+
+            selection <- files_to_inspect[as.numeric(resp)]
+
+            move_shapefiles(shp_files = selection,
+                            from_dir = inspection_dir,
+                            to_dir = site_dir,
+                            new_name_vec = site)
+
+            message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
+                         s = resp,
+                         sel = selection,
+                         sdr = site_dir))
+        }
+
+        #write the specifications of the correctly delineated watershed
+        rgx <- str_match(selection,
+                         paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
+                                'DIST([0-9]+)RES([0-9]+)\\.shp$'))
+
+        write_wb_delin_specs(network = network,
+                             domain = domain,
+                             site_name = site,
+                             buffer_radius = as.numeric(rgx[, 2]),
+                             snap_method = rgx[, 3],
+                             snap_distance = as.numeric(rgx[, 4]),
+                             dem_resolution = as.numeric(rgx[, 5]))
+
+        #calculate watershed area and write it to site_data.csv
+        catch <- ms_calc_watershed_area(network = network,
+                                        domain = domain,
+                                        site_name = site,
+                                        update_site_file = TRUE)
     }
+
+    message(glue('Delineation specifications were written to:\n\t',
+                 'data/general/watershed_delineation_specs.csv\n',
+                 'watershed areas were written to:\n\t',
+                 'data/general/site_data.csv'))
+
+    loginfo(msg = 'Delineations complete',
+            logger = logger_module)
+
+
+    return()
+}
+
+#. handle_errors
+delineate_watershed_apriori <- function(lat, long, crs,
+                                        dev_machine_status = 'n00b',
+                                        verbose = FALSE){
+
+    #lat: numeric representing latitude in decimal degrees
+    #   (negative indicates southern hemisphere)
+    #long: numeric representing longitude in decimal degrees
+    #   (negative indicates west of prime meridian)
+    #crs: numeric representing the coordinate reference system (e.g. WSG84)
+    #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
+    #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen accordingly
+    #verbose: logical. determines the amount of informative messaging during run
+
+    #returns the location of candidate watershed boundary files
+
+    tmp <- tempdir()
+    inspection_dir <- glue(tmp, '/INSPECT_THESE')
+    dem_f <- glue(tmp, '/dem.tif')
+    point_f <- glue(tmp, '/point.shp')
+    d8_f <- glue(tmp, '/d8_pntr.tif')
+    flow_f <- glue(tmp, '/flow.tif')
+
+    dir.create(path = inspection_dir,
+               showWarnings = FALSE)
+
+    proj <- choose_projection(lat = lat,
+                              long = long)
+
+    site <- tibble(x = lat,
+                   y = long) %>%
+        sf::st_as_sf(coords = c("y", "x"),
+                     crs = crs) %>%
+        sf::st_transform(proj)
+    # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
+
+    #prepare for delineation loops
+    buffer_radius <- 100
+    dem_coverage_insufficient <- FALSE
+    while_loop_begin <- TRUE
+
+    #snap site to flowlines 3 different ways. delineate watershed boundaries (wb)
+    #for each unique snap. if the delineations get cut off, get more elevation data
+    #and try again
+    while(while_loop_begin || dem_coverage_insufficient){
+
+        while_loop_begin <- FALSE
+
+        if(dev_machine_status == '1337'){
+            dem_resolution <- case_when(
+                buffer_radius <= 1e4 ~ 12,
+                buffer_radius == 1e5 ~ 11,
+                buffer_radius == 1e6 ~ 10,
+                buffer_radius == 1e7 ~ 8,
+                buffer_radius == 1e8 ~ 6,
+                buffer_radius == 1e9 ~ 4,
+                buffer_radius >= 1e10 ~ 2)
+        } else if(dev_machine_status == 'n00b'){
+            dem_resolution <- case_when(
+                buffer_radius <= 1e4 ~ 10,
+                buffer_radius == 1e5 ~ 8,
+                buffer_radius == 1e6 ~ 6,
+                buffer_radius == 1e7 ~ 4,
+                buffer_radius == 1e8 ~ 2,
+                buffer_radius >= 1e9 ~ 1)
+        } else {
+            stop('dev_machine_status must be either "1337" or "n00b"')
+        }
+
+        site_buf <- sf::st_buffer(x = site,
+                                  dist = buffer_radius)
+        dem <- elevatr::get_elev_raster(locations = site_buf,
+                                        z = dem_resolution,
+                                        verbose = verbose)
+
+        raster::writeRaster(x = dem,
+                            filename = dem_f,
+                            overwrite = TRUE)
+
+        sf::st_write(obj = site,
+                     dsn = point_f,
+                     delete_layer = TRUE,
+                     quiet = TRUE)
+
+        whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                            output = dem_f)
+
+        whitebox::wbt_breach_depressions(dem = dem_f,
+                                         output = dem_f,
+                                         flat_increment = 0.01)
+
+        whitebox::wbt_d8_pointer(dem = dem_f,
+                                 output = d8_f)
+
+        whitebox::wbt_d8_flow_accumulation(input = dem_f,
+                                           output = flow_f,
+                                           out_type = 'catchment area')
+
+        snap1_f <- glue(tmp, '/snap1_jenson_dist150.shp')
+        whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                              streams = flow_f,
+                                              output = snap1_f,
+                                              snap_dist = 150)
+        snap2_f <- glue(tmp, '/snap2_standard_dist50.shp')
+        whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                       flow_accum = flow_f,
+                                       output = snap2_f,
+                                       snap_dist = 50)
+        snap3_f <- glue(tmp, '/snap3_standard_dist150.shp')
+        whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                       flow_accum = flow_f,
+                                       output = snap3_f,
+                                       snap_dist = 150)
+
+        #the site has been snapped 3 different ways. identify unique snap locations.
+        snap1 <- sf::st_read(snap1_f, quiet = TRUE)
+        snap2 <- sf::st_read(snap2_f, quiet = TRUE)
+        snap3 <- sf::st_read(snap3_f, quiet = TRUE)
+        unique_snaps_f <- snap1_f
+        if(! identical(snap1, snap2)) unique_snaps_f <- c(unique_snaps_f, snap2_f)
+        if(! identical(snap1, snap3)) unique_snaps_f <- c(unique_snaps_f, snap3_f)
+
+        #good for experimenting with snap specs:
+        # delineate_watershed_test2(tmp, point_f, flow_f,
+        #                           d8_f, 'standard', 1000)
+
+        #delineate each unique location
+        for(i in 1:length(unique_snaps_f)){
+
+            rgx <- str_match(unique_snaps_f[i],
+                             '.*?_(standard|jenson)_dist([0-9]+)\\.shp$')
+            snap_method <- rgx[, 2]
+            snap_distance <- rgx[, 3]
+
+            wb_f <- glue('{path}/wb{n}_buffer{b}_{typ}_dist{dst}.tif',
+                         path = tmp,
+                         n = i,
+                         b = buffer_radius,
+                         typ = snap_method,
+                         dst = snap_distance)
+
+            whitebox::wbt_watershed(d8_pntr = d8_f,
+                                    pour_pts = unique_snaps_f[i],
+                                    output = wb_f)
+
+            wb <- raster::raster(wb_f)
+
+            #check how many wb cells coincide with the edge of the DEM.
+            #If > 0.1% or > 5, broader DEM needed
+            smry <- raster_intersection_summary(wb = wb,
+                                                dem = dem)
+
+            if(verbose){
+                print(glue('buffer radius: {br}; snap: {sn}/{tot}; ',
+                           'n intersecting cells: {ni}; pct intersect: {pct}',
+                           br = buffer_radius,
+                           sn = i,
+                           tot = length(unique_snaps_f),
+                           ni = round(smry$n_intersections, 2),
+                           pct = round(smry$pct_wb_cells_intersect, 2)))
+            }
+
+            if(smry$pct_wb_cells_intersect > 0.1 || smry$n_intersections > 5){
+                buffer_radius_new <- buffer_radius * 10
+                dem_coverage_insufficient <- TRUE
+            } else {
+                buffer_radius_new <- buffer_radius
+
+                #write and record temp files for the technician to visually inspect
+                wb_sf <- wb %>%
+                    raster::rasterToPolygons() %>%
+                    sf::st_as_sf() %>%
+                    sf::st_buffer(dist = 0.1) %>%
+                    sf::st_union() %>%
+                    sf::st_as_sf()#again? ugh.
+
+                wb_sf <- sf::st_transform(wb_sf, 4326) #EPSG for WGS84
+
+                wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}.shp',
+                                path = inspection_dir,
+                                n = i,
+                                b = buffer_radius,
+                                typ = snap_method,
+                                dst = snap_distance,
+                                res = dem_resolution)
+
+                sf::st_write(obj = wb_sf,
+                             dsn = wb_sf_f,
+                             delete_dsn = TRUE,
+                             quiet = TRUE)
+            }
+        }
+
+        buffer_radius <- buffer_radius_new
+    } #end while loop
+
+    if(verbose){
+        message(glue('Candidate delineations are in: ', inspection_dir))
+    }
+
+    return(inspection_dir)
+}
+
+#. handle_errors
+delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
+                                                 snap_dist, snap_method,
+                                                 dem_resolution, write_dir){
+
+    #lat: numeric representing latitude in decimal degrees
+    #   (negative indicates southern hemisphere)
+    #long: numeric representing longitude in decimal degrees
+    #   (negative indicates west of prime meridian)
+    #crs: numeric representing the coordinate reference system (e.g. WSG84)
+    #buffer_radius: integer. the width (m) of the buffer around the site location.
+    #   a DEM will be acquired that covers at least the full area of the buffer.
+    #snap_dist: integer. the distance (m) around the recorded site location
+    #   to search for a flow path.
+    #snap_method: character. either "standard", which snaps the site location
+    #   to the cell within snap_dist that has the highest flow value, or
+    #   "jenson", which snaps to the nearest flow path, regardless of flow.
+    #dem_resolution: integer 1-14. the granularity of the DEM that is used for
+    #   delineation. this argument is passed directly to the z parameter of
+    #   elevatr::get_elev_raster. 1 is low resolution; 14 is high.
+    #write_dir: character. the directory to write shapefile watershed boundary to
+
+    #returns the location of candidate watershed boundary files
+
+    require(whitebox) #can't do e.g. whitebox::func in do.call
+
+    tmp <- tempdir()
+    inspection_dir <- glue(tmp, '/INSPECT_THESE')
+    dem_f <- glue(tmp, '/dem.tif')
+    point_f <- glue(tmp, '/point.shp')
+    d8_f <- glue(tmp, '/d8_pntr.tif')
+    flow_f <- glue(tmp, '/flow.tif')
+    snap_f <- glue(tmp, '/snap.shp')
+    wb_f <- glue(tmp, '/wb.tif')
+
+    dir.create(path = inspection_dir,
+               showWarnings = FALSE)
+
+    proj <- choose_projection(lat = lat,
+                              long = long)
+
+    site <- tibble(x = lat,
+                   y = long) %>%
+        sf::st_as_sf(coords = c("y", "x"),
+                     crs = crs) %>%
+        sf::st_transform(proj)
+    # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
+
+    site_buf <- sf::st_buffer(x = site,
+                              dist = buffer_radius)
+    dem <- sm(elevatr::get_elev_raster(locations = site_buf,
+                                       z = dem_resolution))
+
+    raster::writeRaster(x = dem,
+                        filename = dem_f,
+                        overwrite = TRUE)
+
+    sf::st_write(obj = site,
+                 dsn = point_f,
+                 delete_layer = TRUE,
+                 quiet = TRUE)
+
+    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                        output = dem_f)
+
+    whitebox::wbt_breach_depressions(dem = dem_f,
+                                     output = dem_f,
+                                     flat_increment = 0.01)
+
+    whitebox::wbt_d8_pointer(dem = dem_f,
+                             output = d8_f)
+
+    whitebox::wbt_d8_flow_accumulation(input = dem_f,
+                                       output = flow_f,
+                                       out_type = 'catchment area')
+
+    #call the appropriate snapping function from whitebox
+    args <- list(pour_pts = point_f,
+                 output = snap_f,
+                 snap_dist = snap_dist)
+
+    if(snap_method == 'standard'){
+        args$flow_accum <- flow_f
+        desired_func <- 'wbt_snap_pour_points'
+    } else if(snap_method == 'jenson'){
+        args$streams <- flow_f
+        desired_func <- 'wbt_jenson_snap_pour_points'
+    } else {
+        stop('snap_method must be "standard" or "jenson"')
+    }
+
+    do.call(desired_func, args)
+
+    #delineate
+    whitebox::wbt_watershed(d8_pntr = d8_f,
+                            pour_pts = snap_f,
+                            output = wb_f)
+
+    wb_sf <- raster::raster(wb_f) %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf() %>%
+        sf::st_buffer(dist = 0.1) %>%
+        sf::st_union() %>%
+        sf::st_as_sf() %>% #again? ugh.
+        sf::st_transform(4326) #EPSG for WGS84
+
+    site_name <- str_match(write_dir, '.+?/([^/]+)$')[, 2]
+
+    sf::st_write(obj = wb_sf,
+                 dsn = glue('{d}/{s}.shp',
+                            d = write_dir,
+                            s = site_name),
+                 delete_dsn = TRUE,
+                 quiet = TRUE)
+
+    message(glue('Watershed boundary written to ',
+                 write_dir))
 
     return()
 }
@@ -2040,6 +2543,192 @@ ms_delineate <- function(network=domain, domain){
 ms_derive <- function(network=domain, domain){
     source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
     return()
+}
+
+#. handle_errors
+move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
+
+    #shp_files is a character vector of filenames with .shp extension
+    #   (.shx, .prj, .dbf are handled internally and don't need to be listed)
+    #from_dir and to_dir are strings representing the source and destination
+    #   directories, respectively
+    #new_name_vec is an optional character vector of new names for each shape file.
+    #   these can end in ".shp", but don't need to
+
+    if(any(! grepl('\\.shp$', shp_files))){
+        stop('All components of shp_files must end in ".shp"')
+    }
+
+    if(length(shp_files) != length(new_name_vec)){
+        stop('new_name_vec must have the same length as shp_files')
+    }
+
+    for(i in 1:length(shp_files)){
+
+        shapefile_base <- strsplit(shp_files[i], '\\.shp')[[1]]
+
+        files_to_move <- list.files(path = from_dir,
+                                    pattern = shapefile_base)
+
+        extensions <- str_match(files_to_move,
+                                paste0(shapefile_base, '(\\.[a-z]{3})'))[, 2]
+
+        if(is.null(new_name_vec)){
+            new_name_base <- rep(shapefile_base, length(files_to_move))
+        } else {
+            new_name_base <- strsplit(new_name_vec[i], '\\.shp$')[[1]]
+            new_name_base <- rep(new_name_base, length(files_to_move))
+        }
+
+        mapply(function(x, nm, ext) file.rename(from = paste(from_dir,
+                                                             x,
+                                                             sep = '/'),
+                                                to = glue('{td}/{n}{ex}',
+                                                          td = to_dir,
+                                                          n = nm,
+                                                          ex = ext)),
+               x = files_to_move,
+               nm = new_name_base,
+               ext = extensions)
+    }
+
+    return()
+}
+
+#. handle_errors
+get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
+
+    #msg: character. a message that will be used to prompt the user
+    #possible_chars: character vector of acceptable single-character responses
+
+    if(subsequent_prompt){
+        cat(paste('Please choose one of:',
+                  paste(possible_chars,
+                        collapse = ', '),
+                  '\n> '))
+    } else {
+        cat(msg)
+    }
+
+    ch <- as.character(readLines(con = stdin(), 1))
+
+    if(length(ch) == 1 && ch %in% possible_chars){
+        return(ch)
+    } else {
+        get_response_1char(msg, possible_chars, subsequent_prompt = TRUE)
+    }
+}
+
+#. handle_errors
+ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
+
+    #reads watershed boundary shapefile from macrosheds directory and calculates
+    #   watershed area with sf::st_area
+
+    #update_site_file: logical. if true, calculated watershed area is written
+    #   to the ws_area_ha column in data/general/site_data.csv
+
+    #returns area in hectares
+
+    munge_dir <- glue('data/{n}/{d}/munged',
+                      n = network,
+                      d = domain)
+
+    munged_dirs <- list.dirs(munge_dir,
+                             recursive = FALSE,
+                             full.names = FALSE)
+
+    ws_boundary_dir <- grep(pattern = '^ws_boundary.*',
+                            x = munged_dirs,
+                            value = TRUE)
+
+    if(! length(ws_boundary_dir)){
+        stop(glue('No ws_boundary directory found in ', munge_dir))
+    }
+
+    site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+                     n = network,
+                     d = domain,
+                     w = ws_boundary_dir,
+                     s = site_name)
+
+    if(! dir.exists(site_dir) || ! length(dir(site_dir))){
+        stop(glue('{s} directory missing or absent (data/{n}/{d}/munged/{w})',
+                  s = site_name,
+                  n = network,
+                  d = domain,
+                  w = ws_boundary_dir))
+    }
+
+    wb <- sf::st_read(glue('data/{n}/{d}/munged/{w}/{s}/{s}.shp',
+                           n = network,
+                           d = domain,
+                           w = ws_boundary_dir,
+                           s = site_name),
+                    quiet = TRUE)
+
+    ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
+
+    if(update_site_file){
+
+        site_data <- sm(read_csv('data/general/site_data.csv'))
+
+        site_data$ws_area_ha[site_data$domain == domain &
+                                 site_data$network == network &
+                                 site_data$site_name == site_name] <- ws_area_ha
+
+        write.csv(site_data,
+                  file = 'data/general/site_data.csv',
+                  row.names = FALSE)
+    }
+
+    return(ws_area_ha)
+}
+
+#. handle_errors
+write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
+                                 snap_method, snap_distance, dem_resolution){
+
+    new_entry <- tibble(network = network,
+                        domain = domain,
+                        site_name = site_name,
+                        buffer_radius_m = buffer_radius,
+                        snap_method = snap_method,
+                        snap_distance_m = snap_distance,
+                        dem_resolution = dem_resolution)
+
+    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
+                   error = function(e) tibble())
+
+    ds <- bind_rows(ds, new_entry)
+
+    write_csv(ds, 'data/general/watershed_delineation_specs.csv')
+
+    return()
+}
+
+#. handle_errors
+read_wb_delin_specs <- function(network, domain, site_name){
+
+    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
+                   error = function(e){
+                       empty_tibble <- tibble(network = 'a',
+                                              domain = 'a',
+                                              site_name = 'a',
+                                              buffer_radius_m = 1,
+                                              snap_method = 'a',
+                                              snap_distance_m = 1,
+                                              dem_resolution = 1)
+
+                       return(empty_tibble[-1, ])
+                   })
+
+    ds <- filter(ds,
+                 network == !!network,
+                 domain == !!domain,
+                 site_name == !!site_name)
+
+    return(ds)
 }
 
 #. handle_errors
@@ -2268,7 +2957,7 @@ convert_unit <- function(x, input_unit, output_unit){
 
     new_val <- x*old_top_conver
     new_val <- new_val/new_top_conver
-    
+
     new_val <- new_val/old_bottom_conver
     new_val <- new_val*new_bottom_conver
 
@@ -2521,7 +3210,22 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
 }
 
 #still in progress
-delineate_watershed <- function(lat, long) {
+delineate_watershed_nhd <- function(lat, long) {
+
+    #this function delineates a watershed from a point first using NHD tools.
+    #if that fails, it falls back on a more general whitebox method, which is
+    #implemented in delineate_watershed. the NHD method, if implemented, should
+    #correct for reach proportional distance of each site location. see
+    # https://github.com/vlahm/watershed_tools/blob/master/2_batch_summary_nhd.R
+    #also at that link, there's a function for retrieving COMID by lat/long, which
+    #could replace discover_nhdplus_id below (which doesn't always seem to work?)
+
+    #there's also this streamstats approach (fully packaged),
+    #   but that's incomplete even for CONUS
+    # x = streamstats::delineateWatershed(xlocation = long,
+    #                                     ylocation = lat,
+    #                                     crs = crs)
+    # streamstats::leafletWatershed(x)
 
     site <- tibble(x = lat,
                    y = long) %>%
@@ -5066,6 +5770,45 @@ get_relative_uncert <- function(x){
     return(ru)
 
 }
+
+#. handle_errors
+raster_intersection_summary <- function(wb, dem){
+
+    #wb is a delineated watershed boundary as a rasterLayer
+    #dem is a DEM rasterLayer
+
+    summary_out <- list()
+
+    #convert wb to sf object
+    wb <- wb %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    #get edge of DEM as sf object
+    dem_edge <- raster::boundaries(dem) %>%
+        raster::reclassify(matrix(c(0, NA),
+                                  ncol = 2)) %>%
+        raster::rasterToPolygons() %>%
+        sf::st_as_sf()
+
+    #tally raster cells
+    summary_out$n_wb_cells <- length(wb$geometry)
+    summary_out$n_dem_cells <- length(dem_edge$geometry)
+
+    #tally intersections; calc percent of wb cells that overlap
+    intersections <- sf::st_intersects(wb, dem_edge) %>%
+        as.matrix() %>%
+        apply(MARGIN = 2,
+              FUN = sum) %>%
+        table()
+
+    true_intersections <- sum(intersections[names(intersections) > 0])
+
+    summary_out$n_intersections <- true_intersections
+    summary_out$pct_wb_cells_intersect <- true_intersections /
+        summary_out$n_wb_cells * 100
+
+    return(summary_out)
 
 #. handle_errors 
 remove_all_na_sites <- function(d) {
