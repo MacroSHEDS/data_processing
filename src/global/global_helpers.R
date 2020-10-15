@@ -671,6 +671,11 @@ ms_read_raw_csv <- function(filepath,
     #Set correct class to each column 
     # suppressWarnings because it warns that NA are created by changing the class 
     # of a column, this is what is wanted when there are character is a numeric 
+    
+    # In cases where ther may only be some varbale flags (not compatable with 
+    # ms_cast_and_reflag  probably)
+    #classes_all <- classes_all[names(classes_all) %in% names(d)]
+    
     d[] <- suppressWarnings(Map(`class<-`, d, classes_all))
         
     #rename cols to canonical names

@@ -112,7 +112,8 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                            variable_flags_dirty = 1)
     }
     
-    if(prodname_ms %in% c('stream_nitrate__DP1.20033')) {
+    if(prodname_ms %in% c('stream_nitrate__DP1.20033', 'stream_temperature__DP1.20053',
+                          'stream_PAR__DP1.20042')) {
         
         col_names <- unique(str_split_fixed(colnames(out), '__', n = Inf)[,1])
         
@@ -128,7 +129,9 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
         
         d <- d %>%
             rename(val=3) %>%
-            mutate(var = 'IS_NO3_N')
+            mutate(var = case_when(prodname_ms == 'stream_nitrate__DP1.20033' ~'IS_NO3_N',
+                                   prodname_ms == 'stream_temperature__DP1.20053' ~ 'IS_temp',
+                                   prodname_ms == 'stream_PAR__DP1.20042'~ 'IS_PAR'))
     }
     
     if(prodname_ms %in% c('stream_gases__DP1.20097')) {
@@ -152,6 +155,30 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                                 summary_flags_clean = list('error' = 0),
                                 summary_flags_dirty = list('error' = 1))
     }
+    
+    if(prodname_ms %in% c('precip_chemistry__DP1.00013')) {
+       
+        d <- out %>%
+            mutate(across(contains('|flg'), ~ifelse(is.na(.x), 0, 1))) %>%
+            mutate(site_name = !!site_name) %>%
+            select(-namedLocation)
+        
+        col_names <- str_split_fixed(colnames(d), '__', n = Inf)[,1]
+        
+        is_sensor <- rep(FALSE,
+                         length(col_names))
+        names(is_sensor) <- unname(col_names)
+        
+        d <- identify_sampling(df = d,
+                                      is_sensor =  is_sensor,
+                                      domain = domain,
+                                      network = network,
+                                      prodname_ms = prodname_ms)
+        
+        d <- ms_cast_and_reflag(d,
+                                variable_flags_clean = 0,
+                                variable_flags_dirty = 1)
+    } 
     
     # carry out final munge steps 
     d <- remove_all_na_sites(d)
@@ -184,6 +211,93 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             p=prodname_ms, n=network, d=domain, s=site_name)
     loginfo(msg, logger=logger_module)
 
+    return('sitemunge complete')
+}
+
+munge_neon_precip <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
+    # site_name=sites[j]; tracker=held_data
+    
+    retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_name)
+    
+    if(nrow(retrieval_log) == 0){
+        return(generate_ms_err('missing retrieval log'))
+    }
+    
+    out = tibble()
+    for(k in 1:nrow(retrieval_log)){
+        #for(k in 1:15){
+        
+        prodcode <- prodcode_from_prodname_ms(prodname_ms)
+        
+        processing_func <- get(paste0('process_1_', prodcode))
+        in_comp <- retrieval_log[k, 'component']
+        
+        out_comp <- sw(do.call(processing_func,
+                               args=list(network = network,
+                                         domain = domain,
+                                         prodname_ms = prodname_ms,
+                                         site_name = site_name,
+                                         component = in_comp)))
+        
+        if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
+            out <- bind_rows(out, out_comp) 
+        }
+    }
+        
+        col_names <- unique(str_split_fixed(colnames(out), '__', n = Inf)[,1])
+        
+        is_sensor <- rep(TRUE,
+                         length(col_names))
+        names(is_sensor) <- unname(col_names)
+        
+        d <- identify_sampling(df = out,
+                               is_sensor =  is_sensor,
+                               domain = domain,
+                               network = network,
+                               prodname_ms = prodname_ms) 
+        
+        d <- d %>%
+            rename(val=3) %>%
+            mutate(var = 'IS_precipitation_ns')
+    
+    d <- remove_all_na_sites(d)
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    
+    rain_sites <- unique(d$site_name)
+    
+    for(y in 1:length(rain_sites)) {
+        
+        d_site <- d %>%
+            filter(site_name == !!rain_sites[y])
+        
+        write_ms_file(d = d,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = rain_sites[y],
+                      level = 'munged',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
+    }
+    
+    update_data_tracker_m(network=network, domain=domain,
+                          tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
+                          new_status='ok')
+    
+    msg = glue('munged {p} ({n}/{d}/{s})',
+               p=prodname_ms, n=network, d=domain, s=site_name)
+    loginfo(msg, logger=logger_module)
+    
     return('sitemunge complete')
 }
 
