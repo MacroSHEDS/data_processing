@@ -640,7 +640,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                                                'Time' = '%H:%M:%S'),
                           datetime_tz = 'US/Central',
                           site_name_col = 'site',
-                          data_cols =  c('Spcond' = 'SpCond', ),
+                          data_cols =  c('Spcond' = 'SpCond'),
                           data_col_pattern = '#V#',
                           summary_flagcols = 'comments',
                           is_sensor = FALSE))

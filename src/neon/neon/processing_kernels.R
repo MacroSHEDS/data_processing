@@ -66,7 +66,7 @@ process_0_DP1.20053 <- function(set_details, network, domain){
 
 }
 
-#air_pressure: STATUS=READY
+#air_pressure: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.00004 <- function(set_details, network, domain){
 
@@ -157,15 +157,35 @@ process_0_DP1.20288 <- function(set_details, network, domain){
 
 }
 
-#precipitation: STATUS=PENDING
+#precipitation: STATUS=READY
 #. handle_errors
-process_0_xx0 <- function(set_details, network, domain){
+process_0_DP1.00006 <- function(set_details, network, domain){
 
+  data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+                                           site=set_details$site_name, startdate=set_details$component,
+                                           enddate=set_details$component, package='basic', check.size=FALSE)
+  
+  raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+                       wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+                       s=set_details$site_name, c=set_details$component)
+  
+  ue(serialize_list_to_dir(data_pile, raw_data_dest))
+  
 }
 
-#precip_chemistry: STATUS=PENDING
+#precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_xx1 <- function(set_details, network, domain){
+process_0_DP1.00013 <- function(set_details, network, domain){
+  
+  data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+                                           site=set_details$site_name, startdate=set_details$component,
+                                           enddate=set_details$component, package='basic', check.size=FALSE)
+  
+  raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+                       wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+                       s=set_details$site_name, c=set_details$component)
+  
+  ue(serialize_list_to_dir(data_pile, raw_data_dest))
 
 }
 
@@ -300,42 +320,37 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
 process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-    rawfiles = list.files(rawdir)
-    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
-    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
+    rawfiles <- list.files(rawdir)
 
     relevant_file1 = 'PARWS_5min.feather'
-
+    
     if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
-        out_sub = ue(sourceflags_to_ms_status(rawd, list(PARFinalQF = 0)))
+        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(out_sub$ms_status == 1)){
-        return(generate_ms_exception('All records failed QA'))
+    if(all(rawd$PARFinalQF == 1) || all(is.na(rawd$PARMean))){
+        return(generate_ms_exception('All records failed QA or no data in component'))
     }
 
-    updown = ue(determine_upstream_downstream(out_sub))
+    updown <- ue(determine_upstream_downstream(rawd))
 
-    out_sub = out_sub %>%
+    out_sub <- rawd %>%
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
-            startDateTime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        group_by(startDateTime, site_name) %>%
+            datetime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
+        group_by(datetime, site_name) %>%
         summarize(
-            PARMean = mean(PARMean, na.rm=TRUE),
-            ms_status = numeric_any(ms_status)) %>%
+            'PAR__|dat' = mean(PARMean, na.rm=TRUE),
+            ms_status = numeric_any(PARFinalQF)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, PAR=PARMean, ms_status)
-
-    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
-                                  desired_interval = '15 min',
-                                  impute_limit = 30))
+        select(site_name, datetime=datetime, 'PAR__|dat', ms_status)
+    
+    out_sub[is.na(out_sub)] <- NA
 
     return(out_sub)
 }
@@ -353,39 +368,34 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
     relevant_file1 = 'TSW_5min.feather'
-
+    
     if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1)) %>%
-          mutate(finalQF = ifelse(is.na(finalQF), 0, finalQF))
+        rawd = read_feather(glue(rawdir, '/', relevant_file1)) 
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$finalQF == 1)){
-        return(generate_ms_exception('All records failed QA'))
+    if(all(rawd$finalQF == 1) || all(is.na(rawd$surfWaterTempMean))){
+        return(generate_ms_exception('All records failed QA or no data in component'))
     }
 
     updown <- ue(determine_upstream_downstream(rawd))
 
     out_sub <- rawd %>%
       mutate(site_name=paste0(siteID, updown)) %>%
-      mutate(startDateTime = force_tz(startDateTime, 'UTC')) %>% 
-      group_by(startDateTime, site_name) %>%
-      summarize(
-        surfWaterTempMean = mean(surfWaterTempMean, na.rm=TRUE),
-        ms_status = numeric_any(finalQF)) %>%
+      mutate(datetime = force_tz(startDateTime, 'UTC')) %>% 
+      group_by(datetime, site_name) %>%
+      summarize('temp__|dat' = mean(surfWaterTempMean, na.rm=TRUE),
+                ms_status = numeric_any(finalQF)) %>%
       ungroup() %>%
-      select(site_name, datetime=startDateTime, temp=surfWaterTempMean,
-            ms_status)
-
-    out_sub <- ue(synchronize_timestep(ms_df = out_sub,
-                                  desired_interval = '15 min',
-                                  impute_limit = 30))
+      select(site_name, datetime, 'temp__|dat', ms_status)
+    
+    out_sub[is.na(out_sub)] <- NA
 
     return(out_sub)
 }
 
-#air_pressure: STATUS=READY
+#air_pressure: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -532,4 +542,108 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
               'FDOM__|flg' = fDOMFinalQF)
 
     return(out_sub)
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
+                                component) {
+  
+  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+  
+  rawfiles <- list.files(rawdir)
+  
+  relevant_file1 <- 'PRIPRE_5min.feather'
+  relevant_file2 <- 'SECPRE_1min.feather'
+
+  if(relevant_file2 %in% rawfiles) {
+    rawd2 <- read_feather(glue(rawdir, '/', relevant_file2))
+    
+    out_sub2 <- rawd2 %>%
+      mutate(site_name=paste(site_name, horizontalPosition, sep = '_'),
+             datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
+      mutate(secPrecipRangeQF = ifelse(is.na(secPrecipRangeQF), 0, secPrecipRangeQF),
+             secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
+      mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
+                                1, 0)) %>%
+      select(site_name, datetime, 'precipitation_ns__|dat'=secPrecipBulk, ms_status)
+  }
+  
+  if(relevant_file1 %in% rawfiles) {
+    rawd1 <- read_feather(glue(rawdir, '/', relevant_file1))
+    
+    out_sub1 <- rawd1 %>%
+      mutate(site_name=paste(site_name, horizontalPosition, sep = '_'),
+             datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
+      mutate(ms_status = ifelse(priPrecipFinalQF == 1,
+                                1, 0)) %>%
+      select(site_name, datetime, 'precipitation_ns__|dat'=priPrecipBulk, ms_status)
+  } 
+  
+  if(!relevant_file1 %in% rawfiles && ! relevant_file2 %in% rawfiles) {
+    return(generate_ms_exception('Missing precip files'))
+  }
+  
+  if(relevant_file1 %in% rawfiles && relevant_file2 %in% rawfiles) {
+    
+    out_sub <- rbind(out_sub2, out_sub1)
+    
+  } else {
+    if(relevant_file1 %in% rawfiles) { out_sub <- out_sub1 } 
+    if(relevant_file2 %in% rawfiles) { out_sub <- out_sub2 } 
+  } 
+  
+  return(out_sub)
+  
+}
+
+#precip_chemistry: STATUS=READY
+#. handle_errors
+process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
+                                component){
+  
+  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+  
+  rawfiles <- list.files(rawdir)
+
+  relevant_file <- 'wdp_chemLab.feather'
+  
+  # Units all mg/l uS/cm and pH
+  
+  if(relevant_file %in% rawfiles){
+    
+    out_sub <- read_feather(glue(rawdir, '/', relevant_file)) %>%
+      rename('Ca__|dat' = precipCalcium,
+             'Mg__|dat' = precipMagnesium,
+             'K__|dat' = precipPotassium,
+             'Na__|dat' = precipSodium,
+             'NH4__|dat' = precipAmmonium,
+             'NO3__|dat' =  precipNitrate,
+             'SO4__|dat' = precipSulfate,
+             'PO4__|dat' = precipPhosphate,
+             'Cl__|dat' = precipChloride,
+             'Br__|dat' = precipBromide,
+             'pH__|dat' = pH,
+             'spCond__|dat' = precipConductivity,
+             'Ca__|flg' = precipCalciumFlag,
+             'Mg__|flg' = precipMagnesiumFlag,
+             'K__|flg' = precipPotassiumFlag,
+             'Na__|flg' = precipSodiumFlag,
+             'NH4__|flg' = precipAmmoniumFlag,
+             'NO3__|flg' =  precipNitrateFlag,
+             'SO4__|flg' = precipSulfateFlag,
+             'PO4__|flg' = precipPhosphateFlag,
+             'Cl__|flg' = precipChlorideFlag,
+             'Br__|flg' = precipBromideFlag) %>%
+      mutate('spCond__|flg' = NA,
+             'pH__|flg' = NA) %>%
+      select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg'))
+    
+  } else {
+    return(generate_ms_exception('wdp_chemLab.feather file missing'))
+  }
+  
+  return(out_sub)
 }
