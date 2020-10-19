@@ -6,7 +6,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'munge',
                               get_statuses = 'ready')
 
-# i=5
+# i=1
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -22,7 +22,7 @@ for(i in 1:nrow(prod_info)){
         next
     }
 
-    sites = names(held_data[[prodname_ms]])
+    sites <- names(held_data[[prodname_ms]])
 
     for(j in 1:length(sites)){
 
@@ -31,6 +31,7 @@ for(i in 1:nrow(prod_info)){
         munge_status <- get_munge_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_name = site_name)
+
         if(munge_status == 'ok'){
             loginfo(glue('Nothing to do for {s} {p}',
                          s = site_name,

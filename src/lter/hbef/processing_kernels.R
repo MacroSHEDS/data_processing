@@ -17,13 +17,25 @@ process_0_1 <- function(set_details, network, domain){
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_13 <- function(set_details, network, domain){
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
-    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
-    download.file(url=set_details$url,
-        destfile=glue(raw_data_dest, '/', set_details$component, '.csv'),
-        cacheOK=FALSE, method='curl')
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                          wd = getwd(),
+                          n = network,
+                          d = domain,
+                          p = set_details$prodname_ms,
+                          s = set_details$site_name)
+
+    dir.create(raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    download.file(url = set_details$url,
+                  destfile = glue(raw_data_dest,
+                                  '/',
+                                  set_details$component,
+                                  '.csv'),
+                  cacheOK = FALSE,
+                  method = 'curl')
 
     return()
 }
@@ -160,6 +172,11 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 process_1_13 <- function(network, domain, prodname_ms, site_name,
     component){
 
+    if(component == 'site info'){
+        loginfo('Blacklisting superfluous data component')
+        return(generate_blacklist_indicator())
+    }
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -212,6 +229,15 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                                               timeEST = '%H:%M'),
                             datetime_tz = 'US/Eastern',
                             site_name_col = 'site',
+                            alt_site_name = list('w1' = c('1', 'W1'),
+                                                 'w2' = c('2', 'W2'),
+                                                 'w3' = c('3', 'W3'),
+                                                 'w4' = c('4', 'W4'),
+                                                 'w5' = c('5', 'W5'),
+                                                 'w6' = c('6', 'W6'),
+                                                 'w7' = c('7', 'W7'),
+                                                 'w8' = c('8', 'W8'),
+                                                 'w9' = c('9', 'W9')),
                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
                                           'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
                                           'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',

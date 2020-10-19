@@ -134,20 +134,35 @@ compare_interp_methods <- function(){
     plot(m3, main='idw^2 and elev')
 }
 
-invalidate_tracked_data <- function(network, domain, level){
+invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
 
-    #level is one of 'munge' or 'derive'. that level will be reset
-    #not currently set up to invalidate level='retrieve'
+    #level is one of 'munge' or 'derive'. that level will be reset.
+    #   not currently set up to invalidate level='retrieve'.
+    #prodname_ms is optional. if supplied, only that product will be invalidated
 
     tracker <- get_data_tracker(network = network,
                                 domain = domain)
 
-    invalidated <- recursive_tracker_update(l = tracker,
-                                            elem_name = level,
-                                            new_val = list(status = 'pending',
-                                                           mtime = '1500-01-01'))
+    if(! is.null(prodname_ms)){
 
-    return(invalidated)
+        sublist <- tracker[[prodname_ms]]
+
+        subl_updt <- recursive_tracker_update(l = sublist,
+                                              elem_name = level,
+                                              new_val = list(status = 'pending',
+                                                             mtime = '1500-01-01'))
+        tracker[[prodname_ms]] <- subl_updt
+
+        return(tracker)
+
+    } else {
+
+        invalidated <- recursive_tracker_update(l = tracker,
+                                                elem_name = level,
+                                                new_val = list(status = 'pending',
+                                                               mtime = '1500-01-01'))
+        return(invalidated)
+    }
 }
 
 assign_typical_test_variables <- function(){
@@ -259,12 +274,13 @@ compare_efficiency <- function(f, g, stepstart=10, stepstop=1e5, outfile){
 
 manufacture_uncert_msdf <- function(df, errval = 0.1){
 
-    colnames <- colnames(df)
-    noncan_colnames <- colnames[! colnames %in% ms_canonicals]
+    #colnames <- colnames(df)
+    #noncan_colnames <- colnames[! colnames %in% ms_canonicals]
 
-    for(n in noncan_colnames){
-        errors::errors(df[[n]]) <- errval
-    }
+    #for(n in noncan_colnames){
+    #    errors::errors(df[[n]]) <- errval
+    #}
+    errors(df$val) <- errval
 
     return(df)
 }
