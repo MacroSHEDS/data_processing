@@ -136,6 +136,19 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 
         if(is.null(out_comp)) next
 
+        if(is_blacklist_indicator(out_comp)){
+            update_data_tracker_r(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  set_details = list(prodname_ms = prodname_ms,
+                                                     site_name = site_name,
+                                                     component = in_comp),
+                                  new_status = 'blacklist')
+        }
+
+        #BUILD THIS REGION INTO A HANDLE-ALL FUNC
+        #IS IT POSSIBLE TO return(next)?
+
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }

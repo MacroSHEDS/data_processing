@@ -80,14 +80,6 @@ assign('unique_exceptions', c(), envir=.GlobalEnv)
 #                     'emayili', 'tinsel', 'imputeTS')
 # idw_var_export <- c('logger_module', 'err_cnt')
 
-#these are column names that are in every non-spatial macrosheds dataset by the
-#time it reaches its final formatted/cleaned state. we sometimes want to ignore
-#these columns when operating on ms tibbles/feathers. this list may also grow.
-#OBSOLETE now that we're using long format storage. remove this when possible.
-assign('ms_canonicals',
-       c('datetime', 'site_name', 'ms_status', 'ms_interp'),
-       envir = .GlobalEnv)
-
 # flag systems (future use?; increasing user value and difficulty to manage):
 
 # system1: binary status (0=chill, 1=unchill)
@@ -359,7 +351,7 @@ identify_sampling <- function(df,
                      'type' = g_a$type,
                      'interval' = g_a$interval)
 
-            all_sites <- rbind(all_sites, g_a)
+            all_sites <- bind_rows(all_sites, g_a)
         }
 
         #include new prefixes in df column names
@@ -1683,8 +1675,12 @@ filter_unneeded_sets <- function(tracker_with_details){
 }
 
 #. handle_errors
-update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
-                                  tracker_name=NULL, set_details=NULL, new_status=NULL){
+update_data_tracker_r <- function(network = domain,
+                                  domain,
+                                  tracker = NULL,
+                                  tracker_name = NULL,
+                                  set_details = NULL,
+                                  new_status = NULL){
 
     #this updates the retrieve section of a data tracker in memory and on disk.
     #see update_data_tracker_m for the munge section and update_data_tracker_d
@@ -1692,7 +1688,8 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk, updated, and then written back to disk.
+    #from disk, updated, and then written back to disk. tracker_name, set_details,
+    #and new_status must be supplied if tracker is not.
 
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(set_details) || is.null(new_status)
@@ -1714,6 +1711,7 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
         if(new_status %in% c('pending', 'ok')){
             rt$held_version[set_ind] = as.character(set_details$avail_version)
         }
+
         rt$status[set_ind] = new_status
         rt$mtime[set_ind] = as.character(Sys.time())
 
@@ -1735,8 +1733,12 @@ update_data_tracker_r <- function(network=domain, domain, tracker=NULL,
 }
 
 #. handle_errors
-update_data_tracker_m <- function(network=domain, domain, tracker_name,
-                                  prodname_ms, site_name, new_status){
+update_data_tracker_m <- function(network = domain,
+                                  domain,
+                                  tracker_name,
+                                  prodname_ms,
+                                  site_name,
+                                  new_status){
 
     #this updates the munge section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
@@ -1766,8 +1768,13 @@ update_data_tracker_m <- function(network=domain, domain, tracker_name,
 }
 
 #. handle_errors
-update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
-                                  tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
+update_data_tracker_d <- function(network = domain,
+                                  domain,
+                                  tracker = NULL,
+                                  tracker_name = NULL,
+                                  prodname_ms = NULL,
+                                  site_name = NULL,
+                                  new_status = NULL){
 
     #this updates the derive section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
@@ -1775,7 +1782,8 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
 
     #if tracker is supplied, it will be used to write/overwrite the one on disk.
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk, updated, and then written back to disk.
+    #from disk, updated, and then written back to disk. tracker_name, set_details,
+    #and new_status must be supplied if tracker is not.
 
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(prodname_ms) ||
@@ -1818,8 +1826,13 @@ update_data_tracker_d <- function(network=domain, domain, tracker=NULL,
 }
 
 #. handle_errors
-update_data_tracker_g <- function(network=domain, domain, tracker=NULL,
-                                  tracker_name=NULL, prodname_ms=NULL, site_name=NULL, new_status=NULL){
+update_data_tracker_g <- function(network = domain,
+                                  domain,
+                                  tracker = NULL,
+                                  tracker_name = NULL,
+                                  prodname_ms = NULL,
+                                  site_name = NULL,
+                                  new_status = NULL){
 
     #this updates the general section of a data tracker in memory and on disk.
     #see update_data_tracker_r for the retrieval section and
@@ -3361,23 +3374,13 @@ delineate_watershed_nhd <- function(lat, long) {
 }
 
 #. handle_errors
-calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){#, dt_round_interv,
-    #impute_limit = 30){
+calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){
 
     #chemprod is the prodname_ms for stream or precip chemistry
     #qprod is the prodname_ms for stream discharge or precip volume over time
     #dt_round_interv is a rounding interval passed to lubridate::round_date
 
-    #todo:
-    #1 incorporate read_combine_feather
-    #2 a lot of datetime management code has been commented. note that if
-    #you need to bring it back (because of some unforeseen problem
-    #with synchronize_timestep), you'll need to change some of the any()
-    #calls to numeric_any, or convert ms_status and ms_interp to
-    #logical and then summarize with any()
-
-    qvar <- prodname_from_prodname_ms(qprod)
-    if(! qvar %in% c('precipitation', 'discharge')){
+    if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
     }
 
@@ -3385,52 +3388,34 @@ calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){#, dt_r
         filter(flux_convertible == 1) %>%
         pull(variable_code)
 
-    chem <- read_feather(glue('data/{n}/{d}/{l}/{cp}/{s}.feather',
-                              n = network,
-                              d = domain,
-                              l = level,
-                              cp = chemprod,
-                              s = site_name))
-
-    chem <- chem %>%
-        pivot_wider(names_from = 'var', values_from = 'val') %>%
-        select(contains(flux_vars), 'datetime', 'ms_status', 'ms_interp')
-    #     mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-    #     group_by(datetime) %>%
-    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    #     ungroup()
-    # chem = manufacture_uncert_msdf(chem)
-
-    # detlims_c <- identify_detection_limit(chem)
-    # ue(identify_detection_limit_t(chem,
-    #                               network = network,
-    #                               domain = domain))
+    chem <- read_combine_feathers(network = network,
+                                  domain = domain,
+                                  prodname_ms = chemprod) %>%
+        filter(site_name == !!site_name) %>%
+        pivot_wider(names_from = 'var',
+                    values_from = 'val') %>%
+        select(datetime, ms_status, ms_interp,
+               matches(paste0('^[A-Z]{2}_',
+                              flux_vars),
+                       ignore.case = FALSE))
 
     daterange <- range(chem$datetime)
-    # fulldt <- tibble(datetime = seq(daterange[1], daterange[2],
-    #                                 by=dt_round_interv))
 
-    discharge <- read_feather(glue('data/{n}/{d}/{l}/{qp}/{s}.feather',
-                                   n = network,
-                                   d = domain,
-                                   l = level,
-                                   qp = qprod,
-                                   s = site_name)) %>%
-        select(-site_name) %>%
-        filter(datetime >= daterange[1], datetime <= daterange[2])
-    # mutate(datetime = lubridate::round_date(datetime, dt_round_interv)) %>%
-    # group_by(datetime) %>%
-    # summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    # ungroup()
-    # discharge = manufacture_uncert_msdf(discharge)
+    flow <- read_combine_feathers(network = network,
+                                  domain = domain,
+                                  prodname_ms = qprod) %>%
+        filter(
+            site_name == !!site_name,
+            datetime >= !!daterange[1],
+            datetime <= !!daterange[2]) %>%
+        rename(flow = val) %>% #quick and dirty way to convert to wide
+        # rename(!!drop_var_prefix(.$var[1]) := val) %>%
+        select(-var, -site_name)
 
-    # discharge = manufacture_uncert_msdf(discharge)
-    # chem = manufacture_uncert_msdf(chem)
-    # discharge = filter(discharge, datetime < as.POSIXct('1980-01-01'))
-    # chem = filter(chem, datetime < as.POSIXct('1980-01-01'))
-
+    #a few commented remnants from the old wide-format days have been left here,
+    #because they might be instructive in other endeavors
     flux <- chem %>%
-        full_join(discharge,
+        full_join(flow,
                   by = 'datetime') %>%
         select_if(~(! all(is.na(.)))) %>%
         rowwise(datetime) %>%
@@ -3439,19 +3424,24 @@ calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){#, dt_r
             ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
         ungroup() %>%
         select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-        mutate_at(vars(-datetime, -!!sym(qvar), -ms_status, -ms_interp),
-                  ~(. * !!sym(qvar))) %>%
-        select(-!!sym(qvar)) %>%
-        mutate(site_name = !!(site_name)) %>%
-        # filter_at(vars(-site_name, -datetime, -ms_status, -ms_interp),
-        filter_at(vars(-any_of(ms_canonicals)),
-                  any_vars(! is.na(.))) %>%
-        arrange(datetime) %>%
-        select(datetime, site_name, everything()) %>%
-        relocate(ms_status, .after = last_col()) %>%
-        relocate(ms_interp, .after = last_col())
+        mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
+                  ~(. * flow)) %>%
+        select(-flow) %>%
+        pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
+                     names_pattern = '(.*)',
+                     names_to = 'var') %>%
+        rename(val = value) %>%
+        filter(! is.na(val)) %>%
+        # filter_at(vars(-all_of(c('datetime', 'ms_status', 'ms_interp'))),
+        #           any_vars(! is.na(.))) %>%
+        mutate(site_name = !!site_name) %>%
+        arrange(site_name, var, datetime) %>%
+        select(datetime, site_name, var, val, ms_status, ms_interp)
+        # select(datetime, site_name, everything()) %>%
+        # relocate(ms_status, .after = last_col()) %>%
+        # relocate(ms_interp, .after = last_col())
 
-    flux <- ue(apply_detection_limit_t(flux, network, domain, prodname_ms))
+    flux <- apply_detection_limit_t(flux, network, domain, chemprod)
 
     return(flux)
 }
@@ -3860,10 +3850,10 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
         ungroup() %>%
         rowwise() %>%
         do(tibble(site_name = .$site_name,
-                      var = .$var,
-                      datetime = seq(.$dtmin,
-                                     .$dtmax,
-                                     by = desired_interval))) %>%
+                  var = .$var,
+                  datetime = seq(.$dtmin,
+                                 .$dtmax,
+                                 by = desired_interval))) %>%
         ungroup()
 
     #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
