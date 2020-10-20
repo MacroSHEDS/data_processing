@@ -384,6 +384,188 @@ identify_sampling <- function(df,
     return(df)
 }
 
+identify_sampling_bypass <- function(df,
+                              is_sensor,
+                              date_col = 'datetime',
+                              network,
+                              domain,
+                              prodname_ms){
+    
+    #This case is used (primarily for neon) when use of ms_read_raw and 
+    # ms_cast_flag are not used because of incaomptable data structures 
+    
+    #checks
+    if(!is.logical(is_sensor)){
+        stop('is_sensor must be logical.')
+    }
+    
+    #parse is_sensor into a character vector of sample regimen codes
+    is_sensor <- ifelse(is_sensor, 'S', 'N')
+    
+    #set up directory system to store sample regimen metadata
+    sampling_dir <- glue('data/{n}/{d}',
+                         n = network,
+                         d = domain)
+    
+    sampling_file <- glue('data/{n}/{d}/sampling_type.json',
+                          n = network,
+                          d = domain)
+    
+    if(file.exists(sampling_file)){
+        master <- jsonlite::fromJSON(readr::read_file(sampling_file))
+    } else {
+        dir.create(sampling_dir, recursive = TRUE)
+        file.create(sampling_file)
+        master <- list()
+    }
+    
+    site_names <- unique(df$site_name)
+    
+    variables <- unique(df$var)
+    
+    all_vars <- tibble()
+    for(p in 1:length(variables)){
+        
+        all_sites <- tibble()
+        for(i in 1:length(site_names)){
+            
+            # df_site <- df_var %>%
+            df_site <- df %>%
+                filter(site_name == !!site_names[i]) %>%
+                filter(var == !!variables[p]) %>%
+                arrange(datetime) 
+            # ! is.na(.data[[date_col]]), #NAs here are indicative of bugs we want to fix, so let's let them through
+            # ! is.na(.data[[var_name]])) #NAs here are indicative of bugs we want to fix, so let's let them through
+            
+            dates <- df_site[[date_col]]
+            dif <- diff(dates)
+            unit <- attr(dif, 'units')
+            
+            conver <- case_when(
+                unit %in% c('seconds', 'secs') ~ 0.01666667,
+                unit %in% c('minutes', 'mins') ~ 1,
+                unit == 'hours' ~ 60,
+                unit == 'days' ~ 1440,
+                TRUE ~ NA_real_)
+            
+            if(is.na(conver)) stop('Weird time unit encountered. address this.')
+            
+            dif_minutes <- as.numeric(dif) * conver
+            
+            # table <- rle2(dif_minutes) %>% #table is a commonly used function
+            run_table <- rle2(dif_minutes) %>%
+                mutate(
+                    site_name = !!site_names[i],
+                    starts := dates[starts],
+                    stops := dates[stops],
+                    # sum = sum(lengths, na.rm = TRUE), #superfluous
+                    porportion = lengths / sum(lengths, na.rm = TRUE),
+                    time = difftime(stops, starts, units = 'days'))
+            
+            # Sites with no record
+            if(nrow(run_table) == 0){
+                
+                g_a <- tibble('site_name' = site_names[i],
+                              'type' = 'NA',
+                              'starts' = lubridate::NA_POSIXct_,
+                              'interval' = NA_real_)
+                
+            } else {
+                
+                test <- filter(run_table,
+                               time > 60,
+                               lengths > 60)
+                
+                #Sites where there are not at least 60 consecutive records, record
+                #for at least 60 consecutive days, and have an average interval of
+                #more than 1 day are assumed to be grab samples
+                if(nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) > 1440){
+                    
+                    g_a <- tibble('site_name' = site_names[i],
+                                  'type' = 'G',
+                                  'starts' = min(run_table$starts,
+                                                 na.rm = TRUE),
+                                  'interval' = round(Mode(run_table$values,
+                                                          na.rm = TRUE)))
+                }
+                
+                #Sites with consecutive samples are have a consistent interval
+                if(nrow(test) != 0 && nrow(run_table) < 20){
+                    
+                    g_a <- test %>%
+                        select(site_name, starts, interval = values) %>%
+                        group_by(site_name, interval) %>%
+                        summarise(starts = min(starts,
+                                               na.rm = TRUE)) %>%
+                        mutate(type = 'I') %>%
+                        arrange(starts)
+                    
+                }
+                
+                #Sites where they do not have a consistent recording interval but
+                #the average interval is less than one day are assumed to be automatic
+                # (such as HBEF discharge that is automatic but lacks a consistent
+                #recording interval)
+                if(
+                    (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) < 1440) ||
+                    (nrow(test) != 0 && nrow(run_table) > 20)
+                ){ #could this be handed with else?
+                    
+                    table_ <- run_table %>%
+                        filter(porportion >= 0.05) %>%
+                        mutate(type = 'I') %>%
+                        select(starts, site_name, type, interval = values) %>%
+                        mutate(interval = as.character(round(interval)))
+                    
+                    table_var <- run_table %>%
+                        filter(porportion <= 0.05)  %>%
+                        group_by(site_name) %>%
+                        summarise(starts = min(starts,
+                                               na.rm = TRUE)) %>%
+                        mutate(
+                            type = 'I',
+                            interval = 'variable') %>%
+                        select(starts, site_name, type, interval)
+                    
+                    g_a <- rbind(table_, table_var) %>%
+                        arrange(starts)
+                }
+            }
+            
+            interval_changes <- rle2(g_a$interval)$starts
+            
+            g_a <- g_a %>%
+                mutate(
+                    type = paste0(type,
+                                  !!is_sensor),
+                    new_var = glue('{ty}_{vb}',
+                               ty = type,
+                               vb = variables[p]),
+                    var = variables[p]) %>%
+                slice(interval_changes)
+            
+            master[[prodname_ms]][[variables[p]]][[site_names[i]]] <-
+                list('startdt' = g_a$starts,
+                     'type' = g_a$type,
+                     'interval' = g_a$interval)
+            
+            all_sites <- rbind(all_sites, g_a)
+        }
+        all_vars <- rbind(all_sites, all_vars) %>%
+            distinct(var, .keep_all = TRUE)
+    }
+    
+    correct_names <- all_vars %>%
+        select(site_name, new_var, var)
+    
+    df <- left_join(df, correct_names, by = c("site_name", "var")) %>%
+        select(datetime, site_name, var=new_var, val, ms_status)
+    
+    readr::write_file(jsonlite::toJSON(master), sampling_file)
+    
+    return(df)
+}
+
 #. handle_errors
 drop_var_prefix <- function(x){
 
@@ -5809,6 +5991,7 @@ raster_intersection_summary <- function(wb, dem){
         summary_out$n_wb_cells * 100
 
     return(summary_out)
+}
 
 #. handle_errors 
 remove_all_na_sites <- function(d) {
