@@ -120,7 +120,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-#dmnrow=4
+# dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
@@ -132,11 +132,6 @@ for(dmnrow in 1:nrow(network_domain)){
 
     update_product_statuses(network=network, domain=domain)
     get_all_local_helpers(network=network, domain=domain)
-
-    # prodname_ms="stream_chemistry__208"
-    # prodname_ms="stream_chemistry__4021"
-    # component="stream chemistry"
-    # site_name='sitename_NA'
 
     ms_retrieve(network = network,
                 domain = domain)
