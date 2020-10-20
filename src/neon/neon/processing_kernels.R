@@ -231,8 +231,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         out_lab <- read_feather(glue(rawdir, '/', relevant_file2)) %>%
             select(site_name = siteID, datetime = collectDate, var = analyte, 
                    val = analyteConcentration, shipmentWarmQF, sampleCondition) %>%
-            mutate(ms_status = ifelse(shipmentWarmQF == 0 || sampleCondition != 'GOOD',
-                                      0, 1)) %>%
+            mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
+                                      1, 0)) %>%
             select(-shipmentWarmQF, -sampleCondition) %>%
             mutate(var = case_when(var == 'Si' ~ 'SiO2',
                                    var == 'Ortho - P' ~ 'PO4_P',
@@ -308,9 +308,10 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
         mutate(
             site_name=paste0(siteID, updown), #append "-up" to upstream site_names
             datetime = force_tz(startDateTime, 'UTC'), #GMT -> UTC
-            NO3_N = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
-        select(site_name, datetime=startDateTime, 'NO3_N__|dat'=NO3_N,
-            ms_status = finalQF)
+            surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
+        select(site_name, datetime=startDateTime, val=surfWaterNitrateMean,
+               ms_status = finalQF) %>%
+      mutate(var = 'NO3_N')
 
     return(out_sub)
 }
@@ -345,10 +346,11 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
             datetime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
         group_by(datetime, site_name) %>%
         summarize(
-            'PAR__|dat' = mean(PARMean, na.rm=TRUE),
+            val = mean(PARMean, na.rm=TRUE),
             ms_status = numeric_any(PARFinalQF)) %>%
         ungroup() %>%
-        select(site_name, datetime=datetime, 'PAR__|dat', ms_status)
+      mutate(var = 'PAR') %>%
+        select(site_name, datetime=datetime, var, val, ms_status)
     
     out_sub[is.na(out_sub)] <- NA
 
@@ -385,10 +387,11 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
       mutate(site_name=paste0(siteID, updown)) %>%
       mutate(datetime = force_tz(startDateTime, 'UTC')) %>% 
       group_by(datetime, site_name) %>%
-      summarize('temp__|dat' = mean(surfWaterTempMean, na.rm=TRUE),
+      summarize(val = mean(surfWaterTempMean, na.rm=TRUE),
                 ms_status = numeric_any(finalQF)) %>%
-      ungroup() %>%
-      select(site_name, datetime, 'temp__|dat', ms_status)
+      ungroup() %>% 
+      mutate(var = 'temp') %>%
+      select(site_name, datetime, var, val, ms_status)
     
     out_sub[is.na(out_sub)] <- NA
 
@@ -485,12 +488,13 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
         mutate(type = ifelse(type == TRUE, 'air', 'water')) %>%
       filter(type == 'water') %>%
         group_by(datetime, siteID) %>%
-      summarise('CH4__|dat' = mean(concentrationCH4, na.rm = TRUE),
-                'CO2__|dat' = mean(concentrationCO2, na.rm = TRUE),
-                'N2O__|dat' = mean(concentrationN2O, na.rm = TRUE),
-                error = max(error, na.rm = TRUE)) %>%
+      summarise('CH4' = mean(concentrationCH4, na.rm = TRUE),
+                'CO2' = mean(concentrationCO2, na.rm = TRUE),
+                'N2O' = mean(concentrationN2O, na.rm = TRUE),
+                ms_status = max(error, na.rm = TRUE)) %>%
         ungroup() %>%
-        rename(site_name = siteID)
+        rename(site_name = siteID) %>%
+      pivot_longer(cols = c('CH4', 'CO2', 'N2O'), names_to = 'var', values_to = 'val')
 
     return(out_sub)
 }
@@ -526,20 +530,24 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     
     if(all(na_test[1,]) && nrow(na_test) == 1) {
       
-      return(tibble())
-    }
+      return(generate_ms_exception('Data file contains all NAs'))
+    } 
     
     updown = ue(determine_upstream_downstream(rawd))
     
     out_sub <- rawd %>%
-        mutate(site_name=paste0(site_name, updown)) %>%
-        select(site_name, datetime=startDateTime, 'spCond__|dat'=specificConductance,
-              'spCond__|flg' = specificCondFinalQF, 'DO__|dat'=dissolvedOxygen, 
-              'DO__|flg' = dissolvedOxygenFinalQF, 'pH__|dat' = pH,
-              'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll, 
-              'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity, 
-              'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM, 
-              'FDOM__|flg' = fDOMFinalQF)
+      mutate(site_name=paste0(site_name, updown)) %>%
+      select(site_name, datetime=startDateTime, 'spCond__|dat'=specificConductance,
+             'spCond__|flg' = specificCondFinalQF, 'DO__|dat'=dissolvedOxygen,
+             'DO__|flg' = dissolvedOxygenFinalQF, 'pH__|dat' = pH,
+             'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll,
+             'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity,
+             'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM,
+             'FDOM__|flg' = fDOMFinalQF) 
+    
+    out_sub <- ms_cast_and_reflag(out_sub,
+                            variable_flags_clean = 0,
+                            variable_flags_dirty = 1)
 
     return(out_sub)
 }
@@ -567,7 +575,8 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
              secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
       mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
                                 1, 0)) %>%
-      select(site_name, datetime, 'precipitation_ns__|dat'=secPrecipBulk, ms_status)
+      mutate(var = 'precipitation_ns') %>%
+      select(site_name, datetime, var, val = secPrecipBulk, ms_status)
   }
   
   if(relevant_file1 %in% rawfiles) {
@@ -578,7 +587,8 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
              datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
       mutate(ms_status = ifelse(priPrecipFinalQF == 1,
                                 1, 0)) %>%
-      select(site_name, datetime, 'precipitation_ns__|dat'=priPrecipBulk, ms_status)
+      mutate(var = 'precipitation_ns') %>%
+      select(site_name, datetime, var, val = priPrecipBulk, ms_status)
   } 
   
   if(!relevant_file1 %in% rawfiles && ! relevant_file2 %in% rawfiles) {
@@ -639,7 +649,14 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
              'Br__|flg' = precipBromideFlag) %>%
       mutate('spCond__|flg' = NA,
              'pH__|flg' = NA) %>%
-      select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg'))
+      select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg')) %>%
+      mutate(across(contains('|flg'), ~ifelse(is.na(.x), 0, 1))) %>%
+      mutate(site_name = !!site_name) %>%
+      select(-namedLocation)
+    
+    out_sub <- ms_cast_and_reflag(out_sub,
+                            variable_flags_clean = 0,
+                            variable_flags_dirty = 1)
     
   } else {
     return(generate_ms_exception('wdp_chemLab.feather file missing'))
