@@ -47,7 +47,7 @@ process_0_3110 <- function(set_details, network, domain){
   
   return()
 }
-
+  
 #munge kernels ####
 
 #stream_chemistry_gwynns: STATUS=READY
@@ -274,6 +274,56 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels ####
 
+#rain_gauge_locations
+#. handle_errors
+process_2_ms013 <- function(network, domain, prodname_ms) {
+  
+  baltimore_gauges <- read_csv('data/general/site_data.csv') %>%
+    filter(domain == 'baltimore', 
+           site_type == 'rain_gauge') %>%
+    sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+    select(site_name)
+  
+  for(i in 1:nrow(baltimore_gauges)){
+    
+    rg <- baltimore_gauges[i,] 
+    
+    ue(write_ms_file(d = rg,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     site_name = rg$site_name,
+                     level = 'derived',
+                     shapefile = TRUE,
+                     link_to_portal = TRUE))
+  }
+}
+
+#stream_gauge_locations
+#. handle_errors
+process_2_ms014 <- function(network, domain, prodname_ms) {
+  
+  baltimore_gauges <- read_csv('data/general/site_data.csv') %>%
+    filter(domain == 'baltimore', 
+           site_type == 'stream_gauge') %>%
+    sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+    select(site_name)
+  
+  for(i in 1:nrow(baltimore_gauges)){
+    
+    sg <- baltimore_gauges[i,] 
+    
+    ue(write_ms_file(d = sg,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     site_name = sg$site_name,
+                     level = 'derived',
+                     shapefile = TRUE,
+                     link_to_portal = TRUE))
+  }
+}
+
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms012 <- function(network, domain, prodname_ms) {
@@ -308,4 +358,135 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
                      shapefile = FALSE,
                      link_to_portal = TRUE))
   }
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms011 <- function(network, domain, prodname_ms) {
+  
+  baltimore_sites <- c('GFCP' = '01589352', 'GFGB' = '01589197', 'GFGL' = '01589180', 'GFVN' = '01589300',
+                       'POBR' = '01583570', 'DRKR' = '01589330', 'BARN' = '01583580', 
+                       'RGHT' = '01589340', 'MCDN' = '01589238', 'MAWI' = '01589351')
+  
+  for(i in 1:length(baltimore_sites)) {
+    
+    if(baltimore_sites[i] == 'MAWI') {
+      discharge <- dataRetrieval::readNWISdv(baltimore_sites[i], '00060') %>%
+        mutate(datetime = ymd_hms(paste0(Date, ' ', '12:00:00'), tz = 'UTC')) %>%
+        mutate(val = X_00060_00003)
+    } else {
+      discharge <- dataRetrieval::readNWISuv(baltimore_sites[i], '00060') %>%
+        rename(datetime = dateTime,
+               val = X_00060_00000)
+    }
+    
+    discharge <- discharge %>%
+      mutate(site_name =!!names(baltimore_sites[i])) %>%
+      mutate(var = 'discharge',
+             val = val * 28.31685,
+             ms_status = 0) %>%
+      select(site_name, datetime, val, var, ms_status)
+    
+    d <- identify_sampling_bypass(discharge,
+                             is_sensor = TRUE,
+                             network = network,
+                             domain = domain,
+                             prodname_ms = prodname_ms) 
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    
+    
+    
+    if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms))) {
+      
+      dir.create(glue('data/{n}/{d}/derived/{p}',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms),
+                 recursive = TRUE)
+    }
+    
+    write_ms_file <- write_ms_file(d, 
+                              network = network, 
+                              domain = domain, 
+                              prodname_ms = prodname_ms, 
+                              site_name = names(baltimore_sites[i]),
+                              level = 'derived', 
+                              shapefile = FALSE,
+                              link_to_portal = TRUE)
+  }
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms){
+  
+  ue(precip_idw(precip_prodname = 'precipitation__4',
+                wb_prodname = 'ws_boundary_ms000',
+                pgauge_prodname = 'rain_gauge_locations__230',
+                precip_prodname_out = prodname_ms))
+  
+  return()
+}
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms){
+  
+  chemprod <- 'stream_chemistry__ms012'
+  qprod <- 'discharge__ms011'
+  
+  chemfiles <- ue(list_derived_files(network = network,
+                                     domain = domain,
+                                     prodname_ms = chemprod))
+  qfiles <- ue(list_derived_files(network = network,
+                                  domain = domain,
+                                  prodname_ms = qprod))
+  
+  flux_sites <- generics::intersect(
+    ue(fname_from_fpath(qfiles, include_fext = FALSE)),
+    ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
+  
+  for(s in flux_sites){
+    
+    flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
+                                 qprod = qprod,
+                                 level = 'derived',
+                                 site_name = s)))
+    
+    ue(write_ms_file(d = flux,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     site_name = s,
+                     level = 'derived',
+                     shapefile = FALSE,
+                     link_to_portal = TRUE))
+  }
+  
+  return()
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms){
+  
+  ue(precip_idw(precip_prodname = 'precipitation__3110',
+                wb_prodname = 'ws_boundary_ms000',
+                pgauge_prodname = 'rain_gauge_locations__ms013',
+                precip_prodname_out = prodname_ms))
+  
+  return()
 }
