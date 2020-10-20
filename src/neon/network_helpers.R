@@ -28,7 +28,7 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
 munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
     # site_name=sites[j]; tracker=held_data
 
-    retrieval_log = extract_retrieval_log(held_data, prodname_ms, site_name)
+    retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_name)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -36,18 +36,14 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
 
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
+   # for(k in 1:7){
 
-        # sitemonth = retrieval_log[k, 'component']
-        # comp = read_feather(glue('data/{n}/{d}/raw/',
-        #     '{p}/{s}/{sm}.feather', n=network, d=domain, p=prodname_ms, s=site_name,
-        #     sm=sitemonth))
+        prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
-        prodcode = prodcode_from_prodname_ms(prodname_ms)
+        processing_func <- get(paste0('process_1_', prodcode))
+        in_comp <- retrieval_log[k, 'component']
 
-        processing_func = get(paste0('process_1_', prodcode))
-        in_comp = retrieval_log[k, 'component']
-
-        out_comp = sw(do.call(processing_func,
+        out_comp <- sw(do.call(processing_func,
                               args=list(network = network,
                                         domain = domain,
                                         prodname_ms = prodname_ms,
@@ -55,19 +51,57 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                                         component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out = bind_rows(out, out_comp)
+            out <- bind_rows(out, out_comp)
         }
 
     }
-
-    write_ms_file(d = out,
-        network = network,
-        domain = domain,
-        prodname_ms = prodname_ms,
-        site_name = site_name,
-        level = 'munged',
-        shapefile = FALSE,
-        link_to_portal = TRUE)
+        
+        sensor <- case_when(prodname_ms == 'stream_chemistry__DP1.20093' ~ FALSE,
+                            prodname_ms == 'stream_nitrate__DP1.20033' ~ TRUE,
+                            prodname_ms == 'stream_temperature__DP1.20053' ~ TRUE,
+                            prodname_ms == 'stream_PAR__DP1.20042' ~ TRUE,
+                            prodname_ms == 'stream_gases__DP1.20097' ~ FALSE,
+                            prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
+                            prodname_ms == 'precip_chemistry__DP1.00013' ~ TRUE,
+                            prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
+        
+        d <- identify_sampling_bypass(df = out,
+                                      is_sensor =  sensor,
+                                      domain = domain,
+                                      network = network,
+                                      prodname_ms = prodname_ms) 
+    
+    d <- d %>%
+        filter(!is.na(val))
+    
+    d <- remove_all_na_sites(d)
+    
+    d <- ue(carry_uncertainty(d,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms))
+    
+    d <- ue(synchronize_timestep(d,
+                                 desired_interval = '1 day', #set to '15 min' when we have server
+                                 impute_limit = 30))
+    
+    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    
+    site_names <- unique(d$site_name)
+    for(y in 1:length(site_names)) {
+        
+        d_site <- d %>%
+            filter(site_name == !!site_names[y])
+        
+        write_ms_file(d = d,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = site_names[y],
+                      level = 'munged',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
+    }
 
     update_data_tracker_m(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
