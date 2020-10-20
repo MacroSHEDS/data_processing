@@ -102,8 +102,9 @@ conf = jsonlite::fromJSON('config.json')
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
-logging::addHandler(logging::writeToFile, logger='ms',
-    file='logs/0_ms_master.log')
+logging::addHandler(logging::writeToFile,
+                    logger = 'ms',
+                    file = 'logs/0_ms_master.log')
 
 source('src/global/global_helpers.R')
 source('src/dev_helpers.R') #comment before pushing live
@@ -120,18 +121,23 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=1
+# dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
     domain = network_domain$domain[dmnrow]
 
-    logger_module = set_up_logger(network=network, domain=domain)
-    loginfo(logger=logger_module,
-        msg=glue('Processing network: {n}, domain: {d}', n=network, d=domain))
+    logger_module = set_up_logger(network = network,
+                                  domain = domain)
+    loginfo(logger = logger_module,
+            msg = glue('Processing network: {n}, domain: {d}',
+                       n = network,
+                       d = domain))
 
-    update_product_statuses(network=network, domain=domain)
-    get_all_local_helpers(network=network, domain=domain)
+    update_product_statuses(network = network,
+                            domain = domain)
+    get_all_local_helpers(network = network,
+                          domain = domain)
 
     ms_retrieve(network = network,
                 domain = domain)
@@ -150,7 +156,10 @@ for(dmnrow in 1:nrow(network_domain)){
 
 
 if(length(email_err_msgs)){
-    email_err(email_err_msgs, conf$report_emails, conf$gmail_pw)
+    email_err(msgs = email_err_msgs,
+              addrs = conf$report_emails,
+              pw = conf$gmail_pw)
 }
 
-loginfo('Run complete', logger='ms.module')
+loginfo('Run complete',
+        logger = 'ms.module')
