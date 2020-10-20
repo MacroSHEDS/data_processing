@@ -12,7 +12,6 @@ process_0_7 <- function(set_details, network, domain){
   return()
 }
 
-
 #discharge_N20B: STATUS=READY
 #. handle_errors
 process_0_8 <- function(set_details, network, domain){
@@ -643,7 +642,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                                                'Time' = '%H:%M:%S'),
                           datetime_tz = 'US/Central',
                           site_name_col = 'site',
-                          data_cols =  c('Spcond' = 'SpCond', ),
+                          data_cols =  c('Spcond' = 'SpCond'),
                           data_col_pattern = '#V#',
                           summary_flagcols = 'comments',
                           is_sensor = FALSE))
@@ -896,26 +895,26 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
   }
 }
 
-#precipitation: STATUS=PENDING
+#precipitation: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
   ue(precip_idw(precip_prodname = 'precipitation__4',
-                wb_prodname = NEED,
-                pgauge_prodname = 'precip_gauge_locations__230',
+                wb_prodname = 'ws_boundary_ms000',
+                pgauge_prodname = 'rain_gauge_locations__230',
                 precip_prodname_out = prodname_ms))
 
   return()
 }
 
-#precip_chemistry: STATUS=PENDING
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms){
 
   ue(pchem_idw(pchem_prodname = 'precip_chemistry__43',
                precip_prodname = 'precipitation__4',
-               wb_prodname = NEED,
-               pgauge_prodname = 'precip_gauge_locations__230',
+               wb_prodname = 'ws_boundary_ms000',
+               pgauge_prodname = 'rain_gauge_locations__230',
                pchem_prodname_out = prodname_ms))
 
   return()
@@ -959,14 +958,14 @@ process_2_ms003 <- function(network, domain, prodname_ms){
   return()
 }
 
-#precip_flux_inst: STATUS=PENDING
+#precip_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms004 <- function(network, domain, prodname_ms){
 
   ue(flux_idw(pchem_prodname = 'precip_chemistry__43',
               precip_prodname = 'precipitation__4',
-              wb_prodname = NEED,
-              pgauge_prodname = 'precip_gauge_locations__230',
+              wb_prodname = 'ws_boundary_ms000',
+              pgauge_prodname = 'rain_gauge_locations__230',
               flux_prodname_out = prodname_ms))
 
   return()
