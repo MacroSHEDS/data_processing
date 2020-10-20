@@ -5782,13 +5782,14 @@ raster_intersection_summary <- function(wb, dem){
 }
 
 #. handle_errors
-remove_all_na_sites <- function(d) {
+remove_all_na_sites <- function(d){
+
     d_test <- d %>%
-        mutate(na = ifelse(!is.na(val), 1, 0)) %>%
+        mutate(na = ifelse(! is.na(val), 1, 0)) %>%
         group_by(site_name, var) %>%
         summarise(non_na = sum(na))
 
-    d <- left_join(d, d_test,  by = c("site_name", "var")) %>%
+    d <- left_join(d, d_test, by = c("site_name", "var")) %>%
         filter(non_na > 10) %>%
         select(-non_na)
 }
