@@ -1,157 +1,157 @@
-domain,pretty_domain,network,pretty_network,stream,site_name,full_name,site_type,latitude,longitude,CRS,ws_area_ha,in_workflow,notes
-hbef,HBEF,lter,LTER,Stream 1,w1,Watershed 1,stream_gauge,43.952034,-71.726501,4326,11.8,1,NA
-hbef,HBEF,lter,LTER,Stream 2,w2,Watershed 2,stream_gauge,43.953358,-71.724174,4326,15.6,1,NA
-hbef,HBEF,lter,LTER,Stream 3,w3,Watershed 3,stream_gauge,43.954875,-71.722816,4326,42.4,1,NA
-hbef,HBEF,lter,LTER,Stream 4,w4,Watershed 4,stream_gauge,43.950176,-71.725792,4326,36.1,1,NA
-hbef,HBEF,lter,LTER,Stream 5,w5,Watershed 5,stream_gauge,43.948845,-71.731918,4326,21.9,1,NA
-hbef,HBEF,lter,LTER,Stream 6,w6,Watershed 6,stream_gauge,43.94994,-71.735641,4326,13.2,1,NA
-hbef,HBEF,lter,LTER,Stream 7,w7,Watershed 7,stream_gauge,43.927509,-71.767075,4326,77.38,1,NA
-hbef,HBEF,lter,LTER,Stream 8,w8,Watershed 8,stream_gauge,43.929436,-71.759521,4326,59.4,1,NA
-hbef,HBEF,lter,LTER,Stream 9,w9,Watershed 9,stream_gauge,43.926014,-71.747195,4326,68.4,1,NA
-hbef,HBEF,lter,LTER,NA,RG1,Rain Gauge 1,rain_gauge,43.95212079,-71.72483773,4326,NA,1,converted shapefile from lter using st_transform
-hbef,HBEF,lter,LTER,NA,RG11,Rain Gauge 11,rain_gauge,43.95022663,-71.73461244,4326,NA,1,converted shapefile from lter using st_transform
-hbef,HBEF,lter,LTER,NA,RG23,Rain Gauge 23,rain_gauge,43.92720113,-71.7469262,4326,NA,1,converted shapefile from lter using st_transform
-hbef,HBEF,lter,LTER,NA,RG22,Rain Gauge 22,rain_gauge,43.94402186,-71.70122926,4326,NA,1,converted shapefile from lter using st_transform
-hbef,HBEF,lter,LTER,NA,N,?,rain_gauge,44,-72,4326,NA,1,still need real coords for these
-hbef,HBEF,lter,LTER,NA,S,?,rain_gauge,44,-72,4326,NA,1,still need real coords for these
-hbef,HBEF,lter,LTER,NA,SP,?,rain_gauge,44,-72,4326,NA,1,still need real coords for these
-hjandrews,H. J. Andrews,lter,LTER,Lookout Creek,GSLOOK,?,stream_gauge,44.2101255,-122.2571458,4326,6229.807388,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 1,GSWS01,?,stream_gauge,44.2073394,-122.2580274,4326,101.0250167,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 2,GSWS02,?,stream_gauge,44.2120146,-122.2448757,4326,63.63383979,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 3,GSWS03,?,stream_gauge,44.21943957,-122.243,4326,99.21769658,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 6,GSWS06,?,stream_gauge,44.26150813,-122.1807065,4326,11.77216528,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 7,GSWS07,?,stream_gauge,44.26463683,-122.1752649,4326,17.50206134,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 8,GSWS08,?,stream_gauge,44.26629426,-122.1707925,4326,11.16935765,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Stream 9,GSWS09,?,stream_gauge,44.20118982,-122.2588014,4326,1.517981483,1,NA
-hjandrews,H. J. Andrews,lter,LTER,stream 10,GSWS10,?,stream_gauge,44.21705699,-122.2610555,4326,12.67747346,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Mack Creek,GSWSMA,?,stream_gauge,44.217,-122.171,4326,1.819381537,1,estimated ws area from Q and gage location by eyeballing
-hjandrews,H. J. Andrews,lter,LTER,Mack Creek,GSWSMC,?,stream_gauge,44.21943607,-122.1674471,4326,579.7195956,1,NA
-hjandrews,H. J. Andrews,lter,LTER,Mack Creek,GSWSMF,?,stream_gauge,44.212,-122.16,4326,3.32856265,1,estimated ws area from Q and gage location by eyeballing
-hjandrews,H. J. Andrews,lter,LTER,Mack Creek,GSMACK,?,stream_gauge,44.21944,-122.1674,4326,579.7195957,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RD1507,1507 Road Storage RG,rain_gauge,44.205599,-122.166083,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,L523RG,Hi-15 Unit L523 Storage RG,rain_gauge,44.265333,-122.18207,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,BLUERD,Blue Ridge Standard RG,rain_gauge,44.234765,-122.230991,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,CARPMT,Carpenter Mountain Storage RG,rain_gauge,44.27809,-122.139942,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,CENMET,Central Met Station Recording RG1,rain_gauge,44.243103,-122.14149,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,EARTHF,Earthflow Standard RG,rain_gauge,44.232446,-122.145719,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,FORKS_,Forks Standard RG,rain_gauge,44.22249,-122.240035,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,FRISEL,Frissell Ridge Storage RG,rain_gauge,44.227168,-122.10624,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS3GRD,WS#3 G Road Standard RG,rain_gauge,44.216648,-122.231448,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,GSMACK,Mack Creek Gaging Station Standard RG,rain_gauge,44.21928,-122.167472,4326,579.7195957,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS3JRD,WS#3 J Road Standard RG,rain_gauge,44.211035,-122.233762,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,MCRAEB,McRae Bridge Standard RG,rain_gauge,44.232959,-122.209223,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,MIDWAY,Midway Standard RG,rain_gauge,44.251137,-122.185031,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS3MRD,WS#3 M Road Standard RG,rain_gauge,44.220074,-122.236531,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,MIRKWD,Mirkwood Standard RG,rain_gauge,44.231315,-122.201972,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,MACKWE,Mack West Standard RG,rain_gauge,44.2118,-122.171177,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RS13RG,Reference Stand #13 Open Storage RG,rain_gauge,44.343931,-122.123217,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,H15PND,Hi-15 Pond Standard RG,rain_gauge,44.262967,-122.171242,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RS03RG,Primary Met Station Recording RG1,rain_gauge,44.211848,-122.255839,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RS05RG,Reference Stand #5 Standard RG,rain_gauge,44.222173,-122.202758,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RS18RG,Reference Stand #18 Standard RG,rain_gauge,44.246321,-122.158768,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,H15RCK,Hi-15 Rockpile Standard RG,rain_gauge,44.263781,-122.183702,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,H15RDG,Hi-15 Ridge Standard RG,rain_gauge,44.272046,-122.172201,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,RDSEND,Roads End Storage RG,rain_gauge,44.2051,-122.137927,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,ROSSRG,Ross' House in Blue River Standard RG,rain_gauge,44.156838,-122.344103,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS1SDL,WS#1 Saddle Standard RG,rain_gauge,44.201943,-122.240765,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,SPOTFI,Spotfire Unit Storage RG,rain_gauge,44.20017,-122.247569,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,SLTRWD,Shelterwood Standard RG,rain_gauge,44.230525,-122.167795,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,TRAILS,Trails End Standard RG,rain_gauge,44.220693,-122.115278,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,UNIT3B,Unit 3B Standard RG,rain_gauge,44.231306,-122.223428,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,UNIT3H,Unit 3H Standard RG,rain_gauge,44.259673,-122.170752,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,UPLMET,Upper Lookout Met Station Recording RG1,rain_gauge,44.207352,-122.11996,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,VANMET,Vanilla Leaf Met Station Recording RG,rain_gauge,44.271625,-122.149519,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,VARMET,Vanilla Leaf Met Meadow Recording RG,rain_gauge,44.273329,-122.149663,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS10RG,Top of WS#10 Storage RG,rain_gauge,44.219956,-122.25684,4326,NA,1,NA
-hjandrews,H. J. Andrews,lter,LTER,NA,WS09RG,Top of WS#9 Storage RG,rain_gauge,44.203214,-122.254851,4326,NA,1,NA
-neon,NEON,neon,NEON,Little Rock Lake,LIRO,Little Rock Lake,lake_gauge,45.998269,-89.704767,4326,NA,0,NA
-neon,NEON,neon,NEON,Toolik Lake,TOOK,Toolik Lake,lake_gauge,68.630692,-149.610636,4326,NA,0,NA
-neon,NEON,neon,NEON,Ordway-Swisher Biological Station - Suggs Lake,SUGG,Ordway-Swisher Biological Station - Suggs Lake,lake_gauge,29.68705,-82.01617,4326,NA,0,NA
-neon,NEON,neon,NEON,Crampton Lake,CRAM,Crampton Lake,lake_gauge,46.21111,-89.47825,4326,NA,0,NA
-neon,NEON,neon,NEON,Ordway-Swisher Biological Station - Barco Lake,BARC,Ordway-Swisher Biological Station - Barco Lake,lake_gauge,29.67647,-82.00909,4326,NA,0,NA
-neon,NEON,neon,NEON,Prairie Pothole,PRPO,Prairie Pothole,lake_gauge,47.12999,-99.25055,4326,NA,0,NA
-neon,NEON,neon,NEON,Prairie Lake at Dakota Coteau Field School,PRLA,Prairie Lake at Dakota Coteau Field School,lake_gauge,47.15909,-99.11388,4326,NA,0,NA
-neon,NEON,neon,NEON,Flint River,FLNT,Flint River,stream_gauge,31.18542,-84.4374,4326,NA,1,NA
-neon,NEON,neon,NEON,Lower Tombigbee River at Choctaw Refuge,TOMB,Lower Tombigbee River at Choctaw Refuge,stream_gauge,31.8521,-88.16107,4326,NA,1,NA
-neon,NEON,neon,NEON,Black Warrior River near Dead Lake,BLWA,Black Warrior River near Dead Lake,stream_gauge,32.54153,-87.79815,4326,NA,1,NA
-neon,NEON,neon,NEON,West St Louis Creek,WLOU,West St Louis Creek,stream_gauge,39.89137,-105.9154,4326,NA,1,NA
-neon,NEON,neon,NEON,McDiffett Creek,MCDI,McDiffett Creek,stream_gauge,38.94428,-96.44197,4326,NA,1,NA
-neon,NEON,neon,NEON,Lewis Run,LEWI,Lewis Run,stream_gauge,39.09564,-77.98322,4326,NA,1,NA
-neon,NEON,neon,NEON,Blue River,BLUE,Blue River,stream_gauge,34.44422,-96.6242,4326,NA,1,NA
-neon,NEON,neon,NEON,Teakettle 2 Creek,TECR,Teakettle 2 Creek,stream_gauge,36.95528,-119.02699,4326,NA,1,NA
-neon,NEON,neon,NEON,Lower Hop Brook,HOPB,Lower Hop Brook,stream_gauge,42.47179,-72.32963,4326,NA,1,NA
-neon,NEON,neon,NEON,Martha Creek,MART,Martha Creek,stream_gauge,45.79125,-121.93196,4326,NA,1,NA
-neon,NEON,neon,NEON,Upper Big Creek,BIGC,Upper Big Creek,stream_gauge,37.058,-119.256,4326,NA,1,NA
-neon,NEON,neon,NEON,Red Butte Creek,REDB,Red Butte Creek,stream_gauge,40.78374,-111.79765,4326,NA,1,NA
-neon,NEON,neon,NEON,Sycamore Creek,SYCA,Sycamore Creek,stream_gauge,33.74906,-111.5069,4326,NA,1,NA
-neon,NEON,neon,NEON,Como Creek,COMO,Como Creek,stream_gauge,40.03496,-105.54487,4326,NA,1,NA
-neon,NEON,neon,NEON,Blacktail Deer Creek,BLDE,Blacktail Deer Creek,stream_gauge,44.95011,-110.58715,4326,NA,1,NA
-neon,NEON,neon,NEON,Pringle Creek,PRIN,Pringle Creek,stream_gauge,33.37859,-97.78226,4326,NA,1,NA
-neon,NEON,neon,NEON,McRae Creek,MCRA,McRae Creek,stream_gauge,44.2596,-122.16555,4326,NA,1,NA
-neon,NEON,neon,NEON,"Caribou Creek, Caribou-Poker Creeks Research Watershed",CARI,"Caribou Creek, Caribou-Poker Creeks Research Watershed",stream_gauge,65.15306,-147.50246,4326,NA,1,NA
-neon,NEON,neon,NEON,Oksrukuyik Creek,OKSR,Oksrukuyik Creek,stream_gauge,68.66975,-149.14302,4326,NA,1,NA
-neon,NEON,neon,NEON,Arikaree River,ARIK,Arikaree River,stream_gauge,39.75825,-102.4471,4326,NA,1,NA
-neon,NEON,neon,NEON,Rio Guilarte,GUIL,Rio Guilarte,stream_gauge,18.1741,-66.79851,4326,NA,1,NA
-neon,NEON,neon,NEON,Rio Cupeyes,CUPE,Rio Cupeyes,stream_gauge,18.11352,-66.98676,4326,NA,1,NA
-neon,NEON,neon,NEON,Posey Creek,POSE,Posey Creek,stream_gauge,38.89332,-78.14678,4326,NA,1,NA
-neon,NEON,neon,NEON,Kings Creek,KING,Kings Creek,stream_gauge,39.10506,-96.60336,4326,NA,1,NA
-neon,NEON,neon,NEON,Mayfield Creek,MAYF,Mayfield Creek,stream_gauge,32.95966,-87.40813,4326,NA,1,NA
-neon,NEON,neon,NEON,Walker Branch,WALK,Walker Branch,stream_gauge,35.95947,-84.28041,4326,NA,1,NA
-neon,NEON,neon,NEON,LeConte Creek,LECO,LeConte Creek,stream_gauge,35.69043,-83.50379,4326,NA,1,NA
-konza,Konza,lter,LTER,N04D,N04D,?,stream_gauge,39.08982,-96.58862,4326,NA,1,NA
-konza,Konza,lter,LTER,N20B,N20B,?,stream_gauge,39.08858,-96.57654,4326,NA,1,NA
-konza,Konza,lter,LTER,N01B,N01B,?,stream_gauge,39.08668,-96.577,4326,NA,1,NA
-konza,Konza,lter,LTER,N02B,N02B,?,stream_gauge,39.08982,-96.58862,4326,NA,1,NA
-konza,Konza,lter,LTER,HIKN,HIKN,Hiking Trail,stream_sampling_point,39.10713,-96.60664,4326,NA,1,NA
-konza,Konza,lter,LTER,HOKN,HOKN,Hokanson,stream_sampling_point,39.10376,-96.59542,4326,NA,1,NA
-konza,Konza,lter,LTER,NFKC,NFKC,North Fork Kings Creek,stream_sampling_point,39.10155,-96.59239,4326,NA,1,NA
-konza,Konza,lter,LTER,SFKC,SFKC,South Fork Kings Creek,stream_sampling_point,39.10128,-96.59239,4326,NA,1,NA
-konza,Konza,lter,LTER,K2AL-1,K2AL-1,?,stream_sampling_point,39.10093,-96.57538,4326,NA,1,NA
-konza,Konza,lter,LTER,KZFL,KZFL,Konza Falls,stream_sampling_point,39.08763,-96.58482,4326,NA,1,NA
-konza,Konza,lter,LTER,STCK,STCK,Stone Creek,stream_sampling_point,39.10564,-96.6061,4326,NA,1,NA
-konza,Konza,lter,LTER,SHAN,SHAN,Shane,stream_sampling_point,39.11439,-96.55757,4326,NA,1,NA
-konza,Konza,lter,LTER,K2AL-2,K2AL-2,?,stream_sampling_point,39.10065,-96.57412,4326,NA,1,NA
-konza,Konza,lter,LTER,TUBE,TUBE,Four Tubes,stream_sampling_point,39.09873,-96.58944,4326,NA,1,NA
-konza,Konza,lter,LTER,NA,HQ02,?,rain_gauge,39.1023,-96.6095,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,N02B,?,rain_gauge,39.0877,-96.5954,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,R01A,?,rain_gauge,39.0692,-96.6107,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,004B,?,rain_gauge,39.0776,-96.5954,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,N4DU,?,rain_gauge,39.0778,-96.5898,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,002C,?,rain_gauge,39.0678,-96.5792,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,020B,?,rain_gauge,39.0756,-96.5758,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,K01B,?,rain_gauge,39.0862,-96.5631,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,N01B,?,rain_gauge,39.0849,-96.571,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,NA,N4DF,?,rain_gauge,39.0876,-96.5843,4326,NA,1,Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond
-konza,Konza,lter,LTER,Kings Creek,HIKX,Hiking Trail,stream_sampling_point,39.107,-96.6068,4326,NA,1,"Not included in stream gauge location product, but lat/long listed in stream_chem metadata"
-baltimore,Baltimore,lter,LTER,NA,WXCMNC,Carrie Murray Nature Center,rain_gauge,39.30724722,-76.69507222,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXCPGC,Carroll Park Golf Course,rain_gauge,39.27359167,-76.64858611,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXDRNC,Dead Run Near Cantonsville,rain_gauge,39.29588611,-76.74402778,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXGFGL,Glyndon Elementary School,rain_gauge,39.46822222,-76.8105,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXGFND,Gwynns Falls Near Delight,rain_gauge,39.44389167,-76.78266944,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXMCDO,McDonogh School,rain_gauge,39.39633611,-76.77140833,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXORDG,Oregon Ridge Park,rain_gauge,39.49656944,-76.68900556,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,NA,WXUMBC,UMBC Campus,rain_gauge,39.2543,-76.70233889,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GFCP,Gwynns Falls at Carroll Park,stream_gauge,39.2715,-76.649,4326,NA,1,Collocated with USGS gauge 01589352
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GFGB,Gwynns Falls at Gwynnbrook Avenue,stream_gauge,39.443,-76.783,4326,NA,1,Collocated with USGS gauge 01589197
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GFGL,Gwynns Falls at Glyndon,stream_gauge,39.4718,-76.817,4326,NA,1,Collocated with USGS gauge 01589180
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GFVN,Gwynns Falls at Villa Nova,stream_gauge,39.3458,-76.733,4326,NA,1,Collocated with USGS gauge 01589300
-baltimore,Baltimore,lter,LTER,Pond Branch,POBR,Pond Branch forested reference site,stream_gauge,39.4803,-76.688,4326,NA,1,Collocated with USGS gauge 01583570
-baltimore,Baltimore,lter,LTER,Dead Run,DRKR,Dead Run at Krome Avenue,stream_gauge,39.3112,-76.717,4326,NA,1,Collocated with USGS gauge 01589330
-baltimore,Baltimore,lter,LTER,Baisman Run,BARN,Baisman Run at Ivy Hill Road,stream_gauge,39.4794,-76.678,4326,NA,1,Collocated with USGS gauge 01583580
-baltimore,Baltimore,lter,LTER,NA,RGHT,Rognel Heights,stream_gauge,39.2547,-76.69,4326,NA,1,Collocated with USGS gauge 01589340. This may only be a stom drain.
-baltimore,Baltimore,lter,LTER,NA,MCDN,McDonogh agricultural site,stream_gauge,39.4004,-76.77,4326,NA,1,Collocated with USGS gauge 01589238.
-baltimore,Baltimore,lter,LTER,Gwynns Run,GRGF,Gwynns Run at Gwynns Run,stream_sampling_point,NA,NA,4326,NA,0,"In baltimore meta data but cant find coordinates, maybe collocated with USGS gauge 0158935180"
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GFuGR,Gwynns Falls above Gwynns Run,stream_sampling_point,NA,NA,4326,NA,0,In baltimore meta data but cant find coordinates
-baltimore,Baltimore,lter,LTER,Maidens Choice,MAWI,Maidens Choice at Wilkens Avenue,stream_gauge,39.2755,-76.666,4326,NA,1,"Was collocated with USGS gauge 01589351, but sampling and gauging only overlap for a short time"
-baltimore,Baltimore,lter,LTER,Gwynns Run,GRuTW,Gwynns Run above trash weir,stream_sampling_point,NA,NA,4326,NA,0,In baltimore meta data but cant find coordinates
-baltimore,Baltimore,lter,LTER,NA,CBLM,NA,stream_sampling_point,NA,NA,4326,NA,0,In baltimore meta data but cant find coordinates
-baltimore,Baltimore,lter,LTER,Red Run,RR1,"Red Run at Painters Mill Bridge Road, Suburban",stream_sampling_point,39.404756,-76.779566,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Red Run,RR2,"Red Run at Painters Mill Bridge Road, Suburban",stream_sampling_point,39.4113889,-76.8130556,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Scotts Level Branch,SL1,"Scotts Level Branch at Gwynns Falls, Suburban",stream_sampling_point,39.360495,-76.745558,4326,NA,1,Collocated with USGS gauge 01589290 (possibly)
-baltimore,Baltimore,lter,LTER,Scotts Level Branch,SL2,"Scotts Level Branch at McDonogh Road,Suburban",stream_sampling_point,39.373866,-76.791005,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Horsehead Branch,HH,"Horsehead Branch at McDonogh Road, Suburban",stream_sampling_point,39.389581,-76.779703,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Holly Branch,HLB,"Holly Branch at Gwynnbrook Avenue, Suburban",stream_sampling_point,39.1027778,-76.791111,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Gwynns Falls,GF5,"Gwynns Falls at McDonogh Road, Suburban",stream_sampling_point,39.39121,-76.765326,4326,NA,1,Cant find collocated USGS gauge
-baltimore,Baltimore,lter,LTER,Jennifer Branch,JBHH,Jennifer Branch at Hartford Hills,stream_sampling_point,39.3993,-76.52,4326,NA,1,NA
-baltimore,Baltimore,lter,LTER,Jennifer Branch,JBNW,Jennifer Branch at Northwind,stream_sampling_point,NA,NA,4326,NA,1,Cant find location
-baltimore,Baltimore,lter,LTER,Jennifer Branch,JBON,Jennifer Branch at Ontario,stream_sampling_point,NA,NA,4326,NA,1,Cant find location
+"domain","pretty_domain","network","pretty_network","stream","site_name","full_name","site_type","latitude","longitude","CRS","ws_area_ha","in_workflow","notes"
+"hbef","HBEF","lter","LTER","Stream 1","w1","Watershed 1","stream_gauge",43.952034,-71.726501,4326,11.8,1,NA
+"hbef","HBEF","lter","LTER","Stream 2","w2","Watershed 2","stream_gauge",43.953358,-71.724174,4326,15.6,1,NA
+"hbef","HBEF","lter","LTER","Stream 3","w3","Watershed 3","stream_gauge",43.954875,-71.722816,4326,42.4,1,NA
+"hbef","HBEF","lter","LTER","Stream 4","w4","Watershed 4","stream_gauge",43.950176,-71.725792,4326,36.1,1,NA
+"hbef","HBEF","lter","LTER","Stream 5","w5","Watershed 5","stream_gauge",43.948845,-71.731918,4326,21.9,1,NA
+"hbef","HBEF","lter","LTER","Stream 6","w6","Watershed 6","stream_gauge",43.94994,-71.735641,4326,13.2,1,NA
+"hbef","HBEF","lter","LTER","Stream 7","w7","Watershed 7","stream_gauge",43.927509,-71.767075,4326,77.38,1,NA
+"hbef","HBEF","lter","LTER","Stream 8","w8","Watershed 8","stream_gauge",43.929436,-71.759521,4326,59.4,1,NA
+"hbef","HBEF","lter","LTER","Stream 9","w9","Watershed 9","stream_gauge",43.926014,-71.747195,4326,68.4,1,NA
+"hbef","HBEF","lter","LTER",NA,"RG1","Rain Gauge 1","rain_gauge",43.952120788912,-71.7248377271807,4326,NA,1,"converted shapefile from lter using st_transform"
+"hbef","HBEF","lter","LTER",NA,"RG11","Rain Gauge 11","rain_gauge",43.9502266292999,-71.7346124400276,4326,NA,1,"converted shapefile from lter using st_transform"
+"hbef","HBEF","lter","LTER",NA,"RG23","Rain Gauge 23","rain_gauge",43.9272011309167,-71.746926195465,4326,NA,1,"converted shapefile from lter using st_transform"
+"hbef","HBEF","lter","LTER",NA,"RG22","Rain Gauge 22","rain_gauge",43.9440218597392,-71.7012292563385,4326,NA,1,"converted shapefile from lter using st_transform"
+"hbef","HBEF","lter","LTER",NA,"N","?","rain_gauge",44,-72,4326,NA,1,"still need real coords for these"
+"hbef","HBEF","lter","LTER",NA,"S","?","rain_gauge",44,-72,4326,NA,1,"still need real coords for these"
+"hbef","HBEF","lter","LTER",NA,"SP","?","rain_gauge",44,-72,4326,NA,1,"still need real coords for these"
+"hjandrews","H. J. Andrews","lter","LTER","Lookout Creek","GSLOOK","?","stream_gauge",44.2101255022,-122.257145776,4326,6229.80738777065,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 1","GSWS01","?","stream_gauge",44.2073394042,-122.258027394,4326,101.025016707045,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 2","GSWS02","?","stream_gauge",44.2120146041,-122.244875675,4326,63.633839788666,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 3","GSWS03","?","stream_gauge",44.2194395724,-122.24300003,4326,99.2176965790093,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 6","GSWS06","?","stream_gauge",44.2615081253,-122.180706523,4326,11.7721652780831,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 7","GSWS07","?","stream_gauge",44.2646368258,-122.175264862,4326,17.5020613421041,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 8","GSWS08","?","stream_gauge",44.266294258,-122.170792538,4326,16.9003419237255,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Stream 9","GSWS09","?","stream_gauge",44.2011898244,-122.258801374,4326,1.51798148310201,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","stream 10","GSWS10","?","stream_gauge",44.2170569856,-122.261055512,4326,12.6774734607502,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMA","?","stream_gauge",44.217,-122.171,4326,1.81938153727259,1,"estimated ws area from Q and gage location by eyeballing"
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMC","?","stream_gauge",44.2194360697,-122.16744705,4326,579.719595588988,1,NA
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSWSMF","?","stream_gauge",44.212,-122.16,4326,3.32856265012411,1,"estimated ws area from Q and gage location by eyeballing"
+"hjandrews","H. J. Andrews","lter","LTER","Mack Creek","GSMACK","?","stream_gauge",44.21944,-122.1674,4326,579.719595702577,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RD1507","1507 Road Storage RG","rain_gauge",44.205599,-122.166083,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"L523RG","Hi-15 Unit L523 Storage RG","rain_gauge",44.265333,-122.18207,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"BLUERD","Blue Ridge Standard RG","rain_gauge",44.234765,-122.230991,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"CARPMT","Carpenter Mountain Storage RG","rain_gauge",44.27809,-122.139942,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"CENMET","Central Met Station Recording RG1","rain_gauge",44.243103,-122.14149,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"EARTHF","Earthflow Standard RG","rain_gauge",44.232446,-122.145719,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"FORKS_","Forks Standard RG","rain_gauge",44.22249,-122.240035,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"FRISEL","Frissell Ridge Storage RG","rain_gauge",44.227168,-122.10624,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS3GRD","WS#3 G Road Standard RG","rain_gauge",44.216648,-122.231448,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"GSMACK","Mack Creek Gaging Station Standard RG","rain_gauge",44.21928,-122.167472,4326,579.719595702577,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS3JRD","WS#3 J Road Standard RG","rain_gauge",44.211035,-122.233762,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"MCRAEB","McRae Bridge Standard RG","rain_gauge",44.232959,-122.209223,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"MIDWAY","Midway Standard RG","rain_gauge",44.251137,-122.185031,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS3MRD","WS#3 M Road Standard RG","rain_gauge",44.220074,-122.236531,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"MIRKWD","Mirkwood Standard RG","rain_gauge",44.231315,-122.201972,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"MACKWE","Mack West Standard RG","rain_gauge",44.2118,-122.171177,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RS13RG","Reference Stand #13 Open Storage RG","rain_gauge",44.343931,-122.123217,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"H15PND","Hi-15 Pond Standard RG","rain_gauge",44.262967,-122.171242,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RS03RG","Primary Met Station Recording RG1","rain_gauge",44.211848,-122.255839,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RS05RG","Reference Stand #5 Standard RG","rain_gauge",44.222173,-122.202758,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RS18RG","Reference Stand #18 Standard RG","rain_gauge",44.246321,-122.158768,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"H15RCK","Hi-15 Rockpile Standard RG","rain_gauge",44.263781,-122.183702,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"H15RDG","Hi-15 Ridge Standard RG","rain_gauge",44.272046,-122.172201,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"RDSEND","Roads End Storage RG","rain_gauge",44.2051,-122.137927,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"ROSSRG","Ross' House in Blue River Standard RG","rain_gauge",44.156838,-122.344103,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS1SDL","WS#1 Saddle Standard RG","rain_gauge",44.201943,-122.240765,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"SPOTFI","Spotfire Unit Storage RG","rain_gauge",44.20017,-122.247569,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"SLTRWD","Shelterwood Standard RG","rain_gauge",44.230525,-122.167795,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"TRAILS","Trails End Standard RG","rain_gauge",44.220693,-122.115278,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"UNIT3B","Unit 3B Standard RG","rain_gauge",44.231306,-122.223428,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"UNIT3H","Unit 3H Standard RG","rain_gauge",44.259673,-122.170752,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"UPLMET","Upper Lookout Met Station Recording RG1","rain_gauge",44.207352,-122.11996,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"VANMET","Vanilla Leaf Met Station Recording RG","rain_gauge",44.271625,-122.149519,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"VARMET","Vanilla Leaf Met Meadow Recording RG","rain_gauge",44.273329,-122.149663,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS10RG","Top of WS#10 Storage RG","rain_gauge",44.219956,-122.25684,4326,NA,1,NA
+"hjandrews","H. J. Andrews","lter","LTER",NA,"WS09RG","Top of WS#9 Storage RG","rain_gauge",44.203214,-122.254851,4326,NA,1,NA
+"neon","NEON","neon","NEON","Little Rock Lake","LIRO","Little Rock Lake","lake_gauge",45.998269,-89.704767,NA,NA,0,NA
+"neon","NEON","neon","NEON","Toolik Lake","TOOK","Toolik Lake","lake_gauge",68.630692,-149.610636,NA,NA,0,NA
+"neon","NEON","neon","NEON","Ordway-Swisher Biological Station - Suggs Lake","SUGG","Ordway-Swisher Biological Station - Suggs Lake","lake_gauge",29.68705,-82.01617,NA,NA,0,NA
+"neon","NEON","neon","NEON","Crampton Lake","CRAM","Crampton Lake","lake_gauge",46.21111,-89.47825,NA,NA,0,NA
+"neon","NEON","neon","NEON","Ordway-Swisher Biological Station - Barco Lake","BARC","Ordway-Swisher Biological Station - Barco Lake","lake_gauge",29.67647,-82.00909,NA,NA,0,NA
+"neon","NEON","neon","NEON","Prairie Pothole","PRPO","Prairie Pothole","lake_gauge",47.12999,-99.25055,NA,NA,0,NA
+"neon","NEON","neon","NEON","Prairie Lake at Dakota Coteau Field School","PRLA","Prairie Lake at Dakota Coteau Field School","lake_gauge",47.15909,-99.11388,NA,NA,0,NA
+"neon","NEON","neon","NEON","Flint River","FLNT","Flint River","stream_gauge",31.18542,-84.4374,NA,NA,1,NA
+"neon","NEON","neon","NEON","Lower Tombigbee River at Choctaw Refuge","TOMB","Lower Tombigbee River at Choctaw Refuge","stream_gauge",31.8521,-88.16107,NA,NA,1,NA
+"neon","NEON","neon","NEON","Black Warrior River near Dead Lake","BLWA","Black Warrior River near Dead Lake","stream_gauge",32.54153,-87.79815,NA,NA,1,NA
+"neon","NEON","neon","NEON","West St Louis Creek","WLOU","West St Louis Creek","stream_gauge",39.89137,-105.9154,NA,NA,1,NA
+"neon","NEON","neon","NEON","McDiffett Creek","MCDI","McDiffett Creek","stream_gauge",38.94428,-96.44197,NA,NA,1,NA
+"neon","NEON","neon","NEON","Lewis Run","LEWI","Lewis Run","stream_gauge",39.09564,-77.98322,NA,NA,1,NA
+"neon","NEON","neon","NEON","Blue River","BLUE","Blue River","stream_gauge",34.44422,-96.6242,NA,NA,1,NA
+"neon","NEON","neon","NEON","Teakettle 2 Creek","TECR","Teakettle 2 Creek","stream_gauge",36.95528,-119.02699,NA,NA,1,NA
+"neon","NEON","neon","NEON","Lower Hop Brook","HOPB","Lower Hop Brook","stream_gauge",42.47179,-72.32963,NA,NA,1,NA
+"neon","NEON","neon","NEON","Martha Creek","MART","Martha Creek","stream_gauge",45.79125,-121.93196,NA,NA,1,NA
+"neon","NEON","neon","NEON","Upper Big Creek","BIGC","Upper Big Creek","stream_gauge",37.058,-119.256,NA,NA,1,NA
+"neon","NEON","neon","NEON","Red Butte Creek","REDB","Red Butte Creek","stream_gauge",40.78374,-111.79765,NA,NA,1,NA
+"neon","NEON","neon","NEON","Sycamore Creek","SYCA","Sycamore Creek","stream_gauge",33.74906,-111.5069,NA,NA,1,NA
+"neon","NEON","neon","NEON","Como Creek","COMO","Como Creek","stream_gauge",40.03496,-105.54487,NA,NA,1,NA
+"neon","NEON","neon","NEON","Blacktail Deer Creek","BLDE","Blacktail Deer Creek","stream_gauge",44.95011,-110.58715,NA,NA,1,NA
+"neon","NEON","neon","NEON","Pringle Creek","PRIN","Pringle Creek","stream_gauge",33.37859,-97.78226,NA,NA,1,NA
+"neon","NEON","neon","NEON","McRae Creek","MCRA","McRae Creek","stream_gauge",44.2596,-122.16555,NA,NA,1,NA
+"neon","NEON","neon","NEON","Caribou Creek, Caribou-Poker Creeks Research Watershed","CARI","Caribou Creek, Caribou-Poker Creeks Research Watershed","stream_gauge",65.15306,-147.50246,NA,NA,1,NA
+"neon","NEON","neon","NEON","Oksrukuyik Creek","OKSR","Oksrukuyik Creek","stream_gauge",68.66975,-149.14302,NA,NA,1,NA
+"neon","NEON","neon","NEON","Arikaree River","ARIK","Arikaree River","stream_gauge",39.75825,-102.4471,NA,NA,1,NA
+"neon","NEON","neon","NEON","Rio Guilarte","GUIL","Rio Guilarte","stream_gauge",18.1741,-66.79851,NA,NA,1,NA
+"neon","NEON","neon","NEON","Rio Cupeyes","CUPE","Rio Cupeyes","stream_gauge",18.11352,-66.98676,NA,NA,1,NA
+"neon","NEON","neon","NEON","Posey Creek","POSE","Posey Creek","stream_gauge",38.89332,-78.14678,NA,NA,1,NA
+"neon","NEON","neon","NEON","Kings Creek","KING","Kings Creek","stream_gauge",39.10506,-96.60336,NA,NA,1,NA
+"neon","NEON","neon","NEON","Mayfield Creek","MAYF","Mayfield Creek","stream_gauge",32.95966,-87.40813,NA,NA,1,NA
+"neon","NEON","neon","NEON","Walker Branch","WALK","Walker Branch","stream_gauge",35.95947,-84.28041,NA,NA,1,NA
+"neon","NEON","neon","NEON","LeConte Creek","LECO","LeConte Creek","stream_gauge",35.69043,-83.50379,NA,NA,1,NA
+"konza","Konza","lter","LTER","N04D","N04D","?","stream_gauge",39.08982,-96.58862,4326,NA,1,NA
+"konza","Konza","lter","LTER","N20B","N20B","?","stream_gauge",39.08858,-96.57654,4326,NA,1,NA
+"konza","Konza","lter","LTER","N01B","N01B","?","stream_gauge",39.08668,-96.577,4326,NA,1,NA
+"konza","Konza","lter","LTER","N02B","N02B","?","stream_gauge",39.08982,-96.58862,4326,NA,1,NA
+"konza","Konza","lter","LTER","HIKN","HIKN","Hiking Trail","stream_sampling_point",39.10713,-96.60664,4326,NA,1,NA
+"konza","Konza","lter","LTER","HOKN","HOKN","Hokanson","stream_sampling_point",39.10376,-96.59542,4326,NA,1,NA
+"konza","Konza","lter","LTER","NFKC","NFKC","North Fork Kings Creek","stream_sampling_point",39.10155,-96.59239,4326,NA,1,NA
+"konza","Konza","lter","LTER","SFKC","SFKC","South Fork Kings Creek","stream_sampling_point",39.10128,-96.59239,4326,NA,1,NA
+"konza","Konza","lter","LTER","K2AL-1","K2AL-1","?","stream_sampling_point",39.10093,-96.57538,4326,NA,1,NA
+"konza","Konza","lter","LTER","KZFL","KZFL","Konza Falls","stream_sampling_point",39.08763,-96.58482,4326,NA,1,NA
+"konza","Konza","lter","LTER","STCK","STCK","Stone Creek","stream_sampling_point",39.10564,-96.6061,4326,NA,1,NA
+"konza","Konza","lter","LTER","SHAN","SHAN","Shane","stream_sampling_point",39.11439,-96.55757,4326,NA,1,NA
+"konza","Konza","lter","LTER","K2AL-2","K2AL-2","?","stream_sampling_point",39.10065,-96.57412,4326,NA,1,NA
+"konza","Konza","lter","LTER","TUBE","TUBE","Four Tubes","stream_sampling_point",39.09873,-96.58944,4326,NA,1,NA
+"konza","Konza","lter","LTER",NA,"HQ02","?","rain_gauge",39.1023,-96.6095,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N02B","?","rain_gauge",39.0877,-96.5954,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"R01A","?","rain_gauge",39.0692,-96.6107,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"004B","?","rain_gauge",39.0776,-96.5954,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N4DU","?","rain_gauge",39.0778,-96.5898,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"002C","?","rain_gauge",39.0678,-96.5792,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"020B","?","rain_gauge",39.0756,-96.5758,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"K01B","?","rain_gauge",39.0862,-96.5631,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N01B","?","rain_gauge",39.0849,-96.571,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N4DF","?","rain_gauge",39.0876,-96.5843,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER","Kings Creek","HIKX","Hiking Trail","stream_sampling_point",39.107,-96.6068,4326,NA,1,"Not included in stream gauge location product, but lat/long listed in stream_chem metadata"
+"baltimore","Baltimore","lter","LTER",NA,"WXCMNC","Carrie Murray Nature Center","rain_gauge",39.30724722,-76.69507222,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXCPGC","Carroll Park Golf Course","rain_gauge",39.27359167,-76.64858611,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXDRNC","Dead Run Near Cantonsville","rain_gauge",39.29588611,-76.74402778,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXGFGL","Glyndon Elementary School","rain_gauge",39.46822222,-76.8105,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXGFND","Gwynns Falls Near Delight","rain_gauge",39.44389167,-76.78266944,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXMCDO","McDonogh School","rain_gauge",39.39633611,-76.77140833,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXORDG","Oregon Ridge Park","rain_gauge",39.49656944,-76.68900556,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER",NA,"WXUMBC","UMBC Campus","rain_gauge",39.2543,-76.70233889,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GFCP","Gwynns Falls at Carroll Park","stream_gauge",39.2715,-76.649,4326,NA,1,"Collocated with USGS gauge 01589352"
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GFGB","Gwynns Falls at Gwynnbrook Avenue","stream_gauge",39.443,-76.783,4326,NA,1,"Collocated with USGS gauge 01589197"
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GFGL","Gwynns Falls at Glyndon","stream_gauge",39.4718,-76.817,4326,NA,1,"Collocated with USGS gauge 01589180"
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GFVN","Gwynns Falls at Villa Nova","stream_gauge",39.3458,-76.733,4326,NA,1,"Collocated with USGS gauge 01589300"
+"baltimore","Baltimore","lter","LTER","Pond Branch","POBR","Pond Branch forested reference site","stream_gauge",39.4803,-76.688,4326,NA,1,"Collocated with USGS gauge 01583570"
+"baltimore","Baltimore","lter","LTER","Dead Run","DRKR","Dead Run at Krome Avenue","stream_gauge",39.3112,-76.717,4326,NA,1,"Collocated with USGS gauge 01589330"
+"baltimore","Baltimore","lter","LTER","Baisman Run","BARN","Baisman Run at Ivy Hill Road","stream_gauge",39.4794,-76.678,4326,NA,1,"Collocated with USGS gauge 01583580"
+"baltimore","Baltimore","lter","LTER",NA,"RGHT","Rognel Heights","stream_gauge",39.2547,-76.69,4326,NA,1,"Collocated with USGS gauge 01589340. This may only be a stom drain."
+"baltimore","Baltimore","lter","LTER",NA,"MCDN","McDonogh agricultural site","stream_gauge",39.4004,-76.77,4326,NA,1,"Collocated with USGS gauge 01589238."
+"baltimore","Baltimore","lter","LTER","Gwynns Run","GRGF","Gwynns Run at Gwynns Run","stream_sampling_point",NA,NA,4326,NA,0,"In baltimore meta data but cant find coordinates, maybe collocated with USGS gauge 0158935180"
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GFuGR","Gwynns Falls above Gwynns Run","stream_sampling_point",NA,NA,4326,NA,0,"In baltimore meta data but cant find coordinates"
+"baltimore","Baltimore","lter","LTER","Maidens Choice","MAWI","Maidens Choice at Wilkens Avenue","stream_gauge",39.2755,-76.666,4326,NA,1,"Was collocated with USGS gauge 01589351, but sampling and gauging only overlap for a short time"
+"baltimore","Baltimore","lter","LTER","Gwynns Run","GRuTW","Gwynns Run above trash weir","stream_sampling_point",NA,NA,4326,NA,0,"In baltimore meta data but cant find coordinates"
+"baltimore","Baltimore","lter","LTER",NA,"CBLM",NA,"stream_sampling_point",NA,NA,4326,NA,0,"In baltimore meta data but cant find coordinates"
+"baltimore","Baltimore","lter","LTER","Red Run","RR1","Red Run at Painters Mill Bridge Road, Suburban","stream_sampling_point",39.404756,-76.779566,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Red Run","RR2","Red Run at Painters Mill Bridge Road, Suburban","stream_sampling_point",39.4113889,-76.8130556,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Scotts Level Branch","SL1","Scotts Level Branch at Gwynns Falls, Suburban","stream_sampling_point",39.360495,-76.745558,4326,NA,1,"Collocated with USGS gauge 01589290 (possibly)"
+"baltimore","Baltimore","lter","LTER","Scotts Level Branch","SL2","Scotts Level Branch at McDonogh Road,Suburban","stream_sampling_point",39.373866,-76.791005,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Horsehead Branch","HH","Horsehead Branch at McDonogh Road, Suburban","stream_sampling_point",39.389581,-76.779703,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Holly Branch","HLB","Holly Branch at Gwynnbrook Avenue, Suburban","stream_sampling_point",39.1027778,-76.791111,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Gwynns Falls","GF5","Gwynns Falls at McDonogh Road, Suburban","stream_sampling_point",39.39121,-76.765326,4326,NA,1,"Cant find collocated USGS gauge"
+"baltimore","Baltimore","lter","LTER","Jennifer Branch","JBHH","Jennifer Branch at Hartford Hills","stream_sampling_point",39.3993,-76.52,4326,NA,1,NA
+"baltimore","Baltimore","lter","LTER","Jennifer Branch","JBNW","Jennifer Branch at Northwind","stream_sampling_point",NA,NA,4326,NA,1,"Cant find location"
+"baltimore","Baltimore","lter","LTER","Jennifer Branch","JBON","Jennifer Branch at Ontario","stream_sampling_point",NA,NA,4326,NA,1,"Cant find location"

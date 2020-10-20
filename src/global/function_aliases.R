@@ -50,3 +50,5 @@ map = purrr::map
 map2 = purrr::map
 st_read = sf::st_read
 errors = errors::errors
+pivot_wider = tidyr::pivot_wider
+pivot_longer = tidyr::pivot_longer
