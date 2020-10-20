@@ -42,7 +42,7 @@ for(i in 1:nrow(prod_info)){
                                              prodname_ms = prodname_ms,
                                              tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn = munge_site(domain, site_name, prodname_ms, held_data)
+            munge_rtn = munge_by_site(domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){

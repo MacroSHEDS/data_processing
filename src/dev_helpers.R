@@ -134,20 +134,35 @@ compare_interp_methods <- function(){
     plot(m3, main='idw^2 and elev')
 }
 
-invalidate_tracked_data <- function(network, domain, level){
+invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
 
-    #level is one of 'munge' or 'derive'. that level will be reset
-    #not currently set up to invalidate level='retrieve'
+    #level is one of 'munge' or 'derive'. that level will be reset.
+    #   not currently set up to invalidate level='retrieve'.
+    #prodname_ms is optional. if supplied, only that product will be invalidated
 
     tracker <- get_data_tracker(network = network,
                                 domain = domain)
 
-    invalidated <- recursive_tracker_update(l = tracker,
-                                            elem_name = level,
-                                            new_val = list(status = 'pending',
-                                                           mtime = '1500-01-01'))
+    if(! is.null(prodname_ms)){
 
-    return(invalidated)
+        sublist <- tracker[[prodname_ms]]
+
+        subl_updt <- recursive_tracker_update(l = sublist,
+                                              elem_name = level,
+                                              new_val = list(status = 'pending',
+                                                             mtime = '1500-01-01'))
+        tracker[[prodname_ms]] <- subl_updt
+
+        return(tracker)
+
+    } else {
+
+        invalidated <- recursive_tracker_update(l = tracker,
+                                                elem_name = level,
+                                                new_val = list(status = 'pending',
+                                                               mtime = '1500-01-01'))
+        return(invalidated)
+    }
 }
 
 assign_typical_test_variables <- function(){
@@ -259,12 +274,13 @@ compare_efficiency <- function(f, g, stepstart=10, stepstop=1e5, outfile){
 
 manufacture_uncert_msdf <- function(df, errval = 0.1){
 
-    colnames <- colnames(df)
-    noncan_colnames <- colnames[! colnames %in% ms_canonicals]
+    #colnames <- colnames(df)
+    #noncan_colnames <- colnames[! colnames %in% ms_canonicals]
 
-    for(n in noncan_colnames){
-        errors::errors(df[[n]]) <- errval
-    }
+    #for(n in noncan_colnames){
+    #    errors::errors(df[[n]]) <- errval
+    #}
+    errors(df$val) <- errval
 
     return(df)
 }
@@ -446,3 +462,54 @@ delineate_watershed_test1 <- function(lat, long, crs,
 # delineate_watershed_test1(lat, long, crs, buffer_radius = 100,
 #                           dem_resolution = 10, snap_method = 'standard',
 #                           snap_dist = 150)
+
+populate_kernel_env <- function(include_extension = FALSE){
+
+    #use this to quickly populate the variables needed inside a munge kernel,
+    #   namely network, domain, site_name, prodname_ms, and component. Just
+    #   call this function, then go to the console and
+    #   tab-complete your way through a path (such as
+    #   'data/lter/hbef/raw/precipitation__13/sitename_NA/HBEF daily precip.csv')
+    #   the function will assign the relevant parts of the path to their
+    #   respective variable names, and then you can step through the kernel!
+
+    #include_extension: logical. if component has a file extension, like
+    #   "stream chemistry.csv", should that be included (TRUE) or left off (FALSE)?
+
+    cat(paste0("Enter path, e.g.: 'data/lter/hbef/raw/precipitation__13/",
+               "sitename_NA/HBEF daily precip.csv'\n"))
+    path <- scan(what = 'character',
+                 nmax = 1,
+                 quiet = TRUE)
+
+    rgx <- str_match(path,
+                     'data/([^/]+)/([^/]+)/raw/([^/]+)/([^/]+)/([^/]+)')
+
+    network <- rgx[, 2]
+    domain <- rgx[, 3]
+    prodname_ms <- rgx[, 4]
+    site_name <- rgx[, 5]
+
+    if(include_extension){
+        component <- rgx[, 6]
+    } else {
+        component <- str_match(rgx[, 6],
+                               '(.+)?\\.[a-zA-Z0-9]+')[, 2]
+    }
+
+    assign('network', network, envir = .GlobalEnv)
+    assign('domain', domain, envir = .GlobalEnv)
+    assign('prodname_ms', prodname_ms, envir = .GlobalEnv)
+    assign('site_name', site_name, envir = .GlobalEnv)
+    assign('component', component, envir = .GlobalEnv)
+
+    msg <- glue('network: {n}\ndomain: {d}\nprodname_ms: {p}\nsite_name: {s}\n',
+                'component: {cp}',
+                n = network,
+                d = domain,
+                p = prodname_ms,
+                s = site_name,
+                cp = component)
+
+    message(msg)
+}
