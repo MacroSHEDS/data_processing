@@ -107,7 +107,7 @@ logging::addHandler(logging::writeToFile,
                     file = 'logs/0_ms_master.log')
 
 source('src/global/global_helpers.R')
-source('src/dev_helpers.R') #comment before pushing live
+source('src/dev/dev_helpers.R') #comment before pushing live
 source_decoratees('src/global/global_helpers.R') #parse decorators
 
 ms_vars <- sm(read_csv('data/general/variables.csv'))
@@ -121,7 +121,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+# dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
