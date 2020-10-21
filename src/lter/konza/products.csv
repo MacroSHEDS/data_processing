@@ -14,7 +14,7 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,n
 230,stream_gauge_locations,spatial,ready,ready,NA,NA,NA,GIS315
 ms011,discharge,sensor,NA,NA,ready,stream_flux_inst_ms003,NA,NA
 ms012,stream_chemistry,grab,NA,NA,ready,stream_flux_inst_ms003,NA,NA
-ms001,precipitation,unknown,NA,NA,pending,NA,NA,NA
-ms002,precip_chemistry,unknown,NA,NA,pending,NA,NA,NA
-ms004,precip_flux_inst,unknown,NA,NA,pending,NA,NA,NA
+ms001,precipitation,unknown,NA,NA,ready,NA,NA,NA
+ms002,precip_chemistry,unknown,NA,NA,ready,NA,NA,NA
+ms004,precip_flux_inst,unknown,NA,NA,ready,NA,NA,NA
 ms003,stream_flux_inst,unknown,NA,NA,ready,NA,NA,NA

@@ -420,7 +420,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                   quote = '')
 
     d <- d %>%
-        as_tibble()
+        as_tibble() %>%
         mutate(RecTime = ifelse(RecTime == '.', 1200, RecTime)) %>%
         mutate(num_t = nchar(RecTime)) %>%
         mutate(num_d = nchar(RecDay)) %>%
@@ -495,7 +495,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                               domain = domain,
                               prodname_ms = prodname_ms))
 
-    d <- remove_all_na_sites(d)
+    # d <- remove_all_na_sites(d)
 
     d <- ue(ms_conversions(d,
                             convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
@@ -511,7 +511,10 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                                  desired_interval = '1 day', #set to '15 min' when we have server
                                  impute_limit = 30))
 
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- ue(apply_detection_limit_t(d,
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms))
 
 }
 
