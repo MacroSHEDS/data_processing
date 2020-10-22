@@ -26,17 +26,17 @@ derive_dirs = list.dirs(glue('data/{n}/{d}/derived',
                         recursive = FALSE)
 derive_dirs = derive_dirs[derive_dirs != 'documentation']
 
-munge_dirs = list.dirs(glue('data/{n}/{d}/munged',
-                            n = network,
-                            d = domain),
-                       full.names = FALSE,
-                       recursive = FALSE)
-munge_dirs = munge_dirs[munge_dirs != 'documentation']
+# munge_dirs = list.dirs(glue('data/{n}/{d}/munged',
+#                             n = network,
+#                             d = domain),
+#                        full.names = FALSE,
+#                        recursive = FALSE)
+# munge_dirs = munge_dirs[munge_dirs != 'documentation']
 
-prodnames_m = prodname_from_prodname_ms(munge_dirs)
-
-
+# prodnames_m = prodname_from_prodname_ms(munge_dirs)
 prodnames_d = prodname_from_prodname_ms(derive_dirs)
+
+
 
 setwd('~/git/macrosheds/data_acquisition/')
 read_feather('data/lter/hbef/derived/stream_flux_inst__ms003/')
