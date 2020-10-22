@@ -199,9 +199,10 @@ identify_sampling <- function(df,
                           n = network,
                           d = domain)
 
-    if(file.exists(sampling_file)){
-        master <- jsonlite::fromJSON(readr::read_file(sampling_file))
-    } else {
+    master <- try(jsonlite::fromJSON(readr::read_file(sampling_file)),
+                  silent = TRUE)
+
+    if('try-error' %in% class(master)){
         dir.create(sampling_dir, recursive = TRUE)
         file.create(sampling_file)
         master <- list()
@@ -341,9 +342,9 @@ identify_sampling <- function(df,
                 mutate(
                     type = paste0(type,
                                   !!is_sensor[var_name_base]),
-                    var = glue('{ty}_{vb}',
-                               ty = type,
-                               vb = var_name_base)) %>%
+                    var = as.character(glue('{ty}_{vb}',
+                                            ty = type,
+                                            vb = var_name_base))) %>%
                 slice(interval_changes)
 
             master[[prodname_ms]][[var_name_base]][[site_names[i]]] <-

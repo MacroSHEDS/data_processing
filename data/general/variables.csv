@@ -21,7 +21,7 @@
 "DOC","Dissolved Organic Carbon","mg/L","combustion","grab","Other","expression(UNKNOWN)",1,1,
 "TDN","Total Dissolved Nitrogen","mg/L","persulfate digestion -  calorimetric analysis","grab","Other","expression(UNKNOWN)",1,1,
 "DON","Dissolved Organic Nitrogen","mg/L","derived","grab","Other","expression(UNKNOWN)",1,1,
-"DIC","Dissolved Inorganic Carbon","M/L","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
+"DIC","Dissolved Inorganic Carbon","M","UNKNOWN","grab","Other","expression(UNKNOWN)",1,1,
 "SiO2","Silica","UNKNOWN","molybdenum blue","grab","Other","expression(SiO[2])",1,1,
 "ANC960","Acid Neutralizing Capacity 960","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,"standardize this to ANC (hbef?)"
 "ANCMet","Acid Neutralizing Capacity Met","ueq/L","UNKNOWN","grab","Other","expression(UNKNOWN)",,0,"standardize this to ANC (hbef?)"
