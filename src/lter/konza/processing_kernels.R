@@ -839,10 +839,13 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_2_ms011 <- function(network, domain, prodname_ms) {
 
-  q_files <- list_munged_files(network = network,
-                    domain = domain,
-                    prodname_ms = c('discharge_N04D__7', 'discharge_N20B__8',
-                                    'discharge_N01B__9', 'discharge_N02B__10'))
+  q_files <- ms_list_files(network = network,
+                           domain = domain,
+                           level = 'munged',
+                           prodname_ms = c('discharge_N04D__7',
+                                           'discharge_N20B__8',
+                                           'discharge_N01B__9',
+                                           'discharge_N02B__10'))
 
   for(i in 1:length(q_files)) {
     site_path <- str_split_fixed(q_files[i], '/', n = Inf)[1,6]
@@ -866,11 +869,12 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms012 <- function(network, domain, prodname_ms) {
 
-  chem_files <- list_munged_files(network = network,
-                               domain = domain,
-                               prodname_ms = c('stream_chemistry__50',
-                                               'stream_conductivity__51',
-                                               'stream_suspended_sediments__20'))
+  chem_files <- ms_list_files(network = network,
+                              domain = domain,
+                              level = 'munged',
+                              prodname_ms = c('stream_chemistry__50',
+                                              'stream_conductivity__51',
+                                              'stream_suspended_sediments__20'))
 
   dir <- glue('data/{n}/{d}/derived/{p}',
        n = network,
@@ -885,7 +889,7 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
   for(i in 1:length(sites)) {
     site_files <- grep(sites[i], chem_files, value = TRUE)
 
-    sile_full <- map_dfr(site_files, read_feather)
+    sile_full <- purrr::map_dfr(site_files, read_feather)
 
     ue(write_ms_file(d = sile_full,
                      network = network,
@@ -930,12 +934,14 @@ process_2_ms003 <- function(network, domain, prodname_ms){
   chemprod <- 'stream_chemistry__ms012'
   qprod <- 'discharge__ms011'
 
-  chemfiles <- ue(list_derived_files(network = network,
-                                    domain = domain,
-                                    prodname_ms = chemprod))
-  qfiles <- ue(list_derived_files(network = network,
-                                 domain = domain,
-                                 prodname_ms = qprod))
+  chemfiles <- ue(ms_list_files(network = network,
+                                domain = domain,
+                                level = 'derived',
+                                prodname_ms = chemprod))
+  qfiles <- ue(ms_list_files(network = network,
+                             domain = domain,
+                             level = 'derived',
+                             prodname_ms = qprod))
 
   flux_sites <- generics::intersect(
     ue(fname_from_fpath(qfiles, include_fext = FALSE)),
@@ -943,10 +949,9 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 
   for(s in flux_sites){
 
-    flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
-                                 qprod = qprod,
-                                 level = 'derived',
-                                 site_name = s)))
+    flux <- sw(calc_inst_flux(chemprod = chemprod,
+                              qprod = qprod,
+                              site_name = s))
 
     ue(write_ms_file(d = flux,
                      network = network,

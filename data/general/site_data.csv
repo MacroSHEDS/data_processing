@@ -98,10 +98,10 @@
 "neon","NEON","neon","NEON","Mayfield Creek","MAYF","Mayfield Creek","stream_gauge",32.95966,-87.40813,NA,NA,1,NA
 "neon","NEON","neon","NEON","Walker Branch","WALK","Walker Branch","stream_gauge",35.95947,-84.28041,NA,NA,1,NA
 "neon","NEON","neon","NEON","LeConte Creek","LECO","LeConte Creek","stream_gauge",35.69043,-83.50379,NA,NA,1,NA
-"konza","Konza","lter","LTER","N04D","N04D","?","stream_gauge",39.08982,-96.58862,4326,NA,1,NA
-"konza","Konza","lter","LTER","N20B","N20B","?","stream_gauge",39.08858,-96.57654,4326,NA,1,NA
-"konza","Konza","lter","LTER","N01B","N01B","?","stream_gauge",39.08668,-96.577,4326,NA,1,NA
-"konza","Konza","lter","LTER","N02B","N02B","?","stream_gauge",39.08982,-96.58862,4326,NA,1,NA
+"konza","Konza","lter","LTER","N04D","N04D","?","stream_gauge",39.08982,-96.58862,4326,97.4148930104108,1,NA
+"konza","Konza","lter","LTER","N20B","N20B","?","stream_gauge",39.08858,-96.57654,4326,75.8111213591218,1,NA
+"konza","Konza","lter","LTER","N01B","N01B","?","stream_gauge",39.08668,-96.577,4326,117.23905801971,1,NA
+"konza","Konza","lter","LTER","N02B","N02B","?","stream_gauge",39.08982,-96.58862,4326,97.4148930104108,1,NA
 "konza","Konza","lter","LTER","HIKN","HIKN","Hiking Trail","stream_sampling_point",39.10713,-96.60664,4326,NA,1,NA
 "konza","Konza","lter","LTER","HOKN","HOKN","Hokanson","stream_sampling_point",39.10376,-96.59542,4326,NA,1,NA
 "konza","Konza","lter","LTER","NFKC","NFKC","North Fork Kings Creek","stream_sampling_point",39.10155,-96.59239,4326,NA,1,NA
@@ -113,14 +113,14 @@
 "konza","Konza","lter","LTER","K2AL-2","K2AL-2","?","stream_sampling_point",39.10065,-96.57412,4326,NA,1,NA
 "konza","Konza","lter","LTER","TUBE","TUBE","Four Tubes","stream_sampling_point",39.09873,-96.58944,4326,NA,1,NA
 "konza","Konza","lter","LTER",NA,"HQ02","?","rain_gauge",39.1023,-96.6095,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
-"konza","Konza","lter","LTER",NA,"N02B","?","rain_gauge",39.0877,-96.5954,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N02B","?","rain_gauge",39.0877,-96.5954,4326,97.4148930104108,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"R01A","?","rain_gauge",39.0692,-96.6107,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"004B","?","rain_gauge",39.0776,-96.5954,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"N4DU","?","rain_gauge",39.0778,-96.5898,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"002C","?","rain_gauge",39.0678,-96.5792,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"020B","?","rain_gauge",39.0756,-96.5758,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"K01B","?","rain_gauge",39.0862,-96.5631,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
-"konza","Konza","lter","LTER",NA,"N01B","?","rain_gauge",39.0849,-96.571,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
+"konza","Konza","lter","LTER",NA,"N01B","?","rain_gauge",39.0849,-96.571,4326,117.23905801971,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER",NA,"N4DF","?","rain_gauge",39.0876,-96.5843,4326,NA,1,"Rain gauge names have changed throughout time and GIS data on PASTE does not correspond to rain dataset. These locations were manually input by plotting old versions of data to current version to determine how old and new site names correspond"
 "konza","Konza","lter","LTER","Kings Creek","HIKX","Hiking Trail","stream_sampling_point",39.107,-96.6068,4326,NA,1,"Not included in stream gauge location product, but lat/long listed in stream_chem metadata"
 "baltimore","Baltimore","lter","LTER",NA,"WXCMNC","Carrie Murray Nature Center","rain_gauge",39.30724722,-76.69507222,4326,NA,1,NA

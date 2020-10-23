@@ -144,7 +144,6 @@ numeric_any <- function(num_vec){
     return(as.numeric(any(as.logical(num_vec))))
 }
 
-#. handle_errors
 gsub_v <- function(pattern, replacement_vec, x){
 
     #just like the first three arguments to gsub, except that
@@ -161,7 +160,6 @@ gsub_v <- function(pattern, replacement_vec, x){
     return(subbed)
 }
 
-#. handle_errors
 identify_sampling <- function(df,
                               is_sensor,
                               date_col = 'datetime',
@@ -561,7 +559,6 @@ identify_sampling_bypass <- function(df,
     return(df)
 }
 
-#. handle_errors
 drop_var_prefix <- function(x){
 
     unprefixed <- substr(x, 4, nchar(x))
@@ -569,7 +566,6 @@ drop_var_prefix <- function(x){
     return(unprefixed)
 }
 
-#. handle_errors
 extract_var_prefix <- function(x){
 
     prefix <- substr(x, 1, 2)
@@ -577,7 +573,6 @@ extract_var_prefix <- function(x){
     return(prefix)
 }
 
-#. handle_errors
 ms_read_raw_csv <- function(filepath,
                             preprocessed_tibble,
                             datetime_cols,
@@ -954,7 +949,6 @@ ms_read_raw_csv <- function(filepath,
     return(d)
 }
 
-#. handle_errors
 resolve_datetime <- function(d,
                              datetime_colnames,
                              datetime_formats,
@@ -1031,7 +1025,6 @@ resolve_datetime <- function(d,
     return(d)
 }
 
-#. handle_errors
 dt_format_to_regex <- function(fmt, optional){
 
     #fmt is a character vector of datetime formatting strings, such as
@@ -1108,7 +1101,6 @@ dt_format_to_regex <- function(fmt, optional){
     return(fmt)
 }
 
-#. handle_errors
 escape_special_regex <- function(x){
 
     #x is a character vector. any special characters in x will be escaped with
@@ -1132,7 +1124,6 @@ escape_special_regex <- function(x){
     return(escaped)
 }
 
-#. handle_errors
 ms_cast_and_reflag <- function(d,
                                input_shape = 'wide',
                                data_col_pattern = '#V#__|dat',
@@ -1425,7 +1416,6 @@ ms_cast_and_reflag <- function(d,
     return(d)
 }
 
-#. handle_errors
 ms_conversions <- function(d,
                            convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                                                  'NH4', 'NH3'),
@@ -1504,7 +1494,6 @@ ms_conversions <- function(d,
     return(d)
 }
 
-#. handle_errors
 query_status <- function(status_code_vec, component = 'flag'){
 
     #TODO: investigate r packages for bitmapping in C*/FORTRAN
@@ -1542,7 +1531,6 @@ query_status <- function(status_code_vec, component = 'flag'){
     return(bit_is_on)
 }
 
-#. handle_errors
 export_to_global <- function(from_env, exclude=NULL){
 
     #exclude is a character vector of names not to export.
@@ -1563,7 +1551,6 @@ export_to_global <- function(from_env, exclude=NULL){
     return()
 }
 
-#. handle_errors
 get_all_local_helpers <- function(network=domain, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
@@ -1602,7 +1589,6 @@ get_all_local_helpers <- function(network=domain, domain){
     return()
 }
 
-#. handle_errors
 set_up_logger <- function(network=domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
@@ -1626,14 +1612,12 @@ set_up_logger <- function(network=domain, domain){
     return(logger_module)
 }
 
-#. handle_errors
 extract_from_config <- function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
 }
 
-#. handle_errors
 clear_from_mem <- function(..., clearlist){
 
     if(missing(clearlist)){
@@ -1647,7 +1631,6 @@ clear_from_mem <- function(..., clearlist){
     return()
 }
 
-#. handle_errors
 retain_ms_globals <- function(retain_vars){
 
     all_globals = ls(envir=.GlobalEnv, all.names=TRUE)
@@ -1676,22 +1659,18 @@ generate_blacklist_indicator = function(text=1){
     return(indobj)
 }
 
-#. handle_errors
 is_ms_err <- function(x){
     return('ms_err' %in% class(x))
 }
 
-#. handle_errors
 is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-#. handle_errors
 is_blacklist_indicator <- function(x){
     return('blacklist_indicator' %in% class(x))
 }
 
-#. handle_errors
 evaluate_result_status <- function(r){
 
     if(is_ms_err(r) || is_ms_exception(r)){
@@ -1705,7 +1684,7 @@ evaluate_result_status <- function(r){
     return(status)
 }
 
-email_err = function(msgs, addrs, pw){
+email_err <- function(msgs, addrs, pw){
 
     if(is.list(msgs)){
         msgs = Reduce(function(x, y) paste(x, y, sep='\n---\n'), msgs)
@@ -1750,7 +1729,7 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-get_data_tracker = function(network=domain, domain){
+get_data_tracker <- function(network = domain, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
     #assumed to be identical to the domain string.
@@ -1772,7 +1751,6 @@ get_data_tracker = function(network=domain, domain){
     return(tracker_data)
 }
 
-#. handle_errors
 make_tracker_skeleton <- function(retrieval_chunks){
 
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
@@ -1790,7 +1768,6 @@ make_tracker_skeleton <- function(retrieval_chunks){
     return(tracker_skeleton)
 }
 
-#. handle_errors
 insert_site_skeleton <- function(tracker, prodname_ms, site_name,
                                  site_components){
 
@@ -1800,19 +1777,16 @@ insert_site_skeleton <- function(tracker, prodname_ms, site_name,
     return(tracker)
 }
 
-#. handle_errors
 product_is_tracked <- function(tracker, prodname_ms){
     bool = prodname_ms %in% names(tracker)
     return(bool)
 }
 
-#. handle_errors
 site_is_tracked <- function(tracker, prodname_ms, site_name){
     bool = site_name %in% names(tracker[[prodname_ms]])
     return(bool)
 }
 
-#. handle_errors
 track_new_product <- function(tracker, prodname_ms){
 
     if(prodname_ms %in% names(tracker)){
@@ -1824,7 +1798,6 @@ track_new_product <- function(tracker, prodname_ms){
     return(tracker)
 }
 
-#. handle_errors
 track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
     retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
@@ -1841,7 +1814,6 @@ track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
     return(tracker)
 }
 
-#. handle_errors
 filter_unneeded_sets <- function(tracker_with_details){
 
     new_sets = tracker_with_details %>%
@@ -1858,7 +1830,6 @@ filter_unneeded_sets <- function(tracker_with_details){
     return(new_sets)
 }
 
-#. handle_errors
 update_data_tracker_r <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -1916,7 +1887,6 @@ update_data_tracker_r <- function(network = domain,
     return()
 }
 
-#. handle_errors
 update_data_tracker_m <- function(network = domain,
                                   domain,
                                   tracker_name,
@@ -1951,7 +1921,6 @@ update_data_tracker_m <- function(network = domain,
     return()
 }
 
-#. handle_errors
 update_data_tracker_d <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -2009,7 +1978,6 @@ update_data_tracker_d <- function(network = domain,
     return()
 }
 
-#. handle_errors
 update_data_tracker_g <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -2061,7 +2029,6 @@ update_data_tracker_g <- function(network = domain,
     return()
 }
 
-#. handle_errors
 backup_tracker <- function(path){
 
     mch = stringr::str_match(path,
@@ -2088,7 +2055,6 @@ backup_tracker <- function(path){
     return()
 }
 
-#. handle_errors
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
                                   keep_status='ok'){
 
@@ -2099,25 +2065,21 @@ extract_retrieval_log <- function(tracker, prodname_ms, site_name,
     return(retrieved_data)
 }
 
-#. handle_errors
 get_munge_status <- function(tracker, prodname_ms, site_name){
     munge_status = tracker[[prodname_ms]][[site_name]]$munge$status
     return(munge_status)
 }
 
-#. handle_errors
 get_derive_status <- function(tracker, prodname_ms, site_name){
     derive_status = tracker[[prodname_ms]][[site_name]]$derive$status
     return(derive_status)
 }
 
-#. handle_errors
 get_general_status <- function(tracker, prodname_ms, site_name){
     general_status = tracker[[prodname_ms]][[site_name]]$general$status
     return(general_status)
 }
 
-#. handle_errors
 get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 
     #unlike other functions with network and domain arguments, this one accepts
@@ -2136,7 +2098,6 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
     return(prods)
 }
 
-#. handle_errors
 prodcode_from_prodname_ms <- function(prodname_ms){
 
     #prodname_ms consists of the macrosheds official name for a data
@@ -2165,7 +2126,6 @@ prodcode_from_prodname_ms <- function(prodname_ms){
     return(prodcode)
 }
 
-#. handle_errors
 prodname_from_prodname_ms <- function(prodname_ms){
 
     #prodname_ms consists of the macrosheds official name for a data
@@ -2185,19 +2145,16 @@ prodname_from_prodname_ms <- function(prodname_ms){
     return(prodname)
 }
 
-#. handle_errors
 ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
     return()
 }
 
-#. handle_errors
 ms_munge <- function(network=domain, domain){
     source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
     return()
 }
 
-#. handle_errors
 ms_delineate <- function(network, domain,
                          dev_machine_status,
                          verbose = FALSE){
@@ -2447,7 +2404,6 @@ ms_delineate <- function(network, domain,
     return()
 }
 
-#. handle_errors
 delineate_watershed_apriori <- function(lat, long, crs,
                                         dev_machine_status = 'n00b',
                                         verbose = FALSE){
@@ -2650,7 +2606,6 @@ delineate_watershed_apriori <- function(lat, long, crs,
     return(inspection_dir)
 }
 
-#. handle_errors
 delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
                                                  snap_dist, snap_method,
                                                  dem_resolution, write_dir){
@@ -2771,13 +2726,11 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
     return()
 }
 
-#. handle_errors
 ms_derive <- function(network=domain, domain){
     source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
     return()
 }
 
-#. handle_errors
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
 
     #shp_files is a character vector of filenames with .shp extension
@@ -2827,7 +2780,6 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
     return()
 }
 
-#. handle_errors
 get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
@@ -2851,7 +2803,6 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-#. handle_errors
 ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
@@ -2917,7 +2868,6 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
     return(ws_area_ha)
 }
 
-#. handle_errors
 write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                                  snap_method, snap_distance, dem_resolution){
 
@@ -2939,7 +2889,6 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
     return()
 }
 
-#. handle_errors
 read_wb_delin_specs <- function(network, domain, site_name){
 
     ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
@@ -2963,7 +2912,6 @@ read_wb_delin_specs <- function(network, domain, site_name){
     return(ds)
 }
 
-#. handle_errors
 serialize_list_to_dir <- function(l, dest){
 
     #l must be a named list
@@ -2999,7 +2947,6 @@ serialize_list_to_dir <- function(l, dest){
     return()
 }
 
-#. handle_errors
 parse_molecular_formulae <- function(formulae){
 
     #`formulae` is a vector
@@ -3023,7 +2970,6 @@ parse_molecular_formulae <- function(formulae){
     return(constituents) # a list of vectors
 }
 
-#. handle_errors
 combine_atomic_masses <- function(molecular_constituents){
 
     #`molecular_constituents` is a vector
@@ -3038,7 +2984,6 @@ combine_atomic_masses <- function(molecular_constituents){
     return(molecular_mass) #a scalar
 }
 
-#. handle_errors
 calculate_molar_mass <- function(molecular_formula){
 
     if(length(molecular_formula) > 1){
@@ -3051,7 +2996,6 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
-#. handle_errors
 convert_molecule <- function(x, from, to){
 
     #e.g. convert_molecule(1.54, 'NH4', 'N')
@@ -3063,7 +3007,6 @@ convert_molecule <- function(x, from, to){
     return(converted_mass)
 }
 
-#. handle_errors
 update_product_file <- function(network, domain, level, prodcode, status,
                                 prodname){
 
@@ -3096,7 +3039,6 @@ update_product_file <- function(network, domain, level, prodcode, status,
     return()
 }
 
-#. handle_errors
 update_product_statuses <- function(network, domain){
 
     #status_codes should maybe be defined globally, or in a file
@@ -3140,7 +3082,6 @@ update_product_statuses <- function(network, domain){
     return()
 }
 
-#. handle_errors
 convert_unit <- function(x, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
@@ -3196,7 +3137,6 @@ convert_unit <- function(x, input_unit, output_unit){
     return(new_val)
 }
 
-#. handle_errors
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                           level = 'munged', shapefile = FALSE,
                           link_to_portal = TRUE){
@@ -3279,7 +3219,6 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     return()
 }
 
-#. handle_errors
 create_portal_link <- function(network, domain, prodname_ms, site_name,
                                level = 'munged', dir = FALSE){
 
@@ -3371,7 +3310,6 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     return()
 }
 
-#. handle_errors
 is_ms_prodcode <- function(prodcode){
 
     #always specify macrosheds "pseudo product codes" as "msXXX" where
@@ -3381,45 +3319,25 @@ is_ms_prodcode <- function(prodcode){
     return(grepl('ms[0-9]{3}', prodcode))
 }
 
-#. handle_errors
-list_munged_files <- function(network, domain, prodname_ms){
-                              # omit_uncertainty_files = FALSE){
+ms_list_files <- function(network, domain, level, prodname_ms){
 
-    mfiles <- glue('data/{n}/{d}/munged/{p}',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms) %>%
+    #level is either "munged" or "derived"
+    #prodname_ms can be a single string or a vector
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be either "munged" or "derived".')
+    }
+
+    files <- glue('data/{n}/{d}/{l}/{p}',
+                  n = network,
+                  d = domain,
+                  l = level,
+                  p = prodname_ms) %>%
         list.files(full.names = TRUE)
 
-    # if(omit_uncertainty_files){
-    #     mfiles <- mfiles[! grepl('_uncert.feather$',
-    #                              mfiles,
-    #                              perl = TRUE)]
-    # }
-
-    return(mfiles)
+    return(files)
 }
 
-#. handle_errors
-list_derived_files <- function(network, domain, prodname_ms){
-    # omit_uncertainty_files = FALSE){
-
-    dfiles <- glue('data/{n}/{d}/derived/{p}',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms) %>%
-        list.files(full.names = TRUE)
-
-    # if(omit_uncertainty_files){
-    #     mfiles <- mfiles[! grepl('_uncert.feather$',
-    #                              mfiles,
-    #                              perl = TRUE)]
-    # }
-
-    return(dfiles)
-}
-
-#. handle_errors
 fname_from_fpath <- function(paths, include_fext = TRUE){
 
     #paths is a vector of filepaths of/this/form. final slash is used to
@@ -3574,12 +3492,12 @@ delineate_watershed_nhd <- function(lat, long) {
     }
 }
 
-#. handle_errors
-calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){
+calc_inst_flux <- function(chemprod, qprod, site_name){
 
-    #chemprod is the prodname_ms for stream or precip chemistry
-    #qprod is the prodname_ms for stream discharge or precip volume over time
-    #dt_round_interv is a rounding interval passed to lubridate::round_date
+    #chemprod is the prodname_ms for stream or precip chemistry.
+    #   it can be a munged or a derived product.
+    #qprod is the prodname_ms for stream discharge or precip volume over time.
+    #   it can be a munged or derived product/
 
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
@@ -3647,7 +3565,6 @@ calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){
     return(flux)
 }
 
-#. handle_errors
 read_combine_shapefiles <- function(network, domain, prodname_ms){
 
     prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
@@ -3672,8 +3589,9 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
     return(combined)
 }
 
-#. handle_errors
-read_combine_feathers <- function(network, domain, prodname_ms){
+read_combine_feathers <- function(network,
+                                  domain,
+                                  prodname_ms){
 
     #read all data feathers associated with a network-domain-product,
     #row bind them, arrange by site_name, var, datetime. insert val_err column
@@ -3681,9 +3599,19 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     #(error/uncertainty is handled by the errors package as an attribute,
     #so it must be written/read as a separate column).
 
-    prodpaths <- list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+    #the processing level is determined automatically from prodname_ms.
+    #   If the product code is "msXXX" where X is a numeral, the processing
+    #   level is assumed to be "derived". otherwise "munged"
+
+    level <- ifelse(grepl('ms[0-9]{3}',
+                          prodcode_from_prodname_ms(prodname_ms)),
+                    'derived',
+                    'munged')
+
+    prodpaths <- ms_list_files(network = network,
+                               domain = domain,
+                               level = level,
+                               prodname_ms = prodname_ms)
 
     combined <- tibble()
     for(i in 1:length(prodpaths)){
@@ -3699,7 +3627,6 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     return(combined)
 }
 
-#. handle_errors
 choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
 
     if(unprojected){
@@ -3721,7 +3648,6 @@ choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
     return(PROJ4)
 }
 
-#. handle_errors
 reconstitute_raster <- function(x, template){
 
     m = matrix(as.vector(x),
@@ -3735,7 +3661,6 @@ reconstitute_raster <- function(x, template){
     return(r)
 }
 
-#. handle_errors
 shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                          data_values, stream_site_name, output_varname,
                          elev_agnostic = FALSE, verbose = FALSE){
@@ -3846,7 +3771,6 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     return(ws_mean)
 }
 
-#. handle_errors
 shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                   precip_values, chem_values, stream_site_name,
                                   verbose = FALSE){
@@ -4013,7 +3937,6 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     return(ws_means)
 }
 
-#. handle_errors
 synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
@@ -4091,7 +4014,6 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     return(d_adjusted)
 }
 
-#. handle_errors
 recursive_tracker_update <- function(l, elem_name, new_val){
 
     #implements depth-first tree traversal
@@ -4115,7 +4037,6 @@ recursive_tracker_update <- function(l, elem_name, new_val){
     return(l)
 }
 
-#. handle_errors
 ms_parallelize <- function(maxcores = Inf){
 
     #maxcores is the maximum number of processor cores to use for R tasks.
@@ -4145,7 +4066,6 @@ ms_parallelize <- function(maxcores = Inf){
     return(clst)
 }
 
-#. handle_errors
 idw_parallel_combine <- function(d1, d2){
 
     #this is for use with foreach loops inside the 3 idw prep functions
@@ -4164,7 +4084,6 @@ idw_parallel_combine <- function(d1, d2){
     return(d_comb)
 }
 
-#. handle_errors
 idw_log_wb <- function(verbose, site_name, i, nw){
 
     if(! verbose) return()
@@ -4180,7 +4099,6 @@ idw_log_wb <- function(verbose, site_name, i, nw){
     return()
 }
 
-#. handle_errors
 idw_log_var <- function(verbose, site_name, v, j, nvars){
 
     if(! verbose) return()
@@ -4197,7 +4115,6 @@ idw_log_var <- function(verbose, site_name, v, j, nvars){
     return()
 }
 
-#. handle_errors
 idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
 
     if(! verbose) return()
@@ -4216,7 +4133,6 @@ idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
     return()
 }
 
-#. handle_errors
 precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                        precip_prodname_out, verbose = TRUE){
 
@@ -4343,7 +4259,6 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     return()
 }
 
-#. handle_errors
 get_detlim_precursor <- function(network, domain, prodname_ms){
 
     #this gets the prodname_ms for the direct precursor of a derived
@@ -4376,7 +4291,6 @@ get_detlim_precursor <- function(network, domain, prodname_ms){
     return(precursor)
 }
 
-#. handle_errors
 pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       pgauge_prodname, pchem_prodname_out, verbose = TRUE){
 
@@ -4531,7 +4445,6 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     return()
 }
 
-#. handle_errors
 flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                      pgauge_prodname, flux_prodname_out, verbose = TRUE){
 
@@ -4730,7 +4643,6 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     return()
 }
 
-#. handle_errors
 invalidate_derived_products <- function(successor_string){
 
     if(all(is.na(successor_string)) || successor_string == ''){
@@ -4752,7 +4664,6 @@ invalidate_derived_products <- function(successor_string){
     return()
 }
 
-#. handle_errors
 write_metadata_r <- function(murl, network, domain, prodname_ms){
 
     #this writes the metadata file for retrieved macrosheds data
@@ -4795,7 +4706,6 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
     return()
 }
 
-#. handle_errors
 read_metadata_r <- function(network, domain, prodname_ms){
 
     #this reads the metadata file for retrieved macrosheds data
@@ -4816,7 +4726,6 @@ read_metadata_r <- function(network, domain, prodname_ms){
     # }
 }
 
-#. handle_errors
 get_precursors <- function(network, domain, prodname_ms){
 
     #this determines which munged products were used to generate
@@ -4845,7 +4754,6 @@ get_precursors <- function(network, domain, prodname_ms){
     return(precursors)
 }
 
-#. handle_errors
 document_kernel_code <- function(network, domain, prodname_ms, level){
 
     #this documents the code used to munge macrosheds data from raw source data.
@@ -4877,7 +4785,6 @@ document_kernel_code <- function(network, domain, prodname_ms, level){
     return(kernel_func)
 }
 
-#. handle_errors
 write_metadata_m <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for munged macrosheds data
@@ -4963,7 +4870,6 @@ write_metadata_m <- function(network, domain, prodname_ms){
     return()
 }
 
-#. handle_errors
 write_metadata_d <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for derived macrosheds data
@@ -5031,7 +4937,6 @@ write_metadata_d <- function(network, domain, prodname_ms){
     return()
 }
 
-#. handle_errors
 identify_detection_limit_s <- function(x){
 
     #this is the scalar version of identify_detection_limit (_s).
@@ -5100,7 +5005,6 @@ identify_detection_limit_s <- function(x){
     return(detlim)
 }
 
-#. handle_errors
 apply_detection_limit_s <- function(x, digits){
 
     #this is the scalar version of apply_detection_limit (_s).
@@ -5195,7 +5099,6 @@ apply_detection_limit_s <- function(x, digits){
     return(x)
 }
 
-#. handle_errors
 Mode <- function(x, na.rm = TRUE){
 
     if(na.rm){
@@ -5208,7 +5111,6 @@ Mode <- function(x, na.rm = TRUE){
 
 }
 
-#. handle_errors
 identify_detection_limit_t <- function(X, network, domain, prodname_ms,
                                        return_detlims = FALSE){
 
@@ -5375,7 +5277,6 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     return()
 }
 
-#. handle_errors
 apply_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     #this is the temporally explicit version of apply_detection_limit (_t).
@@ -5485,7 +5386,6 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
     return(X)
 }
 
-#. handle_errors
 read_detection_limit <- function(network, domain, prodname_ms){
 
     detlims <- glue('data/{n}/{d}/detection_limits.json',
@@ -5499,7 +5399,6 @@ read_detection_limit <- function(network, domain, prodname_ms){
     return(detlims_prod)
 }
 
-#. handle_errors
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
@@ -5519,7 +5418,6 @@ write_detection_limit <- function(detlim, network, domain, prodname_ms){
     return()
 }
 
-#. handle_errors
 rle2 <- function(x){#, return_list = FALSE){
 
     r <- rle(x)
@@ -5543,7 +5441,6 @@ rle2 <- function(x){#, return_list = FALSE){
     return(r)
 }
 
-#. handle_errors
 force_monotonic_locf <- function(v, ascending = TRUE){
 
     if(any(is.na(v))){
@@ -5570,7 +5467,6 @@ force_monotonic_locf <- function(v, ascending = TRUE){
     return(v)
 }
 
-#. handle_errors
 get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
 
     col_name <- paste0(prodname, 'X')
@@ -5584,7 +5480,6 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         })
 }
 
-#. handle_errors
 clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
 
     table_nrow <- sheds %>%
@@ -5617,7 +5512,6 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
     return(table_fin)
 }
 
-#. handle_errors
 get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
                              ws_prodname) {
 
@@ -5675,8 +5569,6 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
 }
 
-
-#. handle_errors
 get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
                           start, ws_prodname) {
 
@@ -5754,7 +5646,6 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
 
 }
 
-#. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
     # uncert <- lapply(detlim,
@@ -5766,7 +5657,6 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-#. handle_errors
 carry_uncertainty <- function(d, network, domain, prodname_ms){
 
     u <- identify_detection_limit_t(d,
@@ -5781,7 +5671,6 @@ carry_uncertainty <- function(d, network, domain, prodname_ms){
     return(d)
 }
 
-#. handle_errors
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -5795,7 +5684,6 @@ err_df_to_matrix <- function(df){
     return(M)
 }
 
-#. handle_errors
 get_relative_uncert <- function(x){
 
     if(any(class(x) %in% c('list', 'data.frame', 'array'))){
@@ -5809,7 +5697,6 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-#. handle_errors
 get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
 
     sheds <- ws_boundry %>%
@@ -5886,7 +5773,6 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
     return()
 }
 
-#. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
     # uncert <- lapply(detlim,
@@ -5898,7 +5784,6 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-#. handle_errors
 carry_uncertainty <- function(d, network, domain, prodname_ms){
 
     u <- identify_detection_limit_t(d,
@@ -5913,7 +5798,6 @@ carry_uncertainty <- function(d, network, domain, prodname_ms){
     return(d)
 }
 
-#. handle_errors
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -5927,7 +5811,6 @@ err_df_to_matrix <- function(df){
     return(M)
 }
 
-#. handle_errors
 get_relative_uncert <- function(x){
 
     if(any(class(x) %in% c('list', 'data.frame', 'array'))){
@@ -5942,7 +5825,6 @@ get_relative_uncert <- function(x){
 
 }
 
-#. handle_errors
 raster_intersection_summary <- function(wb, dem){
 
     #wb is a delineated watershed boundary as a rasterLayer
@@ -5982,7 +5864,6 @@ raster_intersection_summary <- function(wb, dem){
     return(summary_out)
 }
 
-#. handle_errors
 remove_all_na_sites <- function(d){
 
     d_test <- d %>%

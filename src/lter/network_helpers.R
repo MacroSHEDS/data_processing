@@ -5,7 +5,6 @@ ms_pasta_domain_refmap = list(
     baltimore = 'knb-lter-bes'
 )
 
-#. handle_errors
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
     vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
@@ -21,7 +20,6 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
     return(newest_vsn)
 }
 
-#. handle_errors
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
 
@@ -54,7 +52,6 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     return(avail_sets)
 }
 
-#. handle_errors
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
 
@@ -86,7 +83,6 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     return(retrieval_tracker)
 }
 
-#. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
     # sets <- new_sets; tracker <- held_data
 
@@ -113,7 +109,6 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
     }
 }
 
-#. handle_errors
 download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -121,11 +116,11 @@ download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
                          d = domain,
                          p = set_details$prodname_ms,
                          s = set_details$site_name)
-    
+
     dir.create(raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-    
+
     download.file(url = set_details$url,
                   destfile = glue(raw_data_dest,
                                   '/',
