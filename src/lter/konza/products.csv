@@ -1,8 +1,8 @@
 prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes,components
-7,discharge_N04D,sensor,ready,ready,NA,discharge__ms011,NA,ASD021
-8,discharge_N20B,sensor,ready,ready,NA,discharge__ms011,NA,ASD041
-9,discharge_N01B,sensor,ready,ready,NA,discharge__ms011,NA,ASD051
-10,discharge_N02B,sensor,ready,ready,NA,discharge__ms011,NA,ASD061
+7,discharge,sensor,ready,ready,NA,discharge__ms011,N04D,ASD021
+8,discharge,sensor,ready,ready,NA,discharge__ms011,N20B,ASD041
+9,discharge,sensor,ready,ready,NA,discharge__ms011,N01B,ASD051
+10,discharge,sensor,ready,ready,NA,discharge__ms011,N02B,ASD061
 50,stream_chemistry,grab,ready,ready,NA,stream_chemistry__ms012,NA,NA
 51,stream_conductivity,grab,ready,ready,NA,stream_chemistry__ms012,NA,NA
 20,stream_suspended_sediments,grab,ready,ready,NA,stream_chemistry__ms012,NA,NA
