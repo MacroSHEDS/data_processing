@@ -1,4 +1,3 @@
-#. handle_errors
 munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                           nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
@@ -89,7 +88,6 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
     return()
 }
 
-#. handle_errors
 munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                            nolink_regex = '(precip_f|precip_c|precipi)',
                            spatial_regex = '(location|boundary)',
@@ -203,7 +201,6 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
     return()
 }
 
-#. handle_errors
 munge_combined_split <- function(network, domain, site_name, prodname_ms, tracker,
                                  nolink_regex = '(precip_f|precip_c|precipi)',
                                  spatial_regex = '(location|boundary)',
@@ -299,7 +296,6 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
     return()
 }
 
-#. handle_errors
 munge_by_site_product <- function(network, domain, site_name, prodname_ms, tracker,
                           nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
