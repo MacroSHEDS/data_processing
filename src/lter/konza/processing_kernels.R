@@ -1,6 +1,6 @@
 #retrieval kernels ####
 
-#discharge_N04D: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_7 <- function(set_details, network, domain){
 
@@ -12,7 +12,7 @@ process_0_7 <- function(set_details, network, domain){
   return()
 }
 
-#discharge_N20B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_8 <- function(set_details, network, domain){
 
@@ -24,7 +24,7 @@ process_0_8 <- function(set_details, network, domain){
   return()
 }
 
-#discharge_N01B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_9 <- function(set_details, network, domain){
 
@@ -36,7 +36,7 @@ process_0_9 <- function(set_details, network, domain){
   return()
 }
 
-#discharge_N02B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_10 <- function(set_details, network, domain){
 
@@ -151,7 +151,7 @@ process_0_230 <- function(set_details, network, domain){
 
 #munge kernels ####
 
-#discharge_N04D: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_7 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -214,7 +214,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge_N20B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_8 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -277,7 +277,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge_N01B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_9 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -340,7 +340,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge_N02B: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_10 <- function(network, domain, prodname_ms, site_name,
                          component){
