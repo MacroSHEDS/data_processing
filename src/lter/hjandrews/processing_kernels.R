@@ -540,12 +540,14 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     chemprod <- 'stream_chemistry__4021'
     qprod <- 'discharge__4341'
 
-    chemfiles <- ue(list_munged_files(network = network,
-                                      domain = domain,
-                                      prodname_ms = chemprod))
-    qfiles <- ue(list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = qprod))
+    chemfiles <- ue(ms_list_files(network = network,
+                                  domain = domain,
+                                  level = 'munged',
+                                  prodname_ms = chemprod))
+    qfiles <- ue(ms_list_files(network = network,
+                               domain = domain,
+                               level = 'munged',
+                               prodname_ms = qprod))
 
     flux_sites <- generics::intersect(
         ue(fname_from_fpath(qfiles, include_fext = FALSE)),

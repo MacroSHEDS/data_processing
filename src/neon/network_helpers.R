@@ -1,5 +1,4 @@
 
-#. handle_errors
 get_neon_data = function(domain, sets, tracker, silent=TRUE){
     # sets=new_sets; i=20; tracker=held_data
 
@@ -24,7 +23,6 @@ get_neon_data = function(domain, sets, tracker, silent=TRUE){
     }
 }
 
-#. handle_errors
 munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
     # site_name=sites[j]; tracker=held_data
 
@@ -55,7 +53,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
         }
 
     }
-        
+
         sensor <- case_when(prodname_ms == 'stream_chemistry__DP1.20093' ~ FALSE,
                             prodname_ms == 'stream_nitrate__DP1.20033' ~ TRUE,
                             prodname_ms == 'stream_temperature__DP1.20053' ~ TRUE,
@@ -64,35 +62,35 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                             prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
                             prodname_ms == 'precip_chemistry__DP1.00013' ~ TRUE,
                             prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
-        
+
         d <- identify_sampling_bypass(df = out,
                                       is_sensor =  sensor,
                                       domain = domain,
                                       network = network,
-                                      prodname_ms = prodname_ms) 
-    
+                                      prodname_ms = prodname_ms)
+
     d <- d %>%
         filter(!is.na(val))
-    
+
     d <- remove_all_na_sites(d)
-    
+
     d <- ue(carry_uncertainty(d,
                               network = network,
                               domain = domain,
                               prodname_ms = prodname_ms))
-    
+
     d <- ue(synchronize_timestep(d,
                                  desired_interval = '1 day', #set to '15 min' when we have server
                                  impute_limit = 30))
-    
+
     d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
-    
+
     site_names <- unique(d$site_name)
     for(y in 1:length(site_names)) {
-        
+
         d_site <- d %>%
             filter(site_name == !!site_names[y])
-        
+
         write_ms_file(d = d,
                       network = network,
                       domain = domain,
@@ -114,7 +112,6 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
     return('sitemunge complete')
 }
 
-#. handle_errors
 download_sitemonth_details <- function(geturl){
 
     d = httr::GET(geturl)
@@ -123,7 +120,6 @@ download_sitemonth_details <- function(geturl){
     return(d)
 }
 
-#. handle_errors
 determine_upstream_downstream <- function(d_){
 
     updown = substr(d_$horizontalPosition, 3, 3)
@@ -139,7 +135,6 @@ determine_upstream_downstream <- function(d_){
     return(updown)
 }
 
-#. handle_errors
 get_avail_neon_products <- function(){
 
     req = httr::GET(paste0("http://data.neonscience.org/api/v0/products/"))
@@ -150,7 +145,6 @@ get_avail_neon_products <- function(){
     return(prodlist)
 }
 
-#. handle_errors
 get_neon_product_specs <- function(code){
 
     prodlist = get_avail_neon_products()
@@ -173,7 +167,6 @@ get_neon_product_specs <- function(code){
     return(list(prodcode_full=prodcode_full, prod_version=prod_version))
 }
 
-#. handle_errors
 get_avail_neon_product_sets <- function(prodcode_full){
 
     #returns: tibble with url, site_name, component columns
@@ -195,7 +188,6 @@ get_avail_neon_product_sets <- function(prodcode_full){
     return(avail_sets)
 }
 
-#. handle_errors
 populate_set_details <- function(tracker, prodname_ms, site_name, avail){
 
     #must return a tibble with a "needed" column, which indicates which new
