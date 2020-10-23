@@ -1,12 +1,18 @@
+#. handle_errors
 munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                           nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
-    #for when a data product is neatly organized with one site per file,
-    #and all components will be munged
-    #(probably rare, but neon has this arrangement).
+    #for when a data product is organized with one site per file
+    #(neon and konza have this arrangement). if not all components
+    #will be munged, use the "components" column in products.csv
 
+    #site_name is either the true name of a site, like "watershed1", or
+    #   the standin "sitename_NA" that we use elsewhere. If the latter,
+    #   this munge engine will look inside the munged file to determine
+    #   the name of the site. This is necessary when the true site name isn't
+    #   included in tracker.
     #nolink_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string, a hardlink
     #    to the data portal will not be created when the munged file is written.
@@ -45,6 +51,12 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out = bind_rows(out, out_comp)
         }
+    }
+
+    if(site_name == 'sitename_NA') site_name <- unique(out$site_name)
+
+    if(length(site) > 1) {
+        stop('multiple sites encountered in a dataset that should contain only one')
     }
 
     if(sum(dim(out)) > 0){
@@ -88,6 +100,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
     return()
 }
 
+#. handle_errors
 munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                            nolink_regex = '(precip_f|precip_c|precipi)',
                            spatial_regex = '(location|boundary)',
@@ -201,6 +214,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
     return()
 }
 
+#. handle_errors
 munge_combined_split <- function(network, domain, site_name, prodname_ms, tracker,
                                  nolink_regex = '(precip_f|precip_c|precipi)',
                                  spatial_regex = '(location|boundary)',
@@ -296,6 +310,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
     return()
 }
 
+#. handle_errors
 munge_by_site_product <- function(network, domain, site_name, prodname_ms, tracker,
                           nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
@@ -303,6 +318,8 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
 
     #for when a data product is organized with only one site and one variable
     #in a data product (e.g. Konza has a discharge data product for each site)
+
+    #
 
     #nolink_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string, a hardlink
@@ -344,37 +361,30 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
         }
     }
 
-    sites <- sm(read_csv('data/general/site_data.csv'))
+    site <- unique(out$site_name)
 
-    site_prod <- str_split_fixed(prodname_ms, '_', n = Inf)[1,]
-
-    site <- site_prod[length(site_prod)-2]
-
-    site <- unique(grep(paste0('\\', site, '\\b'), sites$site_name, value = T))
-
-    if(! length(site) == 1) {
-        stop('Site name must be supplied imidetly before the __prodcode for munge_by_site_product')
-    } else {
-        ready_to_link <- ifelse(grepl(nolink_regex,
-                                      prodname_ms),
-                                FALSE,
-                                TRUE)
-
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
-
-        write_ms_file(d = out,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = site,
-                      level = 'munged',
-                      shapefile = is_spatial,
-                      link_to_portal = ready_to_link)
-
+    if(length(site) > 1) {
+        stop('multiple sites encountered in a dataset that should contain only one')
     }
+
+    ready_to_link <- ifelse(grepl(nolink_regex,
+                                  prodname_ms),
+                            FALSE,
+                            TRUE)
+
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
+    write_ms_file(d = out,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_name = site,
+                  level = 'munged',
+                  shapefile = is_spatial,
+                  link_to_portal = ready_to_link)
 
     update_data_tracker_m(network = network,
                           domain = domain,

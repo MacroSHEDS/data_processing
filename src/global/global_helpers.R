@@ -2726,9 +2726,87 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
     return()
 }
 
-ms_derive <- function(network=domain, domain){
-    source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
+ms_derive <- function(network = domain, domain){
+
+    source(glue('src/{n}/{d}/derive.R',
+                n = network,
+                d = domain))
+
+    #for any munged product that needs no further processing, recursively
+    #hardlink its entire directory from data/[network]/[domain]/munged/
+    #to data/[network]/[domain]/derived/
+
+    prods <- read_csv(glue('src/{n}/{d}/products.csv',
+                           n = network,
+                           d = domain))
+
+    is_actually_derived <-  grepl('^ms[0-9]{3}$',
+                                  prods$prodcode,
+                                  perl = TRUE) &
+        (is.na(prods$type) |
+             prods$type != 'linked')
+
+    derived_prods <- paste(prods$prodname[is_actually_derived],
+                           prods$prodcode[is_actually_derived],
+                           sep = '__')
+    munged_prods <- paste(prods$prodname[! is_actually_derived],
+                          prods$prodcode[! is_actually_derived],
+                          sep = '__')
+    prods_to_link <- munged_prods[! munged_prods %in% derived_prods]
+
+    #figure out what the new prodname_ms's will be
+    prodcodes_num <- as.numeric(substr(prods$prodcode[is_actually_derived],
+                                       start = 3,
+                                       stop = 5))
+
+    new_prodcodes_num <- seq(max(prodcodes_num) + 1,
+                             max(prodcodes_num) + 1 + length(prodcodes_num))
+
+    new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
+                                      width = 3,
+                                      side = 'left',
+                                      pad = 0) %>%
+                                      {paste0('ms', .)}
+
+    for(i in 1:length(prods_to_link)){
+
+        create_derived_links(network = network,
+                             domain = domain,
+                             prodname_ms = prods_to_link[i],
+                             new_code = new_prodcodes[i])
+
+        append_to_productfile(network = network,
+                              domain = domain,
+                              prodcode = new_prodcodes[i],
+                              prodname = prodname_from_prodname_ms(prods_to_link[i]),
+                              type = 'linked')
+    }
+
     return()
+}
+append_to_productfile <- function(network,
+                                  domain,
+                                  prodcode,
+                                  prodname,
+                                  type,
+                                  retrieve_status,
+                                  munge_status,
+                                  derive_status,
+                                  precursor_of,
+                                  notes,
+                                  components){
+
+    #add a line to the products.csv file for a particular network and domain.
+    #any fields omitted will be populated with NA.
+
+    passed_args <- as.list(match.call()) #TODO HERE: make this nice. test
+    #   all hardlinks for hbef
+
+    prods <- read_csv(glue('src/{n}/{d}/products.csv',
+                      n = network,
+                      d = domain))
+
+
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
@@ -3222,12 +3300,10 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
 create_portal_link <- function(network, domain, prodname_ms, site_name,
                                level = 'munged', dir = FALSE){
 
-    #level is one of 'munged', 'derived', corresponding to the
-    #location, within the data_acquisition system, of the data to be linked
+    #level is either 'munged' or 'derived', corresponding to the
+    #   location, within the data_acquisition system, of the data to be linked.
     #if dir=TRUE, treat site_name as a directory name, and link all files
-    #within (necessary for e.g. shapefiles, which often come with other files)
-
-    #todo: allow level='raw'; flexibility for linking arbitrary file extensions
+    #   within (necessary for e.g. shapefiles, which often come with other files)
 
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
@@ -3236,6 +3312,7 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
                            d = domain,
                            p = strsplit(prodname_ms, '__')[[1]][1])
+
     dir.create(portal_prod_dir,
                showWarnings = FALSE,
                recursive = TRUE)
@@ -3245,14 +3322,10 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
         portal_site_file = glue('{pd}/{s}.feather',
                                 pd = portal_prod_dir,
                                 s = site_name)
-        portal_site_file_uncert = glue('{pd}/{s}_uncert.feather',
-                                       pd = portal_prod_dir,
-                                       s = site_name)
 
         #if there's already a data file for this site-time-product in
         #the portal repo, remove it
         unlink(portal_site_file)
-        unlink(portal_site_file_uncert)
 
         #create a link to the portal repo from the new site file
         #(note: really, to and from are equivalent, as they both
@@ -3263,20 +3336,9 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
                          l = level,
                          p = prodname_ms,
                          s = site_name)
-        site_file_uncert = glue('data/{n}/{d}/{l}/{p}/{s}_uncert.feather',
-                                n = network,
-                                d = domain,
-                                l = level,
-                                p = prodname_ms,
-                                s = site_name)
 
         invisible(sw(file.link(to = portal_site_file,
                                from = site_file)))
-
-        if(file.exists(site_file_uncert)){
-            invisible(sw(file.link(to = portal_site_file_uncert,
-                                   from = site_file_uncert)))
-        }
 
     } else {
 
@@ -3308,6 +3370,97 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     }
 
     return()
+}
+
+create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
+
+    #for hardlinking munged products to the derive directory. this applies to all
+    #munged products that require no derive-level processing.
+
+    #new_prodcode is the derive-style prodcode (e.g. ms920) that will be
+    #   given to the new links in the derive directory. this is determined
+    #   programmatically by ms_derive
+
+    new_prodname_ms <- paste(prodname_from_prodname_ms(prodname_ms),
+                             new_prodcode,
+                             sep = '__')
+
+    munge_dir <- glue('data/{n}/{d}/munged/{p}',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms)
+
+    derive_dir <- glue('data/{n}/{d}/derived/{p}',
+                       n = network,
+                       d = domain,
+                       p = new_prodname_ms)
+
+    dir.create(derive_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dirs_to_build <- list.dirs(munge_dir,
+                               recursive = TRUE)
+
+    dirs_to_build <- convert_munge_path_to_derive_path(
+        paths = dirs_to_build,
+        munge_prodname_ms = prodname_ms,
+        derive_prodname_ms = new_prodname_ms)
+
+    for(dr in dirs_to_build){
+        dir.create(dr,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+    }
+
+
+    #"from" and "to" may seem counterintuitive here. keep in mind that files
+    #as represented by the OS are actually all hardlinks to inodes in the kernel.
+    #so when you make a new hardlink, you're linking *from* a new location
+    #*to* an inode, as referenced by an existing hardlink. file.link uses
+    #these words in a less realistic, but more intuitive way, i.e. *from*
+    #an existing file *to* a new location
+    files_to_link_from <- list.files(path = munge_dir,
+                                     recursive = TRUE,
+                                     full.names = TRUE)
+
+    files_to_link_to <- convert_munge_path_to_derive_path(
+        paths = files_to_link,
+        munge_prodname_ms = prodname_ms,
+        derive_prodname_ms = new_prodname_ms)
+
+    for(i in 1:length(files_to_link_from)){
+        unlink(files_to_link_to[i])
+        invisible(sw(file.link(to = files_to_link_to[i],
+                               from = files_to_link_from[i])))
+    }
+
+    return()
+}
+
+convert_munge_path_to_derive_path <- function(paths,
+                                              munge_prodname_ms,
+                                              derive_prodname_ms){
+
+    #paths: strings containing filepath information. expected words are
+    #   "munged" and a readable prodname_ms. something like
+    #   "data/lter/hbef/munged/ws_boundary__94/w1"
+    #munge_prodname_ms: the prodname_ms for this product in its munged form.
+    #   e.g. "ws_boundary__94"
+    #derive_prodname_ms: the prodname_ms for this product in its derived form
+    #   (may be the same as munge_prodname_ms), e.g. "ws_boundary__ms005"
+
+    paths <- gsub(pattern = 'munged',
+                  replacement = 'derived',
+                  x = paths)
+
+    paths <- gsub(pattern = paste0('__',
+                                   prodcode_from_prodname_ms(munge_prodname_ms)),
+                  replacement = paste0('__',
+                                       prodcode_from_prodname_ms(derive_prodname_ms)),
+                  x = paths)
+
+    return(paths)
 }
 
 is_ms_prodcode <- function(prodcode){
@@ -3589,6 +3742,15 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
     return(combined)
 }
 
+is_derived_product <- function(prodname_ms){
+
+    is_derived <- grepl('^ms[0-9]{3}$',
+                        prodcode_from_prodname_ms(prodname_ms),
+                        perl = TRUE)
+
+    return(is_derived)
+}
+
 read_combine_feathers <- function(network,
                                   domain,
                                   prodname_ms){
@@ -3603,8 +3765,7 @@ read_combine_feathers <- function(network,
     #   If the product code is "msXXX" where X is a numeral, the processing
     #   level is assumed to be "derived". otherwise "munged"
 
-    level <- ifelse(grepl('ms[0-9]{3}',
-                          prodcode_from_prodname_ms(prodname_ms)),
+    level <- ifelse(is_derived_product(prodname_ms),
                     'derived',
                     'munged')
 
@@ -4234,9 +4395,9 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         # ws_mean_precip$precip <- apply_detection_limit_s(ws_mean_precip$precip,
         #                                                 detlim)
         # identify_detection_limit_s(ws_mean_precip$val)
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
 
         ws_mean_precip <- apply_detection_limit_t(ws_mean_precip,
                                                   network = network,
@@ -4259,7 +4420,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
     return()
 }
 
-get_detlim_precursor <- function(network, domain, prodname_ms){
+get_detlim_precursors <- function(network, domain, prodname_ms){
 
     #this gets the prodname_ms for the direct precursor of a derived
     #product. for example, for hjandrews 'precipitation__ms001' it would return
@@ -4267,7 +4428,10 @@ get_detlim_precursor <- function(network, domain, prodname_ms){
     #to a derived product, because those limits were defined on the direct
     #precursor
 
-    #for precip flux products, the direct precursor is considered to be precip chem
+    #for precip flux products, the direct precursor is considered to be precip
+    #chem. for derived products that aggregate two or more munged products of
+    #the same type (e.g. discharge__9, discharge__10, etc. from
+    #lter/konza), this returns all of those products as precursors.
 
     if(network == domain){
         prods <- sm(read_csv(glue('src/{n}/products.csv',
@@ -4422,9 +4586,9 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             stop('NA datetime found in ws_mean_d')
         }
 
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
         ws_mean_d <- apply_detection_limit_t(ws_mean_d,
                                              network = network,
                                              domain = domain,
@@ -4620,9 +4784,9 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  shapefile = FALSE,
         #                  link_to_portal = TRUE))
 
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
         ws_mean_flux <- apply_detection_limit_t(ws_mean_flux,
                                                 network = network,
                                                 domain = domain,
@@ -5295,6 +5459,14 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     X <- as_tibble(X) %>%
         arrange(site_name, var, datetime)
+
+    if(is_derived_product(prodname_ms)){
+
+        #if there are multiple precursors (rare), just use the first
+        prodname_ms <- get_detlim_precursors(network = network,
+                                             domain = domain,
+                                             prodname_ms = prodname_ms)[1]
+    }
 
     detlim <- read_detection_limit(network, domain, prodname_ms)
     if(is_ms_err(detlim)){
