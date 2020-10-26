@@ -1,6 +1,6 @@
 #retrieval kernels ####
 
-#discharge: STATUS=READY
+#discharge_N04D: STATUS=READY
 #. handle_errors
 process_0_7 <- function(set_details, network, domain){
 
@@ -12,7 +12,7 @@ process_0_7 <- function(set_details, network, domain){
   return()
 }
 
-#discharge: STATUS=READY
+#discharge_N20B: STATUS=READY
 #. handle_errors
 process_0_8 <- function(set_details, network, domain){
 
@@ -24,7 +24,7 @@ process_0_8 <- function(set_details, network, domain){
   return()
 }
 
-#discharge: STATUS=READY
+#discharge_N01B: STATUS=READY
 #. handle_errors
 process_0_9 <- function(set_details, network, domain){
 
@@ -36,7 +36,7 @@ process_0_9 <- function(set_details, network, domain){
   return()
 }
 
-#discharge: STATUS=READY
+#discharge_N02B: STATUS=READY
 #. handle_errors
 process_0_10 <- function(set_details, network, domain){
 
@@ -151,7 +151,7 @@ process_0_230 <- function(set_details, network, domain){
 
 #munge kernels ####
 
-#discharge: STATUS=READY
+#discharge_N04D: STATUS=READY
 #. handle_errors
 process_1_7 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -214,7 +214,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge: STATUS=READY
+#discharge_N20B: STATUS=READY
 #. handle_errors
 process_1_8 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -277,7 +277,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge: STATUS=READY
+#discharge_N01B: STATUS=READY
 #. handle_errors
 process_1_9 <- function(network, domain, prodname_ms, site_name,
                         component){
@@ -340,7 +340,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-#discharge: STATUS=READY
+#discharge_N02B: STATUS=READY
 #. handle_errors
 process_1_10 <- function(network, domain, prodname_ms, site_name,
                          component){
@@ -406,115 +406,109 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_50 <- function(network, domain, prodname_ms, site_name,
-                         component){
+                         component) {
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_name,
-                    c = component)
+  rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                  n = network,
+                  d = domain,
+                  p = prodname_ms,
+                  s = site_name,
+                  c = component)
 
-    d <- read.csv(rawfile1,
-                  colClasses = 'character',
-                  quote = '')
+  d <- read.csv(rawfile1, colClasses = "character")
 
-    d <- d %>%
-        as_tibble() %>%
-        mutate(RecTime = ifelse(RecTime == '.', 1200, RecTime)) %>%
-        mutate(num_t = nchar(RecTime)) %>%
-        mutate(num_d = nchar(RecDay)) %>%
-        mutate(time = case_when(num_t == 1 ~ paste0('010', RecTime),
-                                num_t == 2 ~ paste0('01', RecTime),
-                                num_t == 3 ~ paste0('0', RecTime),
-                                num_t == 4 ~ as.character(RecTime),
-                                is.na(num_t) ~ '1200')) %>%
-        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-        select(-num_t, -RecTime, -num_d, -RecDay)
+  d <- d %>%
+    mutate(RecTime = ifelse(RecTime == '.', 1200, RecTime)) %>%
+    mutate(num_t = nchar(RecTime)) %>%
+    mutate(num_d = nchar(RecDay)) %>%
+    mutate(time = case_when(num_t == 1 ~ paste0('010', RecTime),
+                            num_t == 2 ~ paste0('01', RecTime),
+                            num_t == 3 ~ paste0('0', RecTime),
+                            num_t == 4 ~ as.character(RecTime),
+                            is.na(num_t) ~ '1200')) %>%
+    mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
+    select(-num_t, -RecTime, -num_d, -RecDay)
 
-    TP_codes <- c('TP below Det limit', 'TP<Det limit', 'tp< det limit', 'TP below Det limit',
-        'no3 and tp < det limit', 'tp < det limit')
-    NO3_codes <- c('No3 Below det limit', 'NO3 < det limit', 'NO3<det limit', 'no3 < det limit',
-        'no3 below det limit', 'no3 and tp < det limit')
-    NH4_codes <- c('NH4 <det limit', 'nh4<det limit')
+  TP_codes <- c('TP below Det limit', 'TP<Det limit', 'tp< det limit', 'TP below Det limit',
+    'no3 and tp < det limit', 'tp < det limit')
+  NO3_codes <- c('No3 Below det limit', 'NO3 < det limit', 'NO3<det limit', 'no3 < det limit',
+    'no3 below det limit', 'no3 and tp < det limit')
+  NH4_codes <- c('NH4 <det limit', 'nh4<det limit')
 
-    d_comments <- d$COMMENTS
+  d_comments <- d$COMMENTS
 
-    tp <- grepl(paste(TP_codes,collapse="|"), d_comments)
+  tp <- grepl(paste(TP_codes,collapse="|"), d_comments)
 
-    no3 <-  grepl(paste(NO3_codes,collapse="|"), d_comments)
+  no3 <-  grepl(paste(NO3_codes,collapse="|"), d_comments)
 
-    nh4 <-  grepl(paste(NH4_codes,collapse="|"), d_comments)
+  nh4 <-  grepl(paste(NH4_codes,collapse="|"), d_comments)
 
-    d <- d %>%
-        mutate(TP_code = tp,
-               NO3_code = no3,
-               NH4_code = nh4,
-               SRP_code = FALSE,
-               TN_code = FALSE,
-               DOC_code = FALSE,
-               check = 1
-               ) %>%
-        filter(WATERSHED %in% c('n04d', 'n02b', 'n20b', 'n01b', 'nfkc', 'hokn',
-                                'sfkc', 'tube', 'kzfl', 'shan', 'hikx'))
+  d <- d %>%
+    mutate(TP_code = tp,
+           NO3_code = no3,
+           NH4_code = nh4,
+           SRP_code = FALSE,
+           TN_code = FALSE,
+           DOC_code = FALSE,
+           check = 1
+           ) %>%
+    filter(WATERSHED %in% c('n04d', 'n02b', 'n20b', 'n01b', 'nfkc', 'hokn',
+                            'sfkc', 'tube', 'kzfl', 'shan', 'hikx'))
 
-    d <- ue(ms_read_raw_csv(preprocessed_tibble = d,
-                            datetime_cols = list('RecYear' = '%Y',
-                                                 'RecMonth' = '%m',
-                                                 'day' = '%d',
-                                                 'time' = '%H%M'),
-                            datetime_tz = 'US/Central',
-                            site_name_col = 'WATERSHED',
-                            alt_site_name = list('N04D' = 'n04d',
-                                                'N02B' = 'n02b',
-                                                'N20B' = 'n20b',
-                                                'N01B' = 'n01b',
-                                                'NFKC' = 'nfkc',
-                                                'HOKN' = 'hokn',
-                                                'SFKC' = 'sfkc',
-                                                'TUBE' = 'tube',
-                                                'KZFL' = 'kzfl',
-                                                'SHAN' = 'shan',
-                                                'HIKX' = 'hikx'),
-                            data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'SRP',
-                                           'TP', 'DOC'),
-                            data_col_pattern = '#V#',
-                            var_flagcol_pattern = '#V#_code',
-                            summary_flagcols = 'check',
-                            set_to_NA = '.',
-                            is_sensor = FALSE))
+  d <- ue(ms_read_raw_csv(preprocessed_tibble = d,
+                          datetime_cols = list('RecYear' = '%Y',
+                                               'RecMonth' = '%m',
+                                               'day' = '%d',
+                                               'time' = '%H%M'),
+                          datetime_tz = 'US/Central',
+                          site_name_col = 'WATERSHED',
+                          alt_site_name = list('N04D' = 'n04d',
+                                              'N02B'='n02b',
+                                              'N20B' = 'n20b',
+                                              'N01B' = 'n01b',
+                                              'NFKC' = 'nfkc',
+                                              'HOKN' = 'hokn',
+                                              'SFKC' = 'sfkc',
+                                              'TUBE' = 'tube',
+                                              'KZFL' = 'kzfl',
+                                              'SHAN' = 'shan',
+                                              'HIKX' = 'hikx'),
+                          data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'SRP', 'TP', 'DOC'),
+                          data_col_pattern = '#V#',
+                          var_flagcol_pattern = '#V#_code',
+                          summary_flagcols = 'check',
+                          set_to_NA = '.',
+                          is_sensor = FALSE))
 
-    d <- ue(ms_cast_and_reflag(d,
-                               variable_flags_clean = 'FALSE',
-                               variable_flags_dirty = 'TRUE',
-                               summary_flags_to_drop = list('check' = '2'),
-                               summary_flags_clean = list('check' = '1')))
+  d <- ue(ms_cast_and_reflag(d,
+                             variable_flags_clean = 'FALSE',
+                             variable_flags_dirty = 'TRUE',
+                              summary_flags_to_drop = list('check' = '2'),
+                              summary_flags_clean = list('check' = '1')
+                             ))
 
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+  d <- ue(carry_uncertainty(d,
+                            network = network,
+                            domain = domain,
+                            prodname_ms = prodname_ms))
 
-    # d <- remove_all_na_sites(d)
+  d <- remove_all_na_sites(d)
 
-    d <- ue(ms_conversions(d,
-                            convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                                  'NH4', 'NH3'),
-                            convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                                   TN = 'ug/l', SRP = 'ug/l',
-                                                   TP = 'ug/l'),
-                            convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                                 TN = 'mg/l', SRP = 'mg/l',
-                                                 TP = 'mg/l')))
+  d <- ue(ms_conversions(d,
+                          convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                                                'NH4', 'NH3'),
+                         convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
+                                                TN = 'ug/l', SRP = 'ug/l',
+                                                TP = 'ug/l'),
+                         convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
+                                              TN = 'mg/l', SRP = 'mg/l',
+                                              TP = 'mg/l')))
 
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+  d <- ue(synchronize_timestep(d,
+                               desired_interval = '1 day', #set to '15 min' when we have server
+                               impute_limit = 30))
 
-    d <- ue(apply_detection_limit_t(d,
-                                    network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms))
+  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
 
 }
 
@@ -892,14 +886,12 @@ process_2_ms003 <- function(network, domain, prodname_ms){
   chemprod <- 'stream_chemistry__ms012'
   qprod <- 'discharge__ms011'
 
-  chemfiles <- ue(ms_list_files(network = network,
-                                domain = domain,
-                                level = 'derived',
-                                prodname_ms = chemprod))
-  qfiles <- ue(ms_list_files(network = network,
-                             domain = domain,
-                             level = 'derived',
-                             prodname_ms = qprod))
+  chemfiles <- ue(list_derived_files(network = network,
+                                    domain = domain,
+                                    prodname_ms = chemprod))
+  qfiles <- ue(list_derived_files(network = network,
+                                 domain = domain,
+                                 prodname_ms = qprod))
 
   flux_sites <- generics::intersect(
     ue(fname_from_fpath(qfiles, include_fext = FALSE)),
@@ -907,9 +899,10 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 
   for(s in flux_sites){
 
-    flux <- sw(calc_inst_flux(chemprod = chemprod,
-                              qprod = qprod,
-                              site_name = s))
+    flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
+                                 qprod = qprod,
+                                 level = 'derived',
+                                 site_name = s)))
 
     ue(write_ms_file(d = flux,
                      network = network,
@@ -918,7 +911,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                      site_name = s,
                      level = 'derived',
                      shapefile = FALSE,
-                     link_to_portal = FALSE))
+                     link_to_portal = TRUE))
   }
 
   return()
