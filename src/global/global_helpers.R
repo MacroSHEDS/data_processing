@@ -2728,6 +2728,7 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 
 ms_derive <- function(network = domain, domain){
 
+    #generate derived products (derive.R)
     source(glue('src/{n}/{d}/derive.R',
                 n = network,
                 d = domain))
@@ -2823,7 +2824,8 @@ ms_derive <- function(network = domain, domain){
     }
 
     #link all derived products to the data portal directory
-    create_portal_link()
+    create_portal_links(network = network,
+                        domain = domain)
 }
 
 append_to_productfile <- function(network,
@@ -3362,6 +3364,7 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     return()
 }
 
+#deprecated (old form of this function is in helper_scrapyard.R)
 create_portal_link <- function(network, domain, prodname_ms, site_name,
                                level = 'derived', dir = FALSE){
 
@@ -3369,133 +3372,6 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
 
     stop(glue('create_portal_link has been deprecated. use create_portal_links ',
               '(plural)'))
-}
-
-#move to helper_scrapyard.R
-create_portal_link <- function(network, domain, prodname_ms, site_name,
-                               level = 'derived', dir = FALSE){
-
-    #level is either 'munged' or 'derived', corresponding to the
-    #   location, within the data_acquisition system, of the data to be linked.
-    #   DEPRECATED. only derived files should be linked to the portal.
-    #if dir=TRUE, treat site_name as a directory name, and link all files
-    #   within (necessary for e.g. shapefiles, which often come with other files)
-
-    if(! level %in% c('munged', 'derived')){
-        stop('level must be "munged" or "derived"')
-    }
-
-    portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
-                           d = domain,
-                           p = strsplit(prodname_ms, '__')[[1]][1])
-
-    dir.create(portal_prod_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    if(! dir){
-
-        portal_site_file = glue('{pd}/{s}.feather',
-                                pd = portal_prod_dir,
-                                s = site_name)
-
-        #if there's already a data file for this site-time-product in
-        #the portal repo, remove it
-        unlink(portal_site_file)
-
-        #create a link to the portal repo from the new site file
-        #(note: really, to and from are equivalent, as they both
-        #point to the same underlying structure in the filesystem)
-        site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
-                         n = network,
-                         d = domain,
-                         l = level,
-                         p = prodname_ms,
-                         s = site_name)
-
-        invisible(sw(file.link(to = portal_site_file,
-                               from = site_file)))
-
-    } else {
-
-        site_dir <- glue('data/{n}/{d}/{l}/{p}/{s}',
-                         n = network,
-                         d = domain,
-                         l = level,
-                         p = prodname_ms,
-                         s = site_name)
-
-        portal_prod_dir <- glue('../portal/data/{d}/{p}',
-                                d = domain,
-                                p = strsplit(prodname_ms, '__')[[1]][1])
-
-        dir.create(portal_prod_dir,
-                   showWarnings = FALSE,
-                   recursive = TRUE)
-
-        site_files <- list.files(site_dir)
-        for(s in site_files){
-
-            site_file <- glue(site_dir, '/', s)
-            portal_site_file <- glue(portal_prod_dir, '/', s)
-            unlink(portal_site_file)
-            invisible(sw(file.link(to = portal_site_file,
-                                   from = site_file)))
-        }
-
-    }
-
-    return()
-}
-
-create_portal_links <- function(network, domain){
-
-    #for hardlinking derived products to the portal directory. this applies to all
-    #derived products.
-
-    derive_dir <- glue('data/{n}/{d}/derived',
-                       n = network,
-                       d = domain)
-
-    portal_dir <- glue('../portal/data/{d}',
-                       d = domain)
-
-    dir.create(portal_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    dirs_to_build <- list.dirs(derive_dir,
-                               recursive = TRUE)
-    dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
-
-    dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
-
-    for(dr in dirs_to_build){
-        dir.create(dr,
-                   showWarnings = FALSE,
-                   recursive = TRUE)
-    }
-
-    #"from" and "to" may seem counterintuitive here. keep in mind that files
-    #as represented by the OS are actually all hardlinks to inodes in the kernel.
-    #so when you make a new hardlink, you're linking *from* a new location
-    #*to* an inode, as referenced by an existing hardlink. file.link uses
-    #these words in a less realistic, but more intuitive way, i.e. *from*
-    #an existing file *to* a new location
-    files_to_link_from <- list.files(path = derive_dir,
-                                     recursive = TRUE,
-                                     full.names = TRUE)
-
-    files_to_link_to <- convert_derive_path_to_portal_path(
-        paths = files_to_link_from)
-
-    for(i in 1:length(files_to_link_from)){
-        unlink(files_to_link_to[i])
-        invisible(sw(file.link(to = files_to_link_to[i],
-                               from = files_to_link_from[i])))
-    }
-
-    return()
 }
 
 create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
@@ -3554,6 +3430,56 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
         paths = files_to_link_from,
         munge_prodname_ms = prodname_ms,
         derive_prodname_ms = new_prodname_ms)
+
+    for(i in 1:length(files_to_link_from)){
+        unlink(files_to_link_to[i])
+        invisible(sw(file.link(to = files_to_link_to[i],
+                               from = files_to_link_from[i])))
+    }
+
+    return()
+}
+
+create_portal_links <- function(network, domain){
+
+    #for hardlinking derived products to the portal directory. this applies to all
+    #derived products.
+
+    derive_dir <- glue('data/{n}/{d}/derived',
+                       n = network,
+                       d = domain)
+
+    portal_dir <- glue('../portal/data/{d}',
+                       d = domain)
+
+    dir.create(portal_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dirs_to_build <- list.dirs(derive_dir,
+                               recursive = TRUE)
+    dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
+
+    dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
+
+    for(dr in dirs_to_build){
+        dir.create(dr,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+    }
+
+    #"from" and "to" may seem counterintuitive here. keep in mind that files
+    #as represented by the OS are actually all hardlinks to inodes in the kernel.
+    #so when you make a new hardlink, you're linking *from* a new location
+    #*to* an inode, as referenced by an existing hardlink. file.link uses
+    #these words in a less realistic, but more intuitive way, i.e. *from*
+    #an existing file *to* a new location
+    files_to_link_from <- list.files(path = derive_dir,
+                                     recursive = TRUE,
+                                     full.names = TRUE)
+
+    files_to_link_to <- convert_derive_path_to_portal_path(
+        paths = files_to_link_from)
 
     for(i in 1:length(files_to_link_from)){
         unlink(files_to_link_to[i])
