@@ -317,7 +317,7 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
                          site_name = site_name,
                          level = 'munged',
                          shapefile = TRUE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     return()
@@ -360,7 +360,7 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
                          site_name = rg$site_name,
                          level = 'munged',
                          shapefile = TRUE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     return()
@@ -404,7 +404,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                          site_name = w$site_name,
                          level = 'munged',
                          shapefile = TRUE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     return()
@@ -471,7 +471,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                          site_name = s,
                          level = 'derived',
                          shapefile = FALSE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     return()

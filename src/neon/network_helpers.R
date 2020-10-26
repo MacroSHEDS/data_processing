@@ -98,7 +98,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                       site_name = site_names[y],
                       level = 'munged',
                       shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      link_to_portal = FALSE)
     }
 
     update_data_tracker_m(network=network, domain=domain,

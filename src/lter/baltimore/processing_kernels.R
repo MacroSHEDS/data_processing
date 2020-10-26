@@ -295,7 +295,7 @@ process_2_ms013 <- function(network, domain, prodname_ms) {
                      site_name = rg$site_name,
                      level = 'derived',
                      shapefile = TRUE,
-                     link_to_portal = TRUE))
+                     link_to_portal = FALSE))
   }
 }
 
@@ -320,7 +320,7 @@ process_2_ms014 <- function(network, domain, prodname_ms) {
                      site_name = sg$site_name,
                      level = 'derived',
                      shapefile = TRUE,
-                     link_to_portal = TRUE))
+                     link_to_portal = FALSE))
   }
 }
 
@@ -357,7 +357,7 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
                      site_name = sites[i],
                      level = 'derived',
                      shapefile = FALSE,
-                     link_to_portal = TRUE))
+                     link_to_portal = FALSE))
   }
 }
 
@@ -426,7 +426,7 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
                               site_name = names(baltimore_sites[i]),
                               level = 'derived',
                               shapefile = FALSE,
-                              link_to_portal = TRUE)
+                              link_to_portal = FALSE)
   }
 }
 
@@ -476,7 +476,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                      site_name = s,
                      level = 'derived',
                      shapefile = FALSE,
-                     link_to_portal = TRUE))
+                     link_to_portal = FALSE))
   }
 
   return()
