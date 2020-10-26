@@ -121,7 +121,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+# dmnrow=5
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
