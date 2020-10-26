@@ -65,42 +65,42 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                             prodname_ms == 'precip_chemistry__DP1.00013' ~ TRUE,
                             prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
         
-        d <- identify_sampling_bypass(df = out,
-                                      is_sensor =  sensor,
-                                      domain = domain,
+        site_names <- unique(out$site_name)
+        for(y in 1:length(site_names)) {
+            
+            d <- out %>%
+                filter(site_name == !!site_names[y])
+            
+            d <- identify_sampling_bypass(df = out,
+                                          is_sensor =  sensor,
+                                          domain = domain,
+                                          network = network,
+                                          prodname_ms = prodname_ms) 
+            
+            d <- d %>%
+                filter(!is.na(val))
+            
+            d <- remove_all_na_sites(d)
+            
+            d <- ue(carry_uncertainty(d,
                                       network = network,
-                                      prodname_ms = prodname_ms) 
-    
-    d <- d %>%
-        filter(!is.na(val))
-    
-    d <- remove_all_na_sites(d)
-    
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
-    
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
-    
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
-    
-    site_names <- unique(d$site_name)
-    for(y in 1:length(site_names)) {
-        
-        d_site <- d %>%
-            filter(site_name == !!site_names[y])
-        
-        write_ms_file(d = d,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = site_names[y],
-                      level = 'munged',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
+                                      domain = domain,
+                                      prodname_ms = prodname_ms))
+            
+            d <- ue(synchronize_timestep(d,
+                                         desired_interval = '1 day', #set to '15 min' when we have server
+                                         impute_limit = 30))
+            
+            d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+            
+            write_ms_file(d = d,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = site_names[y],
+                          level = 'munged',
+                          shapefile = FALSE,
+                          link_to_portal = TRUE)
     }
 
     update_data_tracker_m(network=network, domain=domain,
