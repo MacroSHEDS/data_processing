@@ -288,8 +288,6 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
 
     rawfiles = list.files(rawdir)
     
-    vars = read_feather(glue(rawdir, '/', 'variables_20033.feather'))
-
     relevant_file1 = 'NSW_15_minute.feather'
     if(relevant_file1 %in% rawfiles){
         rawd = read_feather(glue(rawdir, '/', relevant_file1))
@@ -664,3 +662,19 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
   
   return(out_sub)
 }
+
+#derive kernels ####
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_2_ms012 <- function(network, domain, prodname_ms) {
+  
+  ue(combine_munged_products(network = network,
+                             domain = domain,
+                             prodname_ms = prodname_ms,
+                             munged_prodname_ms = c('stream_quality__DP1.20288',
+                                                    'stream_gases__DP1.20288',
+                                                    'stream_temperature__DP1.20053',
+                                                    'stream_nitrate__DP1.20033',
+                                                    'stream_chemistry__DP1.20093')))
+  }
