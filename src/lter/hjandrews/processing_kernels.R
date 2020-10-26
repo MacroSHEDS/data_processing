@@ -566,7 +566,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                          site_name = s,
                          level = 'derived',
                          shapefile = FALSE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     return()

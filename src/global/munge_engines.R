@@ -1,6 +1,5 @@
 #. handle_errors
 munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
-                          nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
@@ -13,13 +12,6 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
     #   this munge engine will look inside the munged file to determine
     #   the name of the site. This is necessary when the true site name isn't
     #   included in tracker.
-    #nolink_regex is a regex string that matches one or more prodname_ms
-    #    values. If the prodname_ms being munged matches this string, a hardlink
-    #    to the data portal will not be created when the munged file is written.
-    #    use this for e.g. precip data, which is localized to a rain gauge
-    #    when we retrieve it, but will be localized to a watershed after we
-    #    derive it. We don't want precipGauge6.feather on the portal. We want
-    #    watershed6.feather.
     #spatial_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
@@ -61,11 +53,6 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
     if(sum(dim(out)) > 0){
 
-        ready_to_link <- ifelse(grepl(nolink_regex,
-                                      prodname_ms),
-                                FALSE,
-                                TRUE)
-
         is_spatial <- ifelse(grepl(spatial_regex,
                                    prodname_ms),
                              TRUE,
@@ -78,7 +65,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                       site_name = site_name,
                       level = 'munged',
                       shapefile = is_spatial,
-                      link_to_portal = ready_to_link)
+                      link_to_portal = FALSE)
     }
 
     update_data_tracker_m(network = network,
@@ -102,20 +89,12 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
 #. handle_errors
 munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
-                           nolink_regex = '(precip_f|precip_c|precipi)',
                            spatial_regex = '(location|boundary)',
                            silent = TRUE){
 
     #for when a data product has multiple sites in each component, and
     #all components will be munged
 
-    #nolink_regex is a regex string that matches one or more prodname_ms
-    #    values. If the prodname_ms being munged matches this string, a hardlink
-    #    to the data portal will not be created when the munged file is written
-    #    use this for e.g. precip data, which is localized to a rain gauge
-    #    when we retrieve it, but will be localized to a watershed after we
-    #    derive it. We don't want precipGauge6.feather on the portal. We want
-    #    watershed6.feather.
     #spatial_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
@@ -171,14 +150,6 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
             filt_site <- sites[i]
             out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-            #make a portal link for precip gauge locations and pflux, but not for any
-            #other precip product, because the others need to be localized to
-            #watersheds
-            ready_to_link <- ifelse(grepl(nolink_regex,
-                                          prodname_ms),
-                                    FALSE,
-                                    TRUE)
-
             is_spatial <- ifelse(grepl(spatial_regex,
                                        prodname_ms),
                                  TRUE,
@@ -191,7 +162,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                           site_name = filt_site,
                           level = 'munged',
                           shapefile = is_spatial,
-                          link_to_portal = ready_to_link)
+                          link_to_portal = FALSE)
         }
     }
 
@@ -216,20 +187,12 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 
 #. handle_errors
 munge_combined_split <- function(network, domain, site_name, prodname_ms, tracker,
-                                 nolink_regex = '(precip_f|precip_c|precipi)',
                                  spatial_regex = '(location|boundary)',
                                  silent = TRUE){
 
     #for when a data product has multiple sites in each component, and
     #logic governing the use of components will be handled within the kernel
 
-    #nolink_regex is a regex string that matches one or more prodname_ms
-    #   values. If the prodname_ms being munged matches this string, a hardlink
-    #   to the data portal will not be created when the munged file is written
-    #   use this for e.g. precip data, which is localized to a rain gauge
-    #   when we retrieve it, but will be localized to a watershed after we
-    #   derive it. We don't want precipGauge6.feather on the portal. We want
-    #   watershed6.feather.
     #spatial_regex is a regex string that matches one or more prodname_ms
     #   values. If the prodname_ms being munged matches this string,
     #   write_ms_file will assume it's writing a spatial object, and not a
@@ -268,14 +231,6 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
         filt_site <- sites[i]
         out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-        #make a portal link for precip gauge locations, but not for any
-        #other precip product, because the others need to be localized to
-        #watersheds
-        ready_to_link <- ifelse(grepl(nolink_regex,
-                                      prodname_ms),
-                                FALSE,
-                                TRUE)
-
         is_spatial <- ifelse(grepl(spatial_regex,
                                    prodname_ms),
                              TRUE,
@@ -288,7 +243,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
                       site_name = filt_site,
                       level = 'munged',
                       shapefile = is_spatial,
-                      link_to_portal = ready_to_link)
+                      link_to_portal = FALSE)
     }
 
     update_data_tracker_m(network = network,
@@ -312,7 +267,6 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 
 #. handle_errors
 munge_by_site_product <- function(network, domain, site_name, prodname_ms, tracker,
-                          nolink_regex = '(precip_f|precip_c|precipi)',
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
@@ -321,13 +275,6 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
 
     #
 
-    #nolink_regex is a regex string that matches one or more prodname_ms
-    #    values. If the prodname_ms being munged matches this string, a hardlink
-    #    to the data portal will not be created when the munged file is written.
-    #    use this for e.g. precip data, which is localized to a rain gauge
-    #    when we retrieve it, but will be localized to a watershed after we
-    #    derive it. We don't want precipGauge6.feather on the portal. We want
-    #    watershed6.feather.
     #spatial_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
@@ -367,11 +314,6 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
         stop('multiple sites encountered in a dataset that should contain only one')
     }
 
-    ready_to_link <- ifelse(grepl(nolink_regex,
-                                  prodname_ms),
-                            FALSE,
-                            TRUE)
-
     is_spatial <- ifelse(grepl(spatial_regex,
                                prodname_ms),
                          TRUE,
@@ -384,7 +326,7 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
                   site_name = site,
                   level = 'munged',
                   shapefile = is_spatial,
-                  link_to_portal = ready_to_link)
+                  link_to_portal = FALSE)
 
     update_data_tracker_m(network = network,
                           domain = domain,

@@ -2822,7 +2822,8 @@ ms_derive <- function(network = domain, domain){
                              new_prodcode = unname(matched_prodcode))
     }
 
-    return()
+    #link all derived products to the data portal directory
+    create_portal_link()
 }
 
 append_to_productfile <- function(network,
@@ -3277,7 +3278,7 @@ convert_unit <- function(x, input_unit, output_unit){
 
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                           level = 'munged', shapefile = FALSE,
-                          link_to_portal = TRUE){
+                          link_to_portal = FALSE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
@@ -3287,6 +3288,10 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     #acquisition repository if link_to_portal == TRUE, create a hard link to the
     #file from the portal repository, which is assumed to be a sibling of the
     #data_acquision directory and to be named "portal".
+
+    if(! link_to_portal){
+        stop("we're not linking to portal this way anymore. see create_portal_links()")
+    }
 
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
@@ -3358,10 +3363,21 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
 }
 
 create_portal_link <- function(network, domain, prodname_ms, site_name,
-                               level = 'munged', dir = FALSE){
+                               level = 'derived', dir = FALSE){
+
+    #remove this once enough time has passed to be sure all devs are up to speed.
+
+    stop(glue('create_portal_link has been deprecated. use create_portal_links ',
+              '(plural)'))
+}
+
+#move to helper_scrapyard.R
+create_portal_link <- function(network, domain, prodname_ms, site_name,
+                               level = 'derived', dir = FALSE){
 
     #level is either 'munged' or 'derived', corresponding to the
     #   location, within the data_acquisition system, of the data to be linked.
+    #   DEPRECATED. only derived files should be linked to the portal.
     #if dir=TRUE, treat site_name as a directory name, and link all files
     #   within (necessary for e.g. shapefiles, which often come with other files)
 
@@ -3432,6 +3448,56 @@ create_portal_link <- function(network, domain, prodname_ms, site_name,
     return()
 }
 
+create_portal_links <- function(network, domain){
+
+    #for hardlinking derived products to the portal directory. this applies to all
+    #derived products.
+
+    derive_dir <- glue('data/{n}/{d}/derived',
+                       n = network,
+                       d = domain)
+
+    portal_dir <- glue('../portal/data/{d}',
+                       d = domain)
+
+    dir.create(portal_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dirs_to_build <- list.dirs(derive_dir,
+                               recursive = TRUE)
+    dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
+
+    dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
+
+    for(dr in dirs_to_build){
+        dir.create(dr,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+    }
+
+    #"from" and "to" may seem counterintuitive here. keep in mind that files
+    #as represented by the OS are actually all hardlinks to inodes in the kernel.
+    #so when you make a new hardlink, you're linking *from* a new location
+    #*to* an inode, as referenced by an existing hardlink. file.link uses
+    #these words in a less realistic, but more intuitive way, i.e. *from*
+    #an existing file *to* a new location
+    files_to_link_from <- list.files(path = derive_dir,
+                                     recursive = TRUE,
+                                     full.names = TRUE)
+
+    files_to_link_to <- convert_derive_path_to_portal_path(
+        paths = files_to_link_from)
+
+    for(i in 1:length(files_to_link_from)){
+        unlink(files_to_link_to[i])
+        invisible(sw(file.link(to = files_to_link_to[i],
+                               from = files_to_link_from[i])))
+    }
+
+    return()
+}
+
 create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
 
     #for hardlinking munged products to the derive directory. this applies to all
@@ -3461,6 +3527,7 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
 
     dirs_to_build <- list.dirs(munge_dir,
                                recursive = TRUE)
+    dirs_to_build <- dirs_to_build[dirs_to_build != munge_dir]
 
     dirs_to_build <- convert_munge_path_to_derive_path(
         paths = dirs_to_build,
@@ -3518,6 +3585,29 @@ convert_munge_path_to_derive_path <- function(paths,
                   replacement = paste0('__',
                                        prodcode_from_prodname_ms(derive_prodname_ms)),
                   x = paths)
+
+    return(paths)
+}
+
+convert_derive_path_to_portal_path <- function(paths){
+
+    #paths: strings containing filepath information. expected words are
+    #   "derived" and a readable prodname_ms. something like
+    #   "data/lter/hbef/derived/discharge__ms005" or
+    #   "data/lter/hbef/derived/precip_gauge_locations__ms006/RG1"
+
+    paths <- gsub(pattern = paste0('data/', network),
+                  replacement = '../portal/data',
+                  x = paths)
+
+    paths <- gsub(pattern = 'derived/',
+                  replacement = '',
+                  x = paths)
+
+    paths <- gsub(pattern = '__ms[0-9]{3}',
+                  replacement = '',
+                  x = paths,
+                  perl = TRUE)
 
     return(paths)
 }
@@ -4471,7 +4561,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                       site_name = site_name,
                       level = 'derived',
                       shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
@@ -4660,7 +4750,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       site_name = site_name,
                       level = 'derived',
                       shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
@@ -4841,7 +4931,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  site_name = site_name,
         #                  level = 'derived',
         #                  shapefile = FALSE,
-        #                  link_to_portal = TRUE))
+        #                  link_to_portal = FALSE))
 
         precursor_prodname <- get_detlim_precursors(network = network,
                                                     domain = domain,
@@ -4858,7 +4948,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                          site_name = site_name,
                          level = 'derived',
                          shapefile = FALSE,
-                         link_to_portal = TRUE))
+                         link_to_portal = FALSE))
     }
 
     parallel::stopCluster(clst)
