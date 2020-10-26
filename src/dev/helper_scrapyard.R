@@ -574,3 +574,80 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
                           domain = domain,
                           prodname_ms = prodname_ms)
 
+# we used to link some munged and some derived products to the data portal.
+#   now we only link derived products, so this function is deprecated
+    create_portal_link <- function(network, domain, prodname_ms, site_name,
+                               level = 'derived', dir = FALSE){
+
+    #level is either 'munged' or 'derived', corresponding to the
+    #   location, within the data_acquisition system, of the data to be linked.
+    #   DEPRECATED. only derived files should be linked to the portal.
+    #if dir=TRUE, treat site_name as a directory name, and link all files
+    #   within (necessary for e.g. shapefiles, which often come with other files)
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be "munged" or "derived"')
+    }
+
+    portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
+                           d = domain,
+                           p = strsplit(prodname_ms, '__')[[1]][1])
+
+    dir.create(portal_prod_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    if(! dir){
+
+        portal_site_file = glue('{pd}/{s}.feather',
+                                pd = portal_prod_dir,
+                                s = site_name)
+
+        #if there's already a data file for this site-time-product in
+        #the portal repo, remove it
+        unlink(portal_site_file)
+
+        #create a link to the portal repo from the new site file
+        #(note: really, to and from are equivalent, as they both
+        #point to the same underlying structure in the filesystem)
+        site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
+                         n = network,
+                         d = domain,
+                         l = level,
+                         p = prodname_ms,
+                         s = site_name)
+
+        invisible(sw(file.link(to = portal_site_file,
+                               from = site_file)))
+
+    } else {
+
+        site_dir <- glue('data/{n}/{d}/{l}/{p}/{s}',
+                         n = network,
+                         d = domain,
+                         l = level,
+                         p = prodname_ms,
+                         s = site_name)
+
+        portal_prod_dir <- glue('../portal/data/{d}/{p}',
+                                d = domain,
+                                p = strsplit(prodname_ms, '__')[[1]][1])
+
+        dir.create(portal_prod_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
+        site_files <- list.files(site_dir)
+        for(s in site_files){
+
+            site_file <- glue(site_dir, '/', s)
+            portal_site_file <- glue(portal_prod_dir, '/', s)
+            unlink(portal_site_file)
+            invisible(sw(file.link(to = portal_site_file,
+                                   from = site_file)))
+        }
+
+    }
+
+    return()
+}
