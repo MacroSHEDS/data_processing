@@ -57,16 +57,6 @@ for(i in 1:nrow(prod_info)){
                                   site_name=site_name, new_status='error')
 
         } else {
-
-        # if(! is.na(prod_info$derive_status[i])){
-        #     update_data_tracker_d(network = network,
-        #                           domain = domain,
-        #                           tracker_name = 'held_data',
-        #                           prodname_ms = prodname_ms,
-        #                           site_name = site_name,
-        #                           new_status = 'pending')
-        # }
-
             invalidate_derived_products(successor_string = prod_info$precursor_of)
         }
     }
@@ -74,7 +64,6 @@ for(i in 1:nrow(prod_info)){
     write_metadata_m(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
-    # site_name = site_name)
 
     gc()
 }

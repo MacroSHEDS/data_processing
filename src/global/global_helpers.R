@@ -2736,31 +2736,37 @@ ms_derive <- function(network = domain, domain){
     #hardlink its entire directory from data/[network]/[domain]/munged/
     #to data/[network]/[domain]/derived/
 
-    prods <- read_csv(glue('src/{n}/{d}/products.csv',
-                           n = network,
-                           d = domain))
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                              n = network,
+                              d = domain)))
 
-    is_actually_derived <-  grepl('^ms[0-9]{3}$',
-                                  prods$prodcode,
-                                  perl = TRUE) &
+    is_actually_derived <- grepl('^ms[0-9]{3}$',
+                                 prods$prodcode,
+                                 perl = TRUE) &
         (is.na(prods$type) |
              prods$type != 'linked')
+
+    is_linked <- prods$type == 'linked'
 
     derived_prods <- paste(prods$prodname[is_actually_derived],
                            prods$prodcode[is_actually_derived],
                            sep = '__')
-    munged_prods <- paste(prods$prodname[! is_actually_derived],
-                          prods$prodcode[! is_actually_derived],
+
+    munged_prods <- paste(prods$prodname[! is_actually_derived & ! is_linked],
+                          prods$prodcode[! is_actually_derived & ! is_linked],
                           sep = '__')
+
+    #already linked prods will be relinked
     prods_to_link <- munged_prods[! munged_prods %in% derived_prods]
 
     #figure out what the new prodname_ms's will be
-    prodcodes_num <- as.numeric(substr(prods$prodcode[is_actually_derived],
-                                       start = 3,
-                                       stop = 5))
+    prodcodes_num <- as.numeric(substr(
+        prods$prodcode[is_actually_derived],
+        start = 3,
+        stop = 5))
 
     new_prodcodes_num <- seq(max(prodcodes_num) + 1,
-                             max(prodcodes_num) + 1 + length(prodcodes_num))
+                             max(prodcodes_num) + length(prods_to_link))
 
     new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
                                       width = 3,
@@ -2768,22 +2774,57 @@ ms_derive <- function(network = domain, domain){
                                       pad = 0) %>%
                                       {paste0('ms', .)}
 
-    for(i in 1:length(prods_to_link)){
+    names(new_prodcodes) <- rep('unclaimed',
+                                length(new_prodcodes))
+
+    for(p in prods_to_link){
+
+        prodname <- prodname_from_prodname_ms(p)
+
+        if(prodname %in% prods$prodname[is_linked]){
+
+            matched_prodcode <- prods %>%
+                filter(
+                    !!is_linked,
+                    prodname == !!prodname) %>%
+                pull(prodcode)
+
+            if(! matched_prodcode %in% new_prodcodes){
+                stop(glue('attempt to match already linked product with its ',
+                          'prodcode was not successful. investigate.'))
+            }
+
+            names(new_prodcodes)[new_prodcodes == matched_prodcode] <- 'taken'
+
+        } else {
+
+            matched_prodcode <- new_prodcodes[which(names(new_prodcodes) ==
+                                                        'unclaimed')][1]
+
+            if(any(is.na(matched_prodcode))){
+                stop('No unclaimed prodcodes left. something is wrong. investigate')
+            }
+
+            append_to_productfile(
+                network = network,
+                domain = domain,
+                prodcode = unname(matched_prodcode),
+                prodname = prodname,
+                type = 'linked',
+                notes = 'automated entry')
+
+            names(new_prodcodes)[new_prodcodes == matched_prodcode] <- 'taken'
+        }
 
         create_derived_links(network = network,
                              domain = domain,
-                             prodname_ms = prods_to_link[i],
-                             new_code = new_prodcodes[i])
-
-        append_to_productfile(network = network,
-                              domain = domain,
-                              prodcode = new_prodcodes[i],
-                              prodname = prodname_from_prodname_ms(prods_to_link[i]),
-                              type = 'linked')
+                             prodname_ms = p,
+                             new_prodcode = unname(matched_prodcode))
     }
 
     return()
 }
+
 append_to_productfile <- function(network,
                                   domain,
                                   prodcode,
@@ -2799,14 +2840,33 @@ append_to_productfile <- function(network,
     #add a line to the products.csv file for a particular network and domain.
     #any fields omitted will be populated with NA.
 
-    passed_args <- as.list(match.call()) #TODO HERE: make this nice. test
-    #   all hardlinks for hbef
+    passed_args <- as.list(match.call())
+    arg_nms <- names(passed_args)
+    passed_args <- passed_args[! arg_nms %in% c('', 'network', 'domain')]
+    passed_args <- lapply(passed_args,
+                          function(x) eval(x))
 
-    prods <- read_csv(glue('src/{n}/{d}/products.csv',
-                      n = network,
-                      d = domain))
+    args_legit <- sapply(passed_args,
+           function(x) length(x) == 1 && is.character(x))
 
+    if(any(! args_legit)){
+        stop('all arguments must be strings')
+    }
 
+    prodfile <- glue('src/{n}/{d}/products.csv',
+                     n = network,
+                     d = domain)
+
+    prods <- sm(read_csv(prodfile))
+
+    new_row <- unlist(passed_args)
+
+    new_row <- new_row[names(new_row) %in% colnames(prods)]
+
+    prods <- bind_rows(prods, new_row)
+
+    write_csv(x = prods,
+              path = prodfile)
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
@@ -3413,7 +3473,6 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
                    recursive = TRUE)
     }
 
-
     #"from" and "to" may seem counterintuitive here. keep in mind that files
     #as represented by the OS are actually all hardlinks to inodes in the kernel.
     #so when you make a new hardlink, you're linking *from* a new location
@@ -3425,7 +3484,7 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
                                      full.names = TRUE)
 
     files_to_link_to <- convert_munge_path_to_derive_path(
-        paths = files_to_link,
+        paths = files_to_link_from,
         munge_prodname_ms = prodname_ms,
         derive_prodname_ms = new_prodname_ms)
 
