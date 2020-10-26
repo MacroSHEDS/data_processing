@@ -1,0 +1,3 @@
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+20,stream_chemistry_luquillo,grab,ready,ready,NA,NA,NA
+156,discharge,senso,ready,ready,NA,NA,NA
