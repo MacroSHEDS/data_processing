@@ -1,7 +1,7 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info = get_product_info(network=network, domain=domain,
+prod_info = get_product_info(network=network,
                              status_level='derive', get_statuses='ready')
 
 #i=1

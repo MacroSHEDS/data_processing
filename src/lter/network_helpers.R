@@ -2,7 +2,9 @@ ms_pasta_domain_refmap = list(
     hbef = 'knb-lter-hbr',
     hjandrews = 'knb-lter-and',
     konza = 'knb-lter-knz',
-    baltimore = 'knb-lter-bes'
+    baltimore = 'knb-lter-bes',
+    luquillo = 'knb-lter-luq',
+    niwot = 'knb-lter-nwt'
 )
 
 #. handle_errors
@@ -46,6 +48,8 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
 
     names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
     names[names %in% c(domain, network)] = 'sitename_NA'
+    
+    names[is.na(names)] <- 'sitename_NA'
 
     avail_sets = tibble(url=dl_urls,
         site_name=names,
@@ -114,7 +118,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 }
 
 #. handle_errors
-download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
+download_raw_file <- function(network, domain, set_details, file_type = '.csv') {
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,
@@ -126,11 +130,22 @@ download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
                showWarnings = FALSE,
                recursive = TRUE)
     
-    download.file(url = set_details$url,
-                  destfile = glue(raw_data_dest,
-                                  '/',
-                                  set_details$component,
-                                  file_type),
-                  cacheOK = FALSE,
-                  method = 'curl')
+    if(is.null(file_type)) {
+        
+        download.file(url = set_details$url,
+                      destfile = glue(raw_data_dest,
+                                      '/',
+                                      set_details$component),
+                      cacheOK = FALSE,
+                      method = 'curl')
+    } else { 
+        
+        download.file(url = set_details$url,
+                      destfile = glue(raw_data_dest,
+                                      '/',
+                                      set_details$component,
+                                      file_type),
+                      cacheOK = FALSE,
+                      method = 'curl')
+    }
 }
