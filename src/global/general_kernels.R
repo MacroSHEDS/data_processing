@@ -4,13 +4,13 @@
 #. handle_errors
 process_3_ms005 <- function(network, domain, prodname_ms, ws_boundry) {
   
-  npp <- ue(get_gee_standard(network=network, 
-                      domain=domain, 
-                      gee_id='UMT/NTSG/v2/LANDSAT/NPP', 
-                      band='annualNPP', 
-                      prodname='npp', 
-                      rez=30,
-                      ws_boundry=ws_boundry)) 
+  npp <- get_gee_standard(network=network, 
+                          domain=domain, 
+                          gee_id='UMT/NTSG/v2/LANDSAT/NPP', 
+                          band='annualNPP', 
+                          prodname='npp', 
+                          rez=30,
+                          ws_boundry=ws_boundry)
   
   npp_final <- npp %>%
     mutate(year = year(date)) %>%
@@ -28,13 +28,13 @@ process_3_ms005 <- function(network, domain, prodname_ms, ws_boundry) {
 #. handle_errors
 process_3_ms006 <- function(network, domain, prodname_ms, ws_boundry) {
   
-  gpp <- ue(get_gee_standard(network=network, 
-                      domain=domain, 
-                      gee_id='UMT/NTSG/v2/LANDSAT/GPP', 
-                      band='GPP', 
-                      prodname='gpp', 
-                      rez=30,
-                      ws_boundry=ws_boundry)) 
+  gpp <- get_gee_standard(network=network, 
+                          domain=domain, 
+                          gee_id='UMT/NTSG/v2/LANDSAT/GPP', 
+                          band='GPP', 
+                          prodname='gpp', 
+                          rez=30,
+                          ws_boundry=ws_boundry)
   
   gpp_final <- gpp %>%
     mutate(year = year(date)) %>%
@@ -60,13 +60,13 @@ process_3_ms006 <- function(network, domain, prodname_ms, ws_boundry) {
 process_3_ms007 <- function(network, domain, prodname_ms, ws_boundry) {
   
   if(prodname_ms == 'lai__ms007') {
-    lai <- ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='MODIS/006/MOD15A2H', 
-                        band='Lai_500m', 
-                        prodname='lai', 
-                        rez=500,
-                        ws_boundry=ws_boundry))
+    lai <- get_gee_standard(network=network, 
+                            domain=domain, 
+                            gee_id='MODIS/006/MOD15A2H', 
+                            band='Lai_500m', 
+                            prodname='lai', 
+                            rez=500,
+                            ws_boundry=ws_boundry)
     
     lai_final <- lai %>%
       mutate(year = year(date)) %>%
@@ -84,13 +84,13 @@ process_3_ms007 <- function(network, domain, prodname_ms, ws_boundry) {
   }
   
   if(prodname_ms == 'fpar__ms007') {
-    fpar <- ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='MODIS/006/MOD15A2H', 
-                        band='Fpar_500m', 
-                        prodname='fpar', 
-                        rez=500,
-                        ws_boundry=ws_boundry))
+    fpar <- get_gee_standard(network=network, 
+                             domain=domain, 
+                             gee_id='MODIS/006/MOD15A2H', 
+                             band='Fpar_500m', 
+                             prodname='fpar', 
+                             rez=500,
+                             ws_boundry=ws_boundry)
     
     fpar_final <- fpar %>%
       mutate(year = year(date)) %>%
@@ -114,33 +114,33 @@ process_3_ms007 <- function(network, domain, prodname_ms, ws_boundry) {
 process_3_ms008 <- function(network, domain, prodname_ms, ws_boundry) {
   
   if(prodname_ms == 'tree_cover__ms008') {
-    var <- ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='MODIS/006/MOD44B', 
-                        band='Percent_Tree_Cover', 
-                        prodname='tree_cover', 
-                        rez=500,
-                        ws_boundry=ws_boundry))
+    var <- get_gee_standard(network=network, 
+                            domain=domain, 
+                            gee_id='MODIS/006/MOD44B', 
+                            band='Percent_Tree_Cover', 
+                            prodname='tree_cover', 
+                            rez=500,
+                            ws_boundry=ws_boundry)
   }
   
   if(prodname_ms == 'veg_cover__ms008') {
-    var <- ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='MODIS/006/MOD44B', 
-                        band='Percent_NonTree_Vegetation', 
-                        prodname='veg_cover', 
-                        rez=500,
-                        ws_boundry=ws_boundry))
+    var <- get_gee_standard(network=network, 
+                            domain=domain, 
+                            gee_id='MODIS/006/MOD44B', 
+                            band='Percent_NonTree_Vegetation', 
+                            prodname='veg_cover', 
+                            rez=500,
+                            ws_boundry=ws_boundry)
   }
   
   if(prodname_ms == 'bare_cover__ms008') {
-    var <- ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='MODIS/006/MOD44B', 
-                        band='Percent_NonVegetated', 
-                        prodname='bare_cover', 
-                        rez=500,
-                        ws_boundry=ws_boundry))
+    var <- get_gee_standard(network=network, 
+                            domain=domain, 
+                            gee_id='MODIS/006/MOD44B', 
+                            band='Percent_NonVegetated', 
+                            prodname='bare_cover', 
+                            rez=500,
+                            ws_boundry=ws_boundry)
   }
   
   type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
@@ -162,23 +162,23 @@ process_3_ms008 <- function(network, domain, prodname_ms, ws_boundry) {
 process_3_ms009 <- function(network, domain, prodname_ms, ws_boundry) {
   
   if(prodname_ms == 'prism_precip__ms009') {
-    ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='OREGONSTATE/PRISM/AN81d', 
-                        band='ppt', 
-                        prodname='prism_precip', 
-                        rez=4000,
-                        ws_boundry=ws_boundry))
+    get_gee_standard(network=network, 
+                             domain=domain, 
+                             gee_id='OREGONSTATE/PRISM/AN81d', 
+                             band='ppt', 
+                             prodname='prism_precip', 
+                             rez=4000,
+                             ws_boundry=ws_boundry)
   }
   
   if(prodname_ms == 'prism_temp_mean__ms009') {
-    ue(get_gee_standard(network=network, 
-                        domain=domain, 
-                        gee_id='OREGONSTATE/PRISM/AN81d', 
-                        band='tmean', 
-                        prodname='prism_temp_mean', 
-                        rez=4000,
-                        ws_boundry=ws_boundry))
+    get_gee_standard(network=network, 
+                     domain=domain, 
+                     gee_id='OREGONSTATE/PRISM/AN81d', 
+                     band='tmean', 
+                     prodname='prism_temp_mean', 
+                     rez=4000,
+                     ws_boundry=ws_boundry)
   }
   return()
 }

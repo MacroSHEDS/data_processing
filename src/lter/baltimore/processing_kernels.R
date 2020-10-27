@@ -59,24 +59,24 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          datetime_cols = list('Date' = '%Y-%m-%d',
-                                               'time' = '%H:%M'),
-                          datetime_tz = 'US/Eastern',
-                          site_name_col = 'Site',
-                          alt_site_name = list('GFCP' = 'GFCPisco',
-                                               'GFGL' = 'GFGLisco',
-                                               'GFVN' = 'GFVNisco',
-                                               'GRGF' = 'grgf',
-                                               'RGHT' = 'RGHTisco'),
-                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
-                                        'temperature'='temp', 'dox'='DO', 'pH',
-                                        'Turbidity'='turbid', 'Ecoli',
-                                        'conductivity'='spCond', 'Ca', 'HCO3',
-                                        'K', 'Mg', 'Na'),
-                          set_to_NA = -999.99,
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE))
+  d <- ms_read_raw_csv(filepath = rawfile,
+                       datetime_cols = list('Date' = '%Y-%m-%d',
+                                            'time' = '%H:%M'),
+                       datetime_tz = 'US/Eastern',
+                       site_name_col = 'Site',
+                       alt_site_name = list('GFCP' = 'GFCPisco',
+                                            'GFGL' = 'GFGLisco',
+                                            'GFVN' = 'GFVNisco',
+                                            'GRGF' = 'grgf',
+                                            'RGHT' = 'RGHTisco'),
+                       data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
+                                     'temperature'='temp', 'dox'='DO', 'pH',
+                                     'Turbidity'='turbid', 'Ecoli',
+                                     'conductivity'='spCond', 'Ca', 'HCO3',
+                                     'K', 'Mg', 'Na'),
+                       set_to_NA = -999.99,
+                       data_col_pattern = '#V#',
+                       is_sensor = FALSE)
 
   d <- pivot_longer(data = d,
                     cols = ends_with('__|dat'),
@@ -87,25 +87,25 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
 
   d <- remove_all_na_sites(d)
 
-  d <- ue(carry_uncertainty(d,
-                            network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms))
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
 
   # Turbidity is in NTU the ms_vars is in FNU, nut sure these are comparable
-  d <- ue(ms_conversions(d,
-                         convert_units_from = c(PO4_P = 'ug/l',
-                                                SO4 = 'ug/l'),
-                         convert_units_to = c(PO4_P = 'mg/l',
-                                              SO4 = 'mg/l')))
+  d <- ms_conversions(d,
+                      convert_units_from = c(PO4_P = 'ug/l',
+                                             SO4 = 'ug/l'),
+                      convert_units_to = c(PO4_P = 'mg/l',
+                                           SO4 = 'mg/l'))
 
-  d <- ue(synchronize_timestep(d,
-                               desired_interval = '1 day', #set to '15 min' when we have server
-                               impute_limit = 30))
+  d <- synchronize_timestep(d,
+                            desired_interval = '1 day', #set to '15 min' when we have server
+                            impute_limit = 30)
 
-  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-
+  return(d)
 }
 
 #stream_chemistry_club: STATUS=READY
@@ -117,17 +117,17 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          datetime_cols = list('Date' = '%Y-%m-%d',
-                                               'time' = '%H:%M'),
-                          datetime_tz = 'US/Eastern',
-                          site_name_col = 'Site',
-                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
-                                        'temperature'='temp', 'dox'='DO', 'ph'='pH',
-                                        'Turbidity'='turbid', 'Ecoli'),
-                          set_to_NA = c(-999.990, -999.99, -999),
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE))
+  d <- ms_read_raw_csv(filepath = rawfile,
+                       datetime_cols = list('Date' = '%Y-%m-%d',
+                                            'time' = '%H:%M'),
+                       datetime_tz = 'US/Eastern',
+                       site_name_col = 'Site',
+                       data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
+                                     'temperature'='temp', 'dox'='DO', 'ph'='pH',
+                                     'Turbidity'='turbid', 'Ecoli'),
+                       set_to_NA = c(-999.990, -999.99, -999),
+                       data_col_pattern = '#V#',
+                       is_sensor = FALSE)
 
   d <- pivot_longer(data = d,
                     cols = ends_with('__|dat'),
@@ -138,21 +138,22 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
 
   d <- remove_all_na_sites(d)
 
-  d <- ue(carry_uncertainty(d,
-                            network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms))
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
 
-  d <- ue(ms_conversions(d,
-                         convert_units_from = c(PO4_P = 'ug/l'),
-                         convert_units_to = c(PO4_P = 'mg/l')))
+  d <- ms_conversions(d,
+                      convert_units_from = c(PO4_P = 'ug/l'),
+                      convert_units_to = c(PO4_P = 'mg/l'))
 
-  d <- ue(synchronize_timestep(d,
-                               desired_interval = '1 day', #set to '15 min' when we have server
-                               impute_limit = 30))
+  d <- synchronize_timestep(d,
+                            desired_interval = '1 day', #set to '15 min' when we have server
+                            impute_limit = 30)
 
-  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
+  return(d)
 }
 
 
@@ -164,16 +165,16 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          datetime_cols = list('date' = '%Y-%m-%d'),
-                          datetime_tz = 'US/Eastern',
-                          site_name_col = 'site',
-                          data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
-                                        'sulfate'='SO4', 'nitrogen_total'='TN',
-                                        'phosphorus_total'='TP'),
-                          set_to_NA = c(-999.990, -999.99, -999),
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE))
+  d <- ms_read_raw_csv(filepath = rawfile,
+                       datetime_cols = list('date' = '%Y-%m-%d'),
+                       datetime_tz = 'US/Eastern',
+                       site_name_col = 'site',
+                       data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
+                                     'sulfate'='SO4', 'nitrogen_total'='TN',
+                                     'phosphorus_total'='TP'),
+                       set_to_NA = c(-999.990, -999.99, -999),
+                       data_col_pattern = '#V#',
+                       is_sensor = FALSE)
 
   d <- pivot_longer(data = d,
                     cols = ends_with('__|dat'),
@@ -184,26 +185,26 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
 
   d <- remove_all_na_sites(d)
 
-  d <- ue(carry_uncertainty(d,
-                            network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms))
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
 
-  d <- ue(ms_conversions(d,
-                         convert_units_from = c(PO4_P = 'ug/l',
-                                                TP = 'ug/l',
-                                                SO4 = 'ug/l'),
-                         convert_units_to = c(PO4_P = 'mg/l',
-                                              TP = 'mg/l',
-                                              SO4 = 'mg/l')))
+  d <- ms_conversions(d,
+                      convert_units_from = c(PO4_P = 'ug/l',
+                                             TP = 'ug/l',
+                                             SO4 = 'ug/l'),
+                      convert_units_to = c(PO4_P = 'mg/l',
+                                           TP = 'mg/l',
+                                           SO4 = 'mg/l'))
 
-  d <- ue(synchronize_timestep(d,
-                               desired_interval = '1 day', #set to '15 min' when we have server
-                               impute_limit = 30))
+  d <- synchronize_timestep(d,
+                            desired_interval = '1 day', #set to '15 min' when we have server
+                            impute_limit = 30)
 
-  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-
+    return(d)
 }
 
 #precipitation: STATUS=READY
@@ -214,13 +215,13 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
 
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
-                          datetime_tz = 'US/Eastern',
-                          site_name_col = 'Rain_Gauge_ID',
-                          data_cols = c('Precipitation_mm'='precipitation_ns'),
-                          data_col_pattern = '#V#',
-                          is_sensor = TRUE))
+  d <- ms_read_raw_csv(filepath = rawfile,
+                       datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
+                       datetime_tz = 'US/Eastern',
+                       site_name_col = 'Rain_Gauge_ID',
+                       data_cols = c('Precipitation_mm'='precipitation_ns'),
+                       data_col_pattern = '#V#',
+                       is_sensor = TRUE)
 
 
   # Baltimore precip is recorded at 8 sites where there are two tipping-bucket
@@ -259,17 +260,18 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
     mutate(var = 'IS_precipitation_ns',
            ms_status = 0)
 
-  d <- ue(carry_uncertainty(d,
-                            network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms))
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
 
-  d <- ue(synchronize_timestep(d,
-                               desired_interval = '1 day', #set to '15 min' when we have server
-                               impute_limit = 30))
+  d <- synchronize_timestep(d,
+                            desired_interval = '1 day', #set to '15 min' when we have server
+                            impute_limit = 30)
 
-  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
+  return(d)
 }
 
 #derive kernels ####
@@ -288,15 +290,17 @@ process_2_ms013 <- function(network, domain, prodname_ms) {
 
     rg <- baltimore_gauges[i,]
 
-    ue(write_ms_file(d = rg,
-                     network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     site_name = rg$site_name,
-                     level = 'derived',
-                     shapefile = TRUE,
-                     link_to_portal = FALSE))
+    write_ms_file(d = rg,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_name = rg$site_name,
+                  level = 'derived',
+                  shapefile = TRUE,
+                  link_to_portal = FALSE)
   }
+
+  return()
 }
 
 #stream_gauge_locations
@@ -313,15 +317,17 @@ process_2_ms014 <- function(network, domain, prodname_ms) {
 
     sg <- baltimore_gauges[i,]
 
-    ue(write_ms_file(d = sg,
-                     network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     site_name = sg$site_name,
-                     level = 'derived',
-                     shapefile = TRUE,
-                     link_to_portal = FALSE))
+    write_ms_file(d = sg,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_name = sg$site_name,
+                  level = 'derived',
+                  shapefile = TRUE,
+                  link_to_portal = FALSE)
   }
+
+  return()
 }
 
 #stream_chemistry: STATUS=READY
@@ -350,15 +356,17 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
 
     sile_full <- map_dfr(site_files, read_feather)
 
-    ue(write_ms_file(d = sile_full,
-                     network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     site_name = sites[i],
-                     level = 'derived',
-                     shapefile = FALSE,
-                     link_to_portal = FALSE))
+    write_ms_file(d = sile_full,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_name = sites[i],
+                  level = 'derived',
+                  shapefile = FALSE,
+                  link_to_portal = FALSE)
   }
+
+  return()
 }
 
 #discharge: STATUS=READY
@@ -394,16 +402,16 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
                              domain = domain,
                              prodname_ms = prodname_ms)
 
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
 
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
 
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
 
 
@@ -420,24 +428,26 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
     }
 
     write_ms_file <- write_ms_file(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms,
-                              site_name = names(baltimore_sites[i]),
-                              level = 'derived',
-                              shapefile = FALSE,
-                              link_to_portal = FALSE)
+                                   network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms,
+                                   site_name = names(baltimore_sites[i]),
+                                   level = 'derived',
+                                   shapefile = FALSE,
+                                   link_to_portal = FALSE)
   }
+
+  return()
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
-  ue(precip_idw(precip_prodname = 'precipitation__4',
-                wb_prodname = 'ws_boundary_ms000',
-                pgauge_prodname = 'rain_gauge_locations__230',
-                precip_prodname_out = prodname_ms))
+  precip_idw(precip_prodname = 'precipitation__4',
+             wb_prodname = 'ws_boundary_ms000',
+             pgauge_prodname = 'rain_gauge_locations__230',
+             precip_prodname_out = prodname_ms)
 
   return()
 }
@@ -449,34 +459,34 @@ process_2_ms003 <- function(network, domain, prodname_ms){
   chemprod <- 'stream_chemistry__ms012'
   qprod <- 'discharge__ms011'
 
-  chemfiles <- ue(ms_list_files(network = network,
-                                domain = domain,
-                                level = 'derived',
-                                prodname_ms = chemprod))
-  qfiles <- ue(ms_list_files(network = network,
+  chemfiles <- ms_list_files(network = network,
                              domain = domain,
                              level = 'derived',
-                             prodname_ms = qprod))
+                             prodname_ms = chemprod)
+  qfiles <- ms_list_files(network = network,
+                          domain = domain,
+                          level = 'derived',
+                          prodname_ms = qprod)
 
   flux_sites <- generics::intersect(
-    ue(fname_from_fpath(qfiles, include_fext = FALSE)),
-    ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
+    fname_from_fpath(qfiles, include_fext = FALSE),
+    fname_from_fpath(chemfiles, include_fext = FALSE))
 
   for(s in flux_sites){
 
-    flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
-                                 qprod = qprod,
-                                 level = 'derived',
-                                 site_name = s)))
+    flux <- sw(calc_inst_flux(chemprod = chemprod
+                              qprod = qprod,
+                              level = 'derived',
+                              site_name = s))
 
-    ue(write_ms_file(d = flux,
-                     network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     site_name = s,
-                     level = 'derived',
-                     shapefile = FALSE,
-                     link_to_portal = FALSE))
+    write_ms_file(d = flux,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_name = s,
+                  level = 'derived',
+                  shapefile = FALSE,
+                  link_to_portal = FALSE)
   }
 
   return()
@@ -486,10 +496,10 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
-  ue(precip_idw(precip_prodname = 'precipitation__3110',
-                wb_prodname = 'ws_boundary_ms000',
-                pgauge_prodname = 'rain_gauge_locations__ms013',
-                precip_prodname_out = prodname_ms))
+    precip_idw(precip_prodname = 'precipitation__3110',
+               wb_prodname = 'ws_boundary_ms000',
+               pgauge_prodname = 'rain_gauge_locations__ms013',
+               precip_prodname_out = prodname_ms)
 
   return()
 }

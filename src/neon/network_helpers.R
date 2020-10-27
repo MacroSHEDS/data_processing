@@ -80,16 +80,16 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             
             d <- remove_all_na_sites(d)
             
-            d <- ue(carry_uncertainty(d,
-                                      network = network,
-                                      domain = domain,
-                                      prodname_ms = prodname_ms))
+            d <- carry_uncertainty(d,
+                                   network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms)
             
-            d <- ue(synchronize_timestep(d,
-                                         desired_interval = '1 day', #set to '15 min' when we have server
-                                         impute_limit = 30))
+            d <- synchronize_timestep(d,
+                                      desired_interval = '1 day', #set to '15 min' when we have server
+                                      impute_limit = 30)
             
-            d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+            d <- apply_detection_limit_t(d, network, domain, prodname_ms)
             
             write_ms_file(d = d,
                           network = network,
