@@ -32,6 +32,7 @@ process_0_156 <- function(set_details, network, domain) {
     download.file(url = set_details$url,
                   destfile = glue(raw_data_dest, '/', set_details$component, '.csv'),
                   cacheOK = FALSE, method = 'curl')
+    return()
 }
 
 #munge kernels ####
@@ -67,46 +68,46 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
   
     # add TDP thiamin diphosphate to 
   
-    d <- ue(ms_read_raw_csv(preprocessed_tibble = d,
-                            datetime_cols = c(time = '%H%M',
-                                              Sample_Date = '%m/%d/%Y'),
-                            datetime_tz = 'Etc/GMT-4',
-                            site_name_col = 'Sample_ID',
-                            data_cols = c(Temp = 'temp',
-                                          'pH' = 'pH',
-                                          Cond = 'spCond',
-                                          Cl = 'Cl',
-                                          NO3 = 'NO3_N',
-                                          'SO4-S' = 'SO4_S',
-                                          'PO4-P' = 'PO4_S',
-                                          Na = 'Na',
-                                          K = 'K',
-                                          Mg = 'Mg',
-                                          Ca = 'Ca',
-                                          'NH4-N' = 'NH4_N',
-                                          DOC = 'DOC',
-                                          DIC = 'DIC',
-                                          TDN = 'TDN',
-                                          SiO2 = 'SiO2',
-                                          DON = 'DON',
-                                          TSS = 'TSS'),
-                            set_to_NA = c('-9999', '9999.00'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE))
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = c(time = '%H%M',
+                                           Sample_Date = '%m/%d/%Y'),
+                         datetime_tz = 'Etc/GMT-4',
+                         site_name_col = 'Sample_ID',
+                         data_cols = c(Temp = 'temp',
+                                       'pH' = 'pH',
+                                       Cond = 'spCond',
+                                       Cl = 'Cl',
+                                       NO3 = 'NO3_N',
+                                       'SO4-S' = 'SO4_S',
+                                       'PO4-P' = 'PO4_S',
+                                       Na = 'Na',
+                                       K = 'K',
+                                       Mg = 'Mg',
+                                       Ca = 'Ca',
+                                       'NH4-N' = 'NH4_N',
+                                       DOC = 'DOC',
+                                       DIC = 'DIC',
+                                       TDN = 'TDN',
+                                       SiO2 = 'SiO2',
+                                       DON = 'DON',
+                                       TSS = 'TSS'),
+                         set_to_NA = c('-9999', '9999.00'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
     
-    d <- ue(ms_cast_and_reflag(d,
-                               varflag_col_pattern = NA))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
   
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
     
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
   
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
   
     return(d)
 }
@@ -144,46 +145,46 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
     
     # add TDP thiamin diphosphate to 
     
-    d <- ue(ms_read_raw_csv(preprocessed_tibble = d,
-                            datetime_cols = c(time = '%H%M',
-                                              Sample_Date = '%m/%d/%Y'),
-                            datetime_tz = 'Etc/GMT-4',
-                            site_name_col = 'Sample_ID',
-                            data_cols = c(Temp = 'temp',
-                                          'pH' = 'pH',
-                                          Cond = 'spCond',
-                                          Cl = 'Cl',
-                                          NO3 = 'NO3_N',
-                                          'SO4-S' = 'SO4_S',
-                                          'PO4-P' = 'PO4_S',
-                                          Na = 'Na',
-                                          K = 'K',
-                                          Mg = 'Mg',
-                                          Ca = 'Ca',
-                                          'NH4-N' = 'NH4_N',
-                                          DOC = 'DOC',
-                                          DIC = 'DIC',
-                                          TDN = 'TDN',
-                                          SiO2 = 'SiO2',
-                                          DON = 'DON',
-                                          TSS = 'TSS'),
-                            set_to_NA = c('-9999', '9999.00'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE))
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = c(time = '%H%M',
+                                           Sample_Date = '%m/%d/%Y'),
+                         datetime_tz = 'Etc/GMT-4',
+                         site_name_col = 'Sample_ID',
+                         data_cols = c(Temp = 'temp',
+                                       'pH' = 'pH',
+                                       Cond = 'spCond',
+                                       Cl = 'Cl',
+                                       NO3 = 'NO3_N',
+                                       'SO4-S' = 'SO4_S',
+                                       'PO4-P' = 'PO4_S',
+                                       Na = 'Na',
+                                       K = 'K',
+                                       Mg = 'Mg',
+                                       Ca = 'Ca',
+                                       'NH4-N' = 'NH4_N',
+                                       DOC = 'DOC',
+                                       DIC = 'DIC',
+                                       TDN = 'TDN',
+                                       SiO2 = 'SiO2',
+                                       DON = 'DON',
+                                       TSS = 'TSS'),
+                         set_to_NA = c('-9999', '9999.00'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
     
-    d <- ue(ms_cast_and_reflag(d,
-                               varflag_col_pattern = NA))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
     
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
     
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
     
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     
     return(d)
 }

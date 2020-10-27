@@ -196,55 +196,55 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
                    s = site_name,
                    c = component)
   
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          datetime_cols = list('date' = '%Y-%m-%d',
-                                               'time' = '%H%M'),
-                          datetime_tz = 'US/Mountain',
-                          site_name_col = 'samp_loc',
-                          alt_site_name = list('SODDIE' = 'SODDIE STREAM'),
-                          data_cols =  c('pH' = 'pH',
-                                         'cond' = 'SpCond',
-                                         'ANC' = 'ANC',
-                                         'acid' = 'acidity',
-                                         'alkal' = 'alkalinity',
-                                         'H.' = 'H',
-                                         'NH4.' = 'NH4',
-                                         'Ca..' = 'Ca',
-                                         'Mg..' = 'Mg',
-                                         'Na.' = 'Na',
-                                         'K.' = 'K',
-                                         'Cl.' = 'Cl',
-                                         'NO3.' = 'NO3',
-                                         'SO4..' = 'SO4',
-                                         'PO4...' = 'PO4',
-                                         'Si' = 'Si',
-                                         'cat_sum' = 'cationCharge',
-                                         'an_sum' = 'anionCharge',
-                                         'chg_bal' = 'ionBalance',
-                                         'TN' = 'TN',
-                                         'TDN' = 'TDN',
-                                         'PN' = 'TPN',
-                                         'IN' = 'IN',
-                                         'TP' = 'TP',
-                                         'TDP' = 'TDP',
-                                         'PP' = 'TPP',
-                                         'DOP' = 'DOP',
-                                         'IP' = 'TIP',
-                                         'd18O' = 'd18O',
-                                         'TOC' = 'TOC',
-                                         'DOC' = 'DOC',
-                                         'POC' = 'POC'),
-                          data_col_pattern = '#V#',
-                          set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
-                          is_sensor = FALSE))
+  d <- ms_read_raw_csv(filepath = rawfile,
+                       datetime_cols = list('date' = '%Y-%m-%d',
+                                            'time' = '%H%M'),
+                       datetime_tz = 'US/Mountain',
+                       site_name_col = 'samp_loc',
+                       alt_site_name = list('SODDIE' = 'SODDIE STREAM'),
+                       data_cols =  c('pH' = 'pH',
+                                      'cond' = 'SpCond',
+                                      'ANC' = 'ANC',
+                                      'acid' = 'acidity',
+                                      'alkal' = 'alkalinity',
+                                      'H.' = 'H',
+                                      'NH4.' = 'NH4',
+                                      'Ca..' = 'Ca',
+                                      'Mg..' = 'Mg',
+                                      'Na.' = 'Na',
+                                      'K.' = 'K',
+                                      'Cl.' = 'Cl',
+                                      'NO3.' = 'NO3',
+                                      'SO4..' = 'SO4',
+                                      'PO4...' = 'PO4',
+                                      'Si' = 'Si',
+                                      'cat_sum' = 'cationCharge',
+                                      'an_sum' = 'anionCharge',
+                                      'chg_bal' = 'ionBalance',
+                                      'TN' = 'TN',
+                                      'TDN' = 'TDN',
+                                      'PN' = 'TPN',
+                                      'IN' = 'IN',
+                                      'TP' = 'TP',
+                                      'TDP' = 'TDP',
+                                      'PP' = 'TPP',
+                                      'DOP' = 'DOP',
+                                      'IP' = 'TIP',
+                                      'd18O' = 'd18O',
+                                      'TOC' = 'TOC',
+                                      'DOC' = 'DOC',
+                                      'POC' = 'POC'),
+                       data_col_pattern = '#V#',
+                       set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
+                       is_sensor = FALSE)
   
-  d <- ue(ms_cast_and_reflag(d,
-                             varflag_col_pattern = NA))
+  d <- ms_cast_and_reflag(d,
+                          varflag_col_pattern = NA)
   
-  d <- ue(carry_uncertainty(d,
-                            network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms))
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
   
   d <- ms_conversions(d,
                       convert_units_from = c(NH4 = 'ueq/l',
@@ -280,11 +280,11 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
                                            TIP = 'mg/l',
                                            H = 'mg/l'))
   
-  d <- ue(synchronize_timestep(d,
-                               desired_interval = '1 day', #set to '15 min' when we have server
-                               impute_limit = 30))
+  d <- synchronize_timestep(d,
+                            desired_interval = '1 day', #set to '15 min' when we have server
+                            impute_limit = 30)
   
-  d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
   
   return(d)
 }
@@ -301,54 +301,54 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
     
-    d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            datetime_cols = list('date' = '%Y-%m-%d',
-                                                 'time' = '%H%M'),
-                            datetime_tz = 'US/Mountain',
-                            site_name_col = 'local_site',
-                            data_cols =  c('pH' = 'pH',
-                                           'cond' = 'SpCond',
-                                           'ANC' = 'ANC',
-                                           'acid' = 'acidity',
-                                           'alkal' = 'alkalinity',
-                                           'H.' = 'H',
-                                           'NH4.' = 'NH4',
-                                           'Ca..' = 'Ca',
-                                           'Mg..' = 'Mg',
-                                           'Na.' = 'Na',
-                                           'K.' = 'K',
-                                           'Cl.' = 'Cl',
-                                           'NO3.' = 'NO3',
-                                           'SO4..' = 'SO4',
-                                           'PO4...' = 'PO4',
-                                           'Si' = 'Si',
-                                           'cat_sum' = 'cationCharge',
-                                           'an_sum' = 'anionCharge',
-                                           'chg_bal' = 'ionBalance',
-                                           'TN' = 'TN',
-                                           'TDN' = 'TDN',
-                                           'PN' = 'TPN',
-                                           'IN' = 'IN',
-                                           'TP' = 'TP',
-                                           'TDP' = 'TDP',
-                                           'PP' = 'TPP',
-                                           'DOP' = 'DOP',
-                                           'IP' = 'TIP',
-                                           'd18O' = 'd18O',
-                                           'TOC' = 'TOC',
-                                           'DOC' = 'DOC',
-                                           'POC' = 'POC'),
-                            data_col_pattern = '#V#',
-                            set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
-                            is_sensor = FALSE))
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('date' = '%Y-%m-%d',
+                                              'time' = '%H%M'),
+                         datetime_tz = 'US/Mountain',
+                         site_name_col = 'local_site',
+                         data_cols =  c('pH' = 'pH',
+                                        'cond' = 'SpCond',
+                                        'ANC' = 'ANC',
+                                        'acid' = 'acidity',
+                                        'alkal' = 'alkalinity',
+                                        'H.' = 'H',
+                                        'NH4.' = 'NH4',
+                                        'Ca..' = 'Ca',
+                                        'Mg..' = 'Mg',
+                                        'Na.' = 'Na',
+                                        'K.' = 'K',
+                                        'Cl.' = 'Cl',
+                                        'NO3.' = 'NO3',
+                                        'SO4..' = 'SO4',
+                                        'PO4...' = 'PO4',
+                                        'Si' = 'Si',
+                                        'cat_sum' = 'cationCharge',
+                                        'an_sum' = 'anionCharge',
+                                        'chg_bal' = 'ionBalance',
+                                        'TN' = 'TN',
+                                        'TDN' = 'TDN',
+                                        'PN' = 'TPN',
+                                        'IN' = 'IN',
+                                        'TP' = 'TP',
+                                        'TDP' = 'TDP',
+                                        'PP' = 'TPP',
+                                        'DOP' = 'DOP',
+                                        'IP' = 'TIP',
+                                        'd18O' = 'd18O',
+                                        'TOC' = 'TOC',
+                                        'DOC' = 'DOC',
+                                        'POC' = 'POC'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
+                         is_sensor = FALSE)
     
-    d <- ue(ms_cast_and_reflag(d,
-                               varflag_col_pattern = NA))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
     
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
     
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -384,11 +384,11 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
                                              TIP = 'mg/l',
                                              H = 'mg/l'))
     
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
     
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     
     return(d)
 }
@@ -407,55 +407,55 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
     
     look <- read_csv(rawfile)
     
-    d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            datetime_cols = list('date' = '%Y-%m-%d',
-                                                 'time' = '%H%M'),
-                            datetime_tz = 'US/Mountain',
-                            site_name_col = 'local_site',
-                            alt_site_name = list('GREEN1' = 'GREEN LAKE 1'),
-                            data_cols =  c('pH' = 'pH',
-                                           'cond' = 'SpCond',
-                                           'ANC' = 'ANC',
-                                           'acid' = 'acidity',
-                                           'alkal' = 'alkalinity',
-                                           'H.' = 'H',
-                                           'NH4.' = 'NH4',
-                                           'Ca..' = 'Ca',
-                                           'Mg..' = 'Mg',
-                                           'Na.' = 'Na',
-                                           'K.' = 'K',
-                                           'Cl.' = 'Cl',
-                                           'NO3.' = 'NO3',
-                                           'SO4..' = 'SO4',
-                                           'PO4...' = 'PO4',
-                                           'Si' = 'Si',
-                                           'cat_sum' = 'cationCharge',
-                                           'an_sum' = 'anionCharge',
-                                           'chg_bal' = 'ionBalance',
-                                           'TN' = 'TN',
-                                           'TDN' = 'TDN',
-                                           'PN' = 'TPN',
-                                           'IN' = 'IN',
-                                           'TP' = 'TP',
-                                           'TDP' = 'TDP',
-                                           'PP' = 'TPP',
-                                           'DOP' = 'DOP',
-                                           'IP' = 'TIP',
-                                           'd18O' = 'd18O',
-                                           'TOC' = 'TOC',
-                                           'DOC' = 'DOC',
-                                           'POC' = 'POC'),
-                            data_col_pattern = '#V#',
-                            set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
-                            is_sensor = FALSE))
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('date' = '%Y-%m-%d',
+                                              'time' = '%H%M'),
+                         datetime_tz = 'US/Mountain',
+                         site_name_col = 'local_site',
+                         alt_site_name = list('GREEN1' = 'GREEN LAKE 1'),
+                         data_cols =  c('pH' = 'pH',
+                                        'cond' = 'SpCond',
+                                        'ANC' = 'ANC',
+                                        'acid' = 'acidity',
+                                        'alkal' = 'alkalinity',
+                                        'H.' = 'H',
+                                        'NH4.' = 'NH4',
+                                        'Ca..' = 'Ca',
+                                        'Mg..' = 'Mg',
+                                        'Na.' = 'Na',
+                                        'K.' = 'K',
+                                        'Cl.' = 'Cl',
+                                        'NO3.' = 'NO3',
+                                        'SO4..' = 'SO4',
+                                        'PO4...' = 'PO4',
+                                        'Si' = 'Si',
+                                        'cat_sum' = 'cationCharge',
+                                        'an_sum' = 'anionCharge',
+                                        'chg_bal' = 'ionBalance',
+                                        'TN' = 'TN',
+                                        'TDN' = 'TDN',
+                                        'PN' = 'TPN',
+                                        'IN' = 'IN',
+                                        'TP' = 'TP',
+                                        'TDP' = 'TDP',
+                                        'PP' = 'TPP',
+                                        'DOP' = 'DOP',
+                                        'IP' = 'TIP',
+                                        'd18O' = 'd18O',
+                                        'TOC' = 'TOC',
+                                        'DOC' = 'DOC',
+                                        'POC' = 'POC'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
+                         is_sensor = FALSE)
     
-    d <- ue(ms_cast_and_reflag(d,
-                               varflag_col_pattern = NA))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
     
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
     
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -491,14 +491,12 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                                              TIP = 'mg/l',
                                              H = 'mg/l'))
     
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
     
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     
     return(d)
 }
-
-
 
