@@ -37,12 +37,13 @@ for(i in 1:nrow(prod_info)){
 
         if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
-            munge_rtn = munge_combined_split(domain = domain,
+            munge_rtn = munge_combined_split(network = network,
+                                             domain = domain,
                                              site_name = site_name,
                                              prodname_ms = prodname_ms,
                                              tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn = munge_by_site(domain, site_name, prodname_ms, held_data)
+            munge_rtn = munge_by_site(network, domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){
