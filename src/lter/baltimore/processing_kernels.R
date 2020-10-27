@@ -156,7 +156,6 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
   return(d)
 }
 
-
 #stream_chemistry_gwynns_up: STATUS=READY
 #. handle_errors
 process_1_800 <- function(network, domain, prodname_ms, site_name,
@@ -397,10 +396,10 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
       select(site_name, datetime, val, var, ms_status)
 
     d <- identify_sampling_bypass(discharge,
-                             is_sensor = TRUE,
-                             network = network,
-                             domain = domain,
-                             prodname_ms = prodname_ms)
+                                  is_sensor = TRUE,
+                                  network = network,
+                                  domain = domain,
+                                  prodname_ms = prodname_ms)
 
     d <- carry_uncertainty(d,
                            network = network,
