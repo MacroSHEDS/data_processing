@@ -218,34 +218,34 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
 
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
-    d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'Etc/GMT-8',
-                            site_name_col = 'SITECODE',
-                            data_cols =  c(INST_Q = 'discharge'),
-                            data_col_pattern = '#V#',
-                            is_sensor = TRUE,
-                            summary_flagcols = c('ESTCODE', 'EVENT_CODE')))
+    d <- ms_read_raw_csv(filepath = rawfile1,
+                         datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT-8',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(INST_Q = 'discharge'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE,
+                         summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
 
-    d <- ue(ms_cast_and_reflag(d,
-                               varflag_col_pattern = NA,
-                               summary_flags_clean = list(
-                                   ESTCODE = c('A', 'E'),
-                                   EVENT_CODE = c(NA, 'WEATHR')),
-                               summary_flags_dirty = list(
-                                   ESTCODE = c('Q', 'S', 'P'),
-                                   EVENT_CODE = c('INSREM', 'MAINTE'))))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(
+                                ESTCODE = c('A', 'E'),
+                                EVENT_CODE = c(NA, 'WEATHR')),
+                            summary_flags_dirty = list(
+                                ESTCODE = c('Q', 'S', 'P'),
+                                EVENT_CODE = c('INSREM', 'MAINTE')))
 
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
 
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
 
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -268,7 +268,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
 
     if(prodname_ms == 'precip_gauge_locations__5482'){
 
-        projstring <- ue(choose_projection(unprojected = TRUE))
+        projstring <- choose_projection(unprojected = TRUE)
 
         d <- sw(read_csv(rawfile1, progress=FALSE,
                          col_types = readr::cols_only(
@@ -283,36 +283,36 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
 
     } else if(prodname_ms == 'precipitation__5482'){
 
-        d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                                datetime_cols = c(DATE = '%Y-%m-%d'),
-                                datetime_tz = 'UTC',
-                                site_name_col = 'SITECODE',
-                                data_cols =  c(PRECIP_TOT_DAY = 'precip'),
-                                data_col_pattern = '#V#',
-                                is_sensor = FALSE,
-                                summary_flagcols = c('PRECIP_TOT_FLAG',
-                                                     'EVENT_CODE')))
+        d <- ms_read_raw_csv(filepath = rawfile1,
+                             datetime_cols = c(DATE = '%Y-%m-%d'),
+                             datetime_tz = 'UTC',
+                             site_name_col = 'SITECODE',
+                             data_cols =  c(PRECIP_TOT_DAY = 'precip'),
+                             data_col_pattern = '#V#',
+                             is_sensor = FALSE,
+                             summary_flagcols = c('PRECIP_TOT_FLAG',
+                                                  'EVENT_CODE'))
 
-        d <- ue(ms_cast_and_reflag(d,
-                                   varflag_col_pattern = NA,
-                                   summary_flags_clean = list(
-                                       PRECIP_TOT_FLAG = c('A', 'E'),
-                                       EVENT_CODE = c(NA, 'METHOD')),
-                                   #METHOD indicates when methods change.
-                                   summary_flags_dirty = list(
-                                       PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
-                                       EVENT_CODE = c('INSREM', 'MAINTE'))))
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                summary_flags_clean = list(
+                                    PRECIP_TOT_FLAG = c('A', 'E'),
+                                    EVENT_CODE = c(NA, 'METHOD')),
+                                #METHOD indicates when methods change.
+                                summary_flags_dirty = list(
+                                    PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
+                                    EVENT_CODE = c('INSREM', 'MAINTE')))
 
-        d <- ue(carry_uncertainty(d,
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms))
+        d <- carry_uncertainty(d,
+                               network = network,
+                               domain = domain,
+                               prodname_ms = prodname_ms)
 
-        d <- ue(synchronize_timestep(d,
-                                     desired_interval = '1 day', #set to '15 min' when we have server
-                                     impute_limit = 30))
+        d <- synchronize_timestep(d,
+                                  desired_interval = '1 day', #set to '15 min' when we have server
+                                  impute_limit = 30)
 
-        d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+        d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     }
 
     return(d)
@@ -336,40 +336,40 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
 
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
-    d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'Etc/GMT-8',
-                            site_name_col = 'SITECODE',
-                            data_cols =  c(PH='pH', COND='spCond', ALK='alk',
-                                SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
-                                PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
-                                MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
-                                `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
-                                'UTKN', 'TKN', 'K', 'DOC'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE,
-                            alt_datacol_pattern = '#V#_OUTPUT',
-                            var_flagcol_pattern = '#V#CODE',
-                            summary_flagcols = c('TYPE')))
+    d <- ms_read_raw_csv(filepath = rawfile1,
+                         datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT-8',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(PH='pH', COND='spCond', ALK='alk',
+                             SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+                             PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
+                             MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
+                             `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
+                             'UTKN', 'TKN', 'K', 'DOC'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         alt_datacol_pattern = '#V#_OUTPUT',
+                         var_flagcol_pattern = '#V#CODE',
+                         summary_flagcols = c('TYPE'))
 
-    d <- ue(ms_cast_and_reflag(d,
-                               variable_flags_to_drop = 'N',
-                               variable_flags_clean =
-                                   c('A', 'E', 'D', 'DE', '*', 'D*'),
-                               summary_flags_to_drop = list(
-                                   TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
-                               summary_flags_clean = list(TYPE = 'F')))
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_to_drop = 'N',
+                            variable_flags_clean =
+                                c('A', 'E', 'D', 'DE', '*', 'D*'),
+                            summary_flags_to_drop = list(
+                                TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
+                            summary_flags_clean = list(TYPE = 'F'))
 
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
 
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
 
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -390,30 +390,30 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    d <- ue(ms_read_raw_csv(filepath = rawfile1,
-                            datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'Etc/GMT-8',
-                            site_name_col = 'SITECODE',
-                            data_cols =  c(PH='pH', COND='spCond', ALK='alk',
-                                           SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
-                                           PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
-                                           MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
-                                           `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
-                                           'UTKN', 'TKN', 'K', 'DOC'),
-                                           # PRECIP_CM='precip_ns'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE,
-                            alt_datacol_pattern = '#V#_INPUT',
-                            var_flagcol_pattern = '#V#CODE',
-                            summary_flagcols = c('TYPE')))
+    d <- ms_read_raw_csv(filepath = rawfile1,
+                         datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT-8',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(PH='pH', COND='spCond', ALK='alk',
+                                        SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
+                                        PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
+                                        MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
+                                        `NA`='Na', 'UTP', 'TDP', 'UTN', 'TDN', 'DON',
+                                        'UTKN', 'TKN', 'K', 'DOC'),
+                                        # PRECIP_CM='precip_ns'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         alt_datacol_pattern = '#V#_INPUT',
+                         var_flagcol_pattern = '#V#CODE',
+                         summary_flagcols = c('TYPE'))
 
-    d <- ue(ms_cast_and_reflag(d,
-                               variable_flags_to_drop = 'N',
-                               variable_flags_clean =
-                                   c('A', 'E', 'D', 'DE', '*', 'D*'),
-                               summary_flags_to_drop = list(
-                                   TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
-                               summary_flags_clean = list(TYPE = c('F', 'DF'))))
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_to_drop = 'N',
+                            variable_flags_clean =
+                                c('A', 'E', 'D', 'DE', '*', 'D*'),
+                            summary_flags_to_drop = list(
+                                TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
+                            summary_flags_clean = list(TYPE = c('F', 'DF')))
 
     #HJAndrews does not collect precip and precip chemistry at the same
     #locations, so we here crudely localize pchem data to the nearest precip
@@ -429,16 +429,16 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
                   ' to a location'))
     }
 
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
 
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
+    d <- synchronize_timestep(d,
+                              desired_interval = '1 day', #set to '15 min' when we have server
+                              impute_limit = 30)
 
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -463,7 +463,7 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
                           exdir = rawdir1,
                           overwrite = TRUE)
 
-    projstring <- ue(choose_projection(unprojected = TRUE))
+    projstring <- choose_projection(unprojected = TRUE)
 
     if(prodname_ms == 'stream_gauge_locations__3239'){
 
@@ -512,10 +512,10 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
-    ue(precip_idw(precip_prodname = 'precipitation__5482',
-                  wb_prodname = 'ws_boundary__3239',
-                  pgauge_prodname = 'precip_gauge_locations__5482',
-                  precip_prodname_out = prodname_ms))
+    precip_idw(precip_prodname = 'precipitation__5482',
+               wb_prodname = 'ws_boundary__3239',
+               pgauge_prodname = 'precip_gauge_locations__5482',
+               precip_prodname_out = prodname_ms)
 
     return()
 }
@@ -524,11 +524,11 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms){
 
-        ue(pchem_idw(pchem_prodname = 'precip_chemistry__4022',
-                     precip_prodname = 'precipitation__5482',
-                     wb_prodname = 'ws_boundary__3239',
-                     pgauge_prodname = 'precip_gauge_locations__5482',
-                     pchem_prodname_out = prodname_ms))
+        pchem_idw(pchem_prodname = 'precip_chemistry__4022',
+                  precip_prodname = 'precipitation__5482',
+                  wb_prodname = 'ws_boundary__3239',
+                  pgauge_prodname = 'precip_gauge_locations__5482',
+                  pchem_prodname_out = prodname_ms)
 
     return()
 }
@@ -540,31 +540,33 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     chemprod <- 'stream_chemistry__4021'
     qprod <- 'discharge__4341'
 
-    chemfiles <- ue(list_munged_files(network = network,
-                                      domain = domain,
-                                      prodname_ms = chemprod))
-    qfiles <- ue(list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = qprod))
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               level = 'munged',
+                               prodname_ms = chemprod)
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            level = 'munged',
+                            prodname_ms = qprod)
 
     flux_sites <- generics::intersect(
-        ue(fname_from_fpath(qfiles, include_fext = FALSE)),
-        ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
 
     for(s in flux_sites){
 
-        flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
-                                     qprod = qprod,
-                                     site_name = s)))
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s))
 
-        ue(write_ms_file(d = flux,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = s,
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = TRUE))
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = FALSE)
     }
 
     return()
@@ -574,11 +576,11 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_ms004 <- function(network, domain, prodname_ms){
 
-    ue(flux_idw(pchem_prodname = 'precip_chemistry__4022',
-                precip_prodname = 'precipitation__5482',
-                wb_prodname = 'ws_boundary__3239',
-                pgauge_prodname = 'precip_gauge_locations__5482',
-                flux_prodname_out = prodname_ms))
+    flux_idw(pchem_prodname = 'precip_chemistry__4022',
+             precip_prodname = 'precipitation__5482',
+             wb_prodname = 'ws_boundary__3239',
+             pgauge_prodname = 'precip_gauge_locations__5482',
+             flux_prodname_out = prodname_ms)
 
     return()
 }

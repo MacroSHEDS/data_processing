@@ -36,7 +36,8 @@ for(i in 1:nrow(prod_info)){
                    s=site_name, p=prodname_ms), logger=logger_module)
     }
     
-    munge_rtn = munge_by_site_product(domain = domain, 
+    munge_rtn = munge_by_site(network = network,
+                              domain = domain, 
                               site_name = site_name, 
                               prodname_ms = prodname_ms, 
                               tracker = held_data)

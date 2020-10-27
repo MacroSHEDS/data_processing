@@ -38,16 +38,18 @@ for(i in 1:nrow(prod_info)){
     
 
     if(grepl('discharge', prodname_ms)) {
-    munge_rtn = munge_by_site_product(domain = domain, 
+    munge_rtn = munge_by_site(network = network,
+                              domain = domain, 
                               site_name = site_name, 
                               prodname_ms = prodname_ms, 
                               tracker = held_data)
     } else{
     
-      munge_rtn = munge_combined(domain = domain,
-                                       site_name = site_name,
-                                       prodname_ms = prodname_ms,
-                                       tracker = held_data)
+      munge_rtn = munge_combined(network = network,
+                                 domain = domain,
+                                 site_name = site_name,
+                                 prodname_ms = prodname_ms,
+                                 tracker = held_data)
     }
 
     if(is_ms_err(munge_rtn)){

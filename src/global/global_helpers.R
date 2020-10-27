@@ -137,14 +137,10 @@ pprint_callstack = function(){
     return(call_string_pretty)
 }
 
-#errors are not handled for this function because it is used inside pipelines that
-#are used inside processing kernels, so it can't be wrapped in ue(). Find a way to
-#make ue() pipelineable and this numeric_any can be decorated
 numeric_any <- function(num_vec){
     return(as.numeric(any(as.logical(num_vec))))
 }
 
-#. handle_errors
 gsub_v <- function(pattern, replacement_vec, x){
 
     #just like the first three arguments to gsub, except that
@@ -161,7 +157,6 @@ gsub_v <- function(pattern, replacement_vec, x){
     return(subbed)
 }
 
-#. handle_errors
 identify_sampling <- function(df,
                               is_sensor,
                               date_col = 'datetime',
@@ -199,9 +194,10 @@ identify_sampling <- function(df,
                           n = network,
                           d = domain)
 
-    if(file.exists(sampling_file)){
-        master <- jsonlite::fromJSON(readr::read_file(sampling_file))
-    } else {
+    master <- try(jsonlite::fromJSON(readr::read_file(sampling_file)),
+                  silent = TRUE)
+
+    if('try-error' %in% class(master)){
         dir.create(sampling_dir, recursive = TRUE)
         file.create(sampling_file)
         master <- list()
@@ -341,9 +337,9 @@ identify_sampling <- function(df,
                 mutate(
                     type = paste0(type,
                                   !!is_sensor[var_name_base]),
-                    var = glue('{ty}_{vb}',
-                               ty = type,
-                               vb = var_name_base)) %>%
+                    var = as.character(glue('{ty}_{vb}',
+                                            ty = type,
+                                            vb = var_name_base))) %>%
                 slice(interval_changes)
 
             master[[prodname_ms]][[var_name_base]][[site_names[i]]] <-
@@ -384,27 +380,27 @@ identify_sampling_bypass <- function(df,
                               network,
                               domain,
                               prodname_ms){
-    
-    #This case is used (primarily for neon) when use of ms_read_raw and 
-    # ms_cast_flag are not used because of incaomptable data structures 
-    
+
+    #This case is used (primarily for neon) when use of ms_read_raw and
+    # ms_cast_flag are not used because of incaomptable data structures
+
     #checks
     if(!is.logical(is_sensor)){
         stop('is_sensor must be logical.')
     }
-    
+
     #parse is_sensor into a character vector of sample regimen codes
     is_sensor <- ifelse(is_sensor, 'S', 'N')
-    
+
     #set up directory system to store sample regimen metadata
     sampling_dir <- glue('data/{n}/{d}',
                          n = network,
                          d = domain)
-    
+
     sampling_file <- glue('data/{n}/{d}/sampling_type.json',
                           n = network,
                           d = domain)
-    
+
     if(file.exists(sampling_file)){
         master <- jsonlite::fromJSON(readr::read_file(sampling_file))
     } else {
@@ -412,40 +408,40 @@ identify_sampling_bypass <- function(df,
         file.create(sampling_file)
         master <- list()
     }
-    
+
     site_names <- unique(df$site_name)
-    
+
     variables <- unique(df$var)
-    
+
     all_vars <- tibble()
     for(p in 1:length(variables)){
-        
+
         all_sites <- tibble()
         for(i in 1:length(site_names)){
-            
+
             # df_site <- df_var %>%
             df_site <- df %>%
                 filter(site_name == !!site_names[i]) %>%
                 filter(var == !!variables[p]) %>%
-                arrange(datetime) 
+                arrange(datetime)
             # ! is.na(.data[[date_col]]), #NAs here are indicative of bugs we want to fix, so let's let them through
             # ! is.na(.data[[var_name]])) #NAs here are indicative of bugs we want to fix, so let's let them through
-            
+
             dates <- df_site[[date_col]]
             dif <- diff(dates)
             unit <- attr(dif, 'units')
-            
+
             conver <- case_when(
                 unit %in% c('seconds', 'secs') ~ 0.01666667,
                 unit %in% c('minutes', 'mins') ~ 1,
                 unit == 'hours' ~ 60,
                 unit == 'days' ~ 1440,
                 TRUE ~ NA_real_)
-            
+
             if(is.na(conver)) stop('Weird time unit encountered. address this.')
-            
+
             dif_minutes <- as.numeric(dif) * conver
-            
+
             # table <- rle2(dif_minutes) %>% #table is a commonly used function
             run_table <- rle2(dif_minutes) %>%
                 mutate(
@@ -455,26 +451,26 @@ identify_sampling_bypass <- function(df,
                     # sum = sum(lengths, na.rm = TRUE), #superfluous
                     porportion = lengths / sum(lengths, na.rm = TRUE),
                     time = difftime(stops, starts, units = 'days'))
-            
+
             # Sites with no record
             if(nrow(run_table) == 0){
-                
+
                 g_a <- tibble('site_name' = site_names[i],
                               'type' = 'NA',
                               'starts' = lubridate::NA_POSIXct_,
                               'interval' = NA_real_)
-                
+
             } else {
-                
+
                 test <- filter(run_table,
                                time > 60,
                                lengths > 60)
-                
+
                 #Sites where there are not at least 60 consecutive records, record
                 #for at least 60 consecutive days, and have an average interval of
                 #more than 1 day are assumed to be grab samples
                 if(nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) > 1440){
-                    
+
                     g_a <- tibble('site_name' = site_names[i],
                                   'type' = 'G',
                                   'starts' = min(run_table$starts,
@@ -482,10 +478,10 @@ identify_sampling_bypass <- function(df,
                                   'interval' = round(Mode(run_table$values,
                                                           na.rm = TRUE)))
                 }
-                
+
                 #Sites with consecutive samples are have a consistent interval
                 if(nrow(test) != 0 && nrow(run_table) < 20){
-                    
+
                     g_a <- test %>%
                         select(site_name, starts, interval = values) %>%
                         group_by(site_name, interval) %>%
@@ -493,9 +489,9 @@ identify_sampling_bypass <- function(df,
                                                na.rm = TRUE)) %>%
                         mutate(type = 'I') %>%
                         arrange(starts)
-                    
+
                 }
-                
+
                 #Sites where they do not have a consistent recording interval but
                 #the average interval is less than one day are assumed to be automatic
                 # (such as HBEF discharge that is automatic but lacks a consistent
@@ -504,13 +500,13 @@ identify_sampling_bypass <- function(df,
                     (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) < 1440) ||
                     (nrow(test) != 0 && nrow(run_table) > 20)
                 ){ #could this be handed with else?
-                    
+
                     table_ <- run_table %>%
                         filter(porportion >= 0.05) %>%
                         mutate(type = 'I') %>%
                         select(starts, site_name, type, interval = values) %>%
                         mutate(interval = as.character(round(interval)))
-                    
+
                     table_var <- run_table %>%
                         filter(porportion <= 0.05)  %>%
                         group_by(site_name) %>%
@@ -520,14 +516,14 @@ identify_sampling_bypass <- function(df,
                             type = 'I',
                             interval = 'variable') %>%
                         select(starts, site_name, type, interval)
-                    
+
                     g_a <- rbind(table_, table_var) %>%
                         arrange(starts)
                 }
             }
-            
+
             interval_changes <- rle2(g_a$interval)$starts
-            
+
             g_a <- g_a %>%
                 mutate(
                     type = paste0(type,
@@ -537,30 +533,29 @@ identify_sampling_bypass <- function(df,
                                vb = variables[p]),
                     var = variables[p]) %>%
                 slice(interval_changes)
-            
+
             master[[prodname_ms]][[variables[p]]][[site_names[i]]] <-
                 list('startdt' = g_a$starts,
                      'type' = g_a$type,
                      'interval' = g_a$interval)
-            
+
             all_sites <- rbind(all_sites, g_a)
         }
         all_vars <- rbind(all_sites, all_vars) %>%
             distinct(var, .keep_all = TRUE)
     }
-    
+
     correct_names <- all_vars %>%
         select(site_name, new_var, var)
-    
+
     df <- left_join(df, correct_names, by = c("site_name", "var")) %>%
         select(datetime, site_name, var=new_var, val, ms_status)
-    
+
     readr::write_file(jsonlite::toJSON(master), sampling_file)
-    
+
     return(df)
 }
 
-#. handle_errors
 drop_var_prefix <- function(x){
 
     unprefixed <- substr(x, 4, nchar(x))
@@ -568,7 +563,6 @@ drop_var_prefix <- function(x){
     return(unprefixed)
 }
 
-#. handle_errors
 extract_var_prefix <- function(x){
 
     prefix <- substr(x, 1, 2)
@@ -576,7 +570,6 @@ extract_var_prefix <- function(x){
     return(prefix)
 }
 
-#. handle_errors
 ms_read_raw_csv <- function(filepath,
                             preprocessed_tibble,
                             datetime_cols,
@@ -849,8 +842,8 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_NA[i]] <- NA
         }
     }
-    
-        
+
+
     #Set correct class to each column
     # suppressWarnings because it warns that NA are created by changing the class
     # of a column, this is what is wanted when there are character is a numeric
@@ -953,7 +946,6 @@ ms_read_raw_csv <- function(filepath,
     return(d)
 }
 
-#. handle_errors
 resolve_datetime <- function(d,
                              datetime_colnames,
                              datetime_formats,
@@ -1030,7 +1022,6 @@ resolve_datetime <- function(d,
     return(d)
 }
 
-#. handle_errors
 dt_format_to_regex <- function(fmt, optional){
 
     #fmt is a character vector of datetime formatting strings, such as
@@ -1107,7 +1098,6 @@ dt_format_to_regex <- function(fmt, optional){
     return(fmt)
 }
 
-#. handle_errors
 escape_special_regex <- function(x){
 
     #x is a character vector. any special characters in x will be escaped with
@@ -1131,7 +1121,6 @@ escape_special_regex <- function(x){
     return(escaped)
 }
 
-#. handle_errors
 ms_cast_and_reflag <- function(d,
                                input_shape = 'wide',
                                data_col_pattern = '#V#__|dat',
@@ -1424,7 +1413,6 @@ ms_cast_and_reflag <- function(d,
     return(d)
 }
 
-#. handle_errors
 ms_conversions <- function(d,
                            convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                                                  'NH4', 'NH3'),
@@ -1467,22 +1455,22 @@ ms_conversions <- function(d,
     }
 
     vars <- drop_var_prefix(d$var)
-    
-    # Converts input to grams (even if the final unit is moles or eq, it will be 
+
+    # Converts input to grams (even if the final unit is moles or eq, it will be
     # converted to grams so it can be converted from NO3 to NO3 in N)
     for(i in 1:length(convert_units_from)) {
-        
+
         if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i])) {
-            
+
             v = names(convert_units_from)[i]
-            
+
             d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
                                               input_unit = convert_units_from[i],
                                               molecule = v)
         }
     }
-    
-    #convert units 
+
+    #convert units
     if(cuF){
         for(i in 1:length(convert_units_from)){
             v = names(convert_units_from)[i]
@@ -1515,13 +1503,13 @@ ms_conversions <- function(d,
                                                  to = unname(molecular_conversion_map[m]))
         }
     }
-    
+
     #Convert to mol or eq if that is the output unit
     for(i in 1:length(convert_units_from)) {
-        
+
         if(grepl('mol|eq', convert_units_to[i])) {
             v = names(convert_units_from)[i]
-        
+
             d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
                                                 input_unit = convert_units_from[i],
                                                 output_unit = convert_units_to[i],
@@ -1531,7 +1519,6 @@ ms_conversions <- function(d,
     return(d)
 }
 
-#. handle_errors
 query_status <- function(status_code_vec, component = 'flag'){
 
     #TODO: investigate r packages for bitmapping in C*/FORTRAN
@@ -1569,7 +1556,6 @@ query_status <- function(status_code_vec, component = 'flag'){
     return(bit_is_on)
 }
 
-#. handle_errors
 export_to_global <- function(from_env, exclude=NULL){
 
     #exclude is a character vector of names not to export.
@@ -1587,10 +1573,9 @@ export_to_global <- function(from_env, exclude=NULL){
         assign(varnames[i], vars[[i]], .GlobalEnv)
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 get_all_local_helpers <- function(network=domain, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
@@ -1626,10 +1611,9 @@ get_all_local_helpers <- function(network=domain, domain){
     export_to_global(from_env=environment(),
                      exclude=c('network', 'domain', 'thisenv'))
 
-    return()
+    #return()
 }
 
-#. handle_errors
 set_up_logger <- function(network=domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
@@ -1653,14 +1637,12 @@ set_up_logger <- function(network=domain, domain){
     return(logger_module)
 }
 
-#. handle_errors
 extract_from_config <- function(key){
     ind = which(lapply(conf, function(x) grepl(key, x)) == TRUE)
     val = stringr::str_match(conf[ind], '.*\\"(.*)\\"')[2]
     return(val)
 }
 
-#. handle_errors
 clear_from_mem <- function(..., clearlist){
 
     if(missing(clearlist)){
@@ -1671,10 +1653,9 @@ clear_from_mem <- function(..., clearlist){
     rm(list=clearlist, envir=.GlobalEnv)
     gc()
 
-    return()
+    #return()
 }
 
-#. handle_errors
 retain_ms_globals <- function(retain_vars){
 
     all_globals = ls(envir=.GlobalEnv, all.names=TRUE)
@@ -1682,7 +1663,7 @@ retain_ms_globals <- function(retain_vars){
 
     clear_from_mem(clearlist=clutter)
 
-    return()
+    #return()
 }
 
 generate_ms_err = function(text=1){
@@ -1703,22 +1684,18 @@ generate_blacklist_indicator = function(text=1){
     return(indobj)
 }
 
-#. handle_errors
 is_ms_err <- function(x){
     return('ms_err' %in% class(x))
 }
 
-#. handle_errors
 is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-#. handle_errors
 is_blacklist_indicator <- function(x){
     return('blacklist_indicator' %in% class(x))
 }
 
-#. handle_errors
 evaluate_result_status <- function(r){
 
     if(is_ms_err(r) || is_ms_exception(r)){
@@ -1732,7 +1709,7 @@ evaluate_result_status <- function(r){
     return(status)
 }
 
-email_err = function(msgs, addrs, pw){
+email_err <- function(msgs, addrs, pw){
 
     if(is.list(msgs)){
         msgs = Reduce(function(x, y) paste(x, y, sep='\n---\n'), msgs)
@@ -1777,7 +1754,7 @@ email_err = function(msgs, addrs, pw){
 
 }
 
-get_data_tracker = function(network=domain, domain){
+get_data_tracker <- function(network = domain, domain){
 
     #network is an optional macrosheds network name string. If omitted, it's
     #assumed to be identical to the domain string.
@@ -1799,7 +1776,6 @@ get_data_tracker = function(network=domain, domain){
     return(tracker_data)
 }
 
-#. handle_errors
 make_tracker_skeleton <- function(retrieval_chunks){
 
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
@@ -1817,7 +1793,6 @@ make_tracker_skeleton <- function(retrieval_chunks){
     return(tracker_skeleton)
 }
 
-#. handle_errors
 insert_site_skeleton <- function(tracker, prodname_ms, site_name,
                                  site_components){
 
@@ -1827,19 +1802,16 @@ insert_site_skeleton <- function(tracker, prodname_ms, site_name,
     return(tracker)
 }
 
-#. handle_errors
 product_is_tracked <- function(tracker, prodname_ms){
     bool = prodname_ms %in% names(tracker)
     return(bool)
 }
 
-#. handle_errors
 site_is_tracked <- function(tracker, prodname_ms, site_name){
     bool = site_name %in% names(tracker[[prodname_ms]])
     return(bool)
 }
 
-#. handle_errors
 track_new_product <- function(tracker, prodname_ms){
 
     if(prodname_ms %in% names(tracker)){
@@ -1851,7 +1823,6 @@ track_new_product <- function(tracker, prodname_ms){
     return(tracker)
 }
 
-#. handle_errors
 track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
     retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
@@ -1868,7 +1839,6 @@ track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
     return(tracker)
 }
 
-#. handle_errors
 filter_unneeded_sets <- function(tracker_with_details){
 
     new_sets = tracker_with_details %>%
@@ -1885,7 +1855,6 @@ filter_unneeded_sets <- function(tracker_with_details){
     return(new_sets)
 }
 
-#. handle_errors
 update_data_tracker_r <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -1940,10 +1909,9 @@ update_data_tracker_r <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 update_data_tracker_m <- function(network = domain,
                                   domain,
                                   tracker_name,
@@ -1975,10 +1943,9 @@ update_data_tracker_m <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 update_data_tracker_d <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -2033,10 +2000,9 @@ update_data_tracker_d <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 update_data_tracker_g <- function(network = domain,
                                   domain,
                                   tracker = NULL,
@@ -2085,10 +2051,9 @@ update_data_tracker_g <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 backup_tracker <- function(path){
 
     mch = stringr::str_match(path,
@@ -2112,10 +2077,9 @@ backup_tracker <- function(path){
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
                       '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
 
-    return()
+    #return()
 }
 
-#. handle_errors
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
                                   keep_status='ok'){
 
@@ -2126,25 +2090,21 @@ extract_retrieval_log <- function(tracker, prodname_ms, site_name,
     return(retrieved_data)
 }
 
-#. handle_errors
 get_munge_status <- function(tracker, prodname_ms, site_name){
     munge_status = tracker[[prodname_ms]][[site_name]]$munge$status
     return(munge_status)
 }
 
-#. handle_errors
 get_derive_status <- function(tracker, prodname_ms, site_name){
     derive_status = tracker[[prodname_ms]][[site_name]]$derive$status
     return(derive_status)
 }
 
-#. handle_errors
 get_general_status <- function(tracker, prodname_ms, site_name){
     general_status = tracker[[prodname_ms]][[site_name]]$general$status
     return(general_status)
 }
 
-#. handle_errors
 get_product_info <- function(network, domain=NULL, status_level, get_statuses){
 
     #unlike other functions with network and domain arguments, this one accepts
@@ -2163,7 +2123,6 @@ get_product_info <- function(network, domain=NULL, status_level, get_statuses){
     return(prods)
 }
 
-#. handle_errors
 prodcode_from_prodname_ms <- function(prodname_ms){
 
     #prodname_ms consists of the macrosheds official name for a data
@@ -2173,15 +2132,25 @@ prodcode_from_prodname_ms <- function(prodname_ms){
     #underscore in a macrosheds official data category name, this function
     #will be able to split a prodname_ms into its two constituent parts.
 
-    namesplit <- strsplit(prodname_ms, '__')[[1]]
-    name_length <- length(namesplit)
-    prodcode <- namesplit[2:name_length]
-    prodcode <- paste(prodcode, collapse = '__')
+    #accepts a vector of prodname_ms strings
+
+    prodcode <- sapply(prodname_ms,
+                       function(x){
+                           namesplit <- strsplit(x, '__')[[1]]
+                           name_length <- length(namesplit)
+                           prodcode <- namesplit[2:name_length]
+                           paste(prodcode, collapse = '__')
+                       },
+                       USE.NAMES = FALSE)
+
+    # namesplit <- strsplit(prodname_ms, '__')[[1]]
+    # name_length <- length(namesplit)
+    # prodcode <- namesplit[2:name_length]
+    # prodcode <- paste(prodcode, collapse = '__')
 
     return(prodcode)
 }
 
-#. handle_errors
 prodname_from_prodname_ms <- function(prodname_ms){
 
     #prodname_ms consists of the macrosheds official name for a data
@@ -2191,23 +2160,26 @@ prodname_from_prodname_ms <- function(prodname_ms){
     #underscore in a macrosheds official data category name, this function
     #will be able to split a prodname_ms into its two constituent parts.
 
-    prodname <- strsplit(prodname_ms, '__')[[1]][1]
+    #accepts a vector of prodname_ms strings
+
+    prodname <- sapply(prodname_ms,
+                       function(x) strsplit(x, '__')[[1]][1],
+                       USE.NAMES = FALSE)
+    # prodname <- strsplit(prodname_ms, '__')[[1]][1]
+
     return(prodname)
 }
 
-#. handle_errors
 ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
-    return()
+    #return()
 }
 
-#. handle_errors
 ms_munge <- function(network=domain, domain){
     source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
-    return()
+    #return()
 }
 
-#. handle_errors
 ms_delineate <- function(network, domain,
                          dev_machine_status,
                          verbose = FALSE){
@@ -2454,10 +2426,9 @@ ms_delineate <- function(network, domain,
             logger = logger_module)
 
 
-    return()
+    #return()
 }
 
-#. handle_errors
 delineate_watershed_apriori <- function(lat, long, crs,
                                         dev_machine_status = 'n00b',
                                         verbose = FALSE){
@@ -2660,7 +2631,6 @@ delineate_watershed_apriori <- function(lat, long, crs,
     return(inspection_dir)
 }
 
-#. handle_errors
 delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
                                                  snap_dist, snap_method,
                                                  dem_resolution, write_dir){
@@ -2778,16 +2748,155 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
     message(glue('Watershed boundary written to ',
                  write_dir))
 
-    return()
+    #return()
 }
 
-#. handle_errors
-ms_derive <- function(network=domain, domain){
-    source(glue('src/{n}/{d}/derive.R', n=network, d=domain))
-    return()
+ms_derive <- function(network = domain, domain){
+
+    #generate derived products (derive.R)
+    source(glue('src/{n}/{d}/derive.R',
+                n = network,
+                d = domain))
+
+    #for any munged product that needs no further processing, recursively
+    #hardlink its entire directory from data/[network]/[domain]/munged/
+    #to data/[network]/[domain]/derived/
+
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                              n = network,
+                              d = domain)))
+
+    is_actually_derived <- grepl('^ms[0-9]{3}$',
+                                 prods$prodcode,
+                                 perl = TRUE) &
+        (is.na(prods$type) |
+             prods$type != 'linked')
+
+    is_linked <- prods$type == 'linked'
+
+    derived_prods <- paste(prods$prodname[is_actually_derived],
+                           prods$prodcode[is_actually_derived],
+                           sep = '__')
+
+    munged_prods <- paste(prods$prodname[! is_actually_derived & ! is_linked],
+                          prods$prodcode[! is_actually_derived & ! is_linked],
+                          sep = '__')
+
+    #already linked prods will be relinked
+    prods_to_link <- munged_prods[! munged_prods %in% derived_prods]
+
+    #figure out what the new prodname_ms's will be
+    prodcodes_num <- as.numeric(substr(
+        prods$prodcode[is_actually_derived],
+        start = 3,
+        stop = 5))
+
+    new_prodcodes_num <- seq(max(prodcodes_num) + 1,
+                             max(prodcodes_num) + length(prods_to_link))
+
+    new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
+                                      width = 3,
+                                      side = 'left',
+                                      pad = 0) %>%
+                                      {paste0('ms', .)}
+
+    names(new_prodcodes) <- rep('unclaimed',
+                                length(new_prodcodes))
+
+    for(p in prods_to_link){
+
+        prodname <- prodname_from_prodname_ms(p)
+
+        if(prodname %in% prods$prodname[is_linked]){
+
+            matched_prodcode <- prods %>%
+                filter(
+                    !!is_linked,
+                    prodname == !!prodname) %>%
+                pull(prodcode)
+
+            if(! matched_prodcode %in% new_prodcodes){
+                stop(glue('attempt to match already linked product with its ',
+                          'prodcode was not successful. investigate.'))
+            }
+
+            names(new_prodcodes)[new_prodcodes == matched_prodcode] <- 'taken'
+
+        } else {
+
+            matched_prodcode <- new_prodcodes[which(names(new_prodcodes) ==
+                                                        'unclaimed')][1]
+
+            if(any(is.na(matched_prodcode))){
+                stop('No unclaimed prodcodes left. something is wrong. investigate')
+            }
+
+            append_to_productfile(
+                network = network,
+                domain = domain,
+                prodcode = unname(matched_prodcode),
+                prodname = prodname,
+                type = 'linked',
+                notes = 'automated entry')
+
+            names(new_prodcodes)[new_prodcodes == matched_prodcode] <- 'taken'
+        }
+
+        create_derived_links(network = network,
+                             domain = domain,
+                             prodname_ms = p,
+                             new_prodcode = unname(matched_prodcode))
+    }
+
+    #link all derived products to the data portal directory
+    create_portal_links(network = network,
+                        domain = domain)
 }
 
-#. handle_errors
+append_to_productfile <- function(network,
+                                  domain,
+                                  prodcode,
+                                  prodname,
+                                  type,
+                                  retrieve_status,
+                                  munge_status,
+                                  derive_status,
+                                  precursor_of,
+                                  notes,
+                                  components){
+
+    #add a line to the products.csv file for a particular network and domain.
+    #any fields omitted will be populated with NA.
+
+    passed_args <- as.list(match.call())
+    arg_nms <- names(passed_args)
+    passed_args <- passed_args[! arg_nms %in% c('', 'network', 'domain')]
+    passed_args <- lapply(passed_args,
+                          function(x) eval(x))
+
+    args_legit <- sapply(passed_args,
+           function(x) length(x) == 1 && is.character(x))
+
+    if(any(! args_legit)){
+        stop('all arguments must be strings')
+    }
+
+    prodfile <- glue('src/{n}/{d}/products.csv',
+                     n = network,
+                     d = domain)
+
+    prods <- sm(read_csv(prodfile))
+
+    new_row <- unlist(passed_args)
+
+    new_row <- new_row[names(new_row) %in% colnames(prods)]
+
+    prods <- bind_rows(prods, new_row)
+
+    write_csv(x = prods,
+              path = prodfile)
+}
+
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
 
     #shp_files is a character vector of filenames with .shp extension
@@ -2834,10 +2943,9 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
                ext = extensions)
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
@@ -2861,7 +2969,6 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-#. handle_errors
 ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
@@ -2927,7 +3034,6 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
     return(ws_area_ha)
 }
 
-#. handle_errors
 write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                                  snap_method, snap_distance, dem_resolution){
 
@@ -2946,10 +3052,9 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
 
     write_csv(ds, 'data/general/watershed_delineation_specs.csv')
 
-    return()
+    #return()
 }
 
-#. handle_errors
 read_wb_delin_specs <- function(network, domain, site_name){
 
     ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
@@ -2973,7 +3078,6 @@ read_wb_delin_specs <- function(network, domain, site_name){
     return(ds)
 }
 
-#. handle_errors
 serialize_list_to_dir <- function(l, dest){
 
     #l must be a named list
@@ -3006,10 +3110,9 @@ serialize_list_to_dir <- function(l, dest){
         }
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 parse_molecular_formulae <- function(formulae){
 
     #`formulae` is a vector
@@ -3033,7 +3136,6 @@ parse_molecular_formulae <- function(formulae){
     return(constituents) # a list of vectors
 }
 
-#. handle_errors
 combine_atomic_masses <- function(molecular_constituents){
 
     #`molecular_constituents` is a vector
@@ -3048,7 +3150,6 @@ combine_atomic_masses <- function(molecular_constituents){
     return(molecular_mass) #a scalar
 }
 
-#. handle_errors
 calculate_molar_mass <- function(molecular_formula){
 
     if(length(molecular_formula) > 1){
@@ -3069,7 +3170,6 @@ calculate_molar_mass <- function(molecular_formula){
     return(molar_mass)
 }
 
-#. handle_errors
 convert_molecule <- function(x, from, to){
 
     #e.g. convert_molecule(1.54, 'NH4', 'N')
@@ -3081,7 +3181,6 @@ convert_molecule <- function(x, from, to){
     return(converted_mass)
 }
 
-#. handle_errors
 update_product_file <- function(network, domain, level, prodcode, status,
                                 prodname){
 
@@ -3111,10 +3210,9 @@ update_product_file <- function(network, domain, level, prodcode, status,
         write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 update_product_statuses <- function(network, domain){
 
     #status_codes should maybe be defined globally, or in a file
@@ -3155,76 +3253,74 @@ update_product_statuses <- function(network, domain){
                         prodcode=prodcodes, status=status_names,
                         prodname=prodnames)
 
-    return()
+    #return()
 }
 
 convert_to_gl <- function(x, input_unit, molecule) {
-    
+
     if(grepl('eq', input_unit)) {
-        valence = ms_vars$valence[ms_vars$variable_code %in% molecule] 
-        
+        valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
+
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        
         x = (x * calculate_molar_mass(molecule)) / valence
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', input_unit)) {
         x = x * calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     return(x)
-    
+
 }
 
 convert_from_gl <- function(x, input_unit, output_unit, molecule) {
-    
+
     if(grepl('eq', output_unit) && grepl('g', input_unit)) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * valence) / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', output_unit) && grepl('g', input_unit)) {
-        
+
         x = x / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', output_unit) && grepl('eq', input_unit)) {
-        
+
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * calculate_molar_mass(molecule)) / valence
-        
+
         x = x / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('eq', output_unit) && grepl('mol', input_unit)) {
-        
+
         x = x * calculate_molar_mass(molecule)
-        
+
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * valence)/calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     return(x)
-    
+
 }
 
-#. handle_errors
 convert_unit <- function(x, input_unit, output_unit){
 
     units <- tibble(prefix = c('n', "u", "m", "c", "d", "h", "k", "M"),
@@ -3233,20 +3329,20 @@ convert_unit <- function(x, input_unit, output_unit){
 
     old_fraction <- as.vector(str_split_fixed(input_unit, "/", n = Inf))
     old_top <- as.vector(str_split_fixed(old_fraction[1], "", n = Inf))
-    
+
     if(length(old_fraction) == 2) {
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
     }
-    
+
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
     new_top <- as.vector(str_split_fixed(new_fraction[1], "", n = Inf))
-    
+
     if(length(new_fraction == 2)) {
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
     }
 
     old_top_unit <- str_split_fixed(old_top, "", 2)[1]
-    
+
     if(old_top_unit %in% c('g', 'e', 'q', 'l') || old_fraction[1] == 'mol') {
         old_top_conver <- 1
     } else {
@@ -3256,23 +3352,23 @@ convert_unit <- function(x, input_unit, output_unit){
     old_bottom_unit <- str_split_fixed(old_bottom, "", 2)[1]
 
     if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
-        old_bottom_conver <- 1 
+        old_bottom_conver <- 1
     } else {
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
-    
+
     new_top_unit <- str_split_fixed(new_top, "", 2)[1]
-    
+
     if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
         new_top_conver <- 1
     } else {
         new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
     }
-    
+
     new_bottom_unit <- str_split_fixed(new_bottom, "", 2)[1]
-    
+
     if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
-        new_bottom_conver <- 1 
+        new_bottom_conver <- 1
     } else {
         new_bottom_conver <- as.numeric(filter(units, prefix == new_bottom_unit)[,2])
     }
@@ -3286,10 +3382,9 @@ convert_unit <- function(x, input_unit, output_unit){
     return(new_val)
 }
 
-#. handle_errors
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                           level = 'munged', shapefile = FALSE,
-                          link_to_portal = TRUE){
+                          link_to_portal = FALSE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
@@ -3299,6 +3394,10 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     #acquisition repository if link_to_portal == TRUE, create a hard link to the
     #file from the portal repository, which is assumed to be a sibling of the
     #data_acquision directory and to be named "portal".
+
+    if(! link_to_portal){
+        stop("we're not linking to portal this way anymore. see create_portal_links()")
+    }
 
     if(! level %in% c('munged', 'derived')){
         stop('level must be "munged" or "derived"')
@@ -3366,102 +3465,183 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                            dir = shapefile)
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
+#deprecated (old form of this function is in helper_scrapyard.R)
 create_portal_link <- function(network, domain, prodname_ms, site_name,
-                               level = 'munged', dir = FALSE){
+                               level = 'derived', dir = FALSE){
 
-    #level is one of 'munged', 'derived', corresponding to the
-    #location, within the data_acquisition system, of the data to be linked
-    #if dir=TRUE, treat site_name as a directory name, and link all files
-    #within (necessary for e.g. shapefiles, which often come with other files)
+    #remove this once enough time has passed to be sure all devs are up to speed.
 
-    #todo: allow level='raw'; flexibility for linking arbitrary file extensions
+    stop(glue('create_portal_link has been deprecated. use create_portal_links ',
+              '(plural)'))
+}
 
-    if(! level %in% c('munged', 'derived')){
-        stop('level must be "munged" or "derived"')
-    }
+create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
 
-    portal_prod_dir = glue('../portal/data/{d}/{p}', #portal ignores network
-                           d = domain,
-                           p = strsplit(prodname_ms, '__')[[1]][1])
-    dir.create(portal_prod_dir,
+    #for hardlinking munged products to the derive directory. this applies to all
+    #munged products that require no derive-level processing.
+
+    #new_prodcode is the derive-style prodcode (e.g. ms920) that will be
+    #   given to the new links in the derive directory. this is determined
+    #   programmatically by ms_derive
+
+    new_prodname_ms <- paste(prodname_from_prodname_ms(prodname_ms),
+                             new_prodcode,
+                             sep = '__')
+
+    munge_dir <- glue('data/{n}/{d}/munged/{p}',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms)
+
+    derive_dir <- glue('data/{n}/{d}/derived/{p}',
+                       n = network,
+                       d = domain,
+                       p = new_prodname_ms)
+
+    dir.create(derive_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    if(! dir){
+    dirs_to_build <- list.dirs(munge_dir,
+                               recursive = TRUE)
+    dirs_to_build <- dirs_to_build[dirs_to_build != munge_dir]
 
-        portal_site_file = glue('{pd}/{s}.feather',
-                                pd = portal_prod_dir,
-                                s = site_name)
-        portal_site_file_uncert = glue('{pd}/{s}_uncert.feather',
-                                       pd = portal_prod_dir,
-                                       s = site_name)
+    dirs_to_build <- convert_munge_path_to_derive_path(
+        paths = dirs_to_build,
+        munge_prodname_ms = prodname_ms,
+        derive_prodname_ms = new_prodname_ms)
 
-        #if there's already a data file for this site-time-product in
-        #the portal repo, remove it
-        unlink(portal_site_file)
-        unlink(portal_site_file_uncert)
-
-        #create a link to the portal repo from the new site file
-        #(note: really, to and from are equivalent, as they both
-        #point to the same underlying structure in the filesystem)
-        site_file = glue('data/{n}/{d}/{l}/{p}/{s}.feather',
-                         n = network,
-                         d = domain,
-                         l = level,
-                         p = prodname_ms,
-                         s = site_name)
-        site_file_uncert = glue('data/{n}/{d}/{l}/{p}/{s}_uncert.feather',
-                                n = network,
-                                d = domain,
-                                l = level,
-                                p = prodname_ms,
-                                s = site_name)
-
-        invisible(sw(file.link(to = portal_site_file,
-                               from = site_file)))
-
-        if(file.exists(site_file_uncert)){
-            invisible(sw(file.link(to = portal_site_file_uncert,
-                                   from = site_file_uncert)))
-        }
-
-    } else {
-
-        site_dir <- glue('data/{n}/{d}/{l}/{p}/{s}',
-                         n = network,
-                         d = domain,
-                         l = level,
-                         p = prodname_ms,
-                         s = site_name)
-
-        portal_prod_dir <- glue('../portal/data/{d}/{p}',
-                                d = domain,
-                                p = strsplit(prodname_ms, '__')[[1]][1])
-
-        dir.create(portal_prod_dir,
+    for(dr in dirs_to_build){
+        dir.create(dr,
                    showWarnings = FALSE,
                    recursive = TRUE)
-
-        site_files <- list.files(site_dir)
-        for(s in site_files){
-
-            site_file <- glue(site_dir, '/', s)
-            portal_site_file <- glue(portal_prod_dir, '/', s)
-            unlink(portal_site_file)
-            invisible(sw(file.link(to = portal_site_file,
-                                   from = site_file)))
-        }
-
     }
 
-    return()
+    #"from" and "to" may seem counterintuitive here. keep in mind that files
+    #as represented by the OS are actually all hardlinks to inodes in the kernel.
+    #so when you make a new hardlink, you're linking *from* a new location
+    #*to* an inode, as referenced by an existing hardlink. file.link uses
+    #these words in a less realistic, but more intuitive way, i.e. *from*
+    #an existing file *to* a new location
+    files_to_link_from <- list.files(path = munge_dir,
+                                     recursive = TRUE,
+                                     full.names = TRUE)
+
+    files_to_link_to <- convert_munge_path_to_derive_path(
+        paths = files_to_link_from,
+        munge_prodname_ms = prodname_ms,
+        derive_prodname_ms = new_prodname_ms)
+
+    for(i in 1:length(files_to_link_from)){
+        unlink(files_to_link_to[i])
+        invisible(sw(file.link(to = files_to_link_to[i],
+                               from = files_to_link_from[i])))
+    }
+
+    #return()
 }
 
-#. handle_errors
+create_portal_links <- function(network, domain){
+
+    #for hardlinking derived products to the portal directory. this applies to all
+    #derived products.
+
+    derive_dir <- glue('data/{n}/{d}/derived',
+                       n = network,
+                       d = domain)
+
+    portal_dir <- glue('../portal/data/{d}',
+                       d = domain)
+
+    dir.create(portal_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dirs_to_build <- list.dirs(derive_dir,
+                               recursive = TRUE)
+    dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
+
+    dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
+
+    for(dr in dirs_to_build){
+        dir.create(dr,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+    }
+
+    #"from" and "to" may seem counterintuitive here. keep in mind that files
+    #as represented by the OS are actually all hardlinks to inodes in the kernel.
+    #so when you make a new hardlink, you're linking *from* a new location
+    #*to* an inode, as referenced by an existing hardlink. file.link uses
+    #these words in a less realistic, but more intuitive way, i.e. *from*
+    #an existing file *to* a new location
+    files_to_link_from <- list.files(path = derive_dir,
+                                     recursive = TRUE,
+                                     full.names = TRUE)
+
+    files_to_link_to <- convert_derive_path_to_portal_path(
+        paths = files_to_link_from)
+
+    for(i in 1:length(files_to_link_from)){
+        unlink(files_to_link_to[i])
+        invisible(sw(file.link(to = files_to_link_to[i],
+                               from = files_to_link_from[i])))
+    }
+
+    #return()
+}
+
+convert_munge_path_to_derive_path <- function(paths,
+                                              munge_prodname_ms,
+                                              derive_prodname_ms){
+
+    #paths: strings containing filepath information. expected words are
+    #   "munged" and a readable prodname_ms. something like
+    #   "data/lter/hbef/munged/ws_boundary__94/w1"
+    #munge_prodname_ms: the prodname_ms for this product in its munged form.
+    #   e.g. "ws_boundary__94"
+    #derive_prodname_ms: the prodname_ms for this product in its derived form
+    #   (may be the same as munge_prodname_ms), e.g. "ws_boundary__ms005"
+
+    paths <- gsub(pattern = 'munged',
+                  replacement = 'derived',
+                  x = paths)
+
+    paths <- gsub(pattern = paste0('__',
+                                   prodcode_from_prodname_ms(munge_prodname_ms)),
+                  replacement = paste0('__',
+                                       prodcode_from_prodname_ms(derive_prodname_ms)),
+                  x = paths)
+
+    return(paths)
+}
+
+convert_derive_path_to_portal_path <- function(paths){
+
+    #paths: strings containing filepath information. expected words are
+    #   "derived" and a readable prodname_ms. something like
+    #   "data/lter/hbef/derived/discharge__ms005" or
+    #   "data/lter/hbef/derived/precip_gauge_locations__ms006/RG1"
+
+    paths <- gsub(pattern = paste0('data/', network),
+                  replacement = '../portal/data',
+                  x = paths)
+
+    paths <- gsub(pattern = 'derived/',
+                  replacement = '',
+                  x = paths)
+
+    paths <- gsub(pattern = '__ms[0-9]{3}',
+                  replacement = '',
+                  x = paths,
+                  perl = TRUE)
+
+    return(paths)
+}
+
 is_ms_prodcode <- function(prodcode){
 
     #always specify macrosheds "pseudo product codes" as "msXXX" where
@@ -3471,45 +3651,25 @@ is_ms_prodcode <- function(prodcode){
     return(grepl('ms[0-9]{3}', prodcode))
 }
 
-#. handle_errors
-list_munged_files <- function(network, domain, prodname_ms){
-                              # omit_uncertainty_files = FALSE){
+ms_list_files <- function(network, domain, level, prodname_ms){
 
-    mfiles <- glue('data/{n}/{d}/munged/{p}',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms) %>%
+    #level is either "munged" or "derived"
+    #prodname_ms can be a single string or a vector
+
+    if(! level %in% c('munged', 'derived')){
+        stop('level must be either "munged" or "derived".')
+    }
+
+    files <- glue('data/{n}/{d}/{l}/{p}',
+                  n = network,
+                  d = domain,
+                  l = level,
+                  p = prodname_ms) %>%
         list.files(full.names = TRUE)
 
-    # if(omit_uncertainty_files){
-    #     mfiles <- mfiles[! grepl('_uncert.feather$',
-    #                              mfiles,
-    #                              perl = TRUE)]
-    # }
-
-    return(mfiles)
+    return(files)
 }
 
-#. handle_errors
-list_derived_files <- function(network, domain, prodname_ms){
-    # omit_uncertainty_files = FALSE){
-
-    dfiles <- glue('data/{n}/{d}/derived/{p}',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms) %>%
-        list.files(full.names = TRUE)
-
-    # if(omit_uncertainty_files){
-    #     mfiles <- mfiles[! grepl('_uncert.feather$',
-    #                              mfiles,
-    #                              perl = TRUE)]
-    # }
-
-    return(dfiles)
-}
-
-#. handle_errors
 fname_from_fpath <- function(paths, include_fext = TRUE){
 
     #paths is a vector of filepaths of/this/form. final slash is used to
@@ -3664,12 +3824,12 @@ delineate_watershed_nhd <- function(lat, long) {
     }
 }
 
-#. handle_errors
-calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){
+calc_inst_flux <- function(chemprod, qprod, site_name){
 
-    #chemprod is the prodname_ms for stream or precip chemistry
-    #qprod is the prodname_ms for stream discharge or precip volume over time
-    #dt_round_interv is a rounding interval passed to lubridate::round_date
+    #chemprod is the prodname_ms for stream or precip chemistry.
+    #   it can be a munged or a derived product.
+    #qprod is the prodname_ms for stream discharge or precip volume over time.
+    #   it can be a munged or derived product/
 
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
@@ -3737,7 +3897,6 @@ calc_inst_flux <- function(chemprod, qprod, level = 'munged', site_name){
     return(flux)
 }
 
-#. handle_errors
 read_combine_shapefiles <- function(network, domain, prodname_ms){
 
     prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
@@ -3762,8 +3921,18 @@ read_combine_shapefiles <- function(network, domain, prodname_ms){
     return(combined)
 }
 
-#. handle_errors
-read_combine_feathers <- function(network, domain, prodname_ms){
+is_derived_product <- function(prodname_ms){
+
+    is_derived <- grepl('^ms[0-9]{3}$',
+                        prodcode_from_prodname_ms(prodname_ms),
+                        perl = TRUE)
+
+    return(is_derived)
+}
+
+read_combine_feathers <- function(network,
+                                  domain,
+                                  prodname_ms){
 
     #read all data feathers associated with a network-domain-product,
     #row bind them, arrange by site_name, var, datetime. insert val_err column
@@ -3771,9 +3940,18 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     #(error/uncertainty is handled by the errors package as an attribute,
     #so it must be written/read as a separate column).
 
-    prodpaths <- list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+    #the processing level is determined automatically from prodname_ms.
+    #   If the product code is "msXXX" where X is a numeral, the processing
+    #   level is assumed to be "derived". otherwise "munged"
+
+    level <- ifelse(is_derived_product(prodname_ms),
+                    'derived',
+                    'munged')
+
+    prodpaths <- ms_list_files(network = network,
+                               domain = domain,
+                               level = level,
+                               prodname_ms = prodname_ms)
 
     combined <- tibble()
     for(i in 1:length(prodpaths)){
@@ -3789,7 +3967,6 @@ read_combine_feathers <- function(network, domain, prodname_ms){
     return(combined)
 }
 
-#. handle_errors
 choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
 
     if(unprojected){
@@ -3811,7 +3988,6 @@ choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
     return(PROJ4)
 }
 
-#. handle_errors
 reconstitute_raster <- function(x, template){
 
     m = matrix(as.vector(x),
@@ -3825,7 +4001,6 @@ reconstitute_raster <- function(x, template){
     return(r)
 }
 
-#. handle_errors
 shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                          data_values, stream_site_name, output_varname,
                          elev_agnostic = FALSE, verbose = FALSE){
@@ -3936,7 +4111,6 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     return(ws_mean)
 }
 
-#. handle_errors
 shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                   precip_values, chem_values, stream_site_name,
                                   verbose = FALSE){
@@ -4103,7 +4277,6 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     return(ws_means)
 }
 
-#. handle_errors
 synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
@@ -4181,7 +4354,6 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     return(d_adjusted)
 }
 
-#. handle_errors
 recursive_tracker_update <- function(l, elem_name, new_val){
 
     #implements depth-first tree traversal
@@ -4205,7 +4377,6 @@ recursive_tracker_update <- function(l, elem_name, new_val){
     return(l)
 }
 
-#. handle_errors
 ms_parallelize <- function(maxcores = Inf){
 
     #maxcores is the maximum number of processor cores to use for R tasks.
@@ -4235,7 +4406,6 @@ ms_parallelize <- function(maxcores = Inf){
     return(clst)
 }
 
-#. handle_errors
 idw_parallel_combine <- function(d1, d2){
 
     #this is for use with foreach loops inside the 3 idw prep functions
@@ -4254,7 +4424,6 @@ idw_parallel_combine <- function(d1, d2){
     return(d_comb)
 }
 
-#. handle_errors
 idw_log_wb <- function(verbose, site_name, i, nw){
 
     if(! verbose) return()
@@ -4267,10 +4436,9 @@ idw_log_wb <- function(verbose, site_name, i, nw){
     loginfo(msg,
             logger = logger_module)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 idw_log_var <- function(verbose, site_name, v, j, nvars){
 
     if(! verbose) return()
@@ -4284,10 +4452,9 @@ idw_log_var <- function(verbose, site_name, v, j, nvars){
     loginfo(msg,
             logger = logger_module)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
 
     if(! verbose) return()
@@ -4303,10 +4470,9 @@ idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
                 logger = logger_module)
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                        precip_prodname_out, verbose = TRUE){
 
@@ -4408,9 +4574,9 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         # ws_mean_precip$precip <- apply_detection_limit_s(ws_mean_precip$precip,
         #                                                 detlim)
         # identify_detection_limit_s(ws_mean_precip$val)
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
 
         ws_mean_precip <- apply_detection_limit_t(ws_mean_precip,
                                                   network = network,
@@ -4425,16 +4591,15 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                       site_name = site_name,
                       level = 'derived',
                       shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
-#. handle_errors
-get_detlim_precursor <- function(network, domain, prodname_ms){
+get_detlim_precursors <- function(network, domain, prodname_ms){
 
     #this gets the prodname_ms for the direct precursor of a derived
     #product. for example, for hjandrews 'precipitation__ms001' it would return
@@ -4442,7 +4607,10 @@ get_detlim_precursor <- function(network, domain, prodname_ms){
     #to a derived product, because those limits were defined on the direct
     #precursor
 
-    #for precip flux products, the direct precursor is considered to be precip chem
+    #for precip flux products, the direct precursor is considered to be precip
+    #chem. for derived products that aggregate two or more munged products of
+    #the same type (e.g. discharge__9, discharge__10, etc. from
+    #lter/konza), this returns all of those products as precursors.
 
     if(network == domain){
         prods <- sm(read_csv(glue('src/{n}/products.csv',
@@ -4466,7 +4634,6 @@ get_detlim_precursor <- function(network, domain, prodname_ms){
     return(precursor)
 }
 
-#. handle_errors
 pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       pgauge_prodname, pchem_prodname_out, verbose = TRUE){
 
@@ -4598,9 +4765,9 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             stop('NA datetime found in ws_mean_d')
         }
 
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
         ws_mean_d <- apply_detection_limit_t(ws_mean_d,
                                              network = network,
                                              domain = domain,
@@ -4613,15 +4780,14 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                       site_name = site_name,
                       level = 'derived',
                       shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                      pgauge_prodname, flux_prodname_out, verbose = TRUE){
 
@@ -4795,32 +4961,31 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         #                  site_name = site_name,
         #                  level = 'derived',
         #                  shapefile = FALSE,
-        #                  link_to_portal = TRUE))
+        #                  link_to_portal = FALSE))
 
-        precursor_prodname <- get_detlim_precursor(network = network,
-                                                   domain = domain,
-                                                   prodname_ms = prodname_ms)
+        precursor_prodname <- get_detlim_precursors(network = network,
+                                                    domain = domain,
+                                                    prodname_ms = prodname_ms)
         ws_mean_flux <- apply_detection_limit_t(ws_mean_flux,
                                                 network = network,
                                                 domain = domain,
                                                 prodname_ms = precursor_prodname)
 
-        ue(write_ms_file(ws_mean_flux,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = flux_prodname_out,
-                         site_name = site_name,
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = TRUE))
+        write_ms_file(ws_mean_flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = flux_prodname_out,
+                      site_name = site_name,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 invalidate_derived_products <- function(successor_string){
 
     if(all(is.na(successor_string)) || successor_string == ''){
@@ -4839,10 +5004,9 @@ invalidate_derived_products <- function(successor_string){
                                        new_status = 'pending')
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 write_metadata_r <- function(murl, network, domain, prodname_ms){
 
     #this writes the metadata file for retrieved macrosheds data
@@ -4882,10 +5046,9 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
     # invisible(sw(file.link(to = portal_file,
     #                        from = data_acq_file)))
 
-    return()
+    #return()
 }
 
-#. handle_errors
 read_metadata_r <- function(network, domain, prodname_ms){
 
     #this reads the metadata file for retrieved macrosheds data
@@ -4906,7 +5069,6 @@ read_metadata_r <- function(network, domain, prodname_ms){
     # }
 }
 
-#. handle_errors
 get_precursors <- function(network, domain, prodname_ms){
 
     #this determines which munged products were used to generate
@@ -4935,7 +5097,6 @@ get_precursors <- function(network, domain, prodname_ms){
     return(precursors)
 }
 
-#. handle_errors
 document_kernel_code <- function(network, domain, prodname_ms, level){
 
     #this documents the code used to munge macrosheds data from raw source data.
@@ -4967,7 +5128,6 @@ document_kernel_code <- function(network, domain, prodname_ms, level){
     return(kernel_func)
 }
 
-#. handle_errors
 write_metadata_m <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for munged macrosheds data
@@ -5001,14 +5161,14 @@ write_metadata_m <- function(network, domain, prodname_ms){
                                                  paste(compsbysite,
                                                        collapse = '\n')))
 
-    metadata_r <- ue(read_metadata_r(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms))
+    metadata_r <- read_metadata_r(network = network,
+                                  domain = domain,
+                                  prodname_ms = prodname_ms)
 
-    code_m <- ue(document_kernel_code(network = network,
-                                      domain = domain,
-                                      prodname_ms = prodname_ms,
-                                      level = 1))
+    code_m <- document_kernel_code(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms,
+                                   level = 1)
 
     mdoc <- read_file('src/templates/write_metadata_m_boilerplate.txt') %>%
         glue(.,
@@ -5050,10 +5210,9 @@ write_metadata_m <- function(network, domain, prodname_ms){
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
 
-    return()
+    #return()
 }
 
-#. handle_errors
 write_metadata_d <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for derived macrosheds data
@@ -5067,14 +5226,14 @@ write_metadata_d <- function(network, domain, prodname_ms){
                          domain = paste0("'", domain, "'"),
                          prodname_ms = paste0("'", prodname_ms, "'"))
 
-    precursors <- ue(get_precursors(network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms))
+    precursors <- get_precursors(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms)
 
-    code_d <- ue(document_kernel_code(network = network,
-                                      domain = domain,
-                                      prodname_ms = prodname_ms,
-                                      level = 2))
+    code_d <- document_kernel_code(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms,
+                                   level = 2)
 
     ddoc <- read_file('src/templates/write_metadata_d_boilerplate.txt') %>%
         glue(.,
@@ -5118,10 +5277,9 @@ write_metadata_d <- function(network, domain, prodname_ms){
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
 
-    return()
+    #return()
 }
 
-#. handle_errors
 identify_detection_limit_s <- function(x){
 
     #this is the scalar version of identify_detection_limit (_s).
@@ -5190,7 +5348,6 @@ identify_detection_limit_s <- function(x){
     return(detlim)
 }
 
-#. handle_errors
 apply_detection_limit_s <- function(x, digits){
 
     #this is the scalar version of apply_detection_limit (_s).
@@ -5285,7 +5442,6 @@ apply_detection_limit_s <- function(x, digits){
     return(x)
 }
 
-#. handle_errors
 Mode <- function(x, na.rm = TRUE){
 
     if(na.rm){
@@ -5298,7 +5454,6 @@ Mode <- function(x, na.rm = TRUE){
 
 }
 
-#. handle_errors
 identify_detection_limit_t <- function(X, network, domain, prodname_ms,
                                        return_detlims = FALSE){
 
@@ -5462,10 +5617,9 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
         return(detlim_v)
     }
 
-    return()
+    #return()
 }
 
-#. handle_errors
 apply_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     #this is the temporally explicit version of apply_detection_limit (_t).
@@ -5484,6 +5638,14 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
 
     X <- as_tibble(X) %>%
         arrange(site_name, var, datetime)
+
+    if(is_derived_product(prodname_ms)){
+
+        #if there are multiple precursors (rare), just use the first
+        prodname_ms <- get_detlim_precursors(network = network,
+                                             domain = domain,
+                                             prodname_ms = prodname_ms)[1]
+    }
 
     detlim <- read_detection_limit(network, domain, prodname_ms)
     if(is_ms_err(detlim)){
@@ -5575,7 +5737,6 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms){
     return(X)
 }
 
-#. handle_errors
 read_detection_limit <- function(network, domain, prodname_ms){
 
     detlims <- glue('data/{n}/{d}/detection_limits.json',
@@ -5589,7 +5750,6 @@ read_detection_limit <- function(network, domain, prodname_ms){
     return(detlims_prod)
 }
 
-#. handle_errors
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
@@ -5606,10 +5766,9 @@ write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
     readr::write_file(jsonlite::toJSON(x), detlims_file)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 rle2 <- function(x){#, return_list = FALSE){
 
     r <- rle(x)
@@ -5633,7 +5792,6 @@ rle2 <- function(x){#, return_list = FALSE){
     return(r)
 }
 
-#. handle_errors
 force_monotonic_locf <- function(v, ascending = TRUE){
 
     if(any(is.na(v))){
@@ -5660,7 +5818,6 @@ force_monotonic_locf <- function(v, ascending = TRUE){
     return(v)
 }
 
-#. handle_errors
 get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
 
     col_name <- paste0(prodname, 'X')
@@ -5674,7 +5831,6 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         })
 }
 
-#. handle_errors
 clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
 
     table_nrow <- sheds %>%
@@ -5707,7 +5863,6 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
     return(table_fin)
 }
 
-#. handle_errors
 get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
                              ws_prodname) {
 
@@ -5765,8 +5920,6 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
 }
 
-
-#. handle_errors
 get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
                           start, ws_prodname) {
 
@@ -5844,7 +5997,6 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
 
 }
 
-#. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
     # uncert <- lapply(detlim,
@@ -5856,7 +6008,6 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-#. handle_errors
 carry_uncertainty <- function(d, network, domain, prodname_ms){
 
     u <- identify_detection_limit_t(d,
@@ -5871,7 +6022,6 @@ carry_uncertainty <- function(d, network, domain, prodname_ms){
     return(d)
 }
 
-#. handle_errors
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -5885,7 +6035,6 @@ err_df_to_matrix <- function(df){
     return(M)
 }
 
-#. handle_errors
 get_relative_uncert <- function(x){
 
     if(any(class(x) %in% c('list', 'data.frame', 'array'))){
@@ -5899,7 +6048,6 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-#. handle_errors
 get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
 
     sheds <- ws_boundry %>%
@@ -5973,10 +6121,9 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
 
     write_feather(final, final_path)
 
-    return()
+    #return()
 }
 
-#. handle_errors
 detection_limit_as_uncertainty <- function(detlim){
 
     # uncert <- lapply(detlim,
@@ -5988,7 +6135,6 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-#. handle_errors
 carry_uncertainty <- function(d, network, domain, prodname_ms){
 
     u <- identify_detection_limit_t(d,
@@ -6003,7 +6149,6 @@ carry_uncertainty <- function(d, network, domain, prodname_ms){
     return(d)
 }
 
-#. handle_errors
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -6017,7 +6162,6 @@ err_df_to_matrix <- function(df){
     return(M)
 }
 
-#. handle_errors
 get_relative_uncert <- function(x){
 
     if(any(class(x) %in% c('list', 'data.frame', 'array'))){
@@ -6032,7 +6176,6 @@ get_relative_uncert <- function(x){
 
 }
 
-#. handle_errors
 raster_intersection_summary <- function(wb, dem){
 
     #wb is a delineated watershed boundary as a rasterLayer
@@ -6072,51 +6215,50 @@ raster_intersection_summary <- function(wb, dem){
     return(summary_out)
 }
 
-#. handle_errors
-remove_all_na_sites <- function(d) {
+remove_all_na_sites <- function(d){
+
     d_test <- d %>%
-        mutate(na = ifelse(!is.na(val), 1, 0)) %>%
+        mutate(na = ifelse(! is.na(val), 1, 0)) %>%
         group_by(site_name, var) %>%
         summarise(non_na = sum(na))
 
-    d <- left_join(d, d_test,  by = c("site_name", "var")) %>%
+    d <- left_join(d, d_test, by = c("site_name", "var")) %>%
         filter(non_na > 10) %>%
         select(-non_na)
 }
 
-#. handle_errors
-combine_munged_products <- function(network, domain, prodname_ms, 
+combine_munged_products <- function(network, domain, prodname_ms,
                                     munged_prodname_ms) {
-    
-    #Used to combine multiple products into one. Used when discharge, chemistry, 
-    #or other products are split into multiple products and we want them in one. 
-    
+
+    #Used to combine multiple products into one. Used when discharge, chemistry,
+    #or other products are split into multiple products and we want them in one.
+
     files <- list_munged_files(network = network,
                                     domain = domain,
                                     prodname_ms = munged_prodname_ms)
-    
+
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
                 d = domain,
                 p = prodname_ms)
-    
+
     dir.create(dir, showWarnings = FALSE)
-    
+
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
-    
+
     for(i in 1:length(sites)) {
         site_files <- grep(sites[i], files, value = TRUE)
-        
+
         sile_full <- map_dfr(site_files, read_feather)
-        
-        ue(write_ms_file(d = sile_full,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = sites[i],
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = TRUE))
+
+        write_ms_file(d = sile_full,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[i],
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
     }
 }
