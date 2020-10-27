@@ -137,9 +137,6 @@ pprint_callstack = function(){
     return(call_string_pretty)
 }
 
-#errors are not handled for this function because it is used inside pipelines that
-#are used inside processing kernels, so it can't be wrapped in ue(). Find a way to
-#make ue() pipelineable and this numeric_any can be decorated
 numeric_any <- function(num_vec){
     return(as.numeric(any(as.logical(num_vec))))
 }
@@ -1576,7 +1573,7 @@ export_to_global <- function(from_env, exclude=NULL){
         assign(varnames[i], vars[[i]], .GlobalEnv)
     }
 
-    return()
+    #return()
 }
 
 get_all_local_helpers <- function(network=domain, domain){
@@ -1614,7 +1611,7 @@ get_all_local_helpers <- function(network=domain, domain){
     export_to_global(from_env=environment(),
                      exclude=c('network', 'domain', 'thisenv'))
 
-    return()
+    #return()
 }
 
 set_up_logger <- function(network=domain, domain){
@@ -1656,7 +1653,7 @@ clear_from_mem <- function(..., clearlist){
     rm(list=clearlist, envir=.GlobalEnv)
     gc()
 
-    return()
+    #return()
 }
 
 retain_ms_globals <- function(retain_vars){
@@ -1666,7 +1663,7 @@ retain_ms_globals <- function(retain_vars){
 
     clear_from_mem(clearlist=clutter)
 
-    return()
+    #return()
 }
 
 generate_ms_err = function(text=1){
@@ -1912,7 +1909,7 @@ update_data_tracker_r <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
 update_data_tracker_m <- function(network = domain,
@@ -1946,7 +1943,7 @@ update_data_tracker_m <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
 update_data_tracker_d <- function(network = domain,
@@ -2003,7 +2000,7 @@ update_data_tracker_d <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
 update_data_tracker_g <- function(network = domain,
@@ -2054,7 +2051,7 @@ update_data_tracker_g <- function(network = domain,
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
 
-    return()
+    #return()
 }
 
 backup_tracker <- function(path){
@@ -2080,7 +2077,7 @@ backup_tracker <- function(path){
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
                       '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
 
-    return()
+    #return()
 }
 
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
@@ -2175,12 +2172,12 @@ prodname_from_prodname_ms <- function(prodname_ms){
 
 ms_retrieve <- function(network=domain, domain){
     source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
-    return()
+    #return()
 }
 
 ms_munge <- function(network=domain, domain){
     source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
-    return()
+    #return()
 }
 
 ms_delineate <- function(network, domain,
@@ -2429,7 +2426,7 @@ ms_delineate <- function(network, domain,
             logger = logger_module)
 
 
-    return()
+    #return()
 }
 
 delineate_watershed_apriori <- function(lat, long, crs,
@@ -2751,7 +2748,7 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
     message(glue('Watershed boundary written to ',
                  write_dir))
 
-    return()
+    #return()
 }
 
 ms_derive <- function(network = domain, domain){
@@ -2946,7 +2943,7 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
                ext = extensions)
     }
 
-    return()
+    #return()
 }
 
 get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
@@ -3055,7 +3052,7 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
 
     write_csv(ds, 'data/general/watershed_delineation_specs.csv')
 
-    return()
+    #return()
 }
 
 read_wb_delin_specs <- function(network, domain, site_name){
@@ -3113,7 +3110,7 @@ serialize_list_to_dir <- function(l, dest){
         }
     }
 
-    return()
+    #return()
 }
 
 parse_molecular_formulae <- function(formulae){
@@ -3205,7 +3202,7 @@ update_product_file <- function(network, domain, level, prodcode, status,
         write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
     }
 
-    return()
+    #return()
 }
 
 update_product_statuses <- function(network, domain){
@@ -3248,7 +3245,7 @@ update_product_statuses <- function(network, domain){
                         prodcode=prodcodes, status=status_names,
                         prodname=prodnames)
 
-    return()
+    #return()
 }
 
 convert_to_gl <- function(x, input_unit, molecule) {
@@ -3463,7 +3460,7 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                            dir = shapefile)
     }
 
-    return()
+    #return()
 }
 
 #deprecated (old form of this function is in helper_scrapyard.R)
@@ -3539,7 +3536,7 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
                                from = files_to_link_from[i])))
     }
 
-    return()
+    #return()
 }
 
 create_portal_links <- function(network, domain){
@@ -3589,7 +3586,7 @@ create_portal_links <- function(network, domain){
                                from = files_to_link_from[i])))
     }
 
-    return()
+    #return()
 }
 
 convert_munge_path_to_derive_path <- function(paths,
@@ -4434,7 +4431,7 @@ idw_log_wb <- function(verbose, site_name, i, nw){
     loginfo(msg,
             logger = logger_module)
 
-    return()
+    #return()
 }
 
 idw_log_var <- function(verbose, site_name, v, j, nvars){
@@ -4450,7 +4447,7 @@ idw_log_var <- function(verbose, site_name, v, j, nvars){
     loginfo(msg,
             logger = logger_module)
 
-    return()
+    #return()
 }
 
 idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
@@ -4468,7 +4465,7 @@ idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
                 logger = logger_module)
     }
 
-    return()
+    #return()
 }
 
 precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
@@ -4594,7 +4591,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
 get_detlim_precursors <- function(network, domain, prodname_ms){
@@ -4783,7 +4780,7 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
 flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
@@ -4969,19 +4966,19 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                                 domain = domain,
                                                 prodname_ms = precursor_prodname)
 
-        ue(write_ms_file(ws_mean_flux,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = flux_prodname_out,
-                         site_name = site_name,
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = FALSE))
+        write_ms_file(ws_mean_flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = flux_prodname_out,
+                      site_name = site_name,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = FALSE)
     }
 
     parallel::stopCluster(clst)
 
-    return()
+    #return()
 }
 
 invalidate_derived_products <- function(successor_string){
@@ -5002,7 +4999,7 @@ invalidate_derived_products <- function(successor_string){
                                        new_status = 'pending')
     }
 
-    return()
+    #return()
 }
 
 write_metadata_r <- function(murl, network, domain, prodname_ms){
@@ -5044,7 +5041,7 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
     # invisible(sw(file.link(to = portal_file,
     #                        from = data_acq_file)))
 
-    return()
+    #return()
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -5159,14 +5156,14 @@ write_metadata_m <- function(network, domain, prodname_ms){
                                                  paste(compsbysite,
                                                        collapse = '\n')))
 
-    metadata_r <- ue(read_metadata_r(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms))
+    metadata_r <- read_metadata_r(network = network,
+                                  domain = domain,
+                                  prodname_ms = prodname_ms)
 
-    code_m <- ue(document_kernel_code(network = network,
-                                      domain = domain,
-                                      prodname_ms = prodname_ms,
-                                      level = 1))
+    code_m <- document_kernel_code(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms,
+                                   level = 1)
 
     mdoc <- read_file('src/templates/write_metadata_m_boilerplate.txt') %>%
         glue(.,
@@ -5208,7 +5205,7 @@ write_metadata_m <- function(network, domain, prodname_ms){
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
 
-    return()
+    #return()
 }
 
 write_metadata_d <- function(network, domain, prodname_ms){
@@ -5224,14 +5221,14 @@ write_metadata_d <- function(network, domain, prodname_ms){
                          domain = paste0("'", domain, "'"),
                          prodname_ms = paste0("'", prodname_ms, "'"))
 
-    precursors <- ue(get_precursors(network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms))
+    precursors <- get_precursors(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms)
 
-    code_d <- ue(document_kernel_code(network = network,
-                                      domain = domain,
-                                      prodname_ms = prodname_ms,
-                                      level = 2))
+    code_d <- document_kernel_code(network = network,
+                                   domain = domain,
+                                   prodname_ms = prodname_ms,
+                                   level = 2)
 
     ddoc <- read_file('src/templates/write_metadata_d_boilerplate.txt') %>%
         glue(.,
@@ -5275,7 +5272,7 @@ write_metadata_d <- function(network, domain, prodname_ms){
     invisible(sw(file.link(to = portal_file,
                            from = data_acq_file)))
 
-    return()
+    #return()
 }
 
 identify_detection_limit_s <- function(x){
@@ -5615,7 +5612,7 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
         return(detlim_v)
     }
 
-    return()
+    #return()
 }
 
 apply_detection_limit_t <- function(X, network, domain, prodname_ms){
@@ -5764,7 +5761,7 @@ write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
     readr::write_file(jsonlite::toJSON(x), detlims_file)
 
-    return()
+    #return()
 }
 
 rle2 <- function(x){#, return_list = FALSE){
@@ -6119,7 +6116,7 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
 
     write_feather(final, final_path)
 
-    return()
+    #return()
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -6251,13 +6248,13 @@ combine_munged_products <- function(network, domain, prodname_ms,
         
         sile_full <- map_dfr(site_files, read_feather)
         
-        ue(write_ms_file(d = sile_full,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = sites[i],
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = TRUE))
+        write_ms_file(d = sile_full,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[i],
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = TRUE)
     }
 }
