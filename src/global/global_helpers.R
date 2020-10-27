@@ -3056,6 +3056,14 @@ calculate_molar_mass <- function(molecular_formula){
     }
 
     parsed_formula = parse_molecular_formulae(molecular_formula)[[1]]
+    
+    #Some variables are not compatible with parse molecular formula,
+    #Need to insure the molecular mass is calculated correctly 
+    if(molecular_formula %in% c('POC', 'TPN')) {
+        parsed_formula <- case_when(molecular_formula == 'POC' ~ 'C',
+                              molecular_formula == 'TPN' ~ 'N')
+    }
+    
     molar_mass = combine_atomic_masses(parsed_formula)
 
     return(molar_mass)
@@ -3156,8 +3164,6 @@ convert_to_gl <- function(x, input_unit, molecule) {
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule] 
         
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        
-        if(molecule %in% c('POC', ))
         
         x = (x * calculate_molar_mass(molecule)) / valence
         
