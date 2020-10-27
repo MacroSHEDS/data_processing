@@ -279,7 +279,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_2_ms013 <- function(network, domain, prodname_ms) {
 
-  baltimore_gauges <- read_csv('data/general/site_data.csv') %>%
+  baltimore_gauges <- site_data %>%
     filter(domain == 'baltimore',
            site_type == 'rain_gauge') %>%
     sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
@@ -306,7 +306,7 @@ process_2_ms013 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms014 <- function(network, domain, prodname_ms) {
 
-  baltimore_gauges <- read_csv('data/general/site_data.csv') %>%
+  baltimore_gauges <- site_data %>%
     filter(domain == 'baltimore',
            site_type == 'stream_gauge') %>%
     sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
