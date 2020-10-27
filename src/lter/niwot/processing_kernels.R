@@ -152,7 +152,7 @@ process_0_102 <- function(set_details, network, domain){
 #discharge: STATUS=READY
 #. handle_errors
 process_0_111 <- function(set_details, network, domain){
-  
+
   download_raw_file(network = network,
                     domain = domain,
                     set_details = set_details,
@@ -163,7 +163,7 @@ process_0_111 <- function(set_details, network, domain){
 #discharge: STATUS=READY
 #. handle_errors
 process_0_74 <- function(set_details, network, domain){
-  
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
@@ -174,7 +174,7 @@ process_0_74 <- function(set_details, network, domain){
 #discharge: STATUS=READY
 #. handle_errors
 process_0_105 <- function(set_details, network, domain){
-  
+
   download_raw_file(network = network,
                     domain = domain,
                     set_details = set_details,
@@ -187,15 +187,15 @@ process_0_105 <- function(set_details, network, domain){
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_213 <- function(network, domain, prodname_ms, site_name,
-                        component){
-  
+                          component){
+
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-  
+
   d <- ms_read_raw_csv(filepath = rawfile,
                        datetime_cols = list('date' = '%Y-%m-%d',
                                             'time' = '%H%M'),
@@ -237,15 +237,15 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
                        data_col_pattern = '#V#',
                        set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
                        is_sensor = FALSE)
-  
+
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
-  
+
   d <- carry_uncertainty(d,
                          network = network,
                          domain = domain,
                          prodname_ms = prodname_ms)
-  
+
   d <- ms_conversions(d,
                       convert_units_from = c(NH4 = 'ueq/l',
                                              Na = 'ueq/l',
@@ -279,13 +279,13 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
                                            DOP = 'mg/l',
                                            TIP = 'mg/l',
                                            H = 'mg/l'))
-  
+
   d <- synchronize_timestep(d,
                             desired_interval = '1 day', #set to '15 min' when we have server
                             impute_limit = 30)
-  
+
   d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
   return(d)
 }
 
@@ -293,14 +293,14 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_103 <- function(network, domain, prodname_ms, site_name,
                           component){
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
@@ -341,15 +341,15 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
                                                Na = 'ueq/l',
@@ -383,13 +383,13 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
                                              DOP = 'mg/l',
                                              TIP = 'mg/l',
                                              H = 'mg/l'))
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
@@ -397,16 +397,16 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_107 <- function(network, domain, prodname_ms, site_name,
                           component){
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     look <- read_csv(rawfile)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
@@ -448,15 +448,15 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          set_to_NA = c('u', 'NP', 'DNS', 'QNS', 'trace'),
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
                                                Na = 'ueq/l',
@@ -490,13 +490,13 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                                              DOP = 'mg/l',
                                              TIP = 'mg/l',
                                              H = 'mg/l'))
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
