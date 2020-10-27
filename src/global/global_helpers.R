@@ -1455,22 +1455,22 @@ ms_conversions <- function(d,
     }
 
     vars <- drop_var_prefix(d$var)
-    
-    # Converts input to grams (even if the final unit is moles or eq, it will be 
+
+    # Converts input to grams (even if the final unit is moles or eq, it will be
     # converted to grams so it can be converted from NO3 to NO3 in N)
     for(i in 1:length(convert_units_from)) {
-        
+
         if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i])) {
-            
+
             v = names(convert_units_from)[i]
-            
+
             d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
                                               input_unit = convert_units_from[i],
                                               molecule = v)
         }
     }
-    
-    #convert units 
+
+    #convert units
     if(cuF){
         for(i in 1:length(convert_units_from)){
             v = names(convert_units_from)[i]
@@ -1503,13 +1503,13 @@ ms_conversions <- function(d,
                                                  to = unname(molecular_conversion_map[m]))
         }
     }
-    
+
     #Convert to mol or eq if that is the output unit
     for(i in 1:length(convert_units_from)) {
-        
+
         if(grepl('mol|eq', convert_units_to[i])) {
             v = names(convert_units_from)[i]
-        
+
             d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
                                                 input_unit = convert_units_from[i],
                                                 output_unit = convert_units_to[i],
@@ -3249,71 +3249,71 @@ update_product_statuses <- function(network, domain){
 }
 
 convert_to_gl <- function(x, input_unit, molecule) {
-    
+
     if(grepl('eq', input_unit)) {
-        valence = ms_vars$valence[ms_vars$variable_code %in% molecule] 
-        
+        valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
+
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        
+
         if(molecule %in% c('POC', ))
-        
+
         x = (x * calculate_molar_mass(molecule)) / valence
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', input_unit)) {
         x = x * calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     return(x)
-    
+
 }
 
 convert_from_gl <- function(x, input_unit, output_unit, molecule) {
-    
+
     if(grepl('eq', output_unit) && grepl('g', input_unit)) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * valence) / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', output_unit) && grepl('g', input_unit)) {
-        
+
         x = x / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('mol', output_unit) && grepl('eq', input_unit)) {
-        
+
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * calculate_molar_mass(molecule)) / valence
-        
+
         x = x / calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     if(grepl('eq', output_unit) && grepl('mol', input_unit)) {
-        
+
         x = x * calculate_molar_mass(molecule)
-        
+
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
         x = (x * valence)/calculate_molar_mass(molecule)
-        
+
         return(x)
     }
-    
+
     return(x)
-    
+
 }
 
 convert_unit <- function(x, input_unit, output_unit){
@@ -3324,20 +3324,20 @@ convert_unit <- function(x, input_unit, output_unit){
 
     old_fraction <- as.vector(str_split_fixed(input_unit, "/", n = Inf))
     old_top <- as.vector(str_split_fixed(old_fraction[1], "", n = Inf))
-    
+
     if(length(old_fraction) == 2) {
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
     }
-    
+
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
     new_top <- as.vector(str_split_fixed(new_fraction[1], "", n = Inf))
-    
+
     if(length(new_fraction == 2)) {
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
     }
 
     old_top_unit <- str_split_fixed(old_top, "", 2)[1]
-    
+
     if(old_top_unit %in% c('g', 'e', 'q', 'l') || old_fraction[1] == 'mol') {
         old_top_conver <- 1
     } else {
@@ -3347,23 +3347,23 @@ convert_unit <- function(x, input_unit, output_unit){
     old_bottom_unit <- str_split_fixed(old_bottom, "", 2)[1]
 
     if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
-        old_bottom_conver <- 1 
+        old_bottom_conver <- 1
     } else {
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
-    
+
     new_top_unit <- str_split_fixed(new_top, "", 2)[1]
-    
+
     if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
         new_top_conver <- 1
     } else {
         new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
     }
-    
+
     new_bottom_unit <- str_split_fixed(new_bottom, "", 2)[1]
-    
+
     if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
-        new_bottom_conver <- 1 
+        new_bottom_conver <- 1
     } else {
         new_bottom_conver <- as.numeric(filter(units, prefix == new_bottom_unit)[,2])
     }
@@ -6222,32 +6222,31 @@ remove_all_na_sites <- function(d){
         select(-non_na)
 }
 
-#. handle_errors
-combine_munged_products <- function(network, domain, prodname_ms, 
+combine_munged_products <- function(network, domain, prodname_ms,
                                     munged_prodname_ms) {
-    
-    #Used to combine multiple products into one. Used when discharge, chemistry, 
-    #or other products are split into multiple products and we want them in one. 
-    
+
+    #Used to combine multiple products into one. Used when discharge, chemistry,
+    #or other products are split into multiple products and we want them in one.
+
     files <- list_munged_files(network = network,
                                     domain = domain,
                                     prodname_ms = munged_prodname_ms)
-    
+
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
                 d = domain,
                 p = prodname_ms)
-    
+
     dir.create(dir, showWarnings = FALSE)
-    
+
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
-    
+
     for(i in 1:length(sites)) {
         site_files <- grep(sites[i], files, value = TRUE)
-        
+
         sile_full <- map_dfr(site_files, read_feather)
-        
+
         write_ms_file(d = sile_full,
                       network = network,
                       domain = domain,
