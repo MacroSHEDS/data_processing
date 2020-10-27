@@ -2,7 +2,7 @@ source('src/global/general_kernels.R')
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA'
 
-unprod <- sm(read_csv('data/general/universal_products.csv')) %>%
+unprod <- univ_products %>%
   filter(status == 'ready')
 
 files <- list.files(glue('data/{n}/{d}/munged/',
