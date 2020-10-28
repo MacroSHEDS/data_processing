@@ -36,6 +36,7 @@ suppressPackageStartupMessages({
     library(errors)
     library(foreach)
     library(doParallel)
+    library(googlesheets4)
 })
 
 
@@ -48,7 +49,7 @@ ms_setwd <- function(){
     #   (production) instance.
 
     #returns details about the current instance. these details can be
-    #   used to taylor run specifications (which code to run, and how to run it)
+    #   used to tailor run specifications (which code to run, and how to run it)
     #   to the current machine:
     #   "dev" or "server" accordingly
 
@@ -90,7 +91,10 @@ ms_setwd <- function(){
     }
 
     instance_details <- list(instance_type = instance_type,
-                             machine_status = machine_status)
+                             machine_status = machine_status,
+                             config_data_storage = 'remote') #vs local, which
+        #governs whether site_data, variables, ws_delin_specs, etc are searched
+        #for as local CSV files or as google sheets connections.
 
     return(instance_details)
 }
@@ -98,9 +102,13 @@ ms_setwd <- function(){
 ms_instance <- ms_setwd()
 
 #connect rgee to earth engine and python
-#try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
+try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
 
-conf = jsonlite::fromJSON('config.json')
+#load authorization file for macrosheds google sheets
+googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+
+#read in secrets
+conf <- jsonlite::fromJSON('config.json')
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -112,8 +120,10 @@ source('src/global/global_helpers.R')
 source('src/dev/dev_helpers.R') #comment before pushing live
 source_decoratees('src/global/global_helpers.R') #parse decorators
 
-ms_vars <- sm(read_csv('data/general/variables.csv'))
-network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
+#puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
+load_config_datasets(from_where = ms_instance$config_data_storage)
+
+network_domain <- site_data %>%
     filter(as.logical(in_workflow)) %>%
     select(network, domain) %>%
     distinct() %>%
