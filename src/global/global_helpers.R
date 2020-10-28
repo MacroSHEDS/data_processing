@@ -2192,7 +2192,7 @@ ms_delineate <- function(network, domain,
     loginfo(msg = 'Beginning watershed delineation',
             logger = logger_module)
 
-    site_locations <- sm(read_csv('data/general/site_data.csv')) %>%
+    site_locations <- site_data %>%
         filter(
             as.logical(in_workflow),
             network == !!network,
@@ -2211,7 +2211,7 @@ ms_delineate <- function(network, domain,
         missing_site_names <- site_locations$site_name[missing_loc]
 
         stop(glue('Missing/incomplete site location for:\nnetwork: {n}\ndomain: {d}\n',
-                  'site(s): {ss}\n(data/general/site_data.csv)',
+                  'site(s): {ss}\n(see site_data gsheet)',
                   n = network,
                   d = domain,
                   ss = paste(missing_site_names,
@@ -2223,7 +2223,7 @@ ms_delineate <- function(network, domain,
         missing_site_names <- site_locations$site_name[is.na(site_locations$CRS)]
 
         stop(glue('Missing CRS for:\nnetwork: {n}\ndomain: {d}\n',
-                  'site(s): {ss}\n(data/general/site_data.csv)',
+                  'site(s): {ss}\n(see site_data gsheet)',
                   n = network,
                   d = domain,
                   ss = paste(missing_site_names,
@@ -2279,9 +2279,7 @@ ms_delineate <- function(network, domain,
         dir.create(site_dir,
                    showWarnings = FALSE)
 
-        specs <- read_wb_delin_specs(network = network,
-                                     domain = domain,
-                                     site_name = site) %>%
+        specs <- ws_delin_specs %>%
             filter(
                 network == !!network,
                 domain == !!domain,
@@ -2329,7 +2327,7 @@ ms_delineate <- function(network, domain,
                 verbose = verbose)
 
         } else {
-            stop('Multiple entries for same network/domain/site in site_data.csv')
+            stop('Multiple entries for same network/domain/site in site_data')
         }
 
         files_to_inspect <- list.files(path = inspection_dir,
@@ -2410,7 +2408,7 @@ ms_delineate <- function(network, domain,
                              snap_distance = as.numeric(rgx[, 4]),
                              dem_resolution = as.numeric(rgx[, 5]))
 
-        #calculate watershed area and write it to site_data.csv
+        #calculate watershed area and write it to site_data gsheet
         catch <- ms_calc_watershed_area(network = network,
                                         domain = domain,
                                         site_name = site,
@@ -2420,7 +2418,7 @@ ms_delineate <- function(network, domain,
     message(glue('Delineation specifications were written to:\n\t',
                  'data/general/watershed_delineation_specs.csv\n',
                  'watershed areas were written to:\n\t',
-                 'data/general/site_data.csv'))
+                 'site_data gsheet'))
 
     loginfo(msg = 'Delineations complete',
             logger = logger_module)
@@ -2975,7 +2973,7 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
     #   watershed area with sf::st_area
 
     #update_site_file: logical. if true, calculated watershed area is written
-    #   to the ws_area_ha column in data/general/site_data.csv
+    #   to the ws_area_ha column in site_data gsheet
 
     #returns area in hectares
 
@@ -3020,15 +3018,13 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
 
     if(update_site_file){
 
-        site_data <- sm(read_csv('data/general/site_data.csv'))
-
         site_data$ws_area_ha[site_data$domain == domain &
                                  site_data$network == network &
                                  site_data$site_name == site_name] <- ws_area_ha
 
-        write.csv(site_data,
-                  file = 'data/general/site_data.csv',
-                  row.names = FALSE)
+        ms_write_confdata(site_data,
+                          which_dataset = 'site_data',
+                          to_where = ms_instance$config_data_storage)
     }
 
     return(ws_area_ha)
@@ -3045,37 +3041,13 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                         snap_distance_m = snap_distance,
                         dem_resolution = dem_resolution)
 
-    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
-                   error = function(e) tibble())
+    ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
 
-    ds <- bind_rows(ds, new_entry)
-
-    write_csv(ds, 'data/general/watershed_delineation_specs.csv')
+    ms_write_confdata(ws_delin_specs,
+                      which_dataset = 'watershed_delineation_specs',
+                      to_where = ms_instance$config_data_storage)
 
     #return()
-}
-
-read_wb_delin_specs <- function(network, domain, site_name){
-
-    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
-                   error = function(e){
-                       empty_tibble <- tibble(network = 'a',
-                                              domain = 'a',
-                                              site_name = 'a',
-                                              buffer_radius_m = 1,
-                                              snap_method = 'a',
-                                              snap_distance_m = 1,
-                                              dem_resolution = 1)
-
-                       return(empty_tibble[-1, ])
-                   })
-
-    ds <- filter(ds,
-                 network == !!network,
-                 domain == !!domain,
-                 site_name == !!site_name)
-
-    return(ds)
 }
 
 serialize_list_to_dir <- function(l, dest){
@@ -6280,5 +6252,127 @@ combine_munged_products <- function(network, domain, prodname_ms,
                       level = 'derived',
                       shapefile = FALSE,
                       link_to_portal = TRUE)
+    }
+}
+
+load_config_datasets <- function(from_where){
+
+    #this loads our "configuration" datasets into the global environment.
+    #as of 10/27/20 those datasets include site_data, variables, universal_products,
+    #name_variants (which is not loaded), and
+    #watershed_delineation_specs. depending on the type of instance (remote/local),
+    #those datasets are either read as local CSVs or as google sheets. for ms
+    #developers, this will always be "remote". for future users, it'll be a
+    #configurable option.
+
+    if(from_where == 'remote'){
+
+        ms_vars <- sm(googlesheets4::read_sheet(conf$variables_gsheet,
+                                                na = c('', 'NA')))
+
+        site_data <- sm(googlesheets4::read_sheet(conf$site_data_gsheet,
+                                                  na = c('', 'NA')))
+
+        ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
+                                                       na = c('', 'NA')))
+
+        univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
+                                                      na = c('', 'NA')))
+
+    } else if(from_where == 'local'){
+
+        ms_vars <- sm(read_csv('data/general/variables.csv'))
+        site_data <- sm(read_csv('data/general/site_data.csv'))
+        univ_products <- sm(read_csv('data/general/universal_products.csv'))
+
+        ws_delin_specs <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
+                                   error = function(e){
+                                       empty_tibble <- tibble(network = 'a',
+                                                              domain = 'a',
+                                                              site_name = 'a',
+                                                              buffer_radius_m = 1,
+                                                              snap_method = 'a',
+                                                              snap_distance_m = 1,
+                                                              dem_resolution = 1)
+
+                                       return(empty_tibble[-1, ])
+                                   })
+
+    } else {
+        stop('from_where must be either "local" or "remote"')
+    }
+
+    assign('ms_vars',
+           ms_vars,
+           pos = .GlobalEnv)
+
+    assign('site_data',
+           site_data,
+           pos = .GlobalEnv)
+
+    assign('ws_delin_specs',
+           ws_delin_specs,
+           pos = .GlobalEnv)
+
+    assign('univ_products',
+           univ_products,
+           pos = .GlobalEnv)
+}
+
+ms_write_confdata <- function(x, which_dataset, to_where){
+
+    #x: a tibble or data.frame
+    #which_dataset: string. either "variables", "site_data", "univ_products",
+    #   "name_variants", or "watershed_delineation_specs"
+    #to_where: string. either "remote", meaning write this file to a google
+    #   sheets connection defined in data_acquisition/config.json and
+    #   data_acquisition/googlesheet_service_accnt.json, or "local", meaning
+    #   write this file locally to data_acquisition/data/general/<which_dataset>.csv
+
+    #this writes our "configuration" datasets to their appropriate locations.
+    #as of 10/27/20 those datasets include site_data, variables, universal_products,
+    #name_variants, and watershed_delineation_specs.
+    #depending on the type of instance (remote/local),
+    #those datasets are either written to local CSVs or to google sheets. for ms
+    #developers, this will always be "remote". for future users, it'll be a
+    #configurable option.
+
+    known_datasets <- c('variables', 'site_data', 'watershed_delineation_specs',
+                        'univ_products', 'name_variants')
+
+    if(! which_dataset %in% known_datasets){
+        stop(glue('which_dataset must be one of: "{kd}"',
+                  kd = paste(known_datasets, collapse = '", "')))
+    }
+
+    if(to_where == 'remote'){
+
+        write_loc <- case_when(
+            which_dataset == 'variables' ~ conf$variables_gsheet,
+            which_dataset == 'site_data' ~ conf$site_data_gsheet,
+            which_dataset == 'univ_products' ~ conf$univ_prods_gsheet,
+            which_dataset == 'name_variants' ~ conf$name_variant_gsheet,
+            which_dataset == 'watershed_delineation_specs' ~
+                conf$delineation_gsheet)
+
+        sm(googlesheets4::write_sheet(data = x,
+                                      ss = write_loc,
+                                      sheet = 1))
+
+    } else if(to_where == 'local'){
+
+        write_loc <- case_when(
+            which_dataset == 'variables' ~ 'variables.csv',
+            which_dataset == 'site_data' ~ 'site_data.csv',
+            which_dataset == 'univ_products' ~ 'universal_products.csv',
+            which_dataset == 'name_variants' ~ 'name_variants.csv',
+            which_dataset == 'watershed_delineation_specs' ~
+                'watershed_delineation_specs.csv')
+
+        write_csv(x,
+                  path = paste0('data/general/',
+                                write_loc))
+    } else {
+        stop('to_where must be either "local" or "remote"')
     }
 }
