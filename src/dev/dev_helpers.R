@@ -16,7 +16,7 @@ export_all_local_helpers <- function(outfile){
     try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
     try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
 
-    network_domain = read_csv('data/general/site_data.csv') %>%
+    network_domain <- site_data %>%
         filter(as.logical(in_workflow)) %>%
         select(network, domain) %>%
         distinct() %>%

@@ -34,7 +34,7 @@ src/<network>/<domain>/domain_helpers.R, where network is e.g. lter and domain
 is e.g. hbef (Hubbard Brook Experimental Forest). For a catalogue of networks
 and domains, see:
 
-https://github.com/MacroSHEDS/data_processing/blob/master/data/general/site_data.csv
+https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0
 
 Note that most macrosheds functions are wrapped in a decorator function (handle_errors,
 defined in global_helpers.R; see tinsel package for details). This decorator is not needed

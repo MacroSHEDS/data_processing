@@ -14,3 +14,4 @@ OBSOLETE
 *.DS_Store
 *.png
 transfer_data
+googlesheet_service_accnt.json
