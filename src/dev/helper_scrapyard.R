@@ -734,3 +734,27 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
 
     return()
 }
+
+#now we just load delin specs from acquisition_master.R
+read_wb_delin_specs <- function(network, domain, site_name){
+
+    ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
+                   error = function(e){
+                       empty_tibble <- tibble(network = 'a',
+                                              domain = 'a',
+                                              site_name = 'a',
+                                              buffer_radius_m = 1,
+                                              snap_method = 'a',
+                                              snap_distance_m = 1,
+                                              dem_resolution = 1)
+
+                       return(empty_tibble[-1, ])
+                   })
+
+    ds <- filter(ds,
+                 network == !!network,
+                 domain == !!domain,
+                 site_name == !!site_name)
+
+    return(ds)
+}
