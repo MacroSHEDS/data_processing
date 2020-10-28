@@ -3257,18 +3257,28 @@ update_product_statuses <- function(network, domain){
 }
 
 convert_to_gl <- function(x, input_unit, molecule) {
+    
+    molecule_real <- ms_vars %>%
+        filter(variable_code == !!molecule) %>%
+        pull(molecule) 
+    
+    if(!is.na(molecule_real)) {
+        formula <- molecule_real
+    } else {
+        formula <- molecule
+    }
 
     if(grepl('eq', input_unit)) {
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
 
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * calculate_molar_mass(molecule)) / valence
+        x = (x * calculate_molar_mass(formula)) / valence
 
         return(x)
     }
 
     if(grepl('mol', input_unit)) {
-        x = x * calculate_molar_mass(molecule)
+        x = x * calculate_molar_mass(formula)
 
         return(x)
     }
@@ -3278,19 +3288,29 @@ convert_to_gl <- function(x, input_unit, molecule) {
 }
 
 convert_from_gl <- function(x, input_unit, output_unit, molecule) {
+    
+    molecule_real <- ms_vars %>%
+        filter(variable_code == !!molecule) %>%
+        pull(molecule) 
+    
+    if(!is.na(molecule_real)) {
+        formula <- molecule_real
+    } else {
+        formula <- molecule
+    }
 
     if(grepl('eq', output_unit) && grepl('g', input_unit)) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * valence) / calculate_molar_mass(molecule)
+        x = (x * valence) / calculate_molar_mass(formula)
 
         return(x)
     }
 
     if(grepl('mol', output_unit) && grepl('g', input_unit)) {
 
-        x = x / calculate_molar_mass(molecule)
+        x = x / calculate_molar_mass(formula)
 
         return(x)
     }
@@ -3299,20 +3319,20 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * calculate_molar_mass(molecule)) / valence
+        x = (x * calculate_molar_mass(formula)) / valence
 
-        x = x / calculate_molar_mass(molecule)
+        x = x / calculate_molar_mass(formula)
 
         return(x)
     }
 
     if(grepl('eq', output_unit) && grepl('mol', input_unit)) {
 
-        x = x * calculate_molar_mass(molecule)
+        x = x * calculate_molar_mass(formula)
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * valence)/calculate_molar_mass(molecule)
+        x = (x * valence)/calculate_molar_mass(formula)
 
         return(x)
     }
