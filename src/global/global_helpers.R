@@ -2912,6 +2912,10 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
         stop('new_name_vec must have the same length as shp_files')
     }
 
+    dir.create(to_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
     for(i in 1:length(shp_files)){
 
         shapefile_base <- strsplit(shp_files[i], '\\.shp')[[1]]
@@ -3362,7 +3366,7 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     #file from the portal repository, which is assumed to be a sibling of the
     #data_acquision directory and to be named "portal".
 
-    if(! link_to_portal){
+    if(link_to_portal){
         stop("we're not linking to portal this way anymore. see create_portal_links()")
     }
 
