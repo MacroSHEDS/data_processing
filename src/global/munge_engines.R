@@ -47,7 +47,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
     if(site_name == 'sitename_NA') site_name <- unique(out$site_name)
 
-    if(length(site) > 1) {
+    if(length(site_name) > 1) {
         stop('multiple sites encountered in a dataset that should contain only one')
     }
 
