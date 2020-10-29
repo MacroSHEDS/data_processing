@@ -700,6 +700,16 @@ ms_read_raw_csv <- function(filepath,
     ){
         stop('if is_sensor is not length 1, all elements must be named.')
     }
+    
+    if(!all(data_cols %in% ms_vars$variable_code)) {
+        
+        for(i in 1:length(data_cols)) {
+            if(!data_cols[i] %in% ms_vars$variable_code) {
+                loginfo(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
+                        logger = logger_module)
+            }
+        }
+    }
 
     #parse args; deal with missing args
     datetime_colnames <- names(datetime_cols)
@@ -1455,40 +1465,16 @@ ms_conversions <- function(d,
     }
 
     vars <- drop_var_prefix(d$var)
-
-    # Converts input to grams (even if the final unit is moles or eq, it will be
-    # converted to grams so it can be converted from NO3 to NO3 in N)
-    for(i in 1:length(convert_units_from)) {
-
-        if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i])) {
-
-            v = names(convert_units_from)[i]
-
-            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
-                                              input_unit = convert_units_from[i],
-                                              molecule = v)
-        }
-    }
-
-    #convert units
-    if(cuF){
-        for(i in 1:length(convert_units_from)){
-            v = names(convert_units_from)[i]
-            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
-                                             input_unit = convert_units_from[i],
-                                             output_unit = convert_units_to[i])
-        }
-    }
-
-    #handle molecular conversions, like NO3 -> NO3_N
+    
+    molecular_conversion_map <- list(
+        NH4 = 'N',
+        NO3 = 'N',
+        NH3 = 'N',
+        SiO2 = 'Si',
+        SO4 = 'S',
+        PO4 = 'P')
+    
     if(cm){
-        molecular_conversion_map <- list(
-            NH4 = 'N',
-            NO3 = 'N',
-            NH3 = 'N',
-            SiO2 = 'Si',
-            SO4 = 'S',
-            PO4 = 'P')
         if(! all(convert_molecules %in% names(molecular_conversion_map))){
             miss <- convert_molecules[! convert_molecules %in%
                                           names(molecular_conversion_map)]
@@ -1496,24 +1482,53 @@ ms_conversions <- function(d,
                       'molecular_conversion_map, or they should not be converted: ',
                       paste(miss, collapse = ', ')))
         }
-
-        for(m in convert_molecules){
-            d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
-                                                 from = m,
-                                                 to = unname(molecular_conversion_map[m]))
-        }
     }
 
-    #Convert to mol or eq if that is the output unit
+    # Converts input to grams if the final unit contains grams or if the molecule 
+    # will be converted from NO3 to NO3 as N 
     for(i in 1:length(convert_units_from)) {
+        
+        v = names(convert_units_from)[i]
 
+        if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i]) ||
+           names(convert_units_from[i]) %in% convert_molecules) {
+
+            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
+                                              input_unit = convert_units_from[i],
+                                              molecule = v)
+            
+            g_conver <- TRUE
+        } else {
+            g_conver <- FALSE
+        }
+        
+        #convert prefix 
+        if(cuF) {
+            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
+                                             input_unit = convert_units_from[i],
+                                             output_unit = convert_units_to[i])
+        }
+        
+        #handle molecular conversions, like NO3 -> NO3_N
+        if(v %in% convert_molecules) {
+            
+            d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
+                                                 from = v,
+                                                 to = unname(molecular_conversion_map[v]))
+            
+            new_name <- paste0(d$var[vars == v], '_', unname(molecular_conversion_map[v]))
+            
+            d$var[vars == v] <- new_name
+        }
+        
+        #Convert to mol or eq if that is the output unit
         if(grepl('mol|eq', convert_units_to[i])) {
-            v = names(convert_units_from)[i]
 
             d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
                                                 input_unit = convert_units_from[i],
                                                 output_unit = convert_units_to[i],
-                                                molecule = v)
+                                                molecule = v,
+                                                g_conver = g_conver)
         }
     }
     return(d)
@@ -1576,7 +1591,7 @@ export_to_global <- function(from_env, exclude=NULL){
     #return()
 }
 
-get_all_local_helpers <- function(network=domain, domain){
+get_all_local_helpers <- function(network, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
     #because it can only read them into the current environment, all files
@@ -3259,7 +3274,7 @@ convert_to_gl <- function(x, input_unit, molecule) {
 
 }
 
-convert_from_gl <- function(x, input_unit, output_unit, molecule) {
+convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver) {
     
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -3271,23 +3286,25 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule) {
         formula <- molecule
     }
 
-    if(grepl('eq', output_unit) && grepl('g', input_unit)) {
+    if(grepl('eq', output_unit) && grepl('g', input_unit) || 
+       grepl('eq', output_unit) && g_conver) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
-        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
+        if(length(valence) == 0 | is.na(valence)) {stop('Varible is likely missing from ms_vars')}
         x = (x * valence) / calculate_molar_mass(formula)
 
         return(x)
     }
 
-    if(grepl('mol', output_unit) && grepl('g', input_unit)) {
+    if(grepl('mol', output_unit) && grepl('g', input_unit) || 
+       grepl('mol', output_unit) && g_conver) {
 
         x = x / calculate_molar_mass(formula)
 
         return(x)
     }
-
-    if(grepl('mol', output_unit) && grepl('eq', input_unit)) {
+    
+    if(grepl('mol', output_unit) && grepl('eq', input_unit) && !g_conver) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
@@ -3298,7 +3315,7 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule) {
         return(x)
     }
 
-    if(grepl('eq', output_unit) && grepl('mol', input_unit)) {
+    if(grepl('eq', output_unit) && grepl('mol', input_unit) && !g_conver) {
 
         x = x * calculate_molar_mass(formula)
 
@@ -3387,7 +3404,7 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
     #file from the portal repository, which is assumed to be a sibling of the
     #data_acquision directory and to be named "portal".
 
-    if(! link_to_portal){
+    if(link_to_portal){
         stop("we're not linking to portal this way anymore. see create_portal_links()")
     }
 
