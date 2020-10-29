@@ -2927,6 +2927,10 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
         stop('new_name_vec must have the same length as shp_files')
     }
 
+    dir.create(to_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
     for(i in 1:length(shp_files)){
 
         shapefile_base <- strsplit(shp_files[i], '\\.shp')[[1]]
