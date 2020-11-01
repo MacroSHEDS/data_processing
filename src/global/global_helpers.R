@@ -2751,46 +2751,78 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 
 ms_derive <- function(network = domain, domain){
 
-    #generate derived products (derive.R)
-    source(glue('src/{n}/{d}/derive.R',
-                n = network,
-                d = domain))
+    #categorize munged products. some are complete after munging, so they
+    #   get hardlinked. some need to be compiled into canonical form (e.g.
+    #   water_temp, spcond, gases -> stream_chemistry) by a derive
+    #   kernel. and then of course there are products that consistently
+    #   require actual derivation, like precip_flux_inst from precipitation
+    #   and pchem.
 
-    #for any munged product that needs no further processing, recursively
-    #hardlink its entire directory from data/[network]/[domain]/munged/
-    #to data/[network]/[domain]/derived/
+    typical_derprods <- c('precipitation', 'precip_chemistry',
+                          'stream_flux_inst', 'precip_flux_inst')
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain)))
 
-    is_actually_derived <- grepl('^ms[0-9]{3}$',
-                                 prods$prodcode,
-                                 perl = TRUE) &
-        (is.na(prods$type) |
-             prods$type != 'linked')
+    has_ms_prodcode <- grepl('^ms[0-9]{3}$',
+                             prods$prodcode,
+                             perl = TRUE)
 
-    is_linked <- prods$type == 'linked'
+    #determine which prods need to be linked (linkprods)
+    is_self_precursor <- mapply(function(x, y){
+                                    precursors <- strsplit(as.character(y),
+                                                           '\\|\\|')[[1]]
+                                    x %in% prodname_from_prodname_ms(precursors)
+                                },
+                                x = prods$prodname,
+                                y = prods$precursor_of,
+                                USE.NAMES = FALSE)
 
-    derived_prods <- paste(prods$prodname[is_actually_derived],
-                           prods$prodcode[is_actually_derived],
-                           sep = '__')
+    is_linkprod <- prods$type %in% c('linked', 'spatial') |
+        (prods$prodname %in% typical_derprods &
+             ! has_ms_prodcode &
+             ! is_self_precursor)
 
-    munged_prods <- paste(prods$prodname[! is_actually_derived & ! is_linked],
-                          prods$prodcode[! is_actually_derived & ! is_linked],
-                          sep = '__')
+    #determine which prods need to be compiled from constituents (compprods)
+    is_compprod <- has_ms_prodcode &
+        ! prods$prodname %in% typical_derprods &
+        prods$type != 'spatial'
 
-    #already linked prods will be relinked
-    prods_to_link <- munged_prods[! munged_prods %in% derived_prods]
+    #determine which prods are "true" derived prods (derprods)
+    is_derprod <- has_ms_prodcode &
+        prods$prodname %in% typical_derprods
+
+    # is_actually_derived <- grepl('^ms[0-9]{3}$',
+    #                              prods$prodcode,
+    #                              perl = TRUE) &
+    #     (is.na(prods$type) |
+    #          prods$type != 'linked')
+    #
+    # is_linked <- prods$type == 'linked'
+    #
+    # derived_prods <- paste(prods$prodname[is_actually_derived],
+    #                        prods$prodcode[is_actually_derived],
+    #                        sep = '__')
+    #
+    # munged_prods <- paste(prods$prodname[! is_actually_derived & ! is_linked],
+    #                       prods$prodcode[! is_actually_derived & ! is_linked],
+    #                       sep = '__')
+    #
+    # #already linked prods will be relinked
+    # prods_to_link <- munged_prods[! munged_prods %in% derived_prods]
+
+    #for linkprods, hardlink their entire directory from
+    #data/[network]/[domain]/munged/ to data/[network]/[domain]/derived/
 
     #figure out what the new prodname_ms's will be
     prodcodes_num <- as.numeric(substr(
-        prods$prodcode[is_actually_derived],
+        prods$prodcode[is_derprod],
         start = 3,
         stop = 5))
 
     new_prodcodes_num <- seq(max(prodcodes_num) + 1,
-                             max(prodcodes_num) + length(prods_to_link))
+                             max(prodcodes_num) + sum(is_linkprod))
 
     new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
                                       width = 3,
@@ -2845,6 +2877,11 @@ ms_derive <- function(network = domain, domain){
                              prodname_ms = p,
                              new_prodcode = unname(matched_prodcode))
     }
+
+    #generate for-reals derived products (run all code in derive.R)
+    source(glue('src/{n}/{d}/derive.R',
+                n = network,
+                d = domain))
 
     #link all derived products to the data portal directory
     create_portal_links(network = network,
