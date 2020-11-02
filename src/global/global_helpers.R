@@ -671,9 +671,10 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
     #checks
-    filepath_supplied <- ! missing(filepath) && ! is.null(filepath)
-    tibble_supplied <- ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
-    if(filepath_supplied && tibble_supplied){
+    filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
+    tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
+   
+     if(filepath_supplied && tibble_supplied){
         stop(glue('Only one of filepath and preprocessed_tibble can be supplied. ',
                   'preprocessed_tibble is for rare circumstances only.'))
     }
@@ -2258,11 +2259,12 @@ ms_delineate <- function(network, domain,
 
     if(! length(ws_boundary_dir)){
         ws_boundary_dir <- 'ws_boundary__ms000'
-        dir.create(glue('data/{n}/{d}/munged/{w}',
+        level <- 'derived'
+        dir.create(glue('data/{n}/{d}/derived/{w}',
                         n = network,
                         d = domain,
                         w = ws_boundary_dir))
-    }
+    } else { level <- 'munged'}
 
     #for each stream gauge site, check for existing wb file. if none, delineate
     for(i in 1:nrow(site_locations)){
@@ -2278,10 +2280,11 @@ ms_delineate <- function(network, domain,
                        sl = nrow(site_locations)))
         }
 
-        site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+        site_dir <- glue('data/{n}/{d}/{l}/{w}/{s}',
                          n = network,
                          d = domain,
                          w = ws_boundary_dir,
+                         l = level,
                          s = site)
 
         if(dir.exists(site_dir) && length(dir(site_dir))){
@@ -2427,6 +2430,7 @@ ms_delineate <- function(network, domain,
         catch <- ms_calc_watershed_area(network = network,
                                         domain = domain,
                                         site_name = site,
+                                        level = level,
                                         update_site_file = TRUE)
     }
 
@@ -2986,7 +2990,7 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
+ms_calc_watershed_area <- function(network, domain, site_name, level, update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
     #   watershed area with sf::st_area
@@ -2996,9 +3000,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
 
     #returns area in hectares
 
-    munge_dir <- glue('data/{n}/{d}/munged',
+    munge_dir <- glue('data/{n}/{d}/{l}',
                       n = network,
-                      d = domain)
+                      d = domain,
+                      l = level)
 
     munged_dirs <- list.dirs(munge_dir,
                              recursive = FALSE,
@@ -3012,9 +3017,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
         stop(glue('No ws_boundary directory found in ', munge_dir))
     }
 
-    site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+    site_dir <- glue('data/{n}/{d}/{l}/{w}/{s}',
                      n = network,
                      d = domain,
+                     l = level,
                      w = ws_boundary_dir,
                      s = site_name)
 
@@ -3026,9 +3032,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
                   w = ws_boundary_dir))
     }
 
-    wb <- sf::st_read(glue('data/{n}/{d}/munged/{w}/{s}/{s}.shp',
+    wb <- sf::st_read(glue('data/{n}/{d}/{l}/{w}/{s}/{s}.shp',
                            n = network,
                            d = domain,
+                           l = level,
                            w = ws_boundary_dir,
                            s = site_name),
                     quiet = TRUE)
@@ -3911,10 +3918,15 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
 }
 
 read_combine_shapefiles <- function(network, domain, prodname_ms){
+    
+    level <- ifelse(is_derived_product(prodname_ms),
+                    'derived',
+                    'munged')
 
-    prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
+    prodpaths <- list.files(glue('data/{n}/{d}/{l}/{p}',
                                  n = network,
                                  d = domain,
+                                 l = level,
                                  p = prodname_ms),
                             recursive = TRUE,
                             full.names = TRUE,
@@ -6246,9 +6258,10 @@ combine_munged_products <- function(network, domain, prodname_ms,
     #Used to combine multiple products into one. Used when discharge, chemistry,
     #or other products are split into multiple products and we want them in one.
 
-    files <- list_munged_files(network = network,
-                                    domain = domain,
-                                    prodname_ms = munged_prodname_ms)
+    files <- ms_list_files(network = network,
+                           domain = domain,
+                           prodname_ms = munged_prodname_ms,
+                           level = 'munged')
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -6271,8 +6284,7 @@ combine_munged_products <- function(network, domain, prodname_ms,
                       prodname_ms = prodname_ms,
                       site_name = sites[i],
                       level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      shapefile = FALSE)
     }
 }
 
@@ -6395,5 +6407,83 @@ ms_write_confdata <- function(x, which_dataset, to_where){
                                 write_loc))
     } else {
         stop('to_where must be either "local" or "remote"')
+    }
+}
+
+rain_gauge_from_site_data <- function(network, domain, prodname_ms) {
+    
+    locations <- site_data %>%
+        filter(network == !!network,
+               domain == !!domain,
+               site_type == 'rain_gauge') 
+    
+    crs <- unique(locations$CRS) 
+    
+    if(length(crs) > 1) {
+        stop('crs is not consistent for all sites, cannot convert location in 
+             site_data to rain_gauge location product')
+    }
+    
+    locations <- locations %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'), crs = crs) %>%
+        select(site_name)
+    
+    path <- glue('data/{n}/{d}/derived/{p}',
+                 n = network,
+                 d = domain,
+                 p = prodname_ms)
+    
+    dir.create(path, recursive = TRUE)
+    
+    for(i in 1:nrow(locations)) {
+        
+        site_name <- pull(locations[i,], site_name)
+        
+        sf::st_write(locations[i,], glue('{p}/{s}',
+                                         p = path,
+                                         s = site_name),
+                     driver = 'ESRI Shapefile',
+                     delete_dsn = TRUE)
+    }
+}
+
+calc_inst_flux_wrap <- function(chemprod, qprod, prodname_ms) {
+    
+    level_chem <- ifelse(is_derived_product(chemprod),
+                    'derived',
+                    'munged')
+    
+    level_q <- ifelse(is_derived_product(qprod),
+                         'derived',
+                         'munged')
+    
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               level = level_chem,
+                               prodname_ms = chemprod)
+    
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            level = level_q,
+                            prodname_ms = qprod)
+    
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+    
+    for(s in flux_sites){
+        
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s))
+        
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = FALSE)
     }
 }
