@@ -3,7 +3,7 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='munge', get_statuses='ready')
 
-# i=1
+# i=3
 for(i in 1:nrow(prod_info)){
   # for(i in 5){
 
@@ -19,7 +19,7 @@ for(i in 1:nrow(prod_info)){
   
     sites = names(held_data[[prodname_ms]])
   
-    # j <- 1
+    # j = 1
     for(j in 1:length(sites)){
     
         site_name <- sites[j]

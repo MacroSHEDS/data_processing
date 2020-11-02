@@ -1,4 +1,3 @@
-
 retrieve_niwot <- function(set_details, network, domain) {
     
     download_raw_file(network = network,
