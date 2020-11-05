@@ -140,6 +140,10 @@ invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
     #   not currently set up to invalidate level='retrieve'.
     #prodname_ms is optional. if supplied, only that product will be invalidated
 
+    if(! level %in% c('munge', 'derive')){
+        stop('level must be either "munge" or "derive"')
+    }
+
     tracker <- get_data_tracker(network = network,
                                 domain = domain)
 
