@@ -671,9 +671,10 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
 
     #checks
-    filepath_supplied <- ! missing(filepath) && ! is.null(filepath)
-    tibble_supplied <- ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
-    if(filepath_supplied && tibble_supplied){
+    filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
+    tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
+   
+     if(filepath_supplied && tibble_supplied){
         stop(glue('Only one of filepath and preprocessed_tibble can be supplied. ',
                   'preprocessed_tibble is for rare circumstances only.'))
     }
@@ -699,6 +700,16 @@ ms_read_raw_csv <- function(filepath,
         (is.null(svh_names) || any(is.na(svh_names)))
     ){
         stop('if is_sensor is not length 1, all elements must be named.')
+    }
+    
+    if(!all(data_cols %in% ms_vars$variable_code)) {
+        
+        for(i in 1:length(data_cols)) {
+            if(!data_cols[i] %in% ms_vars$variable_code) {
+                loginfo(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
+                        logger = logger_module)
+            }
+        }
     }
 
     #parse args; deal with missing args
@@ -1455,40 +1466,16 @@ ms_conversions <- function(d,
     }
 
     vars <- drop_var_prefix(d$var)
-
-    # Converts input to grams (even if the final unit is moles or eq, it will be
-    # converted to grams so it can be converted from NO3 to NO3 in N)
-    for(i in 1:length(convert_units_from)) {
-
-        if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i])) {
-
-            v = names(convert_units_from)[i]
-
-            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
-                                              input_unit = convert_units_from[i],
-                                              molecule = v)
-        }
-    }
-
-    #convert units
-    if(cuF){
-        for(i in 1:length(convert_units_from)){
-            v = names(convert_units_from)[i]
-            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
-                                             input_unit = convert_units_from[i],
-                                             output_unit = convert_units_to[i])
-        }
-    }
-
-    #handle molecular conversions, like NO3 -> NO3_N
+    
+    molecular_conversion_map <- list(
+        NH4 = 'N',
+        NO3 = 'N',
+        NH3 = 'N',
+        SiO2 = 'Si',
+        SO4 = 'S',
+        PO4 = 'P')
+    
     if(cm){
-        molecular_conversion_map <- list(
-            NH4 = 'N',
-            NO3 = 'N',
-            NH3 = 'N',
-            SiO2 = 'Si',
-            SO4 = 'S',
-            PO4 = 'P')
         if(! all(convert_molecules %in% names(molecular_conversion_map))){
             miss <- convert_molecules[! convert_molecules %in%
                                           names(molecular_conversion_map)]
@@ -1496,24 +1483,53 @@ ms_conversions <- function(d,
                       'molecular_conversion_map, or they should not be converted: ',
                       paste(miss, collapse = ', ')))
         }
-
-        for(m in convert_molecules){
-            d$val[vars == m] <- convert_molecule(x = d$val[vars == m],
-                                                 from = m,
-                                                 to = unname(molecular_conversion_map[m]))
-        }
     }
 
-    #Convert to mol or eq if that is the output unit
+    # Converts input to grams if the final unit contains grams or if the molecule 
+    # will be converted from NO3 to NO3 as N 
     for(i in 1:length(convert_units_from)) {
+        
+        v = names(convert_units_from)[i]
 
+        if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i]) ||
+           names(convert_units_from[i]) %in% convert_molecules) {
+
+            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
+                                              input_unit = convert_units_from[i],
+                                              molecule = v)
+            
+            g_conver <- TRUE
+        } else {
+            g_conver <- FALSE
+        }
+        
+        #convert prefix 
+        if(cuF) {
+            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
+                                             input_unit = convert_units_from[i],
+                                             output_unit = convert_units_to[i])
+        }
+        
+        #handle molecular conversions, like NO3 -> NO3_N
+        if(v %in% convert_molecules) {
+            
+            d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
+                                                 from = v,
+                                                 to = unname(molecular_conversion_map[v]))
+            
+            new_name <- paste0(d$var[vars == v], '_', unname(molecular_conversion_map[v]))
+            
+            d$var[vars == v] <- new_name
+        }
+        
+        #Convert to mol or eq if that is the output unit
         if(grepl('mol|eq', convert_units_to[i])) {
-            v = names(convert_units_from)[i]
 
             d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
                                                 input_unit = convert_units_from[i],
                                                 output_unit = convert_units_to[i],
-                                                molecule = v)
+                                                molecule = v,
+                                                g_conver = g_conver)
         }
     }
     return(d)
@@ -1576,7 +1592,7 @@ export_to_global <- function(from_env, exclude=NULL){
     #return()
 }
 
-get_all_local_helpers <- function(network=domain, domain){
+get_all_local_helpers <- function(network, domain){
 
     #source_decoratees reads in decorator functions (tinsel package).
     #because it can only read them into the current environment, all files
@@ -2243,11 +2259,12 @@ ms_delineate <- function(network, domain,
 
     if(! length(ws_boundary_dir)){
         ws_boundary_dir <- 'ws_boundary__ms000'
-        dir.create(glue('data/{n}/{d}/munged/{w}',
+        level <- 'derived'
+        dir.create(glue('data/{n}/{d}/derived/{w}',
                         n = network,
                         d = domain,
                         w = ws_boundary_dir))
-    }
+    } else { level <- 'munged'}
 
     #for each stream gauge site, check for existing wb file. if none, delineate
     for(i in 1:nrow(site_locations)){
@@ -2263,10 +2280,11 @@ ms_delineate <- function(network, domain,
                        sl = nrow(site_locations)))
         }
 
-        site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+        site_dir <- glue('data/{n}/{d}/{l}/{w}/{s}',
                          n = network,
                          d = domain,
                          w = ws_boundary_dir,
+                         l = level,
                          s = site)
 
         if(dir.exists(site_dir) && length(dir(site_dir))){
@@ -2412,6 +2430,7 @@ ms_delineate <- function(network, domain,
         catch <- ms_calc_watershed_area(network = network,
                                         domain = domain,
                                         site_name = site,
+                                        level = level,
                                         update_site_file = TRUE)
     }
 
@@ -2971,7 +2990,7 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-ms_calc_watershed_area <- function(network, domain, site_name, update_site_file){
+ms_calc_watershed_area <- function(network, domain, site_name, level, update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
     #   watershed area with sf::st_area
@@ -2981,9 +3000,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
 
     #returns area in hectares
 
-    munge_dir <- glue('data/{n}/{d}/munged',
+    munge_dir <- glue('data/{n}/{d}/{l}',
                       n = network,
-                      d = domain)
+                      d = domain,
+                      l = level)
 
     munged_dirs <- list.dirs(munge_dir,
                              recursive = FALSE,
@@ -2997,9 +3017,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
         stop(glue('No ws_boundary directory found in ', munge_dir))
     }
 
-    site_dir <- glue('data/{n}/{d}/munged/{w}/{s}',
+    site_dir <- glue('data/{n}/{d}/{l}/{w}/{s}',
                      n = network,
                      d = domain,
+                     l = level,
                      w = ws_boundary_dir,
                      s = site_name)
 
@@ -3011,9 +3032,10 @@ ms_calc_watershed_area <- function(network, domain, site_name, update_site_file)
                   w = ws_boundary_dir))
     }
 
-    wb <- sf::st_read(glue('data/{n}/{d}/munged/{w}/{s}/{s}.shp',
+    wb <- sf::st_read(glue('data/{n}/{d}/{l}/{w}/{s}/{s}.shp',
                            n = network,
                            d = domain,
+                           l = level,
                            w = ws_boundary_dir,
                            s = site_name),
                     quiet = TRUE)
@@ -3133,6 +3155,14 @@ calculate_molar_mass <- function(molecular_formula){
     }
 
     parsed_formula = parse_molecular_formulae(molecular_formula)[[1]]
+    
+    #Some variables are not compatible with parse molecular formula,
+    #Need to insure the molecular mass is calculated correctly 
+    if(molecular_formula %in% c('POC', 'TPN')) {
+        parsed_formula <- case_when(molecular_formula == 'POC' ~ 'C',
+                              molecular_formula == 'TPN' ~ 'N')
+    }
+    
     molar_mass = combine_atomic_masses(parsed_formula)
 
     return(molar_mass)
@@ -3225,21 +3255,28 @@ update_product_statuses <- function(network, domain){
 }
 
 convert_to_gl <- function(x, input_unit, molecule) {
+    
+    molecule_real <- ms_vars %>%
+        filter(variable_code == !!molecule) %>%
+        pull(molecule) 
+    
+    if(!is.na(molecule_real)) {
+        formula <- molecule_real
+    } else {
+        formula <- molecule
+    }
 
     if(grepl('eq', input_unit)) {
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
 
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-
-        if(molecule %in% c('POC', ))
-
-        x = (x * calculate_molar_mass(molecule)) / valence
+        x = (x * calculate_molar_mass(formula)) / valence
 
         return(x)
     }
 
     if(grepl('mol', input_unit)) {
-        x = x * calculate_molar_mass(molecule)
+        x = x * calculate_molar_mass(formula)
 
         return(x)
     }
@@ -3248,42 +3285,54 @@ convert_to_gl <- function(x, input_unit, molecule) {
 
 }
 
-convert_from_gl <- function(x, input_unit, output_unit, molecule) {
+convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver) {
+    
+    molecule_real <- ms_vars %>%
+        filter(variable_code == !!molecule) %>%
+        pull(molecule) 
+    
+    if(!is.na(molecule_real)) {
+        formula <- molecule_real
+    } else {
+        formula <- molecule
+    }
 
-    if(grepl('eq', output_unit) && grepl('g', input_unit)) {
+    if(grepl('eq', output_unit) && grepl('g', input_unit) || 
+       grepl('eq', output_unit) && g_conver) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
-        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * valence) / calculate_molar_mass(molecule)
+        if(length(valence) == 0 | is.na(valence)) {stop('Varible is likely missing from ms_vars')}
+        x = (x * valence) / calculate_molar_mass(formula)
 
         return(x)
     }
 
-    if(grepl('mol', output_unit) && grepl('g', input_unit)) {
+    if(grepl('mol', output_unit) && grepl('g', input_unit) || 
+       grepl('mol', output_unit) && g_conver) {
 
-        x = x / calculate_molar_mass(molecule)
+        x = x / calculate_molar_mass(formula)
+
+        return(x)
+    }
+    
+    if(grepl('mol', output_unit) && grepl('eq', input_unit) && !g_conver) {
+
+        valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
+        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
+        x = (x * calculate_molar_mass(formula)) / valence
+
+        x = x / calculate_molar_mass(formula)
 
         return(x)
     }
 
-    if(grepl('mol', output_unit) && grepl('eq', input_unit)) {
+    if(grepl('eq', output_unit) && grepl('mol', input_unit) && !g_conver) {
+
+        x = x * calculate_molar_mass(formula)
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * calculate_molar_mass(molecule)) / valence
-
-        x = x / calculate_molar_mass(molecule)
-
-        return(x)
-    }
-
-    if(grepl('eq', output_unit) && grepl('mol', input_unit)) {
-
-        x = x * calculate_molar_mass(molecule)
-
-        valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
-        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * valence)/calculate_molar_mass(molecule)
+        x = (x * valence)/calculate_molar_mass(formula)
 
         return(x)
     }
@@ -3869,10 +3918,15 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
 }
 
 read_combine_shapefiles <- function(network, domain, prodname_ms){
+    
+    level <- ifelse(is_derived_product(prodname_ms),
+                    'derived',
+                    'munged')
 
-    prodpaths <- list.files(glue('data/{n}/{d}/munged/{p}',
+    prodpaths <- list.files(glue('data/{n}/{d}/{l}/{p}',
                                  n = network,
                                  d = domain,
+                                 l = level,
                                  p = prodname_ms),
                             recursive = TRUE,
                             full.names = TRUE,
@@ -6204,9 +6258,10 @@ combine_munged_products <- function(network, domain, prodname_ms,
     #Used to combine multiple products into one. Used when discharge, chemistry,
     #or other products are split into multiple products and we want them in one.
 
-    files <- list_munged_files(network = network,
-                                    domain = domain,
-                                    prodname_ms = munged_prodname_ms)
+    files <- ms_list_files(network = network,
+                           domain = domain,
+                           prodname_ms = munged_prodname_ms,
+                           level = 'munged')
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -6229,8 +6284,7 @@ combine_munged_products <- function(network, domain, prodname_ms,
                       prodname_ms = prodname_ms,
                       site_name = sites[i],
                       level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = TRUE)
+                      shapefile = FALSE)
     }
 }
 
@@ -6353,5 +6407,83 @@ ms_write_confdata <- function(x, which_dataset, to_where){
                                 write_loc))
     } else {
         stop('to_where must be either "local" or "remote"')
+    }
+}
+
+rain_gauge_from_site_data <- function(network, domain, prodname_ms) {
+    
+    locations <- site_data %>%
+        filter(network == !!network,
+               domain == !!domain,
+               site_type == 'rain_gauge') 
+    
+    crs <- unique(locations$CRS) 
+    
+    if(length(crs) > 1) {
+        stop('crs is not consistent for all sites, cannot convert location in 
+             site_data to rain_gauge location product')
+    }
+    
+    locations <- locations %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'), crs = crs) %>%
+        select(site_name)
+    
+    path <- glue('data/{n}/{d}/derived/{p}',
+                 n = network,
+                 d = domain,
+                 p = prodname_ms)
+    
+    dir.create(path, recursive = TRUE)
+    
+    for(i in 1:nrow(locations)) {
+        
+        site_name <- pull(locations[i,], site_name)
+        
+        sf::st_write(locations[i,], glue('{p}/{s}',
+                                         p = path,
+                                         s = site_name),
+                     driver = 'ESRI Shapefile',
+                     delete_dsn = TRUE)
+    }
+}
+
+calc_inst_flux_wrap <- function(chemprod, qprod, prodname_ms) {
+    
+    level_chem <- ifelse(is_derived_product(chemprod),
+                    'derived',
+                    'munged')
+    
+    level_q <- ifelse(is_derived_product(qprod),
+                         'derived',
+                         'munged')
+    
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               level = level_chem,
+                               prodname_ms = chemprod)
+    
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            level = level_q,
+                            prodname_ms = qprod)
+    
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+    
+    for(s in flux_sites){
+        
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s))
+        
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE,
+                      link_to_portal = FALSE)
     }
 }
