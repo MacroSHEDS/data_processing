@@ -953,6 +953,17 @@ ms_read_raw_csv <- function(filepath,
                               domain = domain,
                               network = network,
                               prodname_ms = prodname_ms))
+    
+    #Check if all sites are in site file 
+    if(!all(unique(d$site_name) %in% site_data$site_name)) {
+        
+        for(i in 1:length(unique(d$site_name))) {
+            if(!unique(d$site_name)[i] %in% site_data$site_name) {
+                loginfo(msg = paste(unname(unique(d$site_name)[i]), 'is not in site_data file; add'),
+                        logger = logger_module)
+            }
+        }
+    }
 
     return(d)
 }
@@ -1426,7 +1437,7 @@ ms_cast_and_reflag <- function(d,
 
 ms_conversions <- function(d,
                            convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                                 'NH4', 'NH3'),
+                                                 'NH4', 'NH3', 'NO3_NO2'),
                            convert_units_from,
                            convert_units_to){
 
@@ -1473,7 +1484,8 @@ ms_conversions <- function(d,
         NH3 = 'N',
         SiO2 = 'Si',
         SO4 = 'S',
-        PO4 = 'P')
+        PO4 = 'P',
+        NO3_NO2 = 'N')
     
     if(cm){
         if(! all(convert_molecules %in% names(molecular_conversion_map))){
