@@ -2956,9 +2956,9 @@ ms_derive <- function(network = domain, domain){
     #re-link any already linked prods
     for(i in which(is_already_linked)){
 
-        linked_prodcode <- get_final_derprod(network = network,
-                                             domain = domain,
-                                             prodname = prods$prodname[i]) %>%
+        linked_prodcode <- get_derive_ingredient(network = network,
+                                                 domain = domain,
+                                                 prodname = prods$prodname[i]) %>%
                                prodcode_from_prodname_ms()
 
         create_derived_links(network = network,
@@ -2989,7 +2989,7 @@ ms_derive <- function(network = domain, domain){
                                    ! is_already_linked &
                                    ! is_a_link)
 
-    for(i in 1:length(new_linkprod_inds)){
+    for(i in seq_along(new_linkprod_inds)){
 
         prodname <- prods$prodname[new_linkprod_inds[i]]
 
