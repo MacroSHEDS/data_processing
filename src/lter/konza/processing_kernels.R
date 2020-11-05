@@ -877,79 +877,16 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){
-
-  precip_idw(precip_prodname = 'precipitation__4',
-             wb_prodname = 'ws_boundary_ms000',
-             pgauge_prodname = 'rain_gauge_locations__230',
-             precip_prodname_out = prodname_ms)
-
-  return()
-}
+process_2_ms001 <- derive_precip
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){
-
-  pchem_idw(pchem_prodname = 'precip_chemistry__43',
-            precip_prodname = 'precipitation__4',
-            wb_prodname = 'ws_boundary_ms000',
-            pgauge_prodname = 'rain_gauge_locations__230',
-            pchem_prodname_out = prodname_ms)
-
-  return()
-}
+process_2_ms002 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms){
-
-  chemprod <- 'stream_chemistry__ms012'
-  qprod <- 'discharge__ms011'
-
-  chemfiles <- ms_list_files(network = network,
-                             domain = domain,
-                             level = 'derived',
-                             prodname_ms = chemprod)
-
-  qfiles <- ms_list_files(network = network,
-                          domain = domain,
-                          level = 'derived',
-                          prodname_ms = qprod)
-
-  flux_sites <- generics::intersect(
-    fname_from_fpath(qfiles, include_fext = FALSE),
-    fname_from_fpath(chemfiles, include_fext = FALSE))
-
-  for(s in flux_sites){
-
-    flux <- sw(calc_inst_flux(chemprod = chemprod,
-                              qprod = qprod,
-                              site_name = s))
-
-    write_ms_file(d = flux,
-                  network = network,
-                  domain = domain,
-                  prodname_ms = prodname_ms,
-                  site_name = s,
-                  level = 'derived',
-                  shapefile = FALSE,
-                  link_to_portal = FALSE)
-  }
-
-  return()
-}
+process_2_ms003 <- derive_stream_flux
 
 #precip_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms){
-
-  flux_idw(pchem_prodname = 'precip_chemistry__43',
-           precip_prodname = 'precipitation__4',
-           wb_prodname = 'ws_boundary_ms000',
-           pgauge_prodname = 'rain_gauge_locations__230',
-           flux_prodname_out = prodname_ms)
-
-  return()
-}
-
+process_2_ms004 <- derive_precip_flux
