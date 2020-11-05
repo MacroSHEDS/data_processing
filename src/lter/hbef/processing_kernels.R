@@ -269,8 +269,8 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                             varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
-                        convert_units_from = c(DIC = 'uM'),
-                        convert_units_to = c(DIC = 'mM'))
+                        convert_units_from = c(DIC = 'umol/l'),
+                        convert_units_to = c(DIC = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -453,40 +453,10 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms003 <- function(network, domain, prodname_ms){
-
-    chemprod <- 'stream_chemistry__208'
-    qprod <- 'discharge__1'
-
-    chemfiles <- ms_list_files(network = network,
-                               domain = domain,
-                               level = 'munged',
-                               prodname_ms = chemprod)
-
-    qfiles <- ms_list_files(network = network,
-                            domain = domain,
-                            level = 'munged',
-                            prodname_ms = qprod)
-
-    flux_sites <- generics::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
-
-    for(s in flux_sites){
-
-        flux <- sw(calc_inst_flux(chemprod = chemprod,
-                                  qprod = qprod,
-                                  site_name = s))
-
-        write_ms_file(d = flux,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = s,
-                      level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = FALSE)
-    }
-
+    
+    calc_inst_flux_wrap(chemprod = 'stream_chemistry__208', qprod = 'discharge__1',
+                        prodname_ms = prodname_ms)
+    
     return()
 }
 
