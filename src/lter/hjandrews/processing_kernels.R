@@ -545,13 +545,7 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms){
-    
-    calc_inst_flux_wrap(chemprod = 'stream_chemistry__4021', qprod = 'discharge__4341',
-                        prodname_ms = prodname_ms)
-    
-    return()
-}
+process_2_ms003 <- derive_stream_flux
 
 #precip_flux_inst: STATUS=READY
 #. handle_errors

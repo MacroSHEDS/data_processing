@@ -758,3 +758,47 @@ read_wb_delin_specs <- function(network, domain, site_name){
 
     return(ds)
 }
+
+calc_inst_flux_wrap <- function(chemprod, qprod, prodname_ms) {
+
+    warning("derive_stream_flux is fully automated. let's use it!")
+
+    level_chem <- ifelse(is_derived_product(chemprod),
+                    'derived',
+                    'munged')
+
+    level_q <- ifelse(is_derived_product(qprod),
+                         'derived',
+                         'munged')
+
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               level = level_chem,
+                               prodname_ms = chemprod)
+
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            level = level_q,
+                            prodname_ms = qprod)
+
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+
+    for(s in flux_sites){
+
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_name = s))
+
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE)
+    }
+
+    return()
+}
