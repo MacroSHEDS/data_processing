@@ -323,9 +323,14 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
 process_1_4021 <- function(network, domain, prodname_ms, site_name,
                            components){
 
-    component <- ifelse(grepl('chemistry', prodname_ms),
-                        'CF00201',
-                        'CF00205')
+    #note: blacklisting of components has been superseded by the "component"
+    #   column in products.csv. don't copy this chunk.
+    if(grepl('chemistry', prodname_ms)){
+        component <- 'CF00201'
+    } else {
+        loginfo('Blacklisting stream flux product CF00205. We will make our own.')
+        return(generate_blacklist_indicator())
+    }
 
     rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -379,9 +384,14 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
 process_1_4022 <- function(network, domain, prodname_ms, site_name,
                            components){
 
-    component <- ifelse(grepl('chemistry', prodname_ms),
-                        'CP00201',
-                        'CP00202')
+    #note: blacklisting of components has been superseded by the "component"
+    #   column in products.csv. don't copy this chunk.
+    if(grepl('chemistry', prodname_ms)){
+        component <- 'CP00201'
+    } else {
+        loginfo('Blacklisting precip flux product CP00202. We will make our own.')
+        return(generate_blacklist_indicator())
+    }
 
     rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -535,13 +545,7 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms){
-    
-    calc_inst_flux_wrap(chemprod = 'stream_chemistry__4021', qprod = 'discharge__4341',
-                        prodname_ms = prodname_ms)
-    
-    return()
-}
+process_2_ms003 <- derive_stream_flux
 
 #precip_flux_inst: STATUS=READY
 #. handle_errors
