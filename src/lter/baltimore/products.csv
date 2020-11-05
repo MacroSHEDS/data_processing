@@ -1,9 +1,8 @@
 prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
-700,stream_chemistry_gwynns,grab,ready,ready,NA,chemistry__ms013,NA
-900,stream_chemistry_club,grab,ready,ready,NA,chemistry__ms013,NA
-800,stream_chemistry_gwynns_up,grab,ready,ready,NA,chemistry__ms013,NA
+700,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
+900,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
+800,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
 3110,precipitation,sensor,ready,ready,NA,precipitation__ms001,NA
-ms014,stream_gauge_locations,spatial,NA,NA,ready,NA,NA
 ms013,precip_gauge_location,spatial,NA,NA,ready,precipitation__ms001,NA
 ms012,stream_chemistry,grab,NA,NA,ready,stream_flux_inst_ms003,NA
 ms011,discharge,sensor,NA,NA,ready,stream_flux_inst_ms003,NA
