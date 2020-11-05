@@ -39,8 +39,6 @@ suppressPackageStartupMessages({
     library(googlesheets4)
 })
 
-
-
 ms_setwd <- function(){
 
     #attempts to set working directory for various machines involved in the
