@@ -59,5 +59,6 @@ prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,n
 ms006,usgs_discharge,derived,NA,NA,ready,discharge__ms001,"Two sites are colocated with usgs gauges but the data through lter portal has not been updated in 8 years, so using USGS as data source",NA
 ms001,discharge,derived,NA,NA,ready,stream_flux_inst__ms005,NA,NA
 ms004,precip_gauge_locations,derived,NA,NA,ready,precipitation__ms003,NA,NA
+ms007,stream_gauge_locations,derived,NA,NA,ready,NA,NA,NA
 ms003,precipitation,derived,NA,NA,ready,NA,NA,NA
 ms005,stream_flux_inst,derived,NA,NA,ready,NA,NA,NA
