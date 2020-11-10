@@ -1,0 +1,4 @@
+[
+["index.html", "Intro to MacroSheds data 1 Intro", " Intro to MacroSheds data September 22, 2019 1 Intro This is a cool project "],
+["hj-andrews.html", "2 HJ Andrews", " 2 HJ Andrews library(tidyverse) library(googledrive) library(feather) library(googlesheets) # source(&#39;src/retrieval/retrieve_lter.R&#39;) print(getwd()) ## [1] &quot;C:/Users/mrvr/Dropbox/CSU/CSU_Papers/MacroSheds_Work/data_processing&quot; lterdir = &#39;data/lter/&#39; #could totally put this part inside the function too lter_srcs = googlesheets::gs_title(&#39;lter_package_ids&#39;) %&gt;% googlesheets::gs_read() %&gt;% tidylog::filter(in_workflow == 1) %&gt;% tidylog::mutate(pid_str=stringr::str_replace(id, &#39;^(.+?-.+?-.+?)\\\\.([0-9]+)$&#39;, &#39;\\\\1/\\\\2/newest/&#39;)) lter_download(src_df = lter_srcs, lter_dir=lterdir, dmn=&#39;hjandrews&#39;) "]
+]

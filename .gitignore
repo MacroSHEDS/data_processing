@@ -1,0 +1,17 @@
+config.json
+/data/*
+!/data/general
+.Rproj.user
+.httr-oauth
+.Rhistory
+/logs
+/src/lter/OBSOLETE
+src/.Rapp.history
+data_acquisition.Rproj
+/probsolete
+.DS_Store
+OBSOLETE
+*.DS_Store
+*.png
+transfer_data
+googlesheet_service_accnt.json
