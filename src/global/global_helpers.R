@@ -85,6 +85,12 @@ assign('typical_derprods',
        value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
                  'precip_flux_inst'),
        envir = .GlobalEnv)
+assign('canonical_derprods',
+       value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
+                 'precip_flux_inst', 'discharge', 'precipitation',
+                 'stream_chemistry', 'precip_gauge_locations',
+                 'stream_gauge_locations', 'ws_boundary'),
+       envir = .GlobalEnv)
 
 #exports from an attempt to use socket cluster parallelization;
 # idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
@@ -2934,19 +2940,18 @@ ms_derive <- function(network = domain, domain){
                                 y = prods$precursor_of,
                                 USE.NAMES = FALSE)
 
-    created_links <- prods$prodname[! is.na(prods$derive_status) &
-                                        prods$derive_status == 'linked']
-    is_already_linked <- ! is.na(prods$derive_status) &
-                             prods$derive_status != 'linked' &
-                             prods$prodname %in% created_links
     is_a_link <- ! is.na(prods$derive_status) &
-                     prods$derive_status == 'linked' &
-                     prods$prodname %in% created_links
+        prods$derive_status == 'linked'
+    created_links <- prods$prodname[is_a_link]
+    is_already_linked <- ! is_a_link &
+        prods$prodname %in% created_links
+    # is_a_link <- derstatus_linked &
+    #                  prods$prodname %in% created_links
 
     #determine which active prods need to be linked (linkprods)
     is_linkprod <- (! is.na(prods$derive_status) &
                         prods$derive_status == 'linked') |
-        (prods$prodname %in% typical_derprods &
+        (prods$prodname %in% canonical_derprods &
              ! has_ms_prodcode &
              is_being_munged &
              ! is_self_precursor)
@@ -3104,7 +3109,7 @@ append_to_productfile <- function(network,
     prods <- bind_rows(prods, new_row)
 
     write_csv(x = prods,
-              path = prodfile)
+              file = prodfile)
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
