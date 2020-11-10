@@ -2467,10 +2467,10 @@ ms_delineate <- function(network, domain,
                                         update_site_file = TRUE)
     }
 
-    message(glue('Delineation specifications were written to:\n\t',
-                 'data/general/watershed_delineation_specs.csv\n',
-                 'watershed areas were written to:\n\t',
-                 'site_data gsheet'))
+    # message(glue('Delineation specifications were written to:\n\t',
+    #              'data/general/watershed_delineation_specs.csv\n',
+    #              'watershed areas were written to:\n\t',
+    #              'site_data gsheet'))
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -4512,13 +4512,24 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
         stop('no data to synchronize. bypassing processing.')
     }
 
+    volumetric_vars <- c('discharge', 'discharge_ns', 'precipitation',
+                         'precipitation_ns')
+
     #round to desired_interval
     d <- sw(d %>%
         mutate(datetime = lubridate::round_date(datetime,
                                                 desired_interval)) %>%
         group_by(site_name, var, datetime) %>%
         summarize(
-            val = if(n() > 1) mean(val, na.rm = TRUE) else first(val),
+            val = if(n() > 1){
+                    if(drop_var_prefix(var[1]) %in% volumetric_vars){
+                        sum(val, na.rm = TRUE)
+                    } else {
+                        mean(val, na.rm = TRUE)
+                    }
+                } else {
+                    first(val) #needed for uncertainty propagation to work
+                },
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
         select(datetime, site_name, var, val, ms_status))
@@ -4558,9 +4569,14 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
             err = case_when(
                 err == 0 ~ NA_real_, #change 0 errors (default) to NA...
                 TRUE ~ err),
-            val = set_errors(val, #and then carry error to interped rows
-                             imputeTS::na_locf(err,
-                                               na_remaining = 'rev'))) %>%
+            val = if(sum(! is.na(err)) > 1){
+                    set_errors(val, #and then carry error to interped rows
+                               imputeTS::na_locf(err,
+                                                 na_remaining = 'rev'))
+                } else {
+                    set_errors(val, #unless not enough error to interp
+                               0)
+                }) %>%
         ungroup() %>%
         select(-err) %>%
         # group_by(datetime, site_name) %>%
