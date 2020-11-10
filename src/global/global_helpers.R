@@ -85,6 +85,12 @@ assign('typical_derprods',
        value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
                  'precip_flux_inst'),
        envir = .GlobalEnv)
+assign('canonical_derprods',
+       value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
+                 'precip_flux_inst', 'discharge', 'precipitation',
+                 'stream_chemistry', 'precip_gauge_locations',
+                 'stream_gauge_locations', 'ws_boundary'),
+       envir = .GlobalEnv)
 
 #exports from an attempt to use socket cluster parallelization;
 # idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
@@ -2312,8 +2318,11 @@ ms_delineate <- function(network, domain,
         dir.create(glue('data/{n}/{d}/derived/{w}',
                         n = network,
                         d = domain,
-                        w = ws_boundary_dir))
-    } else { level <- 'munged'}
+                        w = ws_boundary_dir),
+                   recursive = TRUE)
+    } else {
+        level <- 'munged'
+    }
 
     #for each stream gauge site, check for existing wb file. if none, delineate
     for(i in 1:nrow(site_locations)){
@@ -2493,10 +2502,10 @@ ms_delineate <- function(network, domain,
                                         update_site_file = TRUE)
     }
 
-    message(glue('Delineation specifications were written to:\n\t',
-                 'data/general/watershed_delineation_specs.csv\n',
-                 'watershed areas were written to:\n\t',
-                 'site_data gsheet'))
+    # message(glue('Delineation specifications were written to:\n\t',
+    #              'data/general/watershed_delineation_specs.csv\n',
+    #              'watershed areas were written to:\n\t',
+    #              'site_data gsheet'))
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -2521,7 +2530,7 @@ ms_delineate <- function(network, domain,
                               domain = domain,
                               prodname = 'ws_boundary',
                               prodcode = 'ms000',
-                              type = 'spatial',
+                              # type = 'derived', #"spatial", originally
                               precursor_of = wb_successor_string,
                               notes = 'automated entry')
     }
@@ -2868,11 +2877,8 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
     
     #ignore_derprod: logical. if TRUE, don't consider any product with an
     #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE
-    #   (the default), look for a product with an msXXX prodcode. In the special
-    #   case of MS-delineated watershed boundaries, this function will
-    #   ignore ms000 and grab its linked successor.
-    
-    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+   
+     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain)))
     
@@ -2901,6 +2907,7 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
             pull(prodname_ms)
         
     }
+<<<<<<< HEAD
     
     if(length(prodname_ms) > 1){
         
@@ -2912,6 +2919,23 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
         }
     }
     
+=======
+
+    #obsolete docs from above, just in case we need to restore this section
+    #   In the special
+    #   case of MS-delineated watershed boundaries, this function will
+    #   ignore ms000 and grab its linked successor.
+    # if(length(prodname_ms) > 1){
+    #
+    #     wb0 <- which(prodcode_from_prodname_ms(prodname_ms) == 'ms000')
+    #     prodname_ms <- prodname_ms[-wb0]
+
+    if(length(prodname_ms) > 1){
+        stop('could not resolve multiple products with same prodname')
+    }
+    # }
+
+>>>>>>> f91e50075447f12bb0e9f3b33fac53c6a2ccb823
     return(prodname_ms)
 }
 
@@ -2928,13 +2952,13 @@ ms_derive <- function(network = domain, domain){
                               n = network,
                               d = domain)))
 
-    #checks
-    if(! all(prods$type %in% c('normal', 'spatial', 'derived', 'linked'))){
-        stop(glue('All entries in the type column must be one of "normal", ',
-                  '"spatial", "derived", "linked" (src/{n}/{d}/products.csv)',
-                  n = network,
-                  d = domain))
-    }
+    # #checks
+    # if(! all(prods$type %in% c('normal', 'derived', 'linked'))){
+    #     stop(glue('All entries in the type column must be one of "normal", ',
+    #               '"derived", "linked" (src/{n}/{d}/products.csv)',
+    #               n = network,
+    #               d = domain))
+    # }
 
     #check for sitenames in prodnames?
     # if(){
@@ -2959,15 +2983,18 @@ ms_derive <- function(network = domain, domain){
                                 y = prods$precursor_of,
                                 USE.NAMES = FALSE)
 
-    created_links <- prods$prodname[prods$type == 'linked']
-    is_already_linked <- prods$type != 'linked' &
-                             prods$prodname %in% created_links
-    is_a_link <- prods$type == 'linked' &
-                     prods$prodname %in% created_links
+    is_a_link <- ! is.na(prods$derive_status) &
+        prods$derive_status == 'linked'
+    created_links <- prods$prodname[is_a_link]
+    is_already_linked <- ! is_a_link &
+        prods$prodname %in% created_links
+    # is_a_link <- derstatus_linked &
+    #                  prods$prodname %in% created_links
 
     #determine which active prods need to be linked (linkprods)
-    is_linkprod <- prods$type %in% c('linked', 'spatial') |
-        (prods$prodname %in% typical_derprods &
+    is_linkprod <- (! is.na(prods$derive_status) &
+                        prods$derive_status == 'linked') |
+        (prods$prodname %in% canonical_derprods &
              ! has_ms_prodcode &
              is_being_munged &
              ! is_self_precursor)
@@ -3006,14 +3033,17 @@ ms_derive <- function(network = domain, domain){
         start = 3,
         stop = 5))
 
-    new_prodcodes_num <- seq(max(prodcodes_num) + 1,
-                             max(prodcodes_num) + sum(is_linkprod))
+    if(any(is_linkprod)){
 
-    new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
-                                      width = 3,
-                                      side = 'left',
-                                      pad = 0) %>%
-                                      {paste0('ms', .)}
+        new_prodcodes_num <- seq(max(prodcodes_num) + 1,
+                                 max(prodcodes_num) + sum(is_linkprod))
+
+        new_prodcodes <- stringr::str_pad(string = new_prodcodes_num,
+                                          width = 3,
+                                          side = 'left',
+                                          pad = 0) %>%
+            {paste0('ms', .)}
+    }
 
     new_linkprod_inds <- which(is_linkprod &
                                    ! is_already_linked &
@@ -3027,6 +3057,10 @@ ms_derive <- function(network = domain, domain){
                                     prods$prodcode[new_linkprod_inds[i]],
                                     sep = '__')
 
+        if(prodname_ms_source == 'ws_boundary__ms000'){
+            next
+        }
+
         newcode <- new_prodcodes[i]
 
         create_derived_links(network = network,
@@ -3039,7 +3073,7 @@ ms_derive <- function(network = domain, domain){
             domain = domain,
             prodcode = newcode,
             prodname = prodname,
-            type = 'linked',
+            derive_status = 'linked',
             notes = 'automated entry')
     }
 
@@ -3080,7 +3114,7 @@ append_to_productfile <- function(network,
                                   domain,
                                   prodcode,
                                   prodname,
-                                  type,
+                                  # type, #obsolete
                                   retrieve_status,
                                   munge_status,
                                   derive_status,
@@ -3118,7 +3152,7 @@ append_to_productfile <- function(network,
     prods <- bind_rows(prods, new_row)
 
     write_csv(x = prods,
-              path = prodfile)
+              file = prodfile)
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
@@ -4528,13 +4562,24 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
         stop('no data to synchronize. bypassing processing.')
     }
 
+    volumetric_vars <- c('discharge', 'discharge_ns', 'precipitation',
+                         'precipitation_ns')
+
     #round to desired_interval
     d <- sw(d %>%
         mutate(datetime = lubridate::round_date(datetime,
                                                 desired_interval)) %>%
         group_by(site_name, var, datetime) %>%
         summarize(
-            val = if(n() > 1) mean(val, na.rm = TRUE) else first(val),
+            val = if(n() > 1){
+                    if(drop_var_prefix(var[1]) %in% volumetric_vars){
+                        sum(val, na.rm = TRUE)
+                    } else {
+                        mean(val, na.rm = TRUE)
+                    }
+                } else {
+                    first(val) #needed for uncertainty propagation to work
+                },
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
         select(datetime, site_name, var, val, ms_status))
@@ -4574,9 +4619,14 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
             err = case_when(
                 err == 0 ~ NA_real_, #change 0 errors (default) to NA...
                 TRUE ~ err),
-            val = set_errors(val, #and then carry error to interped rows
-                             imputeTS::na_locf(err,
-                                               na_remaining = 'rev'))) %>%
+            val = if(sum(! is.na(err)) > 1){
+                    set_errors(val, #and then carry error to interped rows
+                               imputeTS::na_locf(err,
+                                                 na_remaining = 'rev'))
+                } else {
+                    set_errors(val, #unless not enough error to interp
+                               0)
+                }) %>%
         ungroup() %>%
         select(-err) %>%
         # group_by(datetime, site_name) %>%
@@ -5263,7 +5313,7 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                           p = prodname_ms)
 
     readr::write_file(murl,
-                      path = data_acq_file)
+                      file = data_acq_file)
 
     # #create portal directory if necessary
     # portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
@@ -5426,7 +5476,7 @@ write_metadata_m <- function(network, domain, prodname_ms){
                           md = munged_dir,
                           p = prodname_ms)
     readr::write_file(mdoc,
-                      path = data_acq_file)
+                      file = data_acq_file)
 
     #create portal directory if necessary
     portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
@@ -5492,7 +5542,7 @@ write_metadata_d <- function(network, domain, prodname_ms){
                           dd = derived_dir,
                           p = prodname_ms)
     readr::write_file(ddoc,
-                      path = data_acq_file)
+                      file = data_acq_file)
 
     #create portal directory if necessary
     portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
@@ -6469,9 +6519,9 @@ combine_products <- function(network, domain, prodname_ms,
     for(i in 1:length(sites)) {
         site_files <- grep(sites[i], files, value = TRUE)
 
-        sile_full <- map_dfr(site_files, read_feather)
+        site_full <- map_dfr(site_files, read_feather)
 
-        write_ms_file(d = sile_full,
+        write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
