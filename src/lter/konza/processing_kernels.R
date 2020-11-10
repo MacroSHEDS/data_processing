@@ -8,7 +8,7 @@ process_0_7 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -20,7 +20,7 @@ process_0_8 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -32,7 +32,7 @@ process_0_9 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -44,7 +44,7 @@ process_0_10 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -56,7 +56,7 @@ process_0_50 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -90,7 +90,7 @@ process_0_20 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -162,9 +162,9 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
                      p = prodname_ms,
                      s = site_name,
                      c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(num_t = nchar(RecHour)) %>%
       mutate(num_d = nchar(Recday)) %>%
@@ -175,7 +175,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
                               is.na(num_t) ~ '1200')) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(Recday)), as.character(Recday))) %>%
       select(-num_t, -RecHour, -num_d, -Recday)
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -188,29 +188,29 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'QualFlag',
                          is_sensor = TRUE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_dirty = list('QualFlag' = 1),
                             summary_flags_to_drop = list('QualFlag' = 6))
-    
+
     # Convert from cm/s to liters/s
     d <- d %>%
       mutate(val = val*1000)
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -225,9 +225,9 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(num_t = nchar(RecHour)) %>%
       mutate(num_d = nchar(RecDay)) %>%
@@ -238,7 +238,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
                               is.na(num_t) ~ '1200')) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
       select(-num_t, -RecHour, -num_d, -RecDay)
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -251,29 +251,29 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'QualFlag',
                          is_sensor = TRUE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_dirty = list('QualFlag' = 1),
                             summary_flags_to_drop = list('QualFlag' = 6))
-    
+
     # Convert from cm/s to liters/s
     d <- d %>%
       mutate(val = val*1000)
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -288,9 +288,9 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(num_t = nchar(RecHour)) %>%
       mutate(num_d = nchar(RecDay)) %>%
@@ -301,7 +301,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                               is.na(num_t) ~ '1200')) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
       select(-num_t, -RecHour, -num_d, -RecDay)
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -314,29 +314,29 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'QualFlag',
                          is_sensor = TRUE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_dirty = list('QualFlag' = 1),
                             summary_flags_to_drop = list('QualFlag' = 6))
-    
+
     # Convert from cm/s to liters/s
     d <- d %>%
       mutate(val = val*1000)
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -351,9 +351,9 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(num_t = nchar(RecHour)) %>%
       mutate(num_d = nchar(RecDay)) %>%
@@ -364,7 +364,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
                               is.na(num_t) ~ '1200')) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
       select(-num_t, -RecHour, -num_d, -RecDay)
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -377,18 +377,18 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'QualFlag',
                          is_sensor = TRUE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_dirty = list('QualFlag' = 1),
                             summary_flags_to_drop = list('QualFlag' = 6))
-    
+
     # Convert from cm/s to liters/s
     d <- d %>%
       mutate(val = val*1000)
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
@@ -397,7 +397,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -499,7 +499,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                         convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
                                              TN = 'mg/l', SRP = 'mg/l',
                                              TP = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
@@ -527,7 +527,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -542,24 +542,24 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
                          data_cols =  c('Conduct' = 'spCond'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-  
+
       d <- d %>%
         rename(val = 3) %>%
         mutate(var = 'GN_spCond',
              ms_status = 0) %>%
         filter(site_name %in% c('N04D', 'N02B', 'N20B', 'N01B'))
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -574,9 +574,9 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(Rectime = ifelse(Rectime == '.', 1200, Rectime)) %>%
       mutate(num_t = nchar(Rectime)) %>%
@@ -588,7 +588,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                               is.na(num_t) ~ '1200')) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
       select(-num_t, -Rectime, -num_d, -RecDay)
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -600,25 +600,25 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'comments',
                          is_sensor = FALSE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_to_drop = list(comments = 'bad'),
                             summary_flags_dirty = list(comments = 'remove'))
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -627,20 +627,20 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 process_1_21 <- function(network, domain, prodname_ms, site_name,
                          component) {
     # Meta data says precip chem in everything (so idk what that's about)
-  
+
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(site = case_when(component == 'ASW011' ~ 'N02B',
                               component == 'ASW012' ~ 'N04D'))
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y',
                                               'Time' = '%H:%M:%S'),
@@ -650,7 +650,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'comments',
                          is_sensor = FALSE)
-  
+
     return(d)
 }
 
@@ -665,9 +665,9 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     return(d)
 }
 
@@ -682,9 +682,9 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- d %>%
       mutate(num_d = nchar(RecDay)) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
@@ -692,7 +692,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
       filter(Watershed != '001d',
              Watershed != 'n01d',
              Watershed != '')
-  
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
@@ -709,14 +709,14 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
                          is_sensor = FALSE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_to_drop = list(Comments = 'bad'),
                             summary_flags_dirty = list(Comments = 'remove'))
-  
+
     d <- ms_conversions(d,
                         convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                                               'NH4', 'NH3'),
@@ -726,18 +726,18 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                         convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
                                              TPsN = 'mg/l', SRP = 'mg/l',
                                              TPP = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -752,9 +752,9 @@ process_1_4 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     d <- read.csv(rawfile1, colClasses = "character")
-  
+
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('RecDate' = '%m/%d/%Y'),
                          datetime_tz = 'US/Central',
@@ -764,25 +764,25 @@ process_1_4 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
                          is_sensor = FALSE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
                             summary_flags_to_drop = list(Comments = 'bad'),
                             summary_flags_dirty = list(Comments = 'remove'))
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -797,20 +797,20 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     rawpath <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-  
+
     zipped_files <- unzip(zipfile = rawzip,
                           exdir = rawpath,
                           overwrite = TRUE)
-  
+
     projstring <- choose_projection(unprojected = TRUE)
-  
+
     if(prodname_ms == 'precip_gauge_locations__230') {
     gauges <- sf::st_read(paste0(rawpath, '/', component)) %>%
       mutate(site_name = case_when(RAINGAUGE == 'PPTSE' ~'002C',
@@ -836,9 +836,9 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
         sf::st_transform(projstring) %>%
         arrange(site_name)
     }
-  
+
     unlink(zipped_files)
-  
+
     return(gauges)
 }
 
@@ -851,10 +851,10 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
     combine_munged_products(network = network,
                             domain = domain,
                             prodname_ms = prodname_ms,
-                            munged_prodname_ms = c('discharge_N04D__7',
-                                                   'discharge_N01B__9',
-                                                   'discharge_N20B__8',
-                                                   'discharge_N02B__10'))
+                            munged_prodname_ms = c('discharge__7',
+                                                   'discharge__9',
+                                                   'discharge__8',
+                                                   'discharge__10'))
 
     return()
 }

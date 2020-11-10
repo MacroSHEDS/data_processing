@@ -4,10 +4,10 @@ suppressPackageStartupMessages({
     #since we're referring to their functions directly with ::
 
     # #spatial packages
-    # library(gstat) #must load before raster package
-    # # library(terra)  #must load before gstat package
-    # library(raster) #raster has been replaced by terra (way faster)
-    # library(stars)
+    # library(terra)  #must load before gstat package (which isn't currently needed)
+    # # library(gstat) #must load before raster package (not needed)
+    # library(raster)
+    # # library(stars) #not needed (yet)
     # library(sf)
     # library(sp)
     # library(mapview)
@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
     # library(rgee)
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
+    # library(nhdplusTools)
 
     #everything else
     library(httr)
@@ -131,7 +132,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=4
+# dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
