@@ -2871,7 +2871,8 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 }
 
 
-get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FALSE){
+get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FALSE,
+                                  accpet_multi_ing = FALSE){
     
     #get prodname_ms's by prodname, for specifying derive kernels.
     
@@ -2906,21 +2907,20 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
                                        sep = '__')) %>%
             pull(prodname_ms)
         
-    }
-<<<<<<< HEAD
-    
-    if(length(prodname_ms) > 1){
-        
-        wb0 <- which(prodcode_from_prodname_ms(prodname_ms) == 'ms000')
-        prodname_ms <- prodname_ms[-wb0]
-        
+        #Following code will select a ms product (if it exits) if there are 
+        #multiple products, Useful for when an aggregated derived products exists for 
+        #discharge or chemistry 
         if(length(prodname_ms) > 1){
-            stop('could not resolve multiple products with same prodname')
+            
+            prodname_ms_agged <- grep(pattern = '*ms[0-9]{3}$',
+                                x = prodname_ms, value = TRUE) 
+            
+            if(length(prodname_ms_agged) > 0) {
+                prodname_ms <- prodname_ms_agged
+            }
         }
+        
     }
-    
-=======
-
     #obsolete docs from above, just in case we need to restore this section
     #   In the special
     #   case of MS-delineated watershed boundaries, this function will
@@ -2930,12 +2930,11 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
     #     wb0 <- which(prodcode_from_prodname_ms(prodname_ms) == 'ms000')
     #     prodname_ms <- prodname_ms[-wb0]
 
-    if(length(prodname_ms) > 1){
+    if(length(prodname_ms) > 1 && !accpet_multi_ing){
+
         stop('could not resolve multiple products with same prodname')
     }
     # }
-
->>>>>>> f91e50075447f12bb0e9f3b33fac53c6a2ccb823
     return(prodname_ms)
 }
 
@@ -6661,15 +6660,18 @@ derive_precip <- function(network, domain, prodname_ms){
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
-                                                ignore_derprod = TRUE)
+                                                ignore_derprod = TRUE,
+                                                accpet_multi_ing = TRUE)
     
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'ws_boundary')
+                                            prodname = 'ws_boundary',
+                                            accpet_multi_ing = TRUE)
     
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'precip_gauge_locations')
+                                            prodname = 'precip_gauge_locations',
+                                            accpet_multi_ing = TRUE)
 
     precip_idw(precip_prodname = precip_prodname_ms,
                wb_prodname = wb_prodname_ms,
@@ -6687,20 +6689,24 @@ derive_precip_chem <- function(network, domain, prodname_ms){
     pchem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'precip_chemistry',
-                                               ignore_derprod = TRUE)
+                                               ignore_derprod = TRUE,
+                                               accpet_multi_ing = TRUE)
     
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
-                                                ignore_derprod = TRUE)
+                                                ignore_derprod = TRUE,
+                                                accpet_multi_ing = TRUE)
     
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'ws_boundary')
+                                            prodname = 'ws_boundary',
+                                            accpet_multi_ing = TRUE)
     
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'precip_gauge_locations')
+                                            prodname = 'precip_gauge_locations',
+                                            accpet_multi_ing = TRUE)
 
     pchem_idw(pchem_prodname = pchem_prodname_ms,
               precip_prodname = precip_prodname_ms,
@@ -6715,11 +6721,13 @@ derive_stream_flux <- function(network, domain, prodname_ms){
 
     schem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
-                                               prodname = 'stream_chemistry')
+                                               prodname = 'stream_chemistry',
+                                               accpet_multi_ing = TRUE)
     
     disch_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
-                                               prodname = 'discharge')
+                                               prodname = 'discharge',
+                                               accpet_multi_ing = TRUE)
 
     chemfiles <- ms_list_files(network = network,
                                domain = domain,
@@ -6756,20 +6764,24 @@ derive_precip_flux <- function(network, domain, prodname_ms){
     pchem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'precip_chemistry',
-                                               ignore_derprod = TRUE)
+                                               ignore_derprod = TRUE,
+                                               accpet_multi_ing = TRUE)
     
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
-                                                ignore_derprod = TRUE)
+                                                ignore_derprod = TRUE,
+                                                accpet_multi_ing = TRUE)
     
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'ws_boundary')
+                                            prodname = 'ws_boundary',
+                                            accpet_multi_ing = TRUE)
     
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'precip_gauge_locations')
+                                            prodname = 'precip_gauge_locations',
+                                            accpet_multi_ing = TRUE)
 
     flux_idw(pchem_prodname = pchem_prodname_ms,
              precip_prodname = precip_prodname_ms,
@@ -6791,7 +6803,7 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
 
     if(length(crs) > 1) {
         stop('crs is not consistent for all sites, cannot convert location in
-             site_data to rain_gauge location product')
+             site_data to precip_gauge location product')
     }
 
     locations <- locations %>%
@@ -6809,6 +6821,43 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
 
         site_name <- pull(locations[i,], site_name)
 
+        sf::st_write(locations[i,], glue('{p}/{s}',
+                                         p = path,
+                                         s = site_name),
+                     driver = 'ESRI Shapefile',
+                     delete_dsn = TRUE)
+    }
+}
+
+stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
+    
+    locations <- site_data %>%
+        filter(network == !!network,
+               domain == !!domain,
+               site_type == 'stream_gauge')
+    
+    crs <- unique(locations$CRS)
+    
+    if(length(crs) > 1) {
+        stop('crs is not consistent for all sites, cannot convert location in
+             site_data to stream_gauge location product')
+    }
+    
+    locations <- locations %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'), crs = crs) %>%
+        select(site_name)
+    
+    path <- glue('data/{n}/{d}/derived/{p}',
+                 n = network,
+                 d = domain,
+                 p = prodname_ms)
+    
+    dir.create(path, recursive = TRUE)
+    
+    for(i in 1:nrow(locations)) {
+        
+        site_name <- pull(locations[i,], site_name)
+        
         sf::st_write(locations[i,], glue('{p}/{s}',
                                          p = path,
                                          s = site_name),

@@ -259,14 +259,11 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
 #precip_gauge_locations
 #. handle_errors
-process_2_ms013 <- function(network, domain, prodname_ms) {
+process_2_ms013 <- precip_gauge_from_site_data
 
-    precip_gauge_from_site_data(network = network, 
-                                domain = domain,
-                                prodname_ms = prodname_ms)
-  
-    return()
-}
+#stream_gauge_locations
+#. handle_errors
+process_2_ms014 <- stream_gauge_from_site_data
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
