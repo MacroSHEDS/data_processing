@@ -6475,9 +6475,9 @@ combine_munged_products <- function(network, domain, prodname_ms,
     for(i in 1:length(sites)) {
         site_files <- grep(sites[i], files, value = TRUE)
 
-        sile_full <- map_dfr(site_files, read_feather)
+        site_full <- map_dfr(site_files, read_feather)
 
-        write_ms_file(d = sile_full,
+        write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
