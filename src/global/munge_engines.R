@@ -45,9 +45,13 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
         }
     }
 
-    if(site_name == 'sitename_NA' && ! is_empty(out)) site_name_file <- unique(out$site_name)
+    if(site_name == 'sitename_NA' && ! is_empty(out)){
+        site_name_from_file <- unique(out$site_name)
+    } else {
+        site_name_from_file <- site_name
+    }
 
-    if(length(site_name_file) > 1) {
+    if(length(site_name_from_file) > 1) {
         stop('multiple sites encountered in a dataset that should contain only one')
     }
 
@@ -62,7 +66,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = site_name_file,
+                      site_name = site_name_from_file,
                       level = 'munged',
                       shapefile = is_spatial,
                       link_to_portal = FALSE)

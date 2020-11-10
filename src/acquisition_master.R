@@ -4,10 +4,10 @@ suppressPackageStartupMessages({
     #since we're referring to their functions directly with ::
 
     # #spatial packages
-    # library(gstat) #must load before raster package
-    # # library(terra)  #must load before gstat package
-    # library(raster) #raster has been replaced by terra (way faster)
-    # library(stars)
+    # library(terra)  #must load before gstat package (which isn't currently needed)
+    # # library(gstat) #must load before raster package (not needed)
+    # library(raster)
+    # # library(stars) #not needed (yet)
     # library(sf)
     # library(sp)
     # library(mapview)
@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
     # library(rgee)
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
+    # library(nhdplusTools)
 
     #everything else
     library(httr)
