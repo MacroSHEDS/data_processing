@@ -4728,6 +4728,8 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
         filter(site_name %in% rg$site_name)
     # precip = manufacture_uncert_msdf(precip)
 
+    precip_varname <- precip$var[1]
+
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
     projstring <- choose_projection(lat = mean(bbox$ymin, bbox$ymax),
@@ -4805,7 +4807,7 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
                                        data_locations = rg,
                                        data_values = precip,
                                        stream_site_name = site_name,
-                                       output_varname = 'precip',
+                                       output_varname = precip_varname,
                                        elev_agnostic = FALSE,
                                        verbose = verbose)
 
