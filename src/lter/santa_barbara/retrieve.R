@@ -5,7 +5,7 @@ prod_info = get_product_info(network=network, domain=domain,
 
 # i=41
 for(i in 1:nrow(prod_info)){
-    # for(i in 1){
+ #for(i in 1){
     
     prodname_ms = glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
     

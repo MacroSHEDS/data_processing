@@ -171,10 +171,6 @@ process_0_6 <- retrieve_santa_barbara
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_3017 <- retrieve_santa_barbara
-
-#discharge: STATUS=READY
-#. handle_errors
 process_0_3006 <- retrieve_santa_barbara
 
 #discharge: STATUS=READY
@@ -192,10 +188,6 @@ process_0_3011 <- retrieve_santa_barbara
 #discharge: STATUS=READY
 #. handle_errors
 process_0_3001 <- retrieve_santa_barbara
-
-#discharge: STATUS=READY
-#. handle_errors
-process_0_3018 <- retrieve_santa_barbara
 
 #discharge: STATUS=READY
 #. handle_errors
@@ -419,8 +411,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
     
-    look <- read.csv(rawfile1, colClasses = "character") 
-    
+    look <- read.csv(rawfile1, colClasses = 'character')
     
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
@@ -438,7 +429,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
                                         'spec_cond_uSpercm' = 'spCond'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-999',
-                         is_sensor = TRUE)
+                         is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -475,75 +466,182 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3017 <- retrieve_santa_barbara
+process_1_3006 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3006 <- retrieve_santa_barbara
+process_1_3009 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3009 <- retrieve_santa_barbara
+process_1_3010 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3010 <- retrieve_santa_barbara
+process_1_3011 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3011 <- retrieve_santa_barbara
+process_1_3001 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3001 <- retrieve_santa_barbara
+process_1_3003 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3018 <- retrieve_santa_barbara
+process_1_3007 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3003 <- retrieve_santa_barbara
+process_1_3008 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3007 <- retrieve_santa_barbara
+process_1_3013 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3008 <- retrieve_santa_barbara
+process_1_3015 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3013 <- retrieve_santa_barbara
+process_1_3016 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3015 <- retrieve_santa_barbara
+process_1_3005 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3016 <- retrieve_santa_barbara
+process_1_3002 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3005 <- retrieve_santa_barbara
+process_1_3004 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3002 <- retrieve_santa_barbara
+process_1_3012 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
+#discharge: STATUS=READY
 #. handle_errors
-process_1_3004 <- retrieve_santa_barbara
+process_1_3014 <- munge_santa_barbara_discharge
 
-#discharge: STATUS=PENDING
-#. handle_errors
-process_1_3012 <- retrieve_santa_barbara
+#derive kernels ####
 
-#discharge: STATUS=PENDING
+#usgs_discharge: STATUS=READY
 #. handle_errors
-process_1_3014 <- retrieve_santa_barbara
+process_2_ms006 <- function(network, domain, prodname_ms) {
+    
+    pull_usgs_discharge(network = network, 
+                        domain = domain,
+                        prodname_ms = prodname_ms,
+                        sites = c('SP02' = '11120520', 
+                                  'MC06' = '11119745'),
+                        time_step = 'sub_daily')
+    
+    return()
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms001 <- function(network, domain, prodname_ms) {
+    
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge__3006',
+                                           'discharge__3009',
+                                           'discharge__3010',
+                                           'discharge__3011',
+                                           'discharge__3001',
+                                           'discharge__3003',
+                                           'discharge__3007',
+                                           'discharge__3008',
+                                           'discharge__3013',
+                                           'discharge__3015',
+                                           'discharge__3016',
+                                           'discharge__3005',
+                                           'discharge__3002',
+                                           'discharge__3004',
+                                           'discharge__3012',
+                                           'discharge__3014',
+                                           'discharge__ms006'))
+    
+    return()
+}
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms004 <- precip_gauge_from_site_data
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms) {
+    
+    precip_idw(precip_prodname = c('precipitation__5010', 'precipitation__5016',
+                                   'precipitation__5026', 'precipitation__4004',
+                                   'precipitation__5001', 'precipitation__5004',
+                                   'precipitation__5005', 'precipitation__5006',
+                                   'precipitation__5007', 'precipitation__5008',
+                                   'precipitation__5011', 'precipitation__5014',
+                                   'precipitation__5015', 'precipitation__5017',
+                                   'precipitation__5018', 'precipitation__5019',
+                                   'precipitation__5020', 'precipitation__5021',
+                                   'precipitation__5022', 'precipitation__5024', 
+                                   'precipitation__5027', 'precipitation__5028',
+                                   'precipitation__4003', 'precipitation__5002',
+                                   'precipitation__5003', 'precipitation__5009',
+                                   'precipitation__5012', 'precipitation__5023',
+                                   'precipitation__5025', 'precipitation__4001',
+                                   'precipitation__4002', 'precipitation__4006',
+                                   'precipitation__4009', 'precipitation__4010',
+                                   'precipitation__4011', 'precipitation__4012',
+                                   'precipitation__4007', 'precipitation__4008',
+                                   'precipitation__4005'),
+               wb_prodname = 'ws_boundry__ms000',
+               pgauge_prodname = 'precip_gauge_locations__ms004',
+               precip_prodname_out = prodname_ms)
+    
+    return()
+}
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms005 <- function(network, domain, prodname_ms) {
+    
+    schem_prodname_ms <- 'stream_chemistry__6'
+    disch_prodname_ms <- 'discharge__ms001'
+    
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               prodname_ms = schem_prodname_ms)
+    
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            prodname_ms = disch_prodname_ms)
+    
+    flux_sites <- generics::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+    
+    for(s in flux_sites){
+        
+        flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
+                                  qprod = disch_prodname_ms,
+                                  site_name = s))
+        
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE)
+    }
+    
+    return()
+}

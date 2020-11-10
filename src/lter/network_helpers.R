@@ -59,6 +59,7 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
 
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
+    #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved

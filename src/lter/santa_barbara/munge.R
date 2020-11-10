@@ -3,9 +3,9 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='munge', get_statuses='ready')
 
-# i=39
+# i=57
 for(i in 1:nrow(prod_info)){
-   #for(i in 2:nrow(prod_info)){
+   #for(i in 41:nrow(prod_info)){
 
     prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
   
@@ -36,11 +36,19 @@ for(i in 1:nrow(prod_info)){
                    s=site_name, p=prodname_ms), logger=logger_module)
     }
     
-        munge_rtn = munge_by_site(network = network,
-                                  domain = domain, 
-                                  site_name = site_name, 
-                                  prodname_ms = prodname_ms, 
-                                  tracker = held_data)
+        if(prodname_ms == 'stream_chemistry__6') {
+            munge_rtn = munge_combined(network = network,
+                                       domain = domain, 
+                                       site_name = site_name, 
+                                       prodname_ms = prodname_ms, 
+                                       tracker = held_data)
+        } else{
+            munge_rtn = munge_by_site(network = network,
+                                      domain = domain, 
+                                      site_name = site_name, 
+                                      prodname_ms = prodname_ms, 
+                                      tracker = held_data)
+        }
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network=network, domain=domain,
