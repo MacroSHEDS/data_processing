@@ -4280,7 +4280,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     #the interpolation
     #data_values is a data.frame with one column each for datetime and ms_status,
     #and an additional named column of data values for each data location.
-    #output_varname is only used to name the column in the tibble that is returned
+    #output_varname is only used to populate the column in the tibble that is returned
     #elev_agnostic is a boolean that determines whether elevation should be
     #included as a predictor of the variable being interpolated
 
@@ -4314,6 +4314,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
     }
 
     #calculate watershed mean at every timestep
+    ptm <- proc.time()
     ws_mean <- rep(NA, nrow(data_matrix))
     ntimesteps <- nrow(data_matrix)
     for(k in 1:ntimesteps){
@@ -4322,7 +4323,8 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
                          site_name = stream_site_name,
                          v = output_varname,
                          k = k,
-                         ntimesteps = ntimesteps)
+                         ntimesteps = ntimesteps,
+                         time_elapsed = (proc.time() - ptm)[3] / 60)
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -4380,7 +4382,7 @@ shortcut_idw <- function(encompassing_dem, wshd_bnd, data_locations,
 
 shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                   precip_values, chem_values, stream_site_name,
-                                  verbose = FALSE){
+                                  output_varname, verbose = FALSE){
 
     #this function is similar to shortcut_idw, but when it gets to the
     #vectorized raster stage, it multiplies precip chem by precip volume
@@ -4463,6 +4465,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
     }
 
     #calculate watershed mean concentration and flux at every timestep
+    ptm <- proc.time()
     if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
     ntimesteps <- nrow(p_matrix)
     ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
@@ -4470,9 +4473,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
         idw_log_timestep(verbose = verbose,
                          site_name = stream_site_name,
-                         v = '      ',
+                         v = output_varname,
                          k = k,
-                         ntimesteps = ntimesteps)
+                         ntimesteps = ntimesteps,
+                         time_elapsed = (proc.time() - ptm)[3] / 60)
 
         #assign cell weights as normalized inverse squared distances (p)
         pk <- t(p_matrix[k, , drop = FALSE])
@@ -4511,10 +4515,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         c_idw <- weightmat_c %*% ck
 
         #reapply uncertainty dropped by `%*%`
-        errors(p_idw) <- weightmat %*% matrix(errors(pk),
-                                              nrow = nrow(pk))
-        errors(c_idw) <- weightmat %*% matrix(errors(ck),
-                                              nrow = nrow(ck))
+        errors(p_idw) <- weightmat_p %*% matrix(errors(pk),
+                                                nrow = nrow(pk))
+        errors(c_idw) <- weightmat_c %*% matrix(errors(ck),
+                                                nrow = nrow(ck))
 
         #estimate raster values from elevation alone (p only)
         p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
@@ -4536,6 +4540,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
 
     ws_means <- tibble(datetime = d_dt,
                        site_name = stream_site_name,
+                       var = output_varname,
                        concentration = ws_mean_conc,
                        flux = ws_mean_flux,
                        ms_status = d_status,
@@ -4696,13 +4701,7 @@ idw_parallel_combine <- function(d1, d2){
 
     if(is.character(d1) && d1 == 'first iter') return(d2)
 
-    ms_status <- bitwOr(d1$ms_status, d2$ms_status)
-    ms_interp <- bitwOr(d1$ms_interp, d2$ms_interp)
-
-    d_comb <- bind_cols(d1[, 1:(ncol(d1) - 2)],
-                        d2[, 3, drop = FALSE],
-                        tibble(ms_status = ms_status),
-                        tibble(ms_interp = ms_interp))
+    d_comb <- bind_rows(d1, d2)
 
     return(d_comb)
 }
@@ -4726,7 +4725,7 @@ idw_log_var <- function(verbose, site_name, v, j, nvars){
 
     if(! verbose) return()
 
-    msg <- glue('site: {s} (_/__); var: {vv} ({jj}/{nv})',
+    msg <- glue('site: {s}; var: {vv} ({jj}/{nv})',
                 s = site_name,
                 vv = v,
                 jj = j,
@@ -4738,16 +4737,32 @@ idw_log_var <- function(verbose, site_name, v, j, nvars){
     #return()
 }
 
-idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps){
+idw_log_timestep <- function(verbose, site_name=NULL, v, k, ntimesteps,
+                             time_elapsed){
+
+    #time elapsed must be in minutes. use something like:
+    #   (proc.time() - ptm)[3] / 60)
 
     if(! verbose) return()
 
+    time_elapsed <- ifelse(k == 0,
+                           '?',
+                           time_elapsed)
+
+    estimated_time_remaining <- ifelse(k == 0,
+                                       '?',
+                                       round(time_elapsed * (ntimesteps - k) / k,
+                                             1))
+
     if(k == 1 || k %% 1000 == 0){
-        msg <- glue('site: {s} (_/__); var: {vv} (_/__); timestep: ({kk}/{nt})',
+        msg <- glue('site: {s}; var: {vv}; timestep: ({kk}/{nt}); ',
+                    'thread elapsed (mins): {et}; thread ETA (mins): {tm}',
                     s = site_name,
                     vv = v,
                     kk = k,
-                    nt = ntimesteps)
+                    nt = ntimesteps,
+                    et = round(time_elapsed, 1),
+                    tm = estimated_time_remaining)
 
         loginfo(msg,
                 logger = logger_module)
@@ -5049,6 +5064,8 @@ pchem_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
             stop('NA datetime found in ws_mean_d')
         }
 
+        ws_mean_d <- arrange(ws_mean_d, var, datetime)
+
         precursor_prodname <- get_detlim_precursors(network = network,
                                                     domain = domain,
                                                     prodname_ms = prodname_ms)
@@ -5160,6 +5177,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
     #send vars into flux interpolator with precip, one at a time;
     #combine and write outputs by site
     # catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+
     for(i in 1:nrow(wb)){
 
         wbi <- slice(wb, i)
@@ -5170,7 +5188,14 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                    i = i,
                    nw = nrow(wb))
 
+        #for testing
+        # precip = filter(precip, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01'))
+        # pchem_setlist_fluxable = lapply(pchem_setlist_fluxable, function(x) filter(x, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01')))
+        # drop_these = which(sapply(pchem_setlist_fluxable, function(x) is_empty(x[[1]])))
+        # pchem_setlist_fluxable = pchem_setlist_fluxable[-drop_these]
+        # pchem_vars_fluxable = pchem_vars_fluxable[-drop_these]
         ws_mean_flux <- foreach::foreach(j = 1:nvars_fluxable,
+        ws_mean_flux <- foreach::foreach(j = 1:3,
                                          .combine = idw_parallel_combine,
                                          .init = 'first iter') %dopar% {
                                          # .packages = idw_pkg_export,
@@ -5183,7 +5208,7 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                         site_name = site_name,
                         v = v,
                         j = j,
-                        nvars = nvars)
+                        nvars = nvars_fluxable)
 
             shortcut_idw_concflux(encompassing_dem = dem,
                                   wshd_bnd = wbi,
@@ -5191,52 +5216,15 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
                                   precip_values = precip,
                                   chem_values = pchem_setlist_fluxable[[j]],
                                   stream_site_name = site_name,
+                                  output_varname = v,
                                   verbose = verbose)
         }
 
-        #     if(j == 1){
-        #         datetime_out <- select(ws_means, datetime)
-        #         site_name_out <- select(ws_means, site_name)
-        #         ms_status_out <- ws_means$ms_status
-        #         ms_interp_out <- ws_means$ms_interp
-        #
-        #         # ws_mean_conc <- ws_means %>%
-        #         #     select(concentration) %>%
-        #         #     rename(!!v := concentration)
-        #
-        #         ws_mean_flux <- ws_means %>%
-        #             select(flux) %>%
-        #             rename(!!v := flux)
-        #     } else {
-        #         # ws_mean_conc <- ws_means %>%
-        #         #     select(concentration) %>%
-        #         #     rename(!!v := concentration) %>%
-        #         #     bind_cols(ws_mean_conc)
-        #
-        #         ws_mean_flux <- ws_means %>%
-        #             select(flux) %>%
-        #             rename(!!v := flux) %>%
-        #             bind_cols(ws_mean_flux)
-        #     }
-        #
-        #     ms_status_out <- bitwOr(ws_means$ms_status, ms_status_out)
-        #     ms_interp_out <- bitwOr(ws_means$ms_interp, ms_interp_out)
-        # }
-        #
-        # #reassemble tibbles
-        # # ws_mean_conc <- bind_cols(datetime_out, site_name_out, ws_mean_conc)
-        # ws_mean_flux <- bind_cols(datetime_out, site_name_out, ws_mean_flux)
-        # ws_mean_flux$ms_status <- ms_status_out
-        # ws_mean_flux$ms_interp <- ms_interp_out
-        # # ws_mean_conc$ms_status <- ws_mean_flux$ms_status <- ms_status_out
-        # # ws_mean_conc$ms_interp <- ws_mean_flux$ms_interp <- ms_interp_out
-
-        # if(any(is.na(ws_mean_conc$datetime))){
-        #     stop('NA datetime found in ws_mean_conc')
-        # }
         if(any(is.na(ws_mean_flux$datetime))){
             stop('NA datetime found in ws_mean_flux')
         }
+
+        ws_mean_flux <- arrange(ws_mean_flux, var, datetime)
 
         # ue(write_ms_file(ws_mean_conc,
         #                  network = network,
@@ -6789,7 +6777,7 @@ derive_precip_flux <- function(network, domain, prodname_ms){
              precip_prodname = precip_prodname_ms,
              wb_prodname = wb_prodname_ms,
              pgauge_prodname = rg_prodname_ms,
-             pchem_prodname_out = prodname_ms)
+             flux_prodname_out = prodname_ms)
 
     return()
 }
