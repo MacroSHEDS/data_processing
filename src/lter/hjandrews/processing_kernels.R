@@ -520,28 +520,11 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){
-
-    precip_idw(precip_prodname = 'precipitation__5482',
-               wb_prodname = 'ws_boundary__3239',
-               pgauge_prodname = 'precip_gauge_locations__5482',
-               precip_prodname_out = prodname_ms)
-
-    return()
-}
+process_2_ms001 <- derive_precip
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){
-
-        pchem_idw(pchem_prodname = 'precip_chemistry__4022',
-                  precip_prodname = 'precipitation__5482',
-                  wb_prodname = 'ws_boundary__3239',
-                  pgauge_prodname = 'precip_gauge_locations__5482',
-                  pchem_prodname_out = prodname_ms)
-
-    return()
-}
+process_2_ms002 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
@@ -549,13 +532,4 @@ process_2_ms003 <- derive_stream_flux
 
 #precip_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms){
-
-    flux_idw(pchem_prodname = 'precip_chemistry__4022',
-             precip_prodname = 'precipitation__5482',
-             wb_prodname = 'ws_boundary__3239',
-             pgauge_prodname = 'precip_gauge_locations__5482',
-             flux_prodname_out = prodname_ms)
-
-    return()
-}
+process_2_ms004 <- derive_precip_flux
