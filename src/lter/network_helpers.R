@@ -5,7 +5,9 @@ ms_pasta_domain_refmap = list(
     baltimore = 'knb-lter-bes',
     luquillo = 'knb-lter-luq',
     niwot = 'knb-lter-nwt',
-    santa_barbara = 'knb-lter-sbc'
+    santa_barbara = 'knb-lter-sbc',
+    bonanza = 'knb-lter-bnz',
+    mcmurdo = 'knb-lter-mcm'
 )
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
