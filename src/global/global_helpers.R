@@ -364,6 +364,9 @@ identify_sampling <- function(df,
                 list('startdt' = g_a$starts,
                      'type' = g_a$type,
                      'interval' = g_a$interval)
+            
+            g_a <- g_a %>%
+                mutate(interval = as.character(interval))
 
             all_sites <- bind_rows(all_sites, g_a)
         }
@@ -897,7 +900,7 @@ ms_read_raw_csv <- function(filepath,
     colnames(d) <- colnames_d
 
     #resolve datetime structure into POSIXct
-    d <- resolve_datetime(d = d,
+    d  <- resolve_datetime(d = d,
                           datetime_colnames = datetime_colnames,
                           datetime_formats = datetime_formats,
                           datetime_tz = datetime_tz,
@@ -990,7 +993,7 @@ resolve_datetime <- function(d,
                              datetime_colnames,
                              datetime_formats,
                              datetime_tz,
-                             optional){
+                             optional) {
 
     #d is a data.frame or tibble with at least one date or time column
     #   (all date and/or time columns must contain character strings,
@@ -3151,7 +3154,7 @@ append_to_productfile <- function(network,
     prods <- bind_rows(prods, new_row)
 
     write_csv(x = prods,
-              file = prodfile)
+              path = prodfile)
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
