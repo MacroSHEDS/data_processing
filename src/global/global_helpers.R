@@ -971,10 +971,10 @@ ms_read_raw_csv <- function(filepath,
                               domain = domain,
                               network = network,
                               prodname_ms = prodname_ms))
-    
-    #Check if all sites are in site file 
+
+    #Check if all sites are in site file
     if(!all(unique(d$site_name) %in% site_data$site_name)) {
-        
+
         for(i in 1:length(unique(d$site_name))) {
             if(!unique(d$site_name)[i] %in% site_data$site_name) {
                 loginfo(msg = paste(unname(unique(d$site_name)[i]), 'is not in site_data file; add'),
@@ -1547,9 +1547,9 @@ ms_conversions <- function(d,
             d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
                                                  from = v,
                                                  to = unname(molecular_conversion_map[v]))
-            
+
             check_double <- str_split_fixed(unname(molecular_conversion_map[v]), '', n = Inf)[1,]
-            
+
             if(length(check_double) > 1 && length(unique(check_double)) == 1) {
                 molecular_conversion_map[v] <- unique(check_double)
             }
@@ -2408,16 +2408,16 @@ ms_delineate <- function(network, domain,
 
         files_to_inspect <- list.files(path = inspection_dir,
                                        pattern = '.shp')
-        
+
         tmep_point <- glue(tempdir(), '/', 'POINT')
-        
+
         site_locations[i,] %>%
             sf::st_as_sf(coords = c('longitude', 'latitude'), crs = site_locations[i,]$CRS) %>%
             sf::st_write(dsn = tmep_point,
                      driver = 'ESRI Shapefile',
                      delete_dsn = TRUE,
                      silent = TRUE)
-        
+
         #if only one delineation, write it into macrosheds storage
         if(length(files_to_inspect) == 1){
 
@@ -2441,7 +2441,7 @@ ms_delineate <- function(network, domain,
                                    c(files_to_inspect, 'Abort delineation'),
                                    sep = ': ',
                                    collapse = '\n')
-            
+
             helper_code <- glue('mapview::mapview(sf::st_read("{wd}/{f}")) + mapview::mapview(sf::st_read("{pf}"))',
                                 wd = inspection_dir,
                                 f = files_to_inspect,
@@ -2582,7 +2582,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
                      crs = crs) %>%
         sf::st_transform(proj)
     # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
-    
+
     #prepare for delineation loops
     buffer_radius <- 100
     dem_coverage_insufficient <- FALSE
@@ -2873,18 +2873,18 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 
 get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FALSE,
                                   accpet_multi_ing = FALSE){
-    
+
     #get prodname_ms's by prodname, for specifying derive kernels.
-    
+
     #ignore_derprod: logical. if TRUE, don't consider any product with an
     #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE
-   
+
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain)))
-    
+
     if(ignore_derprod){
-        
+
         prodname_ms <- prods %>%
             filter(
                 !  grepl(pattern = '^ms[0-9]{3}$',
@@ -2894,9 +2894,9 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
                                        prodcode,
                                        sep = '__')) %>%
             pull(prodname_ms)
-        
+
     } else {
-        
+
         prodname_ms <- prods %>%
             filter(
                 # grepl(pattern = '^ms[0-9]{3}$',
@@ -2906,20 +2906,20 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
                                        prodcode,
                                        sep = '__')) %>%
             pull(prodname_ms)
-        
-        #Following code will select a ms product (if it exits) if there are 
-        #multiple products, Useful for when an aggregated derived products exists for 
-        #discharge or chemistry 
+
+        #Following code will select a ms product (if it exits) if there are
+        #multiple products, Useful for when an aggregated derived products exists for
+        #discharge or chemistry
         if(length(prodname_ms) > 1){
-            
+
             prodname_ms_agged <- grep(pattern = '*ms[0-9]{3}$',
-                                x = prodname_ms, value = TRUE) 
-            
+                                x = prodname_ms, value = TRUE)
+
             if(length(prodname_ms_agged) > 0) {
                 prodname_ms <- prodname_ms_agged
             }
         }
-        
+
     }
     #obsolete docs from above, just in case we need to restore this section
     #   In the special
@@ -3404,11 +3404,11 @@ calculate_molar_mass <- function(molecular_formula){
 convert_molecule <- function(x, from, to){
 
     #e.g. convert_molecule(1.54, 'NH4', 'N')
-    
+
     molecule_real <- ms_vars %>%
         filter(variable_code == !!from) %>%
         pull(molecule)
-    
+
     if(!is.na(molecule_real)) {
         from <- molecule_real
     }
@@ -3751,7 +3751,7 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
     new_prodname_ms <- paste(prodname_from_prodname_ms(prodname_ms),
                              new_prodcode,
                              sep = '__')
-    
+
     old_loc <- ifelse(is_derived_product(prodname_ms), 'derived', 'munged')
 
     munge_dir <- glue('data/{n}/{d}/{l}/{p}',
@@ -3919,7 +3919,7 @@ ms_list_files <- function(network, domain, prodname_ms){
 
     #level is either "munged" or "derived"
     #prodname_ms can be a single string or a vector
-    
+
     level <- ifelse(is_derived_product(prodname_ms), 'derived', 'munged')
 
     files <- glue('data/{n}/{d}/{l}/{p}',
@@ -5195,7 +5195,6 @@ flux_idw <- function(pchem_prodname, precip_prodname, wb_prodname,
         # pchem_setlist_fluxable = pchem_setlist_fluxable[-drop_these]
         # pchem_vars_fluxable = pchem_vars_fluxable[-drop_these]
         ws_mean_flux <- foreach::foreach(j = 1:nvars_fluxable,
-        ws_mean_flux <- foreach::foreach(j = 1:3,
                                          .combine = idw_parallel_combine,
                                          .init = 'first iter') %dopar% {
                                          # .packages = idw_pkg_export,
@@ -6652,12 +6651,12 @@ derive_precip <- function(network, domain, prodname_ms){
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
                                                 accpet_multi_ing = TRUE)
-    
+
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
                                             accpet_multi_ing = TRUE)
-    
+
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
@@ -6681,18 +6680,18 @@ derive_precip_chem <- function(network, domain, prodname_ms){
                                                prodname = 'precip_chemistry',
                                                ignore_derprod = TRUE,
                                                accpet_multi_ing = TRUE)
-    
+
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
                                                 accpet_multi_ing = TRUE)
-    
+
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
                                             accpet_multi_ing = TRUE)
-    
+
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
@@ -6713,7 +6712,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                                                domain = domain,
                                                prodname = 'stream_chemistry',
                                                accpet_multi_ing = TRUE)
-    
+
     disch_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'discharge',
@@ -6756,18 +6755,18 @@ derive_precip_flux <- function(network, domain, prodname_ms){
                                                prodname = 'precip_chemistry',
                                                ignore_derprod = TRUE,
                                                accpet_multi_ing = TRUE)
-    
+
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
                                                 accpet_multi_ing = TRUE)
-    
+
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
                                             accpet_multi_ing = TRUE)
-    
+
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
@@ -6820,34 +6819,34 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
 }
 
 stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
-    
+
     locations <- site_data %>%
         filter(network == !!network,
                domain == !!domain,
                site_type == 'stream_gauge')
-    
+
     crs <- unique(locations$CRS)
-    
+
     if(length(crs) > 1) {
         stop('crs is not consistent for all sites, cannot convert location in
              site_data to stream_gauge location product')
     }
-    
+
     locations <- locations %>%
         sf::st_as_sf(coords = c('longitude', 'latitude'), crs = crs) %>%
         select(site_name)
-    
+
     path <- glue('data/{n}/{d}/derived/{p}',
                  n = network,
                  d = domain,
                  p = prodname_ms)
-    
+
     dir.create(path, recursive = TRUE)
-    
+
     for(i in 1:nrow(locations)) {
-        
+
         site_name <- pull(locations[i,], site_name)
-        
+
         sf::st_write(locations[i,], glue('{p}/{s}',
                                          p = path,
                                          s = site_name),
@@ -6857,32 +6856,32 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
 }
 
 pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) {
-    
-    #This function is used in the case when a domain's discharge data is 
-    #associated with the USGS and is not available through the domain's portal 
+
+    #This function is used in the case when a domain's discharge data is
+    #associated with the USGS and is not available through the domain's portal
     #or the USGS data is preferable
-    
-    #sites: a named vector where the name is the site name we would like to be 
-    #    used in MacroSheds and the value is the USGS gauge ID 
-    #time_step: either a single input of 'daily' or 'sub_daily' depending what data 
-    #    is available or perfected. Or a vector the same length as sites with either 
+
+    #sites: a named vector where the name is the site name we would like to be
+    #    used in MacroSheds and the value is the USGS gauge ID
+    #time_step: either a single input of 'daily' or 'sub_daily' depending what data
+    #    is available or perfected. Or a vector the same length as sites with either
     #    'daily' and 'sub_daily'.
-    
+
     if(length(time_step) == 1) {
         time_step <- rep(time_step, length(sites))
     }
-    
+
     if(!all(time_step %in% c('daily', 'sub_daily'))) {
         stop('time_step can only include daily or sub_daily')
     }
-    
+
     if(!length(time_step) == length(sites)) {
         stop(paste0('time_step must either be a single chracter of daily or ',
         'sub_daily, or a vector of the same length as sites'))
     }
-    
+
     for(i in 1:length(sites)) {
-        
+
         if(time_step[i] == 'daily') {
             discharge <- dataRetrieval::readNWISdv(sites[i], '00060') %>%
                 mutate(datetime = ymd_hms(paste0(Date, ' ', '12:00:00'), tz = 'UTC')) %>%
@@ -6892,43 +6891,43 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                 rename(datetime = dateTime,
                        val = X_00060_00000)
         }
-        
+
         discharge <- discharge %>%
             mutate(site_name =!!names(sites[i])) %>%
             mutate(var = 'discharge',
                    val = val * 28.31685,
                    ms_status = 0) %>%
             select(site_name, datetime, val, var, ms_status)
-        
+
         d <- identify_sampling_bypass(discharge,
                                       is_sensor = TRUE,
                                       network = network,
                                       domain = domain,
                                       prodname_ms = prodname_ms)
-        
+
         d <- carry_uncertainty(d,
                                network = network,
                                domain = domain,
                                prodname_ms = prodname_ms)
-        
+
         d <- synchronize_timestep(d,
                                   desired_interval = '1 day', #set to '15 min' when we have server
                                   impute_limit = 30)
-        
+
         d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
-        
+
         if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
                              n = network,
                              d = domain,
                              p = prodname_ms))) {
-            
+
             dir.create(glue('data/{n}/{d}/derived/{p}',
                             n = network,
                             d = domain,
                             p = prodname_ms),
                        recursive = TRUE)
         }
-        
+
          write_ms_file(d,
                        network = network,
                        domain = domain,
@@ -6938,6 +6937,6 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                        shapefile = FALSE,
                        link_to_portal = FALSE)
     }
-    
+
     return()
 }
