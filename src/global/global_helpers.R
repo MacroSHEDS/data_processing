@@ -1506,7 +1506,7 @@ ms_conversions <- function(d,
         SiO2 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
-        NO3_NO2 = 'NN',
+        NO3_NO2 = 'N',
         PO4 = 'P')
 
     if(cm){
@@ -4127,6 +4127,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
         rename(flow = val) %>% #quick and dirty way to convert to wide
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
         select(-var, -site_name)
+    
+    if(nrow(flow) == 0) {
+        return(NULL)
+    }
 
     #a few commented remnants from the old wide-format days have been left here,
     #because they might be instructive in other endeavors
@@ -4156,6 +4160,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
         # select(datetime, site_name, everything()) %>%
         # relocate(ms_status, .after = last_col()) %>%
         # relocate(ms_interp, .after = last_col())
+    
+    if(nrow(flux) == 0) {
+        return(NULL)
+    }
 
     flux <- apply_detection_limit_t(flux, network, domain, chemprod)
 
@@ -5739,6 +5747,58 @@ Mode <- function(x, na.rm = TRUE){
 
 }
 
+knit_det_limts <- function(prodname_ms) {
+    
+    if(is_derived_product(prodname_ms) && !ignore_pred){
+        
+        #if there are multiple precursors (rare), just use the first
+        prodname_ms <- get_detlim_precursors(network = network,
+                                             domain = domain,
+                                             prodname_ms = prodname_ms)
+    }
+    
+    detlim <- read_detection_limit(network, domain, prodname_ms[1])
+    
+    for(i in 2:length(prodname_ms)) {
+        detlim_ <- read_detection_limit(network, domain, prodname_ms[i])
+        
+        old_vars <- names(detlim)
+        new_vars <- names(detlim_)
+        
+        common_vars <- generics::intersect(old_vars, new_vars)
+        
+        if(length(common_vars) > 0) {
+            
+            for(p in 1:length(common_vars)) {
+                
+                old_sites <- names(detlim[[common_vars[p]]])
+                new_sites <- names(detlim_[[common_vars[p]]])
+                
+                common_sites <- generics::intersect(old_sites, new_sites) 
+                
+                if(!length(common_sites) == 0) {
+                    new_sites <- new_sites[!new_sites %in% common_sites]
+                }
+                
+                for(z in 1:length(new_sites)) {
+                    detlim[[common_vars[p]]][[new_sites[z]]] <- detlim_[[common_vars[p]]][[new_sites[z]]]
+                }
+            }
+        } 
+        
+        unique_vars <- new_vars[!new_vars %in% old_vars]
+        if(length(unique_vars) > 0) {
+            for(v in 1:length(unique_vars)) {
+                detlim[[unique_vars[v]]] <- detlim_[[unique_vars[v]]]
+            }
+            
+        }
+    }
+
+    return(detlim)
+    
+}
+
 identify_detection_limit_t <- function(X, network, domain, prodname_ms,
                                        return_detlims = FALSE){
 
@@ -5926,13 +5986,17 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred
 
     if(is_derived_product(prodname_ms) && !ignore_pred){
 
-        #if there are multiple precursors (rare), just use the first
         prodname_ms <- get_detlim_precursors(network = network,
                                              domain = domain,
-                                             prodname_ms = prodname_ms)[1]
+                                             prodname_ms = prodname_ms)
+    }
+    
+    if(length(prodname_ms) > 1) {
+        detlim <- knit_det_limts(prodname_ms)
+    } else {
+        detlim <- read_detection_limit(network, domain, prodname_ms)
     }
 
-    detlim <- read_detection_limit(network, domain, prodname_ms)
     if(is_ms_err(detlim)){
         stop('problem reading detection limits from file')
     }
@@ -5951,6 +6015,8 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred
 
         x <- filter(x, var == varnm)
 
+        #nrow(x) == 1 was added because there was an error occurring if there 
+        #was a site with only one sample of a variable 
         if(nrow(x) == 0){
             return(NULL)
         }
@@ -6655,6 +6721,19 @@ ms_write_confdata <- function(x, which_dataset, to_where){
     }
 }
 
+filter_single_samp_sites <- function(df) {
+    
+    counts <- df %>%
+        group_by(site_name, var) %>%
+        summarise(n = n()) 
+    
+    df <- left_join(df, counts, by = c('site_name', 'var')) %>%
+        filter(n > 1) %>%
+        select(-n) 
+    
+    return(df)
+}
+
 #this section is for generalized derive kernels. this file is getting pretty huge.
 #we should soon separate it into several different files, each with a
 #particular category of global helpers.
@@ -6748,16 +6827,19 @@ derive_stream_flux <- function(network, domain, prodname_ms){
 
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
-                                  site_name = s))
-
-        write_ms_file(d = flux,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_name = s,
-                      level = 'derived',
-                      shapefile = FALSE)
-    }
+                                  site_name = s)) 
+        
+        if(!is.null(flux)) {
+            
+            write_ms_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = s,
+                          level = 'derived',
+                          shapefile = FALSE)
+            } 
+        }
 
     return()
 }

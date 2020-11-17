@@ -4,7 +4,7 @@ site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 prod_info = get_product_info(network=network, domain=domain,
     status_level='derive', get_statuses='ready')
 
-# i=2
+# i=4
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -78,3 +78,5 @@ for(i in 1:nrow(prod_info)){
 
 loginfo('Derive complete for all products',
         logger=logger_module)
+
+
