@@ -3,7 +3,7 @@ loginfo('Beginning munge', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
     status_level='munge', get_statuses='ready')
 
-# i=1
+# i=39
 for(i in 1:nrow(prod_info)){
 # for(i in 5){
 
@@ -34,17 +34,12 @@ for(i in 1:nrow(prod_info)){
             loginfo(glue('Munging {s} {p}',
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
-
-        if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
-                 prodname_ms)){
-            munge_rtn = munge_combined_split(network = network,
-                                             domain = domain,
-                                             site_name = site_name,
-                                             prodname_ms = prodname_ms,
-                                             tracker = held_data)
-        } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn = munge_by_site(network, domain, site_name, prodname_ms, held_data)
-        }
+        
+        munge_rtn = munge_combined(network = network,
+                                   domain = domain,
+                                   site_name = site_name,
+                                   prodname_ms = prodname_ms,
+                                   tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network=network, domain=domain,

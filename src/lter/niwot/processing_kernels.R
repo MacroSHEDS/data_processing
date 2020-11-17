@@ -1807,12 +1807,12 @@ process_2_ms006 <- stream_gauge_from_site_data
 process_2_ms001 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms,
-                            munged_prodname_ms = c('discharge__102',
-                                                   'discharge__111',
-                                                   'discharge__74',
-                                                   'discharge__105'))
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge__102',
+                                           'discharge__111',
+                                           'discharge__74',
+                                           'discharge__105'))
 
     return()
 }
@@ -1822,20 +1822,20 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 process_2_ms002 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms,
-                            munged_prodname_ms = c('stream_chemistry__213',
-                                                   'stream_chemistry__103',
-                                                   'stream_chemistry__107',
-                                                   'stream_chemistry__108',
-                                                   'stream_chemistry__109',
-                                                   'stream_chemistry__110',
-                                                   'stream_chemistry__112',
-                                                   'stream_chemistry__113',
-                                                   'stream_chemistry__9',
-                                                   'stream_chemistry__160',
-                                                   'stream_chemistry__162',
-                                                   'stream_chemistry__163'))
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_chemistry__213',
+                                           'stream_chemistry__103',
+                                           'stream_chemistry__107',
+                                           'stream_chemistry__108',
+                                           'stream_chemistry__109',
+                                           'stream_chemistry__110',
+                                           'stream_chemistry__112',
+                                           'stream_chemistry__113',
+                                           'stream_chemistry__9',
+                                           'stream_chemistry__160',
+                                           'stream_chemistry__162',
+                                           'stream_chemistry__163'))
 
     return()
 }

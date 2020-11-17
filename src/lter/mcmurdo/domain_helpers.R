@@ -10,7 +10,7 @@ retrieve_mcmurdo <- function(set_details, network, domain) {
 
 
 munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
-                                          component){
+                                    component){
     
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -38,42 +38,101 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
     
+    col_old <- colnames(d)
+    col_name <- str_replace_all(col_old, '[.]', '_') 
+    colnames(d) <- col_name
+    
+    code <- str_split_fixed(prodname_ms, '__', n=2)[1,2]
+    
     if(grepl('discharge', prodname_ms)) {
         
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
-                             data_cols =  c('DISCHARGE.RATE' = 'discharge'),
-                             summary_flagcols = 'DISCHARGE.QLTY',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DISCHARGE.QLTY' = c('poor',
-                                                                                'Qmu',
-                                                                                'Qsed')),
-                                summary_flags_to_drop = list('DISCHARGE.QLTY' = 'DROP'),
-                                varflag_col_pattern = NA)
+        if(code %in% c(9021, 9002)) {
+            
+            d <- ms_read_raw_csv(preprocessed_tibble = d,
+                                 datetime_cols = list('date' = '%d-%m-%Y',
+                                                      'time' = '%H:%M'),
+                                 datetime_tz = 'Antarctica/McMurdo',
+                                 site_name_col = 'STRMGAGEID',
+                                 data_cols =  c('DISCHARGE_RATE' = 'discharge'),
+                                 summary_flagcols = 'DIS_COMMENTS',
+                                 data_col_pattern = '#V#',
+                                 is_sensor = TRUE)
+            
+            d <- ms_cast_and_reflag(d,
+                                    summary_flags_dirty = list('DIS_COMMENTS' = c('poor',
+                                                                                    'Qmu',
+                                                                                    'Qsed')),
+                                    summary_flags_to_drop = list('DIS_COMMENTS' = 'UNUSABLE'),
+                                    varflag_col_pattern = NA)
+        } else {
+            
+            d <- ms_read_raw_csv(preprocessed_tibble = d,
+                                 datetime_cols = list('date' = '%d-%m-%Y',
+                                                      'time' = '%H:%M'),
+                                 datetime_tz = 'Antarctica/McMurdo',
+                                 site_name_col = 'STRMGAGEID',
+                                 data_cols =  c('DISCHARGE_RATE' = 'discharge'),
+                                 summary_flagcols = 'DISCHARGE_QLTY',
+                                 data_col_pattern = '#V#',
+                                 is_sensor = TRUE)
+            
+            d <- ms_cast_and_reflag(d,
+                                    summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
+                                                                                    'Qmu',
+                                                                                    'WTmu',
+                                                                                    'SCmu',
+                                                                                    'WTsed',
+                                                                                    'SCsed',
+                                                                                    'Qsed')),
+                                    summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
+                                    varflag_col_pattern = NA)
+        }
         
     } else {
         
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
-                             data_cols =  c('WATER.TEMP' = 'temp',
-                                            'CONDUCTANCE' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#.QLTY',
-                             is_sensor = TRUE)
-        
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
-                                                         'fair', 'Good', 'good'))
+        if(code %in% c(9014, 9003, 9007, 9009, 9010, 9011, 9013, 9021, 9022, 9018, 
+                       9015, 9027, 9016, 9029, 9024, 9023)) {
+            
+            d <- ms_read_raw_csv(preprocessed_tibble = d,
+                                 datetime_cols = list('date' = '%d-%m-%Y',
+                                                      'time' = '%H:%M'),
+                                 datetime_tz = 'Antarctica/McMurdo',
+                                 site_name_col = 'STRMGAGEID',
+                                 data_cols =  c('WATER_TEMP' = 'temp',
+                                                'CONDUCTIVITY' = 'spCond'),
+                                 data_col_pattern = '#V#',
+                                 var_flagcol_pattern = '#V#_QLTY',
+                                 is_sensor = TRUE)
+            
+            d <- ms_cast_and_reflag(d,
+                                    variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
+                                                             'Qmu','WTmu','SCmu','WTsed',
+                                                             'SCsed','Qsed'),
+                                    variable_flags_to_drop = c('UNUSABLE'),
+                                    variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
+                                                             'fair', 'Good', 'good'))
+        } else {
+            
+            d <- ms_read_raw_csv(preprocessed_tibble = d,
+                                 datetime_cols = list('date' = '%d-%m-%Y',
+                                                      'time' = '%H:%M'),
+                                 datetime_tz = 'Antarctica/McMurdo',
+                                 site_name_col = 'STRMGAGEID',
+                                 data_cols =  c('WATER_TEMP' = 'temp',
+                                                'CONDUCTANCE' = 'spCond'),
+                                 data_col_pattern = '#V#',
+                                 var_flagcol_pattern = '#V#_QLTY',
+                                 is_sensor = TRUE)
+            
+            d <- ms_cast_and_reflag(d,
+                                    variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
+                                                             'Qmu','WTmu','SCmu','WTsed',
+                                                             'SCsed','Qsed'),
+                                    variable_flags_to_drop = c('UNUSABLE'),
+                                    variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
+                                                             'fair', 'Good', 'good'))
+            
+        }
     }
     
     d <- carry_uncertainty(d,
