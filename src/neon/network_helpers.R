@@ -62,35 +62,35 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                             prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
                             prodname_ms == 'precip_chemistry__DP1.00013' ~ TRUE,
                             prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
-        
+
         site_names <- unique(out$site_name)
         for(y in 1:length(site_names)) {
-            
+
             d <- out %>%
                 filter(site_name == !!site_names[y])
-            
+
             d <- identify_sampling_bypass(df = out,
                                           is_sensor =  sensor,
                                           domain = domain,
                                           network = network,
-                                          prodname_ms = prodname_ms) 
-            
+                                          prodname_ms = prodname_ms)
+
             d <- d %>%
                 filter(!is.na(val))
-            
+
             d <- remove_all_na_sites(d)
-            
+
             d <- carry_uncertainty(d,
                                    network = network,
                                    domain = domain,
                                    prodname_ms = prodname_ms)
-            
+
             d <- synchronize_timestep(d,
-                                      desired_interval = '1 day', #set to '15 min' when we have server
+                                      desired_interval = '15 min',
                                       impute_limit = 30)
-            
+
             d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-            
+
             write_ms_file(d = d,
                           network = network,
                           domain = domain,
