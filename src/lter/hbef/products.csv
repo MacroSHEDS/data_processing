@@ -10,3 +10,8 @@ ms001,precipitation,derived,NA,NA,ready,NA,NA
 ms002,precip_chemistry,derived,NA,NA,ready,NA,NA
 ms003,stream_flux_inst,derived,NA,NA,ready,NA,NA
 ms004,precip_flux_inst,derived,NA,NA,ready,NA,NA
+ms005,discharge,NA,NA,NA,linked,NA,automated entry
+ms006,precip_gauge_locations,NA,NA,NA,linked,NA,automated entry
+ms007,ws_boundary,NA,NA,NA,linked,NA,automated entry
+ms008,stream_chemistry,NA,NA,NA,linked,NA,automated entry
+ms009,stream_gauge_locations,NA,NA,NA,linked,NA,automated entry
