@@ -19,3 +19,5 @@ ms002,precip_chemistry,derived,NA,NA,ready,NA,NA,NA
 ms004,precip_flux_inst,derived,NA,NA,ready,NA,NA,NA
 ms003,stream_flux_inst,derived,NA,NA,ready,NA,NA,NA
 ms000,ws_boundary,spatial,NA,NA,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,automated entry,NA
+ms013,precip_gauge_locations,NA,NA,NA,linked,NA,automated entry,NA
+ms014,stream_gauge_locations,NA,NA,NA,linked,NA,automated entry,NA
