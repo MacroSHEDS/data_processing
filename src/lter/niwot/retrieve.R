@@ -3,7 +3,7 @@ loginfo('Beginning retrieve', logger=logger_module)
 prod_info = get_product_info(network=network, domain=domain,
                              status_level='retrieve', get_statuses='ready')
 
-# i=2
+# i=89
 for(i in 1:nrow(prod_info)){
         # for(i in 1){
         

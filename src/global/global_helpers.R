@@ -304,7 +304,7 @@ identify_sampling <- function(df,
                 }
 
                 #Sites with consecutive samples are have a consistent interval
-                if(nrow(test) != 0 && nrow(run_table) < 20){
+                if(nrow(test) != 0 && nrow(run_table) <= 20){
 
                     g_a <- test %>%
                         select(site_name, starts, interval = values) %>%
@@ -6828,9 +6828,9 @@ derive_stream_flux <- function(network, domain, prodname_ms){
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
                                   site_name = s)) 
-        
+
         if(!is.null(flux)) {
-            
+
             write_ms_file(d = flux,
                           network = network,
                           domain = domain,
