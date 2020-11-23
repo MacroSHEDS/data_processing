@@ -371,17 +371,21 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
 process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_name,
+                   c = component)
 
-    rawfiles = list.files(rawdir)
+    rawfiles <- list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-    relevant_file1 = 'TSW_5min.feather'
+    relevant_file1 <- 'TSW_5min.feather'
 
     if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -391,9 +395,11 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     }
 
     updown <- determine_upstream_downstream(rawd)
+    # rawd <- mutate(rawd,
+    #                siteID = paste0(siteID, updown))
 
     out_sub <- rawd %>%
-      mutate(site_name=paste0(siteID, updown)) %>%
+      mutate(site_name = paste0(siteID, updown)) %>%
       mutate(datetime = force_tz(startDateTime, 'UTC')) %>%
       group_by(datetime, site_name) %>%
       summarize(val = mean(surfWaterTempMean, na.rm=TRUE),
@@ -405,6 +411,35 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     out_sub[is.na(out_sub)] <- NA
 
     return(out_sub)
+
+    # d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+    #                      datetime_cols = c(startDateTime = '%Y-%m-%d %H:%M:%S'),
+    #                      datetime_tz = 'UTC',
+    #                      site_name_col = 'siteID',
+    #                      data_cols = c(surfWaterTempMean = 'temp'),
+    #                      data_col_pattern = '#V#',
+    #                      is_sensor = TRUE,
+    #                      summary_flagcols = 'finalQF')
+    #
+    # d <- ms_cast_and_reflag(d,
+    #                         summary_flags_clean = list(finalQF = 0),
+    #                         summary_flags_dirty = list(fieldCode = 1),
+    #                         varflag_col_pattern = NA)
+    # #
+    # # # d <- ms_conversions(d, )
+    # #
+    # # d <- carry_uncertainty(d,
+    # #                        network = network,
+    # #                        domain = domain,
+    # #                        prodname_ms = prodname_ms)
+    # #
+    # # d <- synchronize_timestep(d,
+    # #                           desired_interval = '15 min',
+    # #                           impute_limit = 30)
+    # #
+    # # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    #
+    # return(d)
 }
 
 #air_pressure: STATUS=PAUSED
