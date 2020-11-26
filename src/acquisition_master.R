@@ -40,7 +40,21 @@ suppressPackageStartupMessages({
     library(googlesheets4)
 })
 
-ms_setwd <- function(){
+ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
+                    use_ms_error_handling = TRUE){
+
+    #TODO:
+    #could add args that override automatically set instance_type, machine_status
+    #hook up use_multicore_cpu parameter (changes nothing currently)
+    #if we ever find a way to benefit from GPU computing, hook up that param too.
+
+    #use_gpu: logical. leverage GPU for turbo multithreading. not currently connected
+    #   to anything, because we don't yet have a way to benefit from GPU in R
+    #use_multicore_cpu: logical. if on a multicore machine, use all cores.
+    #   not currently hooked up.
+    #use_ms_error_handling. logical. if TRUE, errors are handled and processing
+    #   continues. if FALSE, the handle_errors decorator is not invoked, and
+    #   standard R error handling ensues.
 
     #attempts to set working directory for various machines involved in the
     #   macrosheds project. determines from success/failure whether the current
@@ -54,11 +68,11 @@ ms_setwd <- function(){
 
     successes <- 0
 
-    res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
+    res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #BM1
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
         instance_type <- 'dev'
-        machine_status <- 'n00b'
+        machine_status <- '1337'
     }
 
     res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
@@ -91,14 +105,18 @@ ms_setwd <- function(){
 
     instance_details <- list(instance_type = instance_type,
                              machine_status = machine_status,
+                             use_gpu = use_gpu,
+                             use_multicore_cpu = use_multicore_cpu,
+                             use_ms_error_handling = use_ms_error_handling,
                              config_data_storage = 'remote') #vs local, which
         #governs whether site_data, variables, ws_delin_specs, etc are searched
-        #for as local CSV files or as google sheets connections.
+        #for as local CSV files or as google sheets connections. This is not hooked
+        #up to anything yet
 
     return(instance_details)
 }
 
-ms_instance <- ms_setwd()
+ms_instance <- ms_init()
 
 #connect rgee to earth engine and python
 try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
@@ -117,7 +135,10 @@ logging::addHandler(logging::writeToFile,
 
 source('src/global/global_helpers.R')
 source('src/dev/dev_helpers.R') #comment before pushing live
-source_decoratees('src/global/global_helpers.R') #parse decorators
+
+if(ms_instance$use_ms_error_handling){
+    source_decoratees('src/global/global_helpers.R') #parse decorators
+}
 
 #puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
@@ -132,7 +153,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+# dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]
