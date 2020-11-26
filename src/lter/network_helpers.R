@@ -4,7 +4,8 @@ ms_pasta_domain_refmap = list(
     konza = 'knb-lter-knz',
     baltimore = 'knb-lter-bes',
     luquillo = 'knb-lter-luq',
-    niwot = 'knb-lter-nwt'
+    niwot = 'knb-lter-nwt',
+    santa_barbara = 'knb-lter-sbc'
 )
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
@@ -58,6 +59,7 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
 
 populate_set_details <- function(tracker, prodname_ms, site_name, avail,
     latest_vsn){
+    #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved

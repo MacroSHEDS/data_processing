@@ -1794,22 +1794,19 @@ process_1_415 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels ####
 
-#rain_gauge_locations: STATUS=READY
+#precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms) {
+process_2_ms004 <- precip_gauge_from_site_data
 
-    rain_gauge_from_site_data(network = network,
-                              domain = domain,
-                              prodname_ms = 'rain_gauge_locations__ms004')
-
-    return()
-}
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data
 
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
 
-    combine_munged_products(network = network,
+    combine_products(network = network,
                             domain = domain,
                             prodname_ms = prodname_ms,
                             munged_prodname_ms = c('discharge__102',
@@ -1824,7 +1821,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
 
-    combine_munged_products(network = network,
+    combine_products(network = network,
                             domain = domain,
                             prodname_ms = prodname_ms,
                             munged_prodname_ms = c('stream_chemistry__213',
@@ -1845,17 +1842,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms) {
-
-    precip_idw(precip_prodname = c('precipitation__416',
-                                   'precipitation__414',
-                                   'precipitation__415'),
-               wb_prodname = 'ws_boundary__ms000',
-               pgauge_prodname = 'rain_gauge_locations__ms004',
-               precip_prodname_out = prodname_ms)
-
-    return()
-}
+process_2_ms003 <- derive_precip
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
