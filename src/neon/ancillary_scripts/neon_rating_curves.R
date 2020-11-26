@@ -15,11 +15,34 @@ setwd('~/git/macrosheds/data_acquisition/data/neon/')
 #it also includes velocity, width, etc.
 prodcode = 'DP1.20048.001'
 
+#download zips, unzip 'em.
+data_pile = neonUtilities::zipsByProduct(prodcode,
+    site='all', startdate=NA, enddate=NA,
+    package='basic', check.size=TRUE)
+
+neonUtilities::stackByTable('filesToStack20048',
+                            'chili',
+                            folder=TRUE,
+                            saveUnzippedFiles = TRUE,
+                            nCores=4)
+
+#originally data_pile was the output of loadByProduct, but that's mad broken.
+#so, here's the same idea with just one sitemonth.
+components = list.files('chili/NEON.D01.HOPB.DP1.20048.001.2016-03.basic.20200908T140739Z/',
+                        pattern = '*.csv',
+                        full.names = TRUE)
+data_pile = lapply(components,
+                   read_csv)
+names(data_pile) = str_match(components,
+                             '.*?/(.*)$')[,2]??/?
+data_pile = read.csv('chili/NEON.D01.HOPB.DP1.20048.001.2016-03.basic.20200908T140739Z/NEON.D01.HOPB.DP1.20048.001.dsc_fieldData.2016-03.basic.20200908T140739Z.csv')
+
 # data_pile = neonUtilities::loadByProduct(prodcode,
 #     site='all', startdate=NA, enddate=NA,
 #     package='basic', check.size=TRUE)
-# saveRDS(data_pile, 'zq_data_temp.rds')
-data_pile = readRDS('zq_data_temp.rds')
+# dir.create('ancillary', showWarnings = FALSE)
+# saveRDS(data_pile, 'ancillary/zq_data_temp.rds')
+# data_pile = readRDS('ancillary/zq_data_temp.rds')
 
 # readr::write_lines(data_pile$readme_20048$X1, '/tmp/neon_readme.txt')
 
