@@ -1,17 +1,17 @@
-prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
-1,discharge,ready,ready,NA,stream_flux_inst__ms003,NA
-100,precip_gauge_locations,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-94,ws_boundary,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-13,precipitation,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
-208,precip_chemistry,ready,ready,NA,precip_chemistry__ms002||precip_flux_inst__ms004,NA
-208,stream_chemistry,ready,ready,NA,stream_flux_inst__ms003,NA
-107,stream_gauge_locations,ready,ready,NA,NA,NA
-ms001,precipitation,NA,NA,ready,NA,NA
-ms002,precip_chemistry,NA,NA,ready,NA,NA
-ms003,stream_flux_inst,NA,NA,ready,NA,NA
-ms004,precip_flux_inst,NA,NA,ready,NA,NA
-ms005,discharge,NA,NA,linked,NA,automated entry
-ms006,precip_gauge_locations,NA,NA,linked,NA,automated entry
-ms007,ws_boundary,NA,NA,linked,NA,automated entry
-ms008,stream_chemistry,NA,NA,linked,NA,automated entry
-ms009,stream_gauge_locations,NA,NA,linked,NA,automated entry
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+1,discharge,sensor,ready,ready,NA,stream_flux_inst__ms003,NA
+100,precip_gauge_locations,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
+94,ws_boundary,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
+13,precipitation,grab,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
+208,precip_chemistry,grab,ready,ready,NA,precip_chemistry__ms002||precip_flux_inst__ms004,NA
+208,stream_chemistry,grab,ready,ready,NA,stream_flux_inst__ms003,NA
+107,stream_gauge_locations,spatial,ready,ready,NA,NA,NA
+ms001,precipitation,derived,NA,NA,ready,NA,NA
+ms002,precip_chemistry,derived,NA,NA,ready,NA,NA
+ms003,stream_flux_inst,derived,NA,NA,ready,NA,NA
+ms004,precip_flux_inst,derived,NA,NA,ready,NA,NA
+ms005,discharge,NA,NA,NA,linked,NA,automated entry
+ms006,precip_gauge_locations,NA,NA,NA,linked,NA,automated entry
+ms007,ws_boundary,NA,NA,NA,linked,NA,automated entry
+ms008,stream_chemistry,NA,NA,NA,linked,NA,automated entry
+ms009,stream_gauge_locations,NA,NA,NA,linked,NA,automated entry
