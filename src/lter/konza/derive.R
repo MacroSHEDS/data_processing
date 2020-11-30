@@ -1,15 +1,17 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info = get_product_info(network=network, domain=domain,
-                             status_level='derive', get_statuses='ready')
+prod_info <- get_product_info(network = network, 
+                             domain = domain,
+                             status_level = 'derive', 
+                             get_statuses = 'ready')
 
 # i=6
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data = get_data_tracker(network=network, domain=domain)
+    held_data <- get_data_tracker(network=network, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
@@ -27,12 +29,12 @@ for(i in 1:nrow(prod_info)){
           logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
                        'it before deriving from it.', p=prodname_ms), logger=logger_module)
       next
+        }
     }
-  }
 
     derive_status <- get_derive_status(tracker = held_data,
                                        prodname_ms = prodname_ms,
-                                      site_name = site_name)
+                                       site_name = site_name)
 
     if(derive_status == 'ok'){
         loginfo(glue('Nothing to do for {p}',
@@ -43,11 +45,11 @@ for(i in 1:nrow(prod_info)){
             loginfo(glue('Deriving {p}',
                         p=prodname_ms),
                     logger=logger_module)
-  }
+    }
 
-    prodcode = prodcode_from_prodname_ms_ms(prodname_ms)
+    prodcode <- prodcode_from_prodname_ms_ms(prodname_ms)
 
-    processing_func = get(paste0('process_2_', prodcode))
+    processing_func <- get(paste0('process_2_', prodcode))
 
     derive_msg <- sw(do.call(processing_func,
                              args = list(network = network,
