@@ -86,17 +86,17 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
                                 varflag_col_pattern = NA)
         
         }
-        
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+    #     
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
     
     return(d)
 }
@@ -151,16 +151,16 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
     
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
     
     return(d)
 }
@@ -204,16 +204,16 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_name,
                             summary_flags_to_drop = list('Flag' = 'DROP'),
                             varflag_col_pattern = NA)
     
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
     
     return(d)
 }
@@ -256,17 +256,17 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_name,
                             summary_flags_dirty = list('Flag' = 2),
                             summary_flags_to_drop = list('Flag' = 'DROP'),
                             varflag_col_pattern = NA)
-    
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+    # 
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
     
     return(d)
 }
@@ -310,16 +310,16 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_name,
                             summary_flags_to_drop = list('Flag' = 'DROP'),
                             varflag_col_pattern = NA)
     
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
     
     return(d)
 }
@@ -363,17 +363,17 @@ munge_precip <- function(network, domain, prodname_ms, site_name,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
     
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
-    
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
     return(d)
 }
 
@@ -407,16 +407,16 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_name,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
     
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-    
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
-    
+    # d <- carry_uncertainty(d,
+    #                        network = network,
+    #                        domain = domain,
+    #                        prodname_ms = prodname_ms)
+    # 
+    # d <- synchronize_timestep(d,
+    #                           desired_interval = '1 day', #set to '15 min' when we have server
+    #                           impute_limit = 30)
+    # 
+    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
     return(d)
 }

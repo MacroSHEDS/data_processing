@@ -4155,12 +4155,14 @@ delineate_watershed_nhd <- function(lat, long) {
     }
 }
 
-calc_inst_flux <- function(chemprod, qprod, site_name){
+calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
 
     #chemprod is the prodname_ms for stream or precip chemistry.
     #   it can be a munged or a derived product.
     #qprod is the prodname_ms for stream discharge or precip volume over time.
     #   it can be a munged or derived product/
+    #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use 
+    #predisesors to ms input
 
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
@@ -4231,7 +4233,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
         return(NULL)
     }
 
-    flux <- apply_detection_limit_t(flux, network, domain, chemprod)
+    flux <- apply_detection_limit_t(flux, network, domain, chemprod, ignore_pred)
 
     return(flux)
 }
@@ -5949,7 +5951,7 @@ knit_det_limts <- function(prodname_ms) {
         if(length(common_vars) > 0) {
             
             for(p in 1:length(common_vars)) {
-                
+
                 old_sites <- names(detlim[[common_vars[p]]])
                 new_sites <- names(detlim_[[common_vars[p]]])
                 

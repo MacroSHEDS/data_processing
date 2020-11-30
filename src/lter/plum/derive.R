@@ -1,16 +1,17 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info = get_product_info(network=network, domain=domain,
-    status_level='derive', get_statuses='ready')
+prod_info <- get_product_info(network = network, 
+                              domain = domain,
+                              status_level = 'derive', 
+                              get_statuses = 'ready')
 
-# i=6
+# i=7
 for(i in 1:nrow(prod_info)){
-# for(i in 2){
 
-    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data = get_data_tracker(network=network, domain=domain)
+    held_data <- get_data_tracker(network = network, domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
@@ -46,9 +47,9 @@ for(i in 1:nrow(prod_info)){
                 logger=logger_module)
     }
 
-    prodcode = prodcode_from_prodname_ms(prodname_ms)
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
-    processing_func = get(paste0('process_2_', prodcode))
+    processing_func <- get(paste0('process_2_', prodcode))
 
     derive_msg <- sw(do.call(processing_func,
                              args=list(network = network,
@@ -56,9 +57,13 @@ for(i in 1:nrow(prod_info)){
                                        prodname_ms = prodname_ms)))
 
     stts <- ifelse(is_ms_err(derive_msg), 'error', 'ok')
-    update_data_tracker_d(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms,
-        site_name=site_name, new_status=stts)
+    
+    update_data_tracker_d(network = network, 
+                          domain = domain,
+                          tracker_name = 'held_data', 
+                          prodname_ms = prodname_ms,
+                          site_name = site_name, 
+                          new_status = stts)
 
     if(stts == 'ok'){
         msg = glue('Derived {p} ({n}/{d}/{s})',
@@ -76,7 +81,4 @@ for(i in 1:nrow(prod_info)){
     gc()
 }
 
-loginfo('Derive complete for all products',
-        logger=logger_module)
-
-
+loginfo('Derive complete for all products', logger = logger_module)
