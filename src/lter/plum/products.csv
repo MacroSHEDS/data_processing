@@ -111,27 +111,29 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 104,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
 108,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
 106,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
-68,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2000,NA,NA
-69,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2001,NA,NA
-70,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2002,NA,NA
-140,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2003,NA,NA
-141,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2004,NA,NA
-142,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2005,NA,NA
-143,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2006,NA,NA
-67,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2007,NA,NA
-179,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2009,NA,NA
-180,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2010,NA,NA
-181,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2011,NA,NA
-239,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2012,NA,NA
-359,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2014,NA,NA
-385,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2015,NA,NA
-417,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2016,NA,NA
-423,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2017,NA,NA
-496,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2018,NA,NA
-542,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2019,NA,NA
+68,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2000,NA,NA
+69,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2001,NA,NA
+70,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2002,NA,NA
+140,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2003,NA,NA
+141,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2004,NA,NA
+142,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2005,NA,NA
+143,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2006,NA,NA
+67,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2007,NA,NA
+179,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2009,NA,NA
+180,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2010,NA,NA
+181,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2011,NA,NA
+239,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2012,NA,NA
+359,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2014,NA,NA
+385,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2015,NA,NA
+417,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2016,NA,NA
+423,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2017,NA,NA
+496,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2018,NA,NA
+542,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2019,NA,NA
 ms004,precip_gauge_locations,NA,NA,ready,NA,NA,NA,NA
 ms006,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
 ms001,discharge,NA,NA,ready,NA,NA,NA,NA
 ms002,stream_chemistry,NA,NA,ready,NA,NA,NA,NA
-ms003,precipitation,NA,NA,ready,NA,NA,NA,NA
+ms003,precipitation_ns,NA,NA,ready,precipitation__ms007,NA,NA,NA
+ms007,precipitation,NA,NA,ready,NA,NA,NA,NA
 ms005,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precipitation__ms003,automated entry,NA,NA
