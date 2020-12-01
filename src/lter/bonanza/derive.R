@@ -6,9 +6,8 @@ prod_info <- get_product_info(network = network,
                               status_level = 'derive', 
                               get_statuses = 'ready')
 
-# i=2
+# i=4
 for(i in 1:nrow(prod_info)){
-# for(i in 2){
 
     prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -17,21 +16,24 @@ for(i in 1:nrow(prod_info)){
     if(! product_is_tracked(held_data, prodname_ms)){
 
         if(is_ms_prodcode(prodcode_from_prodname_ms(prodname_ms))){
+
             held_data <- track_new_product(tracker = held_data,
                                            prodname_ms = prodname_ms)
+
             held_data <- insert_site_skeleton(tracker = held_data,
-                                             prodname_ms = prodname_ms,
-                                             site_name = site_name,
-                                             site_components = 'NA')
+                                              prodname_ms = prodname_ms,
+                                              site_name = site_name,
+                                              site_components = 'NA')
 
             update_data_tracker_d(network = network,
                                   domain = domain,
                                   tracker = held_data)
+
         } else {
             logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
-                'it before deriving from it.', p=prodname_ms), logger=logger_module)
+                         'it before deriving from it.', p=prodname_ms), logger=logger_module)
             next
-        }
+          }
     }
 
     derive_status <- get_derive_status(tracker = held_data,
@@ -39,14 +41,14 @@ for(i in 1:nrow(prod_info)){
                                        site_name = site_name)
 
     if(derive_status == 'ok'){
-        loginfo(glue('Nothing to do for {p}',
-                     p = prodname_ms),
-                logger = logger_module)
+          loginfo(glue('Nothing to do for {p}',
+                       p=prodname_ms),
+                  logger=logger_module)
         next
-    } else {
-        loginfo(glue('Deriving {p}',
-                     p = prodname_ms),
-                logger = logger_module)
+      } else {
+      loginfo(glue('Deriving {p}',
+                   p=prodname_ms),
+              logger=logger_module)
     }
 
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
@@ -59,18 +61,17 @@ for(i in 1:nrow(prod_info)){
                                        prodname_ms = prodname_ms)))
 
     stts <- ifelse(is_ms_err(derive_msg), 'error', 'ok')
-
     update_data_tracker_d(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms,
-        site_name=site_name, new_status=stts)
+                          tracker_name='held_data', prodname_ms=prodname_ms,
+                          site_name=site_name, new_status=stts)
 
     if(stts == 'ok'){
-        msg = glue('Derived {p} ({n}/{d}/{s})',
-                   p = prodname_ms,
-                   n = network,
-                   d = domain,
-                   s = site_name)
-        loginfo(msg, logger=logger_module)
+      msg = glue('Derived {p} ({n}/{d}/{s})',
+                 p = prodname_ms,
+                 n = network,
+                 d = domain,
+                 s = site_name)
+      loginfo(msg, logger=logger_module)
     }
 
     write_metadata_d(network = network,

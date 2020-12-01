@@ -1,7 +1,6 @@
-loginfo('Beginning retrieve',
-        logger = logger_module)
+loginfo('Beginning retrieve', logger = logger_module)
 
-prod_info = get_product_info(network = network,
+prod_info <- get_product_info(network = network,
                              domain = domain,
                              status_level = 'retrieve',
                              get_statuses = 'ready')

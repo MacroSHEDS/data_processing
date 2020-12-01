@@ -1,0 +1,15 @@
+prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
+152,stream_chemistry,normal,ready,ready,NA,stream_chemistry__ms001,NA
+142,discharge,normal,ready,ready,NA,stream_flux_inst__ms004,NA
+159,stream_temperature,normal,ready,ready,NA,stream_chemistry__ms001,NA
+167,precipitation,normal,ready,ready,NA,precipitation__ms002|precip_flux_inst__ms005,NA
+157,precip_chemistry,normal,ready,ready,NA,precip_chemistry__ms003|precip_flux_inst__ms005,NA
+ms001,stream_chemistry,derived,NA,NA,ready,stream_flux_inst__ms004,NA
+ms000,ws_boundary,NA,NA,NA,NA,NA,automated entry
+ms006,precip_gauge_locations,derived,NA,NA,ready,precipitation__ms002|precip_flux_inst__ms005,NA
+ms007,stream_gauge_locations,derived,NA,NA,ready,NA,NA
+ms002,precipitation,derived,NA,NA,ready,NA,NA
+ms003,precip_chemistry,derived,NA,NA,ready,NA,NA
+ms004,stream_flux_inst,derived,NA,NA,ready,NA,NA
+ms005,precip_flux_inst,derived,NA,NA,ready,NA,NA
+ms008,discharge,NA,NA,NA,linked,NA,automated entry
