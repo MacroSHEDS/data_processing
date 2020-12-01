@@ -1,0 +1,139 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,X8,X9
+109,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,fish brook 2001,"stage, temp, cond, DO, pH",NA
+110,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,fish brook 2002,"stage, temp, cond, DO, pH",NA
+111,discharge,ready,ready,NA,discharge__ms001,Cart cr 2001,"stage, temp, cond, DO, pH",NA
+111,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2001,"stage, temp, cond, DO, pH",NA
+112,discharge,ready,ready,NA,discharge__ms001,Cart cr 2002,"stage, temp, cond, DO, pH",NA
+112,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2002,"stage, temp, cond, DO, pH",NA
+113,discharge,ready,ready,NA,discharge__ms001,Cart cr 2003,"stage, temp, cond, DO, pH",NA
+113,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2003,"stage, temp, cond, DO, pH",NA
+148,discharge,ready,ready,NA,discharge__ms001,Cart cr 2004,"stage, temp, cond, DO, pH",NA
+148,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2004,"stage, temp, cond, DO, pH",NA
+149,discharge,ready,ready,NA,discharge__ms001,Cart cr 2005,"stage, temp, cond",NA
+149,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2005,"stage, temp, cond",NA
+150,discharge,ready,ready,NA,discharge__ms001,Cart cr 2006,"stage, temp, cond",NA
+150,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2006,"stage, temp, cond",NA
+151,discharge,ready,ready,NA,discharge__ms001,Cart cr 2007,"stage, temp",NA
+151,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2007,"stage, temp",NA
+171,discharge,ready,ready,NA,discharge__ms001,Cart cr 2008,"stage, temp",NA
+171,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2008,"stage, temp",NA
+172,discharge,ready,ready,NA,discharge__ms001,Cart cr 2009,"stage, temp",NA
+172,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2009,"stage, temp",NA
+225,discharge,ready,ready,NA,discharge__ms001,Cart cr 2010,"stage, temp",NA
+225,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2010,"stage, temp",NA
+226,discharge,ready,ready,NA,discharge__ms001,Cart cr 2011,"stage, temp",NA
+226,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2011,"stage, temp",NA
+388,discharge,ready,ready,NA,discharge__ms001,Cart cr 2012,"stage, temp",NA
+433,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2012,"cond, temp",NA
+437,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2013,"DO, temp",NA
+389,discharge,ready,ready,NA,discharge__ms001,Cart cr 2013,"stage, temp",NA
+434,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2013,"cond, temp",NA
+391,discharge,ready,ready,NA,discharge__ms001,Cart cr 2014,"stage, temp",NA
+435,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2014,"cond, temp",NA
+438,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2014,"DO, temp",NA
+436,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2015,"cond, temp",NA
+390,discharge,ready,ready,NA,discharge__ms001,Cart cr 2015,"stage, temp",NA
+439,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2015,"DO, temp",NA
+509,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2016,"cond, temp",NA
+525,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2016,"DO, temp",NA
+526,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2017,"DO, temp",NA
+510,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2017,"cond, temp",NA
+527,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Cart cr 2018,"DO, temp",NA
+117,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2001,"stage, temp, cond, DO, pH",NA
+117,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2001,"stage, temp, cond, DO, pH",NA
+118,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2002,"stage, temp, cond, DO, pH",NA
+118,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2002,"stage, temp, cond, DO, pH",NA
+152,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2003,"stage, temp, cond, DO, pH",NA
+152,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2003,"stage, temp, cond, DO, pH",NA
+153,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2004,"stage, temp, cond, DO, pH",NA
+153,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2004,"stage, temp, cond, DO, pH",NA
+154,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2005,"stage, temp, cond, DO, pH",NA
+154,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2005,"stage, temp, cond, DO, pH",NA
+155,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2006,"stage, temp, cond, DO, pH",NA
+155,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2006,"stage, temp, cond, DO, pH",NA
+176,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2007,"stage, temp",NA
+176,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2007,"stage, temp",NA
+177,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2008,"stage, temp",NA
+177,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2007,"stage, temp",NA
+178,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2009,"stage, temp",NA
+178,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2007,"stage, temp",NA
+227,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2010,"stage, temp",NA
+227,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2007,"stage, temp",NA
+228,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2011,stage,NA
+228,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2011,stage,NA
+396,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2012,stage,NA
+449,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2012,"cond, temp",NA
+397,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2013,stage,NA
+450,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2013,"cond, temp",NA
+398,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2014,stage,NA
+485,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2014,"cond, temp",NA
+399,discharge,ready,ready,NA,discharge__ms001,Saw Mill Brook 2015,stage,NA
+486,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2015,"cond, temp",NA
+515,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2016,"cond, temp",NA
+516,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,Saw Mill Brook 2017,"cond, temp",NA
+156,discharge,ready,ready,NA,discharge__ms001,bear meadow 2005,"stage, temp, cond, DO, pH",NA
+156,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2005,"stage, temp, cond, DO, pH",NA
+157,discharge,ready,ready,NA,discharge__ms001,bear meadow 2006,"stage, temp, cond, DO, pH",NA
+157,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2006,"stage, temp, cond, DO, pH",NA
+158,discharge,ready,ready,NA,discharge__ms001,bear meadow 2007,"stage, temp",NA
+158,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2007,"stage, temp",NA
+173,discharge,ready,ready,NA,discharge__ms001,bear meadow 2008,"stage, temp",NA
+173,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2008,"stage, temp",NA
+174,discharge,ready,ready,NA,discharge__ms001,bear meadow 2009,"stage, temp",NA
+174,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2009,"stage, temp",NA
+229,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2010,"stage, temp",NA
+230,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2011,"stage, temp",NA
+392,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2012,"stage, temp",NA
+393,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2013,"stage, temp",NA
+394,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2014,"stage, temp",NA
+395,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,bear meadow 2015,"stage, temp",NA
+114,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,upper ipswich 2001,"stage, temp, cond, DO, pH",NA
+114,discharge,ready,ready,NA,discharge__ms001,upper ipswich 2001,"stage, temp, cond, DO, pH",NA
+115,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,upper ipswich 2002,"stage, temp, cond, DO, pH",NA
+116,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,upper ipswich 2003,"stage, temp, cond, DO, pH",NA
+487,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2012,"temp, cond",NA
+488,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2013,"temp, cond",NA
+489,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2014,"temp, cond",NA
+490,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2015,"temp, cond",NA
+506,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2016,"temp, cond",NA
+507,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2017,"temp, cond",NA
+508,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,parker dam 2018,"temp, cond",NA
+444,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2012,"temp, cond",NA
+445,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2013,"temp, cond",NA
+446,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2014,"temp, cond",NA
+447,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2015,"temp, cond",NA
+513,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2016,"temp, cond",NA
+514,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2017,"temp, cond",NA
+448,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2015,"DO, temp",NA
+532,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2016,"DO, temp",NA
+533,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2017,"DO, temp",NA
+534,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,ispwich dam 2018,"DO, temp",NA
+104,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
+108,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
+106,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,nutrients,NA,NA
+68,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2000,NA,NA
+69,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2001,NA,NA
+70,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2002,NA,NA
+140,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2003,NA,NA
+141,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2004,NA,NA
+142,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2005,NA,NA
+143,precipitation,ready,ready,NA,precipitation__ms007,gov ac  2006,NA,NA
+67,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2007,NA,NA
+179,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2009,NA,NA
+180,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2010,NA,NA
+181,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2011,NA,NA
+239,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2012,NA,NA
+359,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2014,NA,NA
+385,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2015,NA,NA
+417,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2016,NA,NA
+423,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2017,NA,NA
+496,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2018,NA,NA
+542,precipitation,ready,ready,NA,precipitation__ms007,MBL Marshview 2019,NA,NA
+ms004,precip_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms006,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms001,discharge,NA,NA,ready,NA,NA,NA,NA
+ms002,stream_chemistry,NA,NA,ready,NA,NA,NA,NA
+ms003,precipitation_ns,NA,NA,ready,precipitation__ms007,NA,NA,NA
+ms007,precipitation,NA,NA,ready,NA,NA,NA,NA
+ms005,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precipitation__ms003,automated entry,NA,NA
