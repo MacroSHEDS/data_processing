@@ -4171,8 +4171,8 @@ calc_inst_flux <- function(chemprod, qprod, site_name){
                                   domain = domain,
                                   prodname_ms = chemprod) %>%
         filter(site_name == !!site_name) %>%
-        pivot_wider(names_from = 'var',
-                    values_from = 'val') %>%
+        tidyr::pivot_wider(names_from = 'var',
+                           values_from = 'val') %>%
         select(datetime, ms_status, ms_interp,
                matches(paste0('^[A-Z]{2}_',
                               flux_vars),
@@ -4744,14 +4744,14 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-    uniq_sites <- unique(d$site_name)
+    # uniq_sites <- unique(d$site_name)
 
     if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
-    volumetric_vars <- c('discharge', 'discharge_ns', 'precipitation',
-                         'precipitation_ns')
+    var_is_q <- drop_var_prefix(var[1]) == 'discharge'
+    var_is_p <- drop_var_prefix(var[1]) == 'precipitation'
 
     #round to desired_interval
     d <- sw(d %>%
@@ -4760,8 +4760,11 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
         group_by(site_name, var, datetime) %>%
         summarize(
             val = if(n() > 1){
-                    if(drop_var_prefix(var[1]) %in% volumetric_vars){
+                    if(var_is_p){
                         sum(val, na.rm = TRUE)
+                    } else if(var_is_q){
+                        max_ind <- which.max(val)
+                        if(max_ind) val[max_ind] else NA #max removes error
                     } else {
                         mean(val, na.rm = TRUE)
                     }
