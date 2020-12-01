@@ -2,11 +2,11 @@ loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
 prod_info <- get_product_info(network = network, 
-                              domain = domain,
-                              status_level = 'derive', 
-                              get_statuses = 'ready')
+                             domain = domain,
+                             status_level = 'derive', 
+                             get_statuses = 'ready')
 
-# i=2
+# i=4
 for(i in 1:nrow(prod_info)){
 # for(i in 2){
 
@@ -23,7 +23,6 @@ for(i in 1:nrow(prod_info)){
                                              prodname_ms = prodname_ms,
                                              site_name = site_name,
                                              site_components = 'NA')
-
             update_data_tracker_d(network = network,
                                   domain = domain,
                                   tracker = held_data)
@@ -40,13 +39,13 @@ for(i in 1:nrow(prod_info)){
 
     if(derive_status == 'ok'){
         loginfo(glue('Nothing to do for {p}',
-                     p = prodname_ms),
-                logger = logger_module)
+                     p=prodname_ms),
+                logger=logger_module)
         next
     } else {
         loginfo(glue('Deriving {p}',
-                     p = prodname_ms),
-                logger = logger_module)
+                     p=prodname_ms),
+                logger=logger_module)
     }
 
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
@@ -59,13 +58,12 @@ for(i in 1:nrow(prod_info)){
                                        prodname_ms = prodname_ms)))
 
     stts <- ifelse(is_ms_err(derive_msg), 'error', 'ok')
-
     update_data_tracker_d(network=network, domain=domain,
         tracker_name='held_data', prodname_ms=prodname_ms,
         site_name=site_name, new_status=stts)
 
     if(stts == 'ok'){
-        msg = glue('Derived {p} ({n}/{d}/{s})',
+        msg <- glue('Derived {p} ({n}/{d}/{s})',
                    p = prodname_ms,
                    n = network,
                    d = domain,
