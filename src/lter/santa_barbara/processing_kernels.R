@@ -411,8 +411,6 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
     
-    look <- read.csv(rawfile1, colClasses = 'character')
-    
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
                          datetime_tz = 'US/Pacific',

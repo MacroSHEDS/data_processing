@@ -1,11 +1,11 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network,
-                              domain = domain,
-                              status_level = 'retrieve', 
-                              get_statuses = 'ready')
+prod_info <- get_product_info(network = network, 
+                             domain = domain,
+                             status_level = 'retrieve', 
+                             get_statuses = 'ready')
 
-# i=1
+# i=110
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -22,12 +22,12 @@ for(i in 1:nrow(prod_info)){
 
     avail_sets <- get_avail_lter_product_sets(prodname_ms=prodname_ms,
         version=latest_vsn, domain=domain, data_tracker=held_data)
-    if(is_ms_err(avail_sets)) next
 
-    if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
-             prodname_ms)){
-        avail_sets$site_name <- 'sitename_NA'
-    }
+    if(is_ms_err(avail_sets)) next
+    
+    avail_sets <- avail_sets %>%
+        filter(!grepl('xlx|xls', component))
+
     avail_sites <- unique(avail_sets$site_name)
 
     # j=1
