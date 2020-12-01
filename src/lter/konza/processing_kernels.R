@@ -849,12 +849,12 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
 process_2_ms011 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms,
-                            input_prodname_ms = c('discharge_N04D__7',
-                                                  'discharge_N01B__9',
-                                                  'discharge_N20B__8',
-                                                  'discharge_N02B__10'))
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge_N04D__7',
+                                           'discharge_N01B__9',
+                                           'discharge_N20B__8',
+                                           'discharge_N02B__10'))
     return()
 }
 
@@ -863,11 +863,11 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
 process_2_ms012 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
-                            domain = domain,
-                            prodname_ms = prodname_ms,
-                            input_prodname_ms = c('stream_chemistry__50',
-                                                  'stream_conductivity__51',
-                                                  'stream_suspended_sediments__20'))
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_chemistry__50',
+                                           'stream_conductivity__51',
+                                           'stream_suspended_sediments__20'))
 
     return()
 }

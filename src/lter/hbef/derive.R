@@ -1,15 +1,17 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info = get_product_info(network=network, domain=domain,
-    status_level='derive', get_statuses='ready')
+prod_info <- get_product_info(network = network, 
+                             domain = domain,
+                             status_level = 'derive', 
+                             get_statuses = 'ready')
 
 # i=12
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms = paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data = get_data_tracker(network = network,
+    held_data <- get_data_tracker(network = network,
                                  domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
