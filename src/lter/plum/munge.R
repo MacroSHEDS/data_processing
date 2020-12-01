@@ -1,9 +1,9 @@
 loginfo('Beginning munge', logger=logger_module)
 
 prod_info <- get_product_info(network = network, 
-                              domain = domain,
-                              status_level = 'munge', 
-                              get_statuses = 'ready')
+                             domain = domain, 
+                             status_level = 'munge', 
+                             get_statuses = 'ready')
 
 # i=1
 for(i in 1:nrow(prod_info)){
@@ -27,6 +27,7 @@ for(i in 1:nrow(prod_info)){
         munge_status <- get_munge_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_name = site_name)
+
         if(munge_status == 'ok'){
             loginfo(glue('Nothing to do for {s} {p}',
                          s=site_name, p=prodname_ms), logger=logger_module)
@@ -36,24 +37,19 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
-                 prodname_ms)){
-            munge_rtn <- munge_combined_split(network = network,
+            munge_rtn <- munge_time_component(network = network,
                                              domain = domain,
                                              site_name = site_name,
                                              prodname_ms = prodname_ms,
                                              tracker = held_data)
-        } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn <- munge_by_site(network, domain, site_name, prodname_ms, held_data)
-        }
 
         if(is_ms_err(munge_rtn)){
+
             update_data_tracker_m(network=network, domain=domain,
                 tracker_name='held_data', prodname_ms=prodname_ms,
                 site_name=site_name, new_status='error')
 
         } else {
-
             invalidate_derived_products(successor_string = prod_info$precursor_of)
         }
     }
@@ -61,7 +57,6 @@ for(i in 1:nrow(prod_info)){
     write_metadata_m(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
-                     # site_name = site_name)
 
     gc()
 }
