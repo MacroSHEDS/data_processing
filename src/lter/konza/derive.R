@@ -1,9 +1,9 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                              domain = domain,
-                             status_level = 'derive', 
+                             status_level = 'derive',
                              get_statuses = 'ready')
 
 # i=6
@@ -47,7 +47,7 @@ for(i in 1:nrow(prod_info)){
                     logger=logger_module)
     }
 
-    prodcode <- prodcode_from_prodname_ms_ms(prodname_ms)
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
     processing_func <- get(paste0('process_2_', prodcode))
 
