@@ -704,7 +704,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                                               'HQ02' = c('00HQ', '00hq', 'hq'),
                                               'N4DF' = c('N04D', 'n04d'),
                                               'N01B' = 'n01b'),
-                         data_cols =  c('NO3'='NO3_N', 'NH4'='NH4_N', 'TPN'='TPsN',
+                         data_cols =  c('NO3'='NO3_N', 'NH4'='NH4_N', 'TPsN'='TPN',
                                         'SRP', 'TPP'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
@@ -851,10 +851,10 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('discharge_N04D__7',
-                                           'discharge_N01B__9',
-                                           'discharge_N20B__8',
-                                           'discharge_N02B__10'))
+                     input_prodname_ms = c('discharge__7',
+                                           'discharge__9',
+                                           'discharge__8',
+                                           'discharge__10'))
     return()
 }
 

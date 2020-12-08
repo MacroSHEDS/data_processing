@@ -1,0 +1,34 @@
+This zip file contains the following for each spatial resolution (1m and 30m):
+
+Boundary Shapefiles for eight BES sub-watersheds
+Results Spreadsheet
+	w/ table summaries of:
+		BES Watershed Areas (km2)
+		% Area Land Cover Classes
+		% Area Tree Canopy
+		% Area Impervious Surface
+	Metadata & Workflow
+
+Data sources for analyses are listed in the metadata.
+All analyses and end products are credited to:
+
+John J Lagrosa IV, PhD
+Urban Ecologist and GIS Data Manager
+Center for Urban Environmental Research and Education (CUERE)
+University of Maryland, Baltimore County
+1000 Hilltop Circle
+TRC 102
+Baltimore, MD 21230
+e-mail: jl@umbc.edu
+(410) 455-1765
+
+Claire Welty, PhD
+Professor of Environmental Engineering
+Director, Center for Urban Environmental Research and Education
+University of Maryland, Baltimore County
+
+Special thanks to Andy Miller and Jon Duncan for their input and suggestions.
+
+Posted as part of Baltimore Ecosystem Study Data.  Jonathan Walsh Information Manager, walshjcaryinstitute@gmail.com
+
+This research was supported by funding from the NSF Long-term Ecological Research (LTER) Program. This material is based upon work supported by the National Science Foundation under Grant No. DEB-1637661. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation. 
