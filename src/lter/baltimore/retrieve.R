@@ -1,11 +1,15 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'retrieve', 
+                              status_level = 'retrieve',
                               get_statuses = 'ready')
 
+<<<<<<< HEAD
 # i=1
+=======
+# i=4
+>>>>>>> 302967af8b762857fe8714b15579030eaaf0a094
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -17,14 +21,14 @@ for(i in 1:nrow(prod_info)){
     }
 
     latest_vsn = get_latest_product_version(prodname_ms = prodname_ms,
-                                            domain = domain, 
+                                            domain = domain,
                                             data_tracker = held_data)
 
     if(is_ms_err(latest_vsn)) next
 
     avail_sets <- get_avail_lter_product_sets(prodname_ms = prodname_ms,
-                                              version = latest_vsn, 
-                                              domain = domain, 
+                                              version = latest_vsn,
+                                              domain = domain,
                                               data_tracker = held_data)
     if(is_ms_err(avail_sets)) next
 
@@ -49,7 +53,7 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(held_data)) next
 
-        retrieval_details <- populate_set_details(held_data, prodname_ms, site_name, 
+        retrieval_details <- populate_set_details(held_data, prodname_ms, site_name,
                                                   avail_site_sets, latest_vsn)
 
         if(is_ms_err(retrieval_details)) next
@@ -59,7 +63,7 @@ for(i in 1:nrow(prod_info)){
         if(nrow(new_sets) == 0){
 
             loginfo(glue('Nothing to do for {s} {p}',
-                             s=site_name, p=prodname_ms), 
+                             s=site_name, p=prodname_ms),
                     logger=logger_module)
 
             next
