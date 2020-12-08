@@ -1,12 +1,12 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                              domain = domain,
-                             status_level = 'derive', 
+                             status_level = 'derive',
                              get_statuses = 'ready')
 
-# i=12
+# i=1
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
