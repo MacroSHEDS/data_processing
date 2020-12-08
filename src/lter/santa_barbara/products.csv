@@ -63,3 +63,4 @@ ms007,stream_gauge_locations,derived,NA,NA,ready,NA,NA,NA
 ms003,precipitation,derived,NA,NA,ready,NA,NA,NA
 ms005,stream_flux_inst,derived,NA,NA,ready,NA,NA,NA
 ms008,stream_chemistry,NA,NA,NA,linked,NA,automated entry,NA
+ms000,ws_boundary,NA,NA,NA,NA,precipitation__ms003,automated entry,NA
