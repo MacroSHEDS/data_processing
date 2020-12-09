@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
     library(foreach)
     library(doParallel)
     library(googlesheets4)
+    library(rgee) #requires geojsonio package
 })
 
 ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
@@ -67,23 +68,36 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
     #   "dev" or "server" accordingly
 
     successes <- 0
+    which_machine <- 'unknown'
 
     res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #BM1
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
+        which_machine <- 'BM1'
         instance_type <- 'dev'
         machine_status <- '1337'
     }
 
+    #@Spencer, uncomment this and update it with your path on BM0 ^_^
+    # res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #BM0
+    # if(! 'try-error' %in% class(res)){
+    #     successes <- successes + 1
+    #     which_machine <- 'BM0'
+    #     instance_type <- 'dev'
+    #     machine_status <- '1337'
+    # }
+
     res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
+        which_machine <- 'Spencer'
         instance_type <- 'dev'
         machine_status <- 'n00b'
     }
 
     # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
     # if(! 'try-error' %in% class(res)){
+    #     which_machine <- 'Matt'
     #     successes <- successes + 1
     #     instance_type <- 'dev'
     #     machine_status <- '1337'
@@ -92,6 +106,7 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
     res <- try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
+        which_machine <- 'server'
         instance_type <- 'server'
         machine_status <- '1337'
     }
@@ -103,7 +118,8 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
         stop('failed to set working directory. update ms_setwd() with your wd path')
     }
 
-    instance_details <- list(instance_type = instance_type,
+    instance_details <- list(which_machine = which_machine,
+                             instance_type = instance_type,
                              machine_status = machine_status,
                              use_gpu = use_gpu,
                              use_multicore_cpu = use_multicore_cpu,
@@ -118,14 +134,20 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
 
 ms_instance <- ms_init()
 
-#connect rgee to earth engine and python
-try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
-
 #load authorization file for macrosheds google sheets
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json')
+
+#connect rgee to earth engine and python
+gee_login <- case_when(
+    ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
+    ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
+    TRUE ~ 'UNKNOWN')
+
+try(rgee::ee_Initialize(email = conf[[gee_login]],
+                        drive = TRUE))
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -153,7 +175,7 @@ ms_globals = c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=8
+# dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 
     network = network_domain$network[dmnrow]

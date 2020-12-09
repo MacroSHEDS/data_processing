@@ -55,7 +55,7 @@ for(i in 1:nrow(prod_info)){
            #                           new_status = 'pending')
            # }
 
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
+            invalidate_derived_products(successor_string = prod_info$precursor_of[i])
         }
     }
 

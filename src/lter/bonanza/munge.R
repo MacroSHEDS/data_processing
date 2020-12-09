@@ -1,8 +1,8 @@
 loginfo('Beginning munge', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'munge', 
+                              status_level = 'munge',
                               get_statuses = 'ready')
 
 # i=4
@@ -34,39 +34,45 @@ for(i in 1:nrow(prod_info)){
             loginfo(glue('Nothing to do for {s} {p}',
                          s=site_name, p=prodname_ms), logger=logger_module)
             next
-          
-          } else {
 
-              loginfo(glue('Munging {s} {p}',
-                           s=site_name, p=prodname_ms), logger=logger_module)
-            }
+        } else {
+
+            loginfo(glue('Munging {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
+        }
 
         if(prodname_ms == 'preipitation__167') {
 
             munge_rtn <- munge_by_site(network = network,
-                                      domain = domain, 
-                                      site_name = site_name, 
-                                      prodname_ms = prodname_ms, 
+                                      domain = domain,
+                                      site_name = site_name,
+                                      prodname_ms = prodname_ms,
                                       tracker = held_data)
 
-            } else{
+        } else {
 
-                munge_rtn <- munge_combined(network = network,
-                                           domain = domain, 
-                                           site_name = site_name, 
-                                           prodname_ms = prodname_ms, 
-                                           tracker = held_data)
+            munge_rtn <- munge_combined(network = network,
+                                       domain = domain,
+                                       site_name = site_name,
+                                       prodname_ms = prodname_ms,
+                                       tracker = held_data)
 
-                }
+        }
 
         if(is_ms_err(munge_rtn)){
-            update_data_tracker_m(network=network, domain=domain,
-                                  tracker_name='held_data', prodname_ms=prodname_ms,
-                                  site_name=site_name, new_status='error')
 
-          } else {
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'error')
 
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
+        } else if(is_blacklist_indicator(munge_rtn)){
+            next
+        } else {
+            invalidate_derived_products(
+                successor_string = prod_info$precursor_of[i])
         }
     }
 
