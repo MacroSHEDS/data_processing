@@ -77,9 +77,12 @@ process_0_5482 <- function(set_details, network, domain){
     return()
 }
 
-#stream_chemistry; stream_flux_inst: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_4021 <- function(set_details, network, domain){
+
+    #Stream flux (stream_flux_inst__4021) was removed becuase we are not wanting
+    #use theirs as of now and was causing error in ms_derive
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -123,6 +126,9 @@ process_0_4021 <- function(set_details, network, domain){
 #precip_chemistry; precip_flux_inst: STATUS=READY
 #. handle_errors
 process_0_4022 <- function(set_details, network, domain){
+
+    #precip_flux_inst__4022 was removed becuase we make our own and it was
+    #causing issues for ms_derive
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -318,7 +324,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#stream_chemistry; stream_flux_inst: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_4021 <- function(network, domain, prodname_ms, site_name,
                            components){

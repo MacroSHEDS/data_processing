@@ -403,14 +403,14 @@ process_1_4005 <- munge_santa_barbara_precip
 #. handle_errors
 process_1_6 <- function(network, domain, prodname_ms, site_name,
                         component){
-    
+
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
                          datetime_tz = 'US/Pacific',
@@ -431,7 +431,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c('NH4' = 'umol/l',
                                                'NO3_NO2' = 'umol/l',
@@ -449,18 +449,18 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
                                              'TPC' = 'mg/l',
                                              'TPN' = 'mg/l',
                                              'TPP' = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
@@ -533,21 +533,21 @@ process_1_3014 <- munge_santa_barbara_discharge
 #usgs_discharge: STATUS=READY
 #. handle_errors
 process_2_ms006 <- function(network, domain, prodname_ms) {
-    
-    pull_usgs_discharge(network = network, 
+
+    pull_usgs_discharge(network = network,
                         domain = domain,
                         prodname_ms = prodname_ms,
-                        sites = c('SP02' = '11120520', 
+                        sites = c('SP02' = '11120520',
                                   'MC06' = '11119745'),
                         time_step = 'sub_daily')
-    
+
     return()
 }
 
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
-    
+
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
@@ -567,8 +567,8 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                                            'discharge__3004',
                                            'discharge__3012',
                                            'discharge__3014',
-                                           'discharge__ms006'))
-    
+                                           'usgs_discharge__ms006'))
+
     return()
 }
 

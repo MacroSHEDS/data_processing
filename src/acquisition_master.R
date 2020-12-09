@@ -78,6 +78,7 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
         which_machine <- 'BM1'
         instance_type <- 'dev'
         machine_status <- '1337'
+        op_system <- 'linux'
     }
 
     #@Spencer, uncomment this and update it with your path on BM0 ^_^
@@ -95,6 +96,7 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
         which_machine <- 'Spencer'
         instance_type <- 'dev'
         machine_status <- 'n00b'
+        op_system <- 'mac'
     }
 
     # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
@@ -111,6 +113,15 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
         which_machine <- 'server'
         instance_type <- 'server'
         machine_status <- '1337'
+        op_system <- NA
+    }
+
+    res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
     }
 
     if(successes > 1){
@@ -126,7 +137,8 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
                              use_gpu = use_gpu,
                              use_multicore_cpu = use_multicore_cpu,
                              use_ms_error_handling = use_ms_error_handling,
-                             config_data_storage = 'remote') #vs local, which
+                             config_data_storage = 'remote',
+                             op_system = op_system) #vs local, which
         #governs whether site_data, variables, ws_delin_specs, etc are searched
         #for as local CSV files or as google sheets connections. This is not hooked
         #up to anything yet
@@ -173,15 +185,15 @@ network_domain <- site_data %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'ms_globals')
+ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 
-    network = network_domain$network[dmnrow]
-    domain = network_domain$domain[dmnrow]
+    network <- network_domain$network[dmnrow]
+    domain <- network_domain$domain[dmnrow]
 
     logger_module = set_up_logger(network = network,
                                   domain = domain)
