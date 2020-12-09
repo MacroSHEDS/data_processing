@@ -1,10 +1,9 @@
 loginfo('Beginning munge', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'munge', 
+                              status_level = 'munge',
                               get_statuses = 'ready')
-
 # i=1
 for(i in 1:nrow(prod_info)){
 
@@ -39,22 +38,28 @@ for(i in 1:nrow(prod_info)){
         if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
             munge_rtn <- munge_combined_split(network = network,
-                                             domain = domain,
-                                             site_name = site_name,
-                                             prodname_ms = prodname_ms,
-                                             tracker = held_data)
+                                              domain = domain,
+                                              site_name = site_name,
+                                              prodname_ms = prodname_ms,
+                                              tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
             munge_rtn <- munge_by_site(network, domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){
-            update_data_tracker_m(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms,
-                site_name=site_name, new_status='error')
 
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'error')
+
+        } else if(is_blacklist_indicator(munge_rtn)){
+            next
         } else {
-
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
+            invalidate_derived_products(
+                successor_string = prod_info$precursor_of[i])
         }
     }
 

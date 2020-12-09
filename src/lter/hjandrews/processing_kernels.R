@@ -328,7 +328,6 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     if(grepl('chemistry', prodname_ms)){
         component <- 'CF00201'
     } else {
-        loginfo('Blacklisting stream flux product CF00205. We will make our own.')
         return(generate_blacklist_indicator())
     }
 

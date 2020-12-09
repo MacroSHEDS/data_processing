@@ -60,15 +60,19 @@ for(i in 1:nrow(prod_info)){
         }
 
         if(is_ms_err(munge_rtn)){
+
             update_data_tracker_m(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   prodname_ms = prodname_ms,
                                   site_name = site_name,
                                   new_status = 'error')
-        } else {
 
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
+        } else if(is_blacklist_indicator(munge_rtn)){
+            next
+        } else {
+            invalidate_derived_products(
+                successor_string = prod_info$precursor_of[i])
         }
     }
 
