@@ -367,7 +367,7 @@ identify_sampling <- function(df,
                 list('startdt' = g_a$starts,
                      'type' = g_a$type,
                      'interval' = g_a$interval)
-            
+
             g_a <- g_a %>%
                 mutate(interval = as.character(interval))
 
@@ -726,11 +726,11 @@ ms_read_raw_csv <- function(filepath,
         stop('if is_sensor is not length 1, all elements must be named.')
     }
 
-    if(!all(data_cols %in% ms_vars$variable_code)) {
+    if(! all(data_cols %in% ms_vars$variable_code)) {
 
         for(i in 1:length(data_cols)) {
             if(!data_cols[i] %in% ms_vars$variable_code) {
-                loginfo(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
+                logerror(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
                         logger = logger_module)
             }
         }
@@ -4161,7 +4161,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #   it can be a munged or a derived product.
     #qprod is the prodname_ms for stream discharge or precip volume over time.
     #   it can be a munged or derived product/
-    #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use 
+    #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use
     #predisesors to ms input
 
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
@@ -4195,7 +4195,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         rename(flow = val) %>% #quick and dirty way to convert to wide
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
         select(-var, -site_name)
-    
+
     if(nrow(flow) == 0) {
         return(NULL)
     }
@@ -4228,7 +4228,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         # select(datetime, site_name, everything()) %>%
         # relocate(ms_status, .after = last_col()) %>%
         # relocate(ms_interp, .after = last_col())
-    
+
     if(nrow(flux) == 0) {
         return(NULL)
     }
@@ -4763,8 +4763,8 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
         stop('no data to synchronize. bypassing processing.')
     }
 
-    var_is_q <- drop_var_prefix(var[1]) == 'discharge'
-    var_is_p <- drop_var_prefix(var[1]) == 'precipitation'
+    var_is_q <- drop_var_prefix(d$var[1]) == 'discharge'
+    var_is_p <- drop_var_prefix(d$var[1]) == 'precipitation'
 
     #round to desired_interval
     d <- sw(d %>%
@@ -5932,55 +5932,55 @@ Mode <- function(x, na.rm = TRUE){
 }
 
 knit_det_limts <- function(prodname_ms) {
-    
+
     if(is_derived_product(prodname_ms) && !ignore_pred){
-        
+
         #if there are multiple precursors (rare), just use the first
         prodname_ms <- get_detlim_precursors(network = network,
                                              domain = domain,
                                              prodname_ms = prodname_ms)
     }
-    
+
     detlim <- read_detection_limit(network, domain, prodname_ms[1])
-    
+
     for(i in 2:length(prodname_ms)) {
         detlim_ <- read_detection_limit(network, domain, prodname_ms[i])
-        
+
         old_vars <- names(detlim)
         new_vars <- names(detlim_)
-        
+
         common_vars <- generics::intersect(old_vars, new_vars)
-        
+
         if(length(common_vars) > 0) {
-            
+
             for(p in 1:length(common_vars)) {
 
                 old_sites <- names(detlim[[common_vars[p]]])
                 new_sites <- names(detlim_[[common_vars[p]]])
-                
-                common_sites <- generics::intersect(old_sites, new_sites) 
-                
+
+                common_sites <- generics::intersect(old_sites, new_sites)
+
                 if(!length(common_sites) == 0) {
                     new_sites <- new_sites[!new_sites %in% common_sites]
                 }
-                
+
                 for(z in 1:length(new_sites)) {
                     detlim[[common_vars[p]]][[new_sites[z]]] <- detlim_[[common_vars[p]]][[new_sites[z]]]
                 }
             }
-        } 
-        
+        }
+
         unique_vars <- new_vars[!new_vars %in% old_vars]
         if(length(unique_vars) > 0) {
             for(v in 1:length(unique_vars)) {
                 detlim[[unique_vars[v]]] <- detlim_[[unique_vars[v]]]
             }
-            
+
         }
     }
 
     return(detlim)
-    
+
 }
 
 identify_detection_limit_t <- function(X, network, domain, prodname_ms,
@@ -6174,7 +6174,7 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred
                                              domain = domain,
                                              prodname_ms = prodname_ms)
     }
-    
+
     if(length(prodname_ms) > 1) {
         detlim <- knit_det_limts(prodname_ms)
     } else {
@@ -6199,8 +6199,8 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred
 
         x <- filter(x, var == varnm)
 
-        #nrow(x) == 1 was added because there was an error occurring if there 
-        #was a site with only one sample of a variable 
+        #nrow(x) == 1 was added because there was an error occurring if there
+        #was a site with only one sample of a variable
         if(nrow(x) == 0){
             return(NULL)
         }
@@ -6906,15 +6906,15 @@ ms_write_confdata <- function(x, which_dataset, to_where){
 }
 
 filter_single_samp_sites <- function(df) {
-    
+
     counts <- df %>%
         group_by(site_name, var) %>%
-        summarise(n = n()) 
-    
+        summarise(n = n())
+
     df <- left_join(df, counts, by = c('site_name', 'var')) %>%
         filter(n > 1) %>%
-        select(-n) 
-    
+        select(-n)
+
     return(df)
 }
 
@@ -7011,7 +7011,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
 
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
-                                  site_name = s)) 
+                                  site_name = s))
 
         if(!is.null(flux)) {
 
@@ -7022,7 +7022,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                           site_name = s,
                           level = 'derived',
                           shapefile = FALSE)
-            } 
+            }
         }
 
     return()
