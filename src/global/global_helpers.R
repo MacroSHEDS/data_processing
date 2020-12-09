@@ -2203,14 +2203,10 @@ get_product_info <- function(network, domain = NULL, status_level, get_statuses)
     #ensuring that any prerequisites, including "compiled" products, are generated
     #first.
 
-    if(is.null(domain)){
-        prods <- sm(read_csv(glue('src/{n}/products.csv',
-                                  n = network)))
-    } else {
-        prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
-                                  n = network,
-                                  d = domain)))
-    }
+
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                              n = network,
+                              d = domain)))
 
     status_column <- glue(status_level,
                           '_status')
@@ -2431,6 +2427,7 @@ ms_delineate <- function(network, domain,
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
                 dev_machine_status = dev_machine_status,
+                site_name = site,
                 verbose = verbose)
 
         } else {
@@ -2440,7 +2437,10 @@ ms_delineate <- function(network, domain,
         files_to_inspect <- list.files(path = inspection_dir,
                                        pattern = '.shp')
 
-        tmep_point <- glue(tempdir(), '/', 'POINT')
+        tmp <- tempdir()
+        tmp <- stringr::str_replace_all(tmp, '\\\\', '/')
+
+        tmep_point <- glue(tmp, '/', 'POINT')
 
         site_locations[i,] %>%
             sf::st_as_sf(coords = c('longitude', 'latitude'), crs = site_locations[i,]$CRS) %>%
@@ -2586,6 +2586,7 @@ ms_delineate <- function(network, domain,
 
 delineate_watershed_apriori <- function(lat, long, crs,
                                         dev_machine_status = 'n00b',
+                                        site_name,
                                         verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
@@ -2600,6 +2601,9 @@ delineate_watershed_apriori <- function(lat, long, crs,
     #returns the location of candidate watershed boundary files
 
     tmp <- tempdir()
+
+    tmp <- str_replace_all(tmp, '\\\\', '/')
+
     inspection_dir <- glue(tmp, '/INSPECT_THESE')
     point_dir <- glue(tmp, '/POINT')
     dem_f <- glue(tmp, '/dem.tif')
@@ -2609,6 +2613,15 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
     dir.create(path = inspection_dir,
                showWarnings = FALSE)
+
+    #Old files were making it though to the next site and show old boundaries
+    dir_clean <- list.files(inspection_dir)
+
+    if(length(dir_clean) > 0) {
+
+        file.remove(paste(inspection_dir, dir_clean, sep = '/'))
+    }
+
 
     proj <- choose_projection(lat = lat,
                               long = long)
@@ -2621,7 +2634,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
     # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
 
     #prepare for delineation loops
-    buffer_radius <- 100
+    buffer_radius <- 1000
     dem_coverage_insufficient <- FALSE
     while_loop_begin <- TRUE
 
@@ -2763,6 +2776,12 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
                 wb_sf <- sf::st_transform(wb_sf, 4326) #EPSG for WGS84
 
+                ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
+
+                wb_sf <- wb_sf %>%
+                    mutate(site_name = !!site_name) %>%
+                    mutate(area = !!ws_area_ha)
+
                 wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}.shp',
                                 path = inspection_dir,
                                 n = i,
@@ -2895,6 +2914,12 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 
     site_name <- str_match(write_dir, '.+?/([^/]+)$')[, 2]
 
+    ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
+
+    wb_sf <- wb_sf %>%
+        mutate(site_name = !!site_name) %>%
+        mutate(area = !!ws_area_ha)
+
     sf::st_write(obj = wb_sf,
                  dsn = glue('{d}/{s}.shp',
                             d = write_dir,
@@ -2988,6 +3013,7 @@ ms_derive <- function(network = domain, domain){
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain)))
+
 
     # #checks
     # if(! all(prods$type %in% c('normal', 'derived', 'linked'))){
@@ -3341,13 +3367,15 @@ ms_calc_watershed_area <- function(network, domain, site_name, level, update_sit
                   w = ws_boundary_dir))
     }
 
-    wb <- sf::st_read(glue('data/{n}/{d}/{l}/{w}/{s}/{s}.shp',
-                           n = network,
-                           d = domain,
-                           l = level,
-                           w = ws_boundary_dir,
-                           s = site_name),
-                    quiet = TRUE)
+    wd_path <- glue('data/{n}/{d}/{l}/{w}/{s}/{s}.shp',
+                    n = network,
+                    d = domain,
+                    l = level,
+                    w = ws_boundary_dir,
+                    s = site_name)
+
+    wb <- sf::st_read(wd_path,
+                      quiet = TRUE)
 
     ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
 
@@ -3492,11 +3520,7 @@ convert_molecule <- function(x, from, to){
 update_product_file <- function(network, domain, level, prodcode, status,
                                 prodname){
 
-    if(network == domain){
-        prods = sm(read_csv(glue('src/{n}/products.csv', n=network)))
-    } else {
-        prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
-    }
+    prods = sm(read_csv(glue('src/{n}/{d}/products.csv', n=network, d=domain)))
 
     prodname_list <- strsplit(prodname, '; ')
     names_matched <- sapply(prodname_list, function(x) all(x %in% prods$prodname))
@@ -3714,7 +3738,7 @@ convert_unit <- function(x, input_unit, output_unit){
 
 write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                           level = 'munged', shapefile = FALSE,
-                          link_to_portal = FALSE){
+                          link_to_portal = FALSE, sep_errors = TRUE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
@@ -3767,21 +3791,23 @@ write_ms_file <- function(d, network, domain, prodname_ms, site_name,
                          pd = prod_dir,
                          s = site_name)
 
-        #separate uncertainty into a new column.
-        #remove errors attribute from val column if it exists (it always should)
-        d$val_err <- errors(d$val)
-        if('errors' %in% class(d$val)){
-            d$val <- errors::drop_errors(d$val)
-        } else {
-            warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
-                         'That means this dataset has not passed through ',
-                         'carry_uncertainty yet. it should have.',
-                         n = network,
-                         d = domain,
-                         s = site_name,
-                         p = prodname_ms))
-        }
+        if(sep_errors) {
 
+            #separate uncertainty into a new column.
+            #remove errors attribute from val column if it exists (it always should)
+            d$val_err <- errors(d$val)
+            if('errors' %in% class(d$val)){
+                d$val <- errors::drop_errors(d$val)
+            } else {
+                warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
+                             'That means this dataset has not passed through ',
+                             'carry_uncertainty yet. it should have.',
+                             n = network,
+                             d = domain,
+                             s = site_name,
+                             p = prodname_ms))
+            }
+        }
         #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
     }
@@ -5050,10 +5076,31 @@ precip_idw <- function(precip_prodname, wb_prodname, pgauge_prodname,
 
     clst <- ms_parallelize()
 
+    # .packages = idw_pkg_export,
+    # .export = idw_var_export,
+    # .errorhandling = 'remove',
+    # .verbose = TRUE) %dopar% {
+
+    #exports from an attempt to use socket cluster parallelization;
+     idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
+                         'tidyverse', 'lubridate', 'feather', 'glue',
+                         'emayili', 'tinsel', 'imputeTS')
+     idw_var_export <- c('logger_module', 'err_cnt', 'idw_log_wb', 'shortcut_idw',
+                         'get_detlim_precursors', 'apply_detection_limit_t',
+                         'write_ms_file', 'err_df_to_matrix', 'idw_log_timestep')
+
+     shed_names <- pull(wb, site_name)
+
+     fils <- list.files('data/lter/hjandrews/derived/ws_boundary__ms008', full.names = T)
+
     #interpolate precipitation volume and write watershed averages
-    catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
+    catchout <- foreach::foreach(i = 1:length(wb),
+                                 .export = idw_var_export,
+                                 .packages = idw_pkg_export) %dopar% {
 
         wbi <- slice(wb, i)
+
+        # wbi <- sf::st_read(fils[i])
         site_name <- wbi$site_name
 
         idw_log_wb(verbose = verbose,
@@ -5111,14 +5158,10 @@ get_detlim_precursors <- function(network, domain, prodname_ms){
     #the same type (e.g. discharge__9, discharge__10, etc. from
     #lter/konza), this returns all of those products as precursors.
 
-    if(network == domain){
-        prods <- sm(read_csv(glue('src/{n}/products.csv',
-                                  n = network)))
-    } else {
-        prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
-                                  n = network,
-                                  d = domain)))
-    }
+
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                              n = network,
+                              d = domain)))
 
     prodname <- prodname_from_prodname_ms(prodname_ms)
     if(grepl('precip_flux', prodname)) prodname <- 'precip_chemistry'
@@ -5984,7 +6027,8 @@ knit_det_limts <- function(prodname_ms) {
 }
 
 identify_detection_limit_t <- function(X, network, domain, prodname_ms,
-                                       return_detlims = FALSE){
+                                       return_detlims = FALSE,
+                                       ignore_arrange = FALSE){
 
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
@@ -6019,8 +6063,10 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     #   won't line up with their corresponding data values.
     #   If X was generated by ms_cast_and_reflag, you're good to go.
 
-    X <- as_tibble(X) %>%
-        arrange(site_name, var, datetime)
+    if(!isTRUE(ignore_arrange)){
+        X <- as_tibble(X) %>%
+            arrange(site_name, var, datetime)
+    }
 
     identify_detection_limit_ <- function(X, v, output = 'list'){
 
@@ -6543,13 +6589,14 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-carry_uncertainty <- function(d, network, domain, prodname_ms){
+carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
 
     u <- identify_detection_limit_t(d,
                                     network = network,
                                     domain = domain,
                                     prodname_ms = prodname_ms,
-                                    return_detlims = TRUE)
+                                    return_detlims = TRUE,
+                                    ignore_arrange = ignore_arrange)
     u <- detection_limit_as_uncertainty(u)
     errors(d$val) <- u
     # d <- insert_uncertainty_df(d, u)
@@ -6670,20 +6717,6 @@ detection_limit_as_uncertainty <- function(detlim){
     return(uncert)
 }
 
-carry_uncertainty <- function(d, network, domain, prodname_ms){
-
-    u <- identify_detection_limit_t(d,
-                                    network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms,
-                                    return_detlims = TRUE)
-    u <- detection_limit_as_uncertainty(u)
-    errors(d$val) <- u
-    # d <- insert_uncertainty_df(d, u)
-
-    return(d)
-}
-
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -6744,7 +6777,7 @@ remove_all_na_sites <- function(d){
         summarise(non_na = sum(na))
 
     d <- left_join(d, d_test, by = c("site_name", "var")) %>%
-        filter(non_na > 10) %>%
+        filter(non_na > 1) %>%
         select(-non_na)
 }
 
