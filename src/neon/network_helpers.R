@@ -35,7 +35,6 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
     out = tibble()
     for(k in 1:nrow(retrieval_log)){
    # for(k in 1:7){
-
         prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
         processing_func <- get(paste0('process_1_', prodcode))
@@ -54,13 +53,17 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
 
     }
 
+    if(nrow(out) == 0) {
+        return(generate_ms_err(paste0('All data failed QA or no data is avalible at ', site_name)))
+    }
+
         sensor <- case_when(prodname_ms == 'stream_chemistry__DP1.20093' ~ FALSE,
                             prodname_ms == 'stream_nitrate__DP1.20033' ~ TRUE,
                             prodname_ms == 'stream_temperature__DP1.20053' ~ TRUE,
                             prodname_ms == 'stream_PAR__DP1.20042' ~ TRUE,
                             prodname_ms == 'stream_gases__DP1.20097' ~ FALSE,
                             prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
-                            prodname_ms == 'precip_chemistry__DP1.00013' ~ TRUE,
+                            prodname_ms == 'precip_chemistry__DP1.00013' ~ FALSE,
                             prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
 
         site_names <- unique(out$site_name)
@@ -69,7 +72,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             d <- out %>%
                 filter(site_name == !!site_names[y])
 
-            d <- identify_sampling_bypass(df = out,
+            d <- identify_sampling_bypass(df = d,
                                           is_sensor =  sensor,
                                           domain = domain,
                                           network = network,
@@ -80,13 +83,25 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
 
             d <- remove_all_na_sites(d)
 
-            d <- carry_uncertainty(d,
-                                   network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+            if(prodname_ms == 'stream_quality__DP1.20288') {
+                d <- carry_uncertainty(d,
+                                       network = network,
+                                       domain = domain,
+                                       prodname_ms = prodname_ms,
+                                       ignore_arrange = TRUE)
+            } else {
+                d <- carry_uncertainty(d,
+                                       network = network,
+                                       domain = domain,
+                                       prodname_ms = prodname_ms)
+            }
+
+            if(nrow(d) == 0) {
+                return(NULL)
+            }
 
             d <- synchronize_timestep(d,
-                                      desired_interval = '15 min',
+                                      desired_interval = '1 day',
                                       impute_limit = 30)
 
             d <- apply_detection_limit_t(d, network, domain, prodname_ms)
