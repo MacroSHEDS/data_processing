@@ -19,9 +19,3 @@ ms002,precip_chemistry,NA,NA,ready,NA,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA
 ms004,precip_flux_inst,NA,NA,ready,NA,NA
 ms005,stream_chemistry,NA,NA,linked,NA,automated entry
-ms006,stream_flux_inst,NA,NA,linked,NA,automated entry
-ms007,precip_gauge_locations,NA,NA,linked,NA,automated entry
-ms008,discharge,NA,NA,linked,NA,automated entry
-ms009,precip_flux_inst,NA,NA,linked,NA,automated entry
-ms010,ws_boundary,NA,NA,linked,NA,automated entry
-ms011,stream_gauge_locations,NA,NA,linked,NA,automated entry
