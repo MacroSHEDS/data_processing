@@ -1,8 +1,8 @@
 loginfo('Beginning munge', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
-                             domain = domain, 
-                             status_level = 'munge', 
+prod_info <- get_product_info(network = network,
+                             domain = domain,
+                             status_level = 'munge',
                              get_statuses = 'ready')
 
 # i=1
@@ -43,15 +43,21 @@ for(i in 1:nrow(prod_info)){
                                              prodname_ms = prodname_ms,
                                              tracker = held_data)
 
-        if(is_ms_err(munge_rtn)){
+            if(is_ms_err(munge_rtn)){
 
-            update_data_tracker_m(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms,
-                site_name=site_name, new_status='error')
+                update_data_tracker_m(network = network,
+                                      domain = domain,
+                                      tracker_name = 'held_data',
+                                      prodname_ms = prodname_ms,
+                                      site_name = site_name,
+                                      new_status = 'error')
 
-        } else {
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
-        }
+            } else if(is_blacklist_indicator(munge_rtn)){
+                next
+            } else {
+                invalidate_derived_products(
+                    successor_string = prod_info$precursor_of[i])
+            }
     }
 
     write_metadata_m(network = network,
