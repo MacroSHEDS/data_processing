@@ -41,6 +41,8 @@ suppressPackageStartupMessages({
     library(rgee) #requires geojsonio package
 })
 
+options(dplyr.summarise.inform = FALSE)
+
 ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
                     use_ms_error_handling = TRUE){
 

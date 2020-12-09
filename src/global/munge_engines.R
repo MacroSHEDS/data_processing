@@ -229,7 +229,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
     }
 
     if(is_blacklist_indicator(out_comp)){
-        loginfo(glue('Skipping product {p} (for now?)',
+        logwarn(glue('Skipping product {p} (for now?)',
                      p = prodname_ms))
         return(out_comp)
     }
