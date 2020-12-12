@@ -54,23 +54,28 @@ for(i in 1:nrow(prod_info)){
     processing_func <- get(paste0('process_2_', prodcode))
 
     derive_msg <- sw(do.call(processing_func,
-                             args=list(network = network,
-                                       domain = domain,
-                                       prodname_ms = prodname_ms)))
+                             args = list(network = network,
+                                         domain = domain,
+                                         prodname_ms = prodname_ms)))
 
     stts <- ifelse(is_ms_err(derive_msg), 'error', 'ok')
 
-    update_data_tracker_d(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms,
-        site_name=site_name, new_status=stts)
+    update_data_tracker_d(network = network,
+                          domain = domain,
+                          tracker_name = 'held_data',
+                          prodname_ms = prodname_ms,
+                          site_name = site_name,
+                          new_status = stts)
 
     if(stts == 'ok'){
-        msg = glue('Derived {p} ({n}/{d}/{s})',
-                   p = prodname_ms,
-                   n = network,
-                   d = domain,
-                   s = site_name)
-        loginfo(msg, logger=logger_module)
+        msg <- glue('Derived {p} ({n}/{d}/{s})',
+                    p = prodname_ms,
+                    n = network,
+                    d = domain,
+                    s = site_name)
+
+        loginfo(msg,
+                ogger = logger_module)
     }
 
     write_metadata_d(network = network,
@@ -81,4 +86,4 @@ for(i in 1:nrow(prod_info)){
 }
 
 loginfo('Derive complete for all products',
-        logger=logger_module)
+        logger = logger_module)
