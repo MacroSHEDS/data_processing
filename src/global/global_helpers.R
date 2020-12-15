@@ -67,11 +67,15 @@ handle_errors = function(f){
 }
 
 source('src/global/function_aliases.R')
+source('src/global/munge_engines.R')
 
 if(ms_instance$use_ms_error_handling){
     source_decoratees('src/global/munge_engines.R')
 }
 
+assign('protected_environment',
+       value = new.env(parent = .GlobalEnv),
+       envir = .GlobalEnv)
 assign('email_err_msgs',
        value = list(),
        envir = .GlobalEnv)
@@ -86,13 +90,12 @@ assign('unique_exceptions',
        envir = .GlobalEnv)
 assign('typical_derprods',
        value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
-                 'precip_flux_inst'),
+                 'precip_flux_inst', 'precip_pchem_pflux'),
        envir = .GlobalEnv)
 assign('canonical_derprods',
-       value = c('precipitation', 'precip_chemistry', 'stream_flux_inst',
-                 'precip_flux_inst', 'discharge', 'precipitation',
-                 'stream_chemistry', 'precip_gauge_locations',
-                 'stream_gauge_locations', 'ws_boundary'),
+       value = c('stream_flux_inst', 'discharge', 'precip_gauge_locations',
+                 # 'precipitation', 'precip_chemistry',  'precip_flux_inst',
+                 'stream_chemistry', 'stream_gauge_locations', 'ws_boundary'),
        envir = .GlobalEnv)
 
 #exports from an attempt to use socket cluster parallelization;
@@ -2064,7 +2067,9 @@ update_data_tracker_d <- function(network = domain,
         dt = tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-            return(generate_ms_exception('Product not yet tracked; no action taken.'))
+            msg <- 'Derived product not yet tracked; no action taken.'
+            logging::logwarn(msg)
+            return(generate_ms_exception(msg))
         }
 
         dt$status = new_status
@@ -2189,7 +2194,10 @@ get_general_status <- function(tracker, prodname_ms, site_name){
     return(general_status)
 }
 
-get_product_info <- function(network, domain = NULL, status_level, get_statuses){
+get_product_info <- function(network,
+                             domain = NULL,
+                             status_level,
+                             get_statuses){
 
     #status_level: string. one of "retrieve", "munge", "derive"
     #get_statuses: character vector. any of the possible kernel statuses, including
@@ -2201,7 +2209,8 @@ get_product_info <- function(network, domain = NULL, status_level, get_statuses)
     #"derive", output will be sorted so that canonical derive products
     #(stream_flux_inst, precipitation, precip_chem, precip_flux_inst) are last,
     #ensuring that any prerequisites, including "compiled" products, are generated
-    #first.
+    #first. If two derive products have the same name, they will be sorted
+    #numerically (e.g. ms003, ms009)
 
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
@@ -2214,8 +2223,17 @@ get_product_info <- function(network, domain = NULL, status_level, get_statuses)
     prods <- prods[prods[[status_column]] %in% get_statuses, ]
 
     if(status_level == 'derive'){
-        prods <- bind_rows(prods[! prods$prodname %in% typical_derprods, ],
-                           prods[prods$prodname %in% typical_derprods, ])
+
+        atypicals_sorted <- prods %>%
+            filter(! prodname %in% !!typical_derprods) %>%
+            arrange(prodcode)
+
+        typicals_sorted <- prods %>%
+            filter(prodname %in% !!typical_derprods) %>%
+            arrange(order(match(prodname, !!typical_derprods)))
+
+        prods <- bind_rows(atypicals_sorted,
+                           typicals_sorted)
     }
 
     return(prods)
@@ -2269,13 +2287,48 @@ prodname_from_prodname_ms <- function(prodname_ms){
 }
 
 ms_retrieve <- function(network=domain, domain){
-    source(glue('src/{n}/{d}/retrieve.R', n=network, d=domain))
-    #return()
+    source(glue('src/{n}/{d}/retrieve.R',
+                n = network,
+                d = domain),
+           local = TRUE) #UNTESTED, so may cause errors, but this should stay
+    #and the errors should be fixed via variable passing. the chunk below attempts
+    #to fix some foreseen errors
+
+    #source was previously called with default local = FALSE, which was populating
+    #the global environment with a lot of variables. Some of them we've learned
+    #to expect in the global env, so i'm restoring them here for back-compatibility
+    #now that local = TRUE. Easier than passing them explicitly through our
+    #complex call tree
+    assign(x = 'held_data',
+           value = held_data,
+           envir = .GlobalEnv)
+
+    assign(x = 'prodname_ms',
+           value = prodname_ms,
+           envir = .GlobalEnv)
 }
 
-ms_munge <- function(network=domain, domain){
-    source(glue('src/{n}/{d}/munge.R', n=network, d=domain))
-    #return()
+ms_munge <- function(network = domain, domain){
+
+    source(glue('src/{n}/{d}/munge.R',
+                n = network,
+                d = domain),
+           local = TRUE) #UNTESTED, so may cause errors, but this should stay
+    #and the errors should be fixed via variable passing. the chunk below attempts
+    #to fix some foreseen errors
+
+    #source was previously called with default local = FALSE, which was populating
+    #the global environment with a lot of variables. Some of them we've learned
+    #to expect in the global env, so i'm restoring them here for back-compatibility
+    #now that local = TRUE. Easier than passing them explicitly through our
+    #complex call tree
+    assign(x = 'held_data',
+           value = held_data,
+           envir = .GlobalEnv)
+
+    assign(x = 'prodname_ms',
+           value = prodname_ms,
+           envir = .GlobalEnv)
 }
 
 ms_delineate <- function(network, domain,
@@ -2807,9 +2860,14 @@ delineate_watershed_apriori <- function(lat, long, crs,
     return(inspection_dir)
 }
 
-delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
-                                                 snap_dist, snap_method,
-                                                 dem_resolution, write_dir){
+delineate_watershed_by_specification <- function(lat,
+                                                 long,
+                                                 crs,
+                                                 buffer_radius,
+                                                 snap_dist,
+                                                 snap_method,
+                                                 dem_resolution,
+                                                 write_dir){
 
     #lat: numeric representing latitude in decimal degrees
     #   (negative indicates southern hemisphere)
@@ -2934,13 +2992,18 @@ delineate_watershed_by_specification <- function(lat, long, crs, buffer_radius,
 }
 
 
-get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FALSE,
-                                  accpet_multi_ing = FALSE){
+get_derive_ingredient <- function(network,
+                                  domain,
+                                  prodname,
+                                  ignore_derprod = FALSE,
+                                  accept_multiple = FALSE){
 
     #get prodname_ms's by prodname, for specifying derive kernels.
 
     #ignore_derprod: logical. if TRUE, don't consider any product with an
-    #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE
+    #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE,
+    #   derived products take precedence over munged products.
+    #accept_multi_ing: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -2984,20 +3047,11 @@ get_derive_ingredient <- function(network, domain, prodname, ignore_derprod = FA
         }
 
     }
-    #obsolete docs from above, just in case we need to restore this section
-    #   In the special
-    #   case of MS-delineated watershed boundaries, this function will
-    #   ignore ms000 and grab its linked successor.
-    # if(length(prodname_ms) > 1){
-    #
-    #     wb0 <- which(prodcode_from_prodname_ms(prodname_ms) == 'ms000')
-    #     prodname_ms <- prodname_ms[-wb0]
 
-    if(length(prodname_ms) > 1 && !accpet_multi_ing){
-
+    if(length(prodname_ms) > 1 && ! accept_multiple){
         stop('could not resolve multiple products with same prodname')
     }
-    # }
+
     return(prodname_ms)
 }
 
@@ -3008,7 +3062,8 @@ ms_derive <- function(network = domain, domain){
     #   water_temp, spcond, gases -> stream_chemistry) by a derive
     #   kernel. and then of course there are products that consistently
     #   require actual derivation, like precip_flux_inst from precipitation
-    #   and pchem (usually replaced by the new precip_pchem_pflux kernels)
+    #   and pchem (note that both of these will usually be replaced by the
+    #   new precip_pchem_pflux kernels)
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -3125,6 +3180,8 @@ ms_derive <- function(network = domain, domain){
 
         newcode <- new_prodcodes[i]
 
+        thisenv = environment() #DELETE THIS
+        bypass_append = FALSE
         tryCatch({
             create_derived_links(network = network,
                                  domain = domain,
@@ -3132,10 +3189,16 @@ ms_derive <- function(network = domain, domain){
                                  new_prodcode = newcode)
 
         }, error = function(e){
-            stop(glue('{p} not found. There must be munge errors in need of fixing.',
-                      p = prodname_ms_source))
+            logwarn(glue('TEMPORARY BYPASS of normal error checking until we ',
+                         'incorporate flux products from data sources'))
+            #UNCOMMENT THE BELOW WHEN THE ABOVE IS NO LONGER NEEDED
+            # stop(glue('{p} not found. There must be munge errors in need of fixing.',
+            #           p = prodname_ms_source))
+            #ALSO delete entries with #DELETE THIS
+            assign('bypass_append', TRUE, envir=thisenv) #DELETE THIS
         })
 
+        if(! bypass_append){  #DELETE THIS
         append_to_productfile(
             network = network,
             domain = domain,
@@ -3143,6 +3206,7 @@ ms_derive <- function(network = domain, domain){
             prodname = prodname,
             derive_status = 'linked',
             notes = 'automated entry')
+        } #DELETE THIS
     }
 
     #compile any compprods and derive derprods (run all code in derive.R).
@@ -3150,7 +3214,8 @@ ms_derive <- function(network = domain, domain){
     #   non-canonicals first.
     source(glue('src/{n}/{d}/derive.R',
                 n = network,
-                d = domain))
+                d = domain),
+           local = TRUE)
 
     #link all derived products to the data portal directory
     create_portal_links(network = network,
@@ -3193,6 +3258,9 @@ append_to_productfile <- function(network,
     #add a line to the products.csv file for a particular network and domain.
     #any fields omitted will be populated with NA.
 
+    #if a prodname_ms is already in products.csv, this will terminate before
+    #appending.
+
     import_ancestor_env()
     passed_args <- as.list(match.call())
     arg_nms <- names(passed_args)
@@ -3219,8 +3287,17 @@ append_to_productfile <- function(network,
 
     prods <- bind_rows(prods, new_row)
 
+    new_row_is_duplicate <-
+        duplicated(select(prods, prodname, prodcode))[nrow(prods)]
+
+    if(new_row_is_duplicate){
+        logging::logwarn(glue('New row would duplicate an existing row in ',
+                              'products.csv. Not appending.'))
+        return()
+    }
+
     write_csv(x = prods,
-              path = prodfile)
+              file = prodfile)
 }
 
 move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
@@ -5353,7 +5430,7 @@ ms_parallelize <- function(maxcores = Inf){
 
     #value: a cluster object. you'll need this to return to serial mode and
     #   free up the cores that were employed by R. Be sure to run
-    #parallel::stopCluster(<cluster object>) after the parallel tasks are complete.
+    #ms_unparallelize() after the parallel tasks are complete.
 
     #be sure to call
 
@@ -5362,6 +5439,17 @@ ms_parallelize <- function(maxcores = Inf){
     #machine/cluster. we can use taskset to assign the shiny process
     #to 1-3 cores and this process to any others.
 
+    # #variables used inside the foreach loop on the master process will
+    # #be written to the global environment, in some cases overwriting needed
+    # #globals. we can set them aside in a separate environment and restore them later
+    # protected_vars <- c('prodname_ms', 'verbose', 'site_name')
+    # assign(x = 'protected_vars',
+    #        val = mget(protected_vars,
+    #                   ifnotfound = list(NULL, NULL, NULL),
+    #                   inherits = TRUE),
+    #        envir = protected_environment)
+
+    #then set up parallelization
     ncores <- min(parallel::detectCores(), maxcores)
 
     if(.Platform$OS.type == 'windows'){
@@ -5373,6 +5461,16 @@ ms_parallelize <- function(maxcores = Inf){
     doParallel::registerDoParallel(clst)
 
     return(clst)
+}
+
+get_env_by_variable <- function(x){
+
+    xobj <- deparse(substitute(x))
+    gobjects <- ls(envir = .GlobalEnv)
+    envirs <- gobjects[sapply(gobjects, function(x) is.environment(get(x)))]
+    envirs <- c('.GlobalEnv', envirs)
+    xin <- sapply(envirs, function(e) xobj %in% ls(envir = get(e)))
+    return(envirs[xin])
 }
 
 idw_parallel_combine <- function(d1, d2){
@@ -5614,7 +5712,7 @@ precip_idw <- function(precip_prodname,
                       link_to_portal = FALSE)
     }
 
-    parallel::stopCluster(clst)
+    ms_unparallelize(clst)
 
     #return()
 }
@@ -5814,7 +5912,8 @@ pchem_idw <- function(pchem_prodname,
                       link_to_portal = FALSE)
     }
 
-    parallel::stopCluster(clst)
+    # parallel::stopCluster(clst)
+    ms_unparallelize(clst)
 
     #return()
 }
@@ -5991,7 +6090,8 @@ flux_idw <- function(pchem_prodname,
                       link_to_portal = FALSE)
     }
 
-    parallel::stopCluster(clst)
+    # parallel::stopCluster(clst)
+    ms_unparallelize(clst)
 
     #return()
 }
@@ -6000,6 +6100,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                    precip_prodname,
                                    wb_prodname,
                                    pgauge_prodname,
+                                   prodname_ms,
                                    # flux_prodname_out,
                                    verbose = TRUE){
 
@@ -6032,7 +6133,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
     dem <- sm(elevatr::get_elev_raster(locations = wb_rg_bbox,
                                        z = 8, #res should adjust with area?
-                                       clip = 'bbox'))
+                                       clip = 'bbox',
+                                       expand = 200))
 
     #add elev column to rain gauges
     rg$elevation <- terra::extract(dem, rg)
@@ -6103,15 +6205,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #convertible, interpolate precip, pchem, and pflux. otherwise, just precip
     #and pchem. combine and write outputs by site
 
-    # catchout <- foreach::foreach(i = 1:nrow(wb)) %dopar% {
-
-    # #for testing
-    # precip = filter(precip, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01'))
-    # pchem_setlist = lapply(pchem_setlist, function(x) filter(x, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01')))
-    # drop_these = which(sapply(pchem_setlist, function(x) is_empty(x[[1]])))
-    # pchem_setlist = pchem_setlist[-drop_these]
-    # pchem_vars_fluxable = pchem_vars_fluxable[-drop_these]
-    # nvars = length(pchem_setlist)
+    #for testing
+    precip = filter(precip, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01'))
+    pchem_setlist = lapply(pchem_setlist, function(x) filter(x, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01')))
+    drop_these = which(sapply(pchem_setlist, function(x) is_empty(x[[1]])))
+    pchem_setlist = pchem_setlist[-drop_these]
+    pchem_vars_fluxable = pchem_vars_fluxable[-drop_these]
+    nvars = length(pchem_setlist)
 
     for(i in 1:nrow(wb)){
 
@@ -6128,12 +6228,14 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         }
 
         # idw_out <- foreach::foreach(j = 24:25,
-        idw_out <- foreach::foreach(j = 1:nvars,
-                                    .combine = idw_parallel_combine,
-                                    .init = 'first iter') %dopar% {
-                                    # .packages = idw_pkg_export,
-                                    # .export = idw_var_export) %dopar% {
-        # for(j in 1:nvars_fluxable){
+        idw_out <- foreach::foreach(
+            j = 1:nvars,
+            .combine = idw_parallel_combine,
+            # # .init = 'first iter') %do% {
+            # .export = c('pchem_vars', 'pchem_vars_fluxable', 'verbose',
+            #             'site_name', 'dem', 'wbi', 'rg', 'precip',
+            #             'pchem_setlist', 'first_fluxvar_ind'),
+            .init = 'first iter') %dopar% {
 
             v <- pchem_vars[j]
 
@@ -6176,20 +6278,12 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             foreach_return
         }
 
-
-        #HERE:
-        #0. write funcs for dumping/loading precip dumpfiles
-        #1. if there's a precip dumpfile, read it, delete it, create ms999,
-        #save to derive folder, populate products.csv.
-        #2. fix the stuff below here
-        #3. if there's NOT a dumpfile, gotta get precip. maybe take a shortcut and
-        #dont make that parallel by chunk. just let it be slow, because it's rare
-        #4. see post-its about product managemetn
-
         if(any(is.na(idw_out$datetime))){
             stop('NA datetime found in idw_out')
         }
 
+        # logging::logwarn(paste(colnames(idw_out), collapse = ', '))
+        # zz <<- idw_out
         ws_mean_pchem <- idw_out %>%
             select(-flux) %>%
             rename(val = concentration) %>%
@@ -6252,8 +6346,10 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             precip_chunklist <- chunk_df(d = precip,
                                          nchunks = nchunks)
 
+            clst <- ms_parallelize()
+
             ws_mean_precip <- foreach::foreach(
-                j = 1:nchunks,
+                j = 1:min(nchunks, nrow(precip)),
                 .combine = idw_parallel_combine,
                 .init = 'first iter') %dopar% {
 
@@ -6279,6 +6375,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
                 foreach_return
             }
+
+            ms_unparallelize(clst)
+
         }
 
         if(any(is.na(ws_mean_precip$datetime))){
@@ -6291,11 +6390,14 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         #     select(-var) %>% #just a placeholder
         #     left_join(precip_varnames,
         #               by = c('datetime', 'site_name'))
-        ws_mean_precip <- arrange(ws_mean_precip,
-                                  datetime)
+
+        ws_mean_precip <- ws_mean_precip %>%
+            dplyr::rename_all(dplyr::recode, concentration = 'val') %>%
+            # rename(val = concentration) %>%
+            arrange(datetime)
 
         ws_mean_precip <- apply_detection_limit_t(
-            ws_mean_precip,
+            X = ws_mean_precip,
             network = network,
             domain = domain,
             prodname_ms = precursor_prodnames[grepl('precipitation',
@@ -6311,7 +6413,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                       link_to_portal = FALSE)
     }
 
-    parallel::stopCluster(clst)
+    ms_unparallelize(clst)
 
     append_to_productfile(network = network,
                           domain = domain,
@@ -6337,10 +6439,54 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
            recursive = TRUE)
 }
 
+ms_unparallelize <- function(cluster_object){
+
+    # tryCatch({print(site_name)},
+    #         error=function(e) print('nope'))
+
+    parallel::stopCluster(cluster_object)
+
+    #remove foreach clutter that might compromise the next parallel run
+    fe_junk <- foreach:::.foreachGlobals
+
+    rm(list = ls(name = fe_junk),
+       pos = fe_junk)
+
+    # #remove any unneeded globals that were created during parallelization
+    # unneeded_globals <- c('pchem_vars', 'pchem_vars_fluxable',
+    #                       'dem', 'wbi', 'rg', 'precip',
+    #                       'pchem_setlist', 'first_fluxvar_ind', 'i', 'j')
+    # sw(rm(list = unneeded_globals,
+    #       envir = .GlobalEnv))
+
+    # #restore globals that were overwritten during parallelization
+    # protected_vars <- mget('protected_vars',
+    #                           envir = protected_environment)
+    #
+    # for(i in 1:length(protected_vars)){
+    #
+    #     nm <- names(protected_vars)[i]
+    #     val <- protected_vars[[i]]
+    #
+    #     if(! is.null(val)){
+    #         assign(nm,
+    #                value = val,
+    #                envir = .GlobalEnv)
+    #     } else {
+    #
+    #         #or remove them if they didn't exist before parallelization
+    #         sw(rm(list = nm,
+    #               envir = .GlobalEnv))
+    #     }
+    # }
+}
+
 chunk_df <- function(d, nchunks){
 
     nr <- nrow(d)
     chunksize <- nr/nchunks
+
+    # if(nr < chunksize) chunksize <- nr
 
     chunklist <- split(d,
                        0:(nr - 1) %/% chunksize)
@@ -6490,7 +6636,7 @@ document_kernel_code <- function(network, domain, prodname_ms, level){
     return(kernel_func)
 }
 
-write_metadata_m <- function(network, domain, prodname_ms){
+write_metadata_m <- function(network, domain, prodname_ms, tracker){
 
     #this writes the metadata file for munged macrosheds data
     #see write_metadata_r for retrieved macrosheds data and write_metadata_d
@@ -6499,10 +6645,10 @@ write_metadata_m <- function(network, domain, prodname_ms){
     #also see read_metadata_r
 
     #assemble metadata
-    sitelist <- names(held_data[[prodname_ms]])
+    sitelist <- names(tracker[[prodname_ms]])
     complist <- lapply(sitelist,
                        function(x){
-                           held_data[[prodname_ms]][[x]]$retrieve$component
+                           tracker[[prodname_ms]][[x]]$retrieve$component
                        })
     compsbysite <- mapply(function(s, c){
         glue('\tfor site: {s}\n\t\tcomp(s): {c}',
@@ -7037,7 +7183,11 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     #return()
 }
 
-apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred = FALSE){
+apply_detection_limit_t <- function(X,
+                                    network,
+                                    domain,
+                                    prodname_ms,
+                                    ignore_pred = FALSE){
 
     #this is the temporally explicit version of apply_detection_limit (_t).
     #it supersedes the scalar version (apply_detection_limit_s).
@@ -7056,7 +7206,7 @@ apply_detection_limit_t <- function(X, network, domain, prodname_ms, ignore_pred
     X <- as_tibble(X) %>%
         arrange(site_name, var, datetime)
 
-    if(is_derived_product(prodname_ms) && !ignore_pred){
+    if(is_derived_product(prodname_ms) && ! ignore_pred){
 
         prodname_ms <- get_detlim_precursors(network = network,
                                              domain = domain,
@@ -7804,17 +7954,17 @@ derive_precip <- function(network, domain, prodname_ms){
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
-                                                accpet_multi_ing = TRUE)
+                                                accept_multiple = TRUE)
 
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     precip_idw(precip_prodname = precip_prodname_ms,
                wb_prodname = wb_prodname_ms,
@@ -7832,23 +7982,23 @@ derive_precip_chem <- function(network, domain, prodname_ms){
                                                domain = domain,
                                                prodname = 'precip_chemistry',
                                                ignore_derprod = TRUE,
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
 
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
-                                                accpet_multi_ing = TRUE)
+                                                accept_multiple = TRUE)
 
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     pchem_idw(pchem_prodname = pchem_prodname_ms,
               precip_prodname = precip_prodname_ms,
@@ -7864,12 +8014,12 @@ derive_stream_flux <- function(network, domain, prodname_ms){
     schem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'stream_chemistry',
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
 
     disch_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'discharge',
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
 
     chemfiles <- ms_list_files(network = network,
                                domain = domain,
@@ -7912,23 +8062,23 @@ derive_precip_flux <- function(network, domain, prodname_ms){
                                                domain = domain,
                                                prodname = 'precip_chemistry',
                                                ignore_derprod = TRUE,
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
 
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
-                                                accpet_multi_ing = TRUE)
+                                                accept_multiple = TRUE)
 
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     flux_idw(pchem_prodname = pchem_prodname_ms,
              precip_prodname = precip_prodname_ms,
@@ -7949,28 +8099,29 @@ derive_precip_pchem_pflux <- function(network, domain, prodname_ms){
                                                domain = domain,
                                                prodname = 'precip_chemistry',
                                                ignore_derprod = TRUE,
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
 
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
-                                                accpet_multi_ing = TRUE)
+                                                accept_multiple = TRUE)
 
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
 
     precip_pchem_pflux_idw(pchem_prodname = pchem_prodname_ms,
                            precip_prodname = precip_prodname_ms,
                            wb_prodname = wb_prodname_ms,
-                           pgauge_prodname = rg_prodname_ms)
+                           pgauge_prodname = rg_prodname_ms,
+                           prodname_ms = prodname_ms)
                            # flux_prodname_out = prodname_ms)
 
     return()
