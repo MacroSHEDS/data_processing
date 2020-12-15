@@ -1,4 +1,5 @@
-source('src/global/general_kernels.R')
+source('src/global/general_kernels.R',
+       local = TRUE)
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA'
 

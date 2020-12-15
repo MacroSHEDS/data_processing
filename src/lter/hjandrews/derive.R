@@ -1,18 +1,28 @@
 loginfo('Beginning derive', logger=logger_module)
-site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
+site_name <- 'sitename_NA'
+# assign(x = 'site_name',
+#        value = 'sitename_NA',
+#        envir = .GlobalEnv)
 
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'derive',
                               get_statuses = 'ready')
 
-# i=1
 for(i in 1:nrow(prod_info)){
-# for(i in 2){
 
     prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    # assign(x = 'prodname_ms',
+    #        value = paste0(prod_info$prodname[i],
+    #                       '__',
+    #                       prod_info$prodcode[i]),
+    #        envir = .GlobalEnv)
 
     held_data <- get_data_tracker(network=network, domain=domain)
+    # assign(x = 'held_data',
+    #        value = get_data_tracker(network = network,
+    #                                 domain = domain),
+    #        envir = .GlobalEnv)
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
@@ -75,7 +85,7 @@ for(i in 1:nrow(prod_info)){
                     s = site_name)
 
         loginfo(msg,
-                ogger = logger_module)
+                logger = logger_module)
     }
 
     write_metadata_d(network = network,

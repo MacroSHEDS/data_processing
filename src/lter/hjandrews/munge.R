@@ -9,7 +9,7 @@ for(i in 1:nrow(prod_info)){
 
     prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <- get_data_tracker(network = network, domain = domain)
+    held_data <<- get_data_tracker(network = network, domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
         logwarn(glue('Product {p} is not yet tracked. Retrieve ',
@@ -65,8 +65,8 @@ for(i in 1:nrow(prod_info)){
 
     write_metadata_m(network = network,
                      domain = domain,
-                     prodname_ms = prodname_ms)
-                     # site_name = site_name)
+                     prodname_ms = prodname_ms,
+                     tracker = held_data)
 
     gc()
 }

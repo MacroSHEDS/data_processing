@@ -1368,7 +1368,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                                                 domain = domain,
                                                 prodname = 'precipitation',
                                                 ignore_derprod = TRUE,
-                                                accpet_multi_ing = TRUE)
+                                                accept_multiple = TRUE)
     
     files <- ms_list_files(network = network,
                            domain = domain,
@@ -1427,12 +1427,12 @@ process_2_ms007 <- function(network, domain, prodname_ms){
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'ws_boundary',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
     
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
                                             prodname = 'precip_gauge_locations',
-                                            accpet_multi_ing = TRUE)
+                                            accept_multiple = TRUE)
     
     precip_idw(precip_prodname = 'precipitation_ns__ms003',
                wb_prodname = wb_prodname_ms,
@@ -1449,12 +1449,12 @@ process_2_ms005 <- function(network, domain, prodname_ms){
     schem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'stream_chemistry',
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
     
     disch_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'discharge',
-                                               accpet_multi_ing = TRUE)
+                                               accept_multiple = TRUE)
     
     chemfiles <- ms_list_files(network = network,
                                domain = domain,
