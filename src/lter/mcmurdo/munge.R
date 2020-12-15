@@ -62,8 +62,8 @@ for(i in 1:nrow(prod_info)){
 
     write_metadata_m(network = network,
                      domain = domain,
-                     prodname_ms = prodname_ms)
-                     # site_name = site_name)
+                     prodname_ms = prodname_ms,
+                     tracker = held_data)
 
     gc()
 }

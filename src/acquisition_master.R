@@ -44,7 +44,7 @@ suppressPackageStartupMessages({
 options(dplyr.summarise.inform = FALSE)
 
 ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
-                    use_ms_error_handling = TRUE){
+                    use_ms_error_handling = FALSE){
 
     #TODO:
     #could add args that override automatically set instance_type, machine_status
@@ -189,11 +189,14 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=4
+# dmnrow=7
 for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
+
+    # held_data = invalidate_tracked_data(network, domain, 'derive')
+    # owrite_tracker()
 
     logger_module = set_up_logger(network = network,
                                   domain = domain)
@@ -211,7 +214,8 @@ for(dmnrow in 1:nrow(network_domain)){
                 domain = domain)
     ms_munge(network = network,
              domain = domain)
-    sw(ms_delineate(network = network, domain = domain,
+    sw(ms_delineate(network = network,
+                    domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
