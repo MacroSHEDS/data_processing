@@ -16,6 +16,11 @@ process_3_ms005 <- function(network, domain, prodname_ms, site,
                           rez=30,
                           ws_prodname=site_boundary)
   
+  if(is.null(npp)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site)))
+  }
+  
   npp_final <- npp %>%
     mutate(year = year(date)) %>%
     select(-date) 
@@ -48,6 +53,11 @@ process_3_ms006 <- function(network, domain, prodname_ms, site,
                           prodname = 'gpp', 
                           rez = 30,
                           ws_prodname = site_boundary)
+  
+  if(is.null(gpp)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site)))
+  }
   
   gpp_sum <- gpp %>%
     mutate(year = year(date)) %>%
@@ -106,6 +116,11 @@ process_3_ms007 <- function(network, domain, prodname_ms, site,
                             rez=500,
                             ws_prodname=site_boundary)
     
+    if(is.null(lai)) {
+      return(generate_ms_err(glue('No data was retrived for {s}',
+                                        s = site)))
+    }
+    
     lai_means <- lai %>%
       mutate(year = year(date)) %>%
       filter(var == 'lai_median') %>%
@@ -145,6 +160,11 @@ process_3_ms007 <- function(network, domain, prodname_ms, site,
                              prodname='fpar', 
                              rez=500,
                              ws_prodname=site_boundary)
+    
+    if(is.null(fpar)) {
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site)))
+    }
     
     fpar_means <- fpar %>%
       mutate(year = year(date)) %>%
@@ -217,6 +237,11 @@ process_3_ms008 <- function(network, domain, prodname_ms, site,
                             ws_prodname=site_boundary)
   }
   
+  if(is.null(var)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site)))
+  }
+  
   type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
   
   var_final <- var %>%
@@ -266,6 +291,11 @@ process_3_ms009 <- function(network, domain, prodname_ms, site,
                      ws_prodname=site_boundary)
   }
   
+  if(is.null(final)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site)))
+  }
+  
   type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
   
   dir <- glue('data/{n}/{d}/ws_traits/{v}/',
@@ -281,7 +311,7 @@ process_3_ms009 <- function(network, domain, prodname_ms, site,
   return()
 }
 
-#start_season; end_season; max_season: STATUS=READY 
+#start_season; end_season; max_season; season_length: STATUS=READY 
 #. handle_errors 
 process_3_ms010 <- function(network, domain, prodname_ms, site,
                             boundaries) {
@@ -291,18 +321,106 @@ process_3_ms010 <- function(network, domain, prodname_ms, site,
  
   if(prodname_ms == 'start_season__ms010') {
     sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms, 
-                  time='start_season', ws_prodname=site_boundary))
+                  time='start_season', ws_prodname=site_boundary, site_name=site))
   }
  
  if(prodname_ms == 'max_season__ms010') {
    sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms, 
-                          time='max_season', ws_prodname=site_boundary))
+                          time='max_season', ws_prodname=site_boundary, site_name=site))
  }
  
  if(prodname_ms == 'end_season__ms010') {
    sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms, 
-                          time='end_season', ws_prodname=site_boundary))
+                          time='end_season', ws_prodname=site_boundary, site_name=site))
  }
- 
+  
+  if(prodname_ms == 'season_length__ms010'){
+    
+    dir_start <- glue('data/{n}/{d}/ws_traits/start_season/{s}.feather',
+                     n = network,
+                     d = domain,
+                     s = site)
+    
+    dir_end <- glue('data/{n}/{d}/ws_traits/end_season/{s}.feather',
+                    n = network,
+                    d = domain,
+                    s = site)
+    
+    dir.create(glue('data/{n}/{d}/ws_traits/season_length/',
+                    n = network,
+                    d = domain))
+    
+    if(file.exists(dir_start) && file.exists(dir_end)){
+      
+      start_tib <- read_feather(dir_start) %>%
+        mutate(var = ifelse(var == 'sos_mean', 'mean', 'sd')) %>%
+        rename(start = val) 
+      
+      end_tib <- read_feather(dir_end) %>%
+        mutate(var = ifelse(var == 'eos_mean', 'mean', 'sd')) %>%
+        rename(end = val) 
+      
+      both_tib <- full_join(start_tib, end_tib, by = c('site_name', 'year', 'var')) %>%
+        mutate(val = ifelse(var == 'mean', end-start, (start+end)/2)) %>%
+        select(-start, -end) %>%
+        mutate(var = ifelse(var == 'mean', 'season_length_mean', 'season_length_sd'))
+      
+      
+      
+      write_feather(both_tib, dir_end <- glue('data/{n}/{d}/ws_traits/season_length/{s}.feather',
+                                              n = network,
+                                              d = domain,
+                                              s = site))
+    } else {
+      return(generate_ms_exception(glue('either start or end of season file is missing for {s}',
+                                 s = site)))
+    }
+  }
 }
 
+#terrain: STATUS=READY 
+#. handle_errors 
+process_3_ms011 <- function(network, domain, prodname_ms, site,
+                            boundaries) {
+  
+  dir.create(glue('data/{n}/{d}/ws_traits/terrain/',
+             n = network,
+             d = domain))
+  
+  site_boundary <- boundaries %>% 
+    filter(site_name == site)
+  
+  area <- as.numeric(sf::st_area(site_boundary)/1000000)
+  
+  z_level <- case_when(area > 50 ~ 8,
+                       area >= 25 & area <= 50 ~ 12,
+                       area < 25 ~ 14)
+  
+  dem <- elevatr::get_elev_raster(site_boundary, z = z_level)
+  
+  dem_path <- tempfile(fileext = '.tif')
+  raster::writeRaster(dem, dem_path)
+  
+  slope_path <- tempfile(fileext = '.tif')
+  
+  whitebox::wbt_slope(dem_path, slope_path)
+  
+  slope <- raster::raster(slope_path) %>%
+    terra::crop(., site_boundary) %>%
+    terra::mask(., site_boundary)
+  
+  slope_values <- raster::values(slope)
+  slope_mean <- mean(slope_values, na.rm = TRUE)
+  slope_sd <- sd(slope_values, na.rm = TRUE)
+  
+  site_terrain <- tibble(site_name = site,
+                         domain = domain,
+                         year = NA,
+                         var = c('slope_mean', 'slope_sd'),
+                         val = c(slope_mean, slope_sd))
+  
+  write_feather(site_terrain, glue('data/{n}/{d}/ws_traits/terrain/{s}.feather',
+                                   n = network,
+                                   d = domain,
+                                   s = site))
+}

@@ -20,7 +20,7 @@ if(class(sheds)[1] == 'ms_err' | is.null(sheds[1])) {
 
 site_names <- unique(sheds$site_name)
 
-# i <- 10
+# i=1
 for(i in 1:nrow(unprod)){
   
   prodname_ms = glue(unprod$prodname[i], '__', unprod$prodcode[i])
@@ -66,7 +66,7 @@ for(i in 1:nrow(unprod)){
               logger = logger_module)
       next
     } else {
-      loginfo(glue('Acquiring {p} for {s}',
+      loginfo(glue('Acquiring {s}',
                    p = prodname_ms, s = site_name),
               logger=logger_module)
     }
@@ -82,12 +82,14 @@ for(i in 1:nrow(unprod)){
                                          site = site_name, 
                                          boundaries = sheds)))
     
-    stts <- ifelse(is_ms_err(gerneral_msg), 'error', 'ok')
-    update_data_tracker_g(network=network, domain=domain,
-                          tracker_name='held_data', prodname_ms=prodname_ms,
-                          site_name=site_name, new_status=stts)
-    
-    if(stts == 'ok'){
+    stts_e <- ifelse(is_ms_err(gerneral_msg), 'error', 'ok')
+    stts_w <- ifelse(is_ms_exception(gerneral_msg), 'exception', 'ok')
+    if(stts_e == 'ok' && stts_w == 'ok'){
+      
+      update_data_tracker_g(network=network, domain=domain,
+                            tracker_name='held_data', prodname_ms=prodname_ms,
+                            site_name=site_name, new_status='ok')
+      
       msg = glue('Acquired general {p} ({n}/{d}/{s})',
                  p = prodname_ms,
                  n = network,
@@ -95,10 +97,9 @@ for(i in 1:nrow(unprod)){
                  s = site_name)
       loginfo(msg, logger=logger_module)
     }
-    
     gc()
   }
 }
 
-loginfo('General computation complete for all products',
+loginfo('General acquisition complete for all products',
         logger=logger_module)
