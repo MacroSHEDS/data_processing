@@ -6465,41 +6465,71 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
 
-    median <- ee_extract(
+    # ee_shape <- sf_as_ee(sheds,
+    #          assetId = site)
+    # 
+    # img <- imgcol$reduce(ee$Reducer$mean())
+    # export_1 <- img$reduceRegions(collection = ee_shape, reducer = ee$Reducer$median(), scale = 30)
+    # 
+    # rgee::ee_table_to_drive(collection = export_2,
+    #                         description = 'export gee table',
+    #                         folder = 'GEE',
+    #                         fileNamePrefix = 'hbef_batch_test',
+    #                         fileFormat = 'csv')
+    # 
+    # task <- ee$batch$Export$table$toDrive(
+    #     collection = export_2,
+    #     description = "two_feats",
+    #     folder = 'GEE'
+    # )
+    # 
+    # task$start()
+
+    
+    median <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$median(),
         sf = FALSE
-    )
+    ))
     
-    if(nrow(median) == 0) {
+    if(length(median) <= 4 || class(median) == 'try-error') {
         return(NULL)
-    }
+    } 
+    
+    median_name <- glue('{c}_median', c = prodname) 
+    median <- clean_gee_tabel(median, sheds, median_name)
 
-    sd <- ee_extract(
+    sd <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$stdDev(),
         sf = FALSE
-    )
+    ))
+    
+    if(length(sd) <= 4 || class(sd) == 'try-error') {
+        sd <- tibble()
+    } else {
+        sd_name <- glue('{c}_sd', c = prodname)
+        sd <- clean_gee_tabel(sd, sheds, sd_name)
+    }
 
-    count <- ee_extract(
+    count <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$count(),
         sf = FALSE
-    )
-    median_name <- glue('{c}_median', c = prodname)
-    count_name <- glue('{c}_count', c = prodname)
-
-    median <- clean_gee_tabel(median, sheds, median_name)
-
-    sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
-
-    count <- clean_gee_tabel(count, sheds, count_name)
+    ))
+    
+    if(length(count) <= 4 || class(count) == 'try-error'){
+        count <- tibble()
+    } else {
+        count_name <- glue('{c}_count', c = prodname)
+        count <- clean_gee_tabel(count, sheds, count_name)
+    }
 
     fin <- rbind(median, sd, count)
 
@@ -6532,55 +6562,62 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
     date_ranges <- date_ranges[!is.na(date_ranges)]
     date_ranges <- append(start, date_ranges)
 
+    final <- tibble()
     for(i in 1:(length(date_ranges)-1)) {
         imgcol <- get_gee_imgcol(gee_id, band, prodname,
                                  paste0(date_ranges[i]), paste0(date_ranges[i+1]))
 
-
-        median <- ee_extract(
+        median <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$median(),
             sf = FALSE
-        )
-
-        sd <- ee_extract(
+        ))
+        
+        if(length(median) <= 4 || class(median) == 'try-error') {
+            return(NULL)
+        }
+        
+        median_name <- glue('{c}_median', c = prodname) 
+        median <- clean_gee_tabel(median, sheds, median_name)
+        
+        sd <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$stdDev(),
             sf = FALSE
-        )
-
-        count <- ee_extract(
+        ))
+        
+        if(length(sd) <= 4 || class(sd) == 'try-error') {
+            sd <- tibble()
+        } else {
+            sd_name <- glue('{c}_sd', c = prodname)
+            sd <- clean_gee_tabel(sd, sheds, sd_name)
+        }
+        
+        count <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$count(),
             sf = FALSE
-        )
-
-        median_name <- glue('{c}_median', c = prodname)
-        count_name <- glue('{c}_count', c = prodname)
-
-        median <- clean_gee_tabel(median, sheds, median_name)
-
-        sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
-
-        count <- clean_gee_tabel(count, sheds, count_name)
+        ))
+        
+        if(length(count) <= 4 || class(count) == 'try-error'){
+            count <- tibble()
+        } else {
+            count_name <- glue('{c}_count', c = prodname)
+            count <- clean_gee_tabel(count, sheds, count_name)
+        }
 
         fin <- rbind(median, sd, count)
-
-        if(i == 1) {
-            final <- filter(fin, date == '1900-01-1')
-        }
 
         final <- rbind(final, fin)
     }
 
     return(final)
-
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -6635,7 +6672,8 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, ws_prodname) {
+get_phonology <- function(network, domain, prodname_ms, time, ws_prodname, 
+                          site_name) {
 
     sheds <- ws_prodname %>%
         as.data.frame() %>%
@@ -6713,7 +6751,7 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname) {
                        n = network,
                        d = domain,
                        p = time, 
-                       s = site)
+                       s = site_name)
 
     write_feather(final, final_path)
 
