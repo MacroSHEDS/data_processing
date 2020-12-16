@@ -994,7 +994,8 @@ ms_read_raw_csv <- function(filepath,
 
         for(i in 1:length(unique(d$site_name))) {
             if(!unique(d$site_name)[i] %in% site_data$site_name) {
-                loginfo(msg = paste(unname(unique(d$site_name)[i]), 'is not in site_data file; add'),
+                logwarn(msg = paste(unname(unique(d$site_name)[i]),
+                                    'is not in site_data file; add'),
                         logger = logger_module)
             }
         }
@@ -1471,20 +1472,19 @@ ms_cast_and_reflag <- function(d,
 }
 
 ms_conversions <- function(d,
-                           convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                                 'NH4', 'NH3', 'NO3_NO2'),
+                           keep_molecular,
                            convert_units_from,
                            convert_units_to){
 
     #d: a macrosheds tibble that has aready been through ms_cast_and_reflag
-    #convert molecules: a character vector of molecular formulae to be
-    #   converted from molecular mass to atomic mass of the main constituent.
-    #   for example, NO3 should be converted to NO3-N within macrosheds, so pass
-    #   'NO3' to convert_molecules and it will take care of everything. by default,
-    #   all molecules we want to convert are already passed. The only time
-    #   you might want to change this default argument is if a domain provides
-    #   both forms (e.g. PO4 and PO4-P). In that case, we might want to keep both,
-    #   so we would omit 'PO4' from the argument vector to convert_molecules.
+    #keep_molecular: a character vector of molecular formulae to be
+    #   left alone. Otherwise these formulae: NO3, SO4, PO4, SiO2, NH4, NH3, NO3_NO2
+    #   will be converted according to the atomic masses of their main
+    #   constituents. For example, NO3 should be converted to NO3-N within
+    #   macrosheds, but passing 'NO3' to keep_molecular will leave it as NO3.
+    #   The only time you'd want to do this is when a domain provides both
+    #   forms. In that case we would process both forms separately, converting
+    #   neither.
     #convert_units_from: a named character vector. Names are variable names
     #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
     #   and values are the units of those variables. Omit variables that don't
@@ -1495,7 +1495,7 @@ ms_conversions <- function(d,
     #   Omit variables that don't need to be converted.
 
     #checks
-    cm <- ! missing(convert_molecules)
+    # cm <- ! missing(convert_molecules)
     cuF <- ! missing(convert_units_from) && ! is.null(convert_units_from)
     cuT <- ! missing(convert_units_to) && ! is.null(convert_units_to)
 
@@ -1513,6 +1513,19 @@ ms_conversions <- function(d,
 
     vars <- drop_var_prefix(d$var)
 
+    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'NH4', 'NH3', 'NO3_NO2')
+
+    if(! missing(keep_molecular)){
+        if(any(! keep_molecular %in% convert_molecules)){
+            stop(glue('keep_molecular must be a subset of {cm}',
+                      cm = paste(convert_molecules,
+                                 collapse = ', ')))
+        }
+        convert_molecules <- convert_molecules[! convert_molecules %in% keep_molecular]
+    }
+
+    convert_molecules <- convert_molecules[convert_molecules %in% unique(vars)]
+
     molecular_conversion_map <- list(
         NH4 = 'N',
         NO3 = 'N',
@@ -1520,72 +1533,72 @@ ms_conversions <- function(d,
         SiO2 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
-        NO3_NO2 = 'N',
-        PO4 = 'P')
+        NO3_NO2 = 'N')
 
-    if(cm){
-        if(! all(convert_molecules %in% names(molecular_conversion_map))){
-            miss <- convert_molecules[! convert_molecules %in%
-                                          names(molecular_conversion_map)]
-            stop(glue('These molecules either need to be added to ',
-                      'molecular_conversion_map, or they should not be converted: ',
-                      paste(miss, collapse = ', ')))
+    # if(cm){
+    #     if(! all(convert_molecules %in% names(molecular_conversion_map))){
+    #         miss <- convert_molecules[! convert_molecules %in%
+    #                                       names(molecular_conversion_map)]
+    #         stop(glue('These molecules either need to be added to ',
+    #                   'molecular_conversion_map, or they should not be converted: ',
+    #                   paste(miss, collapse = ', ')))
+    #     }
+    # }
+
+    #handle molecular conversions, like NO3 -> NO3_N
+
+    for(v in convert_molecules){
+
+        d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
+                                             from = v,
+                                             to = unname(molecular_conversion_map[v]))
+
+        check_double <- str_split_fixed(unname(molecular_conversion_map[v]), '', n = Inf)[1,]
+
+        if(length(check_double) > 1 && length(unique(check_double)) == 1) {
+            molecular_conversion_map[v] <- unique(check_double)
         }
+
+        new_name <- paste0(d$var[vars == v], '_', unname(molecular_conversion_map[v]))
+
+        d$var[vars == v] <- new_name
     }
 
     # Converts input to grams if the final unit contains grams or if the molecule
     # will be converted from NO3 to NO3 as N
-    for(i in 1:length(convert_units_from)) {
+    for(i in 1:length(convert_units_from)){
 
-        v = names(convert_units_from)[i]
+        unitfrom <- convert_units_from[i]
+        unitto <- convert_units_to[i]
+        v <- names(unitfrom)
 
-        if(grepl('mol|eq', convert_units_from[i]) && grepl('g', convert_units_to[i]) ||
-           names(convert_units_from[i]) %in% convert_molecules) {
+        g_conver <- FALSE
+        if(grepl('mol|eq', unitfrom) && grepl('g', unitto) ||
+           v %in% convert_molecules){
 
             d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
-                                              input_unit = convert_units_from[i],
+                                              input_unit = unitfrom,
                                               molecule = v)
 
             g_conver <- TRUE
-        } else {
-            g_conver <- FALSE
         }
 
         #convert prefix
-        if(cuF) {
-            d$val[vars == v] <- convert_unit(x = d$val[vars == v],
-                                             input_unit = convert_units_from[i],
-                                             output_unit = convert_units_to[i])
-        }
-
-        #handle molecular conversions, like NO3 -> NO3_N
-        if(v %in% convert_molecules) {
-
-            d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
-                                                 from = v,
-                                                 to = unname(molecular_conversion_map[v]))
-
-            check_double <- str_split_fixed(unname(molecular_conversion_map[v]), '', n = Inf)[1,]
-
-            if(length(check_double) > 1 && length(unique(check_double)) == 1) {
-                molecular_conversion_map[v] <- unique(check_double)
-            }
-
-            new_name <- paste0(d$var[vars == v], '_', unname(molecular_conversion_map[v]))
-
-            d$var[vars == v] <- new_name
-        }
+        d$val[vars == v] <- convert_unit(x = d$val[vars == v],
+                                         input_unit = unitfrom,
+                                         output_unit = unitto)
 
         #Convert to mol or eq if that is the output unit
-        if(grepl('mol|eq', convert_units_to[i])) {
+        if(grepl('mol|eq', unitto)) {
 
             d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
-                                                input_unit = convert_units_from[i],
-                                                output_unit = convert_units_to[i],
+                                                input_unit = unitfrom,
+                                                output_unit = unitto,
                                                 molecule = v,
                                                 g_conver = g_conver)
         }
     }
+
     return(d)
 }
 
@@ -2608,8 +2621,9 @@ ms_delineate <- function(network, domain,
             filter(
                 grepl(pattern = '^ms[0-9]{3}$',
                       x = prodcode),
-                prodname %in% c('precipitation', 'precip_chemistry',
-                                'precip_flux_inst')) %>%
+                prodname == 'precip_pchem_pflux') %>%
+                # prodname %in% c('precipitation', 'precip_chemistry',
+                #                 'precip_flux_inst')) %>%
             mutate(prodname_ms = paste(prodname,
                                        prodcode,
                                        sep = '__')) %>%
@@ -3033,19 +3047,30 @@ get_derive_ingredient <- function(network,
                                        sep = '__')) %>%
             pull(prodname_ms)
 
-        #Following code will select a ms product (if it exits) if there are
-        #multiple products, Useful for when an aggregated derived products exists for
-        #discharge or chemistry
+        #if there are multiple derive kernels, we're looking for the one that is
+        #   a precursor to the other, so grab the one with the lower msXXX ID.
+        #   UNLESS it's ws_boundary. then we want the one that's fully processed,
+        #   so higher msXXX ID.
         if(length(prodname_ms) > 1){
 
-            prodname_ms_agged <- grep(pattern = '*ms[0-9]{3}$',
-                                x = prodname_ms, value = TRUE)
+            #ignore munge kernels
+            prodname_ms <- prodname_ms[grepl(pattern = 'ms[0-9]{3}$',
+                                             x = prodname_ms,
+                                             perl = TRUE)]
 
-            if(length(prodname_ms_agged) > 0) {
-                prodname_ms <- prodname_ms_agged
+            combinekernel_inds <- substr(prodname_ms,
+                                         nchar(prodname_ms) - 2,
+                                         nchar(prodname_ms)) %>%
+                as.numeric()
+
+            if(prodname == 'ws_boundary'){
+                combinekernel_ind <- which.max(combinekernel_inds)
+            } else {
+                combinekernel_ind <- which.min(combinekernel_inds)
             }
-        }
 
+            prodname_ms <- prodname_ms[combinekernel_ind]
+        }
     }
 
     if(length(prodname_ms) > 1 && ! accept_multiple){
@@ -4961,6 +4986,9 @@ reconstruct_var_column <- function(d,
     if(length(detlim) == 1){
         var <- names(detlim)
     } else {
+        # # d <<- d
+        # vv <<- detlim
+        # detlim = vv
         stop(glue('Not sure if we\'ll ever encounter this, but if ',
                   'so we need to build it now!'))
     }
@@ -5498,15 +5526,39 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #convertible, interpolate precip, pchem, and pflux. otherwise, just precip
     #and pchem. combine and write outputs by site
 
-    #for testing
-    precip = filter(precip, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01'))
-    if(! precip_only){
-        pchem_setlist = lapply(pchem_setlist, function(x) filter(x, datetime < as.POSIXct('2010-02-01'), datetime > as.POSIXct('2010-01-01')))
-        drop_these = which(sapply(pchem_setlist, function(x) is_empty(x[[1]])))
-        pchem_setlist = pchem_setlist[-drop_these]
-        pchem_vars_fluxable = pchem_vars_fluxable[-drop_these]
-        nvars = length(pchem_setlist)
+    # ## FOR TESTING (most hideous code ever written)
+    # test_switch = 2 #either 1 or 2
+    # if(! precip_only){
+    #     if(test_switch == 1){
+    #         fo <- pre_idw_filter_for_testing(pchem_setlist, precip_only)
+    #         if(! is.null(fo$x)){
+    #             pchem_setlist <- fo$x
+    #             if(length(fo$drop_these)){
+    #                 pchem_vars_fluxable = pchem_vars_fluxable[-fo$drop_these]
+    #             }
+    #             nvars = length(pchem_setlist)
+    #         }
+    #         fo2 <- pre_idw_filter_for_testing(precip, precip_only,
+    #                                           daterange = fo$daterange)
+    #         precip = fo2$x
+    #     } else if(test_switch == 2){
+    #         fo <- pre_idw_filter_for_testing(precip, precip_only)
+    #         precip = fo$x
+    #         fo2 <- pre_idw_filter_for_testing(pchem_setlist, precip_only,
+    #                                           daterange = fo$daterange)
+    #         pchem_setlist = fo2$x
+    #         nvars = length(pchem_setlist)
+    #     }
+    #
+    # } else {
+    #     fo2 <- pre_idw_filter_for_testing(precip, precip_only)
+    #     precip = fo2$x
+    # }
+
+    if(nrow(precip) == 0){
+        stop('the test code removed all the precip data. change test_switch')
     }
+
 
     for(i in 1:nrow(wb)){
 
@@ -6254,6 +6306,22 @@ Mode <- function(x, na.rm = TRUE){
 
 }
 
+get_successor <- function(network,
+                          domain,
+                          prodname_ms){
+
+    successor <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                              n = network,
+                              d = domain))) %>%
+        mutate(prodname_ms = paste(prodname,
+                                   prodcode,
+                                   sep = '__')) %>%
+        filter(prodname_ms == !!prodname_ms) %>%
+        pull(precursor_of)
+
+    return(successor)
+}
+
 knit_det_limits <- function(network, domain, prodname_ms){
 
     # if(is_derived_product(prodname_ms) && ! ignore_pred){
@@ -6265,6 +6333,12 @@ knit_det_limits <- function(network, domain, prodname_ms){
     # }
 
     detlim <- read_detection_limit(network, domain, prodname_ms[1])
+
+    if(is.null(detlim)){
+        prodname_ms <- get_successor(network = network,
+                                     domain = domain,
+                                     prodname_ms = prodname_ms[1])
+    }
 
     for(i in 2:length(prodname_ms)) {
         detlim_ <- read_detection_limit(network, domain, prodname_ms[i])
@@ -7310,25 +7384,19 @@ derive_precip_pchem_pflux <- function(network, domain, prodname_ms){
 
     pchem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
-                                               prodname = 'precip_chemistry',
-                                               ignore_derprod = TRUE,
-                                               accept_multiple = TRUE)
+                                               prodname = 'precip_chemistry')
 
     precip_prodname_ms <- get_derive_ingredient(network = network,
                                                 domain = domain,
-                                                prodname = 'precipitation',
-                                                ignore_derprod = TRUE,
-                                                accept_multiple = TRUE)
+                                                prodname = 'precipitation')
 
     wb_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'ws_boundary',
-                                            accept_multiple = TRUE)
+                                            prodname = 'ws_boundary')
 
     rg_prodname_ms <- get_derive_ingredient(network = network,
                                             domain = domain,
-                                            prodname = 'precip_gauge_locations',
-                                            accept_multiple = TRUE)
+                                            prodname = 'precip_gauge_locations')
 
     precip_pchem_pflux_idw(pchem_prodname = pchem_prodname_ms,
                            precip_prodname = precip_prodname_ms,

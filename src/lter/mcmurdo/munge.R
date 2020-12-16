@@ -9,7 +9,7 @@ prod_info <- get_product_info(network = network,
 for(i in 1:nrow(prod_info)){
 # for(i in 5){
 
-    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data <- get_data_tracker(network=network, domain=domain)
 

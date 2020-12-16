@@ -580,9 +580,60 @@ process_2_ms004 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms007 <- stream_gauge_from_site_data
 
-#precipitation: STATUS=READY
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+process_2_ms002 <- function(network, domain, prodname_ms) {
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('precipitation__5010',
+                                           'precipitation__5016',
+                                           'precipitation__5026',
+                                           'precipitation__4004',
+                                           'precipitation__5001',
+                                           'precipitation__5004',
+                                           'precipitation__5005',
+                                           'precipitation__5006',
+                                           'precipitation__5007',
+                                           'precipitation__5008',
+                                           'precipitation__5011',
+                                           'precipitation__5014',
+                                           'precipitation__5015',
+                                           'precipitation__5017',
+                                           'precipitation__5018',
+                                           'precipitation__5019',
+                                           'precipitation__5020',
+                                           'precipitation__5021',
+                                           'precipitation__5022',
+                                           'precipitation__5024',
+                                           'precipitation__5027',
+                                           'precipitation__5028',
+                                           'precipitation__4003',
+                                           'precipitation__5002',
+                                           'precipitation__5003',
+                                           'precipitation__5009',
+                                           'precipitation__5012',
+                                           'precipitation__5023',
+                                           'precipitation__5025',
+                                           'precipitation__5013',
+                                           'precipitation__4001',
+                                           'precipitation__4002',
+                                           'precipitation__4006',
+                                           'precipitation__4009',
+                                           'precipitation__4010',
+                                           'precipitation__4011',
+                                           'precipitation__4012',
+                                           'precipitation__4007',
+                                           'precipitation__4008',
+                                           'precipitation__4005'))
+
+    return()
+}
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms003 <- derive_precip
+process_2_ms003 <- derive_precip_pchem_pflux
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors

@@ -1,13 +1,18 @@
-prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
-1,discharge,sensor,ready,ready,NA,stream_flux_inst__ms003,NA
-100,precip_gauge_locations,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-94,ws_boundary,spatial,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
-13,precipitation,grab,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
-208,precip_chemistry,grab,ready,ready,NA,precip_chemistry__ms002||precip_flux_inst__ms004,NA
-208,stream_chemistry,grab,ready,ready,NA,stream_flux_inst__ms003,NA
-107,stream_gauge_locations,spatial,ready,ready,NA,NA,NA
-ms001,precipitation,derived,NA,NA,ready,NA,NA
-ms002,precip_chemistry,derived,NA,NA,ready,NA,NA
-ms003,stream_flux_inst,derived,NA,NA,ready,NA,NA
-ms004,precip_flux_inst,derived,NA,NA,ready,NA,NA
-ms005,precip_pchem_pflux,derived,NA,NA,ready,NA,replaces the other three precip derive kernels
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
+1,discharge,ready,ready,NA,stream_flux_inst__ms003,NA
+100,precip_gauge_locations,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
+94,ws_boundary,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,NA
+13,precipitation,ready,ready,NA,precipitation__ms001||precip_chemistry__ms002||precip_flux_inst__ms004,see also product 14
+208,precip_chemistry,ready,ready,NA,precip_chemistry__ms002||precip_flux_inst__ms004,NA
+208,stream_chemistry,ready,ready,NA,stream_flux_inst__ms003,NA
+107,stream_gauge_locations,ready,ready,NA,NA,NA
+ms001,stream_flux_inst,NA,NA,ready,NA,NA
+ms002,precip_pchem_pflux,NA,NA,ready,NA,NA
+ms003,discharge,NA,NA,linked,NA,automated entry
+ms004,precip_gauge_locations,NA,NA,linked,NA,automated entry
+ms005,ws_boundary,NA,NA,linked,NA,automated entry
+ms006,stream_chemistry,NA,NA,linked,NA,automated entry
+ms007,stream_gauge_locations,NA,NA,linked,NA,automated entry
+ms900,precipitation,NA,NA,NA,NA,automated entry
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry
