@@ -2278,6 +2278,11 @@ ms_munge <- function(network=domain, domain){
     #return()
 }
 
+ms_general <- function(network=domain, domain){
+    source(glue('src/global/general.R', n=network, d=domain))
+    #return()
+}
+
 ms_delineate <- function(network, domain,
                          dev_machine_status,
                          verbose = FALSE){
@@ -6436,7 +6441,8 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
     table_fin <- table_time %>%
         dplyr::select(-name) %>%
         mutate(date = ymd(date)) %>%
-        rename(!!com_name := value)
+        mutate(var = !!com_name) %>%
+        rename(val = value)
 
     return(table_fin)
 }
@@ -6444,13 +6450,13 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
 get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
                              ws_prodname) {
 
-    sheds <- try(read_combine_shapefiles(network=network, domain=domain,
-                                     prodname_ms=ws_prodname))
-
-    if(class(sheds)[1] == 'ms_err') {
-        stop('Watershed boundaries are required for gee products')
-    }
-    sheds <- sheds %>%
+    # sheds <- try(read_combine_shapefiles(network=network, domain=domain,
+    #                                  prodname_ms=ws_prodname))
+    # 
+    # if(class(sheds)[1] == 'ms_err') {
+    #     stop('Watershed boundaries are required for gee products')
+    # }
+    sheds <- ws_prodname %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -6459,40 +6465,73 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
 
-    median <- ee_extract(
+    # ee_shape <- sf_as_ee(sheds,
+    #          assetId = site)
+    # 
+    # img <- imgcol$reduce(ee$Reducer$mean())
+    # export_1 <- img$reduceRegions(collection = ee_shape, reducer = ee$Reducer$median(), scale = 30)
+    # 
+    # rgee::ee_table_to_drive(collection = export_2,
+    #                         description = 'export gee table',
+    #                         folder = 'GEE',
+    #                         fileNamePrefix = 'hbef_batch_test',
+    #                         fileFormat = 'csv')
+    # 
+    # task <- ee$batch$Export$table$toDrive(
+    #     collection = export_2,
+    #     description = "two_feats",
+    #     folder = 'GEE'
+    # )
+    # 
+    # task$start()
+
+    
+    median <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$median(),
         sf = FALSE
-    )
+    ))
+    
+    if(length(median) <= 4 || class(median) == 'try-error') {
+        return(NULL)
+    } 
+    
+    median_name <- glue('{c}_median', c = prodname) 
+    median <- clean_gee_tabel(median, sheds, median_name)
 
-    sd <- ee_extract(
+    sd <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$stdDev(),
         sf = FALSE
-    )
+    ))
+    
+    if(length(sd) <= 4 || class(sd) == 'try-error') {
+        sd <- tibble()
+    } else {
+        sd_name <- glue('{c}_sd', c = prodname)
+        sd <- clean_gee_tabel(sd, sheds, sd_name)
+    }
 
-    count <- ee_extract(
+    count <- try(ee_extract(
         x = imgcol,
         y = sheds,
         scale = rez,
         fun = ee$Reducer$count(),
         sf = FALSE
-    )
-    median_name <- glue('{c}_median', c = prodname)
-    count_name <- glue('{c}_count', c = prodname)
+    ))
+    
+    if(length(count) <= 4 || class(count) == 'try-error'){
+        count <- tibble()
+    } else {
+        count_name <- glue('{c}_count', c = prodname)
+        count <- clean_gee_tabel(count, sheds, count_name)
+    }
 
-    median <- clean_gee_tabel(median, sheds, median_name)
-
-    sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = prodname))
-
-    count <- clean_gee_tabel(count, sheds, count_name)
-
-    fin <- sm(full_join(median, sd)) %>%
-        sm(full_join(count))
+    fin <- rbind(median, sd, count)
 
     return(fin)
 
@@ -6501,78 +6540,84 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
                           start, ws_prodname) {
 
-     sheds <- try(read_combine_shapefiles(network=network, domain=domain,
-                                         prodname_ms=ws_prodname))
+    #  sheds <- try(read_combine_shapefiles(network=network, domain=domain,
+    #                                      prodname_ms=ws_prodname))
+    # 
+    # if(class(sheds)[1] == 'ms_err') {
+    #     stop('Watershed boundaries are required for gee products')
+    # }
 
-    if(class(sheds)[1] == 'ms_err') {
-        stop('Watershed boundaries are required for gee products')
-    }
-
-    sheds <- sheds %>%
+    sheds <- ws_prodname %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
 
-    start <- pull(gee[1,4])
     current <- Sys.Date() + years(5)
-    dates <- seq(start, current, by = 'years')
+    current <- as.numeric(str_split_fixed(current, '-', n = Inf)[1,1])
+    dates <- seq(start, 2025)
 
     date_ranges <- dates[seq(0, 100, by = 5)]
     date_ranges <- date_ranges[!is.na(date_ranges)]
     date_ranges <- append(start, date_ranges)
 
+    final <- tibble()
     for(i in 1:(length(date_ranges)-1)) {
-        imgcol <- get_gee_imgcol(pull(gee[1,1]), pull(gee[1,2]), pull(gee[1,3]),
+        imgcol <- get_gee_imgcol(gee_id, band, prodname,
                                  paste0(date_ranges[i]), paste0(date_ranges[i+1]))
 
-
-        median <- ee_extract(
+        median <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$median(),
             sf = FALSE
-        )
-
-        sd <- ee_extract(
+        ))
+        
+        if(length(median) <= 4 || class(median) == 'try-error') {
+            return(NULL)
+        }
+        
+        median_name <- glue('{c}_median', c = prodname) 
+        median <- clean_gee_tabel(median, sheds, median_name)
+        
+        sd <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$stdDev(),
             sf = FALSE
-        )
-
-        count <- ee_extract(
+        ))
+        
+        if(length(sd) <= 4 || class(sd) == 'try-error') {
+            sd <- tibble()
+        } else {
+            sd_name <- glue('{c}_sd', c = prodname)
+            sd <- clean_gee_tabel(sd, sheds, sd_name)
+        }
+        
+        count <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
             fun = ee$Reducer$count(),
             sf = FALSE
-        )
-
-        median_name <- glue('{c}_median', c = var)
-        count_name <- glue('{c}_count', c = var)
-
-        median <- clean_gee_tabel(median, sheds, median_name)
-
-        sd <- clean_gee_tabel(sd, sheds, glue('{c}_sd', c = var))
-
-        count <- clean_gee_tabel(count, sheds, count_name)
-
-        fin <- sm(full_join(median, sd)) %>%
-            sm(full_join(count))
-
-        if(i == 1) {
-            final <- filter(fin, date == '1900-01-1')
+        ))
+        
+        if(length(count) <= 4 || class(count) == 'try-error'){
+            count <- tibble()
+        } else {
+            count_name <- glue('{c}_count', c = prodname)
+            count <- clean_gee_tabel(count, sheds, count_name)
         }
+
+        fin <- rbind(median, sd, count)
 
         final <- rbind(final, fin)
     }
 
     return(final)
-
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -6627,9 +6672,10 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
+get_phonology <- function(network, domain, prodname_ms, time, ws_prodname, 
+                          site_name) {
 
-    sheds <- ws_boundry %>%
+    sheds <- ws_prodname %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -6692,11 +6738,20 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_boundry) {
 
             final <- rbind(final, final_y)
         }
+    
+    final <- pivot_longer(final, cols = c(mean_name, sd_name), names_to = 'var', 
+                          values_to = 'val')
+    
+    dir <- glue('data/{n}/{d}/ws_traits/{p}/',
+                n = network, d = domain, p = time)
+    
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 
-    final_path <- glue('data/{n}/{d}/ws_traits/{p}.feather',
+    final_path <- glue('data/{n}/{d}/ws_traits/{p}/{s}.feather',
                        n = network,
                        d = domain,
-                       p = time)
+                       p = time, 
+                       s = site_name)
 
     write_feather(final, final_path)
 

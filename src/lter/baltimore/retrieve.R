@@ -5,7 +5,11 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
+<<<<<<< HEAD
+# i=1
+=======
 # i=4
+>>>>>>> 302967af8b762857fe8714b15579030eaaf0a094
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
