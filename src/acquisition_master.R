@@ -43,8 +43,10 @@ suppressPackageStartupMessages({
 
 options(dplyr.summarise.inform = FALSE)
 
-ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
-                    use_ms_error_handling = FALSE){
+ms_init <- function(use_gpu = FALSE,
+                    use_multicore_cpu = TRUE,
+                    use_ms_error_handling = TRUE,
+                    force_machine_status){
 
     #TODO:
     #could add args that override automatically set instance_type, machine_status
@@ -58,6 +60,10 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
     #use_ms_error_handling. logical. if TRUE, errors are handled and processing
     #   continues. if FALSE, the handle_errors decorator is not invoked, and
     #   standard R error handling ensues.
+    #force_machine_status: override the default machine_status for the machine
+    #   you're using. options are 'n00b' and '1337'. Among other (future) things,
+    #   this determines the granularity of downloaded DEMs for watershed
+    #   delineation
 
     #attempts to set working directory for various machines involved in the
     #   macrosheds project. determines from success/failure whether the current
@@ -131,6 +137,8 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
         stop('failed to set working directory. update ms_setwd() with your wd path')
     }
 
+    if(! missing(force_machine_status)) machine_status <- force_machine_status
+
     instance_details <- list(which_machine = which_machine,
                              instance_type = instance_type,
                              machine_status = machine_status,
@@ -146,7 +154,8 @@ ms_init <- function(use_gpu = FALSE, use_multicore_cpu = TRUE,
     return(instance_details)
 }
 
-ms_instance <- ms_init()
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
+                       force_machine_status = 'n00b')
 
 #load authorization file for macrosheds google sheets
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
@@ -189,7 +198,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=7
+# dmnrow=6
 for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
@@ -226,7 +235,6 @@ for(dmnrow in 1:nrow(network_domain)){
 
     retain_ms_globals(ms_globals)
 }
-
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

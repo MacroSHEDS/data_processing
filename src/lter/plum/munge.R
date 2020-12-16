@@ -8,7 +8,7 @@ prod_info <- get_product_info(network = network,
 # i=1
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data <- get_data_tracker(network = network, domain = domain)
 
@@ -62,7 +62,8 @@ for(i in 1:nrow(prod_info)){
 
     write_metadata_m(network = network,
                      domain = domain,
-                     prodname_ms = prodname_ms)
+                     prodname_ms = prodname_ms,
+                     tracker = held_data)
 
     gc()
 }
