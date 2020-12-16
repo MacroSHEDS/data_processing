@@ -491,8 +491,8 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                             summary_flags_clean = list('check' = '1'))
 
     d <- ms_conversions(d,
-                        convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                              'NH4', 'NH3'),
+                        # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                        #                       'NH4', 'NH3'),
                         convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
                                                TN = 'ug/l', SRP = 'ug/l',
                                                TP = 'ug/l'),
@@ -718,8 +718,8 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                             summary_flags_dirty = list(Comments = 'remove'))
 
     d <- ms_conversions(d,
-                        convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                              'NH4', 'NH3'),
+                        # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                        #                       'NH4', 'NH3'),
                         convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
                                                TPsN = 'ug/l', SRP = 'ug/l',
                                                TPP = 'ug/l'),
@@ -846,7 +846,7 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms011 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
                      domain = domain,
@@ -860,7 +860,7 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms012 <- function(network, domain, prodname_ms) {
+process_2_ms002 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
                      domain = domain,
@@ -872,18 +872,22 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
     return()
 }
 
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms001 <- derive_precip
-
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms002 <- derive_precip_chem
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms004 <- derive_precip
+#
+# #precip_chemistry: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms005 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms003 <- derive_stream_flux
 
-#precip_flux_inst: STATUS=READY
+# #precip_flux_inst: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms006 <- derive_precip_flux
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms004 <- derive_precip_flux
+process_2_ms004 <- derive_precip_pchem_pflux

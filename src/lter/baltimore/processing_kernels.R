@@ -375,6 +375,10 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms003 <- derive_stream_flux
 
-#precipitation: STATUS=READY
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms001 <- derive_precip
+process_2_ms001 <- derive_precip_pchem_pflux
