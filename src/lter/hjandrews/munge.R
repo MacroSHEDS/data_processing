@@ -4,13 +4,12 @@ prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'munge',
                               get_statuses = 'ready')
-
-# i=5
+# i=1
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <- get_data_tracker(network = network, domain = domain)
+    held_data <<- get_data_tracker(network = network, domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
         logwarn(glue('Product {p} is not yet tracked. Retrieve ',
@@ -39,29 +38,35 @@ for(i in 1:nrow(prod_info)){
         if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
             munge_rtn <- munge_combined_split(network = network,
-                                             domain = domain,
-                                             site_name = site_name,
-                                             prodname_ms = prodname_ms,
-                                             tracker = held_data)
+                                              domain = domain,
+                                              site_name = site_name,
+                                              prodname_ms = prodname_ms,
+                                              tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
             munge_rtn <- munge_by_site(network, domain, site_name, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){
-            update_data_tracker_m(network=network, domain=domain,
-                tracker_name='held_data', prodname_ms=prodname_ms,
-                site_name=site_name, new_status='error')
 
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'error')
+
+        } else if(is_blacklist_indicator(munge_rtn)){
+            next
         } else {
-
-            invalidate_derived_products(successor_string = prod_info$precursor_of)
+            invalidate_derived_products(
+                successor_string = prod_info$precursor_of[i])
         }
     }
 
     write_metadata_m(network = network,
                      domain = domain,
-                     prodname_ms = prodname_ms)
-                     # site_name = site_name)
+                     prodname_ms = prodname_ms,
+                     tracker = held_data)
 
     gc()
 }

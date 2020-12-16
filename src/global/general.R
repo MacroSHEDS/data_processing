@@ -1,6 +1,9 @@
-loginfo('Beginning general', logger=logger_module)
-source('src/global/general_kernels.R')
+
 library(rgee)
+
+source('src/global/general_kernels.R',
+       local = TRUE)
+loginfo('Beginning derive', logger=logger_module)
 
 unprod <- univ_products %>%
   filter(status == 'ready')

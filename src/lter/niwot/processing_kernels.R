@@ -1678,7 +1678,7 @@ process_1_416 <- function(network, domain, prodname_ms, site_name,
                          datetime_tz = 'US/Mountain',
                          site_name_col = 'local_site',
                          alt_site_name = list('saddle' = 'sdl'),
-                         data_cols =  c('ppt_tot' = 'precipitation_ns'),
+                         data_cols =  c('ppt_tot' = 'precipitation'),
                          data_col_pattern = '#V#',
                         summary_flagcols = c('flag_ppt_tot', 'qdays'),
                          is_sensor = TRUE)
@@ -1722,7 +1722,7 @@ process_1_414 <- function(network, domain, prodname_ms, site_name,
                          datetime_tz = 'US/Mountain',
                          site_name_col = 'local_site',
                          alt_site_name = list('C1' = 'c1'),
-                         data_cols =  c('ppt_tot' = 'precipitation_ns'),
+                         data_cols =  c('ppt_tot' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'qdays',
                          is_sensor = TRUE)
@@ -1764,7 +1764,7 @@ process_1_415 <- function(network, domain, prodname_ms, site_name,
                          datetime_tz = 'US/Mountain',
                          site_name_col = 'local_site',
                          alt_site_name = list('D1' = 'd1'),
-                         data_cols =  c('ppt_tot' = 'precipitation_ns'),
+                         data_cols =  c('ppt_tot' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = c('flag_ppt_tot', 'qdays'),
                          is_sensor = TRUE)
@@ -1840,10 +1840,28 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
     return()
 }
 
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms003 <- derive_precip
+
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms003 <- derive_precip
+process_2_ms003 <- function(network, domain, prodname_ms) {
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('precipitation__414',
+                                           'precipitation__415',
+                                           'precipitation__416'))
+
+    return()
+}
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_stream_flux
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms007 <- derive_precip_pchem_pflux

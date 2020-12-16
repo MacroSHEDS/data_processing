@@ -228,6 +228,12 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
         return(out_comp)
     }
 
+    if(is_blacklist_indicator(out_comp)){
+        logwarn(glue('Skipping product {p} (for now?)',
+                     p = prodname_ms))
+        return(out_comp)
+    }
+
     sites <- unique(out_comp$site_name)
 
     for(i in 1:length(sites)){
@@ -272,33 +278,33 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 #. handle_errors
 munge_time_component <-  function(network, domain, site_name, prodname_ms, tracker,
                                   silent = TRUE){
-    
+
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
                                            site_name)
     # filter(component != "Analytical Methods")
-    
+
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
     }
-    
+
     out <- tibble()
     for(k in 1:nrow(retrieval_log)){
-        
+
         prodcode <- prodcode_from_prodname_ms(prodname_ms)
-        
+
         processing_func <- get(paste0('process_1_', prodcode))
         in_comp <- pull(retrieval_log[k, 'component'])
-        
+
         out_comp <- sw(do.call(processing_func,
                                args = list(network = network,
                                            domain = domain,
                                            prodname_ms = prodname_ms,
                                            site_name = site_name,
                                            component = in_comp)))
-        
+
         if(is.null(out_comp)) next
-        
+
         if(is_blacklist_indicator(out_comp)){
             update_data_tracker_r(network = network,
                                   domain = domain,
@@ -309,54 +315,54 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                                   new_status = 'blacklist')
             next
         }
-        
+
         #BUILD THIS REGION INTO A HANDLE-ALL FUNC
         #IS IT POSSIBLE TO return(next)?
-        
+
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }
-        
+
         sites <- unique(out_comp$site_name)
-        
+
         for(i in 1:length(sites)){
-            
+
             filt_site <- sites[i]
             out_comp_filt <- filter(out_comp, site_name == filt_site)
-            
+
             prod_dir = glue('data/{n}/{d}/munged/{p}',
                             n = network,
                             d = domain,
                             p = prodname_ms)
-            
+
             dir.create(prod_dir,
                        showWarnings = FALSE,
                        recursive = TRUE)
-            
+
             site_file = glue('{pd}/{s}.feather',
                              pd = prod_dir,
                              s = sites[i])
-            
+
             write_feather(out_comp_filt, site_file)
             }
         }
-    
+
     update_data_tracker_m(network = network,
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
                           site_name = site_name,
                           new_status = 'ok')
-    
+
     msg = glue('munged {p} ({n}/{d}/{s})',
                p = prodname_ms,
                n = network,
                d = domain,
                s = site_name)
-    
+
     loginfo(msg,
             logger = logger_module)
-    
+
     return()
-    
+
 }
