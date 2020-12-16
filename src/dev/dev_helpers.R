@@ -1,6 +1,7 @@
-owrite_tracker = function(){
+owrite_tracker = function(trck){
     tracker_path = glue::glue('data/{n}/{d}/data_tracker.json',
         n=network, d=domain)
+    if(! missing(trck)) held_data = trck
     jsonlite::write_json(held_data, tracker_path)
 }
 
@@ -516,4 +517,76 @@ populate_kernel_env <- function(include_extension = FALSE){
                 cp = component)
 
     message(msg)
+}
+
+pre_idw_filter_for_testing <- function(x, precip_only, daterange = NULL,
+                                       length_days = 30){
+
+    if(! is.null(daterange)){
+        daterange = as.POSIXct(daterange)
+    } else {
+        if('list' %in% class(x)){
+            daterange = x %>%
+                purrr::map(~range(.x$datetime)) %>%
+                purrr::reduce(function(a, b){
+                    c(max(a[1], b[1]), min(a[2], b[2]))
+                })
+        } else {
+            daterange = range(x$datetime)
+        }
+    }
+
+    daterange = c(daterange[1], daterange[1] +
+                      length_days * 60 * 60 * 24)
+    drop_these = c()
+
+    if('list' %in% class(x)){
+        if(! precip_only){
+            x = lapply(
+                x,
+                function(z){
+                    filter(z, datetime < daterange[2], datetime > daterange[1])
+                })
+
+            drop_these = which(sapply(x, function(z) is_empty(z[[1]])))
+            if(length(drop_these)) x = x[-drop_these]
+        } else {
+            return(list(x = NULL, daterange = NULL))
+        }
+    } else {
+        x = filter(x, datetime < daterange[2], datetime > daterange[1])
+    }
+
+    return(list(x = x, drop_these = drop_these, daterange = daterange))
+}
+
+paste_from_excel = function(prefix, sep='__'){
+
+    #you could paste a bunch of prodcodes into this with the prefix 'precipitation'
+    #and it would output a neat quoted string, ready to be copied
+
+    z = scan(what = character())
+    paste0("'",
+           paste(paste(prefix,
+                       z,
+                       sep = sep),
+                 collapse = "', '"),
+           "'")
+}
+
+invalidate_all = function(){
+    for(dmnrow in 1:nrow(network_domain)){
+
+        network <- network_domain$network[dmnrow]
+        domain <- network_domain$domain[dmnrow]
+
+        held_data = invalidate_tracked_data(network = network,
+                                            domain = domain,
+                                            level = 'munge')
+        owrite_tracker(held_data)
+        held_data = invalidate_tracked_data(network = network,
+                                            domain = domain,
+                                            level = 'derive')
+        owrite_tracker(held_data)
+    }
 }

@@ -3,60 +3,60 @@
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_152 <- function(set_details, network, domain){
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-    
+
     return()
 }
 
 #discharge: STATUS=READY
 #. handle_errors
 process_0_142 <- function(set_details, network, domain){
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-    
+
     return()
 }
 
 #stream_temperature: STATUS=READY
 #. handle_errors
 process_0_159 <- function(set_details, network, domain){
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-    
+
     return()
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_167 <- function(set_details, network, domain){
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-    
+
     return()
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_157 <- function(set_details, network, domain){
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.txt')
-    
+
     return()
 }
 
@@ -66,7 +66,7 @@ process_0_157 <- function(set_details, network, domain){
 #. handle_errors
 process_1_152 <- function(network, domain, prodname_ms, site_name,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -97,10 +97,10 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                                         'pH' = 'pH'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'umol/l',
                                                'SO4' = 'umol/l',
@@ -145,16 +145,16 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_142 <- function(network, domain, prodname_ms, site_name,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     look <- read.csv(rawfile, colClasses = 'character')
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(Date.Time = '%m/%d/%Y %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
@@ -162,19 +162,19 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
                          data_cols =  c('Flow' = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
@@ -182,16 +182,16 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_159 <- function(network, domain, prodname_ms, site_name,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     raw <- read.delim(rawfile, colClasses = 'character')
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(DATE = '%m/%d/%Y',
                                            TIME = '%H:%M'),
@@ -200,19 +200,19 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                          data_cols =  c('X0CM'= 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
@@ -220,18 +220,18 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_167 <- function(network, domain, prodname_ms, site_name,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     raw <- read.csv(rawfile, colClasses = 'character') %>%
         mutate(nchr = nchar(hour)) %>%
         mutate(time = ifelse(nchr == 3, paste0('0', hour), hour))
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(date = '%Y-%m-%d',
                                            time = '%H%M'),
@@ -242,21 +242,21 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
                          data_cols =  c('value'= 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
-    
+
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('flag' = 'Q'),
                             summary_flags_clean = list('flag' = 'G'),
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
@@ -264,16 +264,16 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_157 <- function(network, domain, prodname_ms, site_name,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
+
     raw <- read.delim(rawfile, header = TRUE, colClasses = 'character', skip=3, sep=',')
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(Date.Off = '%m/%d/%Y'),
                          datetime_tz = 'GMT',
@@ -293,21 +293,21 @@ process_1_157 <- function(network, domain, prodname_ms, site_name,
                          summary_flagcols = 'Invalcode',
                          set_to_NA = c('-9.000', '-9.0', '-9.00'),
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('Invalcode' = 'x'),
                             summary_flags_to_drop = list('Invalcode' = 'BAD'),
                             varflag_col_pattern = NA)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
@@ -316,9 +316,9 @@ process_1_157 <- function(network, domain, prodname_ms, site_name,
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
-    
-    combine_products(network = network, 
-                     domain = domain, 
+
+    combine_products(network = network,
+                     domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__152',
                                            'stream_temperature__159'))
@@ -332,18 +332,22 @@ process_2_ms006 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms007 <- stream_gauge_from_site_data
 
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms002 <- derive_precip
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms002 <- derive_precip
 
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms003 <- derive_precip_chem
+# #precip_chemistry: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms003 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms004 <- derive_stream_flux
 
-#precip_flux_inst: STATUS=READY
+# #precip_flux_inst: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms005 <- derive_precip_flux
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms005 <- derive_precip_flux
+process_2_ms005 <- derive_precip_pchem_pflux
