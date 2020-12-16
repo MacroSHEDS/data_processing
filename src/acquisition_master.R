@@ -166,7 +166,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=10
-for(dmnrow in 1:nrow(network_domain)){
+for(dmnrow in 10:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -182,7 +182,7 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     get_all_local_helpers(network = network,
                           domain = domain)
-
+    
     ms_retrieve(network = network,
                 domain = domain)
     ms_munge(network = network,
