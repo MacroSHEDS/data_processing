@@ -206,6 +206,8 @@ for(dmnrow in c(1:5, 7:10)){
     domain <- network_domain$domain[dmnrow]
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
