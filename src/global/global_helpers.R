@@ -1997,10 +1997,8 @@ update_data_tracker_r <- function(network = domain,
 
         tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
 
-        print(ls(envir = .GlobalEnv))
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
-    print(tracker)
 
     trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
     if(! dir.exists('trackerdir')){

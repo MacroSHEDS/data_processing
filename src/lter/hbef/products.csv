@@ -8,3 +8,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 107,stream_gauge_locations,ready,ready,NA,NA,NA
 ms001,stream_flux_inst,NA,NA,ready,NA,NA
 ms002,precip_pchem_pflux,NA,NA,ready,NA,NA
+ms003,discharge,NA,NA,linked,NA,automated entry
+ms004,precip_gauge_locations,NA,NA,linked,NA,automated entry
+ms005,ws_boundary,NA,NA,linked,NA,automated entry
+ms007,stream_gauge_locations,NA,NA,linked,NA,automated entry
