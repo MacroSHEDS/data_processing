@@ -1997,8 +1997,10 @@ update_data_tracker_r <- function(network = domain,
 
         tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
 
+        print(ls(envir = .GlobalEnv))
         assign(tracker_name, tracker, pos=.GlobalEnv)
     }
+    print(tracker)
 
     trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
     if(! dir.exists('trackerdir')){
@@ -2307,18 +2309,18 @@ ms_retrieve <- function(network=domain, domain){
     #and the errors should be fixed via variable passing. the chunk below attempts
     #to fix some foreseen errors
 
-    #source was previously called with default local = FALSE, which was populating
-    #the global environment with a lot of variables. Some of them we've learned
-    #to expect in the global env, so i'm restoring them here for back-compatibility
-    #now that local = TRUE. Easier than passing them explicitly through our
-    #complex call tree
-    assign(x = 'held_data',
-           value = held_data,
-           envir = .GlobalEnv)
-
-    assign(x = 'prodname_ms',
-           value = prodname_ms,
-           envir = .GlobalEnv)
+    # #source was previously called with default local = FALSE, which was populating
+    # #the global environment with a lot of variables. Some of them we've learned
+    # #to expect in the global env, so i'm restoring them here for back-compatibility
+    # #now that local = TRUE. Easier than passing them explicitly through our
+    # #complex call tree
+    # assign(x = 'held_data',
+    #        value = held_data,
+    #        envir = .GlobalEnv)
+    #
+    # assign(x = 'prodname_ms',
+    #        value = prodname_ms,
+    #        envir = .GlobalEnv)
 }
 
 ms_munge <- function(network = domain, domain){
@@ -2330,18 +2332,18 @@ ms_munge <- function(network = domain, domain){
     #and the errors should be fixed via variable passing. the chunk below attempts
     #to fix some foreseen errors
 
-    #source was previously called with default local = FALSE, which was populating
-    #the global environment with a lot of variables. Some of them we've learned
-    #to expect in the global env, so i'm restoring them here for back-compatibility
-    #now that local = TRUE. Easier than passing them explicitly through our
-    #complex call tree
-    assign(x = 'held_data',
-           value = held_data,
-           envir = .GlobalEnv)
-
-    assign(x = 'prodname_ms',
-           value = prodname_ms,
-           envir = .GlobalEnv)
+    # #source was previously called with default local = FALSE, which was populating
+    # #the global environment with a lot of variables. Some of them we've learned
+    # #to expect in the global env, so i'm restoring them here for back-compatibility
+    # #now that local = TRUE. Easier than passing them explicitly through our
+    # #complex call tree
+    # assign(x = 'held_data',
+    #        value = held_data,
+    #        envir = .GlobalEnv)
+    #
+    # assign(x = 'prodname_ms',
+    #        value = prodname_ms,
+    #        envir = .GlobalEnv)
 }
 
 ms_delineate <- function(network, domain,
@@ -3010,6 +3012,7 @@ get_derive_ingredient <- function(network,
                                   domain,
                                   prodname,
                                   ignore_derprod = FALSE,
+                                  ignore_derprod900 = TRUE,
                                   accept_multiple = FALSE){
 
     #get prodname_ms's by prodname, for specifying derive kernels.
@@ -3017,6 +3020,8 @@ get_derive_ingredient <- function(network,
     #ignore_derprod: logical. if TRUE, don't consider any product with an
     #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE,
     #   derived products take precedence over munged products.
+    #ignore_derprod900: logical. if TRUE, don't consider any product with an
+    #   ms9XX prodcode.
     #accept_multi_ing: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
@@ -3046,6 +3051,11 @@ get_derive_ingredient <- function(network,
                                        prodcode,
                                        sep = '__')) %>%
             pull(prodname_ms)
+
+        if(ignore_derprod900){
+            prodname_ms <- prodname_ms[! grepl(pattern = '__ms9[0-9]{2}$',
+                                               x = prodname_ms)]
+        }
 
         #if there are multiple derive kernels, we're looking for the one that is
         #   a precursor to the other, so grab the one with the lower msXXX ID.

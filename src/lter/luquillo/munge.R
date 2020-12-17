@@ -48,6 +48,7 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(munge_rtn)){
 
+            logging::logerror(as.character(munge_rtn))
             update_data_tracker_m(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',

@@ -1,4 +1,4 @@
-owrite_tracker = function(trck){
+owrite_tracker = function(network, domain, trck){
     tracker_path = glue::glue('data/{n}/{d}/data_tracker.json',
         n=network, d=domain)
     if(! missing(trck)) held_data = trck
@@ -579,14 +579,22 @@ invalidate_all = function(){
 
         network <- network_domain$network[dmnrow]
         domain <- network_domain$domain[dmnrow]
+        print(network); print(domain)
 
-        held_data = invalidate_tracked_data(network = network,
+        tr = invalidate_tracked_data(network = network,
                                             domain = domain,
                                             level = 'munge')
-        owrite_tracker(held_data)
-        held_data = invalidate_tracked_data(network = network,
+
+        if(domain == 'hbef') print(tr$discharge__1$w1)
+        owrite_tracker(network, domain, tr)
+        if(domain == 'hbef'){
+            tr2 = get_data_tracker(network, domain)
+            print(tr2$discharge__1$w1)
+        }
+
+        tr = invalidate_tracked_data(network = network,
                                             domain = domain,
                                             level = 'derive')
-        owrite_tracker(held_data)
+        owrite_tracker(network, domain, tr)
     }
 }
