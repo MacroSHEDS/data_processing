@@ -2,7 +2,7 @@ loginfo('Beginning retrieve', logger=logger_module)
 
 prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'retrieve', 
+                              status_level = 'retrieve',
                               get_statuses = 'ready')
 
 # i=2
@@ -18,14 +18,14 @@ for(i in 1:nrow(prod_info)){
     }
 
     latest_vsn <- get_latest_product_version(prodname_ms = prodname_ms,
-                                             domain = domain, 
+                                             domain = domain,
                                              data_tracker = held_data)
 
     if(is_ms_err(latest_vsn)) next
 
     avail_sets = get_avail_lter_product_sets(prodname_ms = prodname_ms,
-                                             version = latest_vsn, 
-                                             domain = domain, 
+                                             version = latest_vsn,
+                                             domain = domain,
                                              data_tracker = held_data)
 
     if(is_ms_err(avail_sets)) next
@@ -88,7 +88,7 @@ for(i in 1:nrow(prod_info)){
                          'packageid=knb-lter-hbr.{p}.{v}',
                          p = prodcode_from_prodname_ms(prodname_ms),
                          v = latest_vsn)
-    
+
     write_metadata_r(murl = metadata_url,
                      network = network,
                      domain = domain,
