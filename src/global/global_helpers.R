@@ -2307,18 +2307,18 @@ ms_retrieve <- function(network=domain, domain){
     #and the errors should be fixed via variable passing. the chunk below attempts
     #to fix some foreseen errors
 
-    #source was previously called with default local = FALSE, which was populating
-    #the global environment with a lot of variables. Some of them we've learned
-    #to expect in the global env, so i'm restoring them here for back-compatibility
-    #now that local = TRUE. Easier than passing them explicitly through our
-    #complex call tree
-    assign(x = 'held_data',
-           value = held_data,
-           envir = .GlobalEnv)
-
-    assign(x = 'prodname_ms',
-           value = prodname_ms,
-           envir = .GlobalEnv)
+    # #source was previously called with default local = FALSE, which was populating
+    # #the global environment with a lot of variables. Some of them we've learned
+    # #to expect in the global env, so i'm restoring them here for back-compatibility
+    # #now that local = TRUE. Easier than passing them explicitly through our
+    # #complex call tree
+    # assign(x = 'held_data',
+    #        value = held_data,
+    #        envir = .GlobalEnv)
+    #
+    # assign(x = 'prodname_ms',
+    #        value = prodname_ms,
+    #        envir = .GlobalEnv)
 }
 
 ms_munge <- function(network = domain, domain){
@@ -2330,21 +2330,22 @@ ms_munge <- function(network = domain, domain){
     #and the errors should be fixed via variable passing. the chunk below attempts
     #to fix some foreseen errors
 
-    #source was previously called with default local = FALSE, which was populating
-    #the global environment with a lot of variables. Some of them we've learned
-    #to expect in the global env, so i'm restoring them here for back-compatibility
-    #now that local = TRUE. Easier than passing them explicitly through our
-    #complex call tree
-    assign(x = 'held_data',
-           value = held_data,
-           envir = .GlobalEnv)
-
-    assign(x = 'prodname_ms',
-           value = prodname_ms,
-           envir = .GlobalEnv)
+    # #source was previously called with default local = FALSE, which was populating
+    # #the global environment with a lot of variables. Some of them we've learned
+    # #to expect in the global env, so i'm restoring them here for back-compatibility
+    # #now that local = TRUE. Easier than passing them explicitly through our
+    # #complex call tree
+    # assign(x = 'held_data',
+    #        value = held_data,
+    #        envir = .GlobalEnv)
+    #
+    # assign(x = 'prodname_ms',
+    #        value = prodname_ms,
+    #        envir = .GlobalEnv)
 }
 
-ms_delineate <- function(network, domain,
+ms_delineate <- function(network,
+                         domain,
                          dev_machine_status,
                          verbose = FALSE){
 
@@ -2561,12 +2562,14 @@ ms_delineate <- function(network, domain,
                                        possible_chars = c(1:nshapes, 'S', 'A'))
 
             if(resp == 'S'){
+                unlink(site_dir)
                 message(glue('Moving on. You haven\'t seen the last of {s}!',
                               s = site))
                 next
             }
 
             if(resp == 'A'){
+                unlink(site_dir)
                 message('Aborted. Completed delineations have been saved')
                 return()
             }
@@ -3010,6 +3013,7 @@ get_derive_ingredient <- function(network,
                                   domain,
                                   prodname,
                                   ignore_derprod = FALSE,
+                                  ignore_derprod900 = TRUE,
                                   accept_multiple = FALSE){
 
     #get prodname_ms's by prodname, for specifying derive kernels.
@@ -3017,6 +3021,8 @@ get_derive_ingredient <- function(network,
     #ignore_derprod: logical. if TRUE, don't consider any product with an
     #   msXXX prodcode. In other words, return a munged prodname_ms. If FALSE,
     #   derived products take precedence over munged products.
+    #ignore_derprod900: logical. if TRUE, don't consider any product with an
+    #   ms9XX prodcode.
     #accept_multi_ing: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
@@ -3046,6 +3052,11 @@ get_derive_ingredient <- function(network,
                                        prodcode,
                                        sep = '__')) %>%
             pull(prodname_ms)
+
+        if(ignore_derprod900){
+            prodname_ms <- prodname_ms[! grepl(pattern = '__ms9[0-9]{2}$',
+                                               x = prodname_ms)]
+        }
 
         #if there are multiple derive kernels, we're looking for the one that is
         #   a precursor to the other, so grab the one with the lower msXXX ID.
@@ -3488,7 +3499,8 @@ ms_calc_watershed_area <- function(network, domain, site_name, level, update_sit
 
         ms_write_confdata(site_data,
                           which_dataset = 'site_data',
-                          to_where = ms_instance$config_data_storage)
+                          to_where = ms_instance$config_data_storage,
+                          overwrite = TRUE)
     }
 
     return(ws_area_ha)
@@ -3505,11 +3517,12 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                         snap_distance_m = snap_distance,
                         dem_resolution = dem_resolution)
 
-    ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
+    # ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
 
-    ms_write_confdata(ws_delin_specs,
-                      which_dataset = 'watershed_delineation_specs',
-                      to_where = ms_instance$config_data_storage)
+    ms_write_confdata(new_entry,
+                      which_dataset = 'ws_delin_specs',
+                      to_where = ms_instance$config_data_storage,
+                      overwrite = FALSE)
 
     #return()
 }
@@ -4668,7 +4681,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #dump_idw_precip: logical; if TRUE, IDW-interpolated precipitation will
     #   be dumped to disk (data/<network>/<domain>/precip_idw_dumps/<site_name>.rds).
     #   this file will then be read by precip_pchem_pflux_idw, in order to
-    #   properly buiild data/<network>/<domain>/derived/<precipitation_msXXX>.
+    #   properly build data/<network>/<domain>/derived/<precipitation_msXXX>.
     #   the precip_idw_dumps directory is automatically removed after it's used.
     #   This should only be set to TRUE for one iteration of the calling loop,
     #   or else time will be wasted rewriting the files.
@@ -4779,13 +4792,6 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         quickref_ind <- k %% 1000
         update_quickref <- quickref_ind == 0
 
-        # if(update_quickref){
-        #
-        #     # quickref_chunk <- quickref_chunk + 1
-        #     # quickref_chunk <- floor((k - 1) / 1000) + 1
-        #
-        # }
-
         ## GET PRECIP FOR ALL CELLS IN TIMESTEP k
 
         if(quickref_status == 'reading'){
@@ -4884,18 +4890,10 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         errors(ws_mean_conc)[k] <- mean(errors(c_idw), na.rm=TRUE)
         errors(ws_mean_flux)[k] <- mean(errors(flux_interp), na.rm=TRUE)
 
-        # if(return_precip){
-        #     ws_mean_precip[k] <- mean(p_idw, na.rm=TRUE)
-        #     errors(ws_mean_precip)[k] <- mean(errors(p_idw), na.rm=TRUE)
-        # }
         if(dump_idw_precip){
 
             ws_mean_precip[k] <- mean(p_idw, na.rm=TRUE)
             errors(ws_mean_precip)[k] <- mean(errors(p_idw), na.rm=TRUE)
-
-            # if(any(is.na(precip_varnames))){
-            #     stop('NA detected in precip_varnames')
-            # }
 
             ws_means_precip <- tibble(
                 datetime = d_dt,
@@ -5007,6 +5005,11 @@ dump_precip_idw_tempfile <- function(ws_means,
                                      domain,
                                      site_name){
 
+    #not to be confused with precip quickref, the tempfile (dumpfile) communicates
+    #precipitation data used in flux calculation up the callstack from
+    #shortcut_idw_concflux_v2 to precip_pchem_pflux_idw, so that the precip
+    #product can be generated for free, as a byproduct
+
     dumpdir <- glue('data/{n}/{d}/precip_idw_dumps/',
                     n = network,
                     d = domain)
@@ -5024,6 +5027,11 @@ dump_precip_idw_tempfile <- function(ws_means,
 load_precip_idw_tempfile <- function(network,
                                      domain,
                                      site_name){
+
+    #not to be confused with precip quickref, the tempfile (dumpfile) communicates
+    #precipitation data used in flux calculation up the callstack from
+    #shortcut_idw_concflux_v2 to precip_pchem_pflux_idw, so that the precip
+    #product can be generated for free, as a byproduct
 
     dumpfile <- glue('data/{n}/{d}/precip_idw_dumps/{s}.rds',
                      n = network,
@@ -5044,21 +5052,35 @@ save_precip_quickref <- function(precip_idw_list,
                                  # chunk_number){
                                  timestep){
 
+    #not to be confused with the precip idw tempfile (dumpfile),
+    #the quickref file allows the same precip idw data to be used across all
+    #chemistry variables when calculating flux. it's stored in 1000-timestep
+    #chunks
+
     chunk_number <- floor((timestep - 1) / 1000) + 1
     chunkID <- stringr::str_pad(string = chunk_number,
                                 width = 3,
                                 side = 'left',
                                 pad = '0')
 
-    chunkfile <- glue('data/{n}/{d}/precip_idw_quickref/{s}/chunk{ch}.rds}',
-                      n = network,
-                      d = domain,
-                      s = site_name,
+    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/{s}',
+                         n = network,
+                         d = domain,
+                         s = site_name)
+
+    chunkfile <- glue('chunk{ch}.rds',
                       ch = chunkID)
 
     if(! file.exists(chunkfile)){ #in case another thread has already written it
+
+        dir.create(path = quickref_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+
         saveRDS(object = precip_idw_list,
-                file = chunkfile)
+                file = paste(quickref_dir,
+                             chunkfile,
+                             sep = '/'))
     }
 }
 
@@ -5067,8 +5089,13 @@ try_read_precip_quickref <- function(network,
                                      site_name,
                                      timestep){
 
+    #not to be confused with the precip idw tempfile (dumpfile),
+    #the quickref file allows the same precip idw data to be used across all
+    #chemistry variables when calculating flux. it's stored in 1000-timestep
+    #chunks
+
     #set timestep to 0 to get the first chunk. for every thousand timepoints
-    #   thereafter, it will grab the next chunk
+    #thereafter, it will grab the next chunk
 
     chunk_number <- timestep / 1000 + 1
 
@@ -5558,7 +5585,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     if(nrow(precip) == 0){
         stop('the test code removed all the precip data. change test_switch')
     }
-
 
     for(i in 1:nrow(wb)){
 
@@ -7257,25 +7283,31 @@ load_config_datasets <- function(from_where){
            pos = .GlobalEnv)
 }
 
-ms_write_confdata <- function(x, which_dataset, to_where){
+ms_write_confdata <- function(x,
+                              which_dataset,
+                              to_where,
+                              overwrite = FALSE){
 
     #x: a tibble or data.frame
-    #which_dataset: string. either "variables", "site_data", "univ_products",
-    #   "name_variants", or "watershed_delineation_specs"
+    #which_dataset: string. either "ms_vars", "site_data", "univ_products",
+    #   "name_variants", or "ws_delin_specs"
     #to_where: string. either "remote", meaning write this file to a google
     #   sheets connection defined in data_acquisition/config.json and
     #   data_acquisition/googlesheet_service_accnt.json, or "local", meaning
     #   write this file locally to data_acquisition/data/general/<which_dataset>.csv
+    #overwrite: logical; If FALSE, x will be appended to which_dataset
 
     #this writes our "configuration" datasets to their appropriate locations.
-    #as of 10/27/20 those datasets include site_data, variables, universal_products,
-    #name_variants, and watershed_delineation_specs.
+    #as of 10/27/20 those datasets include site_data, ms_vars, universal_products,
+    #name_variants, and ws_delin_specs
     #depending on the type of instance (remote/local),
     #those datasets are either written to local CSVs or to google sheets. for ms
     #developers, this will always be "remote". for future users, it'll be a
     #configurable option.
 
-    known_datasets <- c('variables', 'site_data', 'watershed_delineation_specs',
+    #which_dataset will also be updated in memory
+
+    known_datasets <- c('ms_vars', 'site_data', 'ws_delin_specs',
                         'univ_products', 'name_variants')
 
     if(! which_dataset %in% known_datasets){
@@ -7286,33 +7318,60 @@ ms_write_confdata <- function(x, which_dataset, to_where){
     if(to_where == 'remote'){
 
         write_loc <- case_when(
-            which_dataset == 'variables' ~ conf$variables_gsheet,
+            which_dataset == 'ms_vars' ~ conf$variables_gsheet,
             which_dataset == 'site_data' ~ conf$site_data_gsheet,
             which_dataset == 'univ_products' ~ conf$univ_prods_gsheet,
             which_dataset == 'name_variants' ~ conf$name_variant_gsheet,
-            which_dataset == 'watershed_delineation_specs' ~
-                conf$delineation_gsheet)
+            which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
 
-        sm(googlesheets4::write_sheet(data = x,
-                                      ss = write_loc,
-                                      sheet = 1))
+        if(overwrite){
+            sm(googlesheets4::write_sheet(data = x,
+                                          ss = write_loc,
+                                          sheet = 1))
+        } else {
+            sm(googlesheets4::sheet_append(data = x,
+                                           ss = write_loc,
+                                           sheet = 1))
+        }
+
+        dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                             na = c('', 'NA')))
 
     } else if(to_where == 'local'){
 
         write_loc <- case_when(
-            which_dataset == 'variables' ~ 'variables.csv',
+            which_dataset == 'ms_vars' ~ 'variables.csv',
             which_dataset == 'site_data' ~ 'site_data.csv',
             which_dataset == 'univ_products' ~ 'universal_products.csv',
             which_dataset == 'name_variants' ~ 'name_variants.csv',
-            which_dataset == 'watershed_delineation_specs' ~
-                'watershed_delineation_specs.csv')
+            which_dataset == 'ws_delin_specs' ~ 'watershed_delineation_specs.csv')
 
-        write_csv(x,
-                  path = paste0('data/general/',
-                                write_loc))
+        if(overwrite){
+
+            write_csv(x,
+                      path = paste0('data/general/',
+                                    write_loc))
+        } else {
+
+            dset <- read_csv(path = paste0('data/general/',
+                                           write_loc))
+            dset <- bind_rows(dset, x)
+
+            write_csv(x = dset,
+                      path = paste0('data/general/',
+                                    write_loc))
+        }
+
+        dset <- read_csv(path = paste0('data/general/',
+                                       write_loc))
+
     } else {
         stop('to_where must be either "local" or "remote"')
     }
+
+    assign(x = which_dataset,
+           value = dset,
+           envir = .GlobalEnv)
 }
 
 filter_single_samp_sites <- function(df) {
