@@ -154,7 +154,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = FALSE,
+ms_instance <- ms_init(use_ms_error_handling = TRUE,
                        force_machine_status = 'n00b')
 
 #load authorization file for macrosheds google sheets
@@ -200,13 +200,16 @@ dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=3
 for(dmnrow in 1:nrow(network_domain)){
+# drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
-    # owrite_tracker()
+    # owrite_tracker(network, domain)
 
     logger_module = set_up_logger(network = network,
                                   domain = domain)
@@ -230,8 +233,8 @@ for(dmnrow in 1:nrow(network_domain)){
                     verbose = TRUE))
     ms_derive(network = network,
               domain = domain)
-    ms_general(network = network,
-               domain = domain)
+    # ms_general(network = network,
+    #            domain = domain)
 
     retain_ms_globals(ms_globals)
 }
