@@ -2562,14 +2562,16 @@ ms_delineate <- function(network,
                                        possible_chars = c(1:nshapes, 'S', 'A'))
 
             if(resp == 'S'){
-                unlink(site_dir)
+                unlink(site_dir,
+                       recursive = TRUE)
                 message(glue('Moving on. You haven\'t seen the last of {s}!',
                               s = site))
                 next
             }
 
             if(resp == 'A'){
-                unlink(site_dir)
+                unlink(site_dir,
+                       recursive = TRUE))
                 message('Aborted. Completed delineations have been saved')
                 return()
             }
