@@ -9,16 +9,16 @@ prod_info <- get_product_info(network = network,
 # i=6
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms <- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <- get_data_tracker(network=network, domain=domain)
+    held_data <<- get_data_tracker(network=network, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
         if(is_ms_prodcode(prodcode_from_prodname_ms(prodname_ms))){
-            held_data <- track_new_product(tracker = held_data,
+            held_data <<- track_new_product(tracker = held_data,
                                            prodname_ms = prodname_ms)
-            held_data <- insert_site_skeleton(tracker = held_data,
+            held_data <<- insert_site_skeleton(tracker = held_data,
                                               prodname_ms = prodname_ms,
                                               site_name = site_name,
                                               site_components = 'NA')
