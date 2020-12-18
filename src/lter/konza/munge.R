@@ -10,7 +10,7 @@ for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <- get_data_tracker(network=network, domain=domain)
+    held_data <<- get_data_tracker(network=network, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
         logwarn(glue('Product {p} is not yet tracked. Retrieve ',
@@ -53,6 +53,7 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(munge_rtn)){
 
+            logging::logerror(as.character(munge_rtn))
             update_data_tracker_m(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',

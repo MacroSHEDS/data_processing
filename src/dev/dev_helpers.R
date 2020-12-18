@@ -1,4 +1,4 @@
-owrite_tracker = function(trck){
+owrite_tracker = function(network, domain, trck){
     tracker_path = glue::glue('data/{n}/{d}/data_tracker.json',
         n=network, d=domain)
     if(! missing(trck)) held_data = trck
@@ -579,14 +579,37 @@ invalidate_all = function(){
 
         network <- network_domain$network[dmnrow]
         domain <- network_domain$domain[dmnrow]
+        print(network); print(domain)
 
-        held_data = invalidate_tracked_data(network = network,
+        tr = invalidate_tracked_data(network = network,
                                             domain = domain,
                                             level = 'munge')
-        owrite_tracker(held_data)
-        held_data = invalidate_tracked_data(network = network,
+
+        if(domain == 'hbef') print(tr$discharge__1$w1)
+        owrite_tracker(network, domain, tr)
+        if(domain == 'hbef'){
+            tr2 = get_data_tracker(network, domain)
+            print(tr2$discharge__1$w1)
+        }
+
+        tr = invalidate_tracked_data(network = network,
                                             domain = domain,
                                             level = 'derive')
-        owrite_tracker(held_data)
+        owrite_tracker(network, domain, tr)
     }
+}
+
+drop_automated_entries <- function(path = '.'){
+
+    #this drops rows with "automated entry" from all products.csv files
+    #found below the specified path
+
+    system(glue("find {p} -name 'products.csv' | ",
+                "xargs sed -e '/automated entry/d' -i.TMPBAK",
+                p = path))
+
+    system(glue("find <<p>> -name '*.TMPBAK' -exec rm {} \\;",
+                p = path,
+                .open = '<<',
+                .close = '>>'))
 }
