@@ -598,3 +598,18 @@ invalidate_all = function(){
         owrite_tracker(network, domain, tr)
     }
 }
+
+drop_automated_entries <- function(path = '.'){
+
+    #this drops rows with "automated entry" from all products.csv files
+    #found below the specified path
+
+    system(glue("find {p} -name 'products.csv' | ",
+                "xargs sed -e '/automated entry/d' -i.TMPBAK",
+                p = path))
+
+    system(glue("find <<p>> -name '*.TMPBAK' -exec rm {} \\;",
+                p = path,
+                .open = '<<',
+                .close = '>>'))
+}
