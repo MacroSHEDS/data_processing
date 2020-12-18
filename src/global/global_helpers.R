@@ -2571,7 +2571,7 @@ ms_delineate <- function(network,
 
             if(resp == 'A'){
                 unlink(site_dir,
-                       recursive = TRUE))
+                       recursive = TRUE)
                 message('Aborted. Completed delineations have been saved')
                 return()
             }
