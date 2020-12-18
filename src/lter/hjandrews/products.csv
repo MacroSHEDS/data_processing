@@ -14,11 +14,3 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 3239,stream_gauge_locations,ready,ready,pending,NA,NA
 ms001,stream_flux_inst,NA,NA,ready,NA,NA
 ms002,precip_pchem_pflux,NA,NA,ready,NA,NA
-ms003,stream_chemistry,NA,NA,linked,NA,automated entry
-ms004,precip_gauge_locations,NA,NA,linked,NA,automated entry
-ms005,discharge,NA,NA,linked,NA,automated entry
-ms006,ws_boundary,NA,NA,linked,NA,automated entry
-ms007,stream_gauge_locations,NA,NA,linked,NA,automated entry
-ms900,precipitation,NA,NA,NA,NA,automated entry
-ms901,precip_chemistry,NA,NA,NA,NA,automated entry
-ms902,precip_flux_inst,NA,NA,NA,NA,automated entry
