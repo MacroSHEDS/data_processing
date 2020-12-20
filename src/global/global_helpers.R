@@ -5584,9 +5584,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #     precip = fo2$x
     # }
 
-    if(nrow(precip) == 0){
-        stop('the test code removed all the precip data. change test_switch')
-    }
+    # if(nrow(precip) == 0){
+    #     stop('the test code removed all the precip data. change test_switch')
+    # }
 
     for(i in 1:nrow(wb)){
 
