@@ -200,18 +200,19 @@ dir.create('logs', showWarnings = FALSE)
 
 # drop_automated_entries('.') #use with caution!
 
-dmnrow=9
+dmnrow=3
 # for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in c(1:5, 7:10)){
+for(dmnrow in c(3:5, 7:10)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
+    # held_data = get_data_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
 
     logger_module = set_up_logger(network = network,
                                   domain = domain)
