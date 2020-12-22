@@ -327,7 +327,7 @@ identify_sampling <- function(df,
                 # (such as HBEF discharge that is automatic but lacks a consistent
                 #recording interval)
                 if(
-                    (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) < 1440) ||
+                    (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) <= 1440) ||
                     (nrow(test) != 0 && nrow(run_table) > 20)
                 ){ #could this be handed with else?
 

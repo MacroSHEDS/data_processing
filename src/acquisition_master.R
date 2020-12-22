@@ -38,7 +38,7 @@ suppressPackageStartupMessages({
     library(foreach)
     library(doParallel)
     library(googlesheets4)
-    library(rgee) #requires geojsonio package
+    #library(rgee) #requires geojsonio package
 })
 
 options(dplyr.summarise.inform = FALSE)
@@ -198,7 +198,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=3
+# dmnrow=5
 for(dmnrow in 1:nrow(network_domain)){
 # drop_automated_entries('.') #use with caution!
 
