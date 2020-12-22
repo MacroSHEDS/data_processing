@@ -4587,12 +4587,12 @@ shortcut_idw <- function(encompassing_dem,
     ntimesteps <- nrow(data_matrix)
     for(k in 1:ntimesteps){
 
-        idw_log_timestep(verbose = verbose,
-                         site_name = stream_site_name,
-                         v = output_varname,
-                         k = k,
-                         ntimesteps = ntimesteps,
-                         time_elapsed = (proc.time() - ptm)[3] / 60)
+        # idw_log_timestep(verbose = verbose,
+        #                  site_name = stream_site_name,
+        #                  v = output_varname,
+        #                  k = k,
+        #                  ntimesteps = ntimesteps,
+        #                  time_elapsed = (proc.time() - ptm)[3] / 60)
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -4693,7 +4693,7 @@ shortcut_idw <- function(encompassing_dem,
 shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                      wshd_bnd,
                                      data_locations,
-                                     # precip_values,
+                                     precip_values,
                                      chem_values,
                                      stream_site_name,
                                      output_varname,
@@ -4719,9 +4719,8 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #data_locations: sf point(s) with columns site_name and geometry.
     #   represents all sites (e.g. rain gauges) that will be used in
     #   the interpolation.
-    #precip_values: a tibble with datetime, ms_status, ms_interp,
-    #   and an a column of data values for each precip location.
-    #   REMOVEDL OBSOLETE
+    #precip_values: a data.frame with datetime, ms_status, ms_interp,
+    #   and a column of data values for each precip location.
     #chem_values: a data.frame with datetime, ms_status, ms_interp,
     #   and a column of data values for each precip chemistry location.
     #stream_site_name: character; the name of the watershed/stream, not the
@@ -4748,15 +4747,21 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #     stop('if return_precip is TRUE, interpolate_precip must also be')
     # }
 
-    precip_idw <- read_precip_quickref(network = network,
-                                       domain = domain,
-                                       site_name = stream_site_name,
-                                       dtrange = range(chem_values$datetime))
+    precip_quickref <- read_precip_quickref(network = network,
+                                            domain = domain,
+                                            site_name = stream_site_name,
+                                            dtrange = range(chem_values$datetime))
 
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
-    precip_values <- filter(precip_values,
-                            as.character(datetime) %in% common_dts)
+
+    precip_values <- precip_values %>%
+        mutate(ind = 1:n()) %>%
+        filter(as.character(datetime) %in% common_dts)
+
+    quickref_inds <- precip_values$ind
+    precip_values$ind <- NULL
+
     chem_values <- filter(chem_values,
                           as.character(datetime) %in% common_dts)
 
@@ -4779,33 +4784,31 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                        -ms_interp) %>%
         err_df_to_matrix()
 
+    rm(precip_values, chem_values); gc()
+
     d_status <- bitwOr(p_status, c_status)
     d_interp <- bitwOr(p_interp, c_interp)
-
-    # gauges <- base::union(colnames(p_matrix),
-    #                       colnames(c_matrix))
-    # ngauges <- length(gauges)
 
     #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
 
-    #compute distances from all dem cells to all precip locations
-    inv_distmat_p <- matrix(NA,
-                            nrow = length(dem_wb),
-                            ncol = ncol(p_matrix), #ngauges
-                            dimnames = list(NULL,
-                                            colnames(p_matrix)))
-
-    for(k in 1:ncol(p_matrix)){
-        dk <- filter(data_locations,
-                     site_name == colnames(p_matrix)[k])
-        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
-            terra::values(.)
-        inv_dist2[is.na(elevs)] <- NA #mask
-        inv_distmat_p[, k] <- inv_dist2
-    }
+    # #compute distances from all dem cells to all precip locations
+    # inv_distmat_p <- matrix(NA,
+    #                         nrow = length(dem_wb),
+    #                         ncol = ncol(p_matrix), #ngauges
+    #                         dimnames = list(NULL,
+    #                                         colnames(p_matrix)))
+    #
+    # for(k in 1:ncol(p_matrix)){
+    #     dk <- filter(data_locations,
+    #                  site_name == colnames(p_matrix)[k])
+    #     inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+    #         terra::values(.)
+    #     inv_dist2[is.na(elevs)] <- NA #mask
+    #     inv_distmat_p[, k] <- inv_dist2
+    # }
 
     #compute distances from all dem cells to all chemistry locations
     inv_distmat_c <- matrix(NA,
@@ -4825,83 +4828,84 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     #calculate watershed mean concentration and flux at every timestep
     ptm <- proc.time()
-    if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
-    ntimesteps <- nrow(p_matrix)
-    ws_mean_precip <- ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
+    # if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
+    ntimesteps <- nrow(c_matrix)
+    # ws_mean_precip <- ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
+    ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
+    #REMOVE around here
+    # precip_quickref <- try_read_precip_quickref(network = network,
+    #                                             domain = domain,
+    #                                             site_name = stream_site_name,
+    #                                             timestep = 0)
 
-    precip_quickref <- try_read_precip_quickref(network = network,
-                                                domain = domain,
-                                                site_name = stream_site_name,
-                                                timestep = 0)
-
-    quickref_status <- attributes(precip_quickref)$status
+    # quickref_status <- attributes(precip_quickref)$status
 
     for(k in 1:ntimesteps){
 
-        idw_log_timestep(verbose = verbose,
-                         site_name = stream_site_name,
-                         v = output_varname,
-                         k = k,
-                         ntimesteps = ntimesteps,
-                         time_elapsed = (proc.time() - ptm)[3] / 60)
+        # idw_log_timestep(verbose = verbose,
+        #                  site_name = stream_site_name,
+        #                  v = output_varname,
+        #                  k = k,
+        #                  ntimesteps = ntimesteps,
+        #                  time_elapsed = (proc.time() - ptm)[3] / 60)
 
-        quickref_ind <- k %% 1000
-
-        ## GET PRECIP FOR ALL CELLS IN TIMESTEP k
-
-        if(quickref_status == 'reading'){
-
-            p_idw <- precip_quickref[[k]]
-
-        } else { #'writing'
-
-            #assign cell weights as normalized inverse squared distances (p)
-            pk <- t(p_matrix[k, , drop = FALSE])
-            inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk), drop=FALSE]
-            pk <- pk[! is.na(pk), , drop=FALSE]
-            weightmat_p <- do.call(rbind, #avoids matrix transposition
-                                   unlist(apply(inv_distmat_p_sub, #normalize by row
-                                                1,
-                                                function(x) list(x / sum(x))),
-                                          recursive = FALSE))
-
-            #determine data-elevation relationship for interp weighting (p only)
-            d_elev <- tibble(site_name = rownames(pk),
-                             precip = pk[,1]) %>%
-                left_join(data_locations,
-                          by = 'site_name')
-            mod <- lm(precip ~ elevation, data = d_elev)
-            ab <- as.list(mod$coefficients)
-
-            #perform vectorized idw (p)
-            pk[is.na(pk)] <- 0 #allows matrix multiplication
-            p_idw <- weightmat_p %*% pk
-
-            #reapply uncertainty dropped by `%*%`
-            errors(p_idw) <- weightmat_p %*% matrix(errors(pk),
-                                                    nrow = nrow(pk))
-
-            if(nrow(pk) >= 3){
-
-                #estimate raster values from elevation alone (p only)
-                p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
-
-                #average both approaches (p only; this should be weighted toward idw
-                #when close to any data location, and weighted half and half when far)
-                p_idw <- (p_idw + p_from_elev) / 2
-            }
-
-            if(! update_quickref){ #CHANGE TEST
-
-                precip_quickref <- try_read_precip_quickref(
-                    network = network,
-                    domain = domain,
-                    site_name = stream_site_name,
-                    timestep = k)
-
-                # quickref_status <- attributes(precip_quickref)$status DROP
-            }
-        }
+        # quickref_ind <- k %% 1000
+        #
+        # ## GET PRECIP FOR ALL CELLS IN TIMESTEP k
+        #
+        # if(quickref_status == 'reading'){
+        #
+        #     p_idw <- precip_quickref[[k]]
+        #
+        # } else { #'writing'
+        #
+        #     #assign cell weights as normalized inverse squared distances (p)
+        #     pk <- t(p_matrix[k, , drop = FALSE])
+        #     inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk), drop=FALSE]
+        #     pk <- pk[! is.na(pk), , drop=FALSE]
+        #     weightmat_p <- do.call(rbind, #avoids matrix transposition
+        #                            unlist(apply(inv_distmat_p_sub, #normalize by row
+        #                                         1,
+        #                                         function(x) list(x / sum(x))),
+        #                                   recursive = FALSE))
+        #
+        #     #determine data-elevation relationship for interp weighting (p only)
+        #     d_elev <- tibble(site_name = rownames(pk),
+        #                      precip = pk[,1]) %>%
+        #         left_join(data_locations,
+        #                   by = 'site_name')
+        #     mod <- lm(precip ~ elevation, data = d_elev)
+        #     ab <- as.list(mod$coefficients)
+        #
+        #     #perform vectorized idw (p)
+        #     pk[is.na(pk)] <- 0 #allows matrix multiplication
+        #     p_idw <- weightmat_p %*% pk
+        #
+        #     #reapply uncertainty dropped by `%*%`
+        #     errors(p_idw) <- weightmat_p %*% matrix(errors(pk),
+        #                                             nrow = nrow(pk))
+        #
+        #     if(nrow(pk) >= 3){
+        #
+        #         #estimate raster values from elevation alone (p only)
+        #         p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+        #
+        #         #average both approaches (p only; this should be weighted toward idw
+        #         #when close to any data location, and weighted half and half when far)
+        #         p_idw <- (p_idw + p_from_elev) / 2
+        #     }
+        #
+        #     if(! update_quickref){ #CHANGE TEST
+        #
+        #         precip_quickref <- try_read_precip_quickref(
+        #             network = network,
+        #             domain = domain,
+        #             site_name = stream_site_name,
+        #             timestep = k)
+        #
+        #         # quickref_status <- attributes(precip_quickref)$status DROP
+        #     }
+        # }
 
 
         ## GET CHEMISTRY FOR ALL CELLS IN TIMESTEP k
@@ -4927,7 +4931,8 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         ## GET FLUX FOR ALL CELLS; THEN AVERAGE CELLS FOR PCHEM, PFLUX, PRECIP
 
         #calculate flux for every cell
-        flux_interp <- c_idw * p_idw
+        quickref_ind <- as.character(quickref_inds[k])
+        flux_interp <- c_idw * precip_quickref[[quickref_ind]]
 
         #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
@@ -5097,6 +5102,9 @@ write_precip_quickref <- function(precip_idw_list,
                                   chunkdtrange){
                                  # timestep){
 
+    #allows precip values computed by shortcut_idw for each watershed
+    #   raster cell to be reused by shortcut_idw_concflux_v2
+
     quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
                          n = network,
                          d = domain)
@@ -5154,6 +5162,9 @@ read_precip_quickref <- function(network,
                                  dtrange){
                                  # timestep){
 
+    #allows precip values computed by shortcut_idw for each watershed
+    #   raster cell to be reused by shortcut_idw_concflux_v2
+
     quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
                          n = network,
                          d = domain)
@@ -5192,6 +5203,9 @@ read_precip_quickref <- function(network,
         # quickref_inds[i] <- names(qf)
         # quickref[[i]] <- qf[[1]]
     }
+
+    #for some reason the first ref gets duplicated.
+    quickref <- quickref[! duplicated(names(quickref))]
 
     return(quickref)
 
@@ -5440,6 +5454,7 @@ idw_log_var <- function(verbose,
                         v,
                         j,
                         nvars,
+                        ntimesteps,
                         is_fluxable = NA,
                         note = ''){
 
@@ -5453,11 +5468,12 @@ idw_log_var <- function(verbose,
                    note,
                    paste0('[', note, ']'))
 
-    msg <- glue('site: {s}; var: {vv} ({jj}/{nv}) {f}{n}',
+    msg <- glue('site: {s}; var: {vv} ({jj}/{nv}) {f}; timesteps: {nt}; {n}',
                 s = site_name,
                 vv = v,
                 jj = j,
                 nv = nvars,
+                nt = ntimesteps,
                 f = flux_calc_msg,
                 n = note)
 
@@ -5656,6 +5672,12 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         }
     } #end conditional pchem+pflux block (1)
 
+    #make sure old quickref data aren't still sitting around
+    unlink(glue('data/{n}/{d}/precip_idw_quickref',
+                n = network,
+                d = domain),
+           recursive = TRUE)
+
     #send vars into interpolator with precip, one at a time. if var is flux-
     #convertible, interpolate precip, pchem, and pflux. otherwise, just precip
     #and pchem. combine and write outputs by site
@@ -5735,6 +5757,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                         site_name = site_name,
                         v = 'precipitation',
                         j = paste('chunk', j),
+                        ntimesteps = nrow(precip_chunklist[[j]]),
                         nvars = nchunks)
 
             foreach_return <- shortcut_idw(
@@ -5787,7 +5810,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                       shapefile = FALSE,
                       link_to_portal = FALSE)
 
-        rm(ws_mean_precip, precip); gc()
+        rm(ws_mean_precip); gc()
 
         ## NOW IDW INTERPOLATE PCHEM (IF PRECIP CHEMISTRY DATA EXIST)
         ## AND PFLUX (FOR VARIABLES THAT ARE FLUXABLE).
@@ -5800,17 +5823,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
             clst <- ms_parallelize()
 
-            # idw_out <- foreach::foreach(j = 24:25,
             idw_out <- foreach::foreach(
                 j = 1:nvars,
+                # .verbose = TRUE,
                 .combine = idw_parallel_combine,
-                # .export = c('pchem_vars', 'pchem_vars_fluxable', 'verbose',
-                #             'site_name', 'dem', 'wbi', 'rg', 'precip',
-                #             'pchem_setlist', 'first_fluxvar_ind'),
                 .init = 'first iter') %do% {
 
                 v <- pchem_vars[j]
                 jd <- pchem_setlist[[j]]
+                ntimesteps <- nrow(jd)
 
                 is_fluxable <- ifelse(v %in% pchem_vars_fluxable, TRUE, FALSE)
 
@@ -5819,10 +5840,11 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             v = v,
                             j = j,
                             nvars = nvars,
+                            ntimesteps = ntimesteps,
                             is_fluxable = is_fluxable)
 
-                if(nrow(precip) > 10000){
-                    nchunks <- parallel::detectCores() %/% 2
+                if(ntimesteps> 5000){
+                    nchunks <- parallel::detectCores() %/% 2 #overkill?
                 } else {
                     nchunks <- parallel::detectCores()
                 }
@@ -5830,18 +5852,18 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 chunklist <- chunk_df(d = jd,
                                       nchunks = nchunks)
 
-                foreach_chunk <- foreach::foreach(
+                foreach_chunk_outer <- foreach::foreach(
                     l = 1:min(nchunks, nrow(jd)),
                     .combine = idw_parallel_combine,
                     .init = 'first iter') %dopar% {
 
                     if(is_fluxable){
 
-                        foreach_chunk <- shortcut_idw_concflux_v2(
+                        foreach_chunk_inner <- shortcut_idw_concflux_v2(
                             encompassing_dem = dem,
                             wshd_bnd = wbi,
                             data_locations = rg,
-                            # precip_values = precip,
+                            precip_values = precip,
                             chem_values = chunklist[[l]],
                             stream_site_name = site_name,
                             output_varname = v,
@@ -5851,7 +5873,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
                     } else {
 
-                        foreach_chunk <- shortcut_idw(
+                        foreach_chunk_inner <- shortcut_idw(
                             encompassing_dem = dem,
                             wshd_bnd = wbi,
                             data_locations = rg,
@@ -5862,11 +5884,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             verbose = verbose)
                     }
 
-                    foreach_chunk
+                    foreach_chunk_inner
                 }
 
-                rm(chunklist); gc()
+                foreach_chunk_outer
             }
+
+            rm(chunklist); gc()
 
             ms_unparallelize(clst)
 
@@ -5917,7 +5941,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                           link_to_portal = FALSE)
 
             rm(ws_mean_pflux, ws_mean_pchem); gc()
-        } #end conditional pchem+pflux block
+        } #end conditional pchem+pflux block (2)
     }
 
     append_to_productfile(network = network,
@@ -5940,7 +5964,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                               notes = 'automated entry')
     }
 
-    unlink(glue('data/{n}/{d}/precip_idw_dumps',
+    unlink(glue('data/{n}/{d}/precip_idw_quickref',
                 n = network,
                 d = domain),
            recursive = TRUE)
@@ -7579,6 +7603,7 @@ derive_precip_pchem_pflux <- function(network, domain, prodname_ms){
     #and derive_precip_flux. use it wherever possible to minimize
     #run time.
 
+    # prodname_ms = 'precip_pchem_pflux__ms002'
     pchem_prodname_ms <- get_derive_ingredient(network = network,
                                                domain = domain,
                                                prodname = 'precip_chemistry')
@@ -7595,7 +7620,6 @@ derive_precip_pchem_pflux <- function(network, domain, prodname_ms){
                                             domain = domain,
                                             prodname = 'precip_gauge_locations')
 
-    # prodname_ms = 'precip_pchem_pflux__ms002'
     # pchem_prodname = pchem_prodname_ms; precip_prodname = precip_prodname_ms
     # wb_prodname = wb_prodname_ms; pgauge_prodname = rg_prodname_ms
     precip_pchem_pflux_idw(pchem_prodname = pchem_prodname_ms,
