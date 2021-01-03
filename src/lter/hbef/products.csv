@@ -13,3 +13,6 @@ ms004,precip_gauge_locations,NA,NA,linked,NA,automated entry
 ms005,ws_boundary,NA,NA,linked,NA,automated entry
 ms006,stream_chemistry,NA,NA,linked,NA,automated entry
 ms007,stream_gauge_locations,NA,NA,linked,NA,automated entry
+ms900,precipitation,NA,NA,NA,NA,automated entry
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry
