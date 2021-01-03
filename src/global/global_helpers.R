@@ -2001,7 +2001,7 @@ update_data_tracker_r <- function(network = domain,
     }
 
     trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
-    if(! dir.exists('trackerdir')){
+    if(! dir.exists(trackerdir)){
         dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
     }
 
@@ -2299,49 +2299,60 @@ prodname_from_prodname_ms <- function(prodname_ms){
     return(prodname)
 }
 
-ms_retrieve <- function(network=domain, domain){
+ms_retrieve <- function(network = domain,
+                        domain){
+
     source(glue('src/{n}/{d}/retrieve.R',
                 n = network,
                 d = domain),
-           local = TRUE) #UNTESTED, so may cause errors, but this should stay
-    #and the errors should be fixed via variable passing. the chunk below attempts
-    #to fix some foreseen errors
-
-    # #source was previously called with default local = FALSE, which was populating
-    # #the global environment with a lot of variables. Some of them we've learned
-    # #to expect in the global env, so i'm restoring them here for back-compatibility
-    # #now that local = TRUE. Easier than passing them explicitly through our
-    # #complex call tree
-    # assign(x = 'held_data',
-    #        value = held_data,
-    #        envir = .GlobalEnv)
-    #
-    # assign(x = 'prodname_ms',
-    #        value = prodname_ms,
-    #        envir = .GlobalEnv)
+           local = TRUE)
 }
 
-ms_munge <- function(network = domain, domain){
+ms_munge <- function(network = domain,
+                     domain){
 
     source(glue('src/{n}/{d}/munge.R',
                 n = network,
                 d = domain),
-           local = TRUE) #UNTESTED, so may cause errors, but this should stay
-    #and the errors should be fixed via variable passing. the chunk below attempts
-    #to fix some foreseen errors
+           local = TRUE)
 
-    # #source was previously called with default local = FALSE, which was populating
-    # #the global environment with a lot of variables. Some of them we've learned
-    # #to expect in the global env, so i'm restoring them here for back-compatibility
-    # #now that local = TRUE. Easier than passing them explicitly through our
-    # #complex call tree
-    # assign(x = 'held_data',
-    #        value = held_data,
-    #        envir = .GlobalEnv)
-    #
-    # assign(x = 'prodname_ms',
-    #        value = prodname_ms,
-    #        envir = .GlobalEnv)
+    #calculate watershed areas for any provided watershed boundary files,
+    #and put them in the site_data file
+
+    munged_dir <- glue('data/{n}/{d}/munged',
+                       n = network,
+                       d = domain)
+
+    if(dir.exists(munged_dir)){
+        munged_subdirs <- list.dirs(munged_dir,
+                                    recursive = FALSE)
+    }
+
+    boundary_ind <- grepl(pattern = 'ws_boundary',
+                          x = munged_subdirs)
+
+    if(any(boundary_ind)){
+
+        boundary_dir <- munged_subdirs[boundary_ind]
+
+        sites <- list.dirs(boundary_dir,
+                           full.names = FALSE,
+                           recursive = FALSE)
+
+        loginfo(logger = logger_module,
+                msg = '(Re)calculating watershed areas for site_data')
+
+    } else {
+        sites <- character()
+    }
+
+    for(s in sites){
+        catch <- ms_calc_watershed_area(network = network,
+                                        domain = domain,
+                                        site_name = s,
+                                        level = 'munged',
+                                        update_site_file = TRUE)
+    }
 }
 
 ms_delineate <- function(network,
@@ -3438,7 +3449,11 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-ms_calc_watershed_area <- function(network, domain, site_name, level, update_site_file){
+ms_calc_watershed_area <- function(network,
+                                   domain,
+                                   site_name,
+                                   level,
+                                   update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
     #   watershed area with sf::st_area
@@ -3863,9 +3878,15 @@ convert_unit <- function(x, input_unit, output_unit){
     return(new_val)
 }
 
-write_ms_file <- function(d, network, domain, prodname_ms, site_name,
-                          level = 'munged', shapefile = FALSE,
-                          link_to_portal = FALSE, sep_errors = TRUE){
+write_ms_file <- function(d,
+                          network,
+                          domain,
+                          prodname_ms,
+                          site_name,
+                          level = 'munged',
+                          shapefile = FALSE,
+                          link_to_portal = FALSE,
+                          sep_errors = TRUE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
@@ -4752,8 +4773,31 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                             site_name = stream_site_name,
                                             dtrange = range(chem_values$datetime))
 
+    if(length(precip_quickref) == 1){
+
+        just_checkin <- precip_quickref[[1]]
+
+        if(class(just_checkin) == 'character' &&
+            just_checkin == 'NO QUICKREF AVAILABLE'){
+
+            return(tibble())
+        }
+    }
+
+    #shouldn't need a rolling join here, but maybe?
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
+
+    if(length(common_dts) == 0){
+        pchem_range <- range(chem_values$datetime)
+        test <- filter(precip_values,
+                       datetime > pchem_range[1],
+                       datetime < pchem_range[2])
+        if(nrow(test) > 0){
+            logging::logerror('We need to determine common_dts with a rolling join!')
+        }
+        return(tibble())
+    }
 
     precip_values <- precip_values %>%
         mutate(ind = 1:n()) %>%
@@ -5186,6 +5230,13 @@ read_precip_quickref <- function(network,
         filter((startdt >= dtrange[1] & enddt <= dtrange[2]) |
                    (startdt < dtrange[1] & enddt >= dtrange[1]) |
                    (enddt > dtrange[2] & startdt <= dtrange[2]))
+                   #redundant?
+                   # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
+                   # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
+
+    if(nrow(refranges) == 0){
+        return(list('0' = 'NO QUICKREF AVAILABLE'))
+    }
 
     quickref <- list()
     # quickref_inds <- character(length = nrow(refranges))
@@ -7792,4 +7843,91 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     }
 
     return()
+}
+
+generate_portal_extras <- function(site_data){
+
+    #for post-derive steps that save the portal some processing.
+    #at the moment, this only does one thing, so it seems superfluous,
+    #but we will surely benefit from doing other similar preprocessing
+
+    calculate_flux_by_area(site_data = site_data)
+}
+
+calculate_flux_by_area <- function(site_data){
+
+    setwd('../portal/data/')
+
+    # domains <- site_data %>%
+    #     filter(as.logical(in_workflow)) %>%
+    #     pull(domain) %>%
+    #     unique()
+
+    ws_areas <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(domain, site_name, ws_area_ha) %>%
+        plyr::dlply(.variables = 'domain',
+                    .fun = function(x) select(x, -domain))
+
+    domains <- names(ws_areas)
+
+    engine <- function(flux_var, domains, ws_areas){
+
+        for(dmn in domains){
+
+            files <- try(
+                {
+                    list.files(path = glue('{d}/{v}',
+                                           d = dmn,
+                                           v = flux_var),
+                               # pattern = '(?!documentation
+                               full.names = FALSE,
+                               recursive = FALSE)
+                },
+                silent = TRUE
+            )
+
+            if('try-error' %in% class(files) || length(files) == 0) next
+
+            dir.create(path = glue('{d}/{v}_scaled',
+                                   d = dmn,
+                                   v = flux_var),
+                       recursive = TRUE,
+                       showWarnings = FALSE)
+
+            for(fil in files){
+
+                d <- read_feather(glue('{d}/{v}/{f}',
+                                       d = dmn,
+                                       v = flux_var,
+                                       f = fil))
+
+                d <- d %>%
+                    mutate(val = errors::set_errors(val, val_err)) %>%
+                    select(-val_err) %>%
+                    arrange(site_name, var, datetime) %>%
+                    left_join(ws_areas[[dmn]],
+                              by = 'site_name') %>%
+                    mutate(val = val / ws_area_ha) %>%
+                    select(-ws_area_ha)
+
+                d$val_err <- errors(d$val)
+                d$val <- errors::drop_errors(d$val)
+
+                write_feather(x = d,
+                              path = glue('{d}/{v}_scaled/{f}',
+                                          d = dmn,
+                                          v = flux_var,
+                                          f = fil))
+            }
+        }
+    }
+
+    engine(flux_var = 'stream_flux_inst',
+           domains = domains,
+           ws_areas = ws_areas)
+
+    engine(flux_var = 'precip_flux_inst',
+           domains = domains,
+           ws_areas = ws_areas)
 }
