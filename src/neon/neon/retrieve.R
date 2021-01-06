@@ -1,16 +1,22 @@
+loginfo('Beginning retrieve',
+        logger = logger_module)
+
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'retrieve',
-                              get_statuses = 'ready')
-# i=8; j=1
+                              get_statuses = 'ready') %>%
+    filter(! grepl(pattern = '^VERSIONLESS',
+                   x = prodcode))
+
 for(i in 1:nrow(prod_info)){
-# for(i in 4){
+
+    prodcode <- prod_info$prodcode[i]
 
     prodname_ms <<- paste0(prod_info$prodname[i],
                            '__',
-                           prod_info$prodcode[i])
+                           prodcode)
 
-    prod_specs <- get_neon_product_specs(prod_info$prodcode[i])
+    prod_specs <- get_neon_product_specs(prodcode)
     if(is_ms_err(prod_specs)) next
 
     held_data <<- get_data_tracker(network = network,
@@ -56,7 +62,6 @@ for(i in 1:nrow(prod_info)){
                                                   prodname_ms = prodname_ms,
                                                   site_name = site_name,
                                                   avail = avail_site_sets)
-
         if(is_ms_err(retrieval_details)) next
 
         new_sets <- filter_unneeded_sets(tracker_with_details = retrieval_details)
