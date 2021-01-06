@@ -200,10 +200,8 @@ dir.create('logs', showWarnings = FALSE)
 
 # drop_automated_entries('.') #use with caution!
 
-# dmnrow=1
-# for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in 10){
-# for(dmnrow in c(4:5, 7:10)){
+dmnrow=11
+for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
