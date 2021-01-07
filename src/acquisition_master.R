@@ -200,9 +200,8 @@ dir.create('logs', showWarnings = FALSE)
 
 # drop_automated_entries('.') #use with caution!
 
-dmnrow=3
-# for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in c(3:5, 7:10)){
+dmnrow=11
+for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -241,6 +240,8 @@ for(dmnrow in c(3:5, 7:10)){
 
     retain_ms_globals(ms_globals)
 }
+
+generate_portal_extras(site_data = site_data)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
