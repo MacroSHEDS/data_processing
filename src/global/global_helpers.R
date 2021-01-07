@@ -1876,28 +1876,42 @@ get_data_tracker <- function(network = domain, domain){
     return(tracker_data)
 }
 
-make_tracker_skeleton <- function(retrieval_chunks){
+make_tracker_skeleton <- function(retrieval_chunks,
+                                  versionless){
 
     #retrieval_chunks is a vector of identifiers for subsets (chunks) of
     #the overall dataset to be retrieved, e.g. sitemonths for NEON
 
-    munge_derive_skeleton = list(status='pending', mtime='1500-01-01')
+    munge_derive_skeleton <- list(status = 'pending',
+                                  mtime = '1500-01-01')
 
-    tracker_skeleton = list(
-        retrieve=tibble::tibble(
-            component=retrieval_chunks, mtime='1500-01-01',
-            held_version='-1', status='pending'),
-        munge=munge_derive_skeleton,
-        derive=munge_derive_skeleton)
+    tracker_skeleton <- list(
+        retrieve = tibble::tibble(
+            component = retrieval_chunks,
+            mtime = '1500-01-01',
+            held_version = ifelse(versionless, '1500-01-01', '-1'),
+            status = 'pending'),
+        munge = munge_derive_skeleton,
+        derive = munge_derive_skeleton)
 
     return(tracker_skeleton)
 }
 
-insert_site_skeleton <- function(tracker, prodname_ms, site_name,
-                                 site_components){
+insert_site_skeleton <- function(tracker,
+                                 prodname_ms,
+                                 site_name,
+                                 site_components,
+                                 versionless = FALSE){
 
-    tracker[[prodname_ms]][[site_name]] =
-        make_tracker_skeleton(retrieval_chunks=site_components)
+    #if versionless is TRUE, held_version will be populated with
+    #"1500-01-01" as a placeholder value,
+    #because the modification date stands in for the version when
+    #we're dealing with versionless products. otherwise, held_version is given
+    #a placeholder of -1
+
+    tracker[[prodname_ms]][[site_name]] <-
+        make_tracker_skeleton(retrieval_chunks = site_components,
+                              versionless = versionless)
 
     return(tracker)
 }
@@ -1974,39 +1988,59 @@ update_data_tracker_r <- function(network = domain,
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(set_details) || is.null(new_status)
     )){
-        msg = paste0('If tracker is not supplied, these args must be:',
+
+        msg <- paste0('If tracker is not supplied, these args must be:',
                      'tracker_name, set_details, new_status.')
-        logerror(msg, logger=logger_module)
+
+        logerror(msg,
+                 logger = logger_module)
         stop(msg)
     }
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(network=network, domain=domain)
+        tracker <- get_data_tracker(network = network,
+                                    domain = domain)
 
-        rt = tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
+        rt <- tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve
 
-        set_ind = which(rt$component == set_details$component)
+        set_ind <- which(rt$component == set_details$component)
 
         if(new_status %in% c('pending', 'ok')){
-            rt$held_version[set_ind] = as.character(set_details$avail_version)
+
+            if('avail_version' %in% names(set_details)){
+                rt$held_version[set_ind] <- as.character(set_details$avail_version)
+            } else {
+                rt$held_version[set_ind] <- as.character(set_details$last_mod_dt)
+            }
         }
 
-        rt$status[set_ind] = new_status
-        rt$mtime[set_ind] = as.character(Sys.time())
+        rt$status[set_ind] <- new_status
+        rt$mtime[set_ind] <- as.character(Sys.time())
 
-        tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve = rt
+        tracker[[set_details$prodname_ms]][[set_details$site_name]]$retrieve <- rt
 
-        assign(tracker_name, tracker, pos=.GlobalEnv)
+        assign(x = tracker_name,
+               value = tracker,
+               pos = .GlobalEnv)
     }
 
-    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
-    if(! dir.exists('trackerdir')){
-        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    trackerdir <- glue('data/{n}/{d}',
+                       n = network,
+                       d = domain)
+
+    if(! dir.exists(trackerdir)){
+
+        dir.create(trackerdir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
     }
 
-    trackerfile = glue(trackerdir, '/data_tracker.json')
-    readr::write_file(jsonlite::toJSON(tracker), trackerfile)
+    trackerfile <- glue(trackerdir,
+                        '/data_tracker.json')
+
+    readr::write_file(x = jsonlite::toJSON(tracker),
+                      file = trackerfile)
     backup_tracker(trackerfile)
 
     #return()
@@ -2208,7 +2242,7 @@ get_general_status <- function(tracker, prodname_ms, site_name){
 }
 
 get_product_info <- function(network,
-                             domain = NULL,
+                             domain,
                              status_level,
                              get_statuses){
 
@@ -2216,15 +2250,12 @@ get_product_info <- function(network,
     #get_statuses: character vector. any of the possible kernel statuses, including
     #   "ready", "pending", "paused"
 
-    #unlike other functions with network and domain arguments, this one accepts
-    #either network alone, or network and domain. if just network is given,
-    #it will look for products.csv at the network level. if status_level is
+    #if status_level is
     #"derive", output will be sorted so that canonical derive products
     #(stream_flux_inst, precipitation, precip_chem, precip_flux_inst) are last,
     #ensuring that any prerequisites, including "compiled" products, are generated
     #first. If two derive products have the same name, they will be sorted
     #numerically (e.g. ms003, ms009)
-
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -2299,49 +2330,83 @@ prodname_from_prodname_ms <- function(prodname_ms){
     return(prodname)
 }
 
-ms_retrieve <- function(network=domain, domain){
+ms_retrieve <- function(network = domain,
+                        domain){
+
+    #execute main retrieval script for this network-domain
     source(glue('src/{n}/{d}/retrieve.R',
                 n = network,
                 d = domain),
-           local = TRUE) #UNTESTED, so may cause errors, but this should stay
-    #and the errors should be fixed via variable passing. the chunk below attempts
-    #to fix some foreseen errors
+           local = TRUE)
 
-    # #source was previously called with default local = FALSE, which was populating
-    # #the global environment with a lot of variables. Some of them we've learned
-    # #to expect in the global env, so i'm restoring them here for back-compatibility
-    # #now that local = TRUE. Easier than passing them explicitly through our
-    # #complex call tree
-    # assign(x = 'held_data',
-    #        value = held_data,
-    #        envir = .GlobalEnv)
-    #
-    # assign(x = 'prodname_ms',
-    #        value = prodname_ms,
-    #        envir = .GlobalEnv)
+    #if there's a script for retrieval of versionless products, execute it too
+    versionless_product_script <- glue('src/{n}/{d}/retrieve_versionless.R',
+                                       n = network,
+                                       d = domain)
+
+    if(file.exists(versionless_product_script)){
+
+        source(versionless_product_script,
+               local = TRUE)
+    }
 }
 
-ms_munge <- function(network = domain, domain){
+ms_munge <- function(network = domain,
+                     domain){
 
+    #execute main munge script for this network-domain
     source(glue('src/{n}/{d}/munge.R',
                 n = network,
                 d = domain),
-           local = TRUE) #UNTESTED, so may cause errors, but this should stay
-    #and the errors should be fixed via variable passing. the chunk below attempts
-    #to fix some foreseen errors
+           local = TRUE)
 
-    # #source was previously called with default local = FALSE, which was populating
-    # #the global environment with a lot of variables. Some of them we've learned
-    # #to expect in the global env, so i'm restoring them here for back-compatibility
-    # #now that local = TRUE. Easier than passing them explicitly through our
-    # #complex call tree
-    # assign(x = 'held_data',
-    #        value = held_data,
-    #        envir = .GlobalEnv)
-    #
-    # assign(x = 'prodname_ms',
-    #        value = prodname_ms,
-    #        envir = .GlobalEnv)
+    #if there's a script for munging of versionless products, execute it too
+    versionless_product_script <- glue('src/{n}/{d}/munge_versionless.R',
+                                       n = network,
+                                       d = domain)
+
+    if(file.exists(versionless_product_script)){
+
+        source(versionless_product_script,
+               local = TRUE)
+    }
+
+    #calculate watershed areas for any provided watershed boundary files,
+    #and put them in the site_data file
+    munged_dir <- glue('data/{n}/{d}/munged',
+                       n = network,
+                       d = domain)
+
+    if(dir.exists(munged_dir)){
+        munged_subdirs <- list.dirs(munged_dir,
+                                    recursive = FALSE)
+    }
+
+    boundary_ind <- grepl(pattern = 'ws_boundary',
+                          x = munged_subdirs)
+
+    if(any(boundary_ind)){
+
+        boundary_dir <- munged_subdirs[boundary_ind]
+
+        sites <- list.dirs(boundary_dir,
+                           full.names = FALSE,
+                           recursive = FALSE)
+
+        loginfo(logger = logger_module,
+                msg = '(Re)calculating watershed areas for site_data')
+
+    } else {
+        sites <- character()
+    }
+
+    for(s in sites){
+        catch <- ms_calc_watershed_area(network = network,
+                                        domain = domain,
+                                        site_name = s,
+                                        level = 'munged',
+                                        update_site_file = TRUE)
+    }
 }
 
 ms_delineate <- function(network,
@@ -3438,7 +3503,11 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     }
 }
 
-ms_calc_watershed_area <- function(network, domain, site_name, level, update_site_file){
+ms_calc_watershed_area <- function(network,
+                                   domain,
+                                   site_name,
+                                   level,
+                                   update_site_file){
 
     #reads watershed boundary shapefile from macrosheds directory and calculates
     #   watershed area with sf::st_area
@@ -3658,11 +3727,11 @@ update_product_file <- function(network,
         prods[row_num, col_name] = status[i]
     }
 
-    if(network == domain){
-        write_csv(prods, glue('src/{n}/products.csv', n=network))
-    } else {
-        write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
-    }
+    # if(network == domain){
+    #     write_csv(prods, glue('src/{n}/products.csv', n=network))
+    # } else {
+    write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    # }
 
     #return()
 }
@@ -3684,6 +3753,14 @@ update_product_statuses <- function(network, domain){
 
     if(any(! statuses %in% status_codes)){
         stop(glue('Illegal status in ', kf))
+    }
+
+    decorator_lines <- grepl(pattern = '^#\\. handle_errors$',
+                             x = kernel_lines[status_line_inds + 1])
+
+    if(any(! decorator_lines)){
+        stop(glue('missing or improper decorator lines (#. handle_errors) in ',
+                  kf))
     }
 
     funcname_lines = kernel_lines[status_line_inds + 2]
@@ -3863,16 +3940,25 @@ convert_unit <- function(x, input_unit, output_unit){
     return(new_val)
 }
 
-write_ms_file <- function(d, network, domain, prodname_ms, site_name,
-                          level = 'munged', shapefile = FALSE,
-                          link_to_portal = FALSE, sep_errors = TRUE){
+write_ms_file <- function(d,
+                          network,
+                          domain,
+                          prodname_ms,
+                          site_name,
+                          level = 'munged',
+                          shapefile = FALSE,
+                          link_to_portal = FALSE,
+                          sep_errors = TRUE){
 
     #write an ms tibble or shapefile to its appropriate destination based on
     #network, domain, prodname_ms, site_name, and processing level. If a tibble,
     #write as a feather file (site_name.feather). Uncertainty (error) associated
     #with the val column will be extracted into a separate column called
     #val_err. Write the file to the appropriate location within the data
-    #acquisition repository if link_to_portal == TRUE, create a hard link to the
+    #acquisition repository.
+
+    #deprecated:
+    #if link_to_portal == TRUE, create a hard link to the
     #file from the portal repository, which is assumed to be a sibling of the
     #data_acquision directory and to be named "portal".
 
@@ -4752,8 +4838,31 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                             site_name = stream_site_name,
                                             dtrange = range(chem_values$datetime))
 
+    if(length(precip_quickref) == 1){
+
+        just_checkin <- precip_quickref[[1]]
+
+        if(class(just_checkin) == 'character' &&
+            just_checkin == 'NO QUICKREF AVAILABLE'){
+
+            return(tibble())
+        }
+    }
+
+    #shouldn't need a rolling join here, but maybe?
     common_dts <- base::intersect(as.character(precip_values$datetime),
                                   as.character(chem_values$datetime))
+
+    if(length(common_dts) == 0){
+        pchem_range <- range(chem_values$datetime)
+        test <- filter(precip_values,
+                       datetime > pchem_range[1],
+                       datetime < pchem_range[2])
+        if(nrow(test) > 0){
+            logging::logerror('We need to determine common_dts with a rolling join!')
+        }
+        return(tibble())
+    }
 
     precip_values <- precip_values %>%
         mutate(ind = 1:n()) %>%
@@ -5186,6 +5295,13 @@ read_precip_quickref <- function(network,
         filter((startdt >= dtrange[1] & enddt <= dtrange[2]) |
                    (startdt < dtrange[1] & enddt >= dtrange[1]) |
                    (enddt > dtrange[2] & startdt <= dtrange[2]))
+                   #redundant?
+                   # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
+                   # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
+
+    if(nrow(refranges) == 0){
+        return(list('0' = 'NO QUICKREF AVAILABLE'))
+    }
 
     quickref <- list()
     # quickref_inds <- character(length = nrow(refranges))
@@ -7445,6 +7561,19 @@ load_config_datasets <- function(from_where){
            pos = .GlobalEnv)
 }
 
+write_portal_config_datasets <- function(){
+
+    #so we don't have to read these from gdrive when running the app in
+    #production
+
+    dir.create('../portal/data/general',
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    write_csv(ms_vars, '../portal/data/general/variables.csv')
+    write_csv(site_data, '../portal/data/general/site_data.csv')
+}
+
 ms_write_confdata <- function(x,
                               which_dataset,
                               to_where,
@@ -7792,4 +7921,167 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     }
 
     return()
+}
+
+generate_portal_extras <- function(site_data){
+
+    #for post-derive steps that save the portal some processing.
+
+    loginfo(msg = 'Generating portal extras',
+            logger = logger_module)
+
+    calculate_flux_by_area(site_data = site_data)
+    write_portal_config_datasets()
+}
+
+calculate_flux_by_area <- function(site_data){
+
+    setwd('../portal/data/')
+
+    # domains <- site_data %>%
+    #     filter(as.logical(in_workflow)) %>%
+    #     pull(domain) %>%
+    #     unique()
+
+    ws_areas <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(domain, site_name, ws_area_ha) %>%
+        plyr::dlply(.variables = 'domain',
+                    .fun = function(x) select(x, -domain))
+
+    domains <- names(ws_areas)
+
+    engine <- function(flux_var, domains, ws_areas){
+
+        for(dmn in domains){
+
+            files <- try(
+                {
+                    list.files(path = glue('{d}/{v}',
+                                           d = dmn,
+                                           v = flux_var),
+                               # pattern = '(?!documentation
+                               full.names = FALSE,
+                               recursive = FALSE)
+                },
+                silent = TRUE
+            )
+
+            if('try-error' %in% class(files) || length(files) == 0) next
+
+            dir.create(path = glue('{d}/{v}_scaled',
+                                   d = dmn,
+                                   v = flux_var),
+                       recursive = TRUE,
+                       showWarnings = FALSE)
+
+            for(fil in files){
+
+                d <- read_feather(glue('{d}/{v}/{f}',
+                                       d = dmn,
+                                       v = flux_var,
+                                       f = fil))
+
+                d <- d %>%
+                    mutate(val = errors::set_errors(val, val_err)) %>%
+                    select(-val_err) %>%
+                    arrange(site_name, var, datetime) %>%
+                    left_join(ws_areas[[dmn]],
+                              by = 'site_name') %>%
+                    mutate(val = val / ws_area_ha) %>%
+                    select(-ws_area_ha)
+
+                d$val_err <- errors(d$val)
+                d$val <- errors::drop_errors(d$val)
+
+                write_feather(x = d,
+                              path = glue('{d}/{v}_scaled/{f}',
+                                          d = dmn,
+                                          v = flux_var,
+                                          f = fil))
+            }
+        }
+    }
+
+    engine(flux_var = 'stream_flux_inst',
+           domains = domains,
+           ws_areas = ws_areas)
+
+    engine(flux_var = 'precip_flux_inst',
+           domains = domains,
+           ws_areas = ws_areas)
+}
+
+retrieve_versionless_product <- function(network,
+                                         domain,
+                                         prodname_ms,
+                                         site_name,
+                                         tracker){
+
+    processing_func <- get(paste0('process_0_',
+                                  prodcode_from_prodname_ms(prodname_ms)))
+
+    rt <- tracker[[prodname_ms]][[site_name]]$retrieve
+
+    for(i in 1:nrow(rt)){
+
+        held_dt <- as.POSIXct(rt$held_version[i],
+                              tz = 'UTC')
+
+        deets <- list(prodname_ms = prodname_ms,
+                      site_name = site_name,
+                      component = rt$component[i],
+                      last_mod_dt = held_dt)
+
+        result <- do.call(processing_func,
+                          args = list(set_details = deets,
+                                      network = network,
+                                      domain = domain))
+
+        new_status <- evaluate_result_status(result)
+
+        if(is.POSIXct(result)){
+            deets$last_mod_dt <- as.character(result)
+        }
+
+        update_data_tracker_r(network = network,
+                              domain = domain,
+                              tracker_name = 'held_data',
+                              set_details = deets,
+                              new_status = new_status)
+    }
+}
+
+munge_versionless_product <- function(network,
+                                      domain,
+                                      prodname_ms,
+                                      site_name,
+                                      tracker){
+
+    processing_func <- get(paste0('process_1_',
+                                  prodcode_from_prodname_ms(prodname_ms)))
+
+    rt <- tracker[[prodname_ms]][[site_name]]$retrieve
+
+    for(i in 1:nrow(rt)){
+
+        held_dt <- as.POSIXct(rt$held_version[i],
+                              tz = 'UTC')
+
+        result <- do.call(processing_func,
+                          args = list(network = network,
+                                      domain = domain,
+                                      prodname_ms = prodname_ms,
+                                      site_name = site_name,
+                                      component = rt$component[i]))
+
+        new_status <- evaluate_result_status(result)
+
+        update_data_tracker_m(network = network,
+                              domain = domain,
+                              tracker_name = 'held_data',
+                              prodname_ms = prodname_ms,
+                              site_name = site_name,
+                              new_status = new_status)
+    }
 }
