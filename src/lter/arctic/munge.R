@@ -5,7 +5,7 @@ prod_info <- get_product_info(network = network,
                              status_level = 'munge',
                              get_statuses = 'ready')
 
-# i=100
+# i=4
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -20,7 +20,7 @@ for(i in 1:nrow(prod_info)){
 
     sites <- names(held_data[[prodname_ms]])
 
-    # j = 1
+    #j = 1
     for(j in 1:length(sites)){
 
         site_name <- sites[j]

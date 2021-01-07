@@ -5,7 +5,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=103
+ i=9
 for(i in 1:nrow(prod_info)){
     # for(i in 1){
 
@@ -28,21 +28,16 @@ for(i in 1:nrow(prod_info)){
                                              domain = domain,
                                              data_tracker = held_data)
 
-    needed_components <- pull(prod_info[i, 'components'])
-    if(! is.na(needed_components)) {
-        needed_components <- str_split_fixed(needed_components, ',', n = Inf)[1,]
-        avail_sets <- filter(avail_sets, component %in% needed_components)
-    }
+    avail_sets <- avail_sets %>%
+        filter(grepl('csv', component))
 
     if(is_ms_err(avail_sets)) next
 
-    if(grepl('(precip|stream_chemistry)', prodname_ms)){
-        avail_sets$site_name <- 'sitename_NA'
-    }
+    avail_sets$site_name <- 'sitename_NA'
 
     avail_sites <- unique(avail_sets$site_name)
 
-    # j=1
+    #j=1
     for(j in 1:length(avail_sites)){
 
         site_name <- avail_sites[j]
