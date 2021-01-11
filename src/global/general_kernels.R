@@ -397,7 +397,7 @@ process_3_ms011 <- function(network, domain, prodname_ms, site,
 
   dir.create(glue('data/{n}/{d}/ws_traits/terrain/',
              n = network,
-             d = domain))
+             d = domain), recursive = TRUE)
 
   site_boundary <- boundaries %>%
     filter(site_name == site)
@@ -428,8 +428,8 @@ process_3_ms011 <- function(network, domain, prodname_ms, site,
   site_terrain <- tibble(site_name = site,
                          domain = domain,
                          year = NA,
-                         var = c('slope_mean', 'slope_sd'),
-                         val = c(slope_mean, slope_sd))
+                         var = c('slope_mean', 'slope_sd', 'area'),
+                         val = c(slope_mean, slope_sd, area))
 
   write_feather(site_terrain, glue('data/{n}/{d}/ws_traits/terrain/{s}.feather',
                                    n = network,
