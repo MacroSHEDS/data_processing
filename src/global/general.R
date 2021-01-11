@@ -1,4 +1,3 @@
-
 library(rgee)
 
 source('src/global/general_kernels.R',
@@ -17,11 +16,11 @@ ws_prodname <- grep('ws_boundary', files, value = TRUE)
 sheds <- try(read_combine_shapefiles(network=network, domain=domain,
                                      prodname_ms=ws_prodname))
 
+#site_name <- 'site_name_NA'
+
 if(class(sheds)[1] == 'ms_err' | is.null(sheds[1])) {
   stop('Watershed boundaries are required for general products')
 }
-
-
 
 site_names <- unique(sheds$site_name)
 
@@ -64,7 +63,7 @@ for(i in 1:nrow(unprod)){
                                          prodname_ms = prodname_ms,
                                          site_name = site_name)
 
-    if(general_status == 'ok'){
+    if(general_status %in% c('ok', 'no_data_avail')){
       loginfo(glue('Nothing to do for {s}',
                    s = site_name),
               logger = logger_module)
@@ -88,6 +87,7 @@ for(i in 1:nrow(unprod)){
 
     stts_e <- ifelse(is_ms_err(gerneral_msg), 'error', 'ok')
     stts_w <- ifelse(is_ms_exception(gerneral_msg), 'exception', 'ok')
+    
     if(stts_e == 'ok' && stts_w == 'ok'){
 
       update_data_tracker_g(network=network, domain=domain,
@@ -95,6 +95,36 @@ for(i in 1:nrow(unprod)){
                             site_name=site_name, new_status='ok')
 
       msg = glue('Acquired general {p} ({n}/{d}/{s})',
+                 p = prodname_ms,
+                 n = network,
+                 d = domain,
+                 s = site_name)
+      loginfo(msg, logger=logger_module)
+    } 
+    
+    #This indicates that the GEE returned an empty table which likely means
+    #The gee product is not available at this location i.e prisms is only available 
+    #in the continental US 
+    if(stts_w == 'exception'){
+      update_data_tracker_g(network=network, domain=domain,
+                            tracker_name='held_data', prodname_ms=prodname_ms,
+                            site_name=site_name, new_status='no_data_avail')
+      
+      msg = glue('No data available for {p} ({n}/{d}/{s})',
+                 p = prodname_ms,
+                 n = network,
+                 d = domain,
+                 s = site_name)
+      loginfo(msg, logger=logger_module)
+    }
+    
+    #This indicated an error occurred in general retrieval and should be investigated 
+    if(stts_e == 'error'){
+      update_data_tracker_g(network=network, domain=domain,
+                            tracker_name='held_data', prodname_ms=prodname_ms,
+                            site_name=site_name, new_status='error')
+      
+      msg = glue('Error for {p} ({n}/{d}/{s})',
                  p = prodname_ms,
                  n = network,
                  d = domain,
