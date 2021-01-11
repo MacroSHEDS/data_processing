@@ -198,7 +198,6 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-
 # dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
     # drop_automated_entries('.') #use with caution!
@@ -238,7 +237,7 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_general(network = network,
                domain = domain)
 
-    #retain_ms_globals(ms_globals)
+    retain_ms_globals(ms_globals)
 }
 
 generate_portal_extras(site_data = site_data)
