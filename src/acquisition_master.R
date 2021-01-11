@@ -38,7 +38,7 @@ suppressPackageStartupMessages({
     library(foreach)
     library(doParallel)
     library(googlesheets4)
-    #library(rgee) #requires geojsonio package
+    library(rgee) #requires geojsonio package
 })
 
 options(dplyr.summarise.inform = FALSE)
@@ -198,9 +198,10 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
+
 # dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
-# drop_automated_entries('.') #use with caution!
+    # drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -237,8 +238,10 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_general(network = network,
                domain = domain)
 
-    retain_ms_globals(ms_globals)
+    #retain_ms_globals(ms_globals)
 }
+
+generate_portal_extras(site_data = site_data)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

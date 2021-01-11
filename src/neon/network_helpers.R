@@ -1,25 +1,38 @@
 
-get_neon_data = function(domain, sets, tracker, silent=TRUE){
-    # sets=new_sets; i=20; tracker=held_data
+get_neon_data <- function(domain,
+                          sets,
+                          tracker,
+                          silent = TRUE){
 
     for(i in 1:nrow(sets)){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
 
-        s = sets[i, ]
+        s <- sets[i, ]
 
-        msg = glue('Processing {st}, {p}, {c}',
-            st=s$site_name, p=s$prodname_ms, c=s$component)
-        loginfo(msg, logger=logger_module)
+        msg <- glue('Processing {st}, {p}, {c}',
+                    st = s$site_name,
+                    p = s$prodname_ms,
+                    c = s$component)
 
-        processing_func = get(paste0('process_0_', s$prodcode_id))
-        result = do.call(processing_func,
-            args=list(set_details=s, network=network, domain=domain))
+        loginfo(msg,
+                logger = logger_module)
+
+        processing_func <- get(paste0('process_0_',
+                                      s$prodcode_id))
+
+        result <- do.call(processing_func,
+                          args = list(set_details = s,
+                                      network = network,
+                                      domain = domain))
 
         new_status <- evaluate_result_status(result)
-        update_data_tracker_r(network=network, domain=domain,
-            tracker_name='held_data', set_details=s, new_status=new_status)
 
+        update_data_tracker_r(network = network,
+                              domain = domain,
+                              tracker_name = 'held_data',
+                              set_details = s,
+                              new_status = new_status)
     }
 }
 

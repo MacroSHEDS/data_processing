@@ -808,7 +808,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_20111 <- function(network, domain, prodname_ms, site_name,
+process_1_20111 <- function(network, domain, prodname_ms, site_name,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
@@ -861,7 +861,7 @@ process_0_20111 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_20112 <- function(network, domain, prodname_ms, site_name,
+process_1_20112 <- function(network, domain, prodname_ms, site_name,
                             component){
 
 
@@ -918,21 +918,45 @@ process_0_20112 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
 
-  combine_products(network = network,
-                   domain = domain,
-                   prodname_ms = prodname_ms,
-                   input_prodname_ms = c('discharge__10068', 'discharge__10069',
-                                         'discharge__10070', 'discharge__10591',
-                                         'discharge__10601', 'discharge__1589',
-                                         'discharge__1590', 'discharge__1591',
-                                         'discharge__1592', 'discharge__1593',
-                                         'discharge__1594', 'discharge__1595',
-                                         'discharge__1596', 'discharge__1597',
-                                         'discharge__1598', 'discharge__1599',
-                                         'discharge__1600', 'discharge__1601',
-                                         'discharge__1644', 'discharge__1645',
-                                         'discharge__1646', 'discharge__20118',
-                                         'discharge__20120'))
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge__10068', 'discharge__10069',
+                                           'discharge__10070', 'discharge__10591',
+                                           'discharge__10601', 'discharge__1589',
+                                           'discharge__1590', 'discharge__1591',
+                                           'discharge__1592', 'discharge__1593',
+                                           'discharge__1594', 'discharge__1595',
+                                           'discharge__1596', 'discharge__1597',
+                                           'discharge__1598', 'discharge__1599',
+                                           'discharge__1600', 'discharge__1601',
+                                           'discharge__1644', 'discharge__1645',
+                                           'discharge__1646', 'discharge__20118',
+                                           'discharge__20120'))
+
+    # Becasue arctic lter only records Q at one location on two streams but
+    # samples 5 km up and down stream of where Q is measured, we are associated
+    # Q at that one site with all smapling points within 5km up and down stream
+    q_assoc_sites <- site_data %>%
+        filter(domain == 'arctic') %>%
+        filter(stream %in% c('Oksrukuyik Creek', 'Kuparuk River')) %>%
+        pull(site_name)
+
+    for(s in 1:length(q_assoc_sites)){
+
+        site_name <- q_assoc_sites[s]
+
+        q_stream <- paste(str_split_fixed(site_name, '_', n = Inf)[1,1:2], collapse = '_')
+
+        dir <- 'data/lter/arctic/derived/discharge__ms001'
+        og_file_name <- paste0(dir, '/', q_stream, '.feather')
+        new_file_name <- paste0(dir, '/', site_name, '.feather')
+
+        site_q_file <- read_feather(new_file_name) %>%
+            mutate(site_name = !!q_assoc_sites[s])
+
+        write_feather(site_q_file, new_file_name)
+    }
 
   return()
 }
@@ -941,23 +965,23 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
 
-  combine_products(network = network,
-                   domain = domain,
-                   prodname_ms = prodname_ms,
-                   input_prodname_ms = c('stream_chemistry__10068', 'stream_chemistry__10069',
-                                         'stream_chemistry__10070', 'stream_chemistry__10591',
-                                         'stream_chemistry__10601', 'stream_chemistry__1589',
-                                         'stream_chemistry__1590', 'stream_chemistry__1591',
-                                         'stream_chemistry__1592', 'stream_chemistry__1593',
-                                         'stream_chemistry__1594', 'stream_chemistry__1595',
-                                         'stream_chemistry__1596', 'stream_chemistry__1597',
-                                         'stream_chemistry__1598', 'stream_chemistry__1599',
-                                         'stream_chemistry__1600', 'stream_chemistry__1601',
-                                         'stream_chemistry__1644', 'stream_chemistry__1645',
-                                         'stream_chemistry__1646', 'stream_chemistry__20118',
-                                         'stream_chemistry__20120', 'stream_chemistry__10303'))
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_chemistry__10068', 'stream_chemistry__10069',
+                                           'stream_chemistry__10070', 'stream_chemistry__10591',
+                                           'stream_chemistry__10601', 'stream_chemistry__1589',
+                                           'stream_chemistry__1590', 'stream_chemistry__1591',
+                                           'stream_chemistry__1592', 'stream_chemistry__1593',
+                                           'stream_chemistry__1594', 'stream_chemistry__1595',
+                                           'stream_chemistry__1596', 'stream_chemistry__1597',
+                                           'stream_chemistry__1598', 'stream_chemistry__1599',
+                                           'stream_chemistry__1600', 'stream_chemistry__1601',
+                                           'stream_chemistry__1644', 'stream_chemistry__1645',
+                                           'stream_chemistry__1646', 'stream_chemistry__20118',
+                                           'stream_chemistry__20120', 'stream_chemistry__10303'))
 
-  return()
+    return()
 }
 
 #precip_gauge_locations: STATUS=READY
