@@ -1,6 +1,4 @@
 
-library(rgee)
-
 source('src/global/general_kernels.R',
        local = TRUE)
 loginfo('Beginning derive', logger=logger_module)
@@ -25,7 +23,8 @@ if(class(sheds)[1] == 'ms_err' | is.null(sheds[1])) {
 
 site_names <- unique(sheds$site_name)
 
-for(i in 1:nrow(unprod)){
+#for(i in 1:nrow(unprod)){
+for(i in 14:14){
 
   prodname_ms = glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
@@ -104,6 +103,9 @@ for(i in 1:nrow(unprod)){
     gc()
   }
 }
+
+create_portal_links(network = network,
+                    domain = domain)
 
 loginfo('General acquisition complete for all products',
         logger=logger_module)

@@ -200,6 +200,45 @@ process_0_DP1.00013 <- function(set_details, network, domain){
     return()
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS001 <- function(set_details, network, domain){
+
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name,
+                          c = set_details$component)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue(raw_data_dest,
+                    '/NEONAquaticWatershed.zip')
+
+    res <- httr::HEAD('https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    return()
+}
+
 #munge kernels ####
 
 #stream_chemistry: STATUS=READY
@@ -716,6 +755,70 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
   }
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
+                                     component){
+
+    rawdir1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+
+    rawfile1 <- glue(rawdir1, '/NEONAquaticWatershed.zip')
+
+    zipped_files <- unzip(zipfile = rawfile1,
+                          exdir = rawdir1,
+                          overwrite = TRUE)
+
+    projstring <- choose_projection(unprojected = TRUE)
+
+    d <- sf::st_read(glue(rawdir1,
+                          '/NEON_Aquatic_Watershed.shp'),
+                     stringsAsFactors = FALSE,
+                     quiet = TRUE) %>%
+        filter(Science != 'Lake') %>%
+        # mutate(area = WSAreaKm2 * 100) %>%
+        select(site_name = SiteID, geometry = geometry) %>%
+        sf::st_transform(projstring) %>%
+        arrange(site_name)
+
+    if(nrow(d) == 0) stop('no rows in sf object')
+
+    # munged_data_dest <- glue('data/{n}/{d}/munged/{p}',
+    #                          n = network,
+    #                          d = domain,
+    #                          p = prodname_ms)
+    #
+    # dir.create(path = munged_data_dest,
+    #            showWarnings = FALSE,
+    #            recursive = TRUE)
+
+    for(i in 1:nrow(d)){
+
+        # dir.create(path = glue(munged_data_dest,
+        #                        '/',
+        #                        d$site_name[i]),
+        #            showWarnings = FALSE,
+        #            recursive = TRUE)
+
+        write_ms_file(d = d[i, ],
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = d$site_name[i],
+                      level = 'munged',
+                      shapefile = TRUE)
+    }
+
+    unlink(zipped_files)
+
+    # return(d)
+    return()
+}
+
 #derive kernels ####
 
 #stream_chemistry: STATUS=READY
@@ -735,6 +838,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 }
 
 #precipitation: STATUS=READY
+#. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
 
     #Temporary, NEON only hace 1 precip gauge (usually) per site. Eventuly will
@@ -774,8 +878,8 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
   return()
 }
 
-
 #precip_flux_inst: STATUS=READY
+#. handle_errors
 process_2_ms003 <- function(network, domain, prodname_ms) {
 
     chemfiles <- ms_list_files(network = network,
