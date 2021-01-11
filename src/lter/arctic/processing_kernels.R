@@ -952,7 +952,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
         og_file_name <- paste0(dir, '/', q_stream, '.feather')
         new_file_name <- paste0(dir, '/', site_name, '.feather')
 
-        site_q_file <- read_feather(new_file_name) %>%
+        site_q_file <- read_feather(og_file_name) %>%
             mutate(site_name = !!q_assoc_sites[s])
 
         write_feather(site_q_file, new_file_name)
@@ -995,3 +995,34 @@ process_2_ms004 <- stream_gauge_from_site_data
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_stream_flux
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms) {
+
+    #Temporary, arctic only has 1 precip gauge. Eventuly will
+    #leverage other data to interploate but for now directly linking gauge to
+    #watersheds (similar to neon)
+
+    new_dir <- 'data/lter/arctic/derived/precipitation__ms006/'
+    dir.create(new_dir, recursive = TRUE)
+
+    dir <- 'data/lter/arctic/derived/discharge__ms001/'
+
+    site_files <- list.files(dir)
+
+    sites <- unique(str_split_fixed(site_files, '.feather', n = Inf)[,1])
+
+    for(i in 1:length(sites)) {
+
+        precip <- read_feather('data/lter/arctic/munged/precipitation__1489/TLKMAIN.feather') %>%
+            mutate(site_name == !! sites[i])
+
+      write_feather(precip, glue('{n}{s}.feather',
+                                 n = new_dir,
+                                 s = sites[i]))
+
+    }
+
+    return()
+}
