@@ -212,8 +212,9 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
 
-    logger_module = set_up_logger(network = network,
-                                  domain = domain)
+    logger_module <- set_up_logger(network = network,
+                                   domain = domain)
+
     loginfo(logger = logger_module,
             msg = glue('Processing network: {n}, domain: {d}',
                        n = network,
@@ -239,6 +240,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     retain_ms_globals(ms_globals)
 }
+
+logger_module <- 'ms'
 
 generate_portal_extras(site_data = site_data,
                        network_domain = network_domain)

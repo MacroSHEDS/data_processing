@@ -1714,7 +1714,7 @@ get_all_local_helpers <- function(network, domain){
     #return()
 }
 
-set_up_logger <- function(network=domain, domain){
+set_up_logger <- function(network = domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -1724,16 +1724,23 @@ set_up_logger <- function(network=domain, domain){
     #"ms.lter.hbef", "ms.lter", and "ms", some of which may not have established
     #handlers
 
-    logger_name = glue('ms.{n}.{d}', n=network, d=domain)
-    logger_module = glue(logger_name, '.module')
+    logger_name <- glue('ms.{n}.{d}',
+                       n = network,
+                       d = domain)
+
+    logger_module <- glue(logger_name,
+                          '.module')
 
     if(! dir.exists('logs')){
         dir.create('logs',
                    showWarnings = FALSE)
     }
 
-    logging::addHandler(logging::writeToFile, logger=logger_name,
-                        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+    logging::addHandler(handler = logging::writeToFile,
+                        logger = logger_name,
+                        file = glue('logs/{n}_{d}.log',
+                                    n = network,
+                                    d = domain))
 
     return(logger_module)
 }
@@ -2811,9 +2818,15 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         site_buf <- sf::st_buffer(x = site,
                                   dist = buffer_radius)
-        dem <- elevatr::get_elev_raster(locations = site_buf,
-                                        z = dem_resolution,
-                                        verbose = verbose)
+
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = site_buf,
+                                         z = dem_resolution,
+                                         verbose = verbose)
+            },
+            max_attempts = 4
+        )
 
         raster::writeRaster(x = dem,
                             filename = dem_f,
@@ -3004,8 +3017,15 @@ delineate_watershed_by_specification <- function(lat,
 
     site_buf <- sf::st_buffer(x = site,
                               dist = buffer_radius)
-    dem <- sm(elevatr::get_elev_raster(locations = site_buf,
-                                       z = dem_resolution))
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = site_buf,
+                                     z = dem_resolution,
+                                     verbose = verbose)
+        },
+        max_attempts = 4
+    )
 
     raster::writeRaster(x = dem,
                         filename = dem_f,
@@ -4331,7 +4351,14 @@ delineate_watershed_nhd <- function(lat, long) {
         outline_buff <- outline %>%
             sf::st_buffer(5000)
 
-        dem <- elevatr::get_elev_raster(as(outline_buff, 'Spatial'), z=12)
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
+                                         z = 12,
+                                         verbose = FALSE)
+            },
+            max_attempts = 4
+        )
 
         temp_raster <- tempfile(fileext = ".tif")
 
@@ -5732,10 +5759,18 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
-    dem <- sm(elevatr::get_elev_raster(locations = wb_rg_bbox,
-                                       z = 8, #res should adjust with area?
-                                       clip = 'bbox',
-                                       expand = 200))
+
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = wb_rg_bbox,
+                                     z = 8, #res should adjust with area?,
+                                     clip = 'bbox',
+                                     expand = 200,
+                                     verbose = FALSE)
+        },
+        max_attempts = 4
+    )
 
     #add elev column to rain gauges
     rg$elevation <- terra::extract(dem, rg)
@@ -7958,6 +7993,7 @@ generate_portal_extras <- function(site_data,
     calculate_flux_by_area(site_data = site_data)
     write_portal_config_datasets()
     catalogue_held_data(network_domain = network_domain)
+    combine_ws_boundaries()
 }
 
 calculate_flux_by_area <- function(site_data){
@@ -8154,4 +8190,84 @@ catalogue_held_data <- function(network_domain){
 
     readr::write_file(x = as.character(nobs_nonspatial),
                       file = '../portal/data/general/total_nonspatial_observations.txt')
+}
+
+expo_backoff <- function(expr,
+                         max_attempts = 10,
+                         verbose = FALSE){
+
+    for(attempt_i in seq_len(max_attempts)){
+
+        results <- try(expr = expr,
+                       silent = TRUE)
+
+        if('try-error' %in% class(results)){
+
+            backoff <- runif(n = 1,
+                             min = 0,
+                             max = 2^attempt_i - 1)
+
+            if(verbose){
+                message("Backing off for ", backoff, " seconds.")
+            }
+
+            Sys.sleep(backoff)
+
+        } else {
+
+            if(verbose){
+                message("Succeeded after ", attempt_i, " attempts.")
+            }
+
+            break
+        }
+    }
+
+    return(results)
+}
+
+combine_ws_boundaries <- function(){
+
+    setwd('../portal/data/')
+
+    ws_dirs <- dir(pattern = 'ws_boundary',
+                   recursive = TRUE,
+                   include.dirs = TRUE)
+
+    ws_dirs <- grep(pattern = '^(?!.*documentation).*$',
+                    x = ws_dirs,
+                    value =  TRUE,
+                    perl = TRUE)
+
+    ws_file_list <- list()
+
+    for(i in 1:length(ws_dirs)){
+
+        ws_files <- list.files(ws_dirs[i],
+                               pattern = '*shp',
+                               recursive = TRUE,
+                               full.names = TRUE)
+
+        ws_file_list_sub <- lapply(X = ws_files,
+                                   FUN = function(x){
+                                       x <- sf::st_read(x,
+                                                        quiet = TRUE)
+                                       x <- sf::st_cast(x,
+                                                        to = 'POLYGON')
+                                   })
+        ws_file_list <- append(x = ws_file_list,
+                               values = ws_file_list_sub)
+    }
+
+    combined <- do.call(bind_rows, ws_file_list)
+
+    dir.create(path = 'general/shed_boundary',
+               showWarnings = FALSE)
+
+    sf::st_write(obj = combined,
+                 dsn = 'general/shed_boundary',
+                 layer = 'shed_boundary.shp',
+                 driver = 'ESRI Shapefile',
+                 delete_layer = TRUE,
+                 silent = TRUE)
 }
