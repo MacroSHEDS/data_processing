@@ -1714,7 +1714,7 @@ get_all_local_helpers <- function(network, domain){
     #return()
 }
 
-set_up_logger <- function(network=domain, domain){
+set_up_logger <- function(network = domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -1724,16 +1724,23 @@ set_up_logger <- function(network=domain, domain){
     #"ms.lter.hbef", "ms.lter", and "ms", some of which may not have established
     #handlers
 
-    logger_name = glue('ms.{n}.{d}', n=network, d=domain)
-    logger_module = glue(logger_name, '.module')
+    logger_name <- glue('ms.{n}.{d}',
+                       n = network,
+                       d = domain)
+
+    logger_module <- glue(logger_name,
+                          '.module')
 
     if(! dir.exists('logs')){
         dir.create('logs',
                    showWarnings = FALSE)
     }
 
-    logging::addHandler(logging::writeToFile, logger=logger_name,
-                        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+    logging::addHandler(handler = logging::writeToFile,
+                        logger = logger_name,
+                        file = glue('logs/{n}_{d}.log',
+                                    n = network,
+                                    d = domain))
 
     return(logger_module)
 }
@@ -2811,9 +2818,15 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         site_buf <- sf::st_buffer(x = site,
                                   dist = buffer_radius)
-        dem <- elevatr::get_elev_raster(locations = site_buf,
-                                        z = dem_resolution,
-                                        verbose = verbose)
+
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = site_buf,
+                                         z = dem_resolution,
+                                         verbose = verbose)
+            },
+            max_attempts = 4
+        )
 
         raster::writeRaster(x = dem,
                             filename = dem_f,
@@ -3004,8 +3017,15 @@ delineate_watershed_by_specification <- function(lat,
 
     site_buf <- sf::st_buffer(x = site,
                               dist = buffer_radius)
-    dem <- sm(elevatr::get_elev_raster(locations = site_buf,
-                                       z = dem_resolution))
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = site_buf,
+                                     z = dem_resolution,
+                                     verbose = verbose)
+        },
+        max_attempts = 4
+    )
 
     raster::writeRaster(x = dem,
                         filename = dem_f,
@@ -3289,7 +3309,7 @@ ms_derive <- function(network = domain, domain){
 
         newcode <- new_prodcodes[i]
 
-        thisenv = environment() #DELETE THIS
+        thisenv = environment() #DELETE THIS CHECK WHEN FINISHED
         bypass_append = FALSE
         tryCatch({
             create_derived_links(network = network,
@@ -3307,7 +3327,7 @@ ms_derive <- function(network = domain, domain){
             assign('bypass_append', TRUE, envir=thisenv) #DELETE THIS
         })
 
-        if(! bypass_append){  #DELETE THIS
+        if(! bypass_append){  #MAKE THIS UNCONDITIONAL
         append_to_productfile(
             network = network,
             domain = domain,
@@ -3315,7 +3335,7 @@ ms_derive <- function(network = domain, domain){
             prodname = prodname,
             derive_status = 'linked',
             notes = 'automated entry')
-        } #DELETE THIS
+        }
     }
 
     #compile any compprods and derive derprods (run all code in derive.R).
@@ -4331,7 +4351,14 @@ delineate_watershed_nhd <- function(lat, long) {
         outline_buff <- outline %>%
             sf::st_buffer(5000)
 
-        dem <- elevatr::get_elev_raster(as(outline_buff, 'Spatial'), z=12)
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
+                                         z = 12,
+                                         verbose = FALSE)
+            },
+            max_attempts = 4
+        )
 
         temp_raster <- tempfile(fileext = ".tif")
 
@@ -5732,10 +5759,18 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
-    dem <- sm(elevatr::get_elev_raster(locations = wb_rg_bbox,
-                                       z = 8, #res should adjust with area?
-                                       clip = 'bbox',
-                                       expand = 200))
+
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = wb_rg_bbox,
+                                     z = 8, #res should adjust with area?,
+                                     clip = 'bbox',
+                                     expand = 200,
+                                     verbose = FALSE)
+        },
+        max_attempts = 4
+    )
 
     #add elev column to rain gauges
     rg$elevation <- terra::extract(dem, rg)
@@ -7947,7 +7982,8 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data){
+generate_portal_extras <- function(site_data,
+                                   network_domain){
 
     #for post-derive steps that save the portal some processing.
 
@@ -7956,6 +7992,8 @@ generate_portal_extras <- function(site_data){
 
     calculate_flux_by_area(site_data = site_data)
     write_portal_config_datasets()
+    catalogue_held_data(network_domain = network_domain)
+    combine_ws_boundaries()
 }
 
 calculate_flux_by_area <- function(site_data){
@@ -8108,4 +8146,128 @@ munge_versionless_product <- function(network,
                               site_name = site_name,
                               new_status = new_status)
     }
+}
+
+catalogue_held_data <- function(network_domain){
+
+    #right now all this does is calculate total nonspatial observations for
+    #the portal landing page, but it can eventually generate our full data
+    #catalogue
+
+    nobs_nonspatial <- 0
+    for(i in 1:nrow(network_domain)){
+
+        site_prods <- list.dirs(glue('data/{n}/{d}/derived',
+                                    n = network_domain$network[i],
+                                    d = network_domain$domain[i]),
+                               full.names = TRUE)
+
+        if(length(site_prods) == 0) next
+
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+                                  x = site_prods)
+
+        spatial_prods <- site_prods[spatial_prod_inds]
+        nonspatial_prods <- site_prods[-spatial_prod_inds]
+
+        for(j in 1:length(nonspatial_prods)){
+
+            prod_nobs <- list.files(nonspatial_prods[j],
+                                    full.names = TRUE,
+                                    recursive = TRUE) %>%
+                purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
+                purrr:::reduce(sum)
+
+            nobs_nonspatial <- nobs_nonspatial + prod_nobs
+        }
+
+        # for(j in 1:length(spatial_prods)){
+        #
+        # }
+
+        #etc
+    }
+
+    readr::write_file(x = as.character(nobs_nonspatial),
+                      file = '../portal/data/general/total_nonspatial_observations.txt')
+}
+
+expo_backoff <- function(expr,
+                         max_attempts = 10,
+                         verbose = FALSE){
+
+    for(attempt_i in seq_len(max_attempts)){
+
+        results <- try(expr = expr,
+                       silent = TRUE)
+
+        if('try-error' %in% class(results)){
+
+            backoff <- runif(n = 1,
+                             min = 0,
+                             max = 2^attempt_i - 1)
+
+            if(verbose){
+                message("Backing off for ", backoff, " seconds.")
+            }
+
+            Sys.sleep(backoff)
+
+        } else {
+
+            if(verbose){
+                message("Succeeded after ", attempt_i, " attempts.")
+            }
+
+            break
+        }
+    }
+
+    return(results)
+}
+
+combine_ws_boundaries <- function(){
+
+    setwd('../portal/data/')
+
+    ws_dirs <- dir(pattern = 'ws_boundary',
+                   recursive = TRUE,
+                   include.dirs = TRUE)
+
+    ws_dirs <- grep(pattern = '^(?!.*documentation).*$',
+                    x = ws_dirs,
+                    value =  TRUE,
+                    perl = TRUE)
+
+    ws_file_list <- list()
+
+    for(i in 1:length(ws_dirs)){
+
+        ws_files <- list.files(ws_dirs[i],
+                               pattern = '*shp',
+                               recursive = TRUE,
+                               full.names = TRUE)
+
+        ws_file_list_sub <- lapply(X = ws_files,
+                                   FUN = function(x){
+                                       x <- sf::st_read(x,
+                                                        quiet = TRUE)
+                                       x <- sf::st_cast(x,
+                                                        to = 'POLYGON')
+                                   })
+        ws_file_list <- append(x = ws_file_list,
+                               values = ws_file_list_sub)
+    }
+
+    combined <- do.call(bind_rows, ws_file_list)
+
+    dir.create(path = 'general/shed_boundary',
+               showWarnings = FALSE)
+
+    sf::st_write(obj = combined,
+                 dsn = 'general/shed_boundary',
+                 layer = 'shed_boundary.shp',
+                 driver = 'ESRI Shapefile',
+                 delete_layer = TRUE,
+                 silent = TRUE)
 }
