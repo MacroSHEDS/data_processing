@@ -426,7 +426,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_name,
                                         'tss_mgperLiter' = 'TSS',
                                         'spec_cond_uSpercm' = 'spCond'),
                          data_col_pattern = '#V#',
-                         set_to_NA = '-999',
+                         set_to_NA =  c('-999', '-999.00', '-999.0'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,

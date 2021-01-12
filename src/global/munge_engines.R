@@ -146,29 +146,29 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }
-
-        sites <- unique(out_comp$site_name)
-
-        for(i in 1:length(sites)){
-
-            filt_site <- sites[i]
-            out_comp_filt <- filter(out_comp, site_name == filt_site)
-
-            is_spatial <- ifelse(grepl(spatial_regex,
-                                       prodname_ms),
-                                 TRUE,
-                                 FALSE)
-
-            write_ms_file(d = out_comp_filt,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = filt_site,
-                          level = 'munged',
-                          shapefile = is_spatial,
-                          link_to_portal = FALSE)
-        }
     }
+
+    sites <- unique(out_comp$site_name)
+
+    for(i in 1:length(sites)){
+
+        filt_site <- sites[i]
+        out_comp_filt <- filter(out, site_name == filt_site)
+
+        is_spatial <- ifelse(grepl(spatial_regex,
+                                   prodname_ms),
+                             TRUE,
+                             FALSE)
+
+        write_ms_file(d = out_comp_filt,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = filt_site,
+                      level = 'munged',
+                      shapefile = is_spatial,
+                      link_to_portal = FALSE)
+        }
 
     update_data_tracker_m(network = network,
                           domain = domain,
@@ -322,6 +322,7 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }
+    }
 
         sites <- unique(out_comp$site_name)
 
@@ -345,7 +346,6 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
 
             write_feather(out_comp_filt, site_file)
             }
-        }
 
     update_data_tracker_m(network = network,
                           domain = domain,
