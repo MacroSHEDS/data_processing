@@ -3283,7 +3283,7 @@ ms_derive <- function(network = domain, domain){
 
         newcode <- new_prodcodes[i]
 
-        thisenv = environment() #DELETE THIS
+        thisenv = environment() #DELETE THIS CHECK WHEN FINISHED
         bypass_append = FALSE
         tryCatch({
             create_derived_links(network = network,
@@ -3301,7 +3301,7 @@ ms_derive <- function(network = domain, domain){
             assign('bypass_append', TRUE, envir=thisenv) #DELETE THIS
         })
 
-        if(! bypass_append){  #DELETE THIS
+        if(! bypass_append){  #MAKE THIS UNCONDITIONAL
         append_to_productfile(
             network = network,
             domain = domain,
@@ -3309,7 +3309,7 @@ ms_derive <- function(network = domain, domain){
             prodname = prodname,
             derive_status = 'linked',
             notes = 'automated entry')
-        } #DELETE THIS
+        }
     }
 
     #compile any compprods and derive derprods (run all code in derive.R).
@@ -7923,7 +7923,8 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data){
+generate_portal_extras <- function(site_data,
+                                   network_domain){
 
     #for post-derive steps that save the portal some processing.
 
@@ -7932,6 +7933,7 @@ generate_portal_extras <- function(site_data){
 
     calculate_flux_by_area(site_data = site_data)
     write_portal_config_datasets()
+    catalogue_held_data(network_domain = network_domain)
 }
 
 calculate_flux_by_area <- function(site_data){
@@ -8084,4 +8086,48 @@ munge_versionless_product <- function(network,
                               site_name = site_name,
                               new_status = new_status)
     }
+}
+
+catalogue_held_data <- function(network_domain){
+
+    #right now all this does is calculate total nonspatial observations for
+    #the portal landing page, but it can eventually generate our full data
+    #catalogue
+
+    nobs_nonspatial <- 0
+    for(i in 1:nrow(network_domain)){
+
+        site_prods <- list.dirs(glue('data/{n}/{d}/derived',
+                                    n = network_domain$network[i],
+                                    d = network_domain$domain[i]),
+                               full.names = TRUE)
+
+        if(length(site_prods) == 0) next
+
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+                                  x = site_prods)
+
+        spatial_prods <- site_prods[spatial_prod_inds]
+        nonspatial_prods <- site_prods[-spatial_prod_inds]
+
+        for(j in 1:length(nonspatial_prods)){
+
+            prod_nobs <- list.files(nonspatial_prods[j],
+                                    full.names = TRUE,
+                                    recursive = TRUE) %>%
+                purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
+                purrr:::reduce(sum)
+
+            nobs_nonspatial <- nobs_nonspatial + prod_nobs
+        }
+
+        # for(j in 1:length(spatial_prods)){
+        #
+        # }
+
+        #etc
+    }
+
+    readr::write_file(x = as.character(nobs_nonspatial),
+                      file = '../portal/data/general/total_nonspatial_observations.txt')
 }
