@@ -1679,3 +1679,224 @@ derive_precip_flux <- function(network, domain, prodname_ms){
 
             return()
 }
+
+
+get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
+                          start, ws_prodname) {
+    
+    area <- sf::st_area(ws_prodname) 
+    
+    sheds <- ws_prodname %>%
+        as.data.frame() %>%
+        sf::st_as_sf() %>%
+        select(site_name) %>%
+        sf::st_transform(4326) %>%
+        sf::st_set_crs(4326)
+    
+    site <- unique(sheds$site_name)
+    
+    ee_shape <- sf_as_ee(sheds, 
+                         via = 'getInfo_to_asset',
+                         assetId = 'users/spencerrhea/data_aq_sheds',
+                         overwrite = TRUE,
+                         quiet = TRUE)
+    
+    imgcol <- ee$ImageCollection(gee_id)$select(band)
+    
+    flat_img <- imgcol$map(function(image) {
+        image$select(band)$reduceRegions(
+            collection = ee_shape, 
+            reducer = ee$Reducer$stdDev()$combine(
+                reducer2 = ee$Reducer$median(),
+                sharedInputs = TRUE), 
+            scale = rez
+        )$map(function(f) { 
+            f$set('imageId', image$id())
+        })
+    })$flatten()
+    
+    gee <- flat_img$select(propertySelectors = c('site_name', 'imageId', 
+                                                 'stdDev', 'median'), 
+                           retainGeometry = FALSE)
+    
+    ee_description <-  glue('{n}_{d}_{s}_{p}',
+                            d = domain,
+                            n = network,
+                            s = site,
+                            p = prodname)
+    
+    task <- ee$batch$Export$table$toDrive(collection = gee, 
+                                          description = ee_description,
+                                          fileFormat = 'CSV',
+                                          folder = 'GEE',
+                                          fileNamePrefix = 'rgee')
+    
+    task$start()
+    ee_monitoring(task)
+    
+    temp_rgee <- tempfile(fileext = '.csv')
+    rgee::ee_drive_to_local(task, 
+                            temp_rgee,
+                            overwrite = TRUE,
+                            quiet = TRUE)
+    
+    sd_name <- glue('{c}_sd', c = prodname)   
+    median_name <- glue('{c}_median', c = prodname)
+    
+    fin_table <- read_csv(temp_rgee) %>%
+        select(site_name, stdDev, median, imageId) %>%
+        rename(date = imageId,
+               !!sd_name := stdDev,
+               !!median_name := median) %>%
+        pivot_longer(cols = c(sd_name, median_name),
+                     names_to = 'var',
+                     values_to = 'val')
+    
+    googledrive::drive_rm('GEE/rgee.csv')
+    rgee::ee_manage_delete(path_asset = 'users/spencerrhea/data_aq_sheds',
+                           quiet = TRUE)
+    
+    final <- list(table = fin_table,
+                  type = 'batch') 
+    # } else {
+    #         
+    #     current <- Sys.Date() + years(5)
+    #     current <- as.numeric(str_split_fixed(current, '-', n = Inf)[1,1])
+    #     dates <- seq(start, 2025)
+    #     
+    #     date_ranges <- dates[seq(0, 100, by = 5)]
+    #     date_ranges <- date_ranges[!is.na(date_ranges)]
+    #     date_ranges <- append(start, date_ranges)
+    #     
+    #     final <- tibble()
+    #     for(i in 1:(length(date_ranges)-1)) {
+    #         imgcol <- get_gee_imgcol(gee_id, band, prodname,
+    #                                  paste0(date_ranges[i]), paste0(date_ranges[i+1]))
+    #         
+    #         median <- try(ee_extract(
+    #             x = imgcol,
+    #             y = sheds,
+    #             scale = rez,
+    #             fun = ee$Reducer$median(),
+    #             sf = FALSE
+    #         ))
+    #         
+    #         if(length(median) <= 4 || class(median) == 'try-error') {
+    #             return(NULL)
+    #         }
+    #         
+    #         median_name <- glue('{c}_median', c = prodname) 
+    #         median <- clean_gee_tabel(median, sheds, median_name)
+    #         
+    #         sd <- try(ee_extract(
+    #             x = imgcol,
+    #             y = sheds,
+    #             scale = rez,
+    #             fun = ee$Reducer$stdDev(),
+    #             sf = FALSE
+    #         ))
+    #         
+    #         if(length(sd) <= 4 || class(sd) == 'try-error') {
+    #             sd <- tibble()
+    #         } else {
+    #             sd_name <- glue('{c}_sd', c = prodname)
+    #             sd <- clean_gee_tabel(sd, sheds, sd_name)
+    #         }
+    
+    # count <- try(ee_extract(
+    #     x = imgcol,
+    #     y = sheds,
+    #     scale = rez,
+    #     fun = ee$Reducer$count(),
+    #     sf = FALSE
+    # ))
+    # 
+    # if(length(count) <= 4 || class(count) == 'try-error'){
+    #     count <- tibble()
+    # } else {
+    #     count_name <- glue('{c}_count', c = prodname)
+    #     count <- clean_gee_tabel(count, sheds, count_name)
+    # }
+    
+    #     fin <- rbind(median, sd)
+    #     
+    #     final <- rbind(final, fin)
+    # }
+    
+    
+    # 
+    # col <- ee$ImageCollection(gee_id)$
+    #     filterDate('1957-10-04', '2040-01-01')
+    # 
+    # colList = col$toList(count = 10000000)
+    # n = colList$size()$getInfo()
+    # n <- n-1
+    # 
+    # all_times_m <- tibble()
+    # for (i in 0:n) {
+    #     print(i)
+    #     img = ee$Image(colList$get(i));
+    #     id = img$id()$getInfo();
+    #     
+    #     export <- img$reduceRegions(collection = ee_shape, 
+    #                                 reducer = ee$Reducer$median(),
+    #                                 scale = rez)
+    #     
+    #     image_info <- export$getInfo()
+    #     
+    #     all_sites_m <- tibble()
+    #     for(p in 1:nrow(sheds)){
+    #         site_d_val <- image_info[["features"]][[p]][["properties"]][[band]]
+    #         site_d_val <- ifelse(is.null(site_d_val), NA, site_d_val)
+    #         site_name_p <- image_info[["features"]][[p]][["properties"]][["site_name"]]
+    #         one_y_d <- tibble(val = site_d_val,
+    #                           site_name = site_name_p,
+    #                           date = id)
+    #         
+    #         all_sites_m <- rbind(all_sites_m, one_y_d)
+    #     }
+    #     all_times_m <- rbind(all_times_m, all_sites_m)
+    # }
+    # 
+    # median_name <- glue('{c}_median', c = prodname) 
+    # median <- all_times_m %>%
+    #     mutate(var = !!median_name)
+    # 
+    # if(is.na(unique(median$val)) && length(unique(median$val)) == 1){
+    #     return(NULL)
+    # }
+    #     
+    # all_times_sd <- tibble()
+    # for (i in 0:n) {
+    #     img = ee$Image(colList$get(i));
+    #     id = img$id()$getInfo();
+    #     
+    #     export <- img$reduceRegions(collection = ee_shape, 
+    #                                 reducer = ee$Reducer$stdDev(),
+    #                                 scale = rez)
+    #     
+    #     image_info <- export$getInfo()
+    #     
+    #     all_sites_sd <- tibble()
+    #     for(p in 1:nrow(sheds)){
+    #         site_d_val <- image_info[["features"]][[p]][["properties"]][[band]]
+    #         site_d_val <- ifelse(is.null(site_d_val), NA, site_d_val)
+    #         site_name_p <- image_info[["features"]][[p]][["properties"]][["site_name"]]
+    #         one_y_d <- tibble(val = site_d_val,
+    #                           site_name = site_name_p,
+    #                           date = id)
+    #         
+    #         all_sites_sd <- rbind(all_sites_sd, one_y_d)
+    #     }
+    #     all_times_sd <- rbind(all_times_sd, all_sites_sd)
+    # }
+    # 
+    # sd_name <- glue('{c}_sd', c = prodname)   
+    # sd <- all_times_sd %>%
+    #     mutate(var = !!sd_name)
+    # 
+    
+    
+    return(final)
+}
+
