@@ -241,7 +241,8 @@ for(dmnrow in 1:nrow(network_domain)){
     retain_ms_globals(ms_globals)
 }
 
-generate_portal_extras(site_data = site_data)
+generate_portal_extras(site_data = site_data,
+                       network_domain = network_domain)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
