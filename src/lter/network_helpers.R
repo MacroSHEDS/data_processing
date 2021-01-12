@@ -8,7 +8,8 @@ ms_pasta_domain_refmap = list(
     santa_barbara = 'knb-lter-sbc',
     bonanza = 'knb-lter-bnz',
     mcmurdo = 'knb-lter-mcm',
-    plum = 'knb-lter-pie'
+    plum = 'knb-lter-pie',
+    arctic = 'knb-lter-arc'
 )
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){

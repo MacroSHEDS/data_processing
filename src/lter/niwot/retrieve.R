@@ -1,11 +1,11 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'retrieve', 
+                              status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=89
+# i=104
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -16,7 +16,7 @@ for(i in 1:nrow(prod_info)){
 
         held_data <<- track_new_product(held_data, prodname_ms)
     }
-    
+
     latest_vsn <- get_latest_product_version(prodname_ms=prodname_ms,
                                             domain=domain, data_tracker=held_data)
 
@@ -46,14 +46,14 @@ for(i in 1:nrow(prod_info)){
                                            avail_site_sets)
 
     if(is_ms_err(held_data)) next
-    
-    retrieval_details <- populate_set_details(held_data, prodname_ms, site_name, 
+
+    retrieval_details <- populate_set_details(held_data, prodname_ms, site_name,
                                               avail_site_sets, latest_vsn)
 
     if(is_ms_err(retrieval_details)) next
 
     new_sets = filter_unneeded_sets(retrieval_details)
-    
+
     if(nrow(new_sets) == 0){
 
         loginfo(glue('Nothing to do for {s} {p}',
@@ -66,7 +66,7 @@ for(i in 1:nrow(prod_info)){
     update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
     get_lter_data(domain=domain, new_sets, held_data)
-    
+
     if(! is.na(prod_info$munge_status[i])){
 
         update_data_tracker_m(network = network,
@@ -82,7 +82,7 @@ for(i in 1:nrow(prod_info)){
                          'packageid=knb-lter-hbr.{p}.{v}',
                          p = prodcode_from_prodname_ms(prodname_ms),
                          v = latest_vsn)
-    
+
     write_metadata_r(murl = metadata_url,
                      network = network,
                      domain = domain,
