@@ -4604,7 +4604,11 @@ read_combine_feathers <- function(network,
     return(combined)
 }
 
-choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
+choose_projection <- function(lat = NULL,
+                              long = NULL,
+                              unprojected = FALSE){
+
+    #TODO: CHOOSE PROJECTIONS MORE CAREFULLY
 
     if(unprojected){
         PROJ4 <- glue('+proj=longlat +datum=WGS84 +no_defs ',
@@ -4616,11 +4620,26 @@ choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
         stop('If projecting, lat and long are required.')
     }
 
-    if(lat <= 15 && lat >= -15){ #equatorial
+    abslat <- abs(lat)
+
+    if(abslat < 23){ #tropical
         PROJ4 = glue('+proj=laea +lon_0=', long)
+                 # ' +datum=WGS84 +units=m +no_defs')
     } else { #temperate or polar
         PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
     }
+                     # ' +datum=WGS84 +units=m +no_defs')
+
+    # if(abslat < 23){ #tropical
+    #     PROJ4 <- 9835 #Lambert cylindrical equal area (ellipsoidal; should spherical 9834 be used instead?)
+    # } else if(abslat > 23 && abslat < 66){ # middle latitudes
+    #     PROJ4 <- 9822 #albers equal area conic
+    # } else { #polar (abslat >= 66)
+    #     PROJ4 <- 9820 #lambert equal area azimuthal
+    #     # PROJ4 <- 1027 #lambert equal area azimuthal (spherical)
+    # }
+    # PROJ4 <- 3857 #WGS 84 / Pseudo-Mercator
+    # PROJ4 <- 2163
 
     return(PROJ4)
 }
@@ -7982,8 +8001,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data,
-                                   network_domain){
+generate_portal_extras <- function(site_data){
 
     #for post-derive steps that save the portal some processing.
 
@@ -7992,7 +8010,8 @@ generate_portal_extras <- function(site_data,
 
     calculate_flux_by_area(site_data = site_data)
     write_portal_config_datasets()
-    catalogue_held_data(network_domain = network_domain)
+    catalogue_held_data(site_data = site_data,
+                        network_domain = network_domain)
     combine_ws_boundaries()
 }
 
@@ -8148,13 +8167,29 @@ munge_versionless_product <- function(network,
     }
 }
 
-catalogue_held_data <- function(network_domain){
+catalogue_held_data <- function(network_domain, site_data){
 
-    #right now all this does is calculate total nonspatial observations for
-    #the portal landing page, but it can eventually generate our full data
-    #catalogue
+    #tabulates:
+    # + total nonspatial observations for the portal landing page
+    # +
 
     nobs_nonspatial <- 0
+    # site_display <- tibble()
+    # site_vars <- tibble(network = character(),
+    #                     domain = character(),
+    #                     site = character(),
+    #                     stream = character(),
+    #                     lat = numeric(),
+    #                     long)
+
+    all_sites_display <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(-in_workflow, -notes, -CRS) %>%
+        mutate(nvars = NA,
+               nobs = NA,
+               first_record_UTC = NA,
+               last_record_UTC = NA)
+
     for(i in 1:nrow(network_domain)){
 
         site_prods <- list.dirs(glue('data/{n}/{d}/derived',
@@ -8172,6 +8207,7 @@ catalogue_held_data <- function(network_domain){
 
         for(j in 1:length(nonspatial_prods)){
 
+            ## sum all observations across all sites (will be redundant when the rest is done)
             prod_nobs <- list.files(nonspatial_prods[j],
                                     full.names = TRUE,
                                     recursive = TRUE) %>%
@@ -8179,13 +8215,145 @@ catalogue_held_data <- function(network_domain){
                 purrr:::reduce(sum)
 
             nobs_nonspatial <- nobs_nonspatial + prod_nobs
+
+            list.files(nonspatial_prods[j],
+                       full.names = TRUE,
+                       recursive = TRUE)
+
+            site_data %>%
+                filter(as.logical(in_workflow)) %>%
+                distinct(site_type)
+
+            ## catalog sites for display (one at a time is the safest way)
+
+            product_files <- list.files(nonspatial_prods[j],
+                       full.names = TRUE,
+                       recursive = TRUE)
+
+            # product_vars <- c()
+            # nobs <- 0
+            # first_record <- last_record <- lubridate::NA_POSIXct_
+
+            # single_site_display <- tibble(var = character(),
+            #                               sample_regimen = character(),
+            #                               n_observations = numeric(),
+            #                               first_record_UTC = lubridate::POSIXct(),
+            #                               last_record_UTC = lubridate::POSIXct())
+            single_site_display <- tibble()
+            for(f in product_files){
+
+                single_site_display <- read_feather(f) %>%
+                    mutate(
+                        sample_regimen = extract_var_prefix(var),
+                        var = drop_var_prefix(var)) %>%
+                    group_by(var, sample_regimen, site_name) %>%
+                    summarize(
+                        n_observations = n(),
+                        first_record_UTC = min(datetime,
+                                               na.rm = TRUE),
+                        last_record_UTC = max(datetime,
+                                              na.rm = TRUE),
+                        prop_flagged = sum(ms_status) / n_observations,
+                        prop_imputed = sum(ms_interp) / n_observations) %>%
+                    ungroup() %>%
+                    bind_rows(single_site_display)
+            }
+
+            single_site_display <- single_site_display %>%
+                group_by(var, sample_regimen, site_name) %>%
+                summarize(
+                    n_flagged = sum(prop_flagged * n_observations,
+                                    na.rm = TRUE),
+                    n_imputed = sum(prop_imputed * n_observations,
+                                    na.rm = TRUE),
+                    n_observations = sum(n_observations,
+                                         na.rm = TRUE),
+                    pct_flagged = round(n_flagged / n_observations * 100,
+                                        digits = 2),
+                    pct_imputed = round(n_imputed / n_observations * 100,
+                                        digits = 2),
+                    first_record_UTC = min(first_record_UTC,
+                                           na.rm = TRUE),
+                    last_record_UTC = max(last_record_UTC,
+                                          na.rm = TRUE)) %>%
+                ungroup() %>%
+                select(-n_flagged, -n_imputed) %>%
+                mutate(sample_regimen = case_when(
+                    sample_regimen == 'GS' ~ 'sensor-grab',
+                    sample_regimen == 'IS' ~ 'sensor-installed',
+                    sample_regimen == 'GN' ~ 'nonsensor-grab',
+                    sample_regimen == 'IN' ~ 'nonsensor-installed')) %>%
+                select(site_name, var, sample_regimen, n_observations,
+                       first_record_UTC, last_record_UTC, pct_flagged,
+                       pct_imputed)
+
+            single_site_cross_regimen <- single_site_display %>%
+                group_by(site_name, var) %>%
+                summarize(
+                    n_observations = sum(n_observations,
+                                         na.rm = TRUE),
+                    pct_flagged = round(sum(pct_flagged,,
+                                            na.rm = TRUE),
+                                        digits = 2),
+                    pct_imputed = round(n_imputed / n_observations * 100,
+                                        digits = 2),
+                    first_record_UTC = min(first_record_UTC,
+                                           na.rm = TRUE),
+                    last_record_UTC = max(last_record_UTC,
+                                          na.rm = TRUE)) %>%
+                ungroup() %>%
+
+
+
+
+            #other quick 'n dirty stuff
+
+
+            #domains per network
+            site_data %>%
+                filter(as.logical(in_workflow)) %>%
+                group_by(network) %>%
+                summarize(n_domains = length(unique(domain)))
+
+            #sites per domain
+            site_data$stream[is.na(site_data$stream)] = 1:sum(is.na(site_data$stream))
+            site_data %>%
+                filter(as.logical(in_workflow),
+                       site_type != 'rain_gauge') %>%
+                group_by(network, domain) %>%
+                summarize(n_sites = length(unique(site_name)),
+                          n_unique_streams = length(unique(stream)))
+
+            #mean sites per domain
+            site_data %>%
+                filter(as.logical(in_workflow),
+                       site_type != 'rain_gauge') %>%
+                group_by(network, domain) %>%
+                summarize(n_sites = length(unique(site_name))) %>%
+                ungroup() %>%
+                {mean(.$n_sites)}
+
+            #total sites
+            site_data %>%
+                filter(as.logical(in_workflow),
+                       site_type != 'rain_gauge') %>%
+                group_by(network, domain) %>%
+                summarize(n_sites = length(unique(site_name))) %>%
+                ungroup() %>%
+                {sum(.$n_sites)}
+
+            #total unique streams
+            site_data %>%
+                filter(as.logical(in_workflow),
+                       site_type != 'rain_gauge') %>%
+                group_by(network, domain) %>%
+                summarize(n_sites = length(unique(site_name)),
+                          n_unique_streams = length(unique(stream))) %>%
+                ungroup() %>%
+                {sum(.$n_unique_streams)}
+
+
         }
-
-        # for(j in 1:length(spatial_prods)){
-        #
-        # }
-
-        #etc
     }
 
     readr::write_file(x = as.character(nobs_nonspatial),
@@ -8239,7 +8407,7 @@ combine_ws_boundaries <- function(){
                     value =  TRUE,
                     perl = TRUE)
 
-    ws_file_list <- list()
+    ws_list <- list()
 
     for(i in 1:length(ws_dirs)){
 
@@ -8248,18 +8416,41 @@ combine_ws_boundaries <- function(){
                                recursive = TRUE,
                                full.names = TRUE)
 
-        ws_file_list_sub <- lapply(X = ws_files,
-                                   FUN = function(x){
-                                       x <- sf::st_read(x,
-                                                        quiet = TRUE)
-                                       x <- sf::st_cast(x,
-                                                        to = 'POLYGON')
-                                   })
-        ws_file_list <- append(x = ws_file_list,
-                               values = ws_file_list_sub)
+        #read shapefiles, coerce to POLYGON, project, smooth borders
+        ws_list_sub <- lapply(X = ws_files,
+                              FUN = function(x){
+
+                                  site_name <- str_match(string = x,
+                                                         pattern = '^.*/(.*?)\\.shp$')[, 2]
+
+                                  wb <- x %>%
+                                      sf::st_read(quiet = TRUE) %>%
+                                      sf::st_cast(to = 'POLYGON') %>%
+                                      sf::st_union() %>%
+                                      sf::st_as_sf() %>%
+                                      mutate(site_name = !!site_name) %>%
+                                      select(site_name, geometry = x)
+
+                                  coords <- sf::st_coordinates(wb)
+                                  mean_latlong <- unname(colMeans(coords[, 1:2]))
+
+                                  proj <- choose_projection(lat = mean_latlong[2],
+                                                            long = mean_latlong[1])
+
+                                  wb %>%
+                                      sf::st_transform(crs = proj) %>%
+                                      sf::st_simplify(dTolerance = 30,
+                                                      preserveTopology = TRUE) %>%
+                                      sf::st_transform(crs = 4326) #back to WGS 84
+
+                                  # if(length(x$geometry[[1]]) == 0) print(paste(i, site_name))
+                              })
+
+        ws_list <- append(x = ws_list,
+                          values = ws_list_sub)
     }
 
-    combined <- do.call(bind_rows, ws_file_list)
+    combined <- do.call(bind_rows, ws_list)
 
     dir.create(path = 'general/shed_boundary',
                showWarnings = FALSE)

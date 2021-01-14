@@ -24,20 +24,23 @@
     
     ```
     #too compact
-    mutate(a = x, b = y, c = z) %>%
+    mutate(a = x + x, b = y + y, c = z + z) %>%
 
     #good
     mutate(
-        a = x,
-        b = y,
-        c = z) %>%
+        a = x + x,
+        b = y + y,
+        c = z + z) %>%
 
     #whoa, nelly
     mutate(
-        a = x,
-        b = y,
-        c = z
+        a = x + x,
+        b = y + y,
+        c = z + z
     ) %>%
+
+    #if only one tidy operation, no need for a pipe
+    select(df, a, b)
     ```
 
 + use comments only where variable names can't speak for themselves. Generally, function names should be verbs and other variables should be named with nouns:
@@ -56,4 +59,13 @@
 + no space needed before the curly brace that sets off a function definition:
 
     `myfunc <- function(){`
+
+#unprocessed stuff
+    ', not "
+    multiarg lines in shiny and when repetitive
+    spaces around arithmetic and boolean operators
+    test all hbef products with get_avail_lter_product_sets
+    looping through integers, use i, j, k
+    looping through vaues, use something more descriptive
+    one_line pipers: filter(DF, operation)
 
