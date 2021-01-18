@@ -8343,15 +8343,62 @@ catalogue_held_data <- function(network_domain, site_data){
             VariableName = first(VariableName),
             Unit = first(Unit)) %>%
         ungroup() %>%
-        mutate(MeanObsPerSite = round(Observations / Sites, 0)) %>%
+        mutate(MeanObsPerSite = round(Observations / Sites, 0),
+               Availability = 'feature not yet built') %>%
         select(VariableName, VariableCode, Unit, Observations, Sites,
-               MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
+               MeanObsPerSite, FirstRecordUTC, LastRecordUTC, Availability)
 
     readr::write_csv(x = all_variable_display,
                      file = 'general/catalog_files/all_variables.csv')
 
 
     #generate and write individual file for each variable, describing it by site
+
+    dir.create('general/catalog_files/indiv_variables',
+               showWarnings = FALSE)
+
+    vars <- unique(all_variable_display$VariableCode)
+
+    for(v in vars){
+
+        indiv_variable_display <- all_variable_breakdown %>%
+            filter(VariableCode == !!v) %>%
+            group_by(network, domain, site_name) %>%
+            summarize(
+                Observations = sum(Observations,
+                                   na.rm = TRUE),
+                FirstRecordUTC = min(FirstRecordUTC,
+                                     na.rm = TRUE),
+                LastRecordUTC = max(LastRecordUTC,
+                                    na.rm = TRUE),
+                Unit = first(Unit)) %>%
+            ungroup()
+
+        ndays <- difftime(time1 = indiv_variable_display$LastRecordUTC,
+                          time2 = indiv_variable_display$FirstRecordUTC,
+                          units = 'days') %>%
+            as.numeric()
+
+        indiv_variable_display$MeanObsPerDay <- round(
+            indiv_variable_display$Observations / ndays,
+            digits = 1
+        )
+
+        indiv_variable_display <- indiv_variable_display %>%
+            left_join(select(all_site_breakdown,
+                             domain, pretty_domain, network, pretty_network,
+                             site_name),
+                      by = c('network', 'domain', 'site_name')) %>%
+            select(Network = pretty_network,
+                   Domain = pretty_domain,
+                   SiteCode = site_name,
+                   Unit, Observations, FirstRecordUTC, LastRecordUTC,
+                   MeanObsPerDay)
+
+        readr::write_csv(x = indiv_variable_display,
+                         file = glue('general/catalog_files/indiv_variables/',
+                                     v, '.csv'))
+    }
 
     #generate and write file describing all sites
     #TODO: make sure to include a note about datum on display page
@@ -8367,7 +8414,9 @@ catalogue_held_data <- function(network_domain, site_data){
             LastRecordUTC = max(LastRecordUTC,
                                 na.rm = TRUE)) %>%
         ungroup() %>%
-        mutate(MeanObsPerVar = round(Observations / Variables, 0)) %>%
+        mutate(MeanObsPerVar = round(Observations / Variables, 0),
+               ExternalLink = 'feature not yet built',
+               Availability = 'feature not yet built') %>%
         left_join(all_site_breakdown,
                   by = c('network', 'domain', 'site_name')) %>%
         select(Network = pretty_network,
@@ -8379,17 +8428,57 @@ catalogue_held_data <- function(network_domain, site_data){
                Longitude = longitude,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
-               Observations, Variables, FirstRecordUTC, LastRecordUTC)
+               Observations, Variables, FirstRecordUTC, LastRecordUTC,
+               Availability, ExternalLink)
 
     readr::write_csv(x = all_site_display,
                      file = 'general/catalog_files/all_sites.csv')
 
     #generate and write individual file for each site, describing it by variable
+    dir.create('general/catalog_files/indiv_sites',
+               showWarnings = FALSE)
 
+    sites <- distinct(all_site_breakdown,
+                      network, domain, site_name)
 
+    for(i in 1:nrow(sites)){
 
-    readr::write_file(x = as.character(nobs_nonspatial),
-                      file = 'data/general/total_nonspatial_observations.txt')
+        ntw <- sites$network[i]
+        dmn <- sites$domain[i]
+        sit <- sites$site_name[i]
+
+        indiv_site_display <- all_variable_breakdown %>%
+            filter(network == ntw,
+                   domain == dmn,
+                   site_name == sit)
+
+        ndays <- difftime(time1 = indiv_site_display$LastRecordUTC,
+                          time2 = indiv_site_display$FirstRecordUTC,
+                          units = 'days') %>%
+            as.numeric()
+
+        indiv_site_display$MeanObsPerDay <- round(
+            indiv_site_display$Observations / ndays,
+            digits = 1
+        )
+
+        indiv_site_display <- indiv_site_display %>%
+            # left_join(select(all_site_breakdown,
+            #                  domain, pretty_domain, network, pretty_network,
+            #                  site_name),
+            #           by = c('network', 'domain', 'site_name')) %>%
+            select(VariableCode, VariableName, SampleRegimen, Unit,
+                   Observations, FirstRecordUTC, LastRecordUTC,
+                   MeanObsPerDay, PercentFlagged, PercentImputed)
+
+        readr::write_csv(x = indiv_site_display,
+                         file = glue('general/catalog_files/indiv_sites/',
+                                     '{n}_{d}_{s}.csv',
+                                     n = ntw,
+                                     d = dmn,
+                                     s = sit))
+    }
+
 
     #in case somebody asks for this stuff again:
 
