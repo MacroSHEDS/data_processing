@@ -8182,14 +8182,11 @@ catalogue_held_data <- function(network_domain, site_data){
     #                     lat = numeric(),
     #                     long)
 
-    all_sites_display <- site_data %>%
+    all_site_breakdown <- site_data %>%
         filter(as.logical(in_workflow)) %>%
-        select(-in_workflow, -notes, -CRS) %>%
-        mutate(nvars = NA,
-               nobs = NA,
-               first_record_UTC = NA,
-               last_record_UTC = NA)
+        select(-in_workflow, -notes, -CRS, -local_time_zone)
 
+    all_variable_breakdown <- tibble()
     for(i in 1:nrow(network_domain)){
 
         site_prods <- list.dirs(glue('data/{n}/{d}/derived',
@@ -8216,14 +8213,6 @@ catalogue_held_data <- function(network_domain, site_data){
 
             nobs_nonspatial <- nobs_nonspatial + prod_nobs
 
-            list.files(nonspatial_prods[j],
-                       full.names = TRUE,
-                       recursive = TRUE)
-
-            site_data %>%
-                filter(as.logical(in_workflow)) %>%
-                distinct(site_type)
-
             ## catalog sites for display (one at a time is the safest way)
 
             product_files <- list.files(nonspatial_prods[j],
@@ -8234,15 +8223,17 @@ catalogue_held_data <- function(network_domain, site_data){
             # nobs <- 0
             # first_record <- last_record <- lubridate::NA_POSIXct_
 
-            # single_site_display <- tibble(var = character(),
+            # product_breakdown <- tibble(var = character(),
             #                               sample_regimen = character(),
             #                               n_observations = numeric(),
             #                               first_record_UTC = lubridate::POSIXct(),
             #                               last_record_UTC = lubridate::POSIXct())
-            single_site_display <- tibble()
+
+            #read and combine product files; calculate some goodies
+            product_breakdown <- tibble()
             for(f in product_files){
 
-                single_site_display <- read_feather(f) %>%
+                product_breakdown <- read_feather(f) %>%
                     mutate(
                         sample_regimen = extract_var_prefix(var),
                         var = drop_var_prefix(var)) %>%
@@ -8256,10 +8247,11 @@ catalogue_held_data <- function(network_domain, site_data){
                         prop_flagged = sum(ms_status) / n_observations,
                         prop_imputed = sum(ms_interp) / n_observations) %>%
                     ungroup() %>%
-                    bind_rows(single_site_display)
+                    bind_rows(product_breakdown)
             }
 
-            single_site_display <- single_site_display %>%
+            #summarize and enhance goodies
+            product_breakdown <- product_breakdown %>%
                 group_by(var, sample_regimen, site_name) %>%
                 summarize(
                     n_flagged = sum(prop_flagged * n_observations,
@@ -8279,85 +8271,170 @@ catalogue_held_data <- function(network_domain, site_data){
                 ungroup() %>%
                 select(-n_flagged, -n_imputed) %>%
                 mutate(sample_regimen = case_when(
-                    sample_regimen == 'GS' ~ 'sensor-grab',
-                    sample_regimen == 'IS' ~ 'sensor-installed',
-                    sample_regimen == 'GN' ~ 'nonsensor-grab',
-                    sample_regimen == 'IN' ~ 'nonsensor-installed')) %>%
+                    sample_regimen == 'GS' ~ 'grab-sensor',
+                    sample_regimen == 'IS' ~ 'installed-sensor',
+                    sample_regimen == 'GN' ~ 'grab-nonsensor',
+                    sample_regimen == 'IN' ~ 'installed-nonsensor')) %>%
                 select(site_name, var, sample_regimen, n_observations,
                        first_record_UTC, last_record_UTC, pct_flagged,
                        pct_imputed)
 
-            single_site_cross_regimen <- single_site_display %>%
+            #if multiple sample regimens for a site-variable, aggregate and append them as sample_regimen "all"
+            product_breakdown <- product_breakdown %>%
                 group_by(site_name, var) %>%
                 summarize(
-                    n_observations = sum(n_observations,
-                                         na.rm = TRUE),
-                    pct_flagged = round(sum(pct_flagged,,
-                                            na.rm = TRUE),
-                                        digits = 2),
-                    pct_imputed = round(n_imputed / n_observations * 100,
-                                        digits = 2),
-                    first_record_UTC = min(first_record_UTC,
-                                           na.rm = TRUE),
-                    last_record_UTC = max(last_record_UTC,
-                                          na.rm = TRUE)) %>%
+                    n_observations = if(n() > 1) sum(n_observations, na.rm = TRUE) else first(n_observations),
+                    pct_flagged = if(n() > 1) round(sum(pct_flagged, na.rm = TRUE), digits = 2) else first(pct_flagged),
+                    pct_imputed = if(n() > 1) round(sum(pct_imputed, na.rm = TRUE), digits = 2) else first(pct_imputed),
+                    first_record_UTC = if(n() > 1) min(first_record_UTC, na.rm = TRUE) else first(first_record_UTC),
+                    last_record_UTC = if(n() > 1) max(last_record_UTC, na.rm = TRUE) else first(last_record_UTC),
+                    sample_regimen = if(n() > 1) 'all' else 'drop'
+                ) %>%
                 ungroup() %>%
+                filter(sample_regimen != 'drop') %>%
+                bind_rows(product_breakdown)
 
+            #merge other stuff from variables and site_data config sheets;
+            #final sorting and renaming
+            #(TODO: add methods once we have that worked out)
+            product_breakdown <- product_breakdown %>%
+                left_join(select(ms_vars,
+                                 variable_code, variable_name, unit), #, method
+                          by = c('var' = 'variable_code')) %>%
+                left_join(select(all_site_breakdown,
+                                 network, domain, site_name),
+                          by = 'site_name') %>%
+                select(network,
+                       domain,
+                       site_name,
+                       VariableCode = var,
+                       VariableName = variable_name,
+                       SampleRegimen = sample_regimen,
+                       Unit = unit,
+                       Observations = n_observations,
+                       FirstRecordUTC = first_record_UTC,
+                       LastRecordUTC = last_record_UTC,
+                       PercentFlagged = pct_flagged,
+                       PercentImputed = pct_imputed) %>%
+                arrange(network, domain, site_name, VariableCode, SampleRegimen) %>%
+                filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
 
-
-
-            #other quick 'n dirty stuff
-
-
-            #domains per network
-            site_data %>%
-                filter(as.logical(in_workflow)) %>%
-                group_by(network) %>%
-                summarize(n_domains = length(unique(domain)))
-
-            #sites per domain
-            site_data$stream[is.na(site_data$stream)] = 1:sum(is.na(site_data$stream))
-            site_data %>%
-                filter(as.logical(in_workflow),
-                       site_type != 'rain_gauge') %>%
-                group_by(network, domain) %>%
-                summarize(n_sites = length(unique(site_name)),
-                          n_unique_streams = length(unique(stream)))
-
-            #mean sites per domain
-            site_data %>%
-                filter(as.logical(in_workflow),
-                       site_type != 'rain_gauge') %>%
-                group_by(network, domain) %>%
-                summarize(n_sites = length(unique(site_name))) %>%
-                ungroup() %>%
-                {mean(.$n_sites)}
-
-            #total sites
-            site_data %>%
-                filter(as.logical(in_workflow),
-                       site_type != 'rain_gauge') %>%
-                group_by(network, domain) %>%
-                summarize(n_sites = length(unique(site_name))) %>%
-                ungroup() %>%
-                {sum(.$n_sites)}
-
-            #total unique streams
-            site_data %>%
-                filter(as.logical(in_workflow),
-                       site_type != 'rain_gauge') %>%
-                group_by(network, domain) %>%
-                summarize(n_sites = length(unique(site_name)),
-                          n_unique_streams = length(unique(stream))) %>%
-                ungroup() %>%
-                {sum(.$n_unique_streams)}
-
-
+            #combine with other product summaries
+            all_variable_breakdown <- bind_rows(all_variable_breakdown,
+                                                product_breakdown)
         }
     }
 
+    setwd('../portal/data/')
+    dir.create('general/catalog_files',
+               showWarnings = FALSE)
+
+    #generate and write file describing all variables
+    all_variable_display <- all_variable_breakdown %>%
+        group_by(VariableCode) %>%
+        summarize(
+            Observations = sum(Observations,
+                               na.rm = TRUE),
+            Sites = length(unique(paste0(network, domain, site_name))),
+            FirstRecordUTC = min(FirstRecordUTC,
+                                 na.rm = TRUE),
+            LastRecordUTC = max(LastRecordUTC,
+                                na.rm = TRUE),
+            VariableName = first(VariableName),
+            Unit = first(Unit)) %>%
+        ungroup() %>%
+        mutate(MeanObsPerSite = round(Observations / Sites, 0)) %>%
+        select(VariableName, VariableCode, Unit, Observations, Sites,
+               MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
+
+    readr::write_csv(x = all_variable_display,
+                     file = 'general/catalog_files/all_variables.csv')
+
+
+    #generate and write individual file for each variable, describing it by site
+
+    #generate and write file describing all sites
+    #TODO: make sure to include a note about datum on display page
+    #   also, incude url column somehow
+    all_site_display <- all_variable_breakdown %>%
+        group_by(network, domain, site_name) %>%
+        summarize(
+            Observations = sum(Observations,
+                               na.rm = TRUE),
+            Variables = length(unique(VariableCode)),
+            FirstRecordUTC = min(FirstRecordUTC,
+                                 na.rm = TRUE),
+            LastRecordUTC = max(LastRecordUTC,
+                                na.rm = TRUE)) %>%
+        ungroup() %>%
+        mutate(MeanObsPerVar = round(Observations / Variables, 0)) %>%
+        left_join(all_site_breakdown,
+                  by = c('network', 'domain', 'site_name')) %>%
+        select(Network = pretty_network,
+               Domain = pretty_domain,
+               SiteName = full_name,
+               SiteCode = site_name,
+               StreamName = stream,
+               Latitude = latitude,
+               Longitude = longitude,
+               SiteType = site_type,
+               AreaHectares = ws_area_ha,
+               Observations, Variables, FirstRecordUTC, LastRecordUTC)
+
+    readr::write_csv(x = all_site_display,
+                     file = 'general/catalog_files/all_sites.csv')
+
+    #generate and write individual file for each site, describing it by variable
+
+
+
     readr::write_file(x = as.character(nobs_nonspatial),
-                      file = '../portal/data/general/total_nonspatial_observations.txt')
+                      file = 'data/general/total_nonspatial_observations.txt')
+
+    #in case somebody asks for this stuff again:
+
+    # #domains per network
+    # site_data %>%
+    #     filter(as.logical(in_workflow)) %>%
+    #     group_by(network) %>%
+    #     summarize(n_domains = length(unique(domain)))
+    #
+    # #sites per domain
+    # site_data$stream[is.na(site_data$stream)] = 1:sum(is.na(site_data$stream))
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name)),
+    #               n_unique_streams = length(unique(stream)))
+    #
+    # #mean sites per domain
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name))) %>%
+    #     ungroup() %>%
+    #     {mean(.$n_sites)}
+    #
+    # #total sites
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name))) %>%
+    #     ungroup() %>%
+    #     {sum(.$n_sites)}
+    #
+    # #total unique streams
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name)),
+    #               n_unique_streams = length(unique(stream))) %>%
+    #     ungroup() %>%
+    #     {sum(.$n_unique_streams)}
 }
 
 expo_backoff <- function(expr,
