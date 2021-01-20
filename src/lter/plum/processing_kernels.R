@@ -921,19 +921,6 @@ process_1_104 <- function(network, domain, prodname_ms, site_name,
                                              'POC' = 'mg/l',
                                              'PON' = 'mg/l'))
 
-    #Issues with split chemistry data, see note in process_1_106
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d,
-    #                           desired_interval = '1 day', #set to '15 min' when we have server
-    #                           impute_limit = 30)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -975,7 +962,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_name,
     d <- ms_conversions(d,
                         convert_units_from = c('NH4_N' = 'umol/l',
                                                'PO4_P' = 'umol/l',
-                                               'NO3_NO2_N' = 'umol/l',
+                                               'NO3_NO2' = 'umol/l',
                                                'NO2_N' = 'umol/l',
                                                'Si' = 'umol/l',
                                                'Cl' = 'umol/l',
@@ -989,7 +976,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_name,
                                                'TDP' = 'umol/l'),
                         convert_units_to = c('NH4_N' = 'mg/l',
                                              'PO4_P' = 'mg/l',
-                                             'NO3_NO2_N' = 'mg/l',
+                                             'NO3_NO2' = 'mg/l',
                                              'NO2_N' = 'mg/l',
                                              'Si' = 'mg/l',
                                              'Cl' = 'mg/l',
@@ -1001,19 +988,6 @@ process_1_108 <- function(network, domain, prodname_ms, site_name,
                                              'PON' = 'mg/l',
                                              'POC' = 'mg/l',
                                              'TDP' = 'mg/l'))
-
-    #Issues with split chemistry data, see note in process_1_106
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d,
-    #                           desired_interval = '1 day', #set to '15 min' when we have server
-    #                           impute_limit = 30)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -1042,7 +1016,7 @@ process_1_106 <- function(network, domain, prodname_ms, site_name,
                                               'saw_mill_brook' = 'SB',
                                               'ipswich_dam' = c('ID', 'ID '),
                                               'parker_dam' = 'PD'),
-                         data_cols =  c('TP', 'TN', 'NO3' = 'NO3_NO2', 'TOC'),
+                         data_cols =  c('TP', 'TN', 'NO3' = 'NO3_NO2_N', 'TOC'),
                          summary_flagcols = 'Notes',
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
@@ -1058,60 +1032,12 @@ process_1_106 <- function(network, domain, prodname_ms, site_name,
     d <- ms_conversions(d,
                    convert_units_from = c('TP' = 'umol/l',
                                           'TN' = 'umol/l',
-                                          'NO3_NO2' = 'umol/l',
+                                          'NO3_NO2_N' = 'umol/l',
                                           'TOC' = 'umol/l'),
                    convert_units_to = c('TP' = 'mg/l',
                                         'TN' = 'mg/l',
-                                        'NO3_NO2' = 'mg/l',
+                                        'NO3_NO2_N' = 'mg/l',
                                         'TOC' = 'mg/l'))
-
-    #Plum separates chemistry into different products based on sampling
-    #program/study Resulting in the same variables being in multiple products for
-    #the same sites. This is an issues for synchronize_timestep() because we want
-    #to do this with all available data, not twice with half the data each time.
-    #This is a simple fix but not very elegant and susceptible to possible
-    #unforeseen issues, probably worth addressing as this may arise again.
-
-    # prodpaths_108 <- ms_list_files(network = network,
-    #                            domain = domain,
-    #                            prodname_ms = 'stream_chemistry__108')
-    #
-    # chem_108 <- tibble()
-    # for(i in 1:length(prodpaths_108)){
-    #     part <- read_feather(prodpaths_108[i])
-    #     chem_108 <- bind_rows(chem_108, part)
-    # }
-    #
-    # prodpaths_104 <- ms_list_files(network = network,
-    #                            domain = domain,
-    #                            prodname_ms = 'stream_chemistry__104')
-    #
-    # chem_104 <- tibble()
-    # for(i in 1:length(prodpaths_104)){
-    #     part <- read_feather(prodpaths_104[i])
-    #     chem_104 <- bind_rows(chem_104, part)
-    # }
-    #
-    # if(class(chem_108) == 'try-error') {
-    #     stop('stream_chemistry__108 must be munged before stream_chemistry__106')
-    # }
-    #
-    # if(class(chem_104) == 'try-error') {
-    #     stop('stream_chemistry__104 must be munged before stream_chemistry__106')
-    # }
-    #
-    # d <- rbind(d, select(chem_108, -val_err), select(chem_104, -val_err))
-    #
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d,
-    #                           desired_interval = '1 day', #set to '15 min' when we have server
-    #                           impute_limit = 30)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
