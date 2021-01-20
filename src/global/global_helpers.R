@@ -1713,7 +1713,7 @@ get_all_local_helpers <- function(network, domain){
     #return()
 }
 
-set_up_logger <- function(network=domain, domain){
+set_up_logger <- function(network = domain, domain){
 
     #the logging package establishes logger hierarchy based on name.
     #our root logger is named "ms", and our network-domain loggers are named
@@ -1723,16 +1723,23 @@ set_up_logger <- function(network=domain, domain){
     #"ms.lter.hbef", "ms.lter", and "ms", some of which may not have established
     #handlers
 
-    logger_name = glue('ms.{n}.{d}', n=network, d=domain)
-    logger_module = glue(logger_name, '.module')
+    logger_name <- glue('ms.{n}.{d}',
+                       n = network,
+                       d = domain)
+
+    logger_module <- glue(logger_name,
+                          '.module')
 
     if(! dir.exists('logs')){
         dir.create('logs',
                    showWarnings = FALSE)
     }
 
-    logging::addHandler(logging::writeToFile, logger=logger_name,
-                        file=glue('logs/{n}_{d}.log', n=network, d=domain))
+    logging::addHandler(handler = logging::writeToFile,
+                        logger = logger_name,
+                        file = glue('logs/{n}_{d}.log',
+                                    n = network,
+                                    d = domain))
 
     return(logger_module)
 }
@@ -2810,9 +2817,15 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         site_buf <- sf::st_buffer(x = site,
                                   dist = buffer_radius)
-        dem <- elevatr::get_elev_raster(locations = site_buf,
-                                        z = dem_resolution,
-                                        verbose = verbose)
+
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = site_buf,
+                                         z = dem_resolution,
+                                         verbose = verbose)
+            },
+            max_attempts = 4
+        )
 
         raster::writeRaster(x = dem,
                             filename = dem_f,
@@ -3003,8 +3016,15 @@ delineate_watershed_by_specification <- function(lat,
 
     site_buf <- sf::st_buffer(x = site,
                               dist = buffer_radius)
-    dem <- sm(elevatr::get_elev_raster(locations = site_buf,
-                                       z = dem_resolution))
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = site_buf,
+                                     z = dem_resolution,
+                                     verbose = verbose)
+        },
+        max_attempts = 4
+    )
 
     raster::writeRaster(x = dem,
                         filename = dem_f,
@@ -3288,7 +3308,7 @@ ms_derive <- function(network = domain, domain){
 
         newcode <- new_prodcodes[i]
 
-        thisenv = environment() #DELETE THIS
+        thisenv = environment() #DELETE THIS CHECK WHEN FINISHED
         bypass_append = FALSE
         tryCatch({
             create_derived_links(network = network,
@@ -3306,7 +3326,7 @@ ms_derive <- function(network = domain, domain){
             assign('bypass_append', TRUE, envir=thisenv) #DELETE THIS
         })
 
-        if(! bypass_append){  #DELETE THIS
+        if(! bypass_append){  #MAKE THIS UNCONDITIONAL
         append_to_productfile(
             network = network,
             domain = domain,
@@ -3314,7 +3334,7 @@ ms_derive <- function(network = domain, domain){
             prodname = prodname,
             derive_status = 'linked',
             notes = 'automated entry')
-        } #DELETE THIS
+        }
     }
 
     #compile any compprods and derive derprods (run all code in derive.R).
@@ -4334,7 +4354,14 @@ delineate_watershed_nhd <- function(lat, long) {
         outline_buff <- outline %>%
             sf::st_buffer(5000)
 
-        dem <- elevatr::get_elev_raster(as(outline_buff, 'Spatial'), z=12)
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
+                                         z = 12,
+                                         verbose = FALSE)
+            },
+            max_attempts = 4
+        )
 
         temp_raster <- tempfile(fileext = ".tif")
 
@@ -4580,7 +4607,11 @@ read_combine_feathers <- function(network,
     return(combined)
 }
 
-choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
+choose_projection <- function(lat = NULL,
+                              long = NULL,
+                              unprojected = FALSE){
+
+    #TODO: CHOOSE PROJECTIONS MORE CAREFULLY
 
     if(unprojected){
         PROJ4 <- glue('+proj=longlat +datum=WGS84 +no_defs ',
@@ -4592,11 +4623,26 @@ choose_projection <- function(lat = NULL, long = NULL, unprojected = FALSE){
         stop('If projecting, lat and long are required.')
     }
 
-    if(lat <= 15 && lat >= -15){ #equatorial
+    abslat <- abs(lat)
+
+    if(abslat < 23){ #tropical
         PROJ4 = glue('+proj=laea +lon_0=', long)
+                 # ' +datum=WGS84 +units=m +no_defs')
     } else { #temperate or polar
         PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
     }
+                     # ' +datum=WGS84 +units=m +no_defs')
+
+    # if(abslat < 23){ #tropical
+    #     PROJ4 <- 9835 #Lambert cylindrical equal area (ellipsoidal; should spherical 9834 be used instead?)
+    # } else if(abslat > 23 && abslat < 66){ # middle latitudes
+    #     PROJ4 <- 9822 #albers equal area conic
+    # } else { #polar (abslat >= 66)
+    #     PROJ4 <- 9820 #lambert equal area azimuthal
+    #     # PROJ4 <- 1027 #lambert equal area azimuthal (spherical)
+    # }
+    # PROJ4 <- 3857 #WGS 84 / Pseudo-Mercator
+    # PROJ4 <- 2163
 
     return(PROJ4)
 }
@@ -5735,10 +5781,18 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
-    dem <- sm(elevatr::get_elev_raster(locations = wb_rg_bbox,
-                                       z = 8, #res should adjust with area?
-                                       clip = 'bbox',
-                                       expand = 200))
+
+
+    dem <- expo_backoff(
+        expr = {
+            elevatr::get_elev_raster(locations = wb_rg_bbox,
+                                     z = 8, #res should adjust with area?,
+                                     clip = 'bbox',
+                                     expand = 200,
+                                     verbose = FALSE)
+        },
+        max_attempts = 4
+    )
 
     #add elev column to rain gauges
     rg$elevation <- terra::extract(dem, rg)
@@ -7967,6 +8021,9 @@ generate_portal_extras <- function(site_data){
 
     calculate_flux_by_area(site_data = site_data)
     write_portal_config_datasets()
+    catalogue_held_data(site_data = site_data,
+                        network_domain = network_domain)
+    combine_ws_boundaries()
 }
 
 calculate_flux_by_area <- function(site_data){
@@ -8119,4 +8176,466 @@ munge_versionless_product <- function(network,
                               site_name = site_name,
                               new_status = new_status)
     }
+}
+
+catalogue_held_data <- function(network_domain, site_data){
+
+    #tabulates:
+    # + total nonspatial observations for the portal landing page
+    # +
+
+    nobs_nonspatial <- 0
+    # site_display <- tibble()
+    # site_vars <- tibble(network = character(),
+    #                     domain = character(),
+    #                     site = character(),
+    #                     stream = character(),
+    #                     lat = numeric(),
+    #                     long)
+
+    all_site_breakdown <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(-in_workflow, -notes, -CRS, -local_time_zone)
+
+    all_variable_breakdown <- tibble()
+    for(i in 1:nrow(network_domain)){
+
+        site_prods <- list.dirs(glue('data/{n}/{d}/derived',
+                                    n = network_domain$network[i],
+                                    d = network_domain$domain[i]),
+                               full.names = TRUE)
+
+        if(length(site_prods) == 0) next
+
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+                                  x = site_prods)
+
+        spatial_prods <- site_prods[spatial_prod_inds]
+        nonspatial_prods <- site_prods[-spatial_prod_inds]
+
+        for(j in 1:length(nonspatial_prods)){
+
+            ## sum all observations across all sites (will be redundant when the rest is done)
+            prod_nobs <- list.files(nonspatial_prods[j],
+                                    full.names = TRUE,
+                                    recursive = TRUE) %>%
+                purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
+                purrr:::reduce(sum)
+
+            nobs_nonspatial <- nobs_nonspatial + prod_nobs
+
+            ## catalog sites for display (one at a time is the safest way)
+
+            product_files <- list.files(nonspatial_prods[j],
+                       full.names = TRUE,
+                       recursive = TRUE)
+
+            # product_vars <- c()
+            # nobs <- 0
+            # first_record <- last_record <- lubridate::NA_POSIXct_
+
+            # product_breakdown <- tibble(var = character(),
+            #                               sample_regimen = character(),
+            #                               n_observations = numeric(),
+            #                               first_record_UTC = lubridate::POSIXct(),
+            #                               last_record_UTC = lubridate::POSIXct())
+
+            #read and combine product files; calculate some goodies
+            product_breakdown <- tibble()
+            for(f in product_files){
+
+                product_breakdown <- read_feather(f) %>%
+                    mutate(
+                        sample_regimen = extract_var_prefix(var),
+                        var = drop_var_prefix(var)) %>%
+                    group_by(var, sample_regimen, site_name) %>%
+                    summarize(
+                        n_observations = n(),
+                        first_record_UTC = min(datetime,
+                                               na.rm = TRUE),
+                        last_record_UTC = max(datetime,
+                                              na.rm = TRUE),
+                        prop_flagged = sum(ms_status) / n_observations,
+                        prop_imputed = sum(ms_interp) / n_observations) %>%
+                    ungroup() %>%
+                    bind_rows(product_breakdown)
+            }
+
+            #summarize and enhance goodies
+            product_breakdown <- product_breakdown %>%
+                group_by(var, sample_regimen, site_name) %>%
+                summarize(
+                    n_flagged = sum(prop_flagged * n_observations,
+                                    na.rm = TRUE),
+                    n_imputed = sum(prop_imputed * n_observations,
+                                    na.rm = TRUE),
+                    n_observations = sum(n_observations,
+                                         na.rm = TRUE),
+                    pct_flagged = round(n_flagged / n_observations * 100,
+                                        digits = 2),
+                    pct_imputed = round(n_imputed / n_observations * 100,
+                                        digits = 2),
+                    first_record_UTC = min(first_record_UTC,
+                                           na.rm = TRUE),
+                    last_record_UTC = max(last_record_UTC,
+                                          na.rm = TRUE)) %>%
+                ungroup() %>%
+                select(-n_flagged, -n_imputed) %>%
+                mutate(sample_regimen = case_when(
+                    sample_regimen == 'GS' ~ 'grab-sensor',
+                    sample_regimen == 'IS' ~ 'installed-sensor',
+                    sample_regimen == 'GN' ~ 'grab-nonsensor',
+                    sample_regimen == 'IN' ~ 'installed-nonsensor')) %>%
+                select(site_name, var, sample_regimen, n_observations,
+                       first_record_UTC, last_record_UTC, pct_flagged,
+                       pct_imputed)
+
+            #if multiple sample regimens for a site-variable, aggregate and append them as sample_regimen "all"
+            product_breakdown <- product_breakdown %>%
+                group_by(site_name, var) %>%
+                summarize(
+                    n_observations = if(n() > 1) sum(n_observations, na.rm = TRUE) else first(n_observations),
+                    pct_flagged = if(n() > 1) round(sum(pct_flagged, na.rm = TRUE), digits = 2) else first(pct_flagged),
+                    pct_imputed = if(n() > 1) round(sum(pct_imputed, na.rm = TRUE), digits = 2) else first(pct_imputed),
+                    first_record_UTC = if(n() > 1) min(first_record_UTC, na.rm = TRUE) else first(first_record_UTC),
+                    last_record_UTC = if(n() > 1) max(last_record_UTC, na.rm = TRUE) else first(last_record_UTC),
+                    sample_regimen = if(n() > 1) 'all' else 'drop'
+                ) %>%
+                ungroup() %>%
+                filter(sample_regimen != 'drop') %>%
+                bind_rows(product_breakdown)
+
+            #merge other stuff from variables and site_data config sheets;
+            #final sorting and renaming
+            #(TODO: add methods once we have that worked out)
+            product_breakdown <- product_breakdown %>%
+                left_join(select(ms_vars,
+                                 variable_code, variable_name, unit), #, method
+                          by = c('var' = 'variable_code')) %>%
+                left_join(select(all_site_breakdown,
+                                 network, domain, site_name),
+                          by = 'site_name') %>%
+                select(network,
+                       domain,
+                       site_name,
+                       VariableCode = var,
+                       VariableName = variable_name,
+                       SampleRegimen = sample_regimen,
+                       Unit = unit,
+                       Observations = n_observations,
+                       FirstRecordUTC = first_record_UTC,
+                       LastRecordUTC = last_record_UTC,
+                       PercentFlagged = pct_flagged,
+                       PercentImputed = pct_imputed) %>%
+                arrange(network, domain, site_name, VariableCode, SampleRegimen) %>%
+                filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
+
+            #combine with other product summaries
+            all_variable_breakdown <- bind_rows(all_variable_breakdown,
+                                                product_breakdown)
+        }
+    }
+
+    setwd('../portal/data/')
+    dir.create('general/catalog_files',
+               showWarnings = FALSE)
+
+    #generate and write file describing all variables
+    all_variable_display <- all_variable_breakdown %>%
+        group_by(VariableCode) %>%
+        summarize(
+            Observations = sum(Observations,
+                               na.rm = TRUE),
+            Sites = length(unique(paste0(network, domain, site_name))),
+            FirstRecordUTC = min(FirstRecordUTC,
+                                 na.rm = TRUE),
+            LastRecordUTC = max(LastRecordUTC,
+                                na.rm = TRUE),
+            VariableName = first(VariableName),
+            Unit = first(Unit)) %>%
+        ungroup() %>%
+        mutate(MeanObsPerSite = round(Observations / Sites, 0),
+               Availability = 'feature not yet built') %>%
+        select(VariableName, VariableCode, Unit, Observations, Sites,
+               MeanObsPerSite, FirstRecordUTC, LastRecordUTC, Availability)
+
+    readr::write_csv(x = all_variable_display,
+                     file = 'general/catalog_files/all_variables.csv')
+
+
+    #generate and write individual file for each variable, describing it by site
+
+    dir.create('general/catalog_files/indiv_variables',
+               showWarnings = FALSE)
+
+    vars <- unique(all_variable_display$VariableCode)
+
+    for(v in vars){
+
+        indiv_variable_display <- all_variable_breakdown %>%
+            filter(VariableCode == !!v) %>%
+            group_by(network, domain, site_name) %>%
+            summarize(
+                Observations = sum(Observations,
+                                   na.rm = TRUE),
+                FirstRecordUTC = min(FirstRecordUTC,
+                                     na.rm = TRUE),
+                LastRecordUTC = max(LastRecordUTC,
+                                    na.rm = TRUE),
+                Unit = first(Unit)) %>%
+            ungroup()
+
+        ndays <- difftime(time1 = indiv_variable_display$LastRecordUTC,
+                          time2 = indiv_variable_display$FirstRecordUTC,
+                          units = 'days') %>%
+            as.numeric()
+
+        indiv_variable_display$MeanObsPerDay <- round(
+            indiv_variable_display$Observations / ndays,
+            digits = 1
+        )
+
+        indiv_variable_display <- indiv_variable_display %>%
+            left_join(select(all_site_breakdown,
+                             domain, pretty_domain, network, pretty_network,
+                             site_name),
+                      by = c('network', 'domain', 'site_name')) %>%
+            select(Network = pretty_network,
+                   Domain = pretty_domain,
+                   SiteCode = site_name,
+                   Unit, Observations, FirstRecordUTC, LastRecordUTC,
+                   MeanObsPerDay)
+
+        readr::write_csv(x = indiv_variable_display,
+                         file = glue('general/catalog_files/indiv_variables/',
+                                     v, '.csv'))
+    }
+
+    #generate and write file describing all sites
+    #TODO: make sure to include a note about datum on display page
+    #   also, incude url column somehow
+    all_site_display <- all_variable_breakdown %>%
+        group_by(network, domain, site_name) %>%
+        summarize(
+            Observations = sum(Observations,
+                               na.rm = TRUE),
+            Variables = length(unique(VariableCode)),
+            FirstRecordUTC = min(FirstRecordUTC,
+                                 na.rm = TRUE),
+            LastRecordUTC = max(LastRecordUTC,
+                                na.rm = TRUE)) %>%
+        ungroup() %>%
+        mutate(MeanObsPerVar = round(Observations / Variables, 0),
+               ExternalLink = 'feature not yet built',
+               Availability = 'feature not yet built') %>%
+        left_join(all_site_breakdown,
+                  by = c('network', 'domain', 'site_name')) %>%
+        select(Network = pretty_network,
+               Domain = pretty_domain,
+               SiteName = full_name,
+               SiteCode = site_name,
+               StreamName = stream,
+               Latitude = latitude,
+               Longitude = longitude,
+               SiteType = site_type,
+               AreaHectares = ws_area_ha,
+               Observations, Variables, FirstRecordUTC, LastRecordUTC,
+               Availability, ExternalLink)
+
+    readr::write_csv(x = all_site_display,
+                     file = 'general/catalog_files/all_sites.csv')
+
+    #generate and write individual file for each site, describing it by variable
+    dir.create('general/catalog_files/indiv_sites',
+               showWarnings = FALSE)
+
+    sites <- distinct(all_site_breakdown,
+                      network, domain, site_name)
+
+    for(i in 1:nrow(sites)){
+
+        ntw <- sites$network[i]
+        dmn <- sites$domain[i]
+        sit <- sites$site_name[i]
+
+        indiv_site_display <- all_variable_breakdown %>%
+            filter(network == ntw,
+                   domain == dmn,
+                   site_name == sit)
+
+        ndays <- difftime(time1 = indiv_site_display$LastRecordUTC,
+                          time2 = indiv_site_display$FirstRecordUTC,
+                          units = 'days') %>%
+            as.numeric()
+
+        indiv_site_display$MeanObsPerDay <- round(
+            indiv_site_display$Observations / ndays,
+            digits = 1
+        )
+
+        indiv_site_display <- indiv_site_display %>%
+            # left_join(select(all_site_breakdown,
+            #                  domain, pretty_domain, network, pretty_network,
+            #                  site_name),
+            #           by = c('network', 'domain', 'site_name')) %>%
+            select(VariableCode, VariableName, SampleRegimen, Unit,
+                   Observations, FirstRecordUTC, LastRecordUTC,
+                   MeanObsPerDay, PercentFlagged, PercentImputed)
+
+        readr::write_csv(x = indiv_site_display,
+                         file = glue('general/catalog_files/indiv_sites/',
+                                     '{n}_{d}_{s}.csv',
+                                     n = ntw,
+                                     d = dmn,
+                                     s = sit))
+    }
+
+
+    #in case somebody asks for this stuff again:
+
+    # #domains per network
+    # site_data %>%
+    #     filter(as.logical(in_workflow)) %>%
+    #     group_by(network) %>%
+    #     summarize(n_domains = length(unique(domain)))
+    #
+    # #sites per domain
+    # site_data$stream[is.na(site_data$stream)] = 1:sum(is.na(site_data$stream))
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name)),
+    #               n_unique_streams = length(unique(stream)))
+    #
+    # #mean sites per domain
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name))) %>%
+    #     ungroup() %>%
+    #     {mean(.$n_sites)}
+    #
+    # #total sites
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name))) %>%
+    #     ungroup() %>%
+    #     {sum(.$n_sites)}
+    #
+    # #total unique streams
+    # site_data %>%
+    #     filter(as.logical(in_workflow),
+    #            site_type != 'rain_gauge') %>%
+    #     group_by(network, domain) %>%
+    #     summarize(n_sites = length(unique(site_name)),
+    #               n_unique_streams = length(unique(stream))) %>%
+    #     ungroup() %>%
+    #     {sum(.$n_unique_streams)}
+}
+
+expo_backoff <- function(expr,
+                         max_attempts = 10,
+                         verbose = FALSE){
+
+    for(attempt_i in seq_len(max_attempts)){
+
+        results <- try(expr = expr,
+                       silent = TRUE)
+
+        if('try-error' %in% class(results)){
+
+            backoff <- runif(n = 1,
+                             min = 0,
+                             max = 2^attempt_i - 1)
+
+            if(verbose){
+                message("Backing off for ", backoff, " seconds.")
+            }
+
+            Sys.sleep(backoff)
+
+        } else {
+
+            if(verbose){
+                message("Succeeded after ", attempt_i, " attempts.")
+            }
+
+            break
+        }
+    }
+
+    return(results)
+}
+
+combine_ws_boundaries <- function(){
+
+    setwd('../portal/data/')
+
+    ws_dirs <- dir(pattern = 'ws_boundary',
+                   recursive = TRUE,
+                   include.dirs = TRUE)
+
+    ws_dirs <- grep(pattern = '^(?!.*documentation).*$',
+                    x = ws_dirs,
+                    value =  TRUE,
+                    perl = TRUE)
+
+    ws_list <- list()
+
+    for(i in 1:length(ws_dirs)){
+
+        ws_files <- list.files(ws_dirs[i],
+                               pattern = '*shp',
+                               recursive = TRUE,
+                               full.names = TRUE)
+
+        #read shapefiles, coerce to POLYGON, project, smooth borders
+        ws_list_sub <- lapply(X = ws_files,
+                              FUN = function(x){
+
+                                  site_name <- str_match(string = x,
+                                                         pattern = '^.*/(.*?)\\.shp$')[, 2]
+
+                                  wb <- x %>%
+                                      sf::st_read(quiet = TRUE) %>%
+                                      sf::st_cast(to = 'POLYGON') %>%
+                                      sf::st_union() %>%
+                                      sf::st_as_sf() %>%
+                                      mutate(site_name = !!site_name) %>%
+                                      select(site_name, geometry = x)
+
+                                  coords <- sf::st_coordinates(wb)
+                                  mean_latlong <- unname(colMeans(coords[, 1:2]))
+
+                                  proj <- choose_projection(lat = mean_latlong[2],
+                                                            long = mean_latlong[1])
+
+                                  wb %>%
+                                      sf::st_transform(crs = proj) %>%
+                                      sf::st_simplify(dTolerance = 30,
+                                                      preserveTopology = TRUE) %>%
+                                      sf::st_transform(crs = 4326) #back to WGS 84
+
+                                  # if(length(x$geometry[[1]]) == 0) print(paste(i, site_name))
+                              })
+
+        ws_list <- append(x = ws_list,
+                          values = ws_list_sub)
+    }
+
+    combined <- do.call(bind_rows, ws_list)
+
+    dir.create(path = 'general/shed_boundary',
+               showWarnings = FALSE)
+
+    sf::st_write(obj = combined,
+                 dsn = 'general/shed_boundary',
+                 layer = 'shed_boundary.shp',
+                 driver = 'ESRI Shapefile',
+                 delete_layer = TRUE,
+                 silent = TRUE)
 }
