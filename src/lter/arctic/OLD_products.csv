@@ -1,0 +1,148 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+10502,discharge,ready,ready,ready,stream_flux__ms003,Kuparuk River,1983_Kuparuk_Q_csv
+10503,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1984_Kuparuk_Q_csv
+10504,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1985_Kuparuk_Temp_Q_csv
+10505,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1986_Kuparuk_Temp_Q_csv
+10505,streamchemistry,NA,NA,NA,stream_flux__ms003,Kuparuk River,1986_Kuparuk_Temp_Q_csv
+1330,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1987_Kuparuk_Q_csv
+1331,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1988_Kuparuk_Temp_Q_csv
+1334,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1989_Kuparuk_Temp_Q_csv
+1337,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1990_Kuparuk_Temp_Q_csv
+1340,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1991_Kuparuk_Temp_Q_csv
+1344,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1992_Kuparuk_Temp_Q_csv
+1348,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1993_Kuparuk_Temp_Q_csv
+1352,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1994_Kuparuk_Temp_Q_csv
+1356,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1995_Kuparuk_Temp_Q_csv
+1360,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1996_Kuparuk_Temp_Q_csv
+1363,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1997_Kuparuk_Temp_Q_csv
+1331,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1988_Kuparuk_Temp_Q_csv
+1334,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1989_Kuparuk_Temp_Q_csv
+1337,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1990_Kuparuk_Temp_Q_csv
+1340,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1991_Kuparuk_Temp_Q_csv
+1344,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1992_Kuparuk_Temp_Q_csv
+1348,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1993_Kuparuk_Temp_Q_csv
+1352,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1994_Kuparuk_Temp_Q_csv
+1356,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1995_Kuparuk_Temp_Q_csv
+1360,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1996_Kuparuk_Temp_Q_csv
+1363,stream_chemistry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1997_Kuparuk_Temp_Q_csv
+1367,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1998_Kuparuk_Q_csv
+1370,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,1999_Kuparuk_Temp_Q_csv
+1316,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2000_Kuparuk_Temp_Q_csv
+1320,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2001_Kuparuk_Temp_Q_csv
+1324,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2002_Kuparuk_Temp_Q_csv
+10512,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2003_Kuparuk_Temp_Q_csv
+10513,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2004_Kuparuk_Temp_Q_csv
+10514,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2005_Kuparuk_Temp_Q_csv
+10515,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2006_Kuparuk_Temp_Q_csv
+10516,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2007_Kuparuk_Temp_Q_csv
+10517,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2008_Kuparuk_Temp_Q_csv
+10518,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2009_Kuparuk_Temp_Q_csv
+10519,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2010_Kuparuk_Temp_Q_csv
+10520,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2011_Kuparuk_Temp_Q_csv
+10521,discharge,ready,ready,NA,stream_flux__ms003,Kuparuk River,2012_Kuparuk_Temp_Q_csv
+1370,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,1999_Kuparuk_Temp_Q_csv
+1316,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2000_Kuparuk_Temp_Q_csv
+1320,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2001_Kuparuk_Temp_Q_csv
+1324,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2002_Kuparuk_Temp_Q_csv
+10512,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2003_Kuparuk_Temp_Q_csv
+10513,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2004_Kuparuk_Temp_Q_csv
+10514,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2005_Kuparuk_Temp_Q_csv
+10515,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2006_Kuparuk_Temp_Q_csv
+10516,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2007_Kuparuk_Temp_Q_csv
+10517,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2008_Kuparuk_Temp_Q_csv
+10518,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2009_Kuparuk_Temp_Q_csv
+10519,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2010_Kuparuk_Temp_Q_csv
+10520,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2011_Kuparuk_Temp_Q_csv
+10521,stream_chemsitry,ready,ready,NA,stream_flux__ms003,Kuparuk River,2012_Kuparuk_Temp_Q_csv
+1333,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1988_Oksrukuyik_Q_csv
+1336,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1989_Oksrukuyik_Temp_Q_csv
+1339,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1990_Oksrukuyik_Q_csv
+1342,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1991_Oksrukuyik_Temp_Q_csv
+1346,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1992_Oksrukuyik_Temp_Q_csv
+1350,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1993_Oksrukuyik_Temp_Q_csv
+1354,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1994_Oksrukuyik_Temp_Q_csv
+1358,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1995_Oksrukuyik_Temp_Q_csv
+1362,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1996_Oksrukuyik_Temp_Q_csv
+1365,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1997_Oksrukuyik_Temp_Q_csv
+1368,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1998_Oksrukuyik_Temp_Q_csv
+1372,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1999_Oksrukuyik_Temp_Q_csv
+1318,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2000_Oksrukuyik_Temp_Q_csv
+1322,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2001_Oksrukuyik_Temp_Q_csv
+1326,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2002_Oksrukuyik_Temp_Q_csv
+1328,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2003_Oksrukuyik_Temp_Q_csv
+10040,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2004_Oksrukuyik_Temp_Q_csv
+10043,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2005_Oksrukuyik_Temp_Q_csv
+10045,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2006_Oksrukuyik_Temp_Q_csv
+10047,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2007_Oksrukuyik_Temp_Q_csv
+10049,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2008_Oksrukuyik_Temp_Q_csv
+10395,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2009_Oksrukuyik_Temp_Q_csv
+10396,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2010_Oksrukuyik_Temp_Q_csv
+10510,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2011_Oksrukuyik_Temp_Q_csv
+10511,discharge,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2012_Oksrukuyik_Temp_Q_csv
+1336,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1989_Oksrukuyik_Temp_Q_csv
+1342,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1991_Oksrukuyik_Temp_Q_csv
+1346,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1992_Oksrukuyik_Temp_Q_csv
+1350,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1993_Oksrukuyik_Temp_Q_csv
+1354,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1994_Oksrukuyik_Temp_Q_csv
+1358,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1995_Oksrukuyik_Temp_Q_csv
+1362,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1996_Oksrukuyik_Temp_Q_csv
+1365,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1997_Oksrukuyik_Temp_Q_csv
+1368,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1998_Oksrukuyik_Temp_Q_csv
+1372,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,1999_Oksrukuyik_Temp_Q_csv
+1318,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2000_Oksrukuyik_Temp_Q_csv
+1322,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2001_Oksrukuyik_Temp_Q_csv
+1326,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2002_Oksrukuyik_Temp_Q_csv
+1328,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2003_Oksrukuyik_Temp_Q_csv
+10040,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2004_Oksrukuyik_Temp_Q_csv
+10043,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2005_Oksrukuyik_Temp_Q_csv
+10045,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2006_Oksrukuyik_Temp_Q_csv
+10047,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2007_Oksrukuyik_Temp_Q_csv
+10049,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2008_Oksrukuyik_Temp_Q_csv
+10395,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2009_Oksrukuyik_Temp_Q_csv
+10396,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2010_Oksrukuyik_Temp_Q_csv
+10510,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2011_Oksrukuyik_Temp_Q_csv
+10511,stream_chemistry,ready,ready,NA,stream_flux__ms003,Oksrukuyik  Creek,2012_Oksrukuyik_Temp_Q_csv
+10303,stream_chemistry,ready,ready,NA,stream_flux__ms003,NA,1978-2017_LTER_Streams_Chemistry_v6_csv
+1489,precipitation,ready,ready,NA,NA,NA,1988_currentTFSDaily_csv
+20120,stream_chemistry,ready,ready,NA,NA,NA,2015-2019_LTER_Streams_Roche_and_Trevor_Discharge_csv
+20120,discharge,ready,ready,NA,NA,NA,2015-2019_LTER_Streams_Roche_and_Trevor_Discharge_csv
+1593,discharge,ready,ready,NA,NA,NA,1991_Toolik_Inlet_Kling_csv
+1593,stream_chemistry,ready,ready,NA,NA,NA,1991_Toolik_Inlet_Kling_csv
+1594,discharge,ready,ready,NA,NA,NA,1992_Toolik_Inlet_Kling_csv
+1594,stream_chemistry,ready,ready,NA,NA,NA,1992_Toolik_Inlet_Kling_csv
+1595,discharge,ready,ready,NA,NA,NA,1993_Toolik_Inlet_Kling_csv
+1595,stream_chemistry,ready,ready,NA,NA,NA,1993_Toolik_Inlet_Kling_csv
+1596,discharge,ready,ready,NA,NA,NA,1994_Toolik_Inlet_Kling_csv
+1596,stream_chemistry,ready,ready,NA,NA,NA,1994_Toolik_Inlet_Kling_csv
+1597,discharge,ready,ready,NA,NA,NA,1995_Toolik_Inlet_Kling_csv
+1597,stream_chemistry,ready,ready,NA,NA,NA,1995_Toolik_Inlet_Kling_csv
+1598,discharge,ready,ready,NA,NA,NA,1996_Toolik_Inlet_Kling_csv
+1598,stream_chemistry,ready,ready,NA,NA,NA,1996_Toolik_Inlet_Kling_csv
+1599,discharge,ready,ready,NA,NA,NA,1997_Toolik_Inlet_Kling_csv
+1599,stream_chemistry,ready,ready,NA,NA,NA,1997_Toolik_Inlet_Kling_csv
+1600,discharge,ready,ready,NA,NA,NA,1998_Toolik_Inlet_Kling_csv
+1600,stream_chemistry,ready,ready,NA,NA,NA,1998_Toolik_Inlet_Kling_csv
+1601,discharge,ready,ready,NA,NA,NA,1999_Toolik_Inlet_Kling_csv
+1601,stream_chemistry,ready,ready,NA,NA,NA,1999_Toolik_Inlet_Kling_csv
+1589,discharge,ready,ready,NA,NA,NA,2000_Toolik_Inlet_Kling_csv
+1589,stream_chemistry,ready,ready,NA,NA,NA,2000_Toolik_Inlet_Kling_csv
+1590,discharge,ready,ready,NA,NA,NA,2001_Toolik_Inlet_Kling_csv
+1590,stream_chemistry,ready,ready,NA,NA,NA,2001_Toolik_Inlet_Kling_csv
+1591,discharge,ready,ready,NA,NA,NA,2002_Toolik_Inlet_Kling_csv
+1591,stream_chemistry,ready,ready,NA,NA,NA,2002_Toolik_Inlet_Kling_csv
+1592,discharge,ready,ready,NA,NA,NA,2003_Toolik_Inlet_Kling_csv
+1592,stream_chemistry,ready,ready,NA,NA,NA,2003_Toolik_Inlet_Kling_csv
+1645,discharge,ready,ready,NA,NA,NA,2004_Toolik_Inlet_Kling_csv
+1645,stream_chemistry,ready,ready,NA,NA,NA,2004_Toolik_Inlet_Kling_csv
+1644,discharge,ready,ready,NA,NA,NA,2005_Toolik_Inlet_Kling_csv
+1644,stream_chemistry,ready,ready,NA,NA,NA,2005_Toolik_Inlet_Kling_csv
+1646,discharge,ready,ready,NA,NA,NA,2006_Toolik_Inlet_Kling_csv
+1646,stream_chemistry,ready,ready,NA,NA,NA,2006_Toolik_Inlet_Kling_csv
+10069,discharge,ready,ready,NA,NA,NA,2007_Toolik_Inlet_Kling_csv
+10069,stream_chemistry,ready,ready,NA,NA,NA,2007_Toolik_Inlet_Kling_csv
+10068,discharge,ready,ready,NA,NA,NA,2008_Toolik_Inlet_Kling_csv
+10068,stream_chemistry,ready,ready,NA,NA,NA,2008_Toolik_Inlet_Kling_csv
+10070,discharge,ready,ready,NA,NA,NA,2009_Toolik_Inlet_Kling_csv
+10070,stream_chemistry,ready,ready,NA,NA,NA,2009_Toolik_Inlet_Kling_csv
+10591,discharge,ready,ready,NA,NA,NA,NA
+10591,stream_chemistry,ready,ready,NA,NA,NA,NA

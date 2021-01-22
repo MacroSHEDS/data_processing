@@ -52,7 +52,7 @@ process_0_5482 <- function(set_details, network, domain){
     if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precipitation'){
 
         if(! set_details$component %in% c('MS00402', 'MS00403', 'MS00404')){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -60,7 +60,7 @@ process_0_5482 <- function(set_details, network, domain){
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precip_gauge_locations'){
 
         if(! set_details$component == 'MS00401'){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -77,9 +77,12 @@ process_0_5482 <- function(set_details, network, domain){
     return()
 }
 
-#stream_chemistry; stream_flux_inst: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_4021 <- function(set_details, network, domain){
+
+    #Stream flux (stream_flux_inst__4021) was removed becuase we are not wanting
+    #use theirs as of now and was causing error in ms_derive
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -95,7 +98,7 @@ process_0_4021 <- function(set_details, network, domain){
     if(prodname_from_prodname_ms(set_details$prodname_ms) == 'stream_chemistry'){
 
         if(! set_details$component %in% c('CF00201', 'CF00202', 'CF00203', 'CF00206')){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -103,7 +106,7 @@ process_0_4021 <- function(set_details, network, domain){
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'stream_flux_inst'){
 
         if(! set_details$component %in% c('CF00204', 'CF00205', 'CF00206')){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -124,6 +127,9 @@ process_0_4021 <- function(set_details, network, domain){
 #. handle_errors
 process_0_4022 <- function(set_details, network, domain){
 
+    #precip_flux_inst__4022 was removed becuase we make our own and it was
+    #causing issues for ms_derive
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,
@@ -138,7 +144,7 @@ process_0_4022 <- function(set_details, network, domain){
     if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precip_chemistry'){
 
         if(! set_details$component %in% c('CP00201', 'CP00203', 'CP00206')){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -146,7 +152,7 @@ process_0_4022 <- function(set_details, network, domain){
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precip_flux_inst'){
 
         if(! set_details$component %in% c('CP00202', 'CP00206')){
-            loginfo('Skipping redundant download',
+            logwarn('Skipping redundant download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -178,7 +184,7 @@ process_0_3239 <- function(set_details, network, domain) {
     if(prodname_from_prodname_ms(set_details$prodname_ms) == 'ws_boundary'){
 
         if(! set_details$component %in% c('hf01402', 'hf01404')){
-            loginfo('Skipping redundant or unneeded download',
+            logwarn('Skipping redundant or unneeded download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -186,7 +192,7 @@ process_0_3239 <- function(set_details, network, domain) {
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'stream_gauge_locations'){
 
         if(! set_details$component == 'hf01403'){
-            loginfo('Skipping redundant or unneeded download',
+            logwarn('Skipping redundant or unneeded download',
                     logger = logger_module)
             return(generate_blacklist_indicator())
         }
@@ -210,7 +216,7 @@ process_0_3239 <- function(set_details, network, domain) {
 process_1_4341 <- function(network, domain, prodname_ms, site_name,
                            components){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.txt',
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -287,7 +293,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = c(DATE = '%Y-%m-%d'),
                              datetime_tz = 'UTC',
                              site_name_col = 'SITECODE',
-                             data_cols =  c(PRECIP_TOT_DAY = 'precip'),
+                             data_cols =  c(PRECIP_TOT_DAY = 'precipitation'),
                              data_col_pattern = '#V#',
                              is_sensor = FALSE,
                              summary_flagcols = c('PRECIP_TOT_FLAG',
@@ -318,7 +324,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#stream_chemistry; stream_flux_inst: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_4021 <- function(network, domain, prodname_ms, site_name,
                            components){
@@ -328,7 +334,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_name,
     if(grepl('chemistry', prodname_ms)){
         component <- 'CF00201'
     } else {
-        loginfo('Blacklisting stream flux product CF00205. We will make our own.')
+        logwarn('Blacklisting stream flux product CF00204 (for now)')
         return(generate_blacklist_indicator())
     }
 
@@ -389,7 +395,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_name,
     if(grepl('chemistry', prodname_ms)){
         component <- 'CP00201'
     } else {
-        loginfo('Blacklisting precip flux product CP00202. We will make our own.')
+        logwarn('Blacklisting precip flux product CP00202 (for now)')
         return(generate_blacklist_indicator())
     }
 
@@ -518,18 +524,22 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels ####
 
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms001 <- derive_precip
-
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms002 <- derive_precip_chem
+# #precipitation: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+#
+# #precip_chemistry: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms002 <- derive_precip_chem
+#
+# #precip_flux_inst: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms004 <- derive_precip_flux
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- derive_stream_flux
+process_2_ms001 <- derive_stream_flux
 
-#precip_flux_inst: STATUS=READY
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms004 <- derive_precip_flux
+process_2_ms002 <- derive_precip_pchem_pflux

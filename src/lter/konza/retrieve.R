@@ -1,7 +1,6 @@
-loginfo('Beginning retrieve',
-        logger = logger_module)
+loginfo('Beginning retrieve', logger = logger_module)
 
-prod_info = get_product_info(network = network,
+prod_info <- get_product_info(network = network,
                              domain = domain,
                              status_level = 'retrieve',
                              get_statuses = 'ready')
@@ -9,13 +8,13 @@ prod_info = get_product_info(network = network,
 # i = 1
 for(i in 1:nrow(prod_info)){
 
-    prodname_ms <- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
+    prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <- get_data_tracker(network = network,
+    held_data <<- get_data_tracker(network = network,
                                   domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
-        held_data <- track_new_product(held_data, prodname_ms)
+        held_data <<- track_new_product(held_data, prodname_ms)
     }
 
     latest_vsn <- get_latest_product_version(prodname_ms = prodname_ms,
@@ -47,13 +46,13 @@ for(i in 1:nrow(prod_info)){
                                       drop = FALSE]
 
         if(! site_is_tracked(held_data, prodname_ms, site_name)){
-            held_data <- insert_site_skeleton(held_data,
+            held_data <<- insert_site_skeleton(held_data,
                                               prodname_ms,
                                               site_name,
                                               site_components = avail_site_sets$component)
         }
 
-        held_data <- track_new_site_components(held_data,
+        held_data <<- track_new_site_components(held_data,
                                                prodname_ms,
                                                site_name,
                                                avail_site_sets)

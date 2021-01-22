@@ -5,7 +5,11 @@ ms_pasta_domain_refmap = list(
     baltimore = 'knb-lter-bes',
     luquillo = 'knb-lter-luq',
     niwot = 'knb-lter-nwt',
-    santa_barbara = 'knb-lter-sbc'
+    santa_barbara = 'knb-lter-sbc',
+    bonanza = 'knb-lter-bnz',
+    mcmurdo = 'knb-lter-mcm',
+    plum = 'knb-lter-pie',
+    arctic = 'knb-lter-arc'
 )
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
@@ -16,7 +20,13 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
     prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
 
     vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
-    newest_vsn = RCurl::getURLContent(vsn_request, timeout=10)
+
+    if(ms_instance$op_system == 'windows'){
+        newest_vsn <- xml2::xml_text(xml2::read_html(vsn_request))
+    } else{
+        newest_vsn <- RCurl::getURLContent(vsn_request, timeout=10)
+    }
+
     newest_vsn = as.numeric(stringr::str_match(newest_vsn,
         '[0-9]+$')[1])
 
@@ -28,18 +38,24 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
 
     #returns: tibble with url, site_name, component (aka element_name)
 
-    name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
-    dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+    name_endpoint <- 'https://pasta.lternet.edu/package/name/eml/'
+    dl_endpoint <- 'https://pasta.lternet.edu/package/data/eml/'
 
-    domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname_ms)
+    domain_ref <- ms_pasta_domain_refmap[[domain]]
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
-    name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
+    name_request <- glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
-    reqdata = RCurl::getURLContent(name_request)
-    reqdata = strsplit(reqdata, '\n')[[1]]
+
+    if(ms_instance$op_system == 'windows'){
+        reqdata <- xml2::xml_text(xml2::read_html(name_request))
+    } else{
+        reqdata <- RCurl::getURLContent(name_request)
+    }
+
+    reqdata <- strsplit(reqdata, '\n')[[1]]
     reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE) #junk filter for hbef. might need flex
-    reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
+    reqdata <- str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
     element_ids = reqdata[,2]
     dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
@@ -47,10 +63,10 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
 
     names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
     names[names %in% c(domain, network)] = 'sitename_NA'
-    
+
     names[is.na(names)] <- 'sitename_NA'
 
-    avail_sets = tibble(url=dl_urls,
+    avail_sets <- tibble(url=dl_urls,
         site_name=names,
         component=reqdata[,3])
 
@@ -126,17 +142,17 @@ download_raw_file <- function(network, domain, set_details, file_type = '.csv') 
     dir.create(raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-    
+
     if(is.null(file_type)) {
-        
+
         download.file(url = set_details$url,
                       destfile = glue(raw_data_dest,
                                       '/',
                                       set_details$component),
                       cacheOK = FALSE,
                       method = 'curl')
-    } else { 
-        
+    } else {
+
         download.file(url = set_details$url,
                       destfile = glue(raw_data_dest,
                                       '/',
@@ -148,12 +164,12 @@ download_raw_file <- function(network, domain, set_details, file_type = '.csv') 
 }
 
 retrieve_lter <- function(set_details, network, domain) {
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = NULL)
-    
+
     return()
 }
 
