@@ -493,8 +493,8 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                          prodname_ms = prodname_ms)
 
   d <- ms_conversions(d,
-                      convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                            'NH4', 'NH3'),
+                     # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                     #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
                                              TN = 'ug/l', SRP = 'ug/l',
                                              TP = 'ug/l'),
@@ -714,8 +714,8 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                          prodname_ms = prodname_ms)
 
   d <- ms_conversions(d,
-                      convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                                            'NH4', 'NH3'),
+                     # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
+                     #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
                                              TPsN = 'ug/l', SRP = 'ug/l',
                                              TPP = 'ug/l'),
@@ -838,7 +838,7 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms011 <- function(network, domain, prodname_ms) {
-  
+
   combine_munged_products(network = network,
                           domain = domain,
                           prodname_ms = prodname_ms,
@@ -860,31 +860,6 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
                           munged_prodname_ms = c('stream_chemistry__50',
                                                  'stream_conductivity__51',
                                                  'stream_suspended_sediments__20'))
-
-  return()
-}
-
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){
-
-  precip_idw(precip_prodname = 'precipitation__4',
-             wb_prodname = 'ws_boundary_ms000',
-             pgauge_prodname = 'rain_gauge_locations__230',
-             precip_prodname_out = prodname_ms)
-
-  return()
-}
-
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){
-
-  pchem_idw(pchem_prodname = 'precip_chemistry__43',
-            precip_prodname = 'precipitation__4',
-            wb_prodname = 'ws_boundary_ms000',
-            pgauge_prodname = 'rain_gauge_locations__230',
-            pchem_prodname_out = prodname_ms)
 
   return()
 }
@@ -928,16 +903,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
   return()
 }
 
-#precip_flux_inst: STATUS=READY
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms){
-
-  flux_idw(pchem_prodname = 'precip_chemistry__43',
-           precip_prodname = 'precipitation__4',
-           wb_prodname = 'ws_boundary_ms000',
-           pgauge_prodname = 'rain_gauge_locations__230',
-           flux_prodname_out = prodname_ms)
-
-  return()
-}
+process_2_ms001 <- derive_precip_pchem_pflux
 

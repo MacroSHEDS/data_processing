@@ -200,6 +200,45 @@ process_0_DP1.00013 <- function(set_details, network, domain){
     return()
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS001 <- function(set_details, network, domain){
+
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name,
+                          c = set_details$component)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue(raw_data_dest,
+                    '/NEONAquaticWatershed.zip')
+
+    res <- httr::HEAD('https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    return()
+}
+
 #munge kernels ####
 
 #stream_chemistry: STATUS=READY
@@ -258,25 +297,30 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             filter(var != 'TSS - Dry Mass') %>%
             mutate(datetime = force_tz(datetime, 'UTC'))
 
-    }
+  }
 
-    if(!exists('out_lab')) {
-        print('swc_externalLabDataByAnalyte.feather is missing, will proceed with
-              Alk and ANC file')
+    if(!exists('out_lab') && !exists('out_dom')) {
+        print(paste0('swc_externalLabDataByAnalyte.feather and swc_domainLabData.feather are missing for ', component))
 
-        out_sub <- out_dom
-    }
+        out_sub <- tibble()
 
-    if(!exists('out_dom')) {
-        print('swc_domainLabData.feather is missing, will proceed with
-              chemisty file file')
+    } else {
 
-        out_sub <- out_lab
-    }
+        if(!exists('out_lab')) {
+            print(paste0('swc_externalLabDataByAnalyte.feather is missing for', component, ', will proceed with Alk and ANC file'))
 
-    if(exists('out_dom') && exists('out_lab')) {
-        out_sub <- rbind(out_lab, out_dom)
-    }
+            out_sub <- out_dom
+      }
+
+      if(!exists('out_dom')) {
+          print(paste0('swc_domainLabData.feather is missing for ', component, ', will proceed with chemisty file file'))
+
+          out_sub <- out_lab
+      }
+
+      if(exists('out_dom') && exists('out_lab')) {
+          out_sub <- rbind(out_lab, out_dom)
+      }
 
     out_sub <- out_sub %>%
         group_by(datetime, site_name, var) %>%
@@ -284,6 +328,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             val = mean(val, na.rm=TRUE),
             ms_status = max(ms_status, na.rm = TRUE)) %>%
         mutate(val = ifelse(is.nan(val), NA, val))
+
+    }
 
     return(out_sub)
 }
@@ -702,27 +748,167 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
                             variable_flags_clean = 0,
                             variable_flags_dirty = 1)
 
+    return(out_sub)
+
   } else {
     return(generate_ms_exception('wdp_chemLab.feather file missing'))
   }
+}
 
-  return(out_sub)
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
+                                     component){
+
+    rawdir1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+
+    rawfile1 <- glue(rawdir1, '/NEONAquaticWatershed.zip')
+
+    zipped_files <- unzip(zipfile = rawfile1,
+                          exdir = rawdir1,
+                          overwrite = TRUE)
+
+    projstring <- choose_projection(unprojected = TRUE)
+
+    d <- sf::st_read(glue(rawdir1,
+                          '/NEON_Aquatic_Watershed.shp'),
+                     stringsAsFactors = FALSE,
+                     quiet = TRUE) %>%
+        filter(Science != 'Lake') %>%
+        # mutate(area = WSAreaKm2 * 100) %>%
+        select(site_name = SiteID, geometry = geometry) %>%
+        sf::st_transform(projstring) %>%
+        arrange(site_name)
+
+    if(nrow(d) == 0) stop('no rows in sf object')
+
+    # munged_data_dest <- glue('data/{n}/{d}/munged/{p}',
+    #                          n = network,
+    #                          d = domain,
+    #                          p = prodname_ms)
+    #
+    # dir.create(path = munged_data_dest,
+    #            showWarnings = FALSE,
+    #            recursive = TRUE)
+
+    for(i in 1:nrow(d)){
+
+        # dir.create(path = glue(munged_data_dest,
+        #                        '/',
+        #                        d$site_name[i]),
+        #            showWarnings = FALSE,
+        #            recursive = TRUE)
+
+        write_ms_file(d = d[i, ],
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = d$site_name[i],
+                      level = 'munged',
+                      shapefile = TRUE)
+    }
+
+    unlink(zipped_files)
+
+    # return(d)
+    return()
 }
 
 #derive kernels ####
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms012 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms) {
 
-  combine_munged_products(network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          munged_prodname_ms = c('stream_quality__DP1.20288',
-                                                 'stream_gases__DP1.20288',
-                                                 'stream_temperature__DP1.20053',
-                                                 'stream_nitrate__DP1.20033',
-                                                 'stream_chemistry__DP1.20093'))
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_quality__DP1.20288',
+                                           'stream_gases__DP1.20288',
+                                           'stream_temperature__DP1.20053',
+                                           'stream_nitrate__DP1.20033',
+                                           'stream_chemistry__DP1.20093'))
 
     return()
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms002 <- function(network, domain, prodname_ms) {
+
+    #Temporary, NEON only hace 1 precip gauge (usually) per site. Eventuly will
+    #leverage other data to interploate but for now directly linking gauge to
+    #watersheds
+    dir.create('data/neon/neon/derived/precipitation__ms002/', recursive = TRUE)
+
+    dir <- 'data/neon/neon/munged/precipitation__DP1.00006/'
+
+    site_files <- list.files(dir)
+
+    sites <- unique(str_split_fixed(site_files, '_', n = Inf)[,1])
+
+    for(i in 1:length(sites)) {
+
+        file <- grep(sites[i], site_files, value = TRUE)
+
+        if(length(file) == 1) {
+
+            precip <- read_feather(paste0(dir, file)) %>%
+                mutate(site_name = !!sites[i]) %>%
+                mutate(var = 'IS_precipitation')
+        } else {
+
+            file <- grep('900', file, value = TRUE)
+
+            precip <- read_feather(paste0(dir, file)) %>%
+                mutate(site_name = !!sites[i]) %>%
+                mutate(var = 'IS_precipitation')
+        }
+
+        write_feather(precip, glue('data/neon/neon/derived/precipitation__ms002/{s}.feather',
+                           s = sites[i]))
+
+    }
+
+  return()
+}
+
+#precip_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms) {
+
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               prodname_ms = 'precip_chemistry__DP1.00013')
+
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            prodname_ms = 'precipitation__ms002')
+
+  flux_sites <- generics::intersect(
+    fname_from_fpath(qfiles, include_fext = FALSE),
+    fname_from_fpath(chemfiles, include_fext = FALSE))
+
+  for(s in flux_sites){
+
+    flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
+                              qprod = 'precipitation__ms002',
+                              site_name = s))
+
+    if(!is.null(flux)) {
+
+      write_ms_file(d = flux,
+                    network = network,
+                    domain = domain,
+                    prodname_ms = prodname_ms,
+                    site_name = s,
+                    level = 'derived',
+                    shapefile = FALSE)
+    }
+  }
 }
