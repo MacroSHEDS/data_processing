@@ -425,18 +425,22 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels ####
 
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms001 <- derive_precip
-
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms002 <- derive_precip_chem
+# #precipitation: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+#
+# #precip_chemistry: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms002 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- derive_stream_flux
+process_2_ms001 <- derive_stream_flux
 
-#precip_flux_inst: STATUS=READY
+# #precip_flux_inst: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms004 <- derive_precip_flux
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms004 <- derive_precip_flux
+process_2_ms002 <- derive_precip_pchem_pflux

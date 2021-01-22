@@ -8,7 +8,7 @@ process_0_700 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -20,7 +20,7 @@ process_0_900 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -32,7 +32,7 @@ process_0_800 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
 }
 
@@ -44,8 +44,20 @@ process_0_3110 <- function(set_details, network, domain){
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-  
+
     return()
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_3200 <- function(set_details, network, domain){
+
+  download_raw_file(network = network,
+                    domain = domain,
+                    set_details = set_details,
+                    file_type = '.zip')
+
+  return()
 }
 
 #munge kernels ####
@@ -55,10 +67,10 @@ process_0_3110 <- function(set_details, network, domain){
 process_1_700 <- function(network, domain, prodname_ms, site_name,
                           component) {
     # site_name=site_name; component=in_comp
-  
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
@@ -77,28 +89,28 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
                          set_to_NA = -999.99,
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-  
+
     # Turbidity is in NTU the ms_vars is in FNU, nut sure these are comparable
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l',
                                                SO4 = 'ug/l'),
                         convert_units_to = c(PO4_P = 'mg/l',
                                              SO4 = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -107,10 +119,10 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
 process_1_900 <- function(network, domain, prodname_ms, site_name,
                           component) {
     # site_name=site_name; component=in_comp
-  
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
@@ -122,25 +134,25 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
                          set_to_NA = c(-999.990, -999.99, -999),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-  
+
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l'),
                         convert_units_to = c(PO4_P = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
 }
 
@@ -151,7 +163,7 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Eastern',
@@ -162,10 +174,10 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
                          set_to_NA = c(-999.990, -999.99, -999),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-  
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-  
+
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l',
                                                TP = 'ug/l',
@@ -173,18 +185,18 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
                         convert_units_to = c(PO4_P = 'mg/l',
                                              TP = 'mg/l',
                                              SO4 = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
       return(d)
 }
 
@@ -195,7 +207,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
                          datetime_tz = 'US/Eastern',
@@ -203,56 +215,117 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
                          data_cols = c('Precipitation_mm'='precipitation_ns'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
-  
-  
+
+
     # Baltimore precip is recorded at 8 sites where there are two tipping-bucket
     # rain gauges each. It appears that only rain events are reported, as the
     # dataset has no 0 values (waiting on response from BES). To correct for this
     # both gauges at each site are averaged and 0 values are filled in for all
     # minutes where there is not a record.
-  
-  
+
+
     d <- d %>%
       rename(val = 3) %>%
       mutate(site_name = str_split_fixed(site_name, '_', n = Inf)[,1]) %>%
       group_by(datetime, site_name) %>%
       summarise(val = mean(val, na.rm = TRUE))
-  
+
     rain_gauges <- unique(d$site_name)
-  
+
     final <- tibble()
     for(i in 1:length(rain_gauges)) {
-  
+
       onesite <- d %>%
         filter(site_name == rain_gauges[i])
-  
+
       dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
-  
+
       with_0s <- tibble(datetime = dates)
-  
+
       fin <- full_join(with_0s, onesite, by = 'datetime') %>%
         mutate(val = ifelse(is.na(val), 0, val)) %>%
         mutate(site_name = rain_gauges[i])
-  
+
       final <- rbind(final, fin)
     }
-  
+
     d <- final %>%
       mutate(var = 'IS_precipitation_ns',
              ms_status = 0)
-  
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-  
+
     d <- synchronize_timestep(d,
                               desired_interval = '1 day', #set to '15 min' when we have server
                               impute_limit = 30)
-  
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-  
+
     return(d)
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_3200 <- function(network, domain, prodname_ms, site_name, component){
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}',
+                   n=network, d=domain, p=prodname_ms)
+
+    zipped_files <- unzip(zipfile = rawfile,
+                          exdir = rawdir,
+                          overwrite = TRUE)
+
+    projstring <- choose_projection(unprojected = TRUE)
+
+    shape_paths <- glue('{d}/01m/{s}',
+                       d = rawdir,
+                       s = 'BES Watershed Boundary Shapefiles')
+
+    files <- list.files(shape_paths, full.names = T)
+
+    shp_files <- grep('.shp', files, value = T)
+
+    shp_files <- shp_files[!grepl('.shp.xml', shp_files)]
+
+    full_site_name <- str_split_fixed(shp_files, '[/]', n = Inf)[,8]
+    full_site_name <- str_split_fixed(full_site_name, '[.]', n = Inf)[,1]
+
+    for(i in 1:length(shp_files)){
+
+        site_name <- case_when(full_site_name == 'Baisman_Run' ~ 'BARN',
+                               full_site_name == 'Carroll_Park' ~ 'GFCP',
+                               full_site_name == 'Dead_Run' ~ 'DRKR',
+                               full_site_name == 'Glyndon' ~ 'GFGL',
+                               full_site_name == 'Gwynnbrook' ~ 'GFGB',
+                               full_site_name == 'McDonogh' ~ 'MCDN',
+                               full_site_name == 'Pond_Branch' ~ 'POBR',
+                               full_site_name == 'Villa_Nova' ~ 'GFVN')
+
+        wb <- st_read(shp_files[i]) %>%
+          mutate(site_name = !!site_name[i],
+                 area = Area_m2/10000) %>%
+          select(-Area_m2) %>%
+          sf::st_transform(4326)
+
+        write_ms_file(d = wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = site_name[i],
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
+    }
+
+    unlink(zipped_files)
+
+    return()
 }
 
 #derive kernels ####
@@ -268,31 +341,33 @@ process_2_ms014 <- stream_gauge_from_site_data
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms012 <- function(network, domain, prodname_ms) {
-  
+
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__700',
                                            'stream_chemistry__900',
                                            'stream_chemistry__800'))
-  
+
     return()
 }
 
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms011 <- function(network, domain, prodname_ms) {
-    
-    pull_usgs_discharge(network = network, 
+
+    pull_usgs_discharge(network = network,
                         domain = domain,
                         prodname_ms = prodname_ms,
-                        sites = c('GFCP' = '01589352', 'GFGB' = '01589197', 'GFGL' = '01589180', 'GFVN' = '01589300',
-                                  'POBR' = '01583570', 'DRKR' = '01589330', 'BARN' = '01583580',
-                                  'RGHT' = '01589340', 'MCDN' = '01589238', 'MAWI' = '01589351'),
-                        time_step = c('sub_daily', 'sub_daily', 'sub_daily', 'sub_daily', 
-                                      'sub_daily', 'sub_daily', 'sub_daily', 'sub_daily',
-                                      'sub_daily', 'daily'))
-  
+                        sites = c('GFCP' = '01589352', 'GFGB' = '01589197',
+                                  'GFGL' = '01589180', 'GFVN' = '01589300',
+                                  'POBR' = '01583570', 'DRKR' = '01589330',
+                                  'BARN' = '01583580', 'MCDN' = '01589238',
+                                  'MAWI' = '01589351'),
+                        time_step = c('sub_daily', 'sub_daily', 'sub_daily',
+                                      'sub_daily', 'sub_daily', 'sub_daily',
+                                      'sub_daily', 'sub_daily', 'daily'))
+
   return()
 }
 
@@ -300,6 +375,10 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms003 <- derive_stream_flux
 
-#precipitation: STATUS=READY
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms001 <- derive_precip
+process_2_ms001 <- derive_precip_pchem_pflux

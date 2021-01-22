@@ -1,11 +1,14 @@
-prodcode,prodname,type,retrieve_status,munge_status,derive_status,precursor_of,notes
-700,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
-900,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
-800,stream_chemistry,grab,ready,ready,NA,chemistry__ms013,NA
-3110,precipitation,sensor,ready,ready,NA,precipitation__ms001,NA
-ms013,precip_gauge_locations,spatial,NA,NA,ready,precipitation__ms001,NA
-ms014,stream_gauge_locations,spatial,NA,NA,ready,NA,NA
-ms012,stream_chemistry,grab,NA,NA,ready,stream_flux_inst_ms003,NA
-ms011,discharge,sensor,NA,NA,ready,stream_flux_inst_ms003,NA
-ms003,stream_flux_inst,NA,NA,NA,ready,NA,NA
-ms001,precipitation,NA,NA,NA,ready,NA,NA
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
+700,stream_chemistry,ready,ready,NA,stream_chemistry__ms012,NA
+900,stream_chemistry,ready,ready,NA,stream_chemistry__ms012,NA
+800,stream_chemistry,ready,ready,NA,stream_chemistry__ms012,NA
+3200,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms001,NA
+3110,precipitation,ready,ready,NA,precip_pchem_pflux__ms001,NA
+ms013,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms001,NA
+ms014,stream_gauge_locations,NA,NA,ready,NA,NA
+ms012,stream_chemistry,NA,NA,ready,stream_flux_inst_ms003,NA
+ms011,discharge,NA,NA,ready,stream_flux_inst_ms003,NA
+ms003,stream_flux_inst,NA,NA,ready,NA,NA
+ms001,precip_pchem_pflux,NA,NA,ready,NA,NA
+ms015,ws_boundary,NA,NA,linked,NA,automated entry
+ms900,precipitation,NA,NA,NA,NA,automated entry
