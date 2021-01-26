@@ -286,7 +286,7 @@ identify_sampling <- function(df,
             if(nrow(run_table) == 0){
 
                 g_a <- tibble('site_name' = site_names[i],
-                              'type' = 'NA',
+                              'type' = 'G',
                               'starts' = lubridate::NA_POSIXct_,
                               'interval' = NA_real_)
 
@@ -3843,10 +3843,6 @@ convert_to_gl <- function(x, input_unit, molecule) {
         x = x * calculate_molar_mass(formula)
 
         return(x)
-    }
-
-    if(grepl('ppm', input_unit)){
-
     }
 
     return(x)

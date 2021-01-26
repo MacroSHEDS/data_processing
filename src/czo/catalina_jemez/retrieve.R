@@ -20,9 +20,9 @@ for(i in 1:nrow(prod_info)){
     hydroshare_code <- prod_info$hydroshare_id[i]
 
     latest_vsn <<- get_czo_product_version(prodname_ms = prodname_ms,
-                                           domain = domain,
-                                           hydroshare_code = hydroshare_code,
-                                           data_tracker = held_data)
+                                          domain = domain,
+                                          hydroshare_code = hydroshare_code,
+                                          data_tracker = held_data)
 
     if(is_ms_err(latest_vsn)) next
 
@@ -84,8 +84,8 @@ for(i in 1:nrow(prod_info)){
                                   site_name = site_name,
                                   new_status = 'pending')
 
+            }
         }
-    }
 
     metadata_url <- glue('https://www.hydroshare.org/resource/{v}',
                          v = hydroshare_code)
