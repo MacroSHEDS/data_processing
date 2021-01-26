@@ -286,7 +286,7 @@ identify_sampling <- function(df,
             if(nrow(run_table) == 0){
 
                 g_a <- tibble('site_name' = site_names[i],
-                              'type' = 'NA',
+                              'type' = 'G',
                               'starts' = lubridate::NA_POSIXct_,
                               'interval' = NA_real_)
 
@@ -1565,8 +1565,7 @@ ms_conversions <- function(d,
         d$var[vars == v] <- new_name
     }
 
-    # Converts input to grams if the final unit contains grams or if the molecule
-    # will be converted from NO3 to NO3 as N
+    # Converts input to grams if the final unit contains grams
     for(i in 1:length(convert_units_from)){
 
         unitfrom <- convert_units_from[i]
@@ -2784,7 +2783,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
     # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
 
     #prepare for delineation loops
-    buffer_radius <- 5000
+    buffer_radius <- 1000
     dem_coverage_insufficient <- FALSE
     while_loop_begin <- TRUE
 
@@ -7380,6 +7379,13 @@ get_relative_uncert <- function(x){
 get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
                           site_name) {
 
+
+    geom_check <- sf::st_geometry_type(ws_prodname)
+
+    if(!geom_check == 'POLYGON'){
+        ws_prodname <- sf::st_cast(ws_prodname, 'POLYGON')
+    }
+
     sheds <- ws_prodname %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
@@ -7423,8 +7429,9 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
             name <- names(look)[2]
 
             col_name <- case_when(time == 'start_season' ~ 'sos',
-                                   time == 'end_season' ~ 'eos',
-                                   time == 'max_season' ~ 'mos')
+                                  time == 'end_season' ~ 'eos',
+                                  time == 'max_season' ~ 'mos',
+                                  time == 'length_season' ~ 'los')
 
             mean_name <- glue('{n}_mean', n = col_name)
             sd_name <- glue('{n}_sd', n = col_name)
