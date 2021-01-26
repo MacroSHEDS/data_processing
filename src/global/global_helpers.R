@@ -5430,7 +5430,9 @@ read_precip_quickref <- function(network,
     # return(quickref)
 }
 
-synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
+synchronize_timestep <- function(d,
+                                 desired_interval,
+                                 impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
     #desired_interval is a character string that can be parsed by the "by"
@@ -8171,7 +8173,10 @@ catalogue_held_data <- function(network_domain, site_data){
 
     #tabulates:
     # + total nonspatial observations for the portal landing page
-    # +
+    # + informational catalog for all variables
+    # + informational catalog for all sites
+    # + informational catalog for each individual variable
+    # + informational catalog for each individual site
 
     nobs_nonspatial <- 0
     # site_display <- tibble()
@@ -8344,9 +8349,10 @@ catalogue_held_data <- function(network_domain, site_data){
             Unit = first(Unit)) %>%
         ungroup() %>%
         mutate(MeanObsPerSite = round(Observations / Sites, 0),
-               Availability = 'feature not yet built') %>%
-        select(VariableName, VariableCode, Unit, Observations, Sites,
-               MeanObsPerSite, FirstRecordUTC, LastRecordUTC, Availability)
+               Availability = paste0("<button type='button' id='", VariableCode, "'>view</button>")) %>%
+               # Availability = paste0("<a href='?", VariableCode, "'>view</a>")) %>%
+        select(Availability, VariableName, VariableCode, Unit, Observations, Sites,
+               MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
 
     readr::write_csv(x = all_variable_display,
                      file = 'general/catalog_files/all_variables.csv')
@@ -8416,20 +8422,23 @@ catalogue_held_data <- function(network_domain, site_data){
         ungroup() %>%
         mutate(MeanObsPerVar = round(Observations / Variables, 0),
                ExternalLink = 'feature not yet built',
-               Availability = 'feature not yet built') %>%
+               Availability = paste0("<button type='button' id='",
+                                     network, '_', domain, '_', site_name,
+                                     "'>view</button>")) %>%
         left_join(all_site_breakdown,
                   by = c('network', 'domain', 'site_name')) %>%
-        select(Network = pretty_network,
+        select(Availability,
+               Network = pretty_network,
                Domain = pretty_domain,
-               SiteName = full_name,
                SiteCode = site_name,
+               SiteName = full_name,
                StreamName = stream,
                Latitude = latitude,
                Longitude = longitude,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
-               Availability, ExternalLink)
+               ExternalLink)
 
     readr::write_csv(x = all_site_display,
                      file = 'general/catalog_files/all_sites.csv')
