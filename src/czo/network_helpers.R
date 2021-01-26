@@ -2,42 +2,64 @@
 
 get_czo_product_version <- function(prodname_ms, domain, hydroshare_code, data_tracker){
 
-    vsn_endpoint <- 'https://www.hydroshare.org/resource/'
 
-    vsn_request <- glue(vsn_endpoint, hydroshare_code)
 
-    if(ms_instance$op_system == 'windows'){
-        newest_vsn <- xml2::xml_text(xml2::read_html(vsn_request))
-    } else{
-        newest_vsn <- RCurl::getURLContent(vsn_request, timeout=9)
-    }
+    url_request_search <- paste0('https://www.hydroshare.org/hsapi/resource/',
+                                 hydroshare_code,
+                                 '/sysmeta/')
 
-    newest_vsn <- str_match(newest_vsn, 'Last updated:\\s{1,}[A-z]{3}\\s[0-9]{2}, [0-9]{4} at \\d:[0-9]{2} [A-z][.][A-z]')
+    search_results <- tempfile()
 
-    newest_vsn <- str_split_fixed(newest_vsn, 'Last updated:\n\\s{1,}', n = Inf)[1,2]
+    download.file(url = url_request_search,
+                  destfile = search_results,
+                  cacheOK = FALSE,
+                  method = 'curl')
+
+    search_results_list <- read_json(search_results)
+    newest_vsn <- search_results_list[["date_last_updated"]]
 
     return(newest_vsn)
 }
 
-construct_czo_product_sets <- function(version, hydroshare_code,
-                                       component, data_tracker){
+construct_czo_product_sets <- function(hydroshare_code, component, data_tracker,
+                                       latest_vsn){
 
     #returns: tibble with url, site_name, component (aka element_name)
 
-    name_endpoint <- 'https://www.hydroshare.org/resource/'
-    mid_names <- '/data/contents/'
+    name_endpoint <- 'https://www.hydroshare.org/hsapi/resource/'
+    mid_names <- '/files/'
 
     prod_url <- paste0(name_endpoint, hydroshare_code, mid_names, component)
 
+    site_names_all <- c()
+    components_all <- c()
+    for(d in 1:length(component)){
+
+        component_split <- str_split_fixed(component[d], '[/]', n = Inf)[1,]
+
+        if(length(component_split) > 1){
+
+            site_name <- component_split[1]
+            components_single <- component_split[2]
+        } else{
+            site_name <- 'sitename_NA'
+            components_single <- component_split
+        }
+
+        site_names_all <- append(site_names_all, site_name)
+        components_all <- append(components_all, components_single)
+    }
+
+
     avail_sets <- tibble(url = prod_url,
-        site_name = 'sitename_NA',
-        component = component)
+        site_name = site_names_all,
+        component = components_all,
+        avail_version = latest_vsn)
 
     return(avail_sets)
 }
 
-populate_set_details <- function(tracker, prodname_ms, site_name, avail,
-    latest_vsn){
+populate_set_details <- function(tracker, prodname_ms, site_name, avail){
     #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
@@ -225,4 +247,92 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
     }
 
     return()
+}
+
+get_czo_components <- function(search_string, hydroshare_code) {
+
+    #This function determins the needed components in a hydroshare products.
+    #The component column in the product.csv can be a single component that
+    #is needed, a string of components that are needed seperated by "__|", or
+    #search terms following this conventions:
+    #    !!SEARCH(CONTAINS(serach_phrase|search_phrase)__|EXCLUDE(component_name|component_name))
+    #
+    #CONTAINS and EXCLUDE are each seperate grepl searchs where in text in the
+    #   perenthesis are the pattern input in grepl. Exclude will remove the
+    #   matches and contains will keep the. Multiple grepl searches can be done
+    #   by seperating CONTAINS or EXCLUDE with __|
+    #
+    #CONTAINS will search each componet for the phrase that is specified, you can include
+    #things like '.csv' to get all csv files or 'discharge&.csv' for components that
+    #contain discharge and a .csv extentions.
+    #
+    #EXCLUDE will remove the specifed components within EXCLUDE
+    #Note that hydroshare can have folder in products, the search terms will operate on
+    #the name of a componet with the name in the file extention ex. 'folder/component.csv'
+    #so to eclude this you need to specify 'folder/component.csv' only including
+    #'component.csv' will not catch it in the EXCLUDE
+
+    if(str_split_fixed(search_string, '[(]', n = Inf)[1,1] == '!!SEARCH'){
+
+        url_request_search <- paste0('https://www.hydroshare.org/hsapi/resource/',
+                                     hydroshare_code,
+                                     '/file_list/')
+
+        search_results <- tempfile()
+
+        download.file(url = url_request_search,
+                      destfile = search_results,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        search_results_list <- read_json(search_results)[['results']]
+        search_results <- sapply (search_results_list, '[[', 2)
+
+        search_results_vec <- c()
+        for(t in 1:length(search_results)){
+            comp_new <- str_split_fixed(search_results[t], '[/]', n = Inf)
+
+            if(length(comp_new) > 8){
+                comp_new <- paste(comp_new[,8:length(comp_new)], collapse = '/')
+            } else{
+                comp_new <- comp_new[1,8]
+            }
+
+            search_results_vec <- append(search_results_vec, comp_new)
+        }
+
+        #paste(str_split(search_results, '[/]', n = Inf)[,8:9], collapse = '/')
+
+        search_terms <- str_split_fixed(search_string, '!!SEARCH[(]', n = Inf)[1,2]
+        search_terms <- substr(search_terms, start = 1, stop = nchar(search_terms)-1)
+        search_terms <-  as.vector(str_split_fixed(search_terms, '__[|]', n = Inf))
+
+        for(p in 1:length(search_terms)){
+
+            if(grepl('CONTAINS[(]', search_terms[p])){
+
+                contains <- str_split_fixed(search_terms[p], 'CONTAINS[(]', n = Inf)[1,2]
+                contains <- substr(contains, start = 1, stop = nchar(contains)-1)
+
+                search_results_vec <- search_results_vec[grepl(contains, search_results_vec)]
+            }
+
+            if(grepl('EXCLUDE[(]', search_terms[p])){
+
+                exclude <- str_split_fixed(search_terms[p], 'EXCLUDE[(]', n = Inf)[1,2]
+                exclude <- substr(exclude, start = 1, stop = nchar(exclude)-1)
+
+                search_results_vec <- search_results_vec[!grepl(exclude, search_results_vec)]
+            }
+        }
+
+        return(search_results_vec)
+
+    } else{
+
+        search_string <- as.vector(str_split_fixed(search_string, fixed('__|'), n = Inf))
+
+        return(search_string)
+
+    }
 }
