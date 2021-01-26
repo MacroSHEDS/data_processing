@@ -105,7 +105,7 @@ munge_discharge <- function(network, domain, prodname_ms, site_name,
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
+                              desired_interval = '15 min',
                               impute_limit = 30)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -196,7 +196,7 @@ munge_discharge_temp <- function(network, domain, prodname_ms, site_name,
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
+                              desired_interval = '15 min',
                               impute_limit = 30)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -261,7 +261,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_name,
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
+                              desired_interval = '15 min',
                               impute_limit = 30)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -327,7 +327,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_name,
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
+                              desired_interval = '15 min',
                               impute_limit = 30)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
