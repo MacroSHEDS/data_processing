@@ -272,7 +272,7 @@ get_czo_components <- function(search_string, hydroshare_code) {
     #so to eclude this you need to specify 'folder/component.csv' only including
     #'component.csv' will not catch it in the EXCLUDE
 
-    if(str_split_fixed(search_string, '[(]', n = Inf)[1,1] == '!!SEARCH'){
+    if(str_split_fixed(search_string, '[(]', n = Inf)[1,1] %in% c('!!SEARCH', '')){
 
         url_request_search <- paste0('https://www.hydroshare.org/hsapi/resource/',
                                      hydroshare_code,
@@ -288,45 +288,56 @@ get_czo_components <- function(search_string, hydroshare_code) {
         search_results_list <- read_json(search_results)[['results']]
         search_results <- sapply (search_results_list, '[[', 2)
 
-        search_results_vec <- c()
-        for(t in 1:length(search_results)){
-            comp_new <- str_split_fixed(search_results[t], '[/]', n = Inf)
+        if(str_split_fixed(search_string, '[(]', n = Inf)[1,1] == '') {
 
-            if(length(comp_new) > 8){
-                comp_new <- paste(comp_new[,8:length(comp_new)], collapse = '/')
-            } else{
-                comp_new <- comp_new[1,8]
+            search_results_fin <-  search_results[!grepl('ReadMe.md', search_results)]
+
+            search_results_fin <- str_split_fixed(search_results_fin, '[/]', n = Inf)[,8]
+
+            return(search_results_fin)
+
+        } else{
+
+            search_results_vec <- c()
+            for(t in 1:length(search_results)){
+                comp_new <- str_split_fixed(search_results[t], '[/]', n = Inf)
+
+                if(length(comp_new) > 8){
+                    comp_new <- paste(comp_new[,8:length(comp_new)], collapse = '/')
+                } else{
+                    comp_new <- comp_new[1,8]
+                }
+
+                search_results_vec <- append(search_results_vec, comp_new)
             }
 
-            search_results_vec <- append(search_results_vec, comp_new)
+            #paste(str_split(search_results, '[/]', n = Inf)[,8:9], collapse = '/')
+
+            search_terms <- str_split_fixed(search_string, '!!SEARCH[(]', n = Inf)[1,2]
+            search_terms <- substr(search_terms, start = 1, stop = nchar(search_terms)-1)
+            search_terms <-  as.vector(str_split_fixed(search_terms, '__[|]', n = Inf))
+
+            for(p in 1:length(search_terms)){
+
+                if(grepl('CONTAINS[(]', search_terms[p])){
+
+                    contains <- str_split_fixed(search_terms[p], 'CONTAINS[(]', n = Inf)[1,2]
+                    contains <- substr(contains, start = 1, stop = nchar(contains)-1)
+
+                    search_results_vec <- search_results_vec[grepl(contains, search_results_vec)]
+                }
+
+                if(grepl('EXCLUDE[(]', search_terms[p])){
+
+                    exclude <- str_split_fixed(search_terms[p], 'EXCLUDE[(]', n = Inf)[1,2]
+                    exclude <- substr(exclude, start = 1, stop = nchar(exclude)-1)
+
+                    search_results_vec <- search_results_vec[!grepl(exclude, search_results_vec)]
+                }
+            }
+
+            return(search_results_vec)
         }
-
-        #paste(str_split(search_results, '[/]', n = Inf)[,8:9], collapse = '/')
-
-        search_terms <- str_split_fixed(search_string, '!!SEARCH[(]', n = Inf)[1,2]
-        search_terms <- substr(search_terms, start = 1, stop = nchar(search_terms)-1)
-        search_terms <-  as.vector(str_split_fixed(search_terms, '__[|]', n = Inf))
-
-        for(p in 1:length(search_terms)){
-
-            if(grepl('CONTAINS[(]', search_terms[p])){
-
-                contains <- str_split_fixed(search_terms[p], 'CONTAINS[(]', n = Inf)[1,2]
-                contains <- substr(contains, start = 1, stop = nchar(contains)-1)
-
-                search_results_vec <- search_results_vec[grepl(contains, search_results_vec)]
-            }
-
-            if(grepl('EXCLUDE[(]', search_terms[p])){
-
-                exclude <- str_split_fixed(search_terms[p], 'EXCLUDE[(]', n = Inf)[1,2]
-                exclude <- substr(exclude, start = 1, stop = nchar(exclude)-1)
-
-                search_results_vec <- search_results_vec[!grepl(exclude, search_results_vec)]
-            }
-        }
-
-        return(search_results_vec)
 
     } else{
 
