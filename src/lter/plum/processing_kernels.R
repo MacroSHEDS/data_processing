@@ -1167,10 +1167,14 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
+                              desired_interval = '15 min',
                               impute_limit = 30)
 
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
+    d <- apply_detection_limit_t(X = d,
+                                 network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms,
+                                 ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1258,8 +1262,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                            prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+                              desired_interval = '15 min')
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 

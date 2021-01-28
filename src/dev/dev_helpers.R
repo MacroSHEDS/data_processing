@@ -613,3 +613,39 @@ drop_automated_entries <- function(path = '.'){
                 .open = '<<',
                 .close = '>>'))
 }
+
+dy_examine <- function(d, ...){
+
+    #for quickly plotting time series in order to zoom in on points, so you
+    #don't have to make an xts object and all that crap
+
+    #usage example: dy_examine(d, IS_discharge, GN_NH4_N)
+
+    dots = match.call(expand.dots = FALSE)$...
+    arg_names = vapply(dots, as.character, '')
+
+    d = xts::xts(d[, arg_names],
+                 order.by = d$datetime,
+                 tzone = lubridate::tz(d$datetime[1]))
+
+    dygraphs::dygraph(d) %>%
+        dygraphs::dyOptions(
+            useDataTimezone = TRUE,
+            # fillGraph = TRUE,
+            retainDateWindow = TRUE,
+            labelsKMB = TRUE,
+            # stackedGraph = TRUE,
+
+            # #if precip panels are separated, use these specifications
+            # fillAlpha = 1,
+            # colors = raincolors[1],
+            # strokeWidth = 3,
+            # plotter = hyetograph_js,
+
+            #if not showing points, use these
+            drawPoints = FALSE,
+            strokeWidth = 1,
+            fillAlpha = 0.4,
+            colors = rainbow(length(arg_names)),
+            drawGapEdgePoints = TRUE)
+}
