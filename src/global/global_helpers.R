@@ -4483,8 +4483,20 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #a few commented remnants from the old wide-format days have been left here,
     #because they might be instructive in other endeavors
     flux <- chem %>%
-        full_join(flow,
-                  by = 'datetime') %>%
+
+        #if we ever have dependency issues with fuzzyjoin functions, we should
+        #   implement a data.table rolling join. We'll just have to pop off
+        #   the uncertainty in a separate tibble, do the join, noting which
+        #   datetime series is being modified, then rejoin the uncertainty.
+        fuzzyjoin::difference_inner_join(
+            flow,
+            by = 'datetime',
+            max_dist = as.difftime(tim = '14:59',
+                                   format = '%M:%S')
+        ) %>%
+        select(-datetime.y) %>%
+        rename(datetime = datetime.x) %>%
+
         select_if(~(! all(is.na(.)))) %>%
         rowwise(datetime) %>%
         mutate(
@@ -5430,50 +5442,102 @@ read_precip_quickref <- function(network,
 }
 
 synchronize_timestep <- function(d,
-                                 desired_interval,
-                                 impute_limit = 30){
+                                 desired_interval){
+                                 # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
     #desired_interval is a character string that can be parsed by the "by"
     #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day"
-    #impute_limit is the maximum number of consecutive points to
-    #   inter/extrapolate. it's passed to imputeTS::na_interpolate
+    #impute_limit [REMOVED] is the maximum number of consecutive points to
+    #   inter/extrapolate. it's passed to imputeTS::na_interpolate. This
+    #parameter was removed because it should be standardized, and should only
+    #   vary with desired interval. If we ever change the limit, we'll want
+    #   that change to be reflected across all kernels without having to manually
+    #   update them
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
     # uniq_sites <- unique(d$site_name)
 
+    if(! desired_interval %in% c('15 min', '1 day')){
+        stop(paste('desired_interval must be "15 min" or "1 day", unless one day',
+                   'we decide otherwise'))
+    }
+
     if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
-    var_is_q <- drop_var_prefix(d$var[1]) == 'discharge'
-    var_is_p <- drop_var_prefix(d$var[1]) == 'precipitation'
-
-    #round to desired_interval
-    d <- sw(d %>%
+    #round to desired interval (clunky method, but avoids most group_by overhead)
+    d_split <- d %>%
         mutate(datetime = lubridate::round_date(datetime,
                                                 desired_interval)) %>%
-        group_by(site_name, var, datetime) %>%
-        summarize(
-            val = if(n() > 1){
-                    if(var_is_p){
-                        sum(val, na.rm = TRUE)
-                    } else if(var_is_q){
-                        max_ind <- which.max(val)
-                        if(max_ind) val[max_ind] else NA #max removes error
-                    } else {
-                        mean(val, na.rm = TRUE)
-                    }
-                } else {
-                    first(val) #needed for uncertainty propagation to work
-                },
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup() %>%
-        select(datetime, site_name, var, val, ms_status))
+        dplyr::group_split(site_name, var)
 
-    #fill in missing timepoints with NAs
+    for(i in 1:length(d_split)){
+
+        sitevar_chunk <- d_split[[i]]
+
+        var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+        var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+
+        to_summarize_bool <- duplicated(sitevar_chunk$datetime) |
+            duplicated(sitevar_chunk$datetime,
+                       fromLast = TRUE)
+
+        summary_chunk <- sitevar_chunk[to_summarize_bool, ]
+        noop_chunk <- sitevar_chunk[! to_summarize_bool, ]
+
+        if(nrow(summary_chunk) == 0) next
+
+        d_split[[i]] <- summary_chunk %>%
+            group_by(datetime) %>%
+                summarize(
+                    site_name = first(site_name),
+                    var = first(var),
+                    val = if(var_is_p)
+                        {
+                            sum(val, na.rm = TRUE)
+                        } else if(var_is_q){
+                            max_ind <- which.max(val) #max() removes uncert
+                            if(max_ind) val[max_ind] else NA_real_
+                        } else {
+                            mean(val, na.rm = TRUE)
+                        },
+                    ms_status = numeric_any(ms_status)) %>%
+                ungroup() %>%
+            bind_rows(noop_chunk)
+    }
+
+    d <- d_split %>%
+        purrr::reduce(bind_rows) %>%
+        arrange(site_name, var, datetime) %>%
+        select(datetime, site_name, var, val, ms_status)
+
+    # #round to desired_interval
+    # d <- sw(d %>%
+    #     mutate(datetime = lubridate::round_date(datetime,
+    #                                             desired_interval)) %>%
+    #     group_by(site_name, var, datetime) %>%
+    #     summarize(
+    #         val = if(n() > 1){
+    #                 if(var_is_p){
+    #                     sum(val, na.rm = TRUE)
+    #                 } else if(var_is_q){
+    #                     max_ind <- which.max(val)
+    #                     if(max_ind) val[max_ind] else NA #max removes error
+    #                 } else {
+    #                     mean(val, na.rm = TRUE)
+    #                 }
+    #             } else {
+    #                 first(val) #needed for uncertainty propagation to work
+    #             },
+    #         ms_status = numeric_any(ms_status)) %>%
+    #     ungroup() %>%
+    #     select(datetime, site_name, var, val, ms_status))
+
+    #make tibble for filling in missing timepoints with NAs
     fulldt <- d %>%
         group_by(site_name, var) %>%
         summarize(
@@ -5488,9 +5552,51 @@ synchronize_timestep <- function(d,
                                  by = desired_interval))) %>%
         ungroup()
 
+    #determine gap size to impute, based on sample interval
+    impute_limit <- ifelse(desired_interval == '1 day', #else '15 min'
+                           3, #3 days if imputing daily samples
+                           720) #half a day if imputing continuous samples
+
+    d %>%
+        pivot_wider(
+
+    #get lengths and values for successive repetitions of the same
+    #sample interval (using run length encoding)
+    dt_by_var = sort(unique(dd$DateTime_UTC[dd$variable == varz[i]]))
+
+    run_lengths = rle(diff(as.numeric(dt_by_var)))
+    if(length(run_lengths$lengths) != 1){
+
+        # if gaps or interval change, get mode interval
+        uniqv = unique(run_lengths$values)
+        input_int = as.numeric(names(which.max(tapply(run_lengths$lengths,
+                                                      run_lengths$values, sum)))) / 60
+
+        if(any(uniqv %% min(uniqv) != 0)){ #if underlying pattern changes
+            warning(paste0('Sample interval is not consistent for ', varz[i],
+                           '\n\tGaps will be introduced!\n\t',
+                           'Using the most common interval: ',
+                           as.character(input_int), ' mins.'), call.=FALSE)
+        } else {
+            message(paste0(length(run_lengths$lengths)-1,
+                           ' sample gap(s) detected in ', varz[i], '.'))
+        }
+
+        #store the (most common) sample interval for each variable
+        ints_by_var[i,2] = as.difftime(input_int, unit='mins')
+
+    } else {
+
+        # if consistent, just grab the diff between the first two times
+        ints_by_var[i,2] = difftime(dt_by_var[2],  dt_by_var[1],
+                                    units='mins')
+    }
+
+
+
     #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
     d_adjusted <- d %>%
-        full_join(fulldt, #fill in missing datetime intervals
+        full_join(fulldt, #fill in missing timepoints
                   by = c('datetime', 'site_name', 'var')) %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
@@ -7037,8 +7143,12 @@ apply_detection_limit_t <- function(X,
                               #sometimes synchronize_timestep will adjust a point
                               #to a time before the earliest startdt recorded
                               #in detection_limits.json. this handles that.
-                              roundvec <- imputeTS::na_locf(x = roundvec,
-                                                            option = 'nocb')
+                              if(length(roundvec == 1) && is.na(roundvec)){
+                                  roundvec = detlim_varsite$lim[1]
+                              } else {
+                                  roundvec <- imputeTS::na_locf(x = roundvec,
+                                                                option = 'nocb')
+                              }
 
                               rounded <- mapply(FUN = function(a, b){
                                                     round(a, b)
@@ -7596,11 +7706,17 @@ load_config_datasets <- function(from_where){
 
     if(from_where == 'remote'){
 
-        ms_vars <- sm(googlesheets4::read_sheet(conf$variables_gsheet,
-                                                na = c('', 'NA')))
+        ms_vars <- sm(googlesheets4::read_sheet(
+            conf$variables_gsheet,
+            na = c('', 'NA'),
+            col_types = 'cccccccnncc'
+        ))
 
-        site_data <- sm(googlesheets4::read_sheet(conf$site_data_gsheet,
-                                                  na = c('', 'NA')))
+        site_data <- sm(googlesheets4::read_sheet(
+            conf$site_data_gsheet,
+            na = c('', 'NA'),
+            col_types = 'ccccccccnnnnncc'
+        ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
                                                        na = c('', 'NA')))
