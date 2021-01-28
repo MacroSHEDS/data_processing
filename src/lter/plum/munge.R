@@ -38,10 +38,10 @@ for(i in 1:nrow(prod_info)){
         }
 
             munge_rtn <- munge_time_component(network = network,
-                                             domain = domain,
-                                             site_name = site_name,
-                                             prodname_ms = prodname_ms,
-                                             tracker = held_data)
+                                              domain = domain,
+                                              site_name = site_name,
+                                              prodname_ms = prodname_ms,
+                                              tracker = held_data)
 
             if(is_ms_err(munge_rtn)){
 
