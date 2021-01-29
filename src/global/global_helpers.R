@@ -5441,32 +5441,60 @@ read_precip_quickref <- function(network,
     # return(quickref)
 }
 
-synchronize_timestep <- function(d,
-                                 desired_interval){
+synchronize_timestep <- function(d){
+                                 # desired_interval){
                                  # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
-    #desired_interval is a character string that can be parsed by the "by"
-    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day"
+    #desired_interval [REMOVED] is a character string that can be parsed by the "by"
+    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
+    #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
+    #   ONE FOR GRAB DATA AND ONE FOR SENSOR. IF WE EVER WANT TO CHANGE THEM,
+    #   IT WOULD BE BETTER TO CHANGE THEM JUST ONCE HERE, RATHER THAN IN
+    #   EVERY KERNEL
     #impute_limit [REMOVED] is the maximum number of consecutive points to
-    #   inter/extrapolate. it's passed to imputeTS::na_interpolate. This
-    #parameter was removed because it should be standardized, and should only
-    #   vary with desired interval. If we ever change the limit, we'll want
-    #   that change to be reflected across all kernels without having to manually
-    #   update them
+    #   inter/extrapolate. it's passed to imputeTS::na_interpolate. THIS
+    #   PARAMETER WAS REMOVED BECAUSE IT SHOULD ONLY VARY WITH DESIRED INTERVAL.
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
     # uniq_sites <- unique(d$site_name)
 
-    if(! desired_interval %in% c('15 min', '1 day')){
-        stop(paste('desired_interval must be "15 min" or "1 day", unless one day',
-                   'we decide otherwise'))
-    }
+    # if(! desired_interval %in% c('15 min', '1 day')){
+    #     stop(paste('desired_interval must be "15 min" or "1 day", unless one day',
+    #                'we decide otherwise'))
+    # }
 
     if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
+    }
+
+    #determine whether we're dealing with ~daily data or ~15min data. set
+    #   desired_interval accordingly. if both, split dataset.
+    sitevar_groups <- d %>%
+        group_by(site_name, var) %>%
+        arrange(datetime) %>%
+        dplyr::group_split()
+
+    mode_intervals_m <- vapply(
+        X = sitevar_groups,
+        FUN = function(x) Mode(diff(as.numeric(x$datetime)) / 60),
+        FUN.VALUE = 0
+    )
+
+    desired_interval <- case_when(
+        all(is.na(mode_intervals_m) | mode_intervals_m > 12 * 60) ~ '1 day',
+        all(is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60) ~ '15 min',
+        TRUE ~ 'mix'
+    )
+
+    if(desired_interval == 'mix'){
+
+        daily_sampvar_bool <- is.na(mode_intervals_m) | mode_intervals_m > 12 * 60
+
+        samp_vars_daily <- sitevar_groups[daily_sampvar_bool]
+        samp_vars_15m <- sitevar_groups[! daily_sampvar_bool]
     }
 
     #round to desired interval (clunky method, but avoids most group_by overhead)
@@ -5555,44 +5583,7 @@ synchronize_timestep <- function(d,
     #determine gap size to impute, based on sample interval
     impute_limit <- ifelse(desired_interval == '1 day', #else '15 min'
                            3, #3 days if imputing daily samples
-                           720) #half a day if imputing continuous samples
-
-    d %>%
-        pivot_wider(
-
-    #get lengths and values for successive repetitions of the same
-    #sample interval (using run length encoding)
-    dt_by_var = sort(unique(dd$DateTime_UTC[dd$variable == varz[i]]))
-
-    run_lengths = rle(diff(as.numeric(dt_by_var)))
-    if(length(run_lengths$lengths) != 1){
-
-        # if gaps or interval change, get mode interval
-        uniqv = unique(run_lengths$values)
-        input_int = as.numeric(names(which.max(tapply(run_lengths$lengths,
-                                                      run_lengths$values, sum)))) / 60
-
-        if(any(uniqv %% min(uniqv) != 0)){ #if underlying pattern changes
-            warning(paste0('Sample interval is not consistent for ', varz[i],
-                           '\n\tGaps will be introduced!\n\t',
-                           'Using the most common interval: ',
-                           as.character(input_int), ' mins.'), call.=FALSE)
-        } else {
-            message(paste0(length(run_lengths$lengths)-1,
-                           ' sample gap(s) detected in ', varz[i], '.'))
-        }
-
-        #store the (most common) sample interval for each variable
-        ints_by_var[i,2] = as.difftime(input_int, unit='mins')
-
-    } else {
-
-        # if consistent, just grab the diff between the first two times
-        ints_by_var[i,2] = difftime(dt_by_var[2],  dt_by_var[1],
-                                    units='mins')
-    }
-
-
+                           48) #12 hours if imputing continuous samples
 
     #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
     d_adjusted <- d %>%
@@ -8096,8 +8087,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                                prodname_ms = prodname_ms)
 
         d <- synchronize_timestep(d,
-                                  desired_interval = '1 day', #set to '15 min' when we have server
-                                  impute_limit = 30)
+                                  desired_interval = '1 day') #set to '15 min' when we have server
 
         d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
 
