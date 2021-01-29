@@ -40,10 +40,10 @@ suppressPackageStartupMessages({
     library(googlesheets4)
     library(rgee) #requires geojsonio package
 
-
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
     library(fuzzyjoin)
+
 })
 
 options(dplyr.summarise.inform = FALSE)
@@ -203,7 +203,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-dmnrow=11
+# dmnrow=2
 for(dmnrow in 1:nrow(network_domain)){
     # drop_automated_entries('.') #use with caution!
 
