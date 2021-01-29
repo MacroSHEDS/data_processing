@@ -527,8 +527,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
             ms_status)
 
     out_sub <- synchronize_timestep(ms_df = out_sub,
-                                    desired_interval = '15 min',
-                                    impute_limit = 30)
+                                    desired_interval = '15 min')
 
     return(out_sub)
 }
