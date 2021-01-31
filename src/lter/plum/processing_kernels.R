@@ -1261,8 +1261,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '15 min')
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 
