@@ -5487,7 +5487,27 @@ ms_linear_interpolate <- function(d, interval){
     #d: a ms tibble with no ms_interp column (this will be created)
     #interval: the sampling interval (either '15 min' or '1 day'). an
     #   appropriate maxgap (i.e. max number of consecutive NAs to fill) will
-    #   be chosen based on this interval
+    #   be chosen based on this interval.
+
+    #TODO: prefer imputeTS::na_seadec when there are >=2 non-NA datapoints.
+    #   There are commented sections that begin this work, but we still would
+    #   need to calculate start and end when creating a ts() object. we'd
+    #   also need to separate uncertainty from the val column before converting
+    #   to ts. here is the line that could be added to this documentation
+    #   if we ever implement na_seadec:
+    #For linear interpolation with
+    #   seasonal decomposition, interval will also be used to determine
+    #   the fraction of the sampling period between samples.
+
+    if(length(unique(d$site_name)) > 1){
+        stop(paste('ms_linear_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_linear_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
 
     if(! interval %in% c('15 min', '1 day')){
         stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
@@ -5497,19 +5517,44 @@ ms_linear_interpolate <- function(d, interval){
                            3, #3 days if imputing daily samples
                            48) #12 hours if imputing continuous (15 min) samples
 
+    # ts_delta_t <- ifelse(interval == '1 day',
+    #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
+    #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
+
     d_interp <- d %>%
         # group_by(site_name, var) %>%
-        # arrange(datetime) %>%
+        arrange(datetime) %>%
         mutate(
+
+            #make binary column to track which points are interped
             ms_interp = case_when(
                 is.na(ms_status) ~ 1,
-                TRUE ~ 0), #make binary column to track which points are interped
-            ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
+                TRUE ~ 0),
+
+            #carry status to interped rows
+            ms_status = imputeTS::na_locf(ms_status,
                                           na_remaining = 'rev'),
+
+            # val = if(sum(! is.na(val)) > 2){
+            #
+            #     #linear interp NA vals after seasonal decomposition
+            #     imputeTS::na_seadec(x = as.numeric(ts(val,
+            #                                start = ,
+            #                                end = ,
+            #                                deltat = ts_delta_t)),
+            #                         maxgap = impute_limit)
+            #
+            # } else if(sum(! is.na(val)) > 1){
             val = if(sum(! is.na(val)) > 1){
-                imputeTS::na_interpolation(val, #linear interp NA vals
+
+                #linear interp NA vals
+                imputeTS::na_interpolation(val,
                                            maxgap = impute_limit)
-            } else val) %>% #unless not enough data in group; then do nothing
+
+            #unless not enough data in group; then do nothing
+            } else val
+        ) %>%
+
         filter(! is.na(val)) %>%
         mutate(
             err = errors(val), #extract error from data vals
@@ -5524,7 +5569,7 @@ ms_linear_interpolate <- function(d, interval){
                 set_errors(val, #unless not enough error to interp
                            0)
             }) %>%
-        ungroup() %>%
+        # ungroup() %>%
         select(-err) %>%
         arrange(site_name, var, datetime)
 
@@ -5536,13 +5581,13 @@ synchronize_timestep <- function(d){
                                  # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
-    #desired_interval [REMOVED] is a character string that can be parsed by the "by"
+    #desired_interval [HARD DEPRECATED] is a character string that can be parsed by the "by"
     #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
     #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
     #   ONE FOR GRAB DATA AND ONE FOR SENSOR. IF WE EVER WANT TO CHANGE THEM,
     #   IT WOULD BE BETTER TO CHANGE THEM JUST ONCE HERE, RATHER THAN IN
     #   EVERY KERNEL
-    #impute_limit [REMOVED] is the maximum number of consecutive points to
+    #impute_limit [HARD DEPRECATED] is the maximum number of consecutive points to
     #   inter/extrapolate. it's passed to imputeTS::na_interpolate. THIS
     #   PARAMETER WAS REMOVED BECAUSE IT SHOULD ONLY VARY WITH DESIRED INTERVAL.
 
