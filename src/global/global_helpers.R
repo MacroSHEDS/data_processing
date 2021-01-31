@@ -5441,6 +5441,96 @@ read_precip_quickref <- function(network,
     # return(quickref)
 }
 
+populate_implicit_NAs <- function(d, interval){
+
+    #this would be more flexible if we could pass column names as
+    #   positional args and use them in group_by and mutate
+
+    #d: a ms tibble with at minimum datetime, site_name, and var columns
+    #interval: the interval along which to populate missing values. (must be
+    #   either '15 min' or '1 day'.
+
+    #this function makes implicit missing timeseries records explicit,
+    #   by populating rows so that the datetime column is complete
+    #   with respect to the sampling interval. In other words, if
+    #   samples are taken every 15 minutes, but some samples are skipped
+    #   (rows not present), this will create those rows. if val, ms_status, or
+    #   other columns are present, their new records will be populated with NA
+
+    #returns d, complete with new rows, sorted by site_name, then var, then datetime
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    complete_d <- d %>%
+        group_by(site_name, var) %>%
+        tidyr::complete(datetime = seq(min(datetime),
+                                       max(datetime),
+                                       by = interval)) %>%
+        mutate(site_name = .$site_name[1],
+               var = .$var[1]) %>%
+        ungroup() %>%
+        arrange(site_name, var, datetime) %>%
+        select(datetime, site_name, var, everything())
+
+    # complete_d <- right_join(d,
+    #                          fulldt,
+    #                          by = c('datetime', 'site_name', 'var')) %>%
+    #     arrange(datetime)
+
+    return(complete_d)
+}
+
+ms_linear_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day'). an
+    #   appropriate maxgap (i.e. max number of consecutive NAs to fill) will
+    #   be chosen based on this interval
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    impute_limit <- ifelse(interval == '1 day',
+                           3, #3 days if imputing daily samples
+                           48) #12 hours if imputing continuous (15 min) samples
+
+    d_interp <- d %>%
+        # group_by(site_name, var) %>%
+        # arrange(datetime) %>%
+        mutate(
+            ms_interp = case_when(
+                is.na(ms_status) ~ 1,
+                TRUE ~ 0), #make binary column to track which points are interped
+            ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
+                                          na_remaining = 'rev'),
+            val = if(sum(! is.na(val)) > 1){
+                imputeTS::na_interpolation(val, #linear interp NA vals
+                                           maxgap = impute_limit)
+            } else val) %>% #unless not enough data in group; then do nothing
+        filter(! is.na(val)) %>%
+        mutate(
+            err = errors(val), #extract error from data vals
+            err = case_when(
+                err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
+                TRUE ~ err),
+            val = if(sum(! is.na(err)) > 0){
+                set_errors(val, #and then carry error to interped rows
+                           imputeTS::na_locf(err,
+                                             na_remaining = 'rev'))
+            } else {
+                set_errors(val, #unless not enough error to interp
+                           0)
+            }) %>%
+        ungroup() %>%
+        select(-err) %>%
+        arrange(site_name, var, datetime)
+
+    return(d_interp)
+}
+
 synchronize_timestep <- function(d){
                                  # desired_interval){
                                  # impute_limit = 30){
@@ -5459,169 +5549,102 @@ synchronize_timestep <- function(d){
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-    # uniq_sites <- unique(d$site_name)
-
-    # if(! desired_interval %in% c('15 min', '1 day')){
-    #     stop(paste('desired_interval must be "15 min" or "1 day", unless one day',
-    #                'we decide otherwise'))
-    # }
-
     if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
-    #determine whether we're dealing with ~daily data or ~15min data. set
-    #   desired_interval accordingly. if both, split dataset.
-    sitevar_groups <- d %>%
+    #split dataset by site and variable. for each, determine whether we're
+    #   dealing with ~daily data or ~15min data. set rounding_intervals
+    #   accordingly.
+    d_split <- d %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
         dplyr::group_split()
 
     mode_intervals_m <- vapply(
-        X = sitevar_groups,
+        X = d_split,
         FUN = function(x) Mode(diff(as.numeric(x$datetime)) / 60),
-        FUN.VALUE = 0
-    )
+        FUN.VALUE = 0)
 
-    desired_interval <- case_when(
-        all(is.na(mode_intervals_m) | mode_intervals_m > 12 * 60) ~ '1 day',
-        all(is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60) ~ '15 min',
-        TRUE ~ 'mix'
-    )
-
-    if(desired_interval == 'mix'){
-
-        daily_sampvar_bool <- is.na(mode_intervals_m) | mode_intervals_m > 12 * 60
-
-        samp_vars_daily <- sitevar_groups[daily_sampvar_bool]
-        samp_vars_15m <- sitevar_groups[! daily_sampvar_bool]
-    }
-
-    #round to desired interval (clunky method, but avoids most group_by overhead)
-    d_split <- d %>%
-        mutate(datetime = lubridate::round_date(datetime,
-                                                desired_interval)) %>%
-        dplyr::group_split(site_name, var)
+    rounding_intervals <- case_when(
+        is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
+        is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60 ~ '15 min')
 
     for(i in 1:length(d_split)){
 
         sitevar_chunk <- d_split[[i]]
 
-        var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
-        var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+        #round each site-variable tibble's datetime column to the desired interval.
+        #this method is clunky, but it avoids a lot of group_by overhead.
+        sitevar_chunk <- mutate(sitevar_chunk,
+                                datetime = lubridate::round_date(
+                                    datetime,
+                                    rounding_intervals[i]))
 
+        #split chunk into subchunks. one has duplicate datetimes to summarize,
+        #   and the other doesn't. both will be interpolated in a bit.
         to_summarize_bool <- duplicated(sitevar_chunk$datetime) |
             duplicated(sitevar_chunk$datetime,
                        fromLast = TRUE)
 
-        summary_chunk <- sitevar_chunk[to_summarize_bool, ]
-        noop_chunk <- sitevar_chunk[! to_summarize_bool, ]
+        summary_and_interp_chunk <- sitevar_chunk[to_summarize_bool, ]
+        interp_only_chunk <- sitevar_chunk[! to_summarize_bool, ]
 
-        if(nrow(summary_chunk) == 0) next
+        if(nrow(summary_and_interp_chunk)){
 
-        d_split[[i]] <- summary_chunk %>%
-            group_by(datetime) %>%
-                summarize(
-                    site_name = first(site_name),
-                    var = first(var),
-                    val = if(var_is_p)
-                        {
-                            sum(val, na.rm = TRUE)
-                        } else if(var_is_q){
-                            max_ind <- which.max(val) #max() removes uncert
-                            if(max_ind) val[max_ind] else NA_real_
-                        } else {
-                            mean(val, na.rm = TRUE)
-                        },
-                    ms_status = numeric_any(ms_status)) %>%
-                ungroup() %>%
-            bind_rows(noop_chunk)
+            #summarize by max for Q, sum for P, and mean for chemistry
+            var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+            var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+
+            summary_and_interp_chunk <- summary_and_interp_chunk %>%
+                group_by(datetime) %>%
+                    summarize(
+                        site_name = first(site_name),
+                        var = first(var),
+                        val = if(var_is_p)
+                            {
+                                sum(val, na.rm = TRUE)
+                            } else if(var_is_q){
+                                max_ind <- which.max(val) #max() removes uncert
+                                if(max_ind) val[max_ind] else NA_real_
+                            } else {
+                                mean(val, na.rm = TRUE)
+                            },
+                        ms_status = numeric_any(ms_status)) %>%
+                    ungroup()
+
+            summary_and_interp_chunk <- populate_implicit_NAs(
+                d = summary_and_interp_chunk,
+                interval = rounding_intervals[i])
+
+            summary_and_interp_chunk <- ms_linear_interpolate(
+                d = summary_and_interp_chunk,
+                interval = rounding_intervals[i])
+        }
+
+        if(nrow(interp_only_chunk)){
+
+            interp_only_chunk <- populate_implicit_NAs(
+                d = interp_only_chunk,
+                interval = rounding_intervals[i])
+
+            interp_only_chunk <- ms_linear_interpolate(
+                d = interp_only_chunk,
+                interval = rounding_intervals[i])
+        }
+
+        d_split <- as.list(d_split)
+        d_split[[i]] <- bind_rows(summary_and_interp_chunk,
+                                  interp_only_chunk)
     }
 
+    #recombine list of tibbles into single tibble
     d <- d_split %>%
         purrr::reduce(bind_rows) %>%
         arrange(site_name, var, datetime) %>%
-        select(datetime, site_name, var, val, ms_status)
+        select(datetime, site_name, var, val, ms_status, ms_interp)
 
-    # #round to desired_interval
-    # d <- sw(d %>%
-    #     mutate(datetime = lubridate::round_date(datetime,
-    #                                             desired_interval)) %>%
-    #     group_by(site_name, var, datetime) %>%
-    #     summarize(
-    #         val = if(n() > 1){
-    #                 if(var_is_p){
-    #                     sum(val, na.rm = TRUE)
-    #                 } else if(var_is_q){
-    #                     max_ind <- which.max(val)
-    #                     if(max_ind) val[max_ind] else NA #max removes error
-    #                 } else {
-    #                     mean(val, na.rm = TRUE)
-    #                 }
-    #             } else {
-    #                 first(val) #needed for uncertainty propagation to work
-    #             },
-    #         ms_status = numeric_any(ms_status)) %>%
-    #     ungroup() %>%
-    #     select(datetime, site_name, var, val, ms_status))
-
-    #make tibble for filling in missing timepoints with NAs
-    fulldt <- d %>%
-        group_by(site_name, var) %>%
-        summarize(
-            dtmin = min(datetime),
-            dtmax = max(datetime)) %>%
-        ungroup() %>%
-        rowwise() %>%
-        do(tibble(site_name = .$site_name,
-                  var = .$var,
-                  datetime = seq(.$dtmin,
-                                 .$dtmax,
-                                 by = desired_interval))) %>%
-        ungroup()
-
-    #determine gap size to impute, based on sample interval
-    impute_limit <- ifelse(desired_interval == '1 day', #else '15 min'
-                           3, #3 days if imputing daily samples
-                           48) #12 hours if imputing continuous samples
-
-    #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
-    d_adjusted <- d %>%
-        full_join(fulldt, #fill in missing timepoints
-                  by = c('datetime', 'site_name', 'var')) %>%
-        group_by(site_name, var) %>%
-        arrange(datetime) %>%
-        mutate(
-            ms_interp = case_when(
-                is.na(ms_status) ~ 1,
-                TRUE ~ 0), #add binary column to track which points are interped
-            ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
-                                          na_remaining = 'rev'),
-            val = if(sum(! is.na(val)) > 1){
-                    imputeTS::na_interpolation(val, #linear interp NA vals
-                                               maxgap = impute_limit)
-                } else val, #unless not enough data in group; then do nothing
-            err = errors(val), #extract error from data vals
-            err = case_when(
-                err == 0 ~ NA_real_, #change 0 errors (default) to NA...
-                TRUE ~ err),
-            val = if(sum(! is.na(err)) > 1){
-                    set_errors(val, #and then carry error to interped rows
-                               imputeTS::na_locf(err,
-                                                 na_remaining = 'rev'))
-                } else {
-                    set_errors(val, #unless not enough error to interp
-                               0)
-                }) %>%
-        ungroup() %>%
-        select(-err) %>%
-        # group_by(datetime, site_name) %>%
-        # filter(any(! is.na(val))) %>%
-        # ungroup() %>%
-        filter(! is.na(val)) %>%
-        arrange(site_name, var, datetime)
-
-    return(d_adjusted)
+    return(d)
 }
 
 recursive_tracker_update <- function(l, elem_name, new_val){
@@ -8116,7 +8139,8 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data){
+generate_portal_extras <- function(site_data,
+                                   network_domain){
 
     #for post-derive steps that save the portal some processing.
 
@@ -8321,6 +8345,12 @@ catalogue_held_data <- function(network_domain, site_data){
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
         for(j in 1:length(nonspatial_prods)){
+
+            if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
+                logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
+                        logger = logger_module)
+                nonspatial_prods <- nonspatial_prods[! grepl('precip_pchem_pflux', nonspatial_prods)]
+            }
 
             ## sum all observations across all sites (will be redundant when the rest is done)
             prod_nobs <- list.files(nonspatial_prods[j],
