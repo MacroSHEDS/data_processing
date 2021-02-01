@@ -479,9 +479,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     # #                        domain = domain,
     # #                        prodname_ms = prodname_ms)
     # #
-    # # d <- synchronize_timestep(d,
-    # #                           desired_interval = '15 min',
-    # #                           impute_limit = 30)
+    # # d <- synchronize_timestep(d)
     # #
     # # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     #
@@ -527,8 +525,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
             ms_status)
 
     out_sub <- synchronize_timestep(ms_df = out_sub,
-                                    desired_interval = '15 min',
-                                    impute_limit = 30)
+                                    desired_interval = '15 min')
 
     return(out_sub)
 }
