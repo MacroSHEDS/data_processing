@@ -114,8 +114,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             }
 
             d <- synchronize_timestep(d,
-                                      desired_interval = '1 day',
-                                      impute_limit = 30)
+                                      desired_interval = '1 day')
 
             d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
