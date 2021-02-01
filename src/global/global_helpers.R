@@ -4440,8 +4440,6 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use
     #predisesors to ms input
 
-    #TODO: this can't handle
-
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
     }
@@ -5410,7 +5408,6 @@ read_precip_quickref <- function(network,
     quickref <- quickref[! duplicated(names(quickref))]
 
     return(quickref)
-
 
     #previous approach: when chunks have a size limit:
 
@@ -8207,11 +8204,6 @@ calculate_flux_by_area <- function(site_data){
 
     setwd('../portal/data/')
 
-    # domains <- site_data %>%
-    #     filter(as.logical(in_workflow)) %>%
-    #     pull(domain) %>%
-    #     unique()
-
     ws_areas <- site_data %>%
         filter(as.logical(in_workflow)) %>%
         select(domain, site_name, ws_area_ha) %>%
@@ -8257,7 +8249,7 @@ calculate_flux_by_area <- function(site_data){
                     arrange(site_name, var, datetime) %>%
                     left_join(ws_areas[[dmn]],
                               by = 'site_name') %>%
-                    mutate(val = val / ws_area_ha) %>%
+                    mutate(val = sw(val / ws_area_ha)) %>%
                     select(-ws_area_ha)
 
                 d$val_err <- errors(d$val)
@@ -8279,6 +8271,8 @@ calculate_flux_by_area <- function(site_data){
     engine(flux_var = 'precip_flux_inst',
            domains = domains,
            ws_areas = ws_areas)
+
+    setwd('../../data_acquisition/')
 }
 
 retrieve_versionless_product <- function(network,
@@ -8522,8 +8516,8 @@ catalogue_held_data <- function(network_domain, site_data){
         }
     }
 
-    setwd('../portal/data/')
-    dir.create('general/catalog_files',
+    # setwd('../portal/data/')
+    dir.create('../portal/data/general/catalog_files',
                showWarnings = FALSE)
 
     #generate and write file describing all variables
@@ -8547,12 +8541,12 @@ catalogue_held_data <- function(network_domain, site_data){
                MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
 
     readr::write_csv(x = all_variable_display,
-                     file = 'general/catalog_files/all_variables.csv')
+                     file = '../portal/data/general/catalog_files/all_variables.csv')
 
 
     #generate and write individual file for each variable, describing it by site
 
-    dir.create('general/catalog_files/indiv_variables',
+    dir.create('../portal/data/general/catalog_files/indiv_variables',
                showWarnings = FALSE)
 
     vars <- unique(all_variable_display$VariableCode)
@@ -8594,7 +8588,7 @@ catalogue_held_data <- function(network_domain, site_data){
                    MeanObsPerDay)
 
         readr::write_csv(x = indiv_variable_display,
-                         file = glue('general/catalog_files/indiv_variables/',
+                         file = glue('../portal/data/general/catalog_files/indiv_variables/',
                                      v, '.csv'))
     }
 
@@ -8633,10 +8627,10 @@ catalogue_held_data <- function(network_domain, site_data){
                ExternalLink)
 
     readr::write_csv(x = all_site_display,
-                     file = 'general/catalog_files/all_sites.csv')
+                     file = '../portal/data/general/catalog_files/all_sites.csv')
 
     #generate and write individual file for each site, describing it by variable
-    dir.create('general/catalog_files/indiv_sites',
+    dir.create('../portal/data/general/catalog_files/indiv_sites',
                showWarnings = FALSE)
 
     sites <- distinct(all_site_breakdown,
@@ -8673,7 +8667,7 @@ catalogue_held_data <- function(network_domain, site_data){
                    MeanObsPerDay, PercentFlagged, PercentImputed)
 
         readr::write_csv(x = indiv_site_display,
-                         file = glue('general/catalog_files/indiv_sites/',
+                         file = glue('../portal/data/general/catalog_files/indiv_sites/',
                                      '{n}_{d}_{s}.csv',
                                      n = ntw,
                                      d = dmn,
@@ -8792,11 +8786,7 @@ combine_ws_boundaries <- function(){
 
                                   wb <- x %>%
                                       sf::st_read(quiet = TRUE) %>%
-                                      sf::st_cast(to = 'POLYGON') %>%
-                                      sf::st_union() %>%
-                                      sf::st_as_sf() %>%
-                                      mutate(site_name = !!site_name) %>%
-                                      select(site_name, geometry = x)
+                                      sf::st_cast(to = 'POLYGON')
 
                                   coords <- sf::st_coordinates(wb)
                                   mean_latlong <- unname(colMeans(coords[, 1:2]))
@@ -8806,6 +8796,10 @@ combine_ws_boundaries <- function(){
 
                                   wb %>%
                                       sf::st_transform(crs = proj) %>%
+                                      sf::st_union() %>%
+                                      sf::st_as_sf() %>%
+                                      mutate(site_name = !!site_name) %>%
+                                      select(site_name, geometry = x) %>%
                                       sf::st_simplify(dTolerance = 30,
                                                       preserveTopology = TRUE) %>%
                                       sf::st_transform(crs = 4326) #back to WGS 84
@@ -8828,4 +8822,6 @@ combine_ws_boundaries <- function(){
                  driver = 'ESRI Shapefile',
                  delete_layer = TRUE,
                  silent = TRUE)
+
+    setwd('../../data_acquisition/')
 }
