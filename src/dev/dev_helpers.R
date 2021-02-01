@@ -624,7 +624,8 @@ dy_examine <- function(d, shape = 'long', site, ...){
     #d is either a standard ms tibble, or a tibble/df with datetime, site_name,
     #   and var columns.
     #shape is either 'long' (standard ms tibble) or 'wide'
-    #site is a single site name, present in d$site_name
+    #site is a single site name, present in d$site_name. site can be NA if there
+    #   is no site_name column
     #... = variable names
 
     #usage example: dy_examine(d, 'long', 'upper_ipswich', IS_discharge, GN_NH4_N)
@@ -633,19 +634,18 @@ dy_examine <- function(d, shape = 'long', site, ...){
     dots = match.call(expand.dots = FALSE)$...
     arg_names = vapply(dots, as.character, '')
 
-    d = filter(d, site_name == !!site)
-
+    if(! is.na(site)) d = filter(d, site_name == !!site)
 
     if(shape == 'wide'){
 
         if(any(! arg_names %in% colnames(d))){
-            v = colnames(select(d, -site_name, -datetime))
+            v = colnames(select(d, -one_of('site_name')))
             stop(glue('no data to plot. available variables for {s} are: {vv}',
                       s = site,
                       vv = paste(v, collapse = ", ")))
         }
 
-        d = d[, arg_names]
+        d = d[, c('datetime', arg_names)]
 
     } else if(shape == 'long'){
 
@@ -655,7 +655,7 @@ dy_examine <- function(d, shape = 'long', site, ...){
                       vv = paste(unique(d$var), collapse = ", ")))
         }
 
-        d = select(d, datetime, site_name, var, val)
+        d = select(d, datetime, var, val)
         d = d %>%
             filter(var %in% arg_names) %>%
             pivot_wider(names_from = 'var',
@@ -665,7 +665,7 @@ dy_examine <- function(d, shape = 'long', site, ...){
         stop('shape must be "wide" or "long"')
     }
 
-    d = xts::xts(select(d, -datetime, -site_name),
+    d = xts::xts(select(d, -datetime),
              order.by = d$datetime,
              tzone = lubridate::tz(d$datetime[1]))
 
