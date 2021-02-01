@@ -7594,8 +7594,10 @@ load_config_datasets <- function(from_where){
 
     if(from_where == 'remote'){
 
+        #list-columns were being created but defining  column types seemed to stop this
         ms_vars <- sm(googlesheets4::read_sheet(conf$variables_gsheet,
-                                                na = c('', 'NA')))
+                                                na = c('', 'NA'),
+                                                col_types = 'cccccccnncc'))
 
         site_data <- sm(googlesheets4::read_sheet(conf$site_data_gsheet,
                                                   na = c('', 'NA')))
