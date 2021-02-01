@@ -387,6 +387,8 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
 
     # Convert from cm/s to liters/s
     d <- d %>%
+      # One value seems unrealistically hight
+      filter(val < 5000) %>%
       mutate(val = val*1000)
 
     d <- carry_uncertainty(d,
