@@ -4440,6 +4440,8 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use
     #predisesors to ms input
 
+    #TODO: this can't handle
+
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
     }
@@ -4451,17 +4453,20 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     chem <- read_combine_feathers(network = network,
                                   domain = domain,
                                   prodname_ms = chemprod) %>%
-        filter(site_name == !!site_name) %>%
-        tidyr::pivot_wider(names_from = 'var',
-                           values_from = 'val') %>%
-        select(datetime, ms_status, ms_interp,
-               matches(paste0('^[A-Z]{2}_',
-                              flux_vars),
-                       ignore.case = FALSE))
+        filter(site_name == !!site_name,
+               drop_var_prefix(var) %in% flux_vars)
 
-    if(ncol(chem) == 3){
-        return(NULL)
-    }
+    if(nrow(chem) == 0) return(NULL)
+
+    chem <- chem %>%
+        tidyr::pivot_wider(
+            names_from = 'var',
+            values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
+        select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
+
+    # if(ncol(chem) == 3){
+    #     return(NULL)
+    # }
 
     daterange <- range(chem$datetime)
 
@@ -4476,9 +4481,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
         select(-var, -site_name)
 
-    if(nrow(flow) == 0) {
-        return(NULL)
-    }
+    if(nrow(flow) == 0) return(NULL)
 
     #a few commented remnants from the old wide-format days have been left here,
     #because they might be instructive in other endeavors
@@ -4496,36 +4499,47 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         ) %>%
         select(-datetime.y) %>%
         rename(datetime = datetime.x) %>%
-
         select_if(~(! all(is.na(.)))) %>%
-        rowwise(datetime) %>%
+
+        # rowwise(datetime) %>%
+        # mutate(
+        #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
+        #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
+        # ungroup() %>%
+        # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
+        # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
+        #           ~(. * flow)) %>%
+        # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
+        #              names_pattern = '(.*)',
+        #              names_to = 'var') %>%
+        # rename(val = value) %>%
+
         mutate(
-            ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
-            ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
-        ungroup() %>%
-        select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-        mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
-                  ~(. * flow)) %>%
-        select(-flow) %>%
-        pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
-                     names_pattern = '(.*)',
-                     names_to = 'var') %>%
-        rename(val = value) %>%
+            across(.cols = matches(match = '^ms_status.+',
+                                   perl = TRUE),
+                   .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
+            across(.cols = matches(match = '^ms_interp.+',
+                                   perl = TRUE),
+                   .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
+            across(.cols = starts_with(match = 'val_'),
+                   .fns = ~(.x * flow))) %>%
+        select(-ms_status, -ms_interp, -flow) %>%
+        pivot_longer(cols = ! datetime,
+                     names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
+                     names_to = c('.value', 'var')) %>%
+
         filter(! is.na(val)) %>%
-        # filter_at(vars(-all_of(c('datetime', 'ms_status', 'ms_interp'))),
-        #           any_vars(! is.na(.))) %>%
         mutate(site_name = !!site_name) %>%
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, val, ms_status, ms_interp)
-        # select(datetime, site_name, everything()) %>%
-        # relocate(ms_status, .after = last_col()) %>%
-        # relocate(ms_interp, .after = last_col())
 
-    if(nrow(flux) == 0) {
-        return(NULL)
-    }
+    if(nrow(flux) == 0) return(NULL)
 
-    flux <- apply_detection_limit_t(flux, network, domain, chemprod, ignore_pred)
+    flux <- apply_detection_limit_t(X = flux,
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = chemprod,
+                                    ignore_pred = ignore_pred)
 
     return(flux)
 }
@@ -5489,6 +5503,8 @@ ms_linear_interpolate <- function(d, interval){
     #   appropriate maxgap (i.e. max number of consecutive NAs to fill) will
     #   be chosen based on this interval.
 
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
     #TODO: prefer imputeTS::na_seadec when there are >=2 non-NA datapoints.
     #   There are commented sections that begin this work, but we still would
     #   need to calculate start and end when creating a ts() object. we'd
@@ -5604,7 +5620,8 @@ synchronize_timestep <- function(d){
     d_split <- d %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
-        dplyr::group_split()
+        dplyr::group_split() %>%
+        as.list()
 
     mode_intervals_m <- vapply(
         X = d_split,
@@ -5641,7 +5658,7 @@ synchronize_timestep <- function(d){
             var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
             var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
-            summary_and_interp_chunk <- summary_and_interp_chunk %>%
+            sitevar_chunk <- summary_and_interp_chunk %>%
                 group_by(datetime) %>%
                     summarize(
                         site_name = first(site_name),
@@ -5656,31 +5673,18 @@ synchronize_timestep <- function(d){
                                 mean(val, na.rm = TRUE)
                             },
                         ms_status = numeric_any(ms_status)) %>%
-                    ungroup()
-
-            summary_and_interp_chunk <- populate_implicit_NAs(
-                d = summary_and_interp_chunk,
-                interval = rounding_intervals[i])
-
-            summary_and_interp_chunk <- ms_linear_interpolate(
-                d = summary_and_interp_chunk,
-                interval = rounding_intervals[i])
+                    ungroup() %>%
+                bind_rows(interp_only_chunk) %>%
+                arrange(datetime)
         }
 
-        if(nrow(interp_only_chunk)){
+        sitevar_chunk <- populate_implicit_NAs(
+            d = sitevar_chunk,
+            interval = rounding_intervals[i])
 
-            interp_only_chunk <- populate_implicit_NAs(
-                d = interp_only_chunk,
-                interval = rounding_intervals[i])
-
-            interp_only_chunk <- ms_linear_interpolate(
-                d = interp_only_chunk,
-                interval = rounding_intervals[i])
-        }
-
-        d_split <- as.list(d_split)
-        d_split[[i]] <- bind_rows(summary_and_interp_chunk,
-                                  interp_only_chunk)
+        d_split[[i]] <- ms_linear_interpolate(
+            d = sitevar_chunk,
+            interval = rounding_intervals[i])
     }
 
     #recombine list of tibbles into single tibble
@@ -5982,7 +5986,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         select(-ms_status, -ms_interp, -var) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = val) %>%
-        left_join(status_cols, #they get lumped anyway, so no information loss here
+        left_join(status_cols, #they get lumped anyway
                   by = 'datetime') %>%
         arrange(datetime)
 
