@@ -96,14 +96,10 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
     # intv <- ifelse(grepl('precip', prodname_ms),
     #                '1 day',
     #                '1 hour')
-    # d <- ue(synchronize_timestep(ms_df = d,
-    #                              desired_interval = intv,
-    #                              impute_limit = 30))
+    # d <- ue(synchronize_timestep(ms_df = d)
 
     #constant interval
-    d <- ue(synchronize_timestep(ms_df = d,
-                                 desired_interval = '15 min',
-                                 impute_limit = 30))
+    d <- ue(synchronize_timestep(ms_df = d)
 
     return(d)
 }

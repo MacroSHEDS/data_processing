@@ -186,9 +186,7 @@ process_1_213 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -300,9 +298,7 @@ process_1_103 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -415,9 +411,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -531,9 +525,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -646,9 +638,7 @@ process_1_109 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -761,9 +751,7 @@ process_1_110 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -875,9 +863,7 @@ process_1_112 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -989,9 +975,7 @@ process_1_113 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1104,9 +1088,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1219,9 +1201,7 @@ process_1_160 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1333,9 +1313,7 @@ process_1_162 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1448,9 +1426,7 @@ process_1_163 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1497,9 +1473,7 @@ process_1_102 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1539,9 +1513,7 @@ process_1_111 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1588,9 +1560,7 @@ process_1_74 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1652,9 +1622,7 @@ process_1_105 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1696,9 +1664,7 @@ process_1_416 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1738,9 +1704,7 @@ process_1_414 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -1783,9 +1747,7 @@ process_1_415 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
