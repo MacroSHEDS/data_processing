@@ -5,9 +5,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
-site_name <- 'sitename_NA'
-
-# i=3
+# i=5
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -21,7 +19,7 @@ for(i in 1:nrow(prod_info)){
 
     hydroshare_code <- prod_info$hydroshare_id[i]
 
-    latest_vsn <- get_czo_product_version(prodname_ms = prodname_ms,
+    latest_vsn <<- get_czo_product_version(prodname_ms = prodname_ms,
                                           domain = domain,
                                           hydroshare_code = hydroshare_code,
                                           data_tracker = held_data)
@@ -33,54 +31,64 @@ for(i in 1:nrow(prod_info)){
     component <- get_czo_components(search_string = component,
                                     hydroshare_code = hydroshare_code)
 
-    avail_sets <- construct_czo_product_sets(version = latest_vsn,
-                                             hydroshare_code = hydroshare_code,
+    avail_sets <- construct_czo_product_sets(hydroshare_code = hydroshare_code,
                                              component = component,
-                                             data_tracker = held_data)
+                                             data_tracker = held_data,
+                                             latest_vsn = latest_vsn)
 
     if(is_ms_err(avail_sets)) next
 
-    if(! site_is_tracked(held_data, prodname_ms, site_name)){
-        held_data <<- insert_site_skeleton(held_data, prodname_ms, site_name,
-                                           site_components=avail_sets$component)
-    }
+    avail_sites <- unique(avail_sets$site_name)
 
-    held_data <<- track_new_site_components(held_data, prodname_ms, site_name,
-                                            avail_sets)
+    #j=1
+    for(j in 1:length(avail_sites)){
 
-    if(is_ms_err(held_data)) next
+        site_name <- avail_sites[j]
+        avail_site_sets <- avail_sets[avail_sets$site_name == site_name,]
 
-    retrieval_details <- populate_set_details(held_data, prodname_ms,
-                                              site_name, avail_sets, latest_vsn)
+        if(! site_is_tracked(held_data, prodname_ms, site_name)){
+            held_data <<- insert_site_skeleton(held_data, prodname_ms, site_name,
+                                               site_components=avail_site_sets$component)
+        }
 
-    if(is_ms_err(retrieval_details)) next
+        held_data <<- track_new_site_components(held_data, prodname_ms, site_name,
+                                                avail_site_sets)
 
-    new_sets <- filter_unneeded_sets(retrieval_details)
+        if(is_ms_err(held_data)) next
 
-    if(nrow(new_sets) == 0){
-        loginfo(glue('Nothing to do for {s} {p}',
-                     s=site_name, p=prodname_ms), logger=logger_module)
-        next
-    } else {
-        loginfo(glue('Retrieving {s} {p}',
-                     s=site_name, p=prodname_ms), logger=logger_module)
-    }
+        retrieval_details <- populate_set_details(held_data, prodname_ms,
+                                                  site_name, avail_site_sets)
 
-    update_data_tracker_r(network=network, domain=domain, tracker=held_data)
+        if(is_ms_err(retrieval_details)) next
 
-    get_czo_data(domain=domain, new_sets, held_data)
+        new_sets <- filter_unneeded_sets(retrieval_details)
 
-    if(! is.na(prod_info$munge_status[i])){
-        update_data_tracker_m(network = network,
-                              domain = domain,
-                              tracker_name = 'held_data',
-                              prodname_ms = prodname_ms,
-                              site_name = site_name,
-                              new_status = 'pending')
-    }
+        if(nrow(new_sets) == 0){
+            loginfo(glue('Nothing to do for {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
+            next
+        } else {
+            loginfo(glue('Retrieving {s} {p}',
+                         s=site_name, p=prodname_ms), logger=logger_module)
+        }
+
+        update_data_tracker_r(network=network, domain=domain, tracker=held_data)
+
+        get_czo_data(domain=domain, new_sets, held_data)
+
+        if(! is.na(prod_info$munge_status[i])){
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_name = site_name,
+                                  new_status = 'pending')
+
+            }
+        }
 
     metadata_url <- glue('https://www.hydroshare.org/resource/{v}',
-                         v = latest_vsn)
+                         v = hydroshare_code)
 
     write_metadata_r(murl = metadata_url,
                      network = network,
