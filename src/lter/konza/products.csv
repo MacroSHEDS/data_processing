@@ -4,10 +4,10 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 9,discharge,ready,ready,NA,discharge__ms001,N01B,ASD051
 10,discharge,ready,ready,NA,discharge__ms001,N02B,ASD061
 50,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
-51,stream_conductivity,ready,ready,NA,stream_chemistry__ms002,NA,NA
-20,stream_suspended_sediments,ready,ready,NA,stream_chemistry__ms002,NA,NA
-21,stream_water_quality,ready,pending,NA,NA,NA,"ASW011,ASW012"
-16,stream_temperature,ready,NA,NA,NA,NA,NA
+51,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
+20,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
+21,stream_chemistry,ready,pending,NA,NA,NA,"ASW011,ASW012"
+16,stream_chemistry,ready,NA,NA,NA,NA,NA
 43,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 4,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 230,precip_gauge_locations,ready,ready,NA,precip_pchem_pflux__ms004,NA,GIS300
@@ -19,6 +19,3 @@ ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms004,automated entry,NA
 ms005,precip_gauge_locations,NA,NA,linked,NA,automated entry,NA
 ms006,stream_gauge_locations,NA,NA,linked,NA,automated entry,NA
-ms900,precipitation,NA,NA,NA,NA,automated entry,NA
-ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA
-ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA
