@@ -60,7 +60,7 @@ process_0_50 <- function(set_details, network, domain){
     return()
 }
 
-#stream_conductivity: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_51 <- function(set_details, network, domain){
 
@@ -71,18 +71,7 @@ process_0_51 <- function(set_details, network, domain){
     return()
 }
 
-#precip_gauge_locations; stream_gauge_locations: STATUS=READY
-#. handle_errors
-process_0_51 <- function(set_details, network, domain){
-
-    download_raw_file(network = network,
-                      domain = domain,
-                      set_details = set_details,
-                      file_type = '.csv')
-    return()
-}
-
-#stream_suspended_sediments: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_20 <- function(set_details, network, domain){
 
@@ -94,7 +83,7 @@ process_0_20 <- function(set_details, network, domain){
     return()
 }
 
-#stream_water_quality: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_21 <- function(set_details, network, domain){
 
@@ -105,7 +94,7 @@ process_0_21 <- function(set_details, network, domain){
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_16 <- function(set_details, network, domain){
 
@@ -205,9 +194,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -268,9 +255,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -331,9 +316,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -396,9 +379,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -507,9 +488,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d,
                                  network = network,
@@ -518,7 +497,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#stream_conductivity: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_51 <- function(network, domain, prodname_ms, site_name,
                          component) {
@@ -556,16 +535,14 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
 
-#stream_suspended_sediments: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_20 <- function(network, domain, prodname_ms, site_name,
                          component) {
@@ -615,16 +592,14 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
 
-#stream_water_quality: STATUS=PENDING
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_21 <- function(network, domain, prodname_ms, site_name,
                          component) {
@@ -652,23 +627,6 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'comments',
                          is_sensor = FALSE)
-
-    return(d)
-}
-
-#stream_temperature: STATUS=READY
-#. handle_errors
-process_1_21 <- function(network, domain, prodname_ms, site_name,
-                         component) {
-
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_name,
-                    c = component)
-
-    d <- read.csv(rawfile1, colClasses = "character")
 
     return(d)
 }
@@ -734,9 +692,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -779,9 +735,7 @@ process_1_4 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -868,27 +822,23 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__50',
-                                           'stream_conductivity__51',
-                                           'stream_suspended_sediments__20'))
+                                           'stream_chemistry__51',
+                                           'stream_chemistry__20'))
 
     return()
 }
 
-# #precipitation: STATUS=OBSOLETE
-# #. handle_errors
-# process_2_ms004 <- derive_precip
-#
-# #precip_chemistry: STATUS=OBSOLETE
-# #. handle_errors
-# process_2_ms005 <- derive_precip_chem
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms005 <- precip_gauge_from_site_data
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms003 <- derive_stream_flux
-
-# #precip_flux_inst: STATUS=OBSOLETE
-# #. handle_errors
-# process_2_ms006 <- derive_precip_flux
 
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors

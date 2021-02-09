@@ -25,7 +25,7 @@ process_0_6470 <- function(set_details, network, domain) {
     return()
 }
 
-#discharge; precipitation: STATUS=READY
+#discharge; precipitation: STATUS=PENDING
 #. handle_errors
 process_0_4680 <- function(set_details, network, domain) {
 
@@ -98,9 +98,7 @@ process_1_6421 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -110,7 +108,7 @@ process_1_6421 <- function(network, domain, prodname_ms, site_name,
 #discharge: STATUS=READY
 #. handle_errors
 process_1_6470 <- function(network, domain, prodname_ms, site_name,
-                           components) {
+                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -142,16 +140,14 @@ process_1_6470 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
 
-#precipitation; discharge: STATUS=READY
+#precipitation; discharge: STATUS=PENDING
 #. handle_errors
 process_1_4680 <- function(network, domain, prodname_ms, site_name,
                            components) {
@@ -251,9 +247,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -267,7 +261,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_2851 <- function(network, domain, prodname_ms, site_name,
-                           components) {
+                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -347,9 +341,7 @@ process_1_2851 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -357,3 +349,19 @@ process_1_2851 <- function(network, domain, prodname_ms, site_name,
 }
 
 #derive kernels ####
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms001 <- precip_gauge_from_site_data
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms002 <- stream_gauge_from_site_data
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms005 <- derive_precip_pchem_pflux
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_stream_flux

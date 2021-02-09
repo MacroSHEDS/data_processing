@@ -93,7 +93,11 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # Turbidity is in NTU the ms_vars is in FNU, nut sure these are comparable
+    #pH values greater than 100, removing here
+    d <- mutate(d,
+                val = ifelse(var == 'GN_pH' & val > 14, NA, val))
+
+    # Turbidity is in NTU the ms_vars is in FNU, not sure these are comparable
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l',
                                                SO4 = 'ug/l'),
@@ -105,9 +109,7 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -147,9 +149,7 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -191,9 +191,7 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
@@ -212,7 +210,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
                          datetime_tz = 'US/Eastern',
                          site_name_col = 'Rain_Gauge_ID',
-                         data_cols = c('Precipitation_mm'='precipitation_ns'),
+                         data_cols = c('Precipitation_mm'='precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
 
@@ -250,7 +248,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
     }
 
     d <- final %>%
-      mutate(var = 'IS_precipitation_ns',
+      mutate(var = 'IS_precipitation',
              ms_status = 0)
 
     d <- carry_uncertainty(d,
@@ -258,9 +256,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
                            domain = domain,
                            prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d,
-                              desired_interval = '1 day', #set to '15 min' when we have server
-                              impute_limit = 30)
+    d <- synchronize_timestep(d)
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
