@@ -4451,17 +4451,20 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     chem <- read_combine_feathers(network = network,
                                   domain = domain,
                                   prodname_ms = chemprod) %>%
-        filter(site_name == !!site_name) %>%
-        tidyr::pivot_wider(names_from = 'var',
-                           values_from = 'val') %>%
-        select(datetime, ms_status, ms_interp,
-               matches(paste0('^[A-Z]{2}_',
-                              flux_vars),
-                       ignore.case = FALSE))
+        filter(site_name == !!site_name,
+               drop_var_prefix(var) %in% flux_vars)
 
-    if(ncol(chem) == 3){
-        return(NULL)
-    }
+    if(nrow(chem) == 0) return(NULL)
+
+    chem <- chem %>%
+        tidyr::pivot_wider(
+            names_from = 'var',
+            values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
+        select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
+
+    # if(ncol(chem) == 3){
+    #     return(NULL)
+    # }
 
     daterange <- range(chem$datetime)
 
@@ -4476,44 +4479,65 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
         select(-var, -site_name)
 
-    if(nrow(flow) == 0) {
-        return(NULL)
-    }
+    if(nrow(flow) == 0) return(NULL)
 
     #a few commented remnants from the old wide-format days have been left here,
     #because they might be instructive in other endeavors
     flux <- chem %>%
-        full_join(flow,
-                  by = 'datetime') %>%
+
+        #if we ever have dependency issues with fuzzyjoin functions, we should
+        #   implement a data.table rolling join. We'll just have to pop off
+        #   the uncertainty in a separate tibble, do the join, noting which
+        #   datetime series is being modified, then rejoin the uncertainty.
+        fuzzyjoin::difference_inner_join(
+            flow,
+            by = 'datetime',
+            max_dist = as.difftime(tim = '14:59',
+                                   format = '%M:%S')
+        ) %>%
+        select(-datetime.y) %>%
+        rename(datetime = datetime.x) %>%
         select_if(~(! all(is.na(.)))) %>%
-        rowwise(datetime) %>%
+
+        # rowwise(datetime) %>%
+        # mutate(
+        #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
+        #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
+        # ungroup() %>%
+        # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
+        # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
+        #           ~(. * flow)) %>%
+        # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
+        #              names_pattern = '(.*)',
+        #              names_to = 'var') %>%
+        # rename(val = value) %>%
+
         mutate(
-            ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
-            ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
-        ungroup() %>%
-        select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-        mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
-                  ~(. * flow)) %>%
-        select(-flow) %>%
-        pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
-                     names_pattern = '(.*)',
-                     names_to = 'var') %>%
-        rename(val = value) %>%
+            across(.cols = matches(match = '^ms_status.+',
+                                   perl = TRUE),
+                   .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
+            across(.cols = matches(match = '^ms_interp.+',
+                                   perl = TRUE),
+                   .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
+            across(.cols = starts_with(match = 'val_'),
+                   .fns = ~(.x * flow))) %>%
+        select(-ms_status, -ms_interp, -flow) %>%
+        pivot_longer(cols = ! datetime,
+                     names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
+                     names_to = c('.value', 'var')) %>%
+
         filter(! is.na(val)) %>%
-        # filter_at(vars(-all_of(c('datetime', 'ms_status', 'ms_interp'))),
-        #           any_vars(! is.na(.))) %>%
         mutate(site_name = !!site_name) %>%
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, val, ms_status, ms_interp)
-        # select(datetime, site_name, everything()) %>%
-        # relocate(ms_status, .after = last_col()) %>%
-        # relocate(ms_interp, .after = last_col())
 
-    if(nrow(flux) == 0) {
-        return(NULL)
-    }
+    if(nrow(flux) == 0) return(NULL)
 
-    flux <- apply_detection_limit_t(flux, network, domain, chemprod, ignore_pred)
+    flux <- apply_detection_limit_t(X = flux,
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = chemprod,
+                                    ignore_pred = ignore_pred)
 
     return(flux)
 }
@@ -5385,7 +5409,6 @@ read_precip_quickref <- function(network,
 
     return(quickref)
 
-
     #previous approach: when chunks have a size limit:
 
     # #not to be confused with the precip idw tempfile (dumpfile),
@@ -5429,100 +5452,245 @@ read_precip_quickref <- function(network,
     # return(quickref)
 }
 
-synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
+populate_implicit_NAs <- function(d, interval){
+
+    #this would be more flexible if we could pass column names as
+    #   positional args and use them in group_by and mutate
+
+    #d: a ms tibble with at minimum datetime, site_name, and var columns
+    #interval: the interval along which to populate missing values. (must be
+    #   either '15 min' or '1 day'.
+
+    #this function makes implicit missing timeseries records explicit,
+    #   by populating rows so that the datetime column is complete
+    #   with respect to the sampling interval. In other words, if
+    #   samples are taken every 15 minutes, but some samples are skipped
+    #   (rows not present), this will create those rows. if val, ms_status, or
+    #   other columns are present, their new records will be populated with NA
+
+    #returns d, complete with new rows, sorted by site_name, then var, then datetime
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    complete_d <- d %>%
+        group_by(site_name, var) %>%
+        tidyr::complete(datetime = seq(min(datetime),
+                                       max(datetime),
+                                       by = interval)) %>%
+        mutate(site_name = .$site_name[1],
+               var = .$var[1]) %>%
+        ungroup() %>%
+        arrange(site_name, var, datetime) %>%
+        select(datetime, site_name, var, everything())
+
+    # complete_d <- right_join(d,
+    #                          fulldt,
+    #                          by = c('datetime', 'site_name', 'var')) %>%
+    #     arrange(datetime)
+
+    return(complete_d)
+}
+
+ms_linear_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day'). an
+    #   appropriate maxgap (i.e. max number of consecutive NAs to fill) will
+    #   be chosen based on this interval.
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    #TODO: prefer imputeTS::na_seadec when there are >=2 non-NA datapoints.
+    #   There are commented sections that begin this work, but we still would
+    #   need to calculate start and end when creating a ts() object. we'd
+    #   also need to separate uncertainty from the val column before converting
+    #   to ts. here is the line that could be added to this documentation
+    #   if we ever implement na_seadec:
+    #For linear interpolation with
+    #   seasonal decomposition, interval will also be used to determine
+    #   the fraction of the sampling period between samples.
+
+    if(length(unique(d$site_name)) > 1){
+        stop(paste('ms_linear_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_linear_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    impute_limit <- ifelse(interval == '1 day',
+                           3, #3 days if imputing daily samples
+                           48) #12 hours if imputing continuous (15 min) samples
+
+    # ts_delta_t <- ifelse(interval == '1 day',
+    #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
+    #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
+
+    d_interp <- d %>%
+        # group_by(site_name, var) %>%
+        arrange(datetime) %>%
+        mutate(
+
+            #make binary column to track which points are interped
+            ms_interp = case_when(
+                is.na(ms_status) ~ 1,
+                TRUE ~ 0),
+
+            #carry status to interped rows
+            ms_status = imputeTS::na_locf(ms_status,
+                                          na_remaining = 'rev'),
+
+            # val = if(sum(! is.na(val)) > 2){
+            #
+            #     #linear interp NA vals after seasonal decomposition
+            #     imputeTS::na_seadec(x = as.numeric(ts(val,
+            #                                start = ,
+            #                                end = ,
+            #                                deltat = ts_delta_t)),
+            #                         maxgap = impute_limit)
+            #
+            # } else if(sum(! is.na(val)) > 1){
+            val = if(sum(! is.na(val)) > 1){
+
+                #linear interp NA vals
+                imputeTS::na_interpolation(val,
+                                           maxgap = impute_limit)
+
+            #unless not enough data in group; then do nothing
+            } else val
+        ) %>%
+
+        filter(! is.na(val)) %>%
+        mutate(
+            err = errors(val), #extract error from data vals
+            err = case_when(
+                err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
+                TRUE ~ err),
+            val = if(sum(! is.na(err)) > 0){
+                set_errors(val, #and then carry error to interped rows
+                           imputeTS::na_locf(err,
+                                             na_remaining = 'rev'))
+            } else {
+                set_errors(val, #unless not enough error to interp
+                           0)
+            }) %>%
+        # ungroup() %>%
+        select(-err) %>%
+        arrange(site_name, var, datetime)
+
+    return(d_interp)
+}
+
+synchronize_timestep <- function(d){
+                                 # desired_interval){
+                                 # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_name, var, val, ms_status
-    #desired_interval is a character string that can be parsed by the "by"
-    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day"
-    #impute_limit is the maximum number of consecutive points to
-    #   inter/extrapolate. it's passed to imputeTS::na_interpolate
+    #desired_interval [HARD DEPRECATED] is a character string that can be parsed by the "by"
+    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
+    #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
+    #   ONE FOR GRAB DATA AND ONE FOR SENSOR. IF WE EVER WANT TO CHANGE THEM,
+    #   IT WOULD BE BETTER TO CHANGE THEM JUST ONCE HERE, RATHER THAN IN
+    #   EVERY KERNEL
+    #impute_limit [HARD DEPRECATED] is the maximum number of consecutive points to
+    #   inter/extrapolate. it's passed to imputeTS::na_interpolate. THIS
+    #   PARAMETER WAS REMOVED BECAUSE IT SHOULD ONLY VARY WITH DESIRED INTERVAL.
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
-
-    # uniq_sites <- unique(d$site_name)
 
     if(nrow(d) < 2 || sum(! is.na(d$val)) < 2){
         stop('no data to synchronize. bypassing processing.')
     }
 
-    var_is_q <- drop_var_prefix(d$var[1]) == 'discharge'
-    var_is_p <- drop_var_prefix(d$var[1]) == 'precipitation'
-
-    #round to desired_interval
-    d <- sw(d %>%
-        mutate(datetime = lubridate::round_date(datetime,
-                                                desired_interval)) %>%
-        group_by(site_name, var, datetime) %>%
-        summarize(
-            val = if(n() > 1){
-                    if(var_is_p){
-                        sum(val, na.rm = TRUE)
-                    } else if(var_is_q){
-                        max_ind <- which.max(val)
-                        if(max_ind) val[max_ind] else NA #max removes error
-                    } else {
-                        mean(val, na.rm = TRUE)
-                    }
-                } else {
-                    first(val) #needed for uncertainty propagation to work
-                },
-            ms_status = numeric_any(ms_status)) %>%
-        ungroup() %>%
-        select(datetime, site_name, var, val, ms_status))
-
-    #fill in missing timepoints with NAs
-    fulldt <- d %>%
-        group_by(site_name, var) %>%
-        summarize(
-            dtmin = min(datetime),
-            dtmax = max(datetime)) %>%
-        ungroup() %>%
-        rowwise() %>%
-        do(tibble(site_name = .$site_name,
-                  var = .$var,
-                  datetime = seq(.$dtmin,
-                                 .$dtmax,
-                                 by = desired_interval))) %>%
-        ungroup()
-
-    #interpolate up to impute_limit; populate ms_interp column; remove unfilled NAs
-    d_adjusted <- d %>%
-        full_join(fulldt, #fill in missing datetime intervals
-                  by = c('datetime', 'site_name', 'var')) %>%
+    #split dataset by site and variable. for each, determine whether we're
+    #   dealing with ~daily data or ~15min data. set rounding_intervals
+    #   accordingly.
+    d_split <- d %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
-        mutate(
-            ms_interp = case_when(
-                is.na(ms_status) ~ 1,
-                TRUE ~ 0), #add binary column to track which points are interped
-            ms_status = imputeTS::na_locf(ms_status, #carry status to interped rows
-                                          na_remaining = 'rev'),
-            val = if(sum(! is.na(val)) > 1){
-                    imputeTS::na_interpolation(val, #linear interp NA vals
-                                               maxgap = impute_limit)
-                } else val, #unless not enough data in group; then do nothing
-            err = errors(val), #extract error from data vals
-            err = case_when(
-                err == 0 ~ NA_real_, #change 0 errors (default) to NA...
-                TRUE ~ err),
-            val = if(sum(! is.na(err)) > 1){
-                    set_errors(val, #and then carry error to interped rows
-                               imputeTS::na_locf(err,
-                                                 na_remaining = 'rev'))
-                } else {
-                    set_errors(val, #unless not enough error to interp
-                               0)
-                }) %>%
-        ungroup() %>%
-        select(-err) %>%
-        # group_by(datetime, site_name) %>%
-        # filter(any(! is.na(val))) %>%
-        # ungroup() %>%
-        filter(! is.na(val)) %>%
-        arrange(site_name, var, datetime)
+        dplyr::group_split() %>%
+        as.list()
 
-    return(d_adjusted)
+    mode_intervals_m <- vapply(
+        X = d_split,
+        FUN = function(x) Mode(diff(as.numeric(x$datetime)) / 60),
+        FUN.VALUE = 0)
+
+    rounding_intervals <- case_when(
+        is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
+        is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60 ~ '15 min')
+
+    for(i in 1:length(d_split)){
+
+        sitevar_chunk <- d_split[[i]]
+
+        #round each site-variable tibble's datetime column to the desired interval.
+        #this method is clunky, but it avoids a lot of group_by overhead.
+        sitevar_chunk <- mutate(sitevar_chunk,
+                                datetime = lubridate::round_date(
+                                    datetime,
+                                    rounding_intervals[i]))
+
+        #split chunk into subchunks. one has duplicate datetimes to summarize,
+        #   and the other doesn't. both will be interpolated in a bit.
+        to_summarize_bool <- duplicated(sitevar_chunk$datetime) |
+            duplicated(sitevar_chunk$datetime,
+                       fromLast = TRUE)
+
+        summary_and_interp_chunk <- sitevar_chunk[to_summarize_bool, ]
+        interp_only_chunk <- sitevar_chunk[! to_summarize_bool, ]
+
+        if(nrow(summary_and_interp_chunk)){
+
+            #summarize by max for Q, sum for P, and mean for chemistry
+            var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+            var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+
+            sitevar_chunk <- summary_and_interp_chunk %>%
+                group_by(datetime) %>%
+                    summarize(
+                        site_name = first(site_name),
+                        var = first(var),
+                        val = if(var_is_p)
+                            {
+                                sum(val, na.rm = TRUE)
+                            } else if(var_is_q){
+                                max_ind <- which.max(val) #max() removes uncert
+                                if(max_ind) val[max_ind] else NA_real_
+                            } else {
+                                mean(val, na.rm = TRUE)
+                            },
+                        ms_status = numeric_any(ms_status)) %>%
+                    ungroup() %>%
+                bind_rows(interp_only_chunk) %>%
+                arrange(datetime)
+        }
+
+        sitevar_chunk <- populate_implicit_NAs(
+            d = sitevar_chunk,
+            interval = rounding_intervals[i])
+
+        d_split[[i]] <- ms_linear_interpolate(
+            d = sitevar_chunk,
+            interval = rounding_intervals[i])
+    }
+
+    #recombine list of tibbles into single tibble
+    d <- d_split %>%
+        purrr::reduce(bind_rows) %>%
+        arrange(site_name, var, datetime) %>%
+        select(datetime, site_name, var, val, ms_status, ms_interp)
+
+    return(d)
 }
 
 recursive_tracker_update <- function(l, elem_name, new_val){
@@ -5815,7 +5983,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         select(-ms_status, -ms_interp, -var) %>%
         tidyr::pivot_wider(names_from = site_name,
                            values_from = val) %>%
-        left_join(status_cols, #they get lumped anyway, so no information loss here
+        left_join(status_cols, #they get lumped anyway
                   by = 'datetime') %>%
         arrange(datetime)
 
@@ -7035,8 +7203,12 @@ apply_detection_limit_t <- function(X,
                               #sometimes synchronize_timestep will adjust a point
                               #to a time before the earliest startdt recorded
                               #in detection_limits.json. this handles that.
-                              roundvec <- imputeTS::na_locf(x = roundvec,
-                                                            option = 'nocb')
+                              if(length(roundvec == 1) && is.na(roundvec)){
+                                  roundvec = detlim_varsite$lim[1]
+                              } else {
+                                  roundvec <- imputeTS::na_locf(x = roundvec,
+                                                                option = 'nocb')
+                              }
 
                               rounded <- mapply(FUN = function(a, b){
                                                     round(a, b)
@@ -7594,13 +7766,17 @@ load_config_datasets <- function(from_where){
 
     if(from_where == 'remote'){
 
-        #list-columns were being created but defining  column types seemed to stop this
-        ms_vars <- sm(googlesheets4::read_sheet(conf$variables_gsheet,
-                                                na = c('', 'NA'),
-                                                col_types = 'cccccccnncc'))
+        ms_vars <- sm(googlesheets4::read_sheet(
+            conf$variables_gsheet,
+            na = c('', 'NA'),
+            col_types = 'cccccccnncc'
+        ))
 
-        site_data <- sm(googlesheets4::read_sheet(conf$site_data_gsheet,
-                                                  na = c('', 'NA')))
+        site_data <- sm(googlesheets4::read_sheet(
+            conf$site_data_gsheet,
+            na = c('', 'NA'),
+            col_types = 'ccccccccnnnnncc'
+        ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
                                                        na = c('', 'NA')))
@@ -7979,9 +8155,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                                domain = domain,
                                prodname_ms = prodname_ms)
 
-        d <- synchronize_timestep(d,
-                                  desired_interval = '1 day', #set to '15 min' when we have server
-                                  impute_limit = 30)
+        d <- synchronize_timestep(d) #set to '15 min' when we have server
 
         d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
 
@@ -8010,7 +8184,8 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data){
+generate_portal_extras <- function(site_data,
+                                   network_domain){
 
     #for post-derive steps that save the portal some processing.
 
@@ -8027,11 +8202,6 @@ generate_portal_extras <- function(site_data){
 calculate_flux_by_area <- function(site_data){
 
     setwd('../portal/data/')
-
-    # domains <- site_data %>%
-    #     filter(as.logical(in_workflow)) %>%
-    #     pull(domain) %>%
-    #     unique()
 
     ws_areas <- site_data %>%
         filter(as.logical(in_workflow)) %>%
@@ -8078,7 +8248,7 @@ calculate_flux_by_area <- function(site_data){
                     arrange(site_name, var, datetime) %>%
                     left_join(ws_areas[[dmn]],
                               by = 'site_name') %>%
-                    mutate(val = val / ws_area_ha) %>%
+                    mutate(val = sw(val / ws_area_ha)) %>%
                     select(-ws_area_ha)
 
                 d$val_err <- errors(d$val)
@@ -8100,6 +8270,8 @@ calculate_flux_by_area <- function(site_data){
     engine(flux_var = 'precip_flux_inst',
            domains = domains,
            ws_areas = ws_areas)
+
+    setwd('../../data_acquisition/')
 }
 
 retrieve_versionless_product <- function(network,
@@ -8180,7 +8352,10 @@ catalogue_held_data <- function(network_domain, site_data){
 
     #tabulates:
     # + total nonspatial observations for the portal landing page
-    # +
+    # + informational catalog for all variables
+    # + informational catalog for all sites
+    # + informational catalog for each individual variable
+    # + informational catalog for each individual site
 
     nobs_nonspatial <- 0
     # site_display <- tibble()
@@ -8212,6 +8387,12 @@ catalogue_held_data <- function(network_domain, site_data){
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
         for(j in 1:length(nonspatial_prods)){
+
+            if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
+                logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
+                        logger = logger_module)
+                nonspatial_prods <- nonspatial_prods[! grepl('precip_pchem_pflux', nonspatial_prods)]
+            }
 
             ## sum all observations across all sites (will be redundant when the rest is done)
             prod_nobs <- list.files(nonspatial_prods[j],
@@ -8334,8 +8515,8 @@ catalogue_held_data <- function(network_domain, site_data){
         }
     }
 
-    setwd('../portal/data/')
-    dir.create('general/catalog_files',
+    # setwd('../portal/data/')
+    dir.create('../portal/data/general/catalog_files',
                showWarnings = FALSE)
 
     #generate and write file describing all variables
@@ -8353,17 +8534,18 @@ catalogue_held_data <- function(network_domain, site_data){
             Unit = first(Unit)) %>%
         ungroup() %>%
         mutate(MeanObsPerSite = round(Observations / Sites, 0),
-               Availability = 'feature not yet built') %>%
-        select(VariableName, VariableCode, Unit, Observations, Sites,
-               MeanObsPerSite, FirstRecordUTC, LastRecordUTC, Availability)
+               Availability = paste0("<button type='button' id='", VariableCode, "'>view</button>")) %>%
+               # Availability = paste0("<a href='?", VariableCode, "'>view</a>")) %>%
+        select(Availability, VariableName, VariableCode, Unit, Observations, Sites,
+               MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
 
     readr::write_csv(x = all_variable_display,
-                     file = 'general/catalog_files/all_variables.csv')
+                     file = '../portal/data/general/catalog_files/all_variables.csv')
 
 
     #generate and write individual file for each variable, describing it by site
 
-    dir.create('general/catalog_files/indiv_variables',
+    dir.create('../portal/data/general/catalog_files/indiv_variables',
                showWarnings = FALSE)
 
     vars <- unique(all_variable_display$VariableCode)
@@ -8405,7 +8587,7 @@ catalogue_held_data <- function(network_domain, site_data){
                    MeanObsPerDay)
 
         readr::write_csv(x = indiv_variable_display,
-                         file = glue('general/catalog_files/indiv_variables/',
+                         file = glue('../portal/data/general/catalog_files/indiv_variables/',
                                      v, '.csv'))
     }
 
@@ -8425,26 +8607,29 @@ catalogue_held_data <- function(network_domain, site_data){
         ungroup() %>%
         mutate(MeanObsPerVar = round(Observations / Variables, 0),
                ExternalLink = 'feature not yet built',
-               Availability = 'feature not yet built') %>%
+               Availability = paste0("<button type='button' id='",
+                                     network, '_', domain, '_', site_name,
+                                     "'>view</button>")) %>%
         left_join(all_site_breakdown,
                   by = c('network', 'domain', 'site_name')) %>%
-        select(Network = pretty_network,
+        select(Availability,
+               Network = pretty_network,
                Domain = pretty_domain,
-               SiteName = full_name,
                SiteCode = site_name,
+               SiteName = full_name,
                StreamName = stream,
                Latitude = latitude,
                Longitude = longitude,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
-               Availability, ExternalLink)
+               ExternalLink)
 
     readr::write_csv(x = all_site_display,
-                     file = 'general/catalog_files/all_sites.csv')
+                     file = '../portal/data/general/catalog_files/all_sites.csv')
 
     #generate and write individual file for each site, describing it by variable
-    dir.create('general/catalog_files/indiv_sites',
+    dir.create('../portal/data/general/catalog_files/indiv_sites',
                showWarnings = FALSE)
 
     sites <- distinct(all_site_breakdown,
@@ -8481,7 +8666,7 @@ catalogue_held_data <- function(network_domain, site_data){
                    MeanObsPerDay, PercentFlagged, PercentImputed)
 
         readr::write_csv(x = indiv_site_display,
-                         file = glue('general/catalog_files/indiv_sites/',
+                         file = glue('../portal/data/general/catalog_files/indiv_sites/',
                                      '{n}_{d}_{s}.csv',
                                      n = ntw,
                                      d = dmn,
@@ -8600,11 +8785,7 @@ combine_ws_boundaries <- function(){
 
                                   wb <- x %>%
                                       sf::st_read(quiet = TRUE) %>%
-                                      sf::st_cast(to = 'POLYGON') %>%
-                                      sf::st_union() %>%
-                                      sf::st_as_sf() %>%
-                                      mutate(site_name = !!site_name) %>%
-                                      select(site_name, geometry = x)
+                                      sf::st_cast(to = 'POLYGON')
 
                                   coords <- sf::st_coordinates(wb)
                                   mean_latlong <- unname(colMeans(coords[, 1:2]))
@@ -8614,6 +8795,10 @@ combine_ws_boundaries <- function(){
 
                                   wb %>%
                                       sf::st_transform(crs = proj) %>%
+                                      sf::st_union() %>%
+                                      sf::st_as_sf() %>%
+                                      mutate(site_name = !!site_name) %>%
+                                      select(site_name, geometry = x) %>%
                                       sf::st_simplify(dTolerance = 30,
                                                       preserveTopology = TRUE) %>%
                                       sf::st_transform(crs = 4326) #back to WGS 84
@@ -8636,4 +8821,6 @@ combine_ws_boundaries <- function(){
                  driver = 'ESRI Shapefile',
                  delete_layer = TRUE,
                  silent = TRUE)
+
+    setwd('../../data_acquisition/')
 }
