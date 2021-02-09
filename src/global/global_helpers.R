@@ -8155,8 +8155,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                                domain = domain,
                                prodname_ms = prodname_ms)
 
-        d <- synchronize_timestep(d,
-                                  desired_interval = '1 day') #set to '15 min' when we have server
+        d <- synchronize_timestep(d) #set to '15 min' when we have server
 
         d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
 

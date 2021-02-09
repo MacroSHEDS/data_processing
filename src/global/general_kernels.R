@@ -473,8 +473,8 @@ process_3_ms011 <- function(network, domain, prodname_ms, site,
 
     site_terrain <- tibble(site_name = site,
                            year = NA,
-                           var = c('slope_mean', 'slope_sd', 'area'),
-                           val = c(slope_mean, slope_sd, area))
+                           var = c('slope_mean', 'slope_sd'),
+                           val = c(slope_mean, slope_sd))
 
     write_feather(site_terrain, glue('data/{n}/{d}/ws_traits/terrain/{s}.feather',
                                      n = network,
