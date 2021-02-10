@@ -613,3 +613,78 @@ drop_automated_entries <- function(path = '.'){
                 .open = '<<',
                 .close = '>>'))
 }
+
+dy_examine <- function(d, shape = 'long', site, ...){
+
+    #TODO: to make this show gaps properly, we could use the new populate_implicit_NAs function
+
+    #for quickly plotting time series in order to zoom in on points, so you
+    #don't have to make an xts object and all that crap
+
+    #d is either a standard ms tibble, or a tibble/df with datetime, site_name,
+    #   and var columns.
+    #shape is either 'long' (standard ms tibble) or 'wide'
+    #site is a single site name, present in d$site_name. site can be NA if there
+    #   is no site_name column
+    #... = variable names
+
+    #usage example: dy_examine(d, 'long', 'upper_ipswich', IS_discharge, GN_NH4_N)
+    #(nonstandard evaluation works for anything passed to ...)
+
+    dots = match.call(expand.dots = FALSE)$...
+    arg_names = vapply(dots, as.character, '')
+
+    if(! is.na(site)) d = filter(d, site_name == !!site)
+
+    if(shape == 'wide'){
+
+        if(any(! arg_names %in% colnames(d))){
+            v = colnames(select(d, -one_of('site_name')))
+            stop(glue('no data to plot. available variables for {s} are: {vv}',
+                      s = site,
+                      vv = paste(v, collapse = ", ")))
+        }
+
+        d = d[, c('datetime', arg_names)]
+
+    } else if(shape == 'long'){
+
+        if(any(! arg_names %in% unique(d$var))){
+            stop(glue('no data to plot. available variables for {s} are: {vv}',
+                      s = site,
+                      vv = paste(unique(d$var), collapse = ", ")))
+        }
+
+        d = select(d, datetime, var, val)
+        d = d %>%
+            filter(var %in% arg_names) %>%
+            pivot_wider(names_from = 'var',
+                        values_from = 'val')
+
+    } else {
+        stop('shape must be "wide" or "long"')
+    }
+
+    d = xts::xts(select(d, -datetime),
+             order.by = d$datetime,
+             tzone = lubridate::tz(d$datetime[1]))
+
+    dygraphs::dygraph(d) %>%
+        dygraphs::dyOptions(
+            useDataTimezone = TRUE,
+            retainDateWindow = TRUE,
+            labelsKMB = TRUE,
+            connectSeparatedPoints = FALSE,
+            drawPoints = FALSE,
+            strokeWidth = 1,
+            fillAlpha = 0.4,
+            colors = rainbow(length(arg_names)),
+            drawGapEdgePoints = TRUE)
+
+            # fillAlpha = 1,
+            # colors = raincolors[1],
+            # strokeWidth = 3,
+            # plotter = hyetograph_js,
+            # stackedGraph = TRUE,
+            # fillGraph = TRUE,
+}
