@@ -153,7 +153,8 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
     for(i in 1:length(sites)){
 
         filt_site <- sites[i]
-        out_comp_filt <- filter(out, site_name == filt_site)
+
+        out_comp_filt <- filter(out, site_name == !!filt_site)
 
         is_spatial <- ifelse(grepl(spatial_regex,
                                    prodname_ms),
