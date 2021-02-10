@@ -203,7 +203,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=10
+# dmnrow=13
 for(dmnrow in 1:nrow(network_domain)){
     # drop_automated_entries('.') #use with caution!
 
@@ -248,7 +248,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms'
 
-generate_portal_extras(site_data = site_data)
+generate_portal_extras(site_data = site_data,
+                       network_domain = network_domain)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
