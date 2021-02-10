@@ -150,7 +150,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 
     sites <- unique(out$site_name)
 
-    for(i in 1:length(sites)){
+    for(i in seq_along(sites)){
 
         filt_site <- sites[i]
 
