@@ -13,7 +13,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 2531,precipitation,ready,pending,,,Oracle Ridge,172de7fe091f48d98b1d380da5851932,!!SEARCH(CONTAINS(.csv))
 2475,precipitation,ready,pending,,,South-East Site -- Jemez 2013 Burned ZOB,0ba983afc62647dc8cfbd91058cfc56d,!!SEARCH(CONTAINS(.csv))
 2543,precipitation,ready,pending,,,Marshall Gulch,f7df7b07ea19477ab7ea701c34bc356b,!!SEARCH(CONTAINS(.csv))
-5491,precip_chemistry,ready,pending,,,Santa Catalina Mountains,4ab76a12613c493d82b2df57aa970c24,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url))
+5491,precip_chemistry,ready,ready,,,Santa Catalina Mountains,4ab76a12613c493d82b2df57aa970c24,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url))
 5492,precip_chemistry,ready,pending,,,Jemez River Basin,38c0e61607e74c329ac798c8001bfa95,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url))
 2415,precipitation,ready,pending,,,Flux Tower -- Mixed Conifer,5ca1378090884e72a8dcb796d882bb07,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv|gapfilled))
 2425,precipitation,ready,pending,,,Flux Tower -- Ponderosa Pine,1db7abcf0eb64ef49000c46a6133949d,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv|gapfilled))

@@ -3998,8 +3998,7 @@ write_ms_file <- function(d,
 
     if(shapefile){
 
-        site_dir = glue('{wd}/data/{n}/{d}/{l}/{p}/{s}',
-                        wd = getwd(),
+        site_dir = glue('data/{n}/{d}/{l}/{p}/{s}',
                         n = network,
                         d = domain,
                         l = level,
@@ -4022,6 +4021,7 @@ write_ms_file <- function(d,
                         d = domain,
                         l = level,
                         p = prodname_ms)
+
         dir.create(prod_dir,
                    showWarnings = FALSE,
                    recursive = TRUE)
@@ -5627,18 +5627,40 @@ synchronize_timestep <- function(d){
 
     rounding_intervals <- case_when(
         is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
-        is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60 ~ '15 min')
+        mode_intervals_m <= 12 * 60 ~ '15 min')
 
     for(i in 1:length(d_split)){
 
         sitevar_chunk <- d_split[[i]]
 
+        dupes_present <- any(duplicated(sitevar_chunk$datetime) |
+                             duplicated(sitevar_chunk$datetime,
+                                        fromLast = TRUE))
+
+        #average values for duplicate timestamps (these shouldn't make it to
+        #this stage, but accidents happen)
+        if(dupes_present){
+
+            logwarn(msg = glue('Duplicate datetimes found for site: {s}, var: {v}',
+                               s = sitevar_chunk$site_name[1],
+                               v = sitevar_chunk$var[1]),
+                    logger = logger_module)
+
+            sitevar_chunk <- sitevar_chunk %>%
+                group_by(datetime) %>%
+                summarize(site_name = first(site_name),
+                          var = first(var),
+                          val = mean(val, na.rm = TRUE),
+                          ms_status = numeric_any(ms_status)) %>%
+                ungroup()
+        }
+
         #round each site-variable tibble's datetime column to the desired interval.
         #this method is clunky, but it avoids a lot of group_by overhead.
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::round_date(
-                                    datetime,
-                                    rounding_intervals[i]))
+                                    x = datetime,
+                                    unit = '15 min'))
 
         #split chunk into subchunks. one has duplicate datetimes to summarize,
         #   and the other doesn't. both will be interpolated in a bit.
@@ -5651,8 +5673,8 @@ synchronize_timestep <- function(d){
 
         if(nrow(summary_and_interp_chunk)){
 
-            #summarize by max for Q, sum for P, and mean for chemistry
-            var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+            #summarize by sum for P, and mean for everything else
+            # var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
             var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
             sitevar_chunk <- summary_and_interp_chunk %>%
@@ -5663,9 +5685,9 @@ synchronize_timestep <- function(d){
                         val = if(var_is_p)
                             {
                                 sum(val, na.rm = TRUE)
-                            } else if(var_is_q){
-                                max_ind <- which.max(val) #max() removes uncert
-                                if(max_ind) val[max_ind] else NA_real_
+                            # } else if(var_is_q){
+                            #     max_ind <- which.max(val) #max() removes uncert
+                            #     if(max_ind) val[max_ind] else NA_real_
                             } else {
                                 mean(val, na.rm = TRUE)
                             },
