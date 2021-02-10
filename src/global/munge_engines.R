@@ -148,7 +148,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         }
     }
 
-    sites <- unique(out_comp$site_name)
+    sites <- unique(out$site_name)
 
     for(i in 1:length(sites)){
 
@@ -282,7 +282,6 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
                                            site_name)
-    # filter(component != "Analytical Methods")
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -324,12 +323,12 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
         }
     }
 
-        sites <- unique(out_comp$site_name)
+        sites <- unique(out$site_name)
 
         for(i in 1:length(sites)){
 
             filt_site <- sites[i]
-            out_comp_filt <- filter(out_comp, site_name == filt_site)
+            out_filt <- filter(out, site_name == filt_site)
 
             prod_dir = glue('data/{n}/{d}/munged/{p}',
                             n = network,
@@ -344,7 +343,7 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                              pd = prod_dir,
                              s = sites[i])
 
-            write_feather(out_comp_filt, site_file)
+            write_feather(out_filt, site_file)
             }
 
     update_data_tracker_m(network = network,

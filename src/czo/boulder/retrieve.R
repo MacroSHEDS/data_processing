@@ -5,35 +5,38 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=5
+# i=1
 for(i in 1:nrow(prod_info)){
-    # for(i in 1){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data <<- get_data_tracker(network=network, domain=domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
+
         held_data <<- track_new_product(held_data, prodname_ms)
     }
 
-    latest_vsn <- get_latest_product_version(prodname_ms = prodname_ms,
-                                             domain = domain,
-                                             data_tracker = held_data)
+    hydroshare_code <- prod_info$hydroshare_id[i]
+
+    latest_vsn <<- get_czo_product_version(prodname_ms = prodname_ms,
+                                           domain = domain,
+                                           hydroshare_code = hydroshare_code,
+                                           data_tracker = held_data)
 
     if(is_ms_err(latest_vsn)) next
 
-    avail_sets = get_avail_lter_product_sets(prodname_ms = prodname_ms,
-                                             version = latest_vsn,
-                                             domain = domain,
-                                             data_tracker = held_data)
+    component <- prod_info$component[i]
 
-    avail_sets <- avail_sets %>%
-        filter(grepl('csv', component))
+    component <- get_czo_components(search_string = component,
+                                    hydroshare_code = hydroshare_code)
+
+    avail_sets <- construct_czo_product_sets(hydroshare_code = hydroshare_code,
+                                             component = component,
+                                             data_tracker = held_data,
+                                             latest_vsn = latest_vsn)
 
     if(is_ms_err(avail_sets)) next
-
-    avail_sets$site_name <- 'sitename_NA'
 
     avail_sites <- unique(avail_sets$site_name)
 
@@ -41,11 +44,9 @@ for(i in 1:nrow(prod_info)){
     for(j in 1:length(avail_sites)){
 
         site_name <- avail_sites[j]
-        avail_site_sets <- avail_sets[avail_sets$site_name == site_name, ,
-                                      drop=FALSE]
+        avail_site_sets <- avail_sets[avail_sets$site_name == site_name,]
 
         if(! site_is_tracked(held_data, prodname_ms, site_name)){
-
             held_data <<- insert_site_skeleton(held_data, prodname_ms, site_name,
                                                site_components=avail_site_sets$component)
         }
@@ -56,7 +57,7 @@ for(i in 1:nrow(prod_info)){
         if(is_ms_err(held_data)) next
 
         retrieval_details <- populate_set_details(held_data, prodname_ms,
-                                                  site_name, avail_site_sets, latest_vsn)
+                                                  site_name, avail_site_sets)
 
         if(is_ms_err(retrieval_details)) next
 
@@ -73,7 +74,7 @@ for(i in 1:nrow(prod_info)){
 
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
-        get_lter_data(domain=domain, new_sets, held_data)
+        get_czo_data(domain=domain, new_sets, held_data)
 
         if(! is.na(prod_info$munge_status[i])){
             update_data_tracker_m(network = network,
@@ -82,18 +83,18 @@ for(i in 1:nrow(prod_info)){
                                   prodname_ms = prodname_ms,
                                   site_name = site_name,
                                   new_status = 'pending')
+
         }
     }
 
-    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
-                         'packageid=knb-lter-hbr.{p}.{v}',
-                         p = prodcode_from_prodname_ms(prodname_ms),
-                         v = latest_vsn)
+    metadata_url <- glue('https://www.hydroshare.org/resource/{v}',
+                         v = hydroshare_code)
 
     write_metadata_r(murl = metadata_url,
                      network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
+
     gc()
 }
 
