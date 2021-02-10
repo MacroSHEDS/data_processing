@@ -8197,6 +8197,51 @@ generate_portal_extras <- function(site_data,
     catalogue_held_data(site_data = site_data,
                         network_domain = network_domain)
     combine_ws_boundaries()
+    list_domains_with_discharge(site_data = site_data)
+}
+
+list_domains_with_discharge <- function(site_data){
+
+    #this identifies which sites have Q and which don't, so that the latter
+    #   can be filtered from the sitelist in portal/global.R. that way,
+    #   sites without discharge won't be selectable on the timeseries tab.
+
+    Q_or_noQ <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(network, domain, site_name) %>%
+        distinct() %>%
+        arrange(network, domain, site_name) %>%
+        mutate(has_Q = NA)
+
+    for(i in 1:nrow(Q_or_noQ)){
+
+        ntw <- Q_or_noQ$network[i]
+        dmn <- Q_or_noQ$domain[i]
+        sit <- Q_or_noQ$site_name[i]
+
+        clg <- sm(try(read_csv(glue('../portal/data/general/catalog_files/indiv_sites/',
+                                    '{n}_{d}_{s}.csv',
+                                    n = ntw,
+                                    d = dmn,
+                                    s = sit)),
+                      silent = TRUE))
+
+        if(! inherits(clg, 'try-error') && 'discharge' %in% clg$VariableCode){
+            Q_or_noQ$has_Q[i] <- TRUE
+        } else {
+            Q_or_noQ$has_Q[i] <- FALSE
+        }
+
+    }
+
+    if(any(is.na(Q_or_noQ$has_Q))){
+        stop('NA detected in has_Q column. fix list_domains_with_discharge')
+    }
+
+    Q_or_noQ %>%
+        filter(has_Q) %>%
+        select(-has_Q) %>%
+        write_csv(file = '../portal/data/general/sites_with_discharge.csv')
 }
 
 calculate_flux_by_area <- function(site_data){
