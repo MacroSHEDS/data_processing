@@ -72,12 +72,8 @@ compare_efficiency(ff, gg, 10, 1e5,
                    outfile='plots/efficiency_comparisons/Xleast_NA_rowwise.png')
 
 #synchronize_timestep ####
-ff = expression(synchronize_timestep(ms_df = d[1:s,],
-                                     desired_interval = '1 day',
-                                     impute_limit = 30))
-gg = expression(synchronize_timestep(ms_df = dd[1:s,],
-                                     desired_interval = '1 day',
-                                     impute_limit = 30))
+ff = expression(synchronize_timestep(ms_df = d[1:s,])
+gg = expression(synchronize_timestep(ms_df = dd[1:s,])
 compare_efficiency(ff, gg, 10, 1e6,
                    outfile='plots/efficiency_comparisons/synchronize_timestep.png')
 

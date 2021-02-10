@@ -427,6 +427,12 @@ process_3_ms010 <- function(network, domain, prodname_ms, site,
                          time='end_season', ws_prodname=site_boundary, site_name=site))
     }
 
+    if(prodname_ms == 'season_length__ms010') {
+
+      sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms,
+                       time='length_season', ws_prodname=site_boundary, site_name=site))
+    }
+
     return()
 }
 
