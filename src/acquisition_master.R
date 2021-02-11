@@ -129,6 +129,14 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
+    
+    res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
 
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
@@ -198,7 +206,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=2
+#dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
     # drop_automated_entries('.') #use with caution!
 

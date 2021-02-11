@@ -16,3 +16,4 @@ OBSOLETE
 transfer_data
 googlesheet_service_accnt.json
 data_processing.Rproj
+.Rdata

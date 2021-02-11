@@ -2047,7 +2047,7 @@ update_data_tracker_r <- function(network = domain,
                         '/data_tracker.json')
 
     readr::write_file(x = jsonlite::toJSON(tracker),
-                      file = trackerfile)
+                      path = trackerfile)
     backup_tracker(trackerfile)
 
     #return()
