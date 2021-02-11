@@ -39,6 +39,11 @@ suppressPackageStartupMessages({
     library(doParallel)
     library(googlesheets4)
     library(rgee) #requires geojsonio package
+
+    # install.packages("BiocManager") #required to get the IRanges package
+    # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
+    library(fuzzyjoin)
+
 })
 
 options(dplyr.summarise.inform = FALSE)
@@ -206,7 +211,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-#dmnrow=1
+# dmnrow=10
 for(dmnrow in 1:nrow(network_domain)){
     # drop_automated_entries('.') #use with caution!
 
@@ -251,8 +256,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms'
 
-generate_portal_extras(site_data = site_data,
-                       network_domain = network_domain)
+generate_portal_extras(site_data = site_data)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

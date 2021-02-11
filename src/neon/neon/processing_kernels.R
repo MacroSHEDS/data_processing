@@ -479,9 +479,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     # #                        domain = domain,
     # #                        prodname_ms = prodname_ms)
     # #
-    # # d <- synchronize_timestep(d,
-    # #                           desired_interval = '15 min',
-    # #                           impute_limit = 30)
+    # # d <- synchronize_timestep(d)
     # #
     # # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     #
@@ -526,9 +524,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
         select(site_name, datetime=startDateTime, airpressure=staPresMean,
             ms_status)
 
-    out_sub <- synchronize_timestep(ms_df = out_sub,
-                                    desired_interval = '15 min',
-                                    impute_limit = 30)
+    out_sub <- synchronize_timestep(d = out_sub)
 
     return(out_sub)
 }
@@ -665,7 +661,7 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
              secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
       mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
                                 1, 0)) %>%
-      mutate(var = 'precipitation_ns') %>%
+      mutate(var = 'precipitation') %>%
       select(site_name, datetime, var, val = secPrecipBulk, ms_status)
   }
 
@@ -677,7 +673,7 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
              datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
       mutate(ms_status = ifelse(priPrecipFinalQF == 1,
                                 1, 0)) %>%
-      mutate(var = 'precipitation_ns') %>%
+      mutate(var = 'precipitation') %>%
       select(site_name, datetime, var, val = priPrecipBulk, ms_status)
   }
 
