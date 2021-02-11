@@ -116,7 +116,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {st}, {p}, {c}',
+        msg = glue('Retrieving {st}, {p}, {c}',
             st=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
