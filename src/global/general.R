@@ -1,4 +1,4 @@
-loginfo('Beginning derive', logger=logger_module)
+loginfo('Beginning general', logger=logger_module)
 
 source('src/global/general_kernels.R',
        local = TRUE)
@@ -126,7 +126,7 @@ for(i in 1:nrow(unprod)){
                    n = network,
                    d = domain,
                    s = site_name)
-        loginfo(msg, logger=logger_module)
+        logerror(msg, logger=logger_module)
     }
     gc()
   }

@@ -2121,7 +2121,7 @@ update_data_tracker_d <- function(network = domain,
         dt = tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-            msg <- 'Derived product not yet tracked; no action taken.'
+            msg <- 'Derived product not yet tracked; not updating tracker.'
             logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }
@@ -6107,8 +6107,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         if(! precip_only && nrow(precip) > 10000){
             nchunks <- parallel::detectCores() %/% 2
-        # } else if(nrow(precip) > 17000){
-        #     #handle a case worse than bonanza here
+        } else if(nrow(precip) > 17000){
+            nchunks <- parallel::detectCores() %/% 3
         } else {
             nchunks <- parallel::detectCores()
         }
