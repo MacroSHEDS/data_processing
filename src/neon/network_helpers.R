@@ -10,7 +10,7 @@ get_neon_data <- function(domain,
 
         s <- sets[i, ]
 
-        msg <- glue('Processing {st}, {p}, {c}',
+        msg <- glue('Retrieving {st}, {p}, {c}',
                     st = s$site_name,
                     p = s$prodname_ms,
                     c = s$component)
