@@ -5021,11 +5021,8 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                          rollmax = join_distance,
                                          indices_only = TRUE)
 
-    common_datetimes <- chem_values$datetime[dt_match_inds$x]
-    precip_datetimes <- precip_values$datetime[dt_match_inds$y]
-
-    precip_values <- precip_values[dt_match_inds$y, ]
-    precip_values$datetime <- common_datetimes
+    chem_values <- chem_values[dt_match_inds$x, ]
+    common_datetimes <- chem_values$datetime
 
     if(length(common_datetimes) == 0){
         pchem_range <- range(chem_values$datetime)
@@ -5040,17 +5037,13 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     precip_values <- precip_values %>%
         mutate(ind = 1:n()) %>%
-        filter(datetime %in% common_datetimes)
+        slice(dt_match_inds$y) %>%
+        mutate(datetime = !!common_datetimes)
 
     quickref_inds <- precip_values$ind
     precip_values$ind <- NULL
 
-    chem_values <- filter(chem_values,
-                          datetime %in% common_datetimes)
-
     #matrixify input data so we can use matrix operations
-    d_dt <- precip_values$datetime
-
     p_status <- precip_values$ms_status
     p_interp <- precip_values$ms_interp
     p_matrix <- select(precip_values,
@@ -5249,7 +5242,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     # compare_interp_methods()
 
-    ws_means <- tibble(datetime = d_dt,
+    ws_means <- tibble(datetime = common_datetimes,
                        site_name = stream_site_name,
                        var = output_varname,
                        concentration = ws_mean_conc,

@@ -204,9 +204,9 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=13
-# for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in 4){
+# dmnrow=7
+for(dmnrow in 1:nrow(network_domain)){
+# for(dmnrow in 7){
     # drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
