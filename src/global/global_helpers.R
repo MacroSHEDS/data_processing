@@ -165,6 +165,27 @@ numeric_any <- function(num_vec){
     return(as.numeric(any(as.logical(num_vec))))
 }
 
+numeric_any_v <- function(...){ #attack of the ellipses
+
+    #...: numeric vectors of equal length. should be just 0s and 1s, but
+    #   integers other than 1 are also considered TRUE by as.logical()
+
+    #the vectorized version of numeric_any. good for stuff like:
+    #    mutate(ms_status = numeric_any(c(ms_status_x, ms_status_flow)))
+
+    #returns a single vector of the same length as arguments
+
+    #this func could be useful in global situations
+    numeric_any_positional <- function(...) numeric_any(c(...))
+
+    numeric_any_elementwise <- function(...){
+        mapply(function(...) numeric_any_positional(...), ...)
+    }
+
+    do.call(numeric_any_elementwise,
+            args = list(...))
+}
+
 gsub_v <- function(pattern, replacement_vec, x){
 
     #just like the first three arguments to gsub, except that
@@ -1951,7 +1972,9 @@ track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
     retrieval_tracker = avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
         select(component) %>%
-        mutate(mtime='1900-01-01', held_version='-1', status='pending') %>%
+        mutate(mtime = '1900-01-01',
+               held_version = '-1',
+               status = 'pending') %>%
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
@@ -4456,15 +4479,11 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
 
     if(nrow(chem) == 0) return(NULL)
 
-    chem <- chem %>%
-        tidyr::pivot_wider(
-            names_from = 'var',
-            values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
-        select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
-
-    # if(ncol(chem) == 3){
-    #     return(NULL)
-    # }
+    # chem <- chem %>%
+    #     tidyr::pivot_wider(
+    #         names_from = 'var',
+    #         values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
+    #     select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
 
     daterange <- range(chem$datetime)
 
@@ -4474,62 +4493,112 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         filter(
             site_name == !!site_name,
             datetime >= !!daterange[1],
-            datetime <= !!daterange[2]) %>%
-        rename(flow = val) %>% #quick and dirty way to convert to wide
+            datetime <= !!daterange[2])# %>%
+        # rename(flow = val) %>% #quick and dirty way to convert to wide
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
-        select(-var, -site_name)
+        # select(-var, -site_name)
 
     if(nrow(flow) == 0) return(NULL)
+    flow_is_highres <- Mode(diff(as.numeric(flow$datetime))) <= 15 * 60
 
-    #a few commented remnants from the old wide-format days have been left here,
-    #because they might be instructive in other endeavors
-    flux <- chem %>%
+    chem_split <- chem %>%
+        group_by(var) %>%
+        arrange(datetime) %>%
+        dplyr::group_split() %>%
+        as.list()
 
-        #if we ever have dependency issues with fuzzyjoin functions, we should
-        #   implement a data.table rolling join. We'll just have to pop off
-        #   the uncertainty in a separate tibble, do the join, noting which
-        #   datetime series is being modified, then rejoin the uncertainty.
-        fuzzyjoin::difference_inner_join(
-            flow,
-            by = 'datetime',
-            max_dist = as.difftime(tim = '14:59',
-                                   format = '%M:%S')
-        ) %>%
-        select(-datetime.y) %>%
-        rename(datetime = datetime.x) %>%
-        select_if(~(! all(is.na(.)))) %>%
+    #could do this in parallel (using furrr or foreach), but that might
+    #incur the same OOM issues as doing it all at once in wide-format. worth trying,
+    #but only use half of the available threads
+    for(i in 1:length(chem_split)){
 
-        # rowwise(datetime) %>%
-        # mutate(
-        #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
-        #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
-        # ungroup() %>%
-        # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-        # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
-        #           ~(. * flow)) %>%
-        # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
-        #              names_pattern = '(.*)',
-        #              names_to = 'var') %>%
-        # rename(val = value) %>%
+        chem_chunk <- chem_split[[i]]
 
-        mutate(
-            across(.cols = matches(match = '^ms_status.+',
-                                   perl = TRUE),
-                   .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
-            across(.cols = matches(match = '^ms_interp.+',
-                                   perl = TRUE),
-                   .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
-            across(.cols = starts_with(match = 'val_'),
-                   .fns = ~(.x * flow))) %>%
-        select(-ms_status, -ms_interp, -flow) %>%
-        pivot_longer(cols = ! datetime,
-                     names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
-                     names_to = c('.value', 'var')) %>%
+        chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
 
-        filter(! is.na(val)) %>%
-        mutate(site_name = !!site_name) %>%
-        arrange(site_name, var, datetime) %>%
-        select(datetime, site_name, var, val, ms_status, ms_interp)
+        #if both chem and flow data are low resolution (grab samples),
+        #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
+        #   gap should be 7.5 mins so that there isn't enormous duplication of
+        #   timestamps where multiple high-res values can be snapped to the
+        #   same low-res value
+        if(! chem_is_highres && ! flow_is_highres){
+            join_distance <- c('12:00:00')#, '%H:%M:%S')
+        } else {
+            join_distance <- c('7:30')#, '%M:%S')
+        }
+
+        chem_split[[i]] <- approxjoin_datetime(x = chem_chunk,
+                                               y = flow,
+                                               rollmax = join_distance,
+                                               keep_datetimes_from = 'x') %>%
+            mutate(site_name = site_name_x,
+                   var = var_x,
+                   val = val_x * val_y,
+                   ms_status = numeric_any_v(ms_status_x, ms_status_y),
+                   ms_interp = numeric_any_v(ms_interp_x, ms_interp_y)) %>%
+            select(-starts_with(c('site_name_', 'var_', 'val_',
+                                  'ms_status_', 'ms_interp_'))) %>%
+            filter(! is.na(val)) %>% #should be redundant
+            arrange(datetime)
+    }
+
+    # #a few commented remnants from the old wide-format days have been left here,
+    # #because they might be instructive in other endeavors
+    # flux <- chem %>%
+    #
+    #     #if we ever have dependency issues with fuzzyjoin functions, we should
+    #     #   implement a data.table rolling join. We'll just have to pop off
+    #     #   the uncertainty in a separate tibble, do the join, noting which
+    #     #   datetime series is being modified, then rejoin the uncertainty.
+    #     fuzzyjoin::difference_inner_join(
+    #         flow,
+    #         by = 'datetime',
+    #         max_dist = as.difftime(tim = '14:59',
+    #                                format = '%M:%S')
+    #     ) %>%
+    #     select(-datetime.y) %>%
+    #     rename(datetime = datetime.x) %>%
+    #     # group_by(datetime) %>%
+    #     # summarize(,
+    #     #           .groups = 'drop') %>%
+    #     select_if(~(! all(is.na(.)))) %>%
+    #
+    #     # rowwise(datetime) %>%
+    #     # mutate(
+    #     #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
+    #     #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
+    #     # ungroup() %>%
+    #     # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
+    #     # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
+    #     #           ~(. * flow)) %>%
+    #     # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
+    #     #              names_pattern = '(.*)',
+    #     #              names_to = 'var') %>%
+    #     # rename(val = value) %>%
+    #
+    #     mutate(
+    #         across(.cols = matches(match = '^ms_status.+',
+    #                                perl = TRUE),
+    #                .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
+    #         across(.cols = matches(match = '^ms_interp.+',
+    #                                perl = TRUE),
+    #                .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
+    #         across(.cols = starts_with(match = 'val_'),
+    #                .fns = ~(.x * flow))) %>%
+    #     select(-ms_status, -ms_interp, -flow) %>%
+    #     pivot_longer(cols = ! datetime,
+    #                  names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
+    #                  names_to = c('.value', 'var')) %>%
+    #
+    #     filter(! is.na(val)) %>%
+    #     mutate(site_name = !!site_name) %>%
+    #     arrange(site_name, var, datetime) %>%
+    #     select(datetime, site_name, var, val, ms_status, ms_interp)
+
+    flux <- chem_split %>%
+        purrr::reduce(bind_rows) %>%
+        arrange(site_name, var, datetime)
+        # select(datetime, site_name, var, val, ms_status, ms_interp)
 
     if(nrow(flux) == 0) return(NULL)
 
@@ -4933,30 +5002,51 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         }
     }
 
-    #shouldn't need a rolling join here, but maybe?
-    common_dts <- base::intersect(as.character(precip_values$datetime),
-                                  as.character(chem_values$datetime))
+    precip_is_highres <- Mode(diff(as.numeric(precip_values$datetime))) <= 15 * 60
+    chem_is_highres <- Mode(diff(as.numeric(chem_values$datetime))) <= 15 * 60
 
-    if(length(common_dts) == 0){
+    #if both chem and precip data are low resolution (grab samples),
+    #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
+    #   gap should be 7.5 mins so that there isn't enormous duplication of
+    #   timestamps where multiple high-res values can be snapped to the
+    #   same low-res value
+    if(! chem_is_highres && ! precip_is_highres){
+        join_distance <- c('12:00:00')
+    } else {
+        join_distance <- c('7:30')
+    }
+
+    dt_match_inds <- approxjoin_datetime(x = chem_values,
+                                         y = precip_values,
+                                         rollmax = join_distance,
+                                         indices_only = TRUE)
+
+    common_datetimes <- chem_values$datetime[dt_match_inds$x]
+    precip_datetimes <- precip_values$datetime[dt_match_inds$y]
+
+    precip_values <- precip_values[dt_match_inds$y, ]
+    precip_values$datetime <- common_datetimes
+
+    if(length(common_datetimes) == 0){
         pchem_range <- range(chem_values$datetime)
         test <- filter(precip_values,
                        datetime > pchem_range[1],
                        datetime < pchem_range[2])
         if(nrow(test) > 0){
-            logging::logerror('We need to determine common_dts with a rolling join!')
+            logging::logerror('something is wrong with approxjoin_datetime')
         }
         return(tibble())
     }
 
     precip_values <- precip_values %>%
         mutate(ind = 1:n()) %>%
-        filter(as.character(datetime) %in% common_dts)
+        filter(datetime %in% common_datetimes)
 
     quickref_inds <- precip_values$ind
     precip_values$ind <- NULL
 
     chem_values <- filter(chem_values,
-                          as.character(datetime) %in% common_dts)
+                          datetime %in% common_datetimes)
 
     #matrixify input data so we can use matrix operations
     d_dt <- precip_values$datetime
@@ -6217,7 +6307,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             ntimesteps = ntimesteps,
                             is_fluxable = is_fluxable)
 
-                if(ntimesteps> 5000){
+                if(ntimesteps > 5000){
                     nchunks <- parallel::detectCores() %/% 2 #overkill?
                 } else {
                     nchunks <- parallel::detectCores()
@@ -7996,17 +8086,17 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                                   qprod = disch_prodname_ms,
                                   site_name = s))
 
-        if(!is.null(flux)) {
-
-            write_ms_file(d = flux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_name = s,
-                          level = 'derived',
-                          shapefile = FALSE)
-            }
-        }
+        # if(!is.null(flux)){
+        #
+        #     write_ms_file(d = flux,
+        #                   network = network,
+        #                   domain = domain,
+        #                   prodname_ms = prodname_ms,
+        #                   site_name = s,
+        #                   level = 'derived',
+        #                   shapefile = FALSE)
+        # }
+    }
 
     return()
 }
@@ -8339,6 +8429,207 @@ calculate_flux_by_area <- function(site_data){
            ws_areas = ws_areas)
 
     setwd('../../data_acquisition/')
+}
+
+approxjoin_datetime <- function(x,
+                                y,
+                                rollmax = '7:30',
+                                keep_datetimes_from = 'x',
+                                indices_only = FALSE){
+                                #direction = 'forward'){
+
+    #x and y: macrosheds standard tibbles with only one site_name,
+    #   which must be the same in x and y. Nonstandard tibbles may also work,
+    #   so long as they have datetime columns, but the only case where we need
+    #   this for other tibbles is inside precip_pchem_pflux_idw, in which case
+    #   indices_only == TRUE, so it's not really set up for general-purpose joining
+    #rollmax: the maximum snap time for matching elements of x and y.
+    #   either '7:30' for continuous data or '12:00:00' for grab data
+    #direction [REMOVED]: either 'forward', meaning elements of x will be rolled forward
+    #   in time to match the next y, or 'backward', meaning elements of
+    #   x will be rolled back in time to reach the previous y
+    #keep_datetimes_from: string. either 'x' or 'y'. the datetime column from
+    #   the corresponding tibble will be kept, and the other will be dropped
+    #indices_only: logical. if TRUE, a join is not performed. rather,
+    #   the matching indices from each tibble are returned as a named list of vectors..
+
+    #good datasets for testing this function:
+    # x <- tribble(
+    #     ~datetime, ~site_name, ~var, ~val, ~ms_status, ~ms_interp,
+    #     '1968-10-09 04:42:00', 'GSWS10', 'GN_alk', set_errors(27.75, 1), 0, 0,
+    #     '1968-10-09 04:44:00', 'GSWS10', 'GN_alk', set_errors(21.29, 1), 0, 0,
+    #     '1968-10-09 04:47:00', 'GSWS10', 'GN_alk', set_errors(21.29, 1), 0, 0,
+    #     '1968-10-09 04:59:59', 'GSWS10', 'GN_alk', set_errors(16.04, 1), 0, 0,
+    #     '1968-10-09 05:15:01', 'GSWS10', 'GN_alk', set_errors(17.21, 1), 1, 0,
+    #     '1968-10-09 05:30:59', 'GSWS10', 'GN_alk', set_errors(16.50, 1), 0, 0) %>%
+        # mutate(datetime = as.POSIXct(datetime, tz = 'UTC'))
+    # y <- tribble(
+    #     ~datetime, ~site_name, ~var, ~val, ~ms_status, ~ms_interp,
+    #     '1968-10-09 04:00:00', 'GSWS10', 'GN_alk', set_errors(1.009, 1), 1, 0,
+    #     '1968-10-09 04:15:00', 'GSWS10', 'GN_alk', set_errors(2.009, 1), 1, 1,
+    #     '1968-10-09 04:30:00', 'GSWS10', 'GN_alk', set_errors(3.009, 1), 1, 1,
+    #     '1968-10-09 04:45:00', 'GSWS10', 'GN_alk', set_errors(4.009, 1), 1, 1,
+    #     '1968-10-09 05:00:00', 'GSWS10', 'GN_alk', set_errors(5.009, 1), 1, 1,
+    #     '1968-10-09 05:15:00', 'GSWS10', 'GN_alk', set_errors(6.009, 1), 1, 1) %>%
+    #     mutate(datetime = as.POSIXct(datetime, tz = 'UTC'))
+
+    #tests
+    if('site_name' %in% colnames(x) && length(unique(x$site_name)) > 1){
+        stop('Only one site_name allowed in x at the moment')
+    }
+    if('var' %in% colnames(x) && length(unique(x$var)) > 1){
+        stop('Only one var allowed in x at the moment')
+    }
+    if('site_name' %in% colnames(y) && length(unique(y$site_name)) > 1){
+        stop('Only one site_name allowed in y at the moment')
+    }
+    if('var' %in% colnames(y) && length(unique(y$var)) > 1){
+        stop('Only one var allowed in y at the moment')
+    }
+    if('site_name' %in% colnames(x) &&
+       'site_name' %in% colnames(y) &&
+       x$site_name[1] != y$site_name[1]) stop('x and y site_name must be the same')
+    if(! rollmax %in% c('7:30', '12:00:00')) stop('rollmax must be "7:30" or "12:00:00"')
+    # if(! direction %in% c('forward', 'backward')) stop('direction must be "forward" or "backward"')
+    if(! keep_datetimes_from %in% c('x', 'y')) stop('keep_datetimes_from must be "x" or "y"')
+    if(! 'datetime' %in% colnames(x) || ! 'datetime' %in% colnames(y)){
+        stop('both x and y must have "datetime" columns containing POSIXct values')
+    }
+    if(! is.logical(indices_only)) stop('indices_only must be a logical')
+
+    #deal with the case of x or y being a specialized "flow" tibble
+    # x_is_flowtibble <- y_is_flowtibble <- FALSE
+    # if('flow' %in% colnames(x)) x_is_flowtibble <- TRUE
+    # if('flow' %in% colnames(y)) y_is_flowtibble <- TRUE
+    # if(x_is_flowtibble && ! y_is_flowtibble){
+    #     varname <- y$var[1]
+    #     y$var = NULL
+    # } else if(y_is_flowtibble && ! x_is_flowtibble){
+    #     varname <- x$var[1]
+    #     x$var = NULL
+    # } else if(! x_is_flowtibble && ! y_is_flowtibble){
+    #     varname <- x$var[1]
+    #     x$var = NULL
+    #     y$var = NULL
+    # } else {
+    #     stop('x and y are both "flow" tibbles. There should be no need for this')
+    # }
+    # if(x_is_flowtibble) x <- rename(x, val = flow)
+    # if(y_is_flowtibble) y <- rename(y, val = flow)
+
+    #data.table doesn't work with the errors package, so error needs
+    #to be separated into its own column. also give same-name columns suffixes
+
+    if('val' %in% colnames(x)){ #crude catch for nonstandard ms tibbles (fine for now)
+        x <- x %>%
+            mutate(err = errors(val),
+                   val = errors::drop_errors(val)) %>%
+            rename_with(.fn = ~paste0(., '_x'),
+                        .cols = everything()) %>%
+                        # .cols = any_of(c('site_name', 'var', 'val',
+                        #                  'ms_status', 'ms_interp'))) %>%
+            as.data.table()
+
+        y <- y %>%
+            mutate(err = errors(val),
+                   val = errors::drop_errors(val)) %>%
+            rename_with(.fn = ~paste0(., '_y'),
+                        .cols = everything()) %>%
+            as.data.table()
+    } else {
+        x <- rename(x, datetime_x = datetime) %>% as.data.table()
+        y <- rename(y, datetime_y = datetime) %>% as.data.table()
+    }
+
+    #alternative implementation of the "on" argument in data.table joins...
+    #probably more flexible, so leaving it here in case we need to do something crazy
+    # data.table::setkeyv(x, 'datetime')
+    # data.table::setkeyv(y, 'datetime')
+
+    #convert the desired maximum roll distance from string to integer seconds
+    rollmax <- ifelse(test = rollmax == '7:30',
+                      yes = 7 * 60 + 30,
+                      no = 12 * 60 * 60)
+
+    #leaving this here in case the nearest neighbor join implemented below is too
+    #slow. then we can fall back to a basic rolling join with a maximum distance
+    # rollmax <- ifelse(test = direction == 'forward',
+    #                   yes = -rollmax,
+    #                   no = rollmax)
+    #rollends will move the first/last value of x in the opposite `direction` if necessary
+    # joined <- y[x, on = 'datetime', roll = rollmax, rollends = c(TRUE, TRUE)]
+
+    #create columns in x that represent the snapping window around each datetime
+    x[, `:=` (datetime_min = datetime_x - rollmax,
+              datetime_max = datetime_x + rollmax)]
+    y[, `:=` (datetime_y_orig = datetime_y)] #datetime col will be dropped from y
+
+    # if(indices_only){
+    #     y_indices <- y[x,
+    #                    on = .(datetime_y <= datetime_max,
+    #                           datetime_y >= datetime_min),
+    #                    which = TRUE]
+    #     return(y_indices)
+    # }
+
+    #join x rows to y if y's datetime falls within the x range
+    joined <- y[x, on = .(datetime_y <= datetime_max,
+                          datetime_y >= datetime_min)]
+    joined <- na.omit(joined, cols = 'datetime_y_orig') #drop rows without matches
+
+    #for any datetimes in x or y that were matched more than once, keep only
+    #the nearest match
+    joined[, `:=` (datetime_match_diff = abs(datetime_x - datetime_y_orig))]
+    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_x]
+    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_y_orig]
+
+    if(indices_only){
+        y_indices <- which(y$datetime_y %in% joined$datetime_y_orig)
+        x_indices <- which(x$datetime_x %in% joined$datetime_x)
+        return(list(x = x_indices, y = y_indices))
+    }
+
+    #drop and rename columns (data.table makes weird name modifications)
+    if(keep_datetimes_from == 'x'){
+        joined[, c('datetime_y', 'datetime_y.1', 'datetime_y_orig', 'datetime_match_diff') := NULL]
+        setnames(joined, 'datetime_x', 'datetime')
+    } else {
+        joined[, c('datetime_x', 'datetime_y.1', 'datetime_y', 'datetime_match_diff') := NULL]
+        setnames(joined, 'datetime_y_orig', 'datetime')
+    }
+
+    #restore error objects, var column, original column names (with suffixes).
+    #original column order
+    joined <- as_tibble(joined) %>%
+        mutate(val_x = errors::set_errors(val_x, err_x),
+               val_y = errors::set_errors(val_y, err_y)) %>%
+        select(-err_x, -err_y)
+        # mutate(var = !!varname)
+
+    # if(x_is_flowtibble) joined <- rename(joined,
+    #                                      flow = val_x,
+    #                                      ms_status_flow = ms_status_x,
+    #                                      ms_interp_flow = ms_interp_x)
+    # if(y_is_flowtibble) joined <- rename(joined,
+    #                                      flow = val_y,
+    #                                      ms_status_flow = ms_status_y,
+    #                                      ms_interp_flow = ms_interp_y)
+
+    # if(! sum(grepl('^val_[xy]$', colnames(joined))) > 1){
+    #     joined <- rename(joined, val = matches('^val_[xy]$'))
+    # }
+
+    joined <- select(joined,
+                     datetime,
+                     # matches('^val_?[xy]?$'),
+                     # any_of('flow'),
+                     starts_with('site_name'),
+                     any_of(c(starts_with('var_'), matches('^var$'))),
+                     any_of(c(starts_with('val_'), matches('^val$'))),
+                     starts_with('ms_status_'),
+                     starts_with('ms_interp_'))
+
+    return(joined)
 }
 
 retrieve_versionless_product <- function(network,

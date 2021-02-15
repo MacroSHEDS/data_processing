@@ -42,7 +42,8 @@ suppressPackageStartupMessages({
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
-    library(fuzzyjoin)
+    # library(fuzzyjoin) #nvm. too memory inefficient. implementing rolling join
+    #   from data.table instead
 
 })
 
@@ -204,7 +205,8 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=13
-for(dmnrow in 1:nrow(network_domain)){
+# for(dmnrow in 1:nrow(network_domain)){
+for(dmnrow in 4){
     # drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
@@ -215,7 +217,10 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry__10303')
+    # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive', prodname_ms)
+    # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
