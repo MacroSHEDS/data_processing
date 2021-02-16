@@ -2567,7 +2567,8 @@ ms_delineate <- function(network,
                 snap_dist = specs$snap_distance_m,
                 snap_method = specs$snap_method,
                 dem_resolution = specs$dem_resolution,
-                write_dir = site_dir)
+                write_dir = site_dir,
+                verbose = verbose)
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -2992,7 +2993,8 @@ delineate_watershed_by_specification <- function(lat,
                                                  snap_dist,
                                                  snap_method,
                                                  dem_resolution,
-                                                 write_dir){
+                                                 write_dir,
+                                                 verbose){
 
     #lat: numeric representing latitude in decimal degrees
     #   (negative indicates southern hemisphere)
@@ -3040,7 +3042,7 @@ delineate_watershed_by_specification <- function(lat,
     site_buf <- sf::st_buffer(x = site,
                               dist = buffer_radius)
 
-    dem <- expo_backoff(
+    dem <<- expo_backoff(
         expr = {
             elevatr::get_elev_raster(locations = site_buf,
                                      z = dem_resolution,
