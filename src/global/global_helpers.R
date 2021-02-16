@@ -3269,6 +3269,25 @@ ms_derive <- function(network = domain, domain){
              is_being_munged &
              ! is_self_precursor)
 
+    #this patch catches the case of precip/stream gauges being generated
+    #by a derive kernel (which shouldn't be linked from munge)
+    precip_gauges_derived <- any(grepl('precip_gauge_locations', prods$prodname) &
+                                     has_ms_prodcode)
+    stream_gauges_derived <- any(grepl('stream_gauge_locations', prods$prodname) &
+                                     has_ms_prodcode)
+
+    if(precip_gauges_derived){
+       not_rly_linkprod <-  which(grepl('precip_gauge_locations',
+                    prods$prodname) & ! has_ms_prodcode)
+       is_linkprod[not_rly_linkprod] <- FALSE
+    }
+
+    if(stream_gauges_derived){
+       not_rly_linkprod <-  which(grepl('stream_gauge_locations',
+                    prods$prodname) & ! has_ms_prodcode)
+       is_linkprod[not_rly_linkprod] <- FALSE
+    }
+
     # #determine which active prods need to be compiled from constituents (compprods)
     # is_compprod <- has_ms_prodcode &
     #     ! prods$prodname %in% typical_derprods &
@@ -4461,9 +4480,10 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #chemprod is the prodname_ms for stream or precip chemistry.
     #   it can be a munged or a derived product.
     #qprod is the prodname_ms for stream discharge or precip volume over time.
-    #   it can be a munged or derived product/
-    #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use
-    #predisesors to ms input
+    #   it can be a munged or derived product.
+    #ignore_pred: logical; set to TRUE if detection limits should be retrieved
+    #   from the supplied chemprod directly, rather than its precursor. passed to
+    #   apply_detection_limit_t.
 
     if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
         stop('Could not determine stream/precip')
@@ -5391,8 +5411,12 @@ write_precip_quickref <- function(precip_idw_list,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    chunkfile <- paste(chunkdtrange[1],
-                       chunkdtrange[2],
+    chunkfile <- paste(strftime(chunkdtrange[1],
+                                format = '%Y-%m-%d %H:%M:%S',
+                                tz = 'UTC'),
+                       strftime(chunkdtrange[2],
+                                format = '%Y-%m-%d %H:%M:%S',
+                                tz = 'UTC'),
                        sep = '_')
 
     saveRDS(object = precip_idw_list,
@@ -5476,8 +5500,12 @@ read_precip_quickref <- function(network,
     # quickref_inds <- character(length = nrow(refranges))
     for(i in 1:nrow(refranges)){
 
-        fn <- paste(refranges$startdt[i],
-                    refranges$enddt[i],
+        fn <- paste(strftime(refranges$startdt[i],
+                             format = '%Y-%m-%d %H:%M:%S',
+                             tz = 'UTC'),
+                    strftime(refranges$enddt[i],
+                             format = '%Y-%m-%d %H:%M:%S',
+                             tz = 'UTC'),
                     sep = '_')
 
         qf <- readRDS(glue('{qd}/{f}',
@@ -6190,52 +6218,81 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                                      domain = domain,
                                                      prodname_ms = prodname_ms)
 
-        if(! precip_only && nrow(precip) > 10000){
-            nchunks <- parallel::detectCores() %/% 2
-        } else if(nrow(precip) > 17000){
-            nchunks <- parallel::detectCores() %/% 3
+        nthreads <- parallel::detectCores()
+
+        if(nrow(precip) > 500000){
+            nsuperchunks <- 3
+            nchunks <- nthreads * nsuperchunks
+        } else if(nrow(precip) > 100000){
+            nsuperchunks <- 2
+            nchunks <- nthreads * nsuperchunks
         } else {
-            nchunks <- parallel::detectCores()
+            nsuperchunks <- 1
+            nchunks <- nthreads
         }
+
+        #     nchunks <- parallel::detectCores() %/% 2
+        # } else if(nrow(precip) > 17000){
+        #     nchunks <- parallel::detectCores() %/% 3
+        # } else {
+        #     nchunks <- parallel::detectCores()
+        # }
 
         ## IDW INTERPOLATE PRECIP FOR ALL TIMESTEPS. STORE CELL VALUES
         ## SO THEY CAN BE USED FOR PFLUX INTERP
+        precip_superchunklist <- chunk_df(d = precip,
+                                          nchunks = nsuperchunks,
+                                          create_index_column = TRUE)
 
-        precip_chunklist <- chunk_df(d = precip,
-                                     nchunks = nchunks,
-                                     create_index_column = TRUE)
+        ws_mean_precip <- tibble()
+        for(s in 1:length(precip_superchunklist)){
+        # ws_mean_precip <- foreach::foreach(
+        #     s = 1:length(precip_superchunklist),
+        #     .combine = idw_parallel_combine,
+        #     .init = 'first iter') %:% {
 
-        clst <- ms_parallelize()
+            precip_superchunk <- precip_superchunklist[[s]]
 
-        ws_mean_precip <- foreach::foreach(
-            j = 1:min(nchunks, nrow(precip)),
-            .combine = idw_parallel_combine,
-            .init = 'first iter') %dopar% {
+            precip_chunklist <- chunk_df(d = precip_superchunk,
+                                         nchunks = nthreads,
+                                         create_index_column = FALSE)
 
-            idw_log_var(verbose = verbose,
-                        site_name = site_name,
-                        v = 'precipitation',
-                        j = paste('chunk', j),
-                        ntimesteps = nrow(precip_chunklist[[j]]),
-                        nvars = nchunks)
+            clst <- ms_parallelize(maxcores = nthreads)
 
-            foreach_return <- shortcut_idw(
-                encompassing_dem = dem,
-                wshd_bnd = wbi,
-                data_locations = rg,
-                data_values = precip_chunklist[[j]],
-                stream_site_name = site_name,
-                output_varname = 'SPECIAL CASE PRECIP',
-                save_precip_quickref = ! precip_only,
-                elev_agnostic = FALSE,
-                verbose = verbose)
+            ws_mean_precip_chunk <- foreach::foreach(
+                j = 1:min(nthreads, nrow(precip_superchunk)),
+                .combine = idw_parallel_combine,
+                .init = 'first iter') %dopar% {
 
-            foreach_return
+                idw_log_var(verbose = verbose,
+                            site_name = site_name,
+                            v = 'precipitation',
+                            j = paste('chunk', j + (nthreads * (s - 1))),
+                            ntimesteps = nrow(precip_chunklist[[j]]),
+                            nvars = nchunks)
+
+                foreach_return <- shortcut_idw(
+                    encompassing_dem = dem,
+                    wshd_bnd = wbi,
+                    data_locations = rg,
+                    data_values = precip_chunklist[[j]],
+                    stream_site_name = site_name,
+                    output_varname = 'SPECIAL CASE PRECIP',
+                    save_precip_quickref = ! precip_only,
+                    elev_agnostic = FALSE,
+                    verbose = verbose)
+
+                foreach_return
             }
 
-        ms_unparallelize(clst)
+            ms_unparallelize(clst)
 
-        rm(precip_chunklist); gc()
+            rm(precip_chunklist); gc()
+
+            ws_mean_precip <- bind_rows(ws_mean_precip, ws_mean_precip_chunk)
+        }
+
+        rm(precip_superchunklist); gc()
 
         if(any(is.na(ws_mean_precip$datetime))){
             stop('NA datetime found in ws_mean_precip')
@@ -8081,16 +8138,16 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                                   qprod = disch_prodname_ms,
                                   site_name = s))
 
-        # if(!is.null(flux)){
-        #
-        #     write_ms_file(d = flux,
-        #                   network = network,
-        #                   domain = domain,
-        #                   prodname_ms = prodname_ms,
-        #                   site_name = s,
-        #                   level = 'derived',
-        #                   shapefile = FALSE)
-        # }
+        if(!is.null(flux)){
+
+            write_ms_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_name = s,
+                          level = 'derived',
+                          shapefile = FALSE)
+        }
     }
 
     return()
@@ -8472,14 +8529,14 @@ approxjoin_datetime <- function(x,
     if('site_name' %in% colnames(x) && length(unique(x$site_name)) > 1){
         stop('Only one site_name allowed in x at the moment')
     }
-    if('var' %in% colnames(x) && length(unique(x$var)) > 1){
-        stop('Only one var allowed in x at the moment')
+    if('var' %in% colnames(x) && length(unique(drop_var_prefix(x$var))) > 1){
+        stop('Only one var allowed in x at the moment (not including prefix)')
     }
     if('site_name' %in% colnames(y) && length(unique(y$site_name)) > 1){
         stop('Only one site_name allowed in y at the moment')
     }
-    if('var' %in% colnames(y) && length(unique(y$var)) > 1){
-        stop('Only one var allowed in y at the moment')
+    if('var' %in% colnames(y) && length(unique(drop_var_prefix(y$var))) > 1){
+        stop('Only one var allowed in y at the moment (not including prefix)')
     }
     if('site_name' %in% colnames(x) &&
        'site_name' %in% colnames(y) &&
