@@ -1,0 +1,85 @@
+---
+    title: "AK_TS_Cleaning"
+author: "Matthew Ross"
+date: "2/5/2021"
+output: html_document
+editor_options:
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+    # Run the setup portion of acquisition_master (the part before the main loop)
+    # to load necessary packages and helper functions.
+
+    library(RColorBrewer)
+
+    ws_areas <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(network, domain, site_name, ws_area_ha)
+
+    prodname_dirs <- list_all_product_dirs('discharge')
+    
+    palettes = RColorBrewer::brewer.pal.info %>%
+        filter(category == 'seq') %>%
+        mutate(name = rownames(.))
+```
+
+
+```{r}
+yr_seq = 1948:2029
+plot(yr_seq, rep(1, length(yr_seq)), ylim=c(-10, 2500), type='n', yaxs='i',
+     xaxs = 'i', ylab='Runoff (mm/yr)', xlab='Year')
+
+for(i in 1:length(prodname_dirs)){
+    
+    pd = prodname_dirs[i]
+
+    ntw_dmn_prd <- str_match(string = pd,
+                             pattern = '^data/(.+?)/(.+?)/derived/(.+?)$')[, 2:4]
+
+    d <- list.files(pd, full.names = TRUE) %>%
+        purrr::map_dfr(read_feather) %>%
+        select(-val_err) %>%
+        # mutate(val = errors::set_errors(val, val_err),
+        group_by(site_name, date = lubridate::as_date(datetime)) %>%
+        summarize(val = mean(val),
+                  .groups = 'drop') %>%
+        mutate(year = lubridate::year(date),
+               val = val * 86400) %>%
+        group_by(site_name, year) %>%
+        summarize(val = sum(val),
+                  .groups = 'drop') %>%
+        arrange(site_name, year) %>%
+        mutate(network = ntw_dmn_prd[1],
+               domain = ntw_dmn_prd[2]) %>%
+        left_join(ws_areas,
+                  by = c('network', 'domain', 'site_name')) %>%
+        mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
+               val = val / 1000 * 1e9 / ws_area_mm2,
+               ntw_dmn_sit = paste(network, domain, site_name,
+                                   sep = ' > ')) %>%
+        select(year, ntw_dmn_sit, val) %>%
+        arrange(ntw_dmn_sit, year)
+    
+    n_available_colors = palettes[i, 'maxcolors']
+    colors = RColorBrewer::brewer.pal(n = n_available_colors,
+                                      name = palettes[i, 'name'])
+    
+    plotted_site_tally = 0
+    sites = unique(d$ntw_dmn_sit)
+    for(j in 1:length(sites)){
+        site = sites[j]
+        color_ind = j %% n_available_colors
+        color_ind = ifelse(color_ind == 0, n_available_colors, color_ind)
+        ds = filter(d, ntw_dmn_sit == !!site)
+        maxq = max(ds$val, na.rm = TRUE)
+        if(maxq > 2500) message(site, ': ', maxq)
+        if(any(! is.na(ds$val))) plotted_site_tally = plotted_site_tally + 1
+        lines(ds$year, ds$val, col=alpha(colors[color_ind], 0.5), lwd = 2)
+    }
+}
+
+# joined <- y[x, on = .(datetime_y <= datetime_max,
+#                       datetime_y >= datetime_min)]
+```
