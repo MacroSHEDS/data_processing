@@ -179,11 +179,16 @@ numeric_any_v <- function(...){ #attack of the ellipses
     numeric_any_positional <- function(...) numeric_any(c(...))
 
     numeric_any_elementwise <- function(...){
-        mapply(function(...) numeric_any_positional(...), ...)
+        Map(function(...) numeric_any_positional(...), ...)
     }
 
-    do.call(numeric_any_elementwise,
-            args = list(...))
+    out <- do.call(numeric_any_elementwise,
+                   args = list(...)) %>%
+        unlist()
+
+    if(is.null(out)) out <- numeric()
+
+    return(out)
 }
 
 gsub_v <- function(pattern, replacement_vec, x){
@@ -2513,7 +2518,8 @@ ms_delineate <- function(network,
                         n = network,
                         d = domain,
                         w = ws_boundary_dir),
-                   recursive = TRUE)
+                   recursive = TRUE,
+                   showWarnings = FALSE)
     } else {
         level <- 'munged'
     }
@@ -2567,7 +2573,8 @@ ms_delineate <- function(network,
                 snap_dist = specs$snap_distance_m,
                 snap_method = specs$snap_method,
                 dem_resolution = specs$dem_resolution,
-                write_dir = site_dir)
+                write_dir = site_dir,
+                verbose = verbose)
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -2847,7 +2854,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
                                          z = dem_resolution,
                                          verbose = verbose)
             },
-            max_attempts = 4
+            max_attempts = 10,
+            verbose = verbose
         )
 
         raster::writeRaster(x = dem,
@@ -2992,7 +3000,8 @@ delineate_watershed_by_specification <- function(lat,
                                                  snap_dist,
                                                  snap_method,
                                                  dem_resolution,
-                                                 write_dir){
+                                                 write_dir,
+                                                 verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
     #   (negative indicates southern hemisphere)
@@ -3046,7 +3055,8 @@ delineate_watershed_by_specification <- function(lat,
                                      z = dem_resolution,
                                      verbose = verbose)
         },
-        max_attempts = 4
+        max_attempts = 10,
+        verbose = verbose
     )
 
     raster::writeRaster(x = dem,
@@ -3215,6 +3225,11 @@ ms_derive <- function(network = domain, domain){
     #   require actual derivation, like precip_flux_inst from precipitation
     #   and pchem (note that both of these will usually be replaced by the
     #   new precip_pchem_pflux kernels)
+
+    if(! exists('held_data')){
+        held_data <<- get_data_tracker(network = network,
+                                       domain = domain)
+    }
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -4398,7 +4413,7 @@ delineate_watershed_nhd <- function(lat, long) {
                                          z = 12,
                                          verbose = FALSE)
             },
-            max_attempts = 4
+            max_attempts = 10
         )
 
         temp_raster <- tempfile(fileext = ".tif")
@@ -5023,7 +5038,9 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     }
 
     precip_is_highres <- Mode(diff(as.numeric(precip_values$datetime))) <= 15 * 60
+    if(is.na(precip_is_highres)) precip_is_highres <- FALSE
     chem_is_highres <- Mode(diff(as.numeric(chem_values$datetime))) <= 15 * 60
+    if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
     #if both chem and precip data are low resolution (grab samples),
     #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
@@ -5043,6 +5060,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     chem_values <- chem_values[dt_match_inds$x, ]
     common_datetimes <- chem_values$datetime
+    # quickref_datetimes <- precip_values$datetime
 
     if(length(common_datetimes) == 0){
         pchem_range <- range(chem_values$datetime)
@@ -5479,16 +5497,29 @@ read_precip_quickref <- function(network,
         plyr::ldply(function(y){
             data.frame(startdt = y[1],
                        enddt = y[2])
-        })
+        }) %>%
+        mutate(ref_ind = 1:n())
 
-    refranges <- refranges %>%
-        # mutate(ref_ind = 1:n()) %>%
+    refranges_sel <- refranges %>%
         filter((startdt >= dtrange[1] & enddt <= dtrange[2]) |
                    (startdt < dtrange[1] & enddt >= dtrange[1]) |
                    (enddt > dtrange[2] & startdt <= dtrange[2]))
                    #redundant?
                    # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
                    # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
+
+    #handle the case where an end of dtrange falls right between the start and
+    #end dates of a quickref file. this is possible because precip dates can
+    #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
+    ref_ind_range <- range(refranges_sel$ref_ind)
+    if(dtrange[1] < refranges_sel$startdt && ref_ind_range[1] > 1){
+        refranges_sel <- bind_rows(refranges[ref_ind_range[1] - 1, ],
+                                   refranges_sel)
+    }
+    if(dtrange[2] > refranges_sel$enddt && ref_ind_range[2] < nrow(refranges)){
+        refranges_sel <- bind_rows(refranges_sel,
+                                   refranges[ref_ind_range[2] + 1, ])
+    }
 
     if(nrow(refranges) == 0){
         return(list('0' = 'NO QUICKREF AVAILABLE'))
@@ -6024,6 +6055,8 @@ get_detlim_precursors <- function(network,
         prodname <- 'precip_chemistry'
     } else if(prodname == 'precip_pchem_pflux'){
         prodname <- c('precip_chemistry', 'precipitation')
+    } else if(prodname == 'stream_flux_inst'){
+        prodname <- c('stream_chemistry', 'discharge')
     }
 
     precursors <- prods %>%
@@ -6088,7 +6121,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                      expand = 200,
                                      verbose = FALSE)
         },
-        max_attempts = 4
+        max_attempts = 10,
+        verbose = verbose
     )
 
     #add elev column to rain gauges
@@ -7418,21 +7452,40 @@ read_detection_limit <- function(network, domain, prodname_ms){
 
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
+    #NOTE: this function updated 2021-02-16, near the end of rebuilding
+    #   LTER (discovered issue with luquillo sites overwriting each other in
+    #   the detlim file). as such, it's not thoroughly tested. some stuff
+    #   that worked before might be broken now. tried to make it backward compatible though
+
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
                          n = network,
                          d = domain)
 
+    detlim_new <- detlim #better name; don't want to update every call though
+
     if(file.exists(detlims_file)){
-        x <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        x[[prodname_ms]] <- detlim
+
+        detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
+        if(prodname_ms %in% names(detlim_stored)){
+
+            for(v in names(detlim_new)){
+
+                site_detlims <- detlim_new[[v]]
+                for(s in names(site_detlims)){
+                    detlim_stored[[prodname_ms]][[v]][[s]] <- site_detlims[[s]]
+                }
+            }
+
+        } else {
+            detlim_stored[[prodname_ms]] <- detlim_new
+        }
+
     } else {
-        x <- list(placeholder = detlim)
-        names(x) <- prodname_ms
+        detlim_stored <- list(placeholder = detlim_new)
+        names(detlim_stored) <- prodname_ms
     }
 
-    readr::write_file(jsonlite::toJSON(x), detlims_file)
-
-    #return()
+    readr::write_file(jsonlite::toJSON(detlim_stored), detlims_file)
 }
 
 rle2 <- function(x){#, return_list = FALSE){
@@ -9137,14 +9190,14 @@ expo_backoff <- function(expr,
         results <- try(expr = expr,
                        silent = TRUE)
 
-        if('try-error' %in% class(results)){
+        if(inherits(results, 'try-error')){
 
             backoff <- runif(n = 1,
                              min = 0,
                              max = 2^attempt_i - 1)
 
             if(verbose){
-                message("Backing off for ", backoff, " seconds.")
+                message(paste0("Backing off for ", round(backoff, 1), " seconds."))
             }
 
             Sys.sleep(backoff)
@@ -9152,7 +9205,7 @@ expo_backoff <- function(expr,
         } else {
 
             if(verbose){
-                message("Succeeded after ", attempt_i, " attempts.")
+                message(paste0("Succeeded after ", attempt_i, " attempt(s)."))
             }
 
             break
