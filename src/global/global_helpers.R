@@ -2854,8 +2854,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
                                          z = dem_resolution,
                                          verbose = verbose)
             },
-            max_attempts = 10,
-            verbose = verbose
+            max_attempts = 10
         )
 
         raster::writeRaster(x = dem,
@@ -3055,8 +3054,7 @@ delineate_watershed_by_specification <- function(lat,
                                      z = dem_resolution,
                                      verbose = verbose)
         },
-        max_attempts = 10,
-        verbose = verbose
+        max_attempts = 10
     )
 
     raster::writeRaster(x = dem,
@@ -6121,8 +6119,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                      expand = 200,
                                      verbose = FALSE)
         },
-        max_attempts = 10,
-        verbose = verbose
+        max_attempts = 10
     )
 
     #add elev column to rain gauges
@@ -8094,17 +8091,39 @@ ms_write_confdata <- function(x,
             which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
 
         if(overwrite){
-            sm(googlesheets4::write_sheet(data = x,
-                                          ss = write_loc,
-                                          sheet = 1))
+
+            # sm(googlesheets4::write_sheet(data = x,
+            #                               ss = write_loc,
+            #                               sheet = 1))
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::write_sheet(data = x,
+                                                  ss = write_loc,
+                                                  sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         } else {
-            sm(googlesheets4::sheet_append(data = x,
-                                           ss = write_loc,
-                                           sheet = 1))
+
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::sheet_append(data = x,
+                                                   ss = write_loc,
+                                                   sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         }
 
-        dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                             na = c('', 'NA')))
+        catch <- expo_backoff(
+            expr = {
+                dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                     na = c('', 'NA')))
+            },
+            max_attempts = 4
+        )
 
     } else if(to_where == 'local'){
 
@@ -9183,7 +9202,7 @@ catalogue_held_data <- function(network_domain, site_data){
 
 expo_backoff <- function(expr,
                          max_attempts = 10,
-                         verbose = FALSE){
+                         verbose = TRUE){
 
     for(attempt_i in seq_len(max_attempts)){
 
