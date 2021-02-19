@@ -702,10 +702,10 @@ list_all_product_dirs <- function(prodname){
     return(prodname_dirs)
 }
 
-load_entire_product <- function(prodname, .sort = FALSE){
+load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
 
-    #WARNING: this could easily eat up 20 GB RAM. As the dataset grows,
-    #that number will increase
+    #WARNING: this could easily eat up 20 GB RAM for a product like discharge.
+    #As the dataset grows, that number will increase
 
     #read and combine all files associated with a particular prodname
     #   (e.g. 'discharge' or 'stream_chemistry') across all networks and
@@ -714,6 +714,9 @@ load_entire_product <- function(prodname, .sort = FALSE){
     #   functions
     #.sort: logical. If TRUE, output will be sorted by site_name, var, datetime.
     #   this takes a few minutes.
+    #filter_vars: character vector. for products like stream_chemistry that include
+    #   multiple variables, this filters to just the ones specified (ignoring
+    #   prefix)
 
     prodname_dirs <- list_all_product_dirs(prodname = prodname)
 
@@ -723,8 +726,15 @@ load_entire_product <- function(prodname, .sort = FALSE){
         network_domain <- str_match(string = pd,
                                     pattern = '^data/(.+?)/(.+?)/.+$')[, 2:3]
 
-        d <- list.files(pd, full.names = TRUE) %>%
-            purrr::map_dfr(read_feather) %>%
+        d0 <- list.files(pd, full.names = TRUE) %>%
+            purrr::map_dfr(read_feather)
+
+        if(! missing(filter_vars)){
+            d0 <- filter(d0,
+                        drop_var_prefix(var) %in% filter_vars)
+        }
+
+        d <- d0 %>%
             mutate(val = errors::set_errors(val, val_err),
                    network = network_domain[1],
                    domain = network_domain[2]) %>%
