@@ -16,7 +16,13 @@ palettes = RColorBrewer::brewer.pal.info %>%
     mutate(name = rownames(.))
 
 domains = unique(site_data$domain[site_data$in_workflow == 1])
-dmncolors = c(RColorBrewer::brewer.pal(12, 'Paired')[-11], RColorBrewer::brewer.pal(12, 'Set3'))
+dmncolors = c(RColorBrewer::brewer.pal(12, 'Paired'),
+              # RColorBrewer::brewer.pal(8, 'Accent')[6], #redund
+              RColorBrewer::brewer.pal(8, 'Dark2')[c(4, 8)],
+              RColorBrewer::brewer.pal(9, 'Pastel1')[7],
+              RColorBrewer::brewer.pal(8, 'Pastel2')[-c(2:4, 6)])
+# dmncolors = viridis::(n = length(domains))
+# plot(1:15, 1:15, col=dmncolors, cex=5, pch=20) #test color distinctiveness
 dmncolors = dmncolors[1:length(domains)]
 
 dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE)
@@ -201,7 +207,7 @@ for(i in 1:length(q_dirs)){
 
 dev.off()
 
-# concentration of Ca, Si, Cl, NO3-N, DOC and SO4 (box plot) ####
+# concentration of Ca, Si, Cl, NO3-N, DOC and SO4 (box plot, dark) ####
 
 chemvars = c('Ca', 'Si', 'SiO2_Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
 ylim_maxes = c(455, 25, 25, 600, 20, 85, 600)
@@ -288,7 +294,7 @@ for(i in 1:length(chemvars)){
 dev.off()
 
 
-# Q vs. flux of Ca, Si, Cl, NO3-N, DOC and SO4 (scatter plot) ####
+# Q vs. flux of Ca, Si, Cl, NO3-N, DOC and SO4 (scatter plot, dark) ####
 
 fluxvars = c('Ca', 'Si', 'SiO2_Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
 ylim_maxes = c(1500, 300, 3000, 11000, 800, 4000, 700)
@@ -410,7 +416,7 @@ write_csv(q_ranges, paste0('plots/diagnostic_plots_', vsn, '/q_ranges.csv'))
 
 dev.off()
 
-# Q vs. flux of Ca, Si, Cl, NO3-N, DOC and SO4 (scatter plot with log axes) ####
+# Q vs. flux of Ca, Si, Cl, NO3-N, DOC and SO4 (scatter plot with log axes, dark) ####
 
 fluxvars = c('Ca', 'Si', 'SiO2_Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
 ylim_maxes = log(c(1500, 300, 3000, 11000, 800, 4000, 700))
@@ -611,11 +617,6 @@ for(k in 1:length(fluxvars)){
         colors = RColorBrewer::brewer.pal(n = n_available_colors,
                                           name = palettes[i, 'name'])
 
-        # included_domain_inds = which(domains %in% unique(dflux_var_year$domain))
-        # excluded_domains = domains[-included_domain_inds]
-        # included_domains = domains[included_domain_inds]
-        # included_dmncolors = dmncolors[included_domain_inds]
-
         legend_map = bind_rows(legend_map,
                                tibble(domain = paste(ntw_dmn_prd[1:2], collapse=' > '),
                                       colors = list(colors[3:9])))
@@ -641,9 +642,6 @@ for(k in 1:length(fluxvars)){
                    legend=legend_map$domain, bty = 'n',
                    col = sapply(legend_map$colors, function(x) x[j]),
                    lty=1, seg.len=1, lwd=5, x.intersp=6.5)
-            # legend(legend_position[k], legend=included_domains, pch=1, cex=0.8, pt.lwd=2,
-            #        col=dmncolors[match(included_domains, domains)], bty='n',
-            #        text.col='white')
         } else {
             legend(x=1946 + j, y=quantile(c(0, ylim_maxes[k]), 0.95),
                    legend=rep('', nrow(legend_map)), bty = 'n',
@@ -736,11 +734,6 @@ for(k in 1:length(fluxvars)){
         colors = RColorBrewer::brewer.pal(n = n_available_colors,
                                           name = palettes[i, 'name'])
 
-        # included_domain_inds = which(domains %in% unique(dflux_var_year$domain))
-        # excluded_domains = domains[-included_domain_inds]
-        # included_domains = domains[included_domain_inds]
-        # included_dmncolors = dmncolors[included_domain_inds]
-
         legend_map = bind_rows(legend_map,
                                tibble(domain = paste(ntw_dmn_prd[1:2], collapse=' > '),
                                       colors = list(colors[3:9])))
@@ -766,9 +759,6 @@ for(k in 1:length(fluxvars)){
                    legend=legend_map$domain, bty = 'n',
                    col = sapply(legend_map$colors, function(x) x[j]),
                    lty=1, seg.len=1, lwd=5, x.intersp=6.5)
-            # legend(legend_position[k], legend=included_domains, pch=1, cex=0.8, pt.lwd=2,
-            #        col=dmncolors[match(included_domains, domains)], bty='n',
-            #        text.col='white')
         } else {
             legend(x=1946 + j, y=quantile(c(0, ylim_maxes[k]), 0.95),
                    legend=rep('', nrow(legend_map)), bty = 'n',
@@ -782,3 +772,120 @@ for(k in 1:length(fluxvars)){
 dev.off()
 
 
+# all Q (box plot with log-Y-axis, dark) ####
+
+q_dirs <- list_all_product_dirs('discharge')
+
+plotted_site_tally = 0
+d_by_max = d_boxplot = tibble()
+for(i in 1:length(q_dirs)){
+
+    pd = q_dirs[i]
+
+    ntw_dmn_prd <- str_match(string = pd,
+                             pattern = '^data/(.+?)/(.+?)/derived/(.+?)$')[, 2:4]
+
+    d = list.files(pd, full.names = TRUE) %>%
+        purrr::map_dfr(read_feather) %>%
+        select(-val_err) %>%
+        # mutate(val = errors::set_errors(val, val_err),
+        group_by(site_name, date = lubridate::as_date(datetime)) %>%
+        summarize(val = mean(val),
+                  .groups = 'drop') %>%
+        mutate(year = lubridate::year(date),
+               val = val * 86400) %>%
+        group_by(site_name, year) %>%
+        summarize(val = sum(val),
+                  .groups = 'drop') %>%
+        arrange(site_name, year) %>%
+        mutate(network = ntw_dmn_prd[1],
+               domain = ntw_dmn_prd[2]) %>%
+        left_join(ws_areas,
+                  by = c('network', 'domain', 'site_name')) %>%
+        mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
+               val = val / 1000 * 1e9 / ws_area_mm2,
+               ntw_dmn_sit = paste(network, domain, site_name,
+                                   sep = ' > ')) %>%
+        select(year, ntw_dmn_sit, val) %>%
+        arrange(ntw_dmn_sit, year)
+
+    d_by_max = d %>%
+        group_by(ntw_dmn_sit) %>%
+        summarize(maxval = max(val),
+                  .groups = 'drop') %>%
+        filter(! is.na(maxval)) %>%
+        mutate(domain = ntw_dmn_prd[2]) %>%
+        bind_rows(d_by_max)
+
+    d_boxplot = d %>%
+        filter(ntw_dmn_sit %in% unique(d_by_max$ntw_dmn_sit)) %>%
+        group_by(ntw_dmn_sit) %>%
+        summarize(box_stats = list(boxplot.stats(val)),
+                  .groups = 'drop') %>%
+        mutate(color = dmncolors[ntw_dmn_prd[2] == domains],
+               site_name = str_match(ntw_dmn_sit, '.+? > .+? > (.+)$')[, 2]) %>%
+        bind_rows(d_boxplot)
+}
+
+d_boxplot = filter(d_boxplot,
+                   ntw_dmn_sit %in% d_by_max$ntw_dmn_sit)
+
+site_order = d_by_max$ntw_dmn_sit[order(d_by_max$maxval)]
+
+included_domain_inds = which(domains %in% unique(d_by_max$domain))
+excluded_domains = domains[-included_domain_inds]
+included_domains = domains[included_domain_inds]
+included_dmncolors = dmncolors[included_domain_inds]
+
+d_boxplot = d_boxplot[rev(order(match(d_boxplot$ntw_dmn_sit, site_order))), ]
+
+par(mar=c(14, 4, 4, 1))
+ylims = log(c(0.1, 2.7e6))
+y_ticks = c(0.1, 1, 10, 100, 1000, 10000, 1e5, 1e6)
+
+png(width=11, height=9, units='in', type='cairo', res=300,
+    filename=paste0('plots/diagnostic_plots_',  vsn, '/Q_all_box.png'))
+
+nsites = nrow(d_boxplot)
+plot(1:nsites, rep(1, nsites), ylim=ylims, type='n',
+     ylab='Runoff (mm/yr)', xlab='', xaxt='n', yaxs='i',
+     main=paste0('Annual Runoff'), xlim=c(1, nsites), yaxt='n')
+axis(2, log(y_ticks), y_ticks)
+corners = par("usr")
+rect(corners[1], corners[3], corners[2], corners[4], col = 'black')
+
+for(j in 1:nsites){
+    color = slice(d_boxplot, j) %>% pull(color)
+    stats = (slice(d_boxplot, j) %>% pull(box_stats))[[1]]
+    outliers = log(stats$out)
+    box_whisk = log(stats$stats)
+    segments(x0=j, x1=j, y0=box_whisk[1], y1=box_whisk[2], col=color,
+             lwd=2, lend=3)
+    points(x=j, y=box_whisk[3], col=color, pch=20)
+    segments(x0=j, x1=j, y0=box_whisk[4], y1=box_whisk[5], col=color,
+             lwd=2, lend=3)
+    points(x=rep(j, length(outliers)), y=outliers, col=color, pch=20, cex=0.2)
+}
+
+axis_seq_1 = seq(1, nsites, 2)
+axis_seq_2 = seq(2, nsites, 2)
+axis(1, at=axis_seq_1, labels=d_boxplot$site_name[axis_seq_1],
+     las=2, cex.axis=0.6, tcl=-0.6)
+axis(1, at=axis_seq_2, labels=d_boxplot$site_name[axis_seq_2],
+     las=2, cex.axis=0.6, tcl=-0.6, line=6.5, tick=FALSE)
+axis(1, at=axis_seq_2, labels=rep('', length(axis_seq_2)), tcl=-7)
+legend('topright', legend=included_domains, lty=1, col=included_dmncolors, bty='n', lwd=3,
+       text.col='white')
+newline_seq = try(seq(6, length(excluded_domains), 6), silent=TRUE)
+if(! inherits(newline_seq, 'try-error')){
+    excluded_domains[newline_seq] = paste0('\n', excluded_domains[newline_seq])
+}
+graphics::text(x=quantile(1:nsites, 0.15),
+               y=quantile(ylims, 0.95), adj=0, col='green',
+               labels=paste0('Sites: ', length(unique(d_boxplot$ntw_dmn_sit))))
+graphics::text(x=quantile(1:nsites, 0.15),
+               y=quantile(ylims, 0.9), adj=0, col='pink',
+               labels=paste0('Missing domains: ',
+                             paste(excluded_domains, collapse = ', ')))
+
+dev.off()
