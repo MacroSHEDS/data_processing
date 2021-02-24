@@ -3462,7 +3462,8 @@ append_to_productfile <- function(network,
                      n = network,
                      d = domain)
 
-    prods <- sm(read_csv(prodfile))
+    prods <- sm(read_csv(prodfile)) %>%
+        mutate(prodcode = as.character(prodcode))
 
     new_row <- unlist(passed_args)
 
@@ -5506,6 +5507,10 @@ read_precip_quickref <- function(network,
                    # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
                    # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
 
+    if(nrow(refranges_sel) == 0){
+        return(list('0' = 'NO QUICKREF AVAILABLE'))
+    }
+
     #handle the case where an end of dtrange falls right between the start and
     #end dates of a quickref file. this is possible because precip dates can
     #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
@@ -5517,10 +5522,6 @@ read_precip_quickref <- function(network,
     if(dtrange[2] > refranges_sel$enddt && ref_ind_range[2] < nrow(refranges)){
         refranges_sel <- bind_rows(refranges_sel,
                                    refranges[ref_ind_range[2] + 1, ])
-    }
-
-    if(nrow(refranges) == 0){
-        return(list('0' = 'NO QUICKREF AVAILABLE'))
     }
 
     quickref <- list()
@@ -5887,13 +5888,17 @@ ms_parallelize <- function(maxcores = Inf){
     #   free up the cores that were employed by R. Be sure to run
     #ms_unparallelize() after the parallel tasks are complete.
 
-    #be sure to call
-
     #we need to find a way to protect some cores for serving the portal
     #if we end up processing data and serving the portal on the same
     #machine/cluster. we can use taskset to assign the shiny process
     #to 1-3 cores and this process to any others.
 
+    #NOTE: this function has been updated to work with doFuture, which
+    #   supplants doParallel. doFuture allows us to dispatch jobs on a cluster
+    #   via Slurm. it might also allow us to dispatch multisession jobs on
+    #   Windows
+
+    #obsolete-ish notes:
     # #variables used inside the foreach loop on the master process will
     # #be written to the global environment, in some cases overwriting needed
     # #globals. we can set them aside in a separate environment and restore them later
@@ -5905,15 +5910,29 @@ ms_parallelize <- function(maxcores = Inf){
     #        envir = protected_environment)
 
     #then set up parallelization
+    # clst <- parallel::makeCluster(ncores)
+    clst <- NULL
     ncores <- min(parallel::detectCores(), maxcores)
 
-    if(.Platform$OS.type == 'windows'){
-        clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+    if(ms_instance$which_machine == 'DCC'){
+        doFuture::registerDoFuture()
+        # future::plan(cluster, workers = clst) #might need this instead of Slurm one day
+        future::plan(future.batchtools::batchtools_slurm)
+    } else if(.Platform$OS.type == 'windows'){
+        #issues (found while testing on linux):
+        #1. inner precip logging waits till outer loop completes, then only prints to console.
+        #2. konza error that doesn't occur with FORK cluster:
+        #   task 1 failed - "task 2 failed - "unused argument (datetime_x = datetime)"
+        #3. not fully utilizing cores like FORK does
+        doFuture::registerDoFuture()
+        # clst <- parallel::makeCluster(ncores)
+        future::plan(multisession, workers = ncores)
+        # clst <- parallel::makeCluster(ncores, type = 'PSOCK')
     } else {
+        # future::plan(multicore) #can't be done from Rstudio
         clst <- parallel::makeCluster(ncores, type = 'FORK')
+        doParallel::registerDoParallel(clst)
     }
-
-    doParallel::registerDoParallel(clst)
 
     return(clst)
 }
@@ -6287,6 +6306,16 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                          create_index_column = FALSE)
 
             clst <- ms_parallelize(maxcores = nthreads)
+            # doFuture::registerDoFuture()
+            # ncores <- min(parallel::detectCores(), maxcores)
+            # clst <- parallel::makeCluster(nthreads, type='FORK')
+            # future::plan(future::multicore, workers = 48)
+            # future::plan(future::multisession, workers = 48)
+
+            # parallel::stopCluster(clst)
+            # fe_junk <- foreach:::.foreachGlobals
+            # rm(list = ls(name = fe_junk),
+            #    pos = fe_junk)
 
             ws_mean_precip_chunk <- foreach::foreach(
                 j = 1:min(nthreads, nrow(precip_superchunk)),
@@ -6517,8 +6546,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
 ms_unparallelize <- function(cluster_object){
 
+    #if cluster_object is NULL, nothing will happen
+
     # tryCatch({print(site_name)},
     #         error=function(e) print('nope'))
+
+    if(is.null(cluster_object)){
+        future::plan(future::sequential)
+        return()
+    }
 
     parallel::stopCluster(cluster_object)
 
