@@ -368,6 +368,9 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
 process_1_156 <- function(network, domain, prodname_ms, site_name,
                           component){
 
+    #info on luqillo data
+    #https://www.sas.upenn.edu/lczodata/content/quebrada-three-bisley-q3
+
     if(prodname_ms == 'stream_chemistry__156'){
 
         rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',

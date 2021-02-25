@@ -47,7 +47,7 @@ suppressPackageStartupMessages({
 
 })
 
-options(dplyr.summarise.inform = FALSE)
+(dplyr.summarise.inform = FALSE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -204,7 +204,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=15
+# dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 # for(dmnrow in 7){
     # drop_automated_entries('.') #use with caution!
