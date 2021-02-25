@@ -13,7 +13,8 @@ get_czo_product_version <- function(prodname_ms, domain, hydroshare_code, data_t
     download.file(url = url_request_search,
                   destfile = search_results,
                   cacheOK = FALSE,
-                  method = 'curl')
+                  method = 'curl',
+                  quiet = TRUE)
 
     search_results_list <- read_json(search_results)
     newest_vsn <- search_results_list[["date_last_updated"]]
@@ -281,7 +282,8 @@ get_czo_components <- function(search_string, hydroshare_code) {
         download.file(url = url_request_search,
                       destfile = search_results,
                       cacheOK = FALSE,
-                      method = 'curl')
+                      method = 'curl',
+                      quiet = TRUE)
 
         search_results_list <- read_json(search_results)[['results']]
         search_results <- sapply (search_results_list, '[[', 2)
