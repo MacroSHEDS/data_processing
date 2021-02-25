@@ -179,11 +179,16 @@ numeric_any_v <- function(...){ #attack of the ellipses
     numeric_any_positional <- function(...) numeric_any(c(...))
 
     numeric_any_elementwise <- function(...){
-        mapply(function(...) numeric_any_positional(...), ...)
+        Map(function(...) numeric_any_positional(...), ...)
     }
 
-    do.call(numeric_any_elementwise,
-            args = list(...))
+    out <- do.call(numeric_any_elementwise,
+                   args = list(...)) %>%
+        unlist()
+
+    if(is.null(out)) out <- numeric()
+
+    return(out)
 }
 
 gsub_v <- function(pattern, replacement_vec, x){
@@ -2513,7 +2518,8 @@ ms_delineate <- function(network,
                         n = network,
                         d = domain,
                         w = ws_boundary_dir),
-                   recursive = TRUE)
+                   recursive = TRUE,
+                   showWarnings = FALSE)
     } else {
         level <- 'munged'
     }
@@ -2567,7 +2573,8 @@ ms_delineate <- function(network,
                 snap_dist = specs$snap_distance_m,
                 snap_method = specs$snap_method,
                 dem_resolution = specs$dem_resolution,
-                write_dir = site_dir)
+                write_dir = site_dir,
+                verbose = verbose)
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -2847,7 +2854,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
                                          z = dem_resolution,
                                          verbose = verbose)
             },
-            max_attempts = 4
+            max_attempts = 10
         )
 
         raster::writeRaster(x = dem,
@@ -2992,7 +2999,8 @@ delineate_watershed_by_specification <- function(lat,
                                                  snap_dist,
                                                  snap_method,
                                                  dem_resolution,
-                                                 write_dir){
+                                                 write_dir,
+                                                 verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
     #   (negative indicates southern hemisphere)
@@ -3046,7 +3054,7 @@ delineate_watershed_by_specification <- function(lat,
                                      z = dem_resolution,
                                      verbose = verbose)
         },
-        max_attempts = 4
+        max_attempts = 10
     )
 
     raster::writeRaster(x = dem,
@@ -3215,6 +3223,11 @@ ms_derive <- function(network = domain, domain){
     #   require actual derivation, like precip_flux_inst from precipitation
     #   and pchem (note that both of these will usually be replaced by the
     #   new precip_pchem_pflux kernels)
+
+    if(! exists('held_data')){
+        held_data <<- get_data_tracker(network = network,
+                                       domain = domain)
+    }
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -3449,7 +3462,8 @@ append_to_productfile <- function(network,
                      n = network,
                      d = domain)
 
-    prods <- sm(read_csv(prodfile))
+    prods <- sm(read_csv(prodfile)) %>%
+        mutate(prodcode = as.character(prodcode))
 
     new_row <- unlist(passed_args)
 
@@ -4398,7 +4412,7 @@ delineate_watershed_nhd <- function(lat, long) {
                                          z = 12,
                                          verbose = FALSE)
             },
-            max_attempts = 4
+            max_attempts = 10
         )
 
         temp_raster <- tempfile(fileext = ".tif")
@@ -5023,7 +5037,9 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     }
 
     precip_is_highres <- Mode(diff(as.numeric(precip_values$datetime))) <= 15 * 60
+    if(is.na(precip_is_highres)) precip_is_highres <- FALSE
     chem_is_highres <- Mode(diff(as.numeric(chem_values$datetime))) <= 15 * 60
+    if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
     #if both chem and precip data are low resolution (grab samples),
     #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
@@ -5043,6 +5059,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     chem_values <- chem_values[dt_match_inds$x, ]
     common_datetimes <- chem_values$datetime
+    # quickref_datetimes <- precip_values$datetime
 
     if(length(common_datetimes) == 0){
         pchem_range <- range(chem_values$datetime)
@@ -5479,10 +5496,10 @@ read_precip_quickref <- function(network,
         plyr::ldply(function(y){
             data.frame(startdt = y[1],
                        enddt = y[2])
-        })
+        }) %>%
+        mutate(ref_ind = 1:n())
 
-    refranges <- refranges %>%
-        # mutate(ref_ind = 1:n()) %>%
+    refranges_sel <- refranges %>%
         filter((startdt >= dtrange[1] & enddt <= dtrange[2]) |
                    (startdt < dtrange[1] & enddt >= dtrange[1]) |
                    (enddt > dtrange[2] & startdt <= dtrange[2]))
@@ -5490,8 +5507,21 @@ read_precip_quickref <- function(network,
                    # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
                    # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
 
-    if(nrow(refranges) == 0){
+    if(nrow(refranges_sel) == 0){
         return(list('0' = 'NO QUICKREF AVAILABLE'))
+    }
+
+    #handle the case where an end of dtrange falls right between the start and
+    #end dates of a quickref file. this is possible because precip dates can
+    #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
+    ref_ind_range <- range(refranges_sel$ref_ind)
+    if(dtrange[1] < refranges_sel$startdt && ref_ind_range[1] > 1){
+        refranges_sel <- bind_rows(refranges[ref_ind_range[1] - 1, ],
+                                   refranges_sel)
+    }
+    if(dtrange[2] > refranges_sel$enddt && ref_ind_range[2] < nrow(refranges)){
+        refranges_sel <- bind_rows(refranges_sel,
+                                   refranges[ref_ind_range[2] + 1, ])
     }
 
     quickref <- list()
@@ -5858,13 +5888,17 @@ ms_parallelize <- function(maxcores = Inf){
     #   free up the cores that were employed by R. Be sure to run
     #ms_unparallelize() after the parallel tasks are complete.
 
-    #be sure to call
-
     #we need to find a way to protect some cores for serving the portal
     #if we end up processing data and serving the portal on the same
     #machine/cluster. we can use taskset to assign the shiny process
     #to 1-3 cores and this process to any others.
 
+    #NOTE: this function has been updated to work with doFuture, which
+    #   supplants doParallel. doFuture allows us to dispatch jobs on a cluster
+    #   via Slurm. it might also allow us to dispatch multisession jobs on
+    #   Windows
+
+    #obsolete-ish notes:
     # #variables used inside the foreach loop on the master process will
     # #be written to the global environment, in some cases overwriting needed
     # #globals. we can set them aside in a separate environment and restore them later
@@ -5876,15 +5910,29 @@ ms_parallelize <- function(maxcores = Inf){
     #        envir = protected_environment)
 
     #then set up parallelization
+    # clst <- parallel::makeCluster(ncores)
+    clst <- NULL
     ncores <- min(parallel::detectCores(), maxcores)
 
-    if(.Platform$OS.type == 'windows'){
-        clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+    if(ms_instance$which_machine == 'DCC'){
+        doFuture::registerDoFuture()
+        # future::plan(cluster, workers = clst) #might need this instead of Slurm one day
+        future::plan(future.batchtools::batchtools_slurm)
+    } else if(.Platform$OS.type == 'windows'){
+        #issues (found while testing on linux):
+        #1. inner precip logging waits till outer loop completes, then only prints to console.
+        #2. konza error that doesn't occur with FORK cluster:
+        #   task 1 failed - "task 2 failed - "unused argument (datetime_x = datetime)"
+        #3. not fully utilizing cores like FORK does
+        doFuture::registerDoFuture()
+        # clst <- parallel::makeCluster(ncores)
+        future::plan(multisession, workers = ncores)
+        # clst <- parallel::makeCluster(ncores, type = 'PSOCK')
     } else {
+        # future::plan(multicore) #can't be done from Rstudio
         clst <- parallel::makeCluster(ncores, type = 'FORK')
+        doParallel::registerDoParallel(clst)
     }
-
-    doParallel::registerDoParallel(clst)
 
     return(clst)
 }
@@ -6024,6 +6072,8 @@ get_detlim_precursors <- function(network,
         prodname <- 'precip_chemistry'
     } else if(prodname == 'precip_pchem_pflux'){
         prodname <- c('precip_chemistry', 'precipitation')
+    } else if(prodname == 'stream_flux_inst'){
+        prodname <- c('stream_chemistry', 'discharge')
     }
 
     precursors <- prods %>%
@@ -6088,7 +6138,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                      expand = 200,
                                      verbose = FALSE)
         },
-        max_attempts = 4
+        max_attempts = 10
     )
 
     #add elev column to rain gauges
@@ -6256,6 +6306,16 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                          create_index_column = FALSE)
 
             clst <- ms_parallelize(maxcores = nthreads)
+            # doFuture::registerDoFuture()
+            # ncores <- min(parallel::detectCores(), maxcores)
+            # clst <- parallel::makeCluster(nthreads, type='FORK')
+            # future::plan(future::multicore, workers = 48)
+            # future::plan(future::multisession, workers = 48)
+
+            # parallel::stopCluster(clst)
+            # fe_junk <- foreach:::.foreachGlobals
+            # rm(list = ls(name = fe_junk),
+            #    pos = fe_junk)
 
             ws_mean_precip_chunk <- foreach::foreach(
                 j = 1:min(nthreads, nrow(precip_superchunk)),
@@ -6486,8 +6546,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
 ms_unparallelize <- function(cluster_object){
 
+    #if cluster_object is NULL, nothing will happen
+
     # tryCatch({print(site_name)},
     #         error=function(e) print('nope'))
+
+    if(is.null(cluster_object)){
+        future::plan(future::sequential)
+        return()
+    }
 
     parallel::stopCluster(cluster_object)
 
@@ -7418,21 +7485,40 @@ read_detection_limit <- function(network, domain, prodname_ms){
 
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
+    #NOTE: this function updated 2021-02-16, near the end of rebuilding
+    #   LTER (discovered issue with luquillo sites overwriting each other in
+    #   the detlim file). as such, it's not thoroughly tested. some stuff
+    #   that worked before might be broken now. tried to make it backward compatible though
+
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
                          n = network,
                          d = domain)
 
+    detlim_new <- detlim #better name; don't want to update every call though
+
     if(file.exists(detlims_file)){
-        x <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        x[[prodname_ms]] <- detlim
+
+        detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
+        if(prodname_ms %in% names(detlim_stored)){
+
+            for(v in names(detlim_new)){
+
+                site_detlims <- detlim_new[[v]]
+                for(s in names(site_detlims)){
+                    detlim_stored[[prodname_ms]][[v]][[s]] <- site_detlims[[s]]
+                }
+            }
+
+        } else {
+            detlim_stored[[prodname_ms]] <- detlim_new
+        }
+
     } else {
-        x <- list(placeholder = detlim)
-        names(x) <- prodname_ms
+        detlim_stored <- list(placeholder = detlim_new)
+        names(detlim_stored) <- prodname_ms
     }
 
-    readr::write_file(jsonlite::toJSON(x), detlims_file)
-
-    #return()
+    readr::write_file(jsonlite::toJSON(detlim_stored), detlims_file)
 }
 
 rle2 <- function(x){#, return_list = FALSE){
@@ -8041,17 +8127,39 @@ ms_write_confdata <- function(x,
             which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
 
         if(overwrite){
-            sm(googlesheets4::write_sheet(data = x,
-                                          ss = write_loc,
-                                          sheet = 1))
+
+            # sm(googlesheets4::write_sheet(data = x,
+            #                               ss = write_loc,
+            #                               sheet = 1))
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::write_sheet(data = x,
+                                                  ss = write_loc,
+                                                  sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         } else {
-            sm(googlesheets4::sheet_append(data = x,
-                                           ss = write_loc,
-                                           sheet = 1))
+
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::sheet_append(data = x,
+                                                   ss = write_loc,
+                                                   sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         }
 
-        dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                             na = c('', 'NA')))
+        catch <- expo_backoff(
+            expr = {
+                dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                     na = c('', 'NA')))
+            },
+            max_attempts = 4
+        )
 
     } else if(to_where == 'local'){
 
@@ -9130,21 +9238,21 @@ catalogue_held_data <- function(network_domain, site_data){
 
 expo_backoff <- function(expr,
                          max_attempts = 10,
-                         verbose = FALSE){
+                         verbose = TRUE){
 
     for(attempt_i in seq_len(max_attempts)){
 
         results <- try(expr = expr,
                        silent = TRUE)
 
-        if('try-error' %in% class(results)){
+        if(inherits(results, 'try-error')){
 
             backoff <- runif(n = 1,
                              min = 0,
                              max = 2^attempt_i - 1)
 
             if(verbose){
-                message("Backing off for ", backoff, " seconds.")
+                message(paste0("Backing off for ", round(backoff, 1), " seconds."))
             }
 
             Sys.sleep(backoff)
@@ -9152,7 +9260,7 @@ expo_backoff <- function(expr,
         } else {
 
             if(verbose){
-                message("Succeeded after ", attempt_i, " attempts.")
+                message(paste0("Succeeded after ", attempt_i, " attempt(s)."))
             }
 
             break
