@@ -3,7 +3,7 @@ DP1.20093,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA
 DP1.20288,stream_quality,ready,ready,NA,stream_chemistry__ms001,NA
 DP?.20267,gageht,paused,pending,NA,NA,verify DP#
 DP?.00133,zqcurve,paused,pending,NA,NA,verify DP#
-DP4.00130,discharge,ready,ready,NA,NA,
+DP4.00130,discharge,ready,ready,NA,NA,NA
 DP?.20048,Qflowmeter,paused,pending,NA,NA,verify DP#
 DP?.20193,Qsalt,paused,pending,NA,NA,verify DP#
 DP?.20008,speccond,unavailiable,unavailiable,NA,NA,verify DP#
@@ -22,3 +22,4 @@ ms001,stream_chemistry,NA,NA,ready,NA,NA
 ms002,precipitation,NA,NA,ready,precip_flux_inst__ms003,NA
 ms003,precip_flux_inst,NA,NA,ready,NA,NA
 ms004,ws_boundary,NA,NA,linked,NA,automated entry
+ms005,discharge,NA,NA,linked,NA,automated entry
