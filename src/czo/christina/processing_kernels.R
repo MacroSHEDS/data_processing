@@ -87,7 +87,7 @@ process_0_2501 <- function(set_details, network, domain) {
 
 #munge kernels ####
 
-#stream_chemistry: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_2407 <- function(network, domain, prodname_ms, site_name, components) {
 
@@ -232,7 +232,7 @@ process_1_2407 <- function(network, domain, prodname_ms, site_name, components) 
 
 }
 
-#stream_chemistry: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_1000 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -244,7 +244,7 @@ process_1_1000 <- function(network, domain, prodname_ms, site_name, component) {
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_2400 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -256,7 +256,7 @@ process_1_2400 <- function(network, domain, prodname_ms, site_name, component) {
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_2465 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -268,7 +268,7 @@ process_1_2465 <- function(network, domain, prodname_ms, site_name, component) {
     return()
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PENDING
 #. handle_errors
 process_1_1001 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -280,7 +280,7 @@ process_1_1001 <- function(network, domain, prodname_ms, site_name, component) {
     return()
 }
 
-#precipitation: STATUS=READY
+#precipitation: STATUS=PENDING
 #. handle_errors
 process_1_2565 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -292,7 +292,7 @@ process_1_2565 <- function(network, domain, prodname_ms, site_name, component) {
     return()
 }
 
-#precipitation: STATUS=READY
+#precipitation: STATUS=PENDING
 #. handle_errors
 process_1_2501 <- function(network, domain, prodname_ms, site_name, component) {
 
