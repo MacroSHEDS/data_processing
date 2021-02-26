@@ -1,8 +1,8 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
-7,discharge,ready,ready,NA,discharge__ms001,N04D,ASD021
-8,discharge,ready,ready,NA,discharge__ms001,N20B,ASD041
-9,discharge,ready,ready,NA,discharge__ms001,N01B,ASD051
-10,discharge,ready,ready,NA,discharge__ms001,N02B,ASD061
+7,discharge,ready,ready,NA,discharge__ms001,N04D,ASD022
+8,discharge,ready,ready,NA,discharge__ms001,N20B,ASD042
+9,discharge,ready,ready,NA,discharge__ms001,N01B,ASD052
+10,discharge,ready,ready,NA,discharge__ms001,N02B,ASD062
 50,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 51,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 20,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
