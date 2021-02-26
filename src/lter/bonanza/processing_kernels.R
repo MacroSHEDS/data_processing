@@ -74,6 +74,9 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
+    # Bonanza appears to set values to 0 when the sample was not recorded
+    # This is likely not the best approach in case there are real values that
+    # are 0 and recorded with a single 0, may be worth contacting the domain
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(Sample.Date = '%m/%d/%Y'),
                          datetime_tz = 'US/Alaska',
@@ -96,7 +99,8 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                                         'SUVA.L.mg.1.m.1.' = 'abs254',
                                         'pH' = 'pH'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         set_to_NA = '0')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
