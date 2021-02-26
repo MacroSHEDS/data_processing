@@ -1014,7 +1014,7 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
     for(i in 1:length(sites)) {
 
         precip <- read_feather('data/lter/arctic/munged/precipitation__1489/TLKMAIN.feather') %>%
-            mutate(site_name == !! sites[i])
+            mutate(site_name = !! sites[i])
 
       write_feather(precip, glue('{n}{s}.feather',
                                  n = new_dir,
