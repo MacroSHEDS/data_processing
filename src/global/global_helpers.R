@@ -8462,10 +8462,14 @@ generate_portal_extras <- function(site_data,
     loginfo(msg = 'Generating portal extras',
             logger = logger_module)
 
+    loginfo('scaling flux by area', logger = logger_module)
     calculate_flux_by_area(site_data = site_data)
+    loginfo('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
+    loginfo('cataloguing held data', logger = logger_module)
     catalogue_held_data(site_data = site_data,
                         network_domain = network_domain)
+    loginfo('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
     list_domains_with_discharge(site_data = site_data)
 }
@@ -8893,16 +8897,17 @@ catalogue_held_data <- function(network_domain, site_data){
                                     n = network_domain$network[i],
                                     d = network_domain$domain[i]),
                                full.names = TRUE)
+        site_prods <- site_prods[! grepl('derived$', site_prods)]
 
         if(length(site_prods) == 0) next
 
-        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary)',
                                   x = site_prods)
 
         spatial_prods <- site_prods[spatial_prod_inds]
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
-        for(j in 1:length(nonspatial_prods)){
+        for(j in seq_along(nonspatial_prods)){
 
             if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
                 logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
