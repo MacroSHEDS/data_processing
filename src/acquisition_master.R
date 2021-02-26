@@ -48,7 +48,7 @@ suppressPackageStartupMessages({
 
 })
 
-(dplyr.summarise.inform = FALSE)
+options(dplyr.summarise.inform = FALSE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
