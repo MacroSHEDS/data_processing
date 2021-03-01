@@ -5,12 +5,20 @@
 process_0_DP1.20093 <- function(set_details, network, domain){
     # set_details=s
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                          p = set_details$prodname_ms,
+                                          s = set_details$site_name,
+                                          c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -23,11 +31,19 @@ process_0_DP1.20093 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20033 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -40,11 +56,19 @@ process_0_DP1.20033 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20042 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -57,11 +81,19 @@ process_0_DP1.20042 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20053 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -74,11 +106,19 @@ process_0_DP1.20053 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00004 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=30)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=30),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -95,11 +135,19 @@ process_0_DP1.00004 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20097 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -153,11 +201,19 @@ process_0_DP1.20016 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20288 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -170,11 +226,19 @@ process_0_DP1.20288 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00006 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
                                              site=set_details$site_name, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE)
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
                          s=set_details$site_name, c=set_details$component)
 
@@ -187,11 +251,19 @@ process_0_DP1.00006 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP4.00130 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
                                              site=set_details$site_name, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE)
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
                          s=set_details$site_name, c=set_details$component)
 
@@ -204,11 +276,19 @@ process_0_DP4.00130 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00013 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
                                              site=set_details$site_name, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE)
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
                          s=set_details$site_name, c=set_details$component)
 
