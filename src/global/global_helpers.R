@@ -5927,7 +5927,7 @@ ms_parallelize <- function(maxcores = Inf){
         doFuture::registerDoFuture()
         # clst <- parallel::makeCluster(ncores)
         future::plan(multisession, workers = ncores)
-        # clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+         #clst <- parallel::makeCluster(ncores, type = 'PSOCK')
     } else {
         # future::plan(multicore) #can't be done from Rstudio
         clst <- parallel::makeCluster(ncores, type = 'FORK')
