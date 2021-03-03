@@ -368,6 +368,10 @@ process_0_143 <- retrieve_plum
 
 #precipitation: STATUS=READY
 #. handle_errors
+process_0_162 <- retrieve_plum
+
+#precipitation: STATUS=READY
+#. handle_errors
 process_0_67 <- retrieve_plum
 
 #precipitation: STATUS=READY
@@ -385,6 +389,10 @@ process_0_181 <- retrieve_plum
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_239 <- retrieve_plum
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_0_343 <- retrieve_plum
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -580,7 +588,8 @@ process_1_155 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('Temp' = 'temp',
                                             'SpCond' = 'spCond'),
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
@@ -604,7 +613,8 @@ process_1_155 <- function(network, domain, prodname_ms, site_name,
                              site_name_col = 'site_name',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
@@ -744,7 +754,8 @@ process_1_393 <-  function(network, domain, prodname_ms, site_name,
                          site_name_col = 'site_name',
                          data_cols =  c('Temp' = 'temp'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -1068,6 +1079,10 @@ process_1_143 <- munge_precip
 
 #precipitation: STATUS=READY
 #. handle_errors
+process_1_162 <- munge_precip
+
+#precipitation: STATUS=READY
+#. handle_errors
 process_1_67 <- munge_precip
 
 #precipitation: STATUS=READY
@@ -1085,6 +1100,10 @@ process_1_181 <- munge_precip
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_239 <- munge_precip
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_343 <- munge_precip
 
 #precipitation: STATUS=READY
 #. handle_errors

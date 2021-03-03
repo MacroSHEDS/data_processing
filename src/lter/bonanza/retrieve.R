@@ -1,11 +1,11 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'retrieve', 
+                              status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=5
+# i=4
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -17,14 +17,20 @@ for(i in 1:nrow(prod_info)){
     }
 
     latest_vsn <- get_latest_product_version(prodname_ms = prodname_ms,
-                                             domain = domain, 
+                                             domain = domain,
                                              data_tracker = held_data)
     if(is_ms_err(latest_vsn)) next
 
     avail_sets <- get_avail_lter_product_sets(prodname_ms = prodname_ms,
-                                              version = latest_vsn, 
-                                              domain = domain, 
+                                              version = latest_vsn,
+                                              domain = domain,
                                               data_tracker = held_data)
+
+    needed_components <- pull(prod_info[i, 'components'])
+    if(! is.na(needed_components)) {
+        needed_components <- str_split_fixed(needed_components, ',', n = Inf)[1,]
+        avail_sets <- filter(avail_sets, component %in% needed_components)
+    }
 
     if(is_ms_err(avail_sets)) next
 
@@ -47,7 +53,7 @@ for(i in 1:nrow(prod_info)){
 
         if(is_ms_err(held_data)) next
 
-        retrieval_details <- populate_set_details(held_data, prodname_ms, site_name, 
+        retrieval_details <- populate_set_details(held_data, prodname_ms, site_name,
                                                   avail_site_sets, latest_vsn)
 
         if(is_ms_err(retrieval_details)) next
@@ -66,7 +72,7 @@ for(i in 1:nrow(prod_info)){
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
         get_lter_data(domain=domain, new_sets, held_data)
-        
+
         if(! is.na(prod_info$munge_status[i])){
 
             update_data_tracker_m(network = network,
