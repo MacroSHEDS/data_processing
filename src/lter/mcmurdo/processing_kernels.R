@@ -104,14 +104,14 @@ process_1_9030 <- munge_mcmurdo_discharge
 #. handle_errors
 process_1_9002 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
 
     d <- d %>%
@@ -125,13 +125,13 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
 
             d <- ms_read_raw_csv(preprocessed_tibble = d,
                                  datetime_cols = list('date' = '%d-%m-%Y',
@@ -141,17 +141,18 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
                                  data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                                  summary_flagcols = 'DISCHARGE_QLTY',
                                  data_col_pattern = '#V#',
-                                 is_sensor = TRUE)
-            
+                                 is_sensor = TRUE,
+                                 sampling_type = 'I')
+
             d <- ms_cast_and_reflag(d,
                                     summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
                                                                                     'Qmu',
                                                                                     'Qsed')),
                                     summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
                                     varflag_col_pattern = NA)
-        
+
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -161,41 +162,42 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
                                                          'fair', 'Good', 'good'))
     }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
 process_1_9003 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
-    
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -207,13 +209,13 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -222,17 +224,18 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DSCHRGE_RATE' = 'discharge'),
                              summary_flagcols = 'DSCHRGE_QLTY',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list('DSCHRGE_QLTY' = c('poor',
                                                                               'Qmu',
                                                                               'Qsed')),
                                 summary_flags_to_drop = list('DSCHRGE_QLTY' = 'UNUSABLE'),
                                 varflag_col_pattern = NA)
-        
+
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -242,41 +245,42 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
-                                                         'fair', 'Good', 'good')) 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
+                                                         'fair', 'Good', 'good'))
     }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
 process_1_9007 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
-    
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -288,13 +292,13 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -303,17 +307,18 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DSCHRGE_RATE' = 'discharge'),
                              summary_flagcols = 'DSCHRGE_QLTY',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list('DSCHRGE_QLTY' = c('poor',
                                                                               'Qmu',
                                                                               'Qsed')),
                                 summary_flags_to_drop = list('DSCHRGE_QLTY' = 'UNUSABLE'),
                                 varflag_col_pattern = NA)
-        
+
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -323,41 +328,42 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
-                                                         'fair', 'Good', 'good')) 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
+                                                         'fair', 'Good', 'good'))
     }
 
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
 process_1_9009 <- function(network, domain, prodname_ms, site_name,
                            component) {
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
-    
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -369,16 +375,16 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     d <- d %>%
         rename(CONDUCTIVITY_QLTY = CONDUCTIVITY__QLTY)
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -387,8 +393,9 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHARGE_QLTY',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
                                                                                 'Qmu',
@@ -399,9 +406,9 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                                                                                 'Qsed')),
                                 summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
                                 varflag_col_pattern = NA)
-        
+
     } else {
-        
+
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
@@ -412,26 +419,27 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
-                                                         'fair', 'Good', 'good')) 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
+                                                         'fair', 'Good', 'good'))
     }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
-    
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -462,16 +470,16 @@ process_1_9018 <- munge_mcmurdo_discharge
 #. handle_errors
 process_1_9022 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
-        
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -483,13 +491,13 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -498,17 +506,18 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHG_COM',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-            
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
             d <- ms_cast_and_reflag(d,
                                     summary_flags_dirty = list('DISCHG_COM' = c('poor',
                                                                                     'Qmu',
                                                                                     'Qsed')),
                                     summary_flags_to_drop = list('DISCHG_COM' = 'UNUSABLE'),
                                     varflag_col_pattern = NA)
-        
+
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -518,41 +527,42 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
                                                          'fair', 'Good', 'good'))
     }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
 process_1_9021 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character')
-    
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -564,15 +574,15 @@ process_1_9021 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     code <- str_split_fixed(prodname_ms, '__', n=2)[1,2]
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -581,17 +591,18 @@ process_1_9021 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DIS_COMMENTS',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list('DIS_COMMENTS' = c('poor',
                                                                               'Qmu',
                                                                               'Qsed')),
                                 summary_flags_to_drop = list('DIS_COMMENTS' = 'UNUSABLE'),
                                 varflag_col_pattern = NA)
-            
+
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -601,25 +612,26 @@ process_1_9021 <- function(network, domain, prodname_ms, site_name,
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
                              var_flagcol_pattern = '#V#_QUALITY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
                                                          'Qmu','WTmu','SCmu','WTsed',
                                                          'SCsed','Qsed'),
                                 variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 
+                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
                                                              'fair', 'Good', 'good'))
     }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 
@@ -635,17 +647,17 @@ process_1_9016 <- munge_mcmurdo_discharge
 #. handle_errors
 process_1_9029 <- function(network, domain, prodname_ms, site_name,
                            component){
-    
+
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_name,
                    c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character', skip = 36)
 
-    
+
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
                day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
@@ -657,15 +669,15 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
         mutate(year = str_replace(year, ' ', '')) %>%
         mutate(date = paste(day, month, year, sep = '-'))
-    
+
     col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
+    col_name <- str_replace_all(col_old, '[.]', '_')
     colnames(d) <- col_name
-    
+
     code <- str_split_fixed(prodname_ms, '__', n=2)[1,2]
-    
+
     if(grepl('discharge', prodname_ms)) {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -674,8 +686,9 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHARGE_QLTY',
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
                                                                               'Qmu',
@@ -683,7 +696,7 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                                 summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
                                 varflag_col_pattern = NA)
     } else {
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
@@ -692,28 +705,29 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                              data_cols =  c('WATER_TEMP' = 'temp'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'WATER_TEMP_QLTY',
-                             is_sensor = TRUE)
-        
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
         d <- ms_cast_and_reflag(d,
                                 summary_flags_dirty = list(WATER_TEMP_QLTY =
                                                                c('POOR', 'Poor', 'poor','poor',
                                                                  'Qmu','WTmu','SCmu','WTsed',
                                                                  'SCsed','Qsed')),
                                 summary_flags_to_drop = list( WATER_TEMP_QLTY = 'UNUSABLE'),
-                                summary_flags_clean = list(WATER_TEMP_QLTY = 
+                                summary_flags_clean = list(WATER_TEMP_QLTY =
                                                                c('GOOD', 'FAIR', 'Fair',
                                                                  'fair', 'Good', 'good')),
                                 varflag_col_pattern = NA)
         }
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms) 
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 
@@ -733,7 +747,7 @@ process_1_9017 <- munge_mcmurdo_discharge
 #. handle_errors
 process_1_24 <- function(network, domain, prodname_ms, site_name,
                         component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -741,18 +755,16 @@ process_1_24 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    
+
     d <- read.csv(rawfile, colClasses = 'character', skip = 26) %>%
-        rename(DOC=6,
-               comment = 8) %>%
-        mutate(DOC = ifelse(comment == '<0.1 mg/L', 0, DOC)) %>%
+        rename(DOC=DOC..mg.L.) %>%
         filter(STRMGAGEID != '',
                STRMGAGEID != 'garwood',
                STRMGAGEID != 'miers',
                STRMGAGEID != 'delta_upper',
                STRMGAGEID != 'lizotte_mouth',
                STRMGAGEID != 'vguerard_lower')
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
@@ -760,21 +772,21 @@ process_1_24 <- function(network, domain, prodname_ms, site_name,
                          data_cols =  c('DOC'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- filter_single_samp_sites(d)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
@@ -782,47 +794,33 @@ process_1_24 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_20 <- function(network, domain, prodname_ms, site_name,
                          component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
-    
+
+
     d <- read.csv(rawfile, colClasses = 'character', skip = 26) %>%
         filter(STRMGAGEID != '',
                STRMGAGEID != 'garwood',
                STRMGAGEID != 'miers',
                STRMGAGEID != 'delta_upper',
                STRMGAGEID != 'lizotte_mouth',
-               STRMGAGEID != 'vguerard_lower') 
-    
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
-    
-    colnames(d) <- col_name
-    
-    elements <- c('Li', 'Na', 'K', 'Mg', 'Ca', 'F', 'Cl', 'Br', 'SO4', 'Si')
-    
-    for(i in 1:length(elements)) {
-        
-        change <- glue('{e}__mg_L_', e = elements[i])
-        comment <- glue('{e}_COMMENTS', e = elements[i])
-        
-        d <- d %>%
-            mutate(below = grepl('not detected|ND|no detect', .data[[comment]])) %>%
-            mutate(!!elements[i] := ifelse(below == TRUE, 0, .data[[change]])) %>%
-            select(-below)
-        
-    }
-    
-    d <- d %>%
-        rename(alk = Alkalinity__meq_L_)
-    
-    #Alkalinity is omitted, need to resolve alk reported as mg/l (andrews) and as eq (most sites so far)
-    
+               STRMGAGEID != 'vguerard_lower') %>%
+        rename(Li = Li..mg.L.,
+               Na = Na..mg.L.,
+               K = K..mg.L.,
+               Mg = Mg..mg.L.,
+               Ca = Ca..mg.L.,
+               'F' = F..mg.L.,
+               Cl = Cl..mg.L.,
+               Br = Br..mg.L.,
+               SO4 = SO4..mg.L.,
+               Si = Si..mg.L.)
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
@@ -838,26 +836,38 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                                         'SO4' = 'SO4',
                                         'Si' = 'Si'),
                          data_col_pattern = '#V#',
+                         var_flagcol_pattern = '#V#.COMMENTS',
                          is_sensor = FALSE)
-    
+
+    dirty_string <- c('Not Enough water for the sample to be run fully',
+                      'Not Quantified', 'ND', 'Br not quantified <0.04mg/',
+                      'value outside calibration limit and not diluted to be within calibration limit',
+                      'Br not quantified', 'not quantified', 'Not Quantified',
+                      'not detected', 'ND < 0.04 mg/L', 'Br level below detection limit',
+                      'F level below detection limit', 'F not quantified', '< 0.1 mg/L',
+                      ' F not quantified <0.02mg/L', 'no detect', 'Ca not quantified',
+                      'K not quantified', ' Li not quantified <0.001mg/L', 'Li not quantified',
+                      'Li level below detection limit', 'ND <0.001')
+
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
-    
+                            variable_flags_dirty = dirty_string,
+                            variable_flags_to_drop = 'REMOVE')
+
     d <- filter_single_samp_sites(d)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c('SO4' = 'mg/l'),
                         convert_units_to = c('SO4' = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
@@ -865,15 +875,15 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_21 <- function(network, domain, prodname_ms, site_name,
                          component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_name,
                     c = component)
-    
-    
+
+
     d <- read.csv(rawfile, colClasses = 'character', skip = 26) %>%
         filter(STRMGAGEID != '',
                STRMGAGEID != 'garwood',
@@ -881,47 +891,30 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                STRMGAGEID != 'delta_upper',
                STRMGAGEID != 'lizotte_mouth',
                STRMGAGEID != 'vguerard_lower',
-               STRMGAGEID != 'uvg_f21') 
-    
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_') 
-    
-    colnames(d) <- col_name
-    
-    elements <- c('N_NO3', 'N_NO2', 'N_NH4', 'SRP')
-    
-    for(i in 1:length(elements)) {
-        
-        change <- glue('{e}__ug_L_', e = elements[i])
-        comment <- glue('{e}_COMMENTS', e = elements[i])
-        
-        d <- d %>%
-            mutate(below = grepl('not detected|ND|no detect', .data[[comment]])) %>%
-            mutate(null = ifelse(.data[[change]] >= 0, FALSE, TRUE)) %>%
-            mutate(change_c = ifelse(below == TRUE && null == TRUE, TRUE, FALSE)) %>%
-            mutate(!!elements[i] := ifelse(change_c == TRUE, 0, .data[[change]])) %>%
-            select(-below, -null, -change_c)
-        
-    }
-    
-    #Alkalinity is omitted, need to resolve alk reported as mg/l (andrews) and as eq (most sites so far)
-    
+               STRMGAGEID != 'uvg_f21') %>%
+        rename(N.NO3 = N.NO3..ug.L.,
+               N.NO2 = N.NO2..ug.L.,
+               N.NH4 = N.NH4..ug.L.,
+               SRP = SRP..ug.L.)
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_name_col = 'STRMGAGEID',
-                         data_cols =  c('N_NO3' = 'NO3_N',
-                                        'N_NO2' = 'NO2_N',
-                                        'N_NH4' = 'NH4_N',
+                         data_cols =  c('N.NO3' = 'NO3_N',
+                                        'N.NO2' = 'NO2_N',
+                                        'N.NH4' = 'NH4_N',
                                         'SRP' = 'SRP'),
                          data_col_pattern = '#V#',
+                         var_flagcol_pattern = '#V#.COMMENTS',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
-    
+                            variable_flags_clean = '',
+                            variable_flags_to_drop = 'REMOVE')
+
     d <- filter_single_samp_sites(d)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
@@ -931,17 +924,17 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                                              'NO2_N' = 'mg/l',
                                              'NH4_N' = 'mg/l',
                                              'SRP' = 'mg/l'))
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
 
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     return(d)
 }
 
@@ -955,7 +948,7 @@ process_2_ms004 <- stream_gauge_from_site_data
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
-    
+
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
@@ -977,14 +970,14 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                                             'discharge__9027',
                                             'discharge__9029',
                                             'discharge__9030'))
-    
+
     return()
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
-    
+
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
@@ -1010,7 +1003,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                                             'stream_chemistry__9027',
                                             'stream_chemistry__9029',
                                             'stream_chemistry__9030'))
-    
+
     return()
 }
 
