@@ -668,21 +668,29 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                          summary_flagcols = 'Comments',
                          is_sensor = FALSE)
 
+    # Could use a search function to look for words that indicates bad data.
+    # over all the data with comments seem to indicate the data is in some way
+    # compromised
+    d <- d %>%
+       mutate(Comments = ifelse(Comments != '', 'bad', 'ok'))
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
-                            summary_flags_to_drop = list(Comments = 'bad'),
-                            summary_flags_dirty = list(Comments = 'remove'))
+                            summary_flags_dirty = list(Comments = 'bad'),
+                            summary_flags_to_drop = list(Comments = 'remove'))
 
     d <- ms_conversions(d,
-                        # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                        #                       'NH4', 'NH3'),
-                        convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                               TPsN = 'ug/l', SRP = 'ug/l',
+                        convert_units_from = c(NO3_N = 'ug/l',
+                                               NH4_N = 'ug/l',
+                                               TPsN = 'ug/l',
+                                               SRP = 'ug/l',
                                                TPP = 'ug/l'),
-                        convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                             TPsN = 'mg/l', SRP = 'mg/l',
+                        convert_units_to = c(NO3_N = 'mg/l',
+                                             NH4_N = 'mg/l',
+                                             TPsN = 'mg/l',
+                                             SRP = 'mg/l',
                                              TPP = 'mg/l'))
 
     d <- carry_uncertainty(d,
