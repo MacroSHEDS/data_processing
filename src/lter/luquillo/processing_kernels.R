@@ -127,7 +127,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                                         'TSS'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -163,6 +164,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 process_1_174 <- function(network, domain, prodname_ms, site_name,
                           component){
 
+  # Luquillo's metadata says NO3_N units are in mg/l but they are very high so
+  # I am assuming they must be in ug/l, will check with Luquillo.
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -205,7 +208,8 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
                                         'SiO2'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -213,10 +217,12 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
     d <- ms_conversions(d,
                         convert_units_from = c(Cl = 'ug/l',
                                                NH4_N = 'ug/l',
-                                               PO4_P = 'ug/l'),
+                                               PO4_P = 'ug/l',
+                                               NO3_N = 'ug/l'),
                         convert_units_to = c(Cl = 'mg/l',
                                              NH4_N = 'mg/l',
-                                             PO4_P = 'mg/l'))
+                                             PO4_P = 'mg/l',
+                                             NO3_N = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -463,11 +469,14 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_182 <- function(network, domain, prodname_ms, site_name,
                           component){
 
+    # There seems to be something wrong with this data product. around 2010
+    # they switch from one rating curve to another and it seems that the
+    # values are too/unreal
       rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                      n = network,
                      d = domain,
@@ -551,7 +560,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('discharge__156',
-                                           'discharge__182',
+                                           #'discharge__182',
                                            'usgs_discharge__ms001'))
     return()
 }
