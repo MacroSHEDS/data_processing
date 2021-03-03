@@ -5,7 +5,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=5
+# i=7
 for(i in 1:nrow(prod_info)){
     # for(i in 1){
 

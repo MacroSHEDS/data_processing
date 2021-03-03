@@ -163,7 +163,8 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
