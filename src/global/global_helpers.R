@@ -212,7 +212,8 @@ identify_sampling <- function(df,
                               date_col = 'datetime',
                               network,
                               domain,
-                              prodname_ms){
+                              prodname_ms,
+                              sampling_type){
 
     #TODO: for hbef, identify_sampling is writing sites names as 1 not w1
 
@@ -376,6 +377,12 @@ identify_sampling <- function(df,
                     g_a <- rbind(table_, table_var) %>%
                         arrange(starts)
                 }
+            }
+
+            if(! is.null(sampling_type)){
+
+                g_a <- g_a %>%
+                    mutate(type = sampling_type)
             }
 
             var_name_base <- str_split(string = data_cols[p],
@@ -638,7 +645,8 @@ ms_read_raw_csv <- function(filepath,
                             set_to_NA,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
-                            summary_flagcols){
+                            summary_flagcols,
+                            sampling_type = NULL){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -710,6 +718,9 @@ ms_read_raw_csv <- function(filepath,
     #   variable-specific flag columns
     #summary_flagcols: optional unnamed vector of column names for flag columns
     #   that pertain to all variables
+    #sampling_type: optional value to overwrite identify_sampling because in
+    #   some case this function is misidentifying sampling type. This must be a
+    #   single value of G or I and is applied to all variables in product
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flag/qaqc information,
@@ -763,6 +774,15 @@ ms_read_raw_csv <- function(filepath,
                 logerror(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
                         logger = logger_module)
             }
+        }
+    }
+
+    if(! is.null(sampling_type)){
+        if(! length(sampling_type) == 1){
+            stop('sampling_type must be a length of 1')
+        }
+        if(! sampling_type %in% c('G', 'I')){
+            stop('sampling_type must be either I or G')
         }
     }
 
@@ -834,8 +854,9 @@ ms_read_raw_csv <- function(filepath,
                               length(alt_datacols),
                               length(var_flagcols),
                               length(alt_varflagcols)))
+
+    suffixes <- suffixes[! na_inds]
     colnames_new <- paste0(colnames_all, suffixes)
-    colnames_new <- colnames_new[! na_inds]
 
     colnames_all <- c(datetime_colnames, colnames_all)
     names(colnames_all)[1:length(datetime_cols)] <- datetime_colnames
@@ -1014,7 +1035,8 @@ ms_read_raw_csv <- function(filepath,
                               is_sensor = is_sensor,
                               domain = domain,
                               network = network,
-                              prodname_ms = prodname_ms))
+                              prodname_ms = prodname_ms,
+                              sampling_type = sampling_type))
 
     #Check if all sites are in site file
     if(!all(unique(d$site_name) %in% site_data$site_name)) {

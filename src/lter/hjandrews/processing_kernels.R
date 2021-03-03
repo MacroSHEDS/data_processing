@@ -230,8 +230,34 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),
                          data_col_pattern = '#V#',
+                         alt_site_name = list('GSMACK' = 'GSWSMA'),
                          is_sensor = TRUE,
                          summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
+
+    # In 1995 HJ Andrews put a fish ladder around the GSWSMA (it is also gauged
+    # called GSWSMF). A new measurment called GSWSMC is a sum of GSWSMF and
+    # GSWSMA. We are calling GSWSMA, GSMACK and when the fish ladder is added
+    # GSMACK will refer to GSWSMC
+
+    # It as looks like at 	2018-09-30 16:05:00, GSWSMC is just GSWSMA X 2. May
+    # be worth contacting the domain
+    GSMACK <- d %>%
+        filter(site_name == 'GSMACK') %>%
+        filter(datetime < '1995-09-30 22:00:00')
+
+    GSWSMC <- d %>%
+        filter(site_name == 'GSWSMC') %>%
+        filter(datetime > '1995-09-30 22:00:00') %>%
+        mutate(site_name = 'GSMACK')
+
+
+    d <- d %>%
+        filter(site_name != 'GSWSMA',
+               site_name != 'GSWSMC',
+               site_name != 'GSWSMF',
+               site_name != 'GSMACK')
+
+    d <- rbind(d, GSWSMC, GSMACK)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,

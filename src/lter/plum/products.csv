@@ -118,11 +118,13 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 141,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2004,NA
 142,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2005,NA
 143,precipitation,ready,ready,NA,precipitation__ms003,gov ac  2006,NA
+162,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2008,NA
 67,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2007,NA
 179,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2009,NA
 180,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2010,NA
 181,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2011,NA
 239,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2012,NA
+343,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2013,NA
 359,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2014,NA
 385,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2015,NA
 417,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2016,NA
