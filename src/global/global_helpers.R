@@ -635,7 +635,7 @@ ms_read_raw_csv <- function(filepath,
                             preprocessed_tibble,
                             datetime_cols,
                             datetime_tz,
-                            datetime_optional_chars = ':',
+                            optionalize_nontoken_characters = ':',
                             site_name_col,
                             alt_site_name,
                             data_cols,
@@ -678,7 +678,17 @@ ms_read_raw_csv <- function(filepath,
     #   columns.
     #datetime_tz: string specifying time zone. this specification must be
     #   among those provided by OlsonNames()
-    #datetime_optional_chars: see "optional" argument to dt_format_to_regex
+    #optionalize_nontoken_characters: character vector; used when there might be
+    #   variation in date/time formatting within a column. in regex speak,
+    #   optionalizing a token string means, "match this string if it exists,
+    #   but move on to the next token if it doesn't." All datetime parsing tokens
+    #   (like "%H") are optionalized automatically when this function converts
+    #   them to regex. But other tokens like ":" and "-" that might be used in
+    #   datetime strings are not. Concretely, if you wanted to read either "%H:%M:%S"
+    #   or "%H:%M" in the same column, you'd set optionalize_nontoken_characters = ':',
+    #   and then the parser wouldn't require there to be two colons in order to
+    #   match the string. Don't use this if you don't have to, because it reduces
+    #   specificity. See "optional" argument to dt_format_to_regex for more details.
     #site_name_col: name of column containing site name information
     #alt_site_name: optional list. Names of list elements are desired site_names
     #   within MacroSheds. List elements are character vectors of alternative
@@ -963,10 +973,10 @@ ms_read_raw_csv <- function(filepath,
 
     #resolve datetime structure into POSIXct
     d  <- resolve_datetime(d = d,
-                          datetime_colnames = datetime_colnames,
-                          datetime_formats = datetime_formats,
-                          datetime_tz = datetime_tz,
-                          optional = datetime_optional_chars)
+                           datetime_colnames = datetime_colnames,
+                           datetime_formats = datetime_formats,
+                           datetime_tz = datetime_tz,
+                           optional = optionalize_nontoken_characters)
 
     #remove rows with NA in datetime or site_name
     d <- filter(d,
@@ -1057,18 +1067,18 @@ resolve_datetime <- function(d,
                              datetime_colnames,
                              datetime_formats,
                              datetime_tz,
-                             optional) {
+                             optional){
 
-    #d is a data.frame or tibble with at least one date or time column
+    #d: a data.frame or tibble with at least one date or time column
     #   (all date and/or time columns must contain character strings,
-    #   not parsed date/time/datetime objects)
-    #datetime_colnames is a character vector of column names that contain
-    #   relevantdatetime information
-    #datetime_formats is a character vector of datetime parsing tokens
+    #   not parsed date/time/datetime objects).
+    #datetime_colnames: character vector; column names that contain
+    #   relevant datetime information.
+    #datetime_formats: character vector; datetime parsing tokens
     #   (like '%A, %Y-%m-%d %I:%M:%S %p' or '%j') corresponding to the
-    #   elements of datetime_colnames
-    #   datetime_tz is the time zone of the returned datetime column
-    #optional: see dt_format_to_regex
+    #   elements of datetime_colnames.
+    #datetime_tz: character; time zone of the returned datetime column.
+    #optional: character vector; see dt_format_to_regex.
 
     #return value: d, but with a "datetime" column containing POSIXct datetimes
     #   and without the input datetime columns
@@ -1110,6 +1120,22 @@ resolve_datetime <- function(d,
                                  colnames(dt_tb)),
                           datetime_formats_split)
 
+    if('H' %in% colnames(dt_tb)){
+        dt_tb$H[dt_tb$H == ''] <- '00'
+    }
+    if('M' %in% colnames(dt_tb)){
+        dt_tb$M[dt_tb$M == ''] <- '00'
+    }
+    if('S' %in% colnames(dt_tb)){
+        dt_tb$S[dt_tb$S == ''] <- '00'
+    }
+    if('I' %in% colnames(dt_tb)){
+        dt_tb$I[dt_tb$I == ''] <- '00'
+    }
+    if('P' %in% colnames(dt_tb)){
+        dt_tb$P[dt_tb$P == ''] <- 'AM'
+    }
+
     dt_tb <- dt_tb %>%
         tidyr::unite(col = 'datetime',
                      everything(),
@@ -1134,15 +1160,15 @@ dt_format_to_regex <- function(fmt, optional){
     #fmt is a character vector of datetime formatting strings, such as
     #   '%A, %Y-%m-%d %I:%M:%S %p' or '%j'. each element of fmt that is a
     #   datetime token is replaced with a regex string that matches
-    #   the what the token represents. For example, '%Y' matches a 4-digit
+    #   what the token represents. For example, '%Y' matches a 4-digit
     #   year and '[0-9]{4}' matches a 4-digit numeric sequence. non-token
     #   characters (anything not following a %) are not modified. Note that
     #   tokens B, b, h, A, and a are replaced by '[a-zA-Z]+', which matches
     #   any sequence of one or more alphabetic characters of either case,
     #   not just meaningful month/day names 'Weds' or 'january'. Also note
     #   that these tokens are not currently accepted: g, G, n, t, c, r, R, T.
-    #optional is a character vector of characters that should be made
-    #   optional in the exported regex (succeeded by a ?). This is useful if
+    #optional is a vector of characters that should be made
+    #   optional in the exported regex (followed by a '?'). This is useful if
     #   e.g. fmt is '%H:%M:%S' and elements to be matched may either appear in
     #   HH:MM:SS or HH:MM format. making the ":" character optional here
     #   (via optional = ':') allows the hour and minute data to be retained,
@@ -1166,10 +1192,10 @@ dt_format_to_regex <- function(fmt, optional){
                             W = '([0-9]{2})?',
                             V = '([0-9]{2})?',
                             C = '([0-9]{2})?',
-                            H = '([0-9]{2})?',
-                            I = '([0-9]{2})?',
-                            M = '([0-9]{2})?',
-                            S = '([0-9]{2})?',
+                            H = '([0-9]{1,2})?',
+                            I = '([0-9]{1,2})?',
+                            M = '([0-9]{1,2})?',
+                            S = '([0-9]{1,2})?',
                             p = '([AP]M)?',
                             z = '([+\\-][0-9]{4})?',
                             `F` = '([0-9]{4}-[0-9]{2}-[0-9]{2})')
@@ -2883,6 +2909,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
                             filename = dem_f,
                             overwrite = TRUE)
 
+        #loses projection
         sf::st_write(obj = site,
                      dsn = point_f,
                      delete_layer = TRUE,
@@ -3083,6 +3110,7 @@ delineate_watershed_by_specification <- function(lat,
                         filename = dem_f,
                         overwrite = TRUE)
 
+    #loses projection
     sf::st_write(obj = site,
                  dsn = point_f,
                  delete_layer = TRUE,
@@ -4770,14 +4798,24 @@ choose_projection <- function(lat = NULL,
 
     abslat <- abs(lat)
 
+    # THIS WORKS (PROJECTS STUFF), BUT CAN'T BE READ AUTOMATICALLY BY st_read
     if(abslat < 23){ #tropical
         PROJ4 = glue('+proj=laea +lon_0=', long)
                  # ' +datum=WGS84 +units=m +no_defs')
     } else { #temperate or polar
         PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
     }
-                     # ' +datum=WGS84 +units=m +no_defs')
 
+    ## UTM/UPS would be nice for watersheds that don't fall on more than two zones
+    ## (incomplete)
+    # if(lat > 84 || lat < -80){ #polar; use Universal Polar Stereographic (UPS)
+    #     PROJ4 <- glue('+proj=ups +lon_0=', long)
+    #              # ' +datum=WGS84 +units=m +no_defs')
+    # } else { #not polar; use UTM
+    #     PROJ4 <- glue('+proj=utm +lat_0=', lat, ' +lon_0=', long)
+    # }
+
+    ## EXTRA CODE FOR CHOOSING PROJECTION BY LATITUDE ONLY
     # if(abslat < 23){ #tropical
     #     PROJ4 <- 9835 #Lambert cylindrical equal area (ellipsoidal; should spherical 9834 be used instead?)
     # } else if(abslat > 23 && abslat < 66){ # middle latitudes
@@ -8476,20 +8514,155 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
+log_with_indent <- function(msg, logger, level = 'info', indent = 1){
+
+    #level is one of "info", "warn", 'error".
+    #indent: the number of spaces to indent after the colon.
+
+    indent_str <- rep('\U2800\U2800', indent)
+
+    if(level == 'info'){
+        loginfo(msg = paste0(enc2native(indent_str),
+                             msg),
+                logger = logger)
+    } else if(level == 'warn'){
+        logwarn(msg = paste0(enc2native(indent_str),
+                             msg),
+                logger = logger)
+    } else if(level == 'error'){
+        logerror(msg = paste0(enc2native(indent_str),
+                              msg),
+                logger = logger)
+    }
+}
+
 generate_portal_extras <- function(site_data,
-                                   network_domain){
+                                   network_domain,
+                                   thin_portal_data_to_interval = NA){
+
+    #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::round_date.
+    #   set to NA (the dafault) to prevent thinning.
 
     #for post-derive steps that save the portal some processing.
 
-    loginfo(msg = 'Generating portal extras',
+    loginfo(msg = 'Generating portal extras:',
             logger = logger_module)
 
+    log_with_indent('scaling flux by area', logger = logger_module)
     calculate_flux_by_area(site_data = site_data)
+
+    log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
-    catalogue_held_data(site_data = site_data,
-                        network_domain = network_domain)
+
+    log_with_indent('cataloging held data', logger = logger_module)
+    catalog_held_data(site_data = site_data,
+                      network_domain = network_domain)
+
+    log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
+
+    log_with_indent('determining which domains have Q', logger = logger_module)
     list_domains_with_discharge(site_data = site_data)
+
+    if(! is.na(thin_portal_data_to_interval)){
+        log_with_indent('thinning portal datasets to 1 day',
+                        logger = logger_module)
+        thin_portal_data(network_domain = network_domain,
+                         thin_interval = thin_portal_data_to_interval)
+    }
+}
+
+thin_portal_data <- function(network_domain, thin_interval){
+
+    #thin_interval: passed to the "unit" parameter of lubridate::round_date
+
+    domains <- network_domain$domain
+
+    n_domains <- length(domains)
+    for(i in 1:n_domains){
+
+        dmn <- domains[i]
+
+        log_with_indent(msg = glue('{d}: ({ii}/{n})',
+                                   d = dmn,
+                                   ii = i,
+                                   n = n_domains),
+                        logger = logger_module,
+                        indent = 2)
+
+        prod_dirs <- try(
+            {
+                list.files(path = glue('../portal/data/{d}/',
+                                       d = dmn),
+                           full.names = FALSE,
+                           recursive = FALSE)
+            },
+            silent = TRUE
+        )
+
+        if(length(prod_dirs)){
+
+            #filter products that never need to be thinned. keep the ones that might
+            rgx <- paste0('(^precipitation|^precip_chemistry|^discharge',
+                          '|^precip_flux|^stream_chemistry|^stream_flux)')
+            prod_dirs <- grep(pattern = rgx,
+                              x = prod_dirs,
+                              value = TRUE)
+        }
+
+        for(prd in prod_dirs){
+
+            site_files <- list.files(path = glue('../portal/data/{d}/{p}',
+                                                 d = dmn,
+                                                 p = prd),
+                                     full.names = TRUE,
+                                     recursive = FALSE)
+
+            if(prd == 'precipitation'){
+                agg_call <- quote(sum(val, na.rm = TRUE))
+            } else {
+                agg_call <- quote(mean(val, na.rm = TRUE))
+            }
+
+            for(stf in site_files){
+
+                #check whether this file needs to be thinned
+                dtcol <- read_feather(stf, columns = 'datetime')
+                interval_min <- Mode(diff(as.numeric(dtcol$datetime)) / 60)
+                needs_thin <- ! is.na(interval_min) && interval_min <= 24 * 60
+
+                if(needs_thin){
+
+                    d <- read_feather(stf) %>%
+                        mutate(
+                            datetime = lubridate::round_date(
+                                x = datetime,
+                                unit = thin_interval),
+                            val = errors::set_errors(val, val_err)) %>%
+                        select(-val_err)
+
+                    if(length(unique(d$site_name)) > 1){
+                        stop(paste('Multiple site_names in', stf))
+                    }
+
+                    d %>%
+                        group_by(datetime, var) %>%
+                        summarize(
+                            site_name = first(site_name),
+                            val = eval(agg_call),
+                            ms_status = numeric_any(ms_status),
+                            ms_interp = numeric_any(ms_interp)) %>%
+                        ungroup() %>%
+                        mutate(val_err = errors(val),
+                               val_err = ifelse(is.na(val_err), 0, val_err),
+                               val = errors::drop_errors(val)) %>%
+                        select(datetime, site_name, var, val, ms_status, ms_interp,
+                               val_err) %>%
+                        write_feather(stf)
+                }
+            }
+        }
+    }
 }
 
 list_domains_with_discharge <- function(site_data){
@@ -8886,7 +9059,7 @@ munge_versionless_product <- function(network,
     }
 }
 
-catalogue_held_data <- function(network_domain, site_data){
+catalog_held_data <- function(network_domain, site_data){
 
     #tabulates:
     # + total nonspatial observations for the portal landing page
@@ -8915,16 +9088,17 @@ catalogue_held_data <- function(network_domain, site_data){
                                     n = network_domain$network[i],
                                     d = network_domain$domain[i]),
                                full.names = TRUE)
+        site_prods <- site_prods[! grepl('derived$', site_prods)]
 
         if(length(site_prods) == 0) next
 
-        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary)',
                                   x = site_prods)
 
         spatial_prods <- site_prods[spatial_prod_inds]
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
-        for(j in 1:length(nonspatial_prods)){
+        for(j in seq_along(nonspatial_prods)){
 
             if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
                 logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
@@ -9053,11 +9227,14 @@ catalogue_held_data <- function(network_domain, site_data){
         }
     }
 
-    # setwd('../portal/data/')
+    readr::write_file(x = as.character(nobs_nonspatial),
+                      file = '../portal/data/general/total_nonspatial_observations.txt')
+
     dir.create('../portal/data/general/catalog_files',
                showWarnings = FALSE)
 
     #generate and write file describing all variables
+
     all_variable_display <- all_variable_breakdown %>%
         group_by(VariableCode) %>%
         summarize(
@@ -9132,6 +9309,7 @@ catalogue_held_data <- function(network_domain, site_data){
     #generate and write file describing all sites
     #TODO: make sure to include a note about datum on display page
     #   also, incude url column somehow
+
     all_site_display <- all_variable_breakdown %>%
         group_by(network, domain, site_name) %>%
         summarize(
@@ -9167,6 +9345,7 @@ catalogue_held_data <- function(network_domain, site_data){
                      file = '../portal/data/general/catalog_files/all_sites.csv')
 
     #generate and write individual file for each site, describing it by variable
+
     dir.create('../portal/data/general/catalog_files/indiv_sites',
                showWarnings = FALSE)
 
@@ -9210,7 +9389,6 @@ catalogue_held_data <- function(network_domain, site_data){
                                      d = dmn,
                                      s = sit))
     }
-
 
     #in case somebody asks for this stuff again:
 
