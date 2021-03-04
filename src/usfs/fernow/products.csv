@@ -1,0 +1,7 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,usfs_link
+14,precipitation,ready,ready,NA,precip_pchem_pflux__ms002,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014.zip
+15,discharge,ready,ready,NA,stream_flux_inst__ms001,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0015/RDS-2011-0015.zip
+16,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0016/RDS-2011-0016.zip
+17,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0017/RDS-2011-0017.zip
+ms001,stream_flux_inst,,,ready,,,
+ms002,precip_pchem_pflux,,,ready,,,
