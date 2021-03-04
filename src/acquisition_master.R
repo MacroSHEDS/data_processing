@@ -269,7 +269,8 @@ for(dmnrow in 1:nrow(network_domain)){
 logger_module <- 'ms.module'
 
 generate_portal_extras(site_data = site_data,
-                       network_domain = network_domain)
+                       network_domain = network_domain,
+                       thin_portal_data_to_interval = '1 day')
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
