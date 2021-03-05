@@ -2417,20 +2417,34 @@ ms_retrieve <- function(network = domain,
                         domain){
 
     #execute main retrieval script for this network-domain
-    source(glue('src/{n}/{d}/retrieve.R',
-                n = network,
-                d = domain),
-           local = TRUE)
+    norm_retrieve <- file.exists(glue('src/{n}/{d}/retrieve.R',
+                                      n = network,
+                                      d = domain))
+
+    if(norm_retrieve){
+        source(glue('src/{n}/{d}/retrieve.R',
+                    n = network,
+                    d = domain),
+               local = TRUE)
+    }
+
 
     #if there's a script for retrieval of versionless products, execute it too
     versionless_product_script <- glue('src/{n}/{d}/retrieve_versionless.R',
                                        n = network,
                                        d = domain)
 
-    if(file.exists(versionless_product_script)){
+    versionless_retrieve <- file.exists(versionless_product_script)
+    if(versionless_retrieve){
 
         source(versionless_product_script,
                local = TRUE)
+    }
+
+    if(! norm_retrieve && ! versionless_retrieve){
+        stop(glue('No retrieval script avalible for {n} {d}',
+                  n = network,
+                  d = domain))
     }
 }
 
@@ -2438,10 +2452,16 @@ ms_munge <- function(network = domain,
                      domain){
 
     #execute main munge script for this network-domain
-    source(glue('src/{n}/{d}/munge.R',
-                n = network,
-                d = domain),
-           local = TRUE)
+    norm_munge <- file.exists(glue('src/{n}/{d}/munge.R',
+                                      n = network,
+                                      d = domain))
+
+    if(norm_munge){
+        source(glue('src/{n}/{d}/munge.R',
+                    n = network,
+                    d = domain),
+               local = TRUE)
+    }
 
     #if there's a script for munging of versionless products, execute it too
     versionless_product_script <- glue('src/{n}/{d}/munge_versionless.R',
@@ -2452,6 +2472,12 @@ ms_munge <- function(network = domain,
 
         source(versionless_product_script,
                local = TRUE)
+    }
+
+    if(! norm_munge && ! versionless_product_script){
+        stop(glue('No munge script avalible for {n} {d}',
+                  n = network,
+                  d = domain))
     }
 
     #calculate watershed areas for any provided watershed boundary files,
