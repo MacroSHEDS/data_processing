@@ -6154,15 +6154,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         logging::logwarn('No pchem product. IDW-Interpolating precipitation only')
     }
 
-    pchem <- try({
-        precip <- read_combine_feathers(network = network,
-                                        domain = domain,
-                                        prodname_ms = precip_prodname) %>%
+    precip <- try({
+        read_combine_feathers(network = network,
+                              domain = domain,
+                              prodname_ms = precip_prodname) %>%
             filter(site_name %in% rg$site_name)
     }, silent = TRUE)
 
     pchem_only <- FALSE
-    if('try-error' %in% class(pchem)){
+    if('try-error' %in% class(precip)){
         pchem_only <- TRUE
         if(precip_only) stop('Nothing to IDW interpolate. Is this kernel needed?')
         logging::logwarn('No precip product. IDW-Interpolating pchem only')
