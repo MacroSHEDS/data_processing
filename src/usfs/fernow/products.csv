@@ -1,7 +1,10 @@
-prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,usfs_link
-14,precipitation,ready,ready,NA,precip_pchem_pflux__ms002,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014.zip
-15,discharge,ready,ready,NA,stream_flux_inst__ms001,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0015/RDS-2011-0015.zip
-16,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0016/RDS-2011-0016.zip
-17,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,,https://www.fs.usda.gov/rds/archive/products/RDS-2011-0017/RDS-2011-0017.zip
-ms001,stream_flux_inst,,,ready,,,
-ms002,precip_pchem_pflux,,,ready,,,
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,precipitation,ready,ready,NA,precipitation__ms900,NA,fernow_precip
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,fernow_discharge
+VERSIONLESS003,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,NA,fernow_precip_chem
+VERSIONLESS004,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,fernow_stream_chem
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms003,precip_gauge_locations,,,ready,precip_pchem_pflux__ms002,,
+ms002,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
+ms900,precipitation,,,ready,,,
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms002,automated entry,NA
