@@ -468,6 +468,10 @@ process_2_ms001 <- derive_stream_flux
 #. handle_errors
 process_2_ms003 <- precip_gauge_from_site_data
 
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms002 <- derive_precip_pchem_pflux
+
 #precipitation: STATUS=READY
 #. handle_errors
 process_2_ms900 <- function(network, domain, prodname_ms){
@@ -479,6 +483,4 @@ process_2_ms900 <- function(network, domain, prodname_ms){
               overwrite = TRUE)
 }
 
-#precip_pchem_pflux: STATUS=READY
-#. handle_errors
-process_2_ms002 <- derive_precip_pchem_pflux
+
