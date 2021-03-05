@@ -3,48 +3,173 @@
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_14 <- function(set_details, network, domain) {
+process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
-    download_raw_file(network = network,
-                      domain = domain,
-                      set_details = set_details,
-                      file_type = NULL)
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    loginfo(glue('Nothing to do for {p}',
+            p = set_details$prodname_ms),
+            logger = logger_module)
 
     return()
 }
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_15 <- function(set_details, network, domain) {
+process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
-    download_raw_file(network = network,
-                      domain = domain,
-                      set_details = set_details,
-                      file_type = NULL)
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2011-0015/RDS-2011-0015.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0015/RDS-2011-0015.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    loginfo(glue('Nothing to do for {p}',
+            p = set_details$prodname_ms),
+            logger = logger_module)
 
     return()
+
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_16 <- function(set_details, network, domain) {
+process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
-    download_raw_file(network = network,
-                      domain = domain,
-                      set_details = set_details,
-                      file_type = NULL)
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2011-0016/RDS-2011-0016.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0016/RDS-2011-0016.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    loginfo(glue('Nothing to do for {p}',
+            p = set_details$prodname_ms),
+            logger = logger_module)
 
     return()
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_17 <- function(set_details, network, domain) {
+process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
-    download_raw_file(network = network,
-                      domain = domain,
-                      set_details = set_details,
-                      file_type = NULL)
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_name)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2011-0017/RDS-2011-0017.zip')
+    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+        as.POSIXct() %>%
+        with_tz('UTC')
+
+    if(last_mod_dt > set_details$last_mod_dt){
+
+        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0017/RDS-2011-0017.zip',
+                      destfile = rawfile,
+                      cacheOK = FALSE,
+                      method = 'curl')
+
+        loginfo(msg = paste('Updated', set_details$component),
+                logger = logger_module)
+
+        return(last_mod_dt)
+    }
+
+    loginfo(glue('Nothing to do for {p}',
+            p = set_details$prodname_ms),
+            logger = logger_module)
 
     return()
 }
@@ -53,7 +178,7 @@ process_0_17 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_14 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -77,7 +202,8 @@ process_1_14 <- function(network, domain, prodname_ms, site_name, component) {
                          site_name_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -93,13 +219,29 @@ process_1_14 <- function(network, domain, prodname_ms, site_name, component) {
 
     unlink(temp_dir, recursive = TRUE)
 
-    return(d)
+    sites <- unique(d$site_name)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_name == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    return()
 }
 
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_15 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -148,13 +290,28 @@ process_1_15 <- function(network, domain, prodname_ms, site_name, component) {
 
     unlink(temp_dir, recursive = TRUE)
 
-    return(d)
-}
+    sites <- unique(d$site_name)
 
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_name == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    return()
+}
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_16 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -172,15 +329,25 @@ process_1_16 <- function(network, domain, prodname_ms, site_name, component) {
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- read.csv(rel_file_path, colClasses = 'character')
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%y',
-                                              'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
-                         data_cols =  c('GGL_SW_0.Specific.Conductance..uS.cm.' = 'spCond',
-                                        'GGL_SW_0.Temp..C.' = 'temp'),
+    d <- ms_read_raw_csv(filepath = rel_file_path,
+                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%y'),
+                         datetime_tz = 'US/Eastern',
+                         site_name_col = 'Weather.Station',
+                         data_cols =  c('pH' = 'pH',
+                                        'Electrical.Conductivity..uS.cm.' = 'spCond',
+                                        # there are to ANC in ms_vars check
+                                        'Acid.Neutralizing.Capacity..ueq.L.' = 'ANC',
+                                        'Calcium..mg.L.' = 'Ca',
+                                        'Magnesium..mg.L.' = 'Mg',
+                                        'Sodium..mg.L.' = 'Na',
+                                        'Potassium..mg.L.' = 'K',
+                                        'Ammonium..mg.L.' = 'NH4',
+                                        'Chloride..mg.L.' = 'Cl',
+                                        'Sulfate..mg.L.' = 'SO4',
+                                        'Nitrate..mg.L.' = 'NO3'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -194,13 +361,31 @@ process_1_16 <- function(network, domain, prodname_ms, site_name, component) {
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    return(d)
+    unlink(temp_dir, recursive = TRUE)
+
+    sites <- unique(d$site_name)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_name == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    return()
 }
 
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_17 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -217,7 +402,6 @@ process_1_17 <- function(network, domain, prodname_ms, site_name, component) {
 
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    d <- read.csv(rel_file_path, colClasses = 'character')
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
                          datetime_tz = 'US/Eastern',
@@ -240,6 +424,10 @@ process_1_17 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
+    d <- ms_conversions(d,
+                        convert_units_from = c('NO3' = 'mg/l'),
+                        convert_units_to = c('NO3' = 'mg/l'))
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
@@ -249,7 +437,25 @@ process_1_17 <- function(network, domain, prodname_ms, site_name, component) {
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    return(d)
+    unlink(temp_dir, recursive = TRUE)
+
+    sites <- unique(d$site_name)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_name == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    return()
 }
 
 #derive kernels ####
@@ -257,6 +463,21 @@ process_1_17 <- function(network, domain, prodname_ms, site_name, component) {
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms001 <- derive_stream_flux
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms003 <- precip_gauge_from_site_data
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms900 <- function(network, domain, prodname_ms){
+
+    dir.create('data/usfs/fernow/derived/precipitation__ms900/')
+    file.copy(from = list.files('data/usfs/fernow/munged/precipitation__VERSIONLESS001/',
+                                full.names = TRUE),
+              to = 'data/usfs/fernow/derived/precipitation__ms900',
+              overwrite = TRUE)
+}
 
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
