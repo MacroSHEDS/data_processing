@@ -6178,7 +6178,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
 
-
     dem <- expo_backoff(
         expr = {
             elevatr::get_elev_raster(locations = wb_rg_bbox,
@@ -6521,24 +6520,36 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 stop('NA datetime found in idw_out')
             }
 
-            # logging::logwarn(paste(colnames(idw_out), collapse = ', '))
-            # zz <<- idw_out
-            ws_mean_pchem <- idw_out %>%
-                select(-flux) %>%
-                rename(val = concentration) %>%
-                arrange(var, datetime)
-
-            ws_mean_pflux <- idw_out %>%
-                select(-concentration) %>%
-                rename(val = flux) %>%
-                arrange(var, datetime)
-
             chemprod <- precursor_prodnames[grepl('chem', precursor_prodnames)]
 
-            ws_mean_pflux <- apply_detection_limit_t(ws_mean_pflux,
-                                                     network = network,
-                                                     domain = domain,
-                                                     prodname_ms = chemprod)
+            if(! pchem_only){
+
+                ws_mean_pflux <- idw_out %>%
+                    select(-concentration) %>%
+                    rename(val = flux) %>%
+                    arrange(var, datetime)
+
+                ws_mean_pflux <- apply_detection_limit_t(ws_mean_pflux,
+                                                         network = network,
+                                                         domain = domain,
+                                                         prodname_ms = chemprod)
+
+                write_ms_file(ws_mean_pflux,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = 'precip_flux_inst__ms902',
+                              site_name = site_name,
+                              level = 'derived',
+                              shapefile = FALSE,
+                              link_to_portal = FALSE)
+
+                rm(ws_mean_pflux)
+            }
+
+            ws_mean_pchem <- idw_out %>%
+                select(-any_of('flux')) %>%
+                rename(val = concentration) %>%
+                arrange(var, datetime)
 
             ws_mean_pchem <- apply_detection_limit_t(ws_mean_pchem,
                                                      network = network,
@@ -6554,24 +6565,17 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                           shapefile = FALSE,
                           link_to_portal = FALSE)
 
-            write_ms_file(ws_mean_pflux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = 'precip_flux_inst__ms902',
-                          site_name = site_name,
-                          level = 'derived',
-                          shapefile = FALSE,
-                          link_to_portal = FALSE)
-
-            rm(ws_mean_pflux, ws_mean_pchem); gc()
+            rm(ws_mean_pchem); gc()
         } #end conditional pchem+pflux block (2)
     }
 
-    append_to_productfile(network = network,
-                          domain = domain,
-                          prodcode = 'ms900',
-                          prodname = 'precipitation',
-                          notes = 'automated entry')
+    if(! pchem_only){
+        append_to_productfile(network = network,
+                              domain = domain,
+                              prodcode = 'ms900',
+                              prodname = 'precipitation',
+                              notes = 'automated entry')
+    }
 
     if(! precip_only){
         append_to_productfile(network = network,
@@ -6580,11 +6584,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                               prodname = 'precip_chemistry',
                               notes = 'automated entry')
 
-        append_to_productfile(network = network,
-                              domain = domain,
-                              prodcode = 'ms902',
-                              prodname = 'precip_flux_inst',
-                              notes = 'automated entry')
+        if(! pchem_only){
+            append_to_productfile(network = network,
+                                  domain = domain,
+                                  prodcode = 'ms902',
+                                  prodname = 'precip_flux_inst',
+                                  notes = 'automated entry')
+        }
     }
 
     unlink(glue('data/{n}/{d}/precip_idw_quickref',
