@@ -4825,6 +4825,7 @@ shortcut_idw <- function(encompassing_dem,
                          wshd_bnd,
                          data_locations,
                          data_values,
+                         durations_between_samples = NULL,
                          stream_site_name,
                          output_varname,
                          save_precip_quickref = FALSE,
@@ -4839,6 +4840,16 @@ shortcut_idw <- function(encompassing_dem,
     #   the interpolation
     #data_values: data.frame with one column each for datetime and ms_status,
     #   and an additional named column of data values for each data location.
+    #durations_between_samples: numeric vector representing the time differences
+    #   between rows of data_values. Must be expressed in days. Only used if
+    #   output_varname == 'SPECIAL CASE PRECIP' and save_precip_quickref == TRUE,
+    #   so that quickref data can be expressed in mm/day, which is the unit
+    #   required to calculate precip flux.
+    #   NOTE: this could be calculated internally, but the duration of measurement
+    #   preceding the first value can't be known. Because shortcut_idw is
+    #   often run iteratively on chunks of a dataset, we require that
+    #   durations_between_samples be passed as an input, so as to minimize
+    #   the number of NAs generated.
     #output_varname: character; a prodname_ms, unless you're interpolating
     #   precipitation, in which case it must be "SPECIAL CASE PRECIP", because
     #   prefix information for precip is lost during the widen-by-site step
@@ -4852,8 +4863,17 @@ shortcut_idw <- function(encompassing_dem,
     #     logger = logger_module)
 
     if(output_varname != 'SPECIAL CASE PRECIP' && save_precip_quickref){
-        stop(paste('save_precip_quickref can only be TRUE when output_varname',
+        stop(paste('save_precip_quickref can only be TRUE if output_varname',
                    '== "SPECIAL CASE PRECIP"'))
+    }
+    if(save_precip_quickref && is.null(durations_between_samples)){
+        stop(paste('save_precip_quickref can only be TRUE if',
+                    'durations_between_samples is supplied.'))
+    }
+    if(output_varname != 'SPECIAL CASE PRECIP' && ! is.null(durations_between_samples)){
+        logwarn(msg = paste('In shortcut_idw: ignoring durations_between_samples because',
+                            'output_varname != "SPECIAL CASE PRECIP".'),
+                logger = logger_module)
     }
 
     timestep_indices <- data_values$ind
@@ -4966,6 +4986,13 @@ shortcut_idw <- function(encompassing_dem,
 
     if(save_precip_quickref){
 
+        #convert to mm/d
+        precip_quickref <- Map(function(millimeters, days){
+            return(millimeters/days)
+        },
+        millimeters = precip_quickref,
+        days = durations_between_samples)
+
         names(precip_quickref) <- as.character(timestep_indices)
         write_precip_quickref(precip_idw_list = precip_quickref,
                               network = network,
@@ -5003,6 +5030,7 @@ shortcut_idw <- function(encompassing_dem,
 
 shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                      wshd_bnd,
+                                     ws_area,
                                      data_locations,
                                      precip_values,
                                      chem_values,
@@ -5027,6 +5055,9 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #   recip_gauges
     #wshd_bnd: sf polygon with columns site_name and geometry.
     #   it represents a single watershed boundary.
+    #ws_area: numeric scalar representing watershed area in hectares. This is
+    #   passed so that it doesn't have to be calculated repeatedly (if
+    #   shortcut_idw_concflux_v2 is running iteratively).
     #data_locations: sf point(s) with columns site_name and geometry.
     #   represents all sites (e.g. rain gauges) that will be used in
     #   the interpolation.
@@ -5281,11 +5312,19 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
         ## GET FLUX FOR ALL CELLS; THEN AVERAGE CELLS FOR PCHEM, PFLUX, PRECIP
 
-        #calculate flux for every cell
-        #mm/d * mg/L * m/1000mm * kg/1,000,000mg * 1000L/m^(2 + 1) * 10,000m^2/ha
-        #therefore, kg/(ha * d) = mm * mg/L / d / 100 = (mm * mg) / (d * L * 100)
+        #calculate flux for every cell:
+        #   This is how we'd calcualate flux as kg/(ha * d):
+        #       mm/d * mg/L * m/1000mm * kg/1,000,000mg * 1000L/m^(2 + 1) * 10,000m^2/ha
+        #       therefore, kg/(ha * d) = mm * mg/L / d / 100 = (mm * mg) / (d * L * 100)
+        #   But stream_flux_inst is not scaled by area when it's derived (that
+        #   happens later), so we're going to derive precip_flux_inst
+        #   as unscaled here, and then both can be scaled the same way in
+        #   scale_flux_by_area. So we caculate flux in kg/(ha * d) as above,
+        #   then multiply by watershed area in hectares.
+
         quickref_ind <- as.character(quickref_inds[k])
-        flux_interp <- c_idw * precip_quickref[[quickref_ind]]
+        #              mg/L        mm/day                          ha
+        flux_interp <- c_idw * precip_quickref[[quickref_ind]] * ws_area / 100
 
         #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
@@ -5520,7 +5559,8 @@ read_precip_quickref <- function(network,
                                  # timestep){
 
     #allows precip values computed by shortcut_idw for each watershed
-    #   raster cell to be reused by shortcut_idw_concflux_v2
+    #   raster cell to be reused by shortcut_idw_concflux_v2. These values are
+    #   in mm/day
 
     quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
                          n = network,
@@ -5808,7 +5848,8 @@ synchronize_timestep <- function(d){
 
     rounding_intervals <- case_when(
         is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
-        mode_intervals_m <= 12 * 60 ~ '15 min')
+        mode_intervals_m <= 12 * 60 ~ '1 day') #TODO, TEMPORARY: switch this back
+        # mode_intervals_m <= 12 * 60 ~ '15 min')
 
     for(i in 1:length(d_split)){
 
@@ -6126,6 +6167,20 @@ get_detlim_precursors <- function(network,
     return(precursors)
 }
 
+datetimes_to_durations <- function(datetime_vec, unit){
+
+    #unit must be expressed in a form that's readable by base::difftime
+
+    #an NA is prepended to the output, so that its length is the same as
+    #   datetime_vec
+
+    durs <- diff(datetime_vec)
+    units(durs) <- unit
+    durs <- c(NA_real_, as.numeric(durs))
+
+    return(durs)
+}
+
 precip_pchem_pflux_idw <- function(pchem_prodname,
                                    precip_prodname,
                                    wb_prodname,
@@ -6195,6 +6250,10 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #this avoids a lot of slow summarizing
     if(! pchem_only){
 
+        # if(length(unique(precip$var)) > 1){
+        #     logwarn(paste('Multiple precip prefixes encountered.'))
+        # }
+
         status_cols <- precip %>%
             select(datetime, ms_status, ms_interp) %>%
             group_by(datetime) %>%
@@ -6209,6 +6268,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             left_join(status_cols, #they get lumped anyway
                       by = 'datetime') %>%
             arrange(datetime)
+
+        day_durations <- datetimes_to_durations(precip$datetime,
+                                                unit = 'days')
     }
 
     if(! precip_only){
@@ -6297,6 +6359,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         wbi <- slice(wb, i)
         site_name <- wbi$site_name
+        wbi_area_ha <- as.numeric(sf::st_area(wbi)) / 10000
 
         idw_log_wb(verbose = verbose,
                    site_name = site_name,
@@ -6365,18 +6428,21 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                     .combine = idw_parallel_combine,
                     .init = 'first iter') %dopar% {
 
+                    pchunk <- precip_chunklist[[j]]
+
                     idw_log_var(verbose = verbose,
                                 site_name = site_name,
                                 v = 'precipitation',
                                 j = paste('chunk', j + (nthreads * (s - 1))),
-                                ntimesteps = nrow(precip_chunklist[[j]]),
+                                ntimesteps = nrow(pchunk),
                                 nvars = nchunks)
 
                     foreach_return <- shortcut_idw(
                         encompassing_dem = dem,
                         wshd_bnd = wbi,
                         data_locations = rg,
-                        data_values = precip_chunklist[[j]],
+                        data_values = pchunk,
+                        durations_between_samples = day_durations[pchunk$ind],
                         stream_site_name = site_name,
                         output_varname = 'SPECIAL CASE PRECIP',
                         save_precip_quickref = ! precip_only,
@@ -6484,6 +6550,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                         foreach_chunk_inner <- shortcut_idw_concflux_v2(
                             encompassing_dem = dem,
                             wshd_bnd = wbi,
+                            ws_area = wbi_area_ha,
                             data_locations = rg,
                             precip_values = precip,
                             chem_values = chunklist[[l]],
@@ -8544,7 +8611,7 @@ generate_portal_extras <- function(site_data,
             logger = logger_module)
 
     log_with_indent('scaling flux by area', logger = logger_module)
-    calculate_flux_by_area(site_data = site_data)
+    scale_flux_by_area(site_data = site_data)
 
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
@@ -8704,9 +8771,7 @@ list_domains_with_discharge <- function(site_data){
         write_csv(file = '../portal/data/general/sites_with_discharge.csv')
 }
 
-calculate_flux_by_area <- function(site_data){
-
-    setwd('../portal/data/')
+scale_flux_by_area <- function(site_data){
 
     ws_areas <- site_data %>%
         filter(as.logical(in_workflow)) %>%
@@ -8722,7 +8787,7 @@ calculate_flux_by_area <- function(site_data){
 
             files <- try(
                 {
-                    list.files(path = glue('{d}/{v}',
+                    list.files(path = glue('../portal/data/{d}/{v}',
                                            d = dmn,
                                            v = flux_var),
                                # pattern = '(?!documentation
@@ -8734,7 +8799,7 @@ calculate_flux_by_area <- function(site_data){
 
             if('try-error' %in% class(files) || length(files) == 0) next
 
-            dir.create(path = glue('{d}/{v}_scaled',
+            dir.create(path = glue('../portal/{d}/{v}_scaled',
                                    d = dmn,
                                    v = flux_var),
                        recursive = TRUE,
@@ -8742,7 +8807,7 @@ calculate_flux_by_area <- function(site_data){
 
             for(fil in files){
 
-                d <- read_feather(glue('{d}/{v}/{f}',
+                d <- read_feather(glue('../portal/{d}/{v}/{f}',
                                        d = dmn,
                                        v = flux_var,
                                        f = fil))
@@ -8760,7 +8825,7 @@ calculate_flux_by_area <- function(site_data){
                 d$val <- errors::drop_errors(d$val)
 
                 write_feather(x = d,
-                              path = glue('{d}/{v}_scaled/{f}',
+                              path = glue('../portal/{d}/{v}_scaled/{f}',
                                           d = dmn,
                                           v = flux_var,
                                           f = fil))
@@ -8775,8 +8840,6 @@ calculate_flux_by_area <- function(site_data){
     engine(flux_var = 'precip_flux_inst',
            domains = domains,
            ws_areas = ws_areas)
-
-    setwd('../../data_acquisition/')
 }
 
 approxjoin_datetime <- function(x,
