@@ -2813,6 +2813,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
     point_dir <- glue(tmp, '/POINT')
     dem_f <- glue(tmp, '/dem.tif')
     point_f <- glue(tmp, '/point.shp')
+    streams_f <- glue(tmp, '/streams.shp')
+    roads_f <- glue(tmp, '/roads.shp')
     d8_f <- glue(tmp, '/d8_pntr.tif')
     flow_f <- glue(tmp, '/flow.tif')
 
@@ -2826,7 +2828,6 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         file.remove(paste(inspection_dir, dir_clean, sep = '/'))
     }
-
 
     proj <- choose_projection(lat = lat,
                               long = long)
@@ -2883,7 +2884,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
             max_attempts = 10
         )
 
-        raster::writeRaster(x = dem,
+        # terra::writeRaster(x = dem_proj,
+        raster::writeRaster(x = dem_proj,
                             filename = dem_f,
                             overwrite = TRUE)
 
@@ -2893,12 +2895,34 @@ delineate_watershed_apriori <- function(lat, long, crs,
                      delete_layer = TRUE,
                      quiet = TRUE)
 
+        get_osm_roads(extent_raster = dem_proj,
+                      outfile = roads_f)
+        get_osm_streams(extent_raster = dem_proj,
+                        outfile = streams_f)
+
         whitebox::wbt_fill_single_cell_pits(dem = dem_f,
                                             output = dem_f)
 
-        whitebox::wbt_breach_depressions(dem = dem_f,
-                                         output = dem_f,
-                                         flat_increment = 0.01)
+        #inferior method, but maybe still needed in some cases? also see
+        #   wbt_fill_depressions for when there are open pit mines
+        # whitebox::wbt_breach_depressions(dem = dem_f,
+        #                                  output = dem_f,
+        #                                  flat_increment = 0.01)
+        whitebox::wbt_breach_depressions_least_cost(dem = dem_f,
+                                                    output = dem_f,
+                                                    dist = 10000, #maximum trench length
+                                                    fill = TRUE)
+                                                    # flat_increment = 0.01)
+
+        #the secret is that BOTH of these burns are needed!
+        whitebox::wbt_burn_streams_at_roads(dem = dem_f,
+                                            streams = streams_f,
+                                            roads = roads_f,
+                                            output = dem_f,
+                                            width = 50)
+        whitebox::wbt_fill_burn(dem = dem_f,
+                                streams = streams_f,
+                                output = dem_f)
 
         whitebox::wbt_d8_pointer(dem = dem_f,
                                  output = d8_f)
@@ -9597,4 +9621,104 @@ combine_ws_boundaries <- function(){
                  silent = TRUE)
 
     setwd('../../data_acquisition/')
+}
+
+get_osm_roads <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   roads will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    extent_raster <- terra::rast(extent_raster)
+    rast_crs <- as.character(extent_raster@crs)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    highway_types <- c('motorway', 'trunk', 'primary', 'secondary', 'tertiary')
+    highway_types <- c(highway_types,
+                       paste(highway_types, 'link', sep = '_'))
+
+    roads_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'highway',
+                                 value = highway_types)
+
+    roads <- osmdata::osmdata_sf(roads_query)
+    roads <- roads$osm_lines$geometry
+
+    # plot(roads$osm_lines, max.plot = 1)
+
+    roads_proj <- roads %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(roads_proj,
+                     dsn = outfile,
+                     layer = 'roads',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     silent = TRUE)
+
+        message(paste('OSM roads layer written to', outfile))
+
+    } else {
+        return(roads_proj)
+    }
+}
+
+get_osm_streams <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   streams will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    extent_raster <- terra::rast(extent_raster)
+    rast_crs <- as.character(extent_raster@crs)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    streams_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'waterway',
+                                 value = c('river', 'stream'))
+
+    streams <- osmdata::osmdata_sf(streams_query)
+    streams <- streams$osm_lines$geometry
+
+    streams_proj <- streams %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(streams_proj,
+                     dsn = outfile,
+                     layer = 'streams',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     silent = TRUE)
+
+        message(paste('OSM roads layer written to', outfile))
+
+    } else {
+        return(streams_proj)
+    }
 }
