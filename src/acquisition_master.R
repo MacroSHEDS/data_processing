@@ -40,6 +40,7 @@ suppressPackageStartupMessages({
     library(doFuture)
     library(googlesheets4)
     library(rgee) #requires geojsonio package
+    library(osmdata)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
