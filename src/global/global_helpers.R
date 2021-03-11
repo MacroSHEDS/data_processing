@@ -2613,6 +2613,12 @@ ms_delineate <- function(network,
 
             message('Delineating from stored specifications')
 
+            if(specs$flat_increment == 'null'){
+                flat_increment <- NULL
+            } else {
+                flat_increment <- as.numeric(specs$flat_increment)
+            }
+
             catch <- delineate_watershed_by_specification(
                 lat = site_locations$latitude[i],
                 long = site_locations$longitude[i],
@@ -2621,6 +2627,9 @@ ms_delineate <- function(network,
                 snap_dist = specs$snap_distance_m,
                 snap_method = specs$snap_method,
                 dem_resolution = specs$dem_resolution,
+                flat_increment = flat_increment,
+                breach_method = specs$breach_method,
+                burn_streams = specs$burn_streams,
                 write_dir = site_dir,
                 verbose = verbose)
 
@@ -2644,110 +2653,131 @@ ms_delineate <- function(network,
                           s = site))
             }
 
-            inspection_dir <- delineate_watershed_apriori(
+            tmp <- tempdir()
+            # tmp <- stringr::str_replace_all(tmp, '\\\\', '/')
+
+            selection <- delineate_watershed_apriori_recurse(
                 lat = site_locations$latitude[i],
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
-                dev_machine_status = dev_machine_status,
                 site_name = site,
+                dem_resolution = NULL,
+                flat_increment = NULL,
+                breach_method = 'lc',
+                burn_streams = FALSE,
+                scratch_dir = tmp,
+                write_dir = site_dir,
+                dev_machine_status = dev_machine_status,
                 verbose = verbose)
+            # inspection_dir <- delineate_watershed_apriori(
+            #     lat = site_locations$latitude[i],
+            #     long = site_locations$longitude[i],
+            #     crs = site_locations$CRS[i],
+            #     dev_machine_status = dev_machine_status,
+            #     site_name = site,
+            #     verbose = verbose)
+
+            if(is.numeric(selection) && selection == 1) next
+            if(is.numeric(selection) && selection == 2) return()
+
 
         } else {
             stop('Multiple entries for same network/domain/site in site_data')
         }
 
-        files_to_inspect <- list.files(path = inspection_dir,
-                                       pattern = '.shp')
-
-        tmp <- tempdir()
-        tmp <- stringr::str_replace_all(tmp, '\\\\', '/')
-
-        tmep_point <- glue(tmp, '/', 'POINT')
-
-        site_locations[i,] %>%
-            sf::st_as_sf(coords = c('longitude', 'latitude'), crs = site_locations[i,]$CRS) %>%
-            sf::st_write(dsn = tmep_point,
-                         driver = 'ESRI Shapefile',
-                         delete_dsn = TRUE,
-                         silent = TRUE)
-
-        #if only one delineation, write it into macrosheds storage
-        if(length(files_to_inspect) == 1){
-
-            selection <- files_to_inspect[1]
-
-            move_shapefiles(shp_files = selection,
-                            from_dir = inspection_dir,
-                            to_dir = site_dir)
-
-            message(glue('Delineation successful. Shapefile written to ',
-                         site_dir))
-
-            #otherwise, technician must inspect all delineations and choose one
-        } else {
-
-            nshapes <- length(files_to_inspect)
-
-            wb_selections <- paste(paste0('[',
-                                          c(1:nshapes, 'S', 'A'),
-                                          ']'),
-                                   c(files_to_inspect, 'Skip this one', 'Abort delineation'),
-                                   sep = ': ',
-                                   collapse = '\n')
-
-            helper_code <- glue('mapview::mapview(sf::st_read("{wd}/{f}")) + mapview::mapview(sf::st_read("{pf}"))',
-                                wd = inspection_dir,
-                                f = files_to_inspect,
-                                pf = tmep_point) %>%
-                paste(collapse = '\n\n')
-
-            msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
-                        'in {td}, then enter the number corresponding to the ',
-                        'one that looks most legit. Here\'s some ',
-                        'helper code you can paste into an R instance running ',
-                        'in a shell (terminal):\n\n{hc}\n\nIf you aren\'t ',
-                        'sure which is correct, get a site manager to verify:\n',
-                        'request_site_manager_verification(type=\'wb delin\', ',
-                        'network, domain)\n\nChoices:\n{sel}\n\nEnter choice here > ',
-                        hc = helper_code,
-                        sel = wb_selections,
-                        td = inspection_dir)
-
-            resp <- get_response_1char(msg = msg,
-                                       possible_chars = c(1:nshapes, 'S', 'A'))
-
-            if(resp == 'S'){
-                unlink(site_dir,
-                       recursive = TRUE)
-                message(glue('Moving on. You haven\'t seen the last of {s}!',
-                              s = site))
-                next
-            }
-
-            if(resp == 'A'){
-                unlink(site_dir,
-                       recursive = TRUE)
-                message('Aborted. Completed delineations have been saved')
-                return()
-            }
-
-            selection <- files_to_inspect[as.numeric(resp)]
-
-            move_shapefiles(shp_files = selection,
-                            from_dir = inspection_dir,
-                            to_dir = site_dir,
-                            new_name_vec = site)
-
-            message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
-                         s = resp,
-                         sel = selection,
-                         sdr = site_dir))
-        }
+        # files_to_inspect <- list.files(path = inspection_dir,
+        #                                pattern = '.shp')
+        #
+        # tmp <- tempdir()
+        # tmp <- stringr::str_replace_all(tmp, '\\\\', '/')
+        #
+        # tmep_point <- glue(tmp, '/', 'POINT')
+        #
+        # site_locations[i,] %>%
+        #     sf::st_as_sf(coords = c('longitude', 'latitude'), crs = site_locations[i,]$CRS) %>%
+        #     sf::st_write(dsn = tmep_point,
+        #                  driver = 'ESRI Shapefile',
+        #                  delete_dsn = TRUE,
+        #                  quiet = TRUE)
+        #
+        # #if only one delineation, write it into macrosheds storage
+        # if(length(files_to_inspect) == 1){
+        #
+        #     selection <- files_to_inspect[1]
+        #
+        #     move_shapefiles(shp_files = selection,
+        #                     from_dir = inspection_dir,
+        #                     to_dir = site_dir)
+        #
+        #     message(glue('Delineation successful. Shapefile written to ',
+        #                  site_dir))
+        #
+        #     #otherwise, technician must inspect all delineations and choose one
+        # } else {
+        #
+        #     nshapes <- length(files_to_inspect)
+        #
+        #     wb_selections <- paste(paste0('[',
+        #                                   c(1:nshapes, 'S', 'A'),
+        #                                   ']'),
+        #                            c(files_to_inspect, 'Skip this one', 'Abort delineation'),
+        #                            sep = ': ',
+        #                            collapse = '\n')
+        #
+        #     helper_code <- glue('mapview::mapview(sf::st_read("{wd}/{f}")) + mapview::mapview(sf::st_read("{pf}"))',
+        #                         wd = inspection_dir,
+        #                         f = files_to_inspect,
+        #                         pf = tmep_point) %>%
+        #         paste(collapse = '\n\n')
+        #
+        #     msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
+        #                 'in {td}, then enter the number corresponding to the ',
+        #                 'one that looks most legit. Here\'s some ',
+        #                 'helper code you can paste into an R instance running ',
+        #                 'in a shell (terminal):\n\n{hc}\n\nIf you aren\'t ',
+        #                 'sure which is correct, get a site manager to verify:\n',
+        #                 'request_site_manager_verification(type=\'wb delin\', ',
+        #                 'network, domain)\n\nChoices:\n{sel}\n\nEnter choice here > ',
+        #                 hc = helper_code,
+        #                 sel = wb_selections,
+        #                 td = inspection_dir)
+        #
+        #     resp <- get_response_1char(msg = msg,
+        #                                possible_chars = c(1:nshapes, 'S', 'A'))
+        #
+        #     if(resp == 'S'){
+        #         unlink(site_dir,
+        #                recursive = TRUE)
+        #         message(glue('Moving on. You haven\'t seen the last of {s}!',
+        #                       s = site))
+        #         next
+        #     }
+        #
+        #     if(resp == 'A'){
+        #         unlink(site_dir,
+        #                recursive = TRUE)
+        #         message('Aborted. Completed delineations have been saved')
+        #         return()
+        #     }
+        #
+        #     selection <- files_to_inspect[as.numeric(resp)]
+        #
+        #     move_shapefiles(shp_files = selection,
+        #                     from_dir = inspection_dir,
+        #                     to_dir = site_dir,
+        #                     new_name_vec = site)
+        #
+        #     message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
+        #                  s = resp,
+        #                  sel = selection,
+        #                  sdr = site_dir))
+        #}
 
         #write the specifications of the correctly delineated watershed
         rgx <- str_match(selection,
                          paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
-                                'DIST([0-9]+)RES([0-9]+)\\.shp$'))
+                                'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
+                                'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
 
         write_wb_delin_specs(network = network,
                              domain = domain,
@@ -2755,7 +2785,10 @@ ms_delineate <- function(network,
                              buffer_radius = as.numeric(rgx[, 2]),
                              snap_method = rgx[, 3],
                              snap_distance = as.numeric(rgx[, 4]),
-                             dem_resolution = as.numeric(rgx[, 5]))
+                             dem_resolution = as.numeric(rgx[, 5]),
+                             flat_increment = rgx[, 6],
+                             breach_method = rgx[, 7],
+                             burn_streams = rgx[, 8])
 
         #calculate watershed area and write it to site_data gsheet
         catch <- ms_calc_watershed_area(network = network,
@@ -2811,9 +2844,242 @@ ms_delineate <- function(network,
     #return()
 }
 
-delineate_watershed_apriori <- function(lat, long, crs,
-                                        dev_machine_status = 'n00b',
+choose_dem_resolution <- function(dev_machine_status, buffer_radius){
+
+    if(dev_machine_status == '1337'){
+        dem_resolution <- case_when(
+            buffer_radius <= 1e4 ~ 12,
+            buffer_radius == 1e5 ~ 11,
+            buffer_radius == 1e6 ~ 10,
+            buffer_radius == 1e7 ~ 8,
+            buffer_radius == 1e8 ~ 6,
+            buffer_radius == 1e9 ~ 4,
+            buffer_radius >= 1e10 ~ 2)
+    } else if(dev_machine_status == 'n00b'){
+        dem_resolution <- case_when(
+            buffer_radius <= 1e4 ~ 10,
+            buffer_radius == 1e5 ~ 8,
+            buffer_radius == 1e6 ~ 6,
+            buffer_radius == 1e7 ~ 4,
+            buffer_radius == 1e8 ~ 2,
+            buffer_radius >= 1e9 ~ 1)
+    } else {
+        stop('dev_machine_status must be either "1337" or "n00b"')
+    }
+
+    return(dem_resolution)
+}
+
+delineate_watershed_apriori_recurse <- function(lat,
+                                                long,
+                                                crs,
+                                                site_name,
+                                                dem_resolution = NULL,
+                                                flat_increment = NULL,
+                                                breach_method = 'lc',
+                                                burn_streams = FALSE,
+                                                scratch_dir = tempdir(),
+                                                write_dir,
+                                                dev_machine_status = 'n00b',
+                                                verbose = FALSE){
+
+    #This function calls delineate_watershed_apriori recursively, taking
+    #   user input after each call, until the user selects a delineation
+    #   or aborts. For parameter documentation, see delineate_watershed_apriori.
+
+    # tmp <- tempdir()
+    scratch_dir <- stringr::str_replace_all(scratch_dir, '\\\\', '/')
+
+    inspection_dir <- delineate_watershed_apriori(
+        lat = lat,
+        long = long,
+        crs = crs,
+        site_name = site_name,
+        dem_resolution = dem_resolution,
+        flat_increment = flat_increment,
+        breach_method = breach_method,
+        burn_streams = burn_streams,
+        scratch_dir = scratch_dir,
+        dev_machine_status = dev_machine_status,
+        verbose = verbose)
+
+    files_to_inspect <- list.files(path = inspection_dir,
+                                   pattern = '.shp')
+
+    temp_point <- glue(scratch_dir, '/', 'POINT')
+
+    tibble(longitude = long, latitude = lat) %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'),
+                     crs = crs) %>%
+        sf::st_write(dsn = temp_point,
+                     driver = 'ESRI Shapefile',
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
+
+    #if only one delineation, write it into macrosheds storage
+    if(length(files_to_inspect) == 1){
+
+        selection <- files_to_inspect[1]
+
+        move_shapefiles(shp_files = selection,
+                        from_dir = inspection_dir,
+                        to_dir = write_dir)
+
+        message(glue('Delineation successful. Shapefile written to ',
+                     write_dir))
+
+        #otherwise, technician must inspect all delineations and choose one
+    } else {
+
+        nshapes <- length(files_to_inspect)
+
+        wb_selections <- paste(paste0('[',
+                                      c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                                      ']'),
+                               c(files_to_inspect,
+                                 'Burn streams into the DEM (may handle road-stream intersections)',
+                                 'Use more aggressive breaching method',
+                                 'Select DEM resolution',
+                                 'Set flat_increment',
+                                 'Next (skip this one for now)',
+                                 'Abort delineation'),
+                               sep = ': ',
+                               collapse = '\n')
+
+        helper_code <- glue('{id}.\nmapview::mapview(sf::st_read("{wd}/{f}")) + ',
+                            'mapview::mapview(sf::st_read("{pf}"))',
+                            id = 1:length(files_to_inspect),
+                            wd = inspection_dir,
+                            f = files_to_inspect,
+                            pf = temp_point) %>%
+            paste(collapse = '\n\n')
+
+        msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
+                    'by pasting the mapview lines below into R.\n\n{hc}\n\n',
+                    'Enter the number corresponding to the ',
+                    'one that looks most legit, or select one or more tuning ',
+                    'options (e.g. "SBRI" without quotes). You usually won\'t ',
+                    'need to tune anything. If you aren\'t ',
+                    'sure which delineation is correct, get a site manager to verify:\n',
+                    'request_site_manager_verification(type=\'wb delin\', ',
+                    'network, domain) [function not yet built]\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
+                    hc = helper_code,
+                    sel = wb_selections)
+                    # td = inspection_dir)
+
+        resp <- get_response_mchar(
+            msg = msg,
+            possible_resps = paste(c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                                   collapse = ''),
+            allow_alphanumeric_response = FALSE)
+
+        if('n' %in% resp){
+            unlink(write_dir,
+                   recursive = TRUE)
+            print(glue('Moving on. You haven\'t seen the last of {s}!',
+                       s = site_name))
+            return(1)
+        }
+
+        if('a' %in% resp){
+            unlink(write_dir,
+                   recursive = TRUE)
+            print(glue('Aborted. Any completed delineations have been saved.'))
+            return(2)
+        }
+
+        if('S' %in% resp){
+            burn_streams <- TRUE
+        } else {
+            burn_streams <- FALSE
+        }
+
+        if('B' %in% resp){
+            breach_method <- 'basic'
+        } else {
+            breach_method <- 'lc'
+        }
+
+        if('R' %in% resp){
+            dem_resolution <- get_response_mchar(
+                msg = paste0('Choose DEM resolution between 1 (low) and 14 (high)',
+                             ' to pass to elevatr::get_elev_raster. For tiny ',
+                             'watersheds, use 12-13. For giant ones, use 8-9.\n\n',
+                             'Enter choice here > '),
+                possible_resps = paste(1:14))
+            dem_resolution <- as.numeric(dem_resolution)
+        }
+
+        if('I' %in% resp){
+
+            bm <- ifelse(breach_method == 'basic',
+                         'whitebox::wbt_breach_depressions',
+                         'whitebox::wbt_breach_depressions_least_cost')
+
+            new_options <- paste(paste0('[',
+                                        c('S', 'M', 'L'),
+                                        ']'),
+                                 c('0.001', '0.01', '0.1'),
+                                 sep = ': ',
+                                 collapse = '\n')
+
+            resp2 <- get_response_1char(
+                msg = glue('Pick the size of the elevation increment to pass to ',
+                           bm, '.\n\n', new_options, '\n\nEnter choice here > '),
+                possible_chars = c('S', 'M', 'L'))
+
+            flat_increment <- switch(resp2,
+                                     S = 0.001,
+                                     M = 0.01,
+                                     L = 0.1)
+        }
+
+        if(! grepl('[0-9]', resp)){
+
+            selection <- delineate_watershed_apriori_recurse(
+                lat = lat,
+                long = long,
+                crs = crs,
+                site_name = site_name,
+                dem_resolution = dem_resolution,
+                flat_increment = flat_increment,
+                breach_method = breach_method,
+                burn_streams = burn_streams,
+                scratch_dir = scratch_dir,
+                write_dir = write_dir,
+                dev_machine_status = dev_machine_status,
+                verbose = verbose)
+
+            return(selection)
+        }
+
+        selection <- files_to_inspect[as.numeric(resp)]
+
+        move_shapefiles(shp_files = selection,
+                        from_dir = inspection_dir,
+                        to_dir = write_dir,
+                        new_name_vec = site_name)
+
+        message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
+                     s = resp,
+                     sel = selection,
+                     sdr = write_dir))
+    }
+
+    return(selection)
+}
+
+# site_row = site_data[1, ]; lat = site_row$latitude; long = site_row$longitude; crs=4326; site_name=site_row$site_name
+delineate_watershed_apriori <- function(lat,
+                                        long,
+                                        crs,
                                         site_name,
+                                        dem_resolution = NULL,
+                                        flat_increment = NULL,
+                                        breach_method = 'basic',
+                                        burn_streams = FALSE,
+                                        scratch_dir = tempdir(),
+                                        dev_machine_status = 'n00b',
                                         verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
@@ -2821,22 +3087,47 @@ delineate_watershed_apriori <- function(lat, long, crs,
     #long: numeric representing longitude in decimal degrees
     #   (negative indicates west of prime meridian)
     #crs: numeric representing the coordinate reference system (e.g. WSG84)
+    #dem_resolution: optional integer 1-14. the granularity of the DEM that is used for
+    #   delineation. this argument is passed directly to the z parameter of
+    #   elevatr::get_elev_raster. 1 is low resolution; 14 is high. If NULL,
+    #   this is determined automatically.
+    #flat_increment: float or NULL. Passed to
+    #   whitebox::wbt_breach_depressions_least_cost
+    #   or whitebox::wbt_breach_depressions, depending on the value
+    #   of breach_method (see next).
+    #breach_method: string. Either 'basic', which invokes whitebox::wbt_breach_depressions,
+    #   or 'lc', which invokes whitebox::wbt_breach_depressions_least_cost
+    #burn_streams: logical. if TRUE, both whitebox::wbt_burn_streams_at_roads
+    #   and whitebox::wbt_fill_burn are called on the DEM, using road and stream
+    #   layers from OpenStreetMap.
+    #scratch_dir: the directory where intermediate files will be dumped. This
+    #   is a randomly generated temporary directory if not specified.
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen accordingly
     #verbose: logical. determines the amount of informative messaging during run
 
     #returns the location of candidate watershed boundary files
 
-    tmp <- tempdir()
+    # tmp <- tempdir()
+    # tmp <- str_replace_all(tmp, '\\\\', '/')
 
-    tmp <- str_replace_all(tmp, '\\\\', '/')
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
 
-    inspection_dir <- glue(tmp, '/INSPECT_THESE')
-    point_dir <- glue(tmp, '/POINT')
-    dem_f <- glue(tmp, '/dem.tif')
-    point_f <- glue(tmp, '/point.shp')
-    d8_f <- glue(tmp, '/d8_pntr.tif')
-    flow_f <- glue(tmp, '/flow.tif')
+    inspection_dir <- glue(scratch_dir, '/INSPECT_THESE')
+    point_dir <- glue(scratch_dir, '/POINT')
+    dem_f <- glue(scratch_dir, '/dem.tif')
+    point_f <- glue(scratch_dir, '/point.shp')
+    streams_f <- glue(scratch_dir, '/streams.shp')
+    roads_f <- glue(scratch_dir, '/roads.shp')
+    d8_f <- glue(scratch_dir, '/d8_pntr.tif')
+    flow_f <- glue(scratch_dir, '/flow.tif')
 
     dir.create(path = inspection_dir,
                showWarnings = FALSE)
@@ -2845,10 +3136,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
     dir_clean <- list.files(inspection_dir)
 
     if(length(dir_clean) > 0) {
-
         file.remove(paste(inspection_dir, dir_clean, sep = '/'))
     }
-
 
     proj <- choose_projection(lat = lat,
                               long = long)
@@ -2872,25 +3161,30 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         while_loop_begin <- FALSE
 
-        if(dev_machine_status == '1337'){
-            dem_resolution <- case_when(
-                buffer_radius <= 1e4 ~ 12,
-                buffer_radius == 1e5 ~ 11,
-                buffer_radius == 1e6 ~ 10,
-                buffer_radius == 1e7 ~ 8,
-                buffer_radius == 1e8 ~ 6,
-                buffer_radius == 1e9 ~ 4,
-                buffer_radius >= 1e10 ~ 2)
-        } else if(dev_machine_status == 'n00b'){
-            dem_resolution <- case_when(
-                buffer_radius <= 1e4 ~ 10,
-                buffer_radius == 1e5 ~ 8,
-                buffer_radius == 1e6 ~ 6,
-                buffer_radius == 1e7 ~ 4,
-                buffer_radius == 1e8 ~ 2,
-                buffer_radius >= 1e9 ~ 1)
-        } else {
-            stop('dev_machine_status must be either "1337" or "n00b"')
+        if(is.null(dem_resolution)){
+            dem_resolution <- choose_dem_resolution(
+                dev_machine_status = dev_machine_status,
+                buffer_radius = buffer_radius)
+        }
+
+        if(verbose){
+
+            if(is.null(flat_increment)){
+                fi <- 'NULL (auto)'
+            } else {
+                fi <- as.character(flat_increment)
+            }
+
+            print(glue('Delineation specs for this attempt:\n',
+                       '\tsite_name: {st}; ',
+                       'dem_resolution: {dr}; flat_increment: {fi}\n',
+                       '\tbreach_method: {bm}; burn_streams: {bs}',
+                       st = site_name,
+                       dr = dem_resolution,
+                       fi = fi,
+                       bm = breach_method,
+                       bs = as.character(burn_streams),
+                       .trim = FALSE))
         }
 
         site_buf <- sf::st_buffer(x = site,
@@ -2900,50 +3194,85 @@ delineate_watershed_apriori <- function(lat, long, crs,
             expr = {
                 elevatr::get_elev_raster(locations = site_buf,
                                          z = dem_resolution,
-                                         verbose = verbose)
+                                         verbose = FALSE)
             },
             max_attempts = 10
         )
 
+        # terra::writeRaster(x = dem,
         raster::writeRaster(x = dem,
                             filename = dem_f,
                             overwrite = TRUE)
 
-        #loses projection
+        #loses projection?
         sf::st_write(obj = site,
                      dsn = point_f,
                      delete_layer = TRUE,
                      quiet = TRUE)
 
-        whitebox::wbt_fill_single_cell_pits(dem = dem_f,
-                                            output = dem_f)
+        if(burn_streams){
+            get_osm_roads(extent_raster = dem,
+                          outfile = roads_f)
+            get_osm_streams(extent_raster = dem,
+                            outfile = streams_f)
+        }
 
-        whitebox::wbt_breach_depressions(dem = dem_f,
-                                         output = dem_f,
-                                         flat_increment = 0.01)
+        whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                            output = dem_f) %>% invisible()
+
+        if(breach_method == 'basic'){
+
+            whitebox::wbt_breach_depressions(
+                dem = dem_f,
+                output = dem_f,
+                flat_increment = flat_increment) %>% invisible()
+
+        } else if(breach_method == 'lc'){
+
+            whitebox::wbt_breach_depressions_least_cost(
+                dem = dem_f,
+                output = dem_f,
+                dist = 10000, #maximum trench length
+                fill = TRUE,
+                flat_increment = flat_increment) %>% invisible()
+        }
+        #also see wbt_fill_depressions for when there are open pit mines
+
+        if(burn_streams){
+
+            #the secret is that BOTH of these burns can work in tandem!
+            whitebox::wbt_burn_streams_at_roads(dem = dem_f,
+                                                streams = streams_f,
+                                                roads = roads_f,
+                                                output = dem_f,
+                                                width = 50) %>% invisible()
+            whitebox::wbt_fill_burn(dem = dem_f,
+                                    streams = streams_f,
+                                    output = dem_f) %>% invisible()
+        }
 
         whitebox::wbt_d8_pointer(dem = dem_f,
-                                 output = d8_f)
+                                 output = d8_f) %>% invisible()
 
         whitebox::wbt_d8_flow_accumulation(input = dem_f,
                                            output = flow_f,
-                                           out_type = 'catchment area')
+                                           out_type = 'catchment area') %>% invisible()
 
-        snap1_f <- glue(tmp, '/snap1_jenson_dist150.shp')
+        snap1_f <- glue(scratch_dir, '/snap1_jenson_dist150.shp')
         whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
                                               streams = flow_f,
                                               output = snap1_f,
-                                              snap_dist = 150)
-        snap2_f <- glue(tmp, '/snap2_standard_dist50.shp')
+                                              snap_dist = 150) %>% invisible()
+        snap2_f <- glue(scratch_dir, '/snap2_standard_dist50.shp')
         whitebox::wbt_snap_pour_points(pour_pts = point_f,
                                        flow_accum = flow_f,
                                        output = snap2_f,
-                                       snap_dist = 50)
-        snap3_f <- glue(tmp, '/snap3_standard_dist150.shp')
+                                       snap_dist = 50) %>% invisible()
+        snap3_f <- glue(scratch_dir, '/snap3_standard_dist150.shp')
         whitebox::wbt_snap_pour_points(pour_pts = point_f,
                                        flow_accum = flow_f,
                                        output = snap3_f,
-                                       snap_dist = 150)
+                                       snap_dist = 150) %>% invisible()
 
         #the site has been snapped 3 different ways. identify unique snap locations.
         snap1 <- sf::st_read(snap1_f, quiet = TRUE)
@@ -2954,7 +3283,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
         if(! identical(snap1, snap3)) unique_snaps_f <- c(unique_snaps_f, snap3_f)
 
         #good for experimenting with snap specs:
-        # delineate_watershed_test2(tmp, point_f, flow_f,
+        # delineate_watershed_test2(scratch_dir, point_f, flow_f,
         #                           d8_f, 'standard', 1000)
 
         #delineate each unique location
@@ -2966,7 +3295,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
             snap_distance <- rgx[, 3]
 
             wb_f <- glue('{path}/wb{n}_buffer{b}_{typ}_dist{dst}.tif',
-                         path = tmp,
+                         path = scratch_dir,
                          n = i,
                          b = buffer_radius,
                          typ = snap_method,
@@ -2974,7 +3303,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
             whitebox::wbt_watershed(d8_pntr = d8_f,
                                     pour_pts = unique_snaps_f[i],
-                                    output = wb_f)
+                                    output = wb_f) %>% invisible()
 
             wb <- raster::raster(wb_f)
 
@@ -2984,8 +3313,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
                                                 dem = dem)
 
             if(verbose){
-                print(glue('buffer radius: {br}; snap: {sn}/{tot}; ',
-                           'n intersecting cells: {ni}; pct intersect: {pct}',
+                print(glue('site buffer radius: {br}; pour point snap: {sn}/{tot}; ',
+                           'n intersecting border cells: {ni}; pct intersect: {pct}',
                            br = buffer_radius,
                            sn = i,
                            tot = length(unique_snaps_f),
@@ -2996,6 +3325,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
             if(smry$pct_wb_cells_intersect > 0.1 || smry$n_intersections > 5){
                 buffer_radius_new <- buffer_radius * 10
                 dem_coverage_insufficient <- TRUE
+                print(glue('Hit DEM edge. Incrementing buffer.'))
+                break
             } else {
                 dem_coverage_insufficient <- FALSE
                 buffer_radius_new <- buffer_radius
@@ -3016,18 +3347,28 @@ delineate_watershed_apriori <- function(lat, long, crs,
                     mutate(site_name = !!site_name) %>%
                     mutate(area = !!ws_area_ha)
 
-                wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}.shp',
+                if(is.null(flat_increment)){
+                    flt_incrmt <- 'null'
+                } else {
+                    flt_incrmt <- as.character(flat_increment)
+                }
+
+                wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}',
+                                'INC{inc}BREACH{brc}BURN{brn}.shp',
                                 path = inspection_dir,
                                 n = i,
-                                b = buffer_radius,
+                                b = sprintf('%d', buffer_radius),
                                 typ = snap_method,
                                 dst = snap_distance,
-                                res = dem_resolution)
+                                res = dem_resolution,
+                                inc = flt_incrmt,
+                                brc = breach_method,
+                                brn = as.character(burn_streams))
 
-                sf::st_write(obj = wb_sf,
-                             dsn = wb_sf_f,
-                             delete_dsn = TRUE,
-                             quiet = TRUE)
+                sw(sf::st_write(obj = wb_sf,
+                                dsn = wb_sf_f,
+                                delete_dsn = TRUE,
+                                quiet = TRUE))
             }
         }
 
@@ -3048,6 +3389,9 @@ delineate_watershed_by_specification <- function(lat,
                                                  snap_dist,
                                                  snap_method,
                                                  dem_resolution,
+                                                 flat_increment,
+                                                 breach_method,
+                                                 burn_streams,
                                                  write_dir,
                                                  verbose = FALSE){
 
@@ -3066,16 +3410,34 @@ delineate_watershed_by_specification <- function(lat,
     #dem_resolution: integer 1-14. the granularity of the DEM that is used for
     #   delineation. this argument is passed directly to the z parameter of
     #   elevatr::get_elev_raster. 1 is low resolution; 14 is high.
+    #flat_increment: float or NULL. Passed to wbt_breach_depressions_least_cost
+    #   or wbt_breach_depressions, depending on the value of breach_method (see next).
+    #breach_method: string. Either 'basic', which invokes whitebox::wbt_breach_depressions,
+    #   or 'lc', which invokes whitebox::wbt_breach_depressions_least_cost
+    #burn_streams: logical. if TRUE, both whitebox::wbt_burn_streams_at_roads
+    #   and whitebox::wbt_fill_burn are called on the DEM, using road and stream
+    #   layers from OpenStreetMap.
     #write_dir: character. the directory to write shapefile watershed boundary to
 
     #returns the location of candidate watershed boundary files
 
     require(whitebox) #can't do e.g. whitebox::func in do.call
 
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
+
     tmp <- tempdir()
     inspection_dir <- glue(tmp, '/INSPECT_THESE')
     dem_f <- glue(tmp, '/dem.tif')
     point_f <- glue(tmp, '/point.shp')
+    streams_f <- glue(tmp, '/streams.shp')
+    roads_f <- glue(tmp, '/roads.shp')
     d8_f <- glue(tmp, '/d8_pntr.tif')
     flow_f <- glue(tmp, '/flow.tif')
     snap_f <- glue(tmp, '/snap.shp')
@@ -3101,7 +3463,7 @@ delineate_watershed_by_specification <- function(lat,
         expr = {
             elevatr::get_elev_raster(locations = site_buf,
                                      z = dem_resolution,
-                                     verbose = verbose)
+                                     verbose = FALSE)
         },
         max_attempts = 10
     )
@@ -3116,19 +3478,53 @@ delineate_watershed_by_specification <- function(lat,
                  delete_layer = TRUE,
                  quiet = TRUE)
 
-    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
-                                        output = dem_f)
+    if(burn_streams){
+        get_osm_roads(extent_raster = dem,
+                      outfile = roads_f)
+        get_osm_streams(extent_raster = dem,
+                        outfile = streams_f)
+    }
 
-    whitebox::wbt_breach_depressions(dem = dem_f,
-                                     output = dem_f,
-                                     flat_increment = 0.01)
+    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                        output = dem_f) %>% invisible()
+
+    if(breach_method == 'basic'){
+
+        whitebox::wbt_breach_depressions(
+            dem = dem_f,
+            output = dem_f,
+            flat_increment = flat_increment) %>% invisible()
+
+    } else if(breach_method == 'lc'){
+
+        whitebox::wbt_breach_depressions_least_cost(
+            dem = dem_f,
+            output = dem_f,
+            dist = 10000, #maximum trench length
+            fill = TRUE,
+            flat_increment = flat_increment) %>% invisible()
+    }
+    #also see wbt_fill_depressions for when there are open pit mines
+
+    if(burn_streams){
+
+        #the secret is that BOTH of these burns can work in tandem!
+        whitebox::wbt_burn_streams_at_roads(dem = dem_f,
+                                            streams = streams_f,
+                                            roads = roads_f,
+                                            output = dem_f,
+                                            width = 50) %>% invisible()
+        whitebox::wbt_fill_burn(dem = dem_f,
+                                streams = streams_f,
+                                output = dem_f) %>% invisible()
+    }
 
     whitebox::wbt_d8_pointer(dem = dem_f,
-                             output = d8_f)
+                             output = d8_f) %>% invisible()
 
     whitebox::wbt_d8_flow_accumulation(input = dem_f,
                                        output = flow_f,
-                                       out_type = 'catchment area')
+                                       out_type = 'catchment area') %>% invisible()
 
     #call the appropriate snapping function from whitebox
     args <- list(pour_pts = point_f,
@@ -3150,7 +3546,7 @@ delineate_watershed_by_specification <- function(lat,
     #delineate
     whitebox::wbt_watershed(d8_pntr = d8_f,
                             pour_pts = snap_f,
-                            output = wb_f)
+                            output = wb_f) %>% invisible()
 
     wb_sf <- raster::raster(wb_f) %>%
         raster::rasterToPolygons() %>%
@@ -3180,7 +3576,6 @@ delineate_watershed_by_specification <- function(lat,
 
     #return()
 }
-
 
 get_derive_ingredient <- function(network,
                                   domain,
@@ -3611,10 +4006,14 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
     #return()
 }
 
-get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
+get_response_1char <- function(msg,
+                               possible_chars,
+                               subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
     #possible_chars: character vector of acceptable single-character responses
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
 
     if(subsequent_prompt){
         cat(paste('Please choose one of:',
@@ -3630,8 +4029,98 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     if(length(ch) == 1 && ch %in% possible_chars){
         return(ch)
     } else {
-        get_response_1char(msg, possible_chars, subsequent_prompt = TRUE)
+        get_response_1char(msg = msg,
+                           possible_chars = possible_chars,
+                           subsequent_prompt = TRUE)
     }
+}
+
+get_response_mchar <- function(msg,
+                               possible_resps,
+                               allow_alphanumeric_response = TRUE,
+                               subsequent_prompt = FALSE){
+
+    #msg: character. a message that will be used to prompt the user
+    #possible_resps: character vector. If length 1, each character in the response
+    #   will be required to match a character in possible_resps, and the return
+    #   value will be a character vector of each single-character tokens in the
+    #   response. If
+    #   length > 1, the response will be required to match an element of
+    #   possible_resps exactly, and the response will be returned as-is.
+    #allow_alphanumeric_response: logical. If FALSE, the response may not
+    #   include both numerals and letters. Only applies when possible_resps
+    #   has length 1.
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
+
+    split_by_character <- ifelse(length(possible_resps) == 1, TRUE, FALSE)
+
+    if(subsequent_prompt){
+
+        if(split_by_character){
+            pr <- strsplit(possible_resps, split = '')[[1]]
+        } else {
+            pr <- possible_resps
+        }
+
+        cat(paste('Your options are:',
+                  paste(pr,
+                        collapse = ', '),
+                  '\n> '))
+    } else {
+        cat(msg)
+    }
+
+    chs <- as.character(readLines(con = stdin(), 1))
+
+    if(! allow_alphanumeric_response &&
+       split_by_character &&
+       grepl('[0-9]', chs) &&
+       grepl('[a-zA-Z]', chs)){
+
+        cat('Response may not include both letters and numbers.\n> ')
+        resp <- get_response_mchar(
+            msg = msg,
+            possible_resps = possible_resps,
+            allow_alphanumeric_response = allow_alphanumeric_response,
+            subsequent_prompt = FALSE)
+
+        return(resp)
+    }
+
+    if(length(chs)){
+        if(split_by_character){
+
+            if(length(possible_resps) != 1){
+                stop('possible_resps must be length 1 if split_by_character is TRUE')
+            }
+
+            chs <- strsplit(chs, split = '')[[1]]
+            possible_resps_split <- strsplit(possible_resps, split = '')[[1]]
+
+            if(all(chs %in% possible_resps_split)){
+                return(chs)
+            }
+
+        } else {
+
+            if(length(possible_resps) < 2){
+                stop('possible_resps must have length > 1 if split_by_character is FALSE')
+            }
+
+            if(any(possible_resps == chs)){
+                return(chs)
+            }
+        }
+    }
+
+    resp <- get_response_mchar(
+        msg = msg,
+        possible_resps = possible_resps,
+        allow_alphanumeric_response = allow_alphanumeric_response,
+        subsequent_prompt = TRUE)
+
+    return(resp)
 }
 
 ms_calc_watershed_area <- function(network,
@@ -3647,6 +4136,8 @@ ms_calc_watershed_area <- function(network,
     #   to the ws_area_ha column in site_data gsheet
 
     #returns area in hectares
+
+    print(glue('Computing watershed area'))
 
     ms_dir <- glue('data/{n}/{d}/{l}',
                    n = network,
@@ -3708,8 +4199,18 @@ ms_calc_watershed_area <- function(network,
     return(ws_area_ha)
 }
 
-write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
-                                 snap_method, snap_distance, dem_resolution){
+write_wb_delin_specs <- function(network,
+                                 domain,
+                                 site_name,
+                                 buffer_radius,
+                                 snap_method,
+                                 snap_distance,
+                                 dem_resolution,
+                                 flat_increment,
+                                 breach_method,
+                                 burn_streams){
+
+    print(glue('Saving delineation specs'))
 
     new_entry <- tibble(network = network,
                         domain = domain,
@@ -3717,7 +4218,10 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                         buffer_radius_m = buffer_radius,
                         snap_method = snap_method,
                         snap_distance_m = snap_distance,
-                        dem_resolution = dem_resolution)
+                        dem_resolution = dem_resolution,
+                        flat_increment = as.character(flat_increment),
+                        breach_method = as.character(breach_method),
+                        burn_streams = as.character(burn_streams))
 
     # ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
 
@@ -3725,8 +4229,6 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                       which_dataset = 'ws_delin_specs',
                       to_where = ms_instance$config_data_storage,
                       overwrite = FALSE)
-
-    #return()
 }
 
 serialize_list_to_dir <- function(l, dest){
@@ -4798,12 +5300,25 @@ choose_projection <- function(lat = NULL,
 
     abslat <- abs(lat)
 
+    # if(abslat < 23){ #tropical
+    #     PROJ4 = glue('+proj=laea +lon_0=', long)
+    #              # ' +datum=WGS84 +units=m +no_defs')
+    # } else { #temperate or polar
+    #     PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    # }
+
+    #this is what the makers of https://projectionwizard.org/# use to choose
+    #a suitable projection: https://rdrr.io/cran/rCAT/man/simProjWiz.html
     # THIS WORKS (PROJECTS STUFF), BUT CAN'T BE READ AUTOMATICALLY BY st_read
-    if(abslat < 23){ #tropical
-        PROJ4 = glue('+proj=laea +lon_0=', long)
-                 # ' +datum=WGS84 +units=m +no_defs')
-    } else { #temperate or polar
-        PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    if(abslat < 70){ #tropical or temperate
+        PROJ4 <- glue('+proj=cea +lon_0={lng} +lat_ts=0 +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lng = long)
+    } else { #polar
+        PROJ4 <- glue('+proj=laea +lat_0={lt} +lon_0={lng} +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lt = lat,
+                      lng = long)
     }
 
     ## UTM/UPS would be nice for watersheds that don't fall on more than two zones
@@ -4847,6 +5362,7 @@ shortcut_idw <- function(encompassing_dem,
                          wshd_bnd,
                          data_locations,
                          data_values,
+                         durations_between_samples = NULL,
                          stream_site_name,
                          output_varname,
                          save_precip_quickref = FALSE,
@@ -4861,6 +5377,16 @@ shortcut_idw <- function(encompassing_dem,
     #   the interpolation
     #data_values: data.frame with one column each for datetime and ms_status,
     #   and an additional named column of data values for each data location.
+    #durations_between_samples: numeric vector representing the time differences
+    #   between rows of data_values. Must be expressed in days. Only used if
+    #   output_varname == 'SPECIAL CASE PRECIP' and save_precip_quickref == TRUE,
+    #   so that quickref data can be expressed in mm/day, which is the unit
+    #   required to calculate precip flux.
+    #   NOTE: this could be calculated internally, but the duration of measurement
+    #   preceding the first value can't be known. Because shortcut_idw is
+    #   often run iteratively on chunks of a dataset, we require that
+    #   durations_between_samples be passed as an input, so as to minimize
+    #   the number of NAs generated.
     #output_varname: character; a prodname_ms, unless you're interpolating
     #   precipitation, in which case it must be "SPECIAL CASE PRECIP", because
     #   prefix information for precip is lost during the widen-by-site step
@@ -4874,8 +5400,17 @@ shortcut_idw <- function(encompassing_dem,
     #     logger = logger_module)
 
     if(output_varname != 'SPECIAL CASE PRECIP' && save_precip_quickref){
-        stop(paste('save_precip_quickref can only be TRUE when output_varname',
+        stop(paste('save_precip_quickref can only be TRUE if output_varname',
                    '== "SPECIAL CASE PRECIP"'))
+    }
+    if(save_precip_quickref && is.null(durations_between_samples)){
+        stop(paste('save_precip_quickref can only be TRUE if',
+                    'durations_between_samples is supplied.'))
+    }
+    if(output_varname != 'SPECIAL CASE PRECIP' && ! is.null(durations_between_samples)){
+        logwarn(msg = paste('In shortcut_idw: ignoring durations_between_samples because',
+                            'output_varname != "SPECIAL CASE PRECIP".'),
+                logger = logger_module)
     }
 
     timestep_indices <- data_values$ind
@@ -4988,6 +5523,13 @@ shortcut_idw <- function(encompassing_dem,
 
     if(save_precip_quickref){
 
+        #convert to mm/d
+        precip_quickref <- Map(function(millimeters, days){
+            return(millimeters/days)
+        },
+        millimeters = precip_quickref,
+        days = durations_between_samples)
+
         names(precip_quickref) <- as.character(timestep_indices)
         write_precip_quickref(precip_idw_list = precip_quickref,
                               network = network,
@@ -5025,6 +5567,7 @@ shortcut_idw <- function(encompassing_dem,
 
 shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                      wshd_bnd,
+                                     ws_area,
                                      data_locations,
                                      precip_values,
                                      chem_values,
@@ -5049,6 +5592,9 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #   recip_gauges
     #wshd_bnd: sf polygon with columns site_name and geometry.
     #   it represents a single watershed boundary.
+    #ws_area: numeric scalar representing watershed area in hectares. This is
+    #   passed so that it doesn't have to be calculated repeatedly (if
+    #   shortcut_idw_concflux_v2 is running iteratively).
     #data_locations: sf point(s) with columns site_name and geometry.
     #   represents all sites (e.g. rain gauges) that will be used in
     #   the interpolation.
@@ -5303,11 +5849,19 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
         ## GET FLUX FOR ALL CELLS; THEN AVERAGE CELLS FOR PCHEM, PFLUX, PRECIP
 
-        #calculate flux for every cell
-        #mm/d * mg/L * m/1000mm * kg/1,000,000mg * 1000L/m^(2 + 1) * 10,000m^2/ha
-        #therefore, kg/(ha * d) = mm * mg/L / d / 100 = (mm * mg) / (d * L * 100)
+        #calculate flux for every cell:
+        #   This is how we'd calcualate flux as kg/(ha * d):
+        #       mm/d * mg/L * m/1000mm * kg/1,000,000mg * 1000L/m^(2 + 1) * 10,000m^2/ha
+        #       therefore, kg/(ha * d) = mm * mg/L / d / 100 = (mm * mg) / (d * L * 100)
+        #   But stream_flux_inst is not scaled by area when it's derived (that
+        #   happens later), so we're going to derive precip_flux_inst
+        #   as unscaled here, and then both can be scaled the same way in
+        #   scale_flux_by_area. So we caculate flux in kg/(ha * d) as above,
+        #   then multiply by watershed area in hectares.
+
         quickref_ind <- as.character(quickref_inds[k])
-        flux_interp <- c_idw * precip_quickref[[quickref_ind]]
+        #              mg/L        mm/day                          ha
+        flux_interp <- c_idw * precip_quickref[[quickref_ind]] * ws_area / 100
 
         #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
@@ -5542,7 +6096,8 @@ read_precip_quickref <- function(network,
                                  # timestep){
 
     #allows precip values computed by shortcut_idw for each watershed
-    #   raster cell to be reused by shortcut_idw_concflux_v2
+    #   raster cell to be reused by shortcut_idw_concflux_v2. These values are
+    #   in mm/day
 
     quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
                          n = network,
@@ -5830,7 +6385,8 @@ synchronize_timestep <- function(d){
 
     rounding_intervals <- case_when(
         is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
-        mode_intervals_m <= 12 * 60 ~ '15 min')
+        mode_intervals_m <= 12 * 60 ~ '1 day') #TODO, TEMPORARY: switch this back
+        # mode_intervals_m <= 12 * 60 ~ '15 min')
 
     for(i in 1:length(d_split)){
 
@@ -6148,6 +6704,20 @@ get_detlim_precursors <- function(network,
     return(precursors)
 }
 
+datetimes_to_durations <- function(datetime_vec, unit){
+
+    #unit must be expressed in a form that's readable by base::difftime
+
+    #an NA is prepended to the output, so that its length is the same as
+    #   datetime_vec
+
+    durs <- diff(datetime_vec)
+    units(durs) <- unit
+    durs <- c(NA_real_, as.numeric(durs))
+
+    return(durs)
+}
+
 precip_pchem_pflux_idw <- function(pchem_prodname,
                                    precip_prodname,
                                    wb_prodname,
@@ -6217,6 +6787,10 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #this avoids a lot of slow summarizing
     if(! pchem_only){
 
+        # if(length(unique(precip$var)) > 1){
+        #     logwarn(paste('Multiple precip prefixes encountered.'))
+        # }
+
         status_cols <- precip %>%
             select(datetime, ms_status, ms_interp) %>%
             group_by(datetime) %>%
@@ -6231,6 +6805,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             left_join(status_cols, #they get lumped anyway
                       by = 'datetime') %>%
             arrange(datetime)
+
+        day_durations <- datetimes_to_durations(precip$datetime,
+                                                unit = 'days')
     }
 
     if(! precip_only){
@@ -6319,6 +6896,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         wbi <- slice(wb, i)
         site_name <- wbi$site_name
+        wbi_area_ha <- as.numeric(sf::st_area(wbi)) / 10000
 
         idw_log_wb(verbose = verbose,
                    site_name = site_name,
@@ -6387,18 +6965,21 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                     .combine = idw_parallel_combine,
                     .init = 'first iter') %dopar% {
 
+                    pchunk <- precip_chunklist[[j]]
+
                     idw_log_var(verbose = verbose,
                                 site_name = site_name,
                                 v = 'precipitation',
                                 j = paste('chunk', j + (nthreads * (s - 1))),
-                                ntimesteps = nrow(precip_chunklist[[j]]),
+                                ntimesteps = nrow(pchunk),
                                 nvars = nchunks)
 
                     foreach_return <- shortcut_idw(
                         encompassing_dem = dem,
                         wshd_bnd = wbi,
                         data_locations = rg,
-                        data_values = precip_chunklist[[j]],
+                        data_values = pchunk,
+                        durations_between_samples = day_durations[pchunk$ind],
                         stream_site_name = site_name,
                         output_varname = 'SPECIAL CASE PRECIP',
                         save_precip_quickref = ! precip_only,
@@ -6506,6 +7087,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                         foreach_chunk_inner <- shortcut_idw_concflux_v2(
                             encompassing_dem = dem,
                             wshd_bnd = wbi,
+                            ws_area = wbi_area_ha,
                             data_locations = rg,
                             precip_values = precip,
                             chem_values = chunklist[[l]],
@@ -8000,17 +8582,26 @@ raster_intersection_summary <- function(wb, dem){
 
     summary_out <- list()
 
-    #convert wb to sf object
-    wb <- wb %>%
-        raster::rasterToPolygons() %>%
-        sf::st_as_sf()
+    #convert wb to sf object (there are several benign but seemingly uncatchable
+    #   garbage collection errors here)
+    wb <- sf::st_as_sf(raster::rasterToPolygons(wb))
 
     #get edge of DEM as sf object
-    dem_edge <- raster::boundaries(dem) %>%
-        raster::reclassify(matrix(c(0, NA),
-                                  ncol = 2)) %>%
+    dem_edge <- raster::focal(x = dem, #the terra version doesn't retain NA border
+                  fun = function(x, ...) return(0),
+                  w = matrix(1, nrow = 3, ncol = 3)) %>%
+        raster::reclassify(rcl = matrix(c(0, NA, #second, set inner cells to NA
+                                          NA, 1), #first, set outer cells to 1... yup.
+                                        ncol = 2)) %>%
         raster::rasterToPolygons() %>%
         sf::st_as_sf()
+    # dem_edge <- raster::boundaries(dem) %>%
+    #                                # classes = TRUE,
+    #                                # asNA = FALSE) %>%
+    #     raster::reclassify(rcl = matrix(c(0, NA), #set inner cells to NA
+    #                                     ncol = 2)) %>%
+    #     raster::rasterToPolygons() %>%
+    #     sf::st_as_sf()
 
     #tally raster cells
     summary_out$n_wb_cells <- length(wb$geometry)
@@ -8103,8 +8694,11 @@ load_config_datasets <- function(from_where){
             col_types = 'ccccccccnnnnncc'
         ))
 
-        ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
-                                                       na = c('', 'NA')))
+        ws_delin_specs <- sm(googlesheets4::read_sheet(
+            conf$delineation_gsheet,
+            na = c('', 'NA'),
+            col_types = 'cccncnnccl'
+        ))
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
@@ -8123,7 +8717,10 @@ load_config_datasets <- function(from_where){
                                                               buffer_radius_m = 1,
                                                               snap_method = 'a',
                                                               snap_distance_m = 1,
-                                                              dem_resolution = 1)
+                                                              dem_resolution = 1,
+                                                              flat_increment = 1,
+                                                              breach_method = 'a',
+                                                              burn_streams = 'a')
 
                                        return(empty_tibble[-1, ])
                                    })
@@ -8194,6 +8791,16 @@ ms_write_confdata <- function(x,
                   kd = paste(known_datasets, collapse = '", "')))
     }
 
+    type_string <- case_when(
+        which_dataset == 'ms_vars' ~ 'cccccccnncc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncc',
+        which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
+        TRUE ~ 'placeholder')
+
+    if(which_dataset %in% c('univ_products', 'name_variants')){
+        type_string <- NULL
+    }
+
     if(to_where == 'remote'){
 
         write_loc <- case_when(
@@ -8233,7 +8840,8 @@ ms_write_confdata <- function(x,
         catch <- expo_backoff(
             expr = {
                 dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                                     na = c('', 'NA')))
+                                                     na = c('', 'NA'),
+                                                     col_types = type_string))
             },
             max_attempts = 4
         )
@@ -8264,7 +8872,8 @@ ms_write_confdata <- function(x,
         }
 
         dset <- read_csv(path = paste0('data/general/',
-                                       write_loc))
+                                       write_loc),
+                         col_types = type_string)
 
     } else {
         stop('to_where must be either "local" or "remote"')
@@ -8406,7 +9015,8 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
                                          p = path,
                                          s = site_name),
                      driver = 'ESRI Shapefile',
-                     delete_dsn = TRUE)
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
     }
 }
 
@@ -8443,7 +9053,8 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
                                          p = path,
                                          s = site_name),
                      driver = 'ESRI Shapefile',
-                     delete_dsn = TRUE)
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
     }
 }
 
@@ -8536,7 +9147,8 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
     #level is one of "info", "warn", 'error".
     #indent: the number of spaces to indent after the colon.
 
-    indent_str <- rep('\U2800\U2800', indent)
+    indent_str <- paste(rep('\U2800\U2800', indent),
+                        collapse = '')
 
     if(level == 'info'){
         loginfo(msg = paste0(enc2native(indent_str),
@@ -8566,7 +9178,7 @@ generate_portal_extras <- function(site_data,
             logger = logger_module)
 
     log_with_indent('scaling flux by area', logger = logger_module)
-    calculate_flux_by_area(site_data = site_data)
+    scale_flux_by_area(site_data = site_data)
 
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
@@ -8726,9 +9338,7 @@ list_domains_with_discharge <- function(site_data){
         write_csv(file = '../portal/data/general/sites_with_discharge.csv')
 }
 
-calculate_flux_by_area <- function(site_data){
-
-    setwd('../portal/data/')
+scale_flux_by_area <- function(site_data){
 
     ws_areas <- site_data %>%
         filter(as.logical(in_workflow)) %>%
@@ -8744,7 +9354,7 @@ calculate_flux_by_area <- function(site_data){
 
             files <- try(
                 {
-                    list.files(path = glue('{d}/{v}',
+                    list.files(path = glue('../portal/data/{d}/{v}',
                                            d = dmn,
                                            v = flux_var),
                                # pattern = '(?!documentation
@@ -8756,7 +9366,7 @@ calculate_flux_by_area <- function(site_data){
 
             if('try-error' %in% class(files) || length(files) == 0) next
 
-            dir.create(path = glue('{d}/{v}_scaled',
+            dir.create(path = glue('../portal/data/{d}/{v}_scaled',
                                    d = dmn,
                                    v = flux_var),
                        recursive = TRUE,
@@ -8764,7 +9374,7 @@ calculate_flux_by_area <- function(site_data){
 
             for(fil in files){
 
-                d <- read_feather(glue('{d}/{v}/{f}',
+                d <- read_feather(glue('../portal/data/{d}/{v}/{f}',
                                        d = dmn,
                                        v = flux_var,
                                        f = fil))
@@ -8782,7 +9392,7 @@ calculate_flux_by_area <- function(site_data){
                 d$val <- errors::drop_errors(d$val)
 
                 write_feather(x = d,
-                              path = glue('{d}/{v}_scaled/{f}',
+                              path = glue('../portal/data/{d}/{v}_scaled/{f}',
                                           d = dmn,
                                           v = flux_var,
                                           f = fil))
@@ -8797,8 +9407,6 @@ calculate_flux_by_area <- function(site_data){
     engine(flux_var = 'precip_flux_inst',
            domains = domains,
            ws_areas = ws_areas)
-
-    setwd('../../data_acquisition/')
 }
 
 approxjoin_datetime <- function(x,
@@ -9469,16 +10077,16 @@ expo_backoff <- function(expr,
                              max = 2^attempt_i - 1)
 
             if(verbose){
-                message(paste0("Backing off for ", round(backoff, 1), " seconds."))
+                print(glue("Backing off for ", round(backoff, 1), " seconds."))
             }
 
             Sys.sleep(backoff)
 
         } else {
 
-            if(verbose){
-                message(paste0("Succeeded after ", attempt_i, " attempt(s)."))
-            }
+            # if(verbose){
+            #     print(paste0("Request succeeded after ", attempt_i, " attempt(s)."))
+            # }
 
             break
         }
@@ -9553,7 +10161,115 @@ combine_ws_boundaries <- function(){
                  layer = 'shed_boundary.shp',
                  driver = 'ESRI Shapefile',
                  delete_layer = TRUE,
-                 silent = TRUE)
+                 quiet = TRUE)
 
     setwd('../../data_acquisition/')
+}
+
+get_osm_roads <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   roads will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    message('Downloading roads layer from OpenStreetMaps')
+
+    extent_raster <- terra::rast(extent_raster)
+    # rast_crs <- as.character(extent_raster@crs)
+    rast_crs <- terra::crs(extent_raster,
+                           proj4 = TRUE)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    highway_types <- c('motorway', 'trunk', 'primary', 'secondary', 'tertiary')
+    highway_types <- c(highway_types,
+                       paste(highway_types, 'link', sep = '_'))
+
+    roads_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'highway',
+                                 value = highway_types)
+
+    roads <- osmdata::osmdata_sf(roads_query)
+    roads <- roads$osm_lines$geometry
+
+    # plot(roads$osm_lines, max.plot = 1)
+
+    roads_proj <- roads %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(roads_proj,
+                     dsn = outfile,
+                     layer = 'roads',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     quiet = TRUE)
+
+        message(paste('OSM roads layer written to', outfile))
+
+    } else {
+        return(roads_proj)
+    }
+}
+
+get_osm_streams <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   streams will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    message('Downloading streams layer from OpenStreetMaps')
+
+    extent_raster <- terra::rast(extent_raster)
+    # rast_crs <- as.character(extent_raster@crs)
+    rast_crs <- terra::crs(extent_raster,
+                           proj4 = TRUE)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    streams_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'waterway',
+                                 value = c('river', 'stream'))
+
+    streams <- osmdata::osmdata_sf(streams_query)
+    streams <- streams$osm_lines$geometry
+
+    streams_proj <- streams %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(streams_proj,
+                     dsn = outfile,
+                     layer = 'streams',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     quiet = TRUE)
+
+        message(paste('OSM streams layer written to', outfile))
+
+    } else {
+        return(streams_proj)
+    }
 }
