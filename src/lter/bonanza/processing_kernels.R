@@ -163,7 +163,8 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -219,6 +220,8 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 process_1_167 <- function(network, domain, prodname_ms, site_name,
                           component) {
 
+    # There is anoth precip product (384) which uses weighing buckets that is
+    # better for snow but less accurate for rain
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -239,12 +242,20 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
                          alt_site_name = list('CRREL' = 'CRREL-Met'),
                          data_cols =  c('value'= 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         set_to_NA = c('-9999', '999.00', '-9999.000', '-7999.000',
+                                       '999.000'))
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('flag' = 'Q'),
                             summary_flags_clean = list('flag' = 'G'),
                             varflag_col_pattern = NA)
+
+    if(component == '167_TIPBUCK_CPEAK_1993-2016.txt'){
+
+        d <- d %>%
+            filter(datetime >= '1998-01-01')
+    }
 
     d <- carry_uncertainty(d,
                            network = network,

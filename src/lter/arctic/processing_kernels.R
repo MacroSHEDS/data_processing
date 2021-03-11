@@ -567,7 +567,8 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
-                             summary_flagcols = 'Comments')
+                             summary_flagcols = 'Comments',
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 summary_flags_clean = list('Comments' = ''),
@@ -591,7 +592,8 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
-                             summary_flagcols = 'Comments')
+                             summary_flagcols = 'Comments',
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 summary_flags_clean = list('Comments' = ''),
@@ -775,7 +777,6 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -784,7 +785,8 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -807,7 +809,6 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_20111 <- function(network, domain, prodname_ms, site_name,
@@ -826,7 +827,6 @@ process_1_20111 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -835,7 +835,8 @@ process_1_20111 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -878,7 +879,6 @@ process_1_20112 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -887,7 +887,8 @@ process_1_20112 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
