@@ -1648,7 +1648,7 @@ process_1_416 <- function(network, domain, prodname_ms, site_name,
                          alt_site_name = list('saddle' = 'sdl'),
                          data_cols =  c('ppt_tot' = 'precipitation'),
                          data_col_pattern = '#V#',
-                        summary_flagcols = c('flag_ppt_tot', 'qdays'),
+                         summary_flagcols = c('flag_ppt_tot', 'qdays'),
                          is_sensor = TRUE)
 
     d <- d %>%
@@ -1658,6 +1658,14 @@ process_1_416 <- function(network, domain, prodname_ms, site_name,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list('flag_ppt_tot' = 'NaN'),
                             summary_flags_dirty = list('flag_ppt_tot' = c(1,2)))
+
+    # this correction is suggested by Niwot based on blowing snow over smapling
+    # at saddle. Information about the correction factor here: Overestimation of
+    # snow depth and inorganic nitrogen wetfall using NADP data, Niwot Ridge, Colorado
+    d <- d %>%
+        mutate(month = month(datetime)) %>%
+        mutate(val = ifelse(month %in% c(10,11,12,1,2,3,4), val*0.39, val)) %>%
+        select(-month)
 
     d <- carry_uncertainty(d,
                            network = network,
