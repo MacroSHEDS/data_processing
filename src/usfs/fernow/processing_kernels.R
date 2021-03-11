@@ -238,7 +238,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
     return()
 }
 
-
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
@@ -328,7 +327,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    d <- read.csv(rel_file_path, colClasses = 'character')
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%y'),
                          datetime_tz = 'US/Eastern',
@@ -381,7 +379,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     return()
 }
-
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
