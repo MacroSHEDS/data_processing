@@ -439,7 +439,8 @@ identify_sampling_bypass <- function(df,
                               date_col = 'datetime',
                               network,
                               domain,
-                              prodname_ms){
+                              prodname_ms,
+                              sampling_type = NULL){
 
     #This case is used (primarily for neon) when use of ms_read_raw and
     # ms_cast_flag are not used because of incaomptable data structures
@@ -584,6 +585,12 @@ identify_sampling_bypass <- function(df,
             }
 
             interval_changes <- rle2(g_a$interval)$starts
+
+            if(! is.null(sampling_type)){
+
+                g_a <- g_a %>%
+                    mutate(type = sampling_type)
+            }
 
             g_a <- g_a %>%
                 mutate(
@@ -2474,7 +2481,7 @@ ms_munge <- function(network = domain,
                local = TRUE)
     }
 
-    if(! norm_munge && ! versionless_product_script){
+    if(! norm_munge && ! file.exists(versionless_product_script)){
         stop(glue('No munge script avalible for {n} {d}',
                   n = network,
                   d = domain))
@@ -9032,7 +9039,9 @@ retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_name,
-                                         tracker){
+                                         tracker,
+                                         orcid_login,
+                                         orcid_pass){
 
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
