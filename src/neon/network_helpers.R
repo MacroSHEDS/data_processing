@@ -28,6 +28,11 @@ get_neon_data <- function(domain,
 
         new_status <- evaluate_result_status(result)
 
+        if(new_status == 'error'){
+            logging::logwarn(result,
+                         logger = logger_module)
+        }
+
         update_data_tracker_r(network = network,
                               domain = domain,
                               tracker_name = 'held_data',
