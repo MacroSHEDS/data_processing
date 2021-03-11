@@ -12,7 +12,7 @@ DP?.20008,spec_cond,unavailiable,unavailiable,NA,NA,verify DP#
 DP1.20033,stream_nitrate,ready,ready,NA,stream_chemistry__ms001,NA
 DP1.00004,air_pressure,paused,paused,NA,NA,NA
 DP1.20097,stream_gases,ready,ready,NA,stream_chemistry__ms001,NA
-DP1.20016,surface_elevation,paused,pending,NA,NA,NA
+DP1.20016,surface_elevation,ready,ready,NA,NA,NA
 DP1.20053,stream_temperature,ready,ready,NA,stream_chemistry__ms001,NA
 DP1.20042,stream_PAR,ready,ready,NA,NA,NA
 DP1.00006,precipitation,ready,ready,NA,precip_pchem_pflux__ms002,NA
