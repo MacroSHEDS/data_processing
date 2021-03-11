@@ -505,10 +505,13 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
                 site_name = paste0('GSWS', site_name),
                 site_name = ifelse(site_name == 'GSWSMACK',
                                    'GSMACK',
-                                   site_name),
-                site_name = ifelse(site_name == 'GSWS04',
-                                   'GSLOOK',
                                    site_name)) %>%
+                #GSWS04 is GSLOOK, but that shapefile is missing subwatersheds,
+                #   so we're going to drop it here and delineate it ourselves
+                # site_name = ifelse(site_name == 'GSWS04',
+                #                    'GSLOOK',
+                #                    site_name)) %>%
+            filter(site_name != 'GSWS04') %>%
             sf::st_transform(projstring) %>%
             arrange(site_name)
     }
