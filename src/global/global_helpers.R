@@ -2937,27 +2937,42 @@ delineate_watershed_apriori_recurse <- function(lat,
                     'Enter the number corresponding to the ',
                     'one that looks most legit, or select one or more tuning ',
                     'options (e.g. "SBRI" without quotes). You usually won\'t ',
-                    'need to tune anything. \nIf you aren\'t ',
+                    'need to tune anything. If you aren\'t ',
                     'sure which delineation is correct, get a site manager to verify:\n',
                     'request_site_manager_verification(type=\'wb delin\', ',
-                    'network, domain)\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
+                    'network, domain) [function not yet built]\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
                     hc = helper_code,
                     sel = wb_selections)
                     # td = inspection_dir)
 
         resp <- get_response_mchar(
             msg = msg,
-            possible_chars = paste(c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a')),
-            numbers_and_letters = FALSE,
-            split_by_character = 'letters only')
+            possible_resps = paste(c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                                   collapse = ''),
+            allow_alphanumeric_response = FALSE)
+
+        if('n' %in% resp){
+            unlink(write_dir,
+                   recursive = TRUE)
+            print(glue('Moving on. You haven\'t seen the last of {s}!',
+                       s = site_name))
+            return(1)
+        }
+
+        if('a' %in% resp){
+            unlink(write_dir,
+                   recursive = TRUE)
+            print(glue('Aborted. Any completed delineations have been saved.'))
+            return(2)
+        }
 
         if('S' %in% resp){
-            print('Streams will be burned.')
             burn_streams <- TRUE
+        } else {
+            burn_streams <- FALSE
         }
 
         if('B' %in% resp){
-            print('Breaching will be mega.')
             breach_method <- 'basic'
         } else {
             breach_method <- 'lc'
@@ -2969,9 +2984,8 @@ delineate_watershed_apriori_recurse <- function(lat,
                              ' to pass to elevatr::get_elev_raster. For tiny ',
                              'watersheds, use 12-13. For giant ones, use 8-9.\n\n',
                              'Enter choice here > '),
-                possible_chars = paste(1:14),
-                numbers_and_letters = FALSE,
-                split_by_character = 'none')
+                possible_resps = paste(1:14))
+            dem_resolution <- as.numeric(dem_resolution)
         }
 
         if('I' %in% resp){
@@ -2998,22 +3012,7 @@ delineate_watershed_apriori_recurse <- function(lat,
                                      L = 0.1)
         }
 
-        if(resp == 'n'){
-            unlink(write_dir,
-                   recursive = TRUE)
-            print(glue('Moving on. You haven\'t seen the last of {s}!',
-                         s = site_name))
-            return(1)
-        }
-
-        if(resp == 'a'){
-            unlink(write_dir,
-                   recursive = TRUE)
-            print('Aborted. Completed delineations have been saved.')
-            return(2)
-        }
-
-        if(any(! is.numeric(resp))){
+        if(! grepl('[0-9]', resp)){
 
             selection <- delineate_watershed_apriori_recurse(
                 lat = lat,
@@ -3090,6 +3089,15 @@ delineate_watershed_apriori <- function(lat,
     # tmp <- tempdir()
     # tmp <- str_replace_all(tmp, '\\\\', '/')
 
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
+
     inspection_dir <- glue(scratch_dir, '/INSPECT_THESE')
     point_dir <- glue(scratch_dir, '/POINT')
     dem_f <- glue(scratch_dir, '/dem.tif')
@@ -3140,18 +3148,21 @@ delineate_watershed_apriori <- function(lat,
         if(verbose){
 
             if(is.null(flat_increment)){
-                fi <- 'NULL'
+                fi <- 'NULL (auto)'
             } else {
                 fi <- as.character(flat_increment)
             }
 
             print(glue('Delineation specs for this attempt:\n',
-                       '\tdem_resolution: {dr}; flat_increment: {fi}\n',
+                       '\tsite_name: {st}; ',
+                       'dem_resolution: {dr}; flat_increment: {fi}\n',
                        '\tbreach_method: {bm}; burn_streams: {bs}',
+                       st = site_name,
                        dr = dem_resolution,
                        fi = fi,
                        bm = breach_method,
-                       bs = as.character(burn_streams)))
+                       bs = as.character(burn_streams),
+                       .trim = FALSE))
         }
 
         site_buf <- sf::st_buffer(x = site,
@@ -3280,8 +3291,8 @@ delineate_watershed_apriori <- function(lat,
                                                 dem = dem)
 
             if(verbose){
-                print(glue('buffer radius: {br}; snap: {sn}/{tot}; ',
-                           'n intersecting cells: {ni}; pct intersect: {pct}',
+                print(glue('site buffer radius: {br}; pour point snap: {sn}/{tot}; ',
+                           'n intersecting border cells: {ni}; pct intersect: {pct}',
                            br = buffer_radius,
                            sn = i,
                            tot = length(unique_snaps_f),
@@ -3292,6 +3303,8 @@ delineate_watershed_apriori <- function(lat,
             if(smry$pct_wb_cells_intersect > 0.1 || smry$n_intersections > 5){
                 buffer_radius_new <- buffer_radius * 10
                 dem_coverage_insufficient <- TRUE
+                print(glue('Hit DEM edge. Incrementing buffer.'))
+                break
             } else {
                 dem_coverage_insufficient <- FALSE
                 buffer_radius_new <- buffer_radius
@@ -3322,7 +3335,7 @@ delineate_watershed_apriori <- function(lat,
                                 'INC{inc}BREACH{brc}BURN{brn}.shp',
                                 path = inspection_dir,
                                 n = i,
-                                b = buffer_radius,
+                                b = sprintf('%d', buffer_radius),
                                 typ = snap_method,
                                 dst = snap_distance,
                                 res = dem_resolution,
@@ -3387,6 +3400,15 @@ delineate_watershed_by_specification <- function(lat,
     #returns the location of candidate watershed boundary files
 
     require(whitebox) #can't do e.g. whitebox::func in do.call
+
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
 
     tmp <- tempdir()
     inspection_dir <- glue(tmp, '/INSPECT_THESE')
@@ -3962,10 +3984,14 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
     #return()
 }
 
-get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
+get_response_1char <- function(msg,
+                               possible_chars,
+                               subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
     #possible_chars: character vector of acceptable single-character responses
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
 
     if(subsequent_prompt){
         cat(paste('Please choose one of:',
@@ -3981,39 +4007,42 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     if(length(ch) == 1 && ch %in% possible_chars){
         return(ch)
     } else {
-        get_response_1char(msg, possible_chars, subsequent_prompt = TRUE)
+        get_response_1char(msg = msg,
+                           possible_chars = possible_chars,
+                           subsequent_prompt = TRUE)
     }
 }
 
 get_response_mchar <- function(msg,
-                               possible_chars,
-                               numbers_and_letters = TRUE,
-                               split_by_character = 'letters only',
+                               possible_resps,
+                               allow_alphanumeric_response = TRUE,
                                subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
-    #possible_chars: string. Acceptable response characters. e.g. 'abCD'. If
-    #   the response contains characters not in this string, the user
-    #   will be re-prompted. (For multicharacter numerals whose constituent
-    #   single-character numerals aren't also included, this will fail,
-    #   but I'm getting carried away so I'm not going to account for that now.)
-    #numbers_and_letters: logical. If TRUE, both numbers and letters can be entered
-    #   together. If FALSE, the response must include either numbers OR letters,
-    #   but not both.
-    #split_by_character: character. Should the response be a vector of single-
-    #   character strings ('all'), a single string just as the user gave it
-    #   ('none'), or either depending on whether the response contains
-    #   numerals or letters ('letters only'). Note that 'letters only' is only
-    #   implemented if numbers_and_letters is set to FALSE. Otherwise it behaves
-    #   like 'none'.
+    #possible_resps: character vector. If length 1, each character in the response
+    #   will be required to match a character in possible_resps, and the return
+    #   value will be a character vector of each single-character tokens in the
+    #   response. If
+    #   length > 1, the response will be required to match an element of
+    #   possible_resps exactly, and the response will be returned as-is.
+    #allow_alphanumeric_response: logical. If FALSE, the response may not
+    #   include both numerals and letters. Only applies when possible_resps
+    #   has length 1.
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
 
-    if(! split_by_character %in% c('all', 'none', 'letters only')){
-        stop('split_by_character must be one of "all", "none", or "letters only".')
-    }
+    split_by_character <- ifelse(length(possible_resps) == 1, TRUE, FALSE)
 
     if(subsequent_prompt){
+
+        if(split_by_character){
+            pr <- strsplit(possible_resps, split = '')[[1]]
+        } else {
+            pr <- possible_resps
+        }
+
         cat(paste('Your options are:',
-                  paste(possible_chars,
+                  paste(pr,
                         collapse = ', '),
                   '\n> '))
     } else {
@@ -4022,36 +4051,54 @@ get_response_mchar <- function(msg,
 
     chs <- as.character(readLines(con = stdin(), 1))
 
-    has_nmbrs <- grepl('[0-9]', chs)
-    has_ltrs <- grepl('[a-zA-Z]', chs)
+    if(! allow_alphanumeric_response &&
+       split_by_character &&
+       grepl('[0-9]', chs) &&
+       grepl('[a-zA-Z]', chs)){
 
-    if(! numbers_and_letters && has_nmbrs && has_ltrs){
-        cat('Response may include numbers or letters, but not both.\n> ')
-        get_response_mchar(msg = msg,
-                           possible_chars = possible_chars,
-                           numbers_and_letters = numbers_and_letters,
-                           split_by_character = split_by_character,
-                           subsequent_prompt = FALSE)
+        cat('Response may not include both letters and numbers.\n> ')
+        resp <- get_response_mchar(
+            msg = msg,
+            possible_resps = possible_resps,
+            allow_alphanumeric_response = allow_alphanumeric_response,
+            subsequent_prompt = FALSE)
+
+        return(resp)
     }
 
-    chs_split <- strsplit(chs, split = '')[[1]]
+    if(length(chs)){
+        if(split_by_character){
 
-    if(all(chs_split %in% possible_chars)){
+            if(length(possible_resps) != 1){
+                stop('possible_resps must be length 1 if split_by_character is TRUE')
+            }
 
-        if(split_by_character == 'all') chs <- chs_split
-        if(split_by_character == 'letters only' &&
-           has_ltrs &&
-           ! numbers_and_letters) chs <- chs_split
+            chs <- strsplit(chs, split = '')[[1]]
+            possible_resps_split <- strsplit(possible_resps, split = '')[[1]]
 
-        return(chs)
+            if(all(chs %in% possible_resps_split)){
+                return(chs)
+            }
 
-    } else {
-        get_response_mchar(msg = msg,
-                           possible_chars = possible_chars,
-                           numbers_and_letters = numbers_and_letters,
-                           split_by_character = split_by_character,
-                           subsequent_prompt = TRUE)
+        } else {
+
+            if(length(possible_resps) < 2){
+                stop('possible_resps must have length > 1 if split_by_character is FALSE')
+            }
+
+            if(any(possible_resps == chs)){
+                return(chs)
+            }
+        }
     }
+
+    resp <- get_response_mchar(
+        msg = msg,
+        possible_resps = possible_resps,
+        allow_alphanumeric_response = allow_alphanumeric_response,
+        subsequent_prompt = TRUE)
+
+    return(resp)
 }
 
 ms_calc_watershed_area <- function(network,
@@ -4067,6 +4114,8 @@ ms_calc_watershed_area <- function(network,
     #   to the ws_area_ha column in site_data gsheet
 
     #returns area in hectares
+
+    print(glue('Computing watershed area'))
 
     ms_dir <- glue('data/{n}/{d}/{l}',
                    n = network,
@@ -4128,9 +4177,18 @@ ms_calc_watershed_area <- function(network,
     return(ws_area_ha)
 }
 
-write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
-                                 snap_method, snap_distance, dem_resolution,
-                                 flat_increment, breach_method){
+write_wb_delin_specs <- function(network,
+                                 domain,
+                                 site_name,
+                                 buffer_radius,
+                                 snap_method,
+                                 snap_distance,
+                                 dem_resolution,
+                                 flat_increment,
+                                 breach_method,
+                                 burn_streams){
+
+    print(glue('Saving delineation specs'))
 
     new_entry <- tibble(network = network,
                         domain = domain,
@@ -4139,9 +4197,9 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                         snap_method = snap_method,
                         snap_distance_m = snap_distance,
                         dem_resolution = dem_resolution,
-                        flat_increment = flat_increment,
-                        breach_method = breach_method,
-                        burn_streams = burn_streams)
+                        flat_increment = as.character(flat_increment),
+                        breach_method = as.character(breach_method),
+                        burn_streams = as.character(burn_streams))
 
     # ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
 
@@ -5220,12 +5278,25 @@ choose_projection <- function(lat = NULL,
 
     abslat <- abs(lat)
 
+    # if(abslat < 23){ #tropical
+    #     PROJ4 = glue('+proj=laea +lon_0=', long)
+    #              # ' +datum=WGS84 +units=m +no_defs')
+    # } else { #temperate or polar
+    #     PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    # }
+
+    #this is what the makers of https://projectionwizard.org/# use to choose
+    #a suitable projection: https://rdrr.io/cran/rCAT/man/simProjWiz.html
     # THIS WORKS (PROJECTS STUFF), BUT CAN'T BE READ AUTOMATICALLY BY st_read
-    if(abslat < 23){ #tropical
-        PROJ4 = glue('+proj=laea +lon_0=', long)
-                 # ' +datum=WGS84 +units=m +no_defs')
-    } else { #temperate or polar
-        PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    if(abslat < 70){ #tropical or temperate
+        PROJ4 <- glue('+proj=cea +lon_0={lng} +lat_ts=0 +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lng = long)
+    } else { #polar
+        PROJ4 <- glue('+proj=laea +lat_0={lt} +lon_0={lng} +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lt = lat,
+                      lng = long)
     }
 
     ## UTM/UPS would be nice for watersheds that don't fall on more than two zones
@@ -8494,11 +8565,21 @@ raster_intersection_summary <- function(wb, dem){
     wb <- sf::st_as_sf(raster::rasterToPolygons(wb))
 
     #get edge of DEM as sf object
-    dem_edge <- raster::boundaries(dem) %>%
-        raster::reclassify(matrix(c(0, NA),
-                                  ncol = 2)) %>%
+    dem_edge <- raster::focal(x = dem, #the terra version doesn't retain NA border
+                  fun = function(x, ...) return(0),
+                  w = matrix(1, nrow = 3, ncol = 3)) %>%
+        raster::reclassify(rcl = matrix(c(0, NA, #second, set inner cells to NA
+                                          NA, 1), #first, set outer cells to 1... yup.
+                                        ncol = 2)) %>%
         raster::rasterToPolygons() %>%
         sf::st_as_sf()
+    # dem_edge <- raster::boundaries(dem) %>%
+    #                                # classes = TRUE,
+    #                                # asNA = FALSE) %>%
+    #     raster::reclassify(rcl = matrix(c(0, NA), #set inner cells to NA
+    #                                     ncol = 2)) %>%
+    #     raster::rasterToPolygons() %>%
+    #     sf::st_as_sf()
 
     #tally raster cells
     summary_out$n_wb_cells <- length(wb$geometry)
@@ -8591,8 +8672,11 @@ load_config_datasets <- function(from_where){
             col_types = 'ccccccccnnnnncc'
         ))
 
-        ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
-                                                       na = c('', 'NA')))
+        ws_delin_specs <- sm(googlesheets4::read_sheet(
+            conf$delineation_gsheet,
+            na = c('', 'NA'),
+            col_types = 'cccncnnccl'
+        ))
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
@@ -8685,6 +8769,16 @@ ms_write_confdata <- function(x,
                   kd = paste(known_datasets, collapse = '", "')))
     }
 
+    type_string <- case_when(
+        which_dataset == 'ms_vars' ~ 'cccccccnncc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncc',
+        which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
+        TRUE ~ 'placeholder')
+
+    if(which_dataset %in% c('univ_products', 'name_variants')){
+        type_string <- NULL
+    }
+
     if(to_where == 'remote'){
 
         write_loc <- case_when(
@@ -8724,7 +8818,8 @@ ms_write_confdata <- function(x,
         catch <- expo_backoff(
             expr = {
                 dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                                     na = c('', 'NA')))
+                                                     na = c('', 'NA'),
+                                                     col_types = type_string))
             },
             max_attempts = 4
         )
@@ -8755,7 +8850,8 @@ ms_write_confdata <- function(x,
         }
 
         dset <- read_csv(path = paste0('data/general/',
-                                       write_loc))
+                                       write_loc),
+                         col_types = type_string)
 
     } else {
         stop('to_where must be either "local" or "remote"')
@@ -9029,7 +9125,8 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
     #level is one of "info", "warn", 'error".
     #indent: the number of spaces to indent after the colon.
 
-    indent_str <- rep('\U2800\U2800', indent)
+    indent_str <- paste(rep('\U2800\U2800', indent),
+                        collapse = '')
 
     if(level == 'info'){
         loginfo(msg = paste0(enc2native(indent_str),
@@ -9247,7 +9344,7 @@ scale_flux_by_area <- function(site_data){
 
             if('try-error' %in% class(files) || length(files) == 0) next
 
-            dir.create(path = glue('../portal/{d}/{v}_scaled',
+            dir.create(path = glue('../portal/data/{d}/{v}_scaled',
                                    d = dmn,
                                    v = flux_var),
                        recursive = TRUE,
@@ -9255,7 +9352,7 @@ scale_flux_by_area <- function(site_data){
 
             for(fil in files){
 
-                d <- read_feather(glue('../portal/{d}/{v}/{f}',
+                d <- read_feather(glue('../portal/data/{d}/{v}/{f}',
                                        d = dmn,
                                        v = flux_var,
                                        f = fil))
@@ -9273,7 +9370,7 @@ scale_flux_by_area <- function(site_data){
                 d$val <- errors::drop_errors(d$val)
 
                 write_feather(x = d,
-                              path = glue('../portal/{d}/{v}_scaled/{f}',
+                              path = glue('../portal/data/{d}/{v}_scaled/{f}',
                                           d = dmn,
                                           v = flux_var,
                                           f = fil))
@@ -9958,7 +10055,7 @@ expo_backoff <- function(expr,
                              max = 2^attempt_i - 1)
 
             if(verbose){
-                print(paste0("Backing off for ", round(backoff, 1), " seconds."))
+                print(glue("Backing off for ", round(backoff, 1), " seconds."))
             }
 
             Sys.sleep(backoff)
