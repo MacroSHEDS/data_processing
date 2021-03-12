@@ -760,7 +760,8 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
              'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll,
              'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity,
              'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM,
-             'FDOM__|flg' = fDOMFinalQF)
+             'FDOM__|flg' = fDOMFinalQF,'DO_sat__|dat' = dissolvedOxygenSaturation,
+             'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
 
     out_sub <- ms_cast_and_reflag(out_sub,
                                   variable_flags_clean = 0,
