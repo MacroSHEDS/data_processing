@@ -41,7 +41,10 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                                            component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out = bind_rows(out, out_comp)
+
+            # out = bind_rows(out, out_comp)
+            out <- data.table::rbindlist(list(out, out_comp)) %>%
+                as_tibble()
         }
     }
 
@@ -144,7 +147,11 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         #IS IT POSSIBLE TO return(next)?
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out <- bind_rows(out, out_comp)
+
+            #internal dplyr error encountered here for konza -> precip_gauge_locations__230
+            # out <- bind_rows_sf(out, as_tibble(out_comp))
+            out <- data.table::rbindlist(list(out, out_comp)) %>%
+                as_tibble()
         }
     }
 
