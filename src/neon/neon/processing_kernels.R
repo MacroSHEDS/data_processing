@@ -160,11 +160,22 @@ process_0_DP1.20097 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20016 <- function(set_details, network, domain){
 
-    stop('disabled. waiting on NEON to fix this product')
+    #stop('disabled. waiting on NEON to fix this product')
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
+                                                  site=set_details$site_name,
+                                                  startdate=set_details$component,
+                                                  enddate=set_details$component,
+                                                  package='basic',
+                                                  check.size=FALSE,
+                                                  avg=5))
+
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -682,11 +693,34 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#surface_elevation: STATUS=PENDING (not yet needed. waiting on neon)
+#surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     component){
-    NULL
+
+  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+
+  rawfiles <- list.files(rawdir)
+
+  relevant_file <- 'EOS_5_min.feather'
+
+  if(relevant_file %in% rawfiles) {
+
+    rawd <- read_feather(glue(rawdir, '/', relevant_file))
+
+    out_sub <- rawd %>%
+      mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
+      mutate(ms_status = ifelse(is.na(ms_status), 0, ms_status)) %>%
+      mutate(var = 'stage_height') %>%
+      select(site_name = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
+
+  } else {
+    return(generate_ms_exception('Missing discharge files'))
+  }
+
+  return(out_sub)
+
 }
 
 #stream_quality: STATUS=READY
@@ -726,7 +760,8 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
              'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll,
              'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity,
              'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM,
-             'FDOM__|flg' = fDOMFinalQF)
+             'FDOM__|flg' = fDOMFinalQF,'DO_sat__|dat' = dissolvedOxygenSaturation,
+             'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
 
     out_sub <- ms_cast_and_reflag(out_sub,
                                   variable_flags_clean = 0,
@@ -814,6 +849,7 @@ process_1_DP4.00130 <-function(network, domain, prodname_ms, site_name,
                                 1, 0)) %>%
       mutate(var = 'discharge') %>%
       select(site_name = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
+
   } else {
     return(generate_ms_exception('Missing discharge files'))
   }
