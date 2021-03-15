@@ -5,7 +5,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 14,precipitation,ready,ready,NA,precipitation__ms007,NA,NA
 156,discharge,ready,ready,NA,discharge__ms002,NA,"Streamflow data from Bisley Quebrada 1, 2, 3, Sabana, and Puente Roto"
 156,stream_chemistry,ready,ready,NA,stream_chemistry__ms003,NA,"Daily Temperature data from Bisley Quebrada 1, 2, 3"
-182,discharge,ready,ready,NA,discharge__ms002,NA,NA
+182,discharge,ready,paused,NA,discharge__ms002,NA,NA
 ms001,usgs_discharge,NA,NA,ready,discharge__ms002,NA,NA
 ms002,discharge,NA,NA,ready,stream_flux_inst__ms006,NA,NA
 ms003,stream_chemistry,NA,NA,ready,stream_flux_inst__ms006,NA,NA

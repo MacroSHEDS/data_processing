@@ -110,14 +110,14 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'linux'
     }
 
-    #@Spencer, uncomment this and update it with your path on BM0 ^_^
-    # res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #BM0
-    # if(! 'try-error' %in% class(res)){
-    #     successes <- successes + 1
-    #     which_machine <- 'BM0'
-    #     instance_type <- 'dev'
-    #     machine_status <- '1337'
-    # }
+    res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM0'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
 
     res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
     if(! 'try-error' %in% class(res)){
@@ -145,14 +145,6 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-    res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
-    if(! 'try-error' %in% class(res)){
-        successes <- successes + 1
-        instance_type <- 'dev'
-        machine_status <- '1337'
-        op_system <- 'windows'
-    }
-
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -176,7 +168,7 @@ ms_init <- function(use_gpu = FALSE,
 }
 
 ms_instance <- ms_init(use_ms_error_handling = FALSE,
-                       force_machine_status = 'n00b',
+                    #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
@@ -220,7 +212,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=12
+# dmnrow=16
 for(dmnrow in 1:nrow(network_domain)){
 # for(dmnrow in 9){
     # drop_automated_entries('.') #use with caution!

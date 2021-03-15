@@ -1,0 +1,17 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms003,NA,east_river_met,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-04a0bf909a5e63a-20201207T194832971
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms002,NA,east_river_discharge,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-39d95e263bec24d-20190301T155200040382
+VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_isotopes,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-1a238fda8efff28-20201008T062924406
+VERSIONLESS004,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_cations,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-00d153692f1826b-20201008T064447692
+VERSIONLESS005,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_anions,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-b2f6dc82c561acf-20201008T063210052
+VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_carbon,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-7129d0cae9524f7-20201008T064208417
+VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_nitrogen,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-27b02333d31ae19-20201008T063638376
+VERSIONLESS008,ws_boundaries,ready,paused,NA,NA,NA,east_river_ws_boundaries,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-3b9a58adc163fd4-20190509T155206477018
+ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms002,NA,NA,NA
+ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms003,precip_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms004,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms005,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms003,automated entry,NA,NA
+ms006,discharge,NA,NA,linked,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA

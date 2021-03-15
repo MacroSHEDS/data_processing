@@ -134,16 +134,12 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                             varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
-                        convert_units_from = c(Cl = 'ug/l',
-                                               NO3_N = 'ug/l',
+                        convert_units_from = c(NO3_N = 'ug/l',
                                                NH4_N = 'ug/l',
-                                               PO4_P = 'ug/l',
-                                               DOC = 'ug/l'),
-                        convert_units_to = c(Cl = 'mg/l',
-                                             NO3_N = 'mg/l',
+                                               PO4_P = 'ug/l'),
+                        convert_units_to = c(NO3_N = 'mg/l',
                                              NH4_N = 'mg/l',
-                                             PO4_P = 'mg/l',
-                                             DOC = 'mg/l'))
+                                             PO4_P = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
