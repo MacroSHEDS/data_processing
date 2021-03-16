@@ -191,6 +191,19 @@ numeric_any_v <- function(...){ #attack of the ellipses
     return(out)
 }
 
+sd_or_0 <- function(x, na.rm = FALSE){
+
+    #Only used to bypass the tyranny of the errors package not letting
+    #me take the mean of an errors object of length 1 without setting the
+    #uncertainty to 0
+
+    x <- if(is.vector(x) || is.factor(x)) x else as.double(x)
+
+    if(length(x) == 1) return(0)
+
+    x <- sqrt(var(x, na.rm = na.rm))
+}
+
 gsub_v <- function(pattern, replacement_vec, x){
 
     #just like the first three arguments to gsub, except that
@@ -1909,16 +1922,16 @@ email_err <- function(msgs, addrs, pw){
 
         for(a in addrs){
 
-            email = envelope() %>%
-                from('grdouser@gmail.com') %>%
-                to(a) %>%
-                subject('MacroSheds error') %>%
-                text(text_body)
+            email = emayili::envelope() %>%
+                envelope::from('grdouser@gmail.com') %>%
+                envelope::to(a) %>%
+                envelope::subject('MacroSheds error') %>%
+                envelope::text(text_body)
 
-            smtp = server(host='smtp.gmail.com',
-                          port=587, #or 465 for SMTPS
-                          username='grdouser@gmail.com',
-                          password=pw)
+            smtp = envelope::server(host='smtp.gmail.com',
+                                    port=587, #or 465 for SMTPS
+                                    username='grdouser@gmail.com',
+                                    password=pw)
 
             smtp(email, verbose=FALSE)
         }
@@ -1934,7 +1947,7 @@ email_err <- function(msgs, addrs, pw){
 
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
-        logerr(msg, logger=logger_module)
+        logging::logerror(msg, logger=logger_module)
         return('email fail')
     } else {
         return('email success')
@@ -5560,8 +5573,8 @@ shortcut_idw <- function(encompassing_dem,
         precip_quickref <- Map(function(millimeters, days){
             return(millimeters/days)
         },
-        millimeters = precip_quickref,
-        days = durations_between_samples)
+            millimeters = precip_quickref,
+            days = durations_between_samples)
 
         names(precip_quickref) <- as.character(timestep_indices)
         write_precip_quickref(precip_idw_list = precip_quickref,
@@ -6404,7 +6417,7 @@ synchronize_timestep <- function(d){
 
     #split dataset by site and variable. for each, determine whether we're
     #   dealing with ~daily data or ~15min data. set rounding_intervals
-    #   accordingly.
+    #   accordingly. This approach avoids OOM errors with giant groupings.
     d_split <- d %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
@@ -6438,17 +6451,44 @@ synchronize_timestep <- function(d){
                                v = sitevar_chunk$var[1]),
                     logger = logger_module)
 
-            sitevar_chunk <- sitevar_chunk %>%
-                group_by(datetime) %>%
-                summarize(site_name = first(site_name),
-                          var = first(var),
-                          val = mean(val, na.rm = TRUE),
-                          ms_status = numeric_any(ms_status)) %>%
-                ungroup()
+            sitevar_chunk_dt <- sitevar_chunk %>%
+                mutate(val_err = errors(val),
+                       val = errors::drop_errors(val)) %>%
+                as.data.table()
+
+            sitevar_chunk <- sitevar_chunk_dt[, .(
+                site_name = data.table::first(site_name),
+                var = data.table::first(var),
+             #data.table doesn't work with the errors package, but we're
+             #determining the uncertainty of the mean by the same method here:
+             #    max(SDM, mean(uncert)),
+             #    where SDM is the Standard Deviation of the Mean.
+             #The one difference is that we remove NAs when computing
+             #the standard deviation. Rationale: 1. This will only result in
+             #"incorrect" error values if there's an NA error coupled with a
+             #non-NA value (if the value is NA, the error must be too).
+             #I don't think this happens very often, if ever.
+             #2. an error of NA just looks like 0 error, which is more misleading
+             #than even a wild nonzero error.
+                val_err = max(sd_or_0(val, na.rm = TRUE) / sqrt(.N),
+                              mean(val_err, na.rm = TRUE)),
+                val = mean(val, na.rm = TRUE),
+                ms_status = numeric_any(ms_status)
+             ), keyby = datetime] %>%
+                as_tibble() %>%
+                mutate(val = set_errors(val, val_err)) %>%
+                select(-val_err)
+
+            # sitevar_chunk <- sitevar_chunk %>%
+            #     group_by(datetime) %>%
+            #     summarize(site_name = first(site_name),
+            #               var = first(var),
+            #               val = mean(val, na.rm = TRUE),
+            #               ms_status = numeric_any(ms_status)) %>%
+            #     ungroup()
         }
 
         #round each site-variable tibble's datetime column to the desired interval.
-        #this method is clunky, but it avoids a lot of group_by overhead.
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::round_date(
                                     x = datetime,
@@ -6469,24 +6509,50 @@ synchronize_timestep <- function(d){
             # var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
             var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
-            sitevar_chunk <- summary_and_interp_chunk %>%
-                group_by(datetime) %>%
-                    summarize(
-                        site_name = first(site_name),
-                        var = first(var),
-                        val = if(var_is_p)
-                            {
-                                sum(val, na.rm = TRUE)
-                            # } else if(var_is_q){
-                            #     max_ind <- which.max(val) #max() removes uncert
-                            #     if(max_ind) val[max_ind] else NA_real_
-                            } else {
-                                mean(val, na.rm = TRUE)
-                            },
-                        ms_status = numeric_any(ms_status)) %>%
-                    ungroup() %>%
+            summary_and_interp_chunk_dt <- summary_and_interp_chunk %>%
+                mutate(val_err = errors(val),
+                       val = errors::drop_errors(val)) %>%
+                as.data.table()
+
+            sitevar_chunk <- summary_and_interp_chunk_dt[, .(
+                site_name = data.table::first(site_name),
+                var = data.table::first(var),
+                val_err = if(var_is_p)
+                    {
+                    #the errors package uses taylor series expansion here.
+                    #maybe implement some day.
+                        sum(val_err, na.rm = TRUE)
+                    } else {
+                        max(sd_or_0(val, na.rm = TRUE) / sqrt(.N),
+                            mean(val_err, na.rm = TRUE))
+                    },
+                val = if(var_is_p) sum(val, na.rm = TRUE) else mean(val, na.rm = TRUE),
+                ms_status = numeric_any(ms_status)
+            ), by = datetime] %>%
+                as_tibble() %>%
+                mutate(val = set_errors(val, val_err)) %>%
+                select(-val_err) %>%
                 bind_rows(interp_only_chunk) %>%
                 arrange(datetime)
+
+            # sitevar_chunk <- summary_and_interp_chunk %>%
+            #     group_by(datetime) %>%
+            #         summarize(
+            #             site_name = first(site_name),
+            #             var = first(var),
+            #             val = if(var_is_p)
+            #                 {
+            #                     sum(val, na.rm = TRUE)
+            #                 # } else if(var_is_q){
+            #                 #     max_ind <- which.max(val) #max() removes uncert
+            #                 #     if(max_ind) val[max_ind] else NA_real_
+            #                 } else {
+            #                     mean(val, na.rm = TRUE)
+            #                 },
+            #             ms_status = numeric_any(ms_status)) %>%
+            #         ungroup() %>%
+            #     bind_rows(interp_only_chunk) %>%
+            #     arrange(datetime)
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -6737,16 +6803,68 @@ get_detlim_precursors <- function(network,
     return(precursors)
 }
 
-datetimes_to_durations <- function(datetime_vec, unit){
+datetimes_to_durations <- function(datetime_vec,
+                                   variable_prefix_vec = NULL,
+                                   unit,
+                                   sensor_maxgap = Inf,
+                                   nonsensor_maxgap = Inf,
+                                   grab_maxgap = Inf,
+                                   installed_maxgap = Inf){
 
-    #unit must be expressed in a form that's readable by base::difftime
+    #datetime_vec: POSIXct. a vector of datetimes
+    #variable_prefix_vec: POSIXct. a vector of macrosheds variable prefixes,
+    #   e.g. 'IS'. This vector is generated by calling extract_var_prefix
+    #   on the var column of a macrosheds data.frame. Only required if you
+    #   supply one or more of the maxgap parameters.
+    #unit: string. The desired datetime unit. Must be expressed in a form
+    #   that's readable by base::difftime
+    #sensor_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to sensor data only (IS and GS).
+    #nonsensor_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to nonsensor data only (IN and GN).
+    #grab_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to grab data only (GS and GN).
+    #installed_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   only to data from installed units (IS and IN).
 
     #an NA is prepended to the output, so that its length is the same as
     #   datetime_vec
 
+    if(! is.null(variable_prefix_vec) &&
+       ! all(variable_prefix_vec %in% c('GN', 'GS', 'IN', 'IS'))){
+        stop(paste('all elements of variable_prefix_vec must be one of "GN",',
+                   '"GS", "IN", "IS"'))
+    }
+
     durs <- diff(datetime_vec)
     units(durs) <- unit
     durs <- c(NA_real_, as.numeric(durs))
+
+    if(! is.null(variable_prefix_vec)){
+        is_sensor_data <- grepl('^.S', variable_prefix_vec)
+        is_installed_data <- grepl('^I', variable_prefix_vec)
+    }
+
+    if(! is.infinite(sensor_maxgap)){
+        durs[is_sensor_data & durs > sensor_maxgap] <- NA_real_
+    }
+    if(! is.infinite(nonsensor_maxgap)){
+        durs[! is_sensor_data & durs > nonsensor_maxgap] <- NA_real_
+    }
+    if(! is.infinite(grab_maxgap)){
+        durs[! is_installed_data & durs > grab_maxgap] <- NA_real_
+    }
+    if(! is.infinite(installed_maxgap)){
+        durs[is_installed_data & durs > installed_maxgap] <- NA_real_
+    }
 
     return(durs)
 }
@@ -6831,6 +6949,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 ms_status = numeric_any(ms_status),
                 ms_interp = numeric_any(ms_interp))
 
+        day_durations_byproduct <- datetimes_to_durations(
+            datetime_vec = precip$datetime,
+            variable_prefix_vec = extract_var_prefix(precip$var),
+            unit = 'days',
+            installed_maxgap = 2,
+            grab_maxgap = 30)
+
+        precip$val[is.na(day_durations_byproduct)] <- NA
+
         precip <- precip %>%
             select(-ms_status, -ms_interp, -var) %>%
             tidyr::pivot_wider(names_from = site_name,
@@ -6839,8 +6966,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                       by = 'datetime') %>%
             arrange(datetime)
 
-        day_durations <- datetimes_to_durations(precip$datetime,
-                                                unit = 'days')
+        day_durations <- datetimes_to_durations(
+            datetime_vec = precip$datetime,
+            unit = 'days')
     }
 
     if(! precip_only){
