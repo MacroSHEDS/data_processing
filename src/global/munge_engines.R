@@ -25,12 +25,17 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
         return(generate_ms_err('missing retrieval log'))
     }
 
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
+    processing_func <- get(paste0('process_1_', prodcode))
+
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     out <- tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        prodcode <- prodcode_from_prodname_ms(prodname_ms)
-
-        processing_func <- get(paste0('process_1_', prodcode))
         in_comp <- retrieval_log[k, 'component', drop=TRUE]
 
         out_comp <- sw(do.call(processing_func,
@@ -42,9 +47,18 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
 
-            # out = bind_rows(out, out_comp)
-            out <- data.table::rbindlist(list(out, out_comp)) %>%
-                as_tibble()
+            if(is_spatial){
+
+                #internal data.table error encountered here for hbef -> discharge__1
+                out <- data.table::rbindlist(list(out, out_comp),
+                                             use.names = TRUE,
+                                             fill = TRUE) %>%
+                    as_tibble()
+
+            } else {
+                out <- bind_rows(out, out_comp)
+            }
+
         }
     }
 
@@ -59,11 +73,6 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
     }
 
     if(! is_empty(out)){
-
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
 
         write_ms_file(d = out,
                       network = network,
@@ -115,12 +124,17 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         return(generate_ms_err('missing retrieval log'))
     }
 
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
+    processing_func <- get(paste0('process_1_', prodcode))
+
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     out <- tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        prodcode <- prodcode_from_prodname_ms(prodname_ms)
-
-        processing_func <- get(paste0('process_1_', prodcode))
         in_comp <- pull(retrieval_log[k, 'component'])
 
         out_comp <- sw(do.call(processing_func,
@@ -148,10 +162,20 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
 
-            #internal dplyr error encountered here for konza -> precip_gauge_locations__230
-            # out <- bind_rows_sf(out, as_tibble(out_comp))
-            out <- data.table::rbindlist(list(out, out_comp)) %>%
-                as_tibble()
+            if(is_spatial){
+
+                out <- data.table::rbindlist(list(out, out_comp),
+                                             use.names = TRUE,
+                                             fill = TRUE) %>%
+                    as_tibble()
+
+            } else {
+
+                #internal dplyr error encountered here for konza -> precip_gauge_locations__230
+                # out <- bind_rows_sf(out, as_tibble(out_comp))
+                out <- bind_rows(out, out_comp)
+            }
+
         }
     }
 
@@ -222,6 +246,11 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     processing_func <- get(paste0('process_1_', prodcode))
     components <- pull(retrieval_log, component)
 
@@ -248,11 +277,6 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 
         filt_site <- sites[i]
         out_comp_filt <- filter(out_comp, site_name == filt_site)
-
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
 
         write_ms_file(d = out_comp_filt,
                       network = network,
