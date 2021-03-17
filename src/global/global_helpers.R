@@ -2724,8 +2724,7 @@ ms_delineate <- function(network,
             #     verbose = verbose)
 
             if(is.numeric(selection) && selection == 1) next
-            if(is.numeric(selection) && selection == 2) return()
-
+            if(is.numeric(selection) && selection == 2) return('')
 
         } else {
             stop('Multiple entries for same network/domain/site in site_data')
@@ -2992,7 +2991,8 @@ delineate_watershed_apriori_recurse <- function(lat,
                                sep = ': ',
                                collapse = '\n')
 
-        helper_code <- glue('{id}.\nmapview::mapview(sf::st_read("{wd}/{f}")) + ',
+        helper_code <- glue('{id}.\nmapview::mapviewOptions(fgb = FALSE);',
+                            'mapview::mapview(sf::st_read("{wd}/{f}")) + ',
                             'mapview::mapview(sf::st_read("{pf}"))',
                             id = 1:length(files_to_inspect),
                             wd = inspection_dir,
@@ -3001,7 +3001,7 @@ delineate_watershed_apriori_recurse <- function(lat,
             paste(collapse = '\n\n')
 
         msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
-                    'by pasting the mapview lines below into R.\n\n{hc}\n\n',
+                    'by pasting the mapview lines below into a separate instance of R.\n\n{hc}\n\n',
                     'Enter the number corresponding to the ',
                     'one that looks most legit, or select one or more tuning ',
                     'options (e.g. "SBRI" without quotes). You usually won\'t ',
@@ -3759,7 +3759,8 @@ ms_derive <- function(network = domain, domain){
         prods$derive_status == 'linked'
     created_links <- prods$prodname[is_a_link]
     is_already_linked <- ! is_a_link &
-        prods$prodname %in% created_links
+        prods$prodname %in% created_links &
+        prods$munge_status == 'ready'
     # is_a_link <- derstatus_linked &
     #                  prods$prodname %in% created_links
 
@@ -3881,6 +3882,30 @@ ms_derive <- function(network = domain, domain){
             derive_status = 'linked',
             notes = 'automated entry')
         }
+    }
+
+    waiting_retrv_kerns <- prods %>%
+        filter(! is.na(retrieve_status) & retrieve_status != 'ready') %>%
+        mutate(prodname_ms = paste(prodname, prodcode, sep='_')) %>%
+        pull(prodname_ms)
+
+    waiting_mng_kerns <- prods %>%
+        filter(! is.na(munge_status) & munge_status != 'ready') %>%
+        mutate(prodname_ms = paste(prodname, prodcode, sep='_')) %>%
+        pull(prodname_ms)
+
+    if(length(waiting_retrv_kerns)){
+        logwarn(msg = glue('Some retrieve kernels are not ready: {wr}',
+                           wr = paste(waiting_retrv_kerns,
+                                      collapse = ', ')),
+                logger = logger_module)
+    }
+
+    if(length(waiting_mng_kerns)){
+        logwarn(msg = glue('Some munge kernels are not ready: {wr}',
+                           wr = paste(waiting_mng_kerns,
+                                      collapse = ', ')),
+                logger = logger_module)
     }
 
     #compile any compprods and derive derprods (run all code in derive.R).
@@ -5521,6 +5546,16 @@ shortcut_idw <- function(encompassing_dem,
         #perform vectorized idw
         dk[is.na(dk)] <- 0 #allows matrix multiplication
         d_idw <- weightmat %*% dk
+
+        if(nrow(dk) == 0){
+            ws_mean[k] <- set_errors(NA_real_, NA)
+            if(save_precip_quickref){
+                precip_quickref[[k]] <- matrix(NA,
+                                               nrow = nrow(d_idw),
+                                               ncol = ncol(d_idw))
+            }
+            next
+        }
 
         #reapply uncertainty dropped by `%*%`
         errors(d_idw) <- weightmat %*% matrix(errors(dk),
@@ -8852,7 +8887,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnncc'
+            col_types = 'ccccccccnnnnnccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -8954,7 +8989,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnncc',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnncc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
@@ -10234,6 +10269,10 @@ expo_backoff <- function(expr,
                        silent = TRUE)
 
         if(inherits(results, 'try-error')){
+
+            if(attempt_i == max_attempts){
+                stop(attr(results, 'condition'))
+            }
 
             backoff <- runif(n = 1,
                              min = 0,
