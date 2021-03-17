@@ -145,8 +145,8 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
 
         retrieval_tracker <- retrieval_tracker[! old_bool, ]
 
-        # Added to update data traker so that old component is removed from
-        held_data[[prodname_ms]][[site_name]][['retrieve']] <<- retrieval_tracker
+        tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
+        held_data <<- tracker
     }
 
 
