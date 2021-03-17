@@ -144,6 +144,8 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
         }
 
         retrieval_tracker <- retrieval_tracker[! old_bool, ]
+        tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
+        held_data <<- tracker
     }
 
     return(retrieval_tracker)
