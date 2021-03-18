@@ -144,8 +144,45 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
         }
 
         retrieval_tracker <- retrieval_tracker[! old_bool, ]
+
         tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
         held_data <<- tracker
+    }
+
+
+    if(any(retrieval_tracker$needed)) {
+
+        email_update <- retrieval_tracker %>%
+            filter(held_version != -1) %>%
+            filter(avail_version !=  held_version)
+
+        if(!nrow(email_update) == 0) {
+
+            sites <- unique(email_update$site_name)
+            sites <- paste(sites, collapse = ', ')
+
+            components <- unique(email_update$component)
+            components <- paste(components, collapse = ', ')
+
+            logwarn(msg = glue('The domain had updated product: {p}',
+                               p = prodname_ms))
+
+            update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
+                               'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
+                               ' Check meta data to ensure munge and retrival code is ',
+                               'still acceptable for this version of the product ',
+                               '(units have not changed, there are no new variables, ',
+                               'variables names have not changed, etc.).',
+                               n = network,
+                               d = domain,
+                               p = prodname_ms,
+                               s = sites,
+                               c = components)
+
+            email_err(msgs = update_msg,
+                      addrs = conf$report_emails,
+                      pw = conf$gmail_pw)
+        }
     }
 
     return(retrieval_tracker)
