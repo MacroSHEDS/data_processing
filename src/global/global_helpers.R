@@ -5484,8 +5484,10 @@ shortcut_idw <- function(encompassing_dem,
                 logger = logger_module)
     }
 
-    timestep_indices <- data_values$ind
-    data_values$ind <- NULL
+    if('ind' %in% colnames(data_values)){
+        timestep_indices <- data_values$ind
+        data_values$ind <- NULL
+    }
 
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
@@ -7105,10 +7107,11 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         nthreads <- parallel::detectCores()
 
-        if(nrow(precip) > 500000){
+        niters <- ifelse(! pchem_only, nrow(precip), nrow(pchem))
+        if(niters > 500000){
             nsuperchunks <- 3
             nchunks <- nthreads * nsuperchunks
-        } else if(nrow(precip) > 100000){
+        } else if(niters > 100000){
             nsuperchunks <- 2
             nchunks <- nthreads * nsuperchunks
         } else {
