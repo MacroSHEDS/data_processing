@@ -1194,9 +1194,6 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
 #. handle_errors
 process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, component) {
 
-    # TDN values are VERY high, should contact domains to see if they are
-    # actully reported in g/l
-
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,

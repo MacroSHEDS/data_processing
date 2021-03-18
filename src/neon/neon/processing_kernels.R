@@ -754,13 +754,21 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
 
     out_sub <- rawd %>%
       mutate(site_name=paste0(site_name, updown)) %>%
-      select(site_name, datetime=startDateTime, 'spCond__|dat'=specificConductance,
-             'spCond__|flg' = specificCondFinalQF, 'DO__|dat'=dissolvedOxygen,
-             'DO__|flg' = dissolvedOxygenFinalQF, 'pH__|dat' = pH,
-             'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll,
-             'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity,
-             'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM,
-             'FDOM__|flg' = fDOMFinalQF,'DO_sat__|dat' = dissolvedOxygenSaturation,
+      select(site_name,
+             datetime=startDateTime,
+             'spCond__|dat'=specificConductance,
+             'spCond__|flg' = specificCondFinalQF,
+             'DO__|dat'=dissolvedOxygen,
+             'DO__|flg' = dissolvedOxygenFinalQF,
+             'pH__|dat' = pH,
+             'pH__|flg' = pHFinalQF,
+             'CHL__|dat'=chlorophyll,
+             'CHL__|flg' = chlorophyllFinalQF,
+             'turbid__|dat'=turbidity,
+             'turbid__|flg' = turbidityFinalQF,
+             'FDOM__|dat'=fDOM,
+             'FDOM__|flg' = fDOMFinalQF,
+             'DO_sat__|dat' = dissolvedOxygenSaturation,
              'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
 
     out_sub <- ms_cast_and_reflag(out_sub,
