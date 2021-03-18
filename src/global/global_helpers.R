@@ -5157,6 +5157,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
 
     if(nrow(flow) == 0) return(NULL)
     flow_is_highres <- Mode(diff(as.numeric(flow$datetime))) <= 15 * 60
+    if(is.na(flow_is_highres)) flow_is_highres <- FALSE
 
     chem_split <- chem %>%
         group_by(var) %>%
@@ -5172,6 +5173,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         chem_chunk <- chem_split[[i]]
 
         chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+        if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
         #if both chem and flow data are low resolution (grab samples),
         #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
@@ -6182,7 +6184,7 @@ read_precip_quickref <- function(network,
     #   raster cell to be reused by shortcut_idw_concflux_v2. These values are
     #   in mm/day
 
-    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
+    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref',
                          n = network,
                          d = domain)
 
@@ -6215,23 +6217,27 @@ read_precip_quickref <- function(network,
     #end dates of a quickref file. this is possible because precip dates can
     #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
     ref_ind_range <- range(refranges_sel$ref_ind)
-    if(dtrange[1] < refranges_sel$startdt && ref_ind_range[1] > 1){
+
+    if(dtrange[1] < refranges_sel$startdt[1] && ref_ind_range[1] > 1){
+
         refranges_sel <- bind_rows(refranges[ref_ind_range[1] - 1, ],
                                    refranges_sel)
     }
-    if(dtrange[2] > refranges_sel$enddt && ref_ind_range[2] < nrow(refranges)){
+
+    if(dtrange[2] > refranges_sel$enddt[nrow(refranges_sel)] &&
+       ref_ind_range[2] < nrow(refranges)){
+
         refranges_sel <- bind_rows(refranges_sel,
                                    refranges[ref_ind_range[2] + 1, ])
     }
 
     quickref <- list()
-    # quickref_inds <- character(length = nrow(refranges))
-    for(i in 1:nrow(refranges)){
+    for(i in 1:nrow(refranges_sel)){
 
-        fn <- paste(strftime(refranges$startdt[i],
+        fn <- paste(strftime(refranges_sel$startdt[i],
                              format = '%Y-%m-%d %H:%M:%S',
                              tz = 'UTC'),
-                    strftime(refranges$enddt[i],
+                    strftime(refranges_sel$enddt[i],
                              format = '%Y-%m-%d %H:%M:%S',
                              tz = 'UTC'),
                     sep = '_')
@@ -6241,56 +6247,12 @@ read_precip_quickref <- function(network,
                            f = fn))
 
         quickref <- append(quickref, qf)
-        # quickref_inds[i] <- names(qf)
-        # quickref[[i]] <- qf[[1]]
     }
 
-    #for some reason the first ref gets duplicated.
+    #for some reason the first ref sometimes gets duplicated?
     quickref <- quickref[! duplicated(names(quickref))]
 
     return(quickref)
-
-    #previous approach: when chunks have a size limit:
-
-    # #not to be confused with the precip idw tempfile (dumpfile),
-    # #the quickref file allows the same precip idw data to be used across all
-    # #chemistry variables when calculating flux. it's stored in 1000-timestep
-    # #chunks
-    #
-    # #set timestep to 0 to get the first chunk. for every thousand timepoints
-    # #thereafter, it will grab the next chunk
-    #
-    # chunk_number <- timestep / 1000 + 1
-    #
-    # if(! chunk_number %% 1 == 0){
-    #     stop('timestep must be a multiple of 1000')
-    # }
-    #
-    # chunkID <- stringr::str_pad(string = chunk_number,
-    #                             width = 3,
-    #                             side = 'left',
-    #                             pad = '0')
-    #
-    # quickref <- tryCatch(
-    #     {
-    #         o <- readRDS(precip_idw_list,
-    #                      glue('data/{n}/{d}/precip_idw_quickref/{s}/chunk{ch}.rds}',
-    #                           n = network,
-    #                           d = domain,
-    #                           s = site_name,
-    #                           ch = chunkID))
-    #         attr(o, 'status') <- 'read'
-    #         return(o)
-    #
-    #     },
-    #     error = function(e)
-    #         {
-    #             o <- list()
-    #             attr(o, 'status') <- 'write'
-    #             return(o)
-    #         })
-    #
-    # return(quickref)
 }
 
 populate_implicit_NAs <- function(d, interval){
@@ -6529,7 +6491,7 @@ synchronize_timestep <- function(d){
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::round_date(
                                     x = datetime,
-                                    unit = '15 min'))
+                                    unit = rounding_intervals[i]))
 
         #split chunk into subchunks. one has duplicate datetimes to summarize,
         #   and the other doesn't. both will be interpolated in a bit.
@@ -7107,28 +7069,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         nthreads <- parallel::detectCores()
 
-        niters <- ifelse(! pchem_only, nrow(precip), nrow(pchem))
-        if(niters > 500000){
-            nsuperchunks <- 3
-            nchunks <- nthreads * nsuperchunks
-        } else if(niters > 100000){
-            nsuperchunks <- 2
-            nchunks <- nthreads * nsuperchunks
-        } else {
-            nsuperchunks <- 1
-            nchunks <- nthreads
-        }
-
-        #     nchunks <- parallel::detectCores() %/% 2
-        # } else if(nrow(precip) > 17000){
-        #     nchunks <- parallel::detectCores() %/% 3
-        # } else {
-        #     nchunks <- parallel::detectCores()
-        # }
-
         ## IDW INTERPOLATE PRECIP FOR ALL TIMESTEPS. STORE CELL VALUES
         ## SO THEY CAN BE USED FOR PFLUX INTERP
         if(! pchem_only){
+
+            ntimesteps_precip <- nrow(precip)
+            nsuperchunks <- ceiling(ntimesteps_precip / 25000 * 2)
+            nchunks_precip <- nthreads * nsuperchunks
 
             precip_superchunklist <- chunk_df(d = precip,
                                               nchunks = nsuperchunks,
@@ -7171,7 +7118,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                 v = 'precipitation',
                                 j = paste('chunk', j + (nthreads * (s - 1))),
                                 ntimesteps = nrow(pchunk),
-                                nvars = nchunks)
+                                nvars = nchunks_precip)
 
                     foreach_return <- shortcut_idw(
                         encompassing_dem = dem,
@@ -7251,7 +7198,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
                 v <- pchem_vars[j]
                 jd <- pchem_setlist[[j]]
-                ntimesteps <- nrow(jd)
+                ntimesteps_chemflux <- nrow(jd)
 
                 if(v %in% pchem_vars_fluxable && ! pchem_only){
                     is_fluxable <- TRUE
@@ -7264,13 +7211,14 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             v = v,
                             j = j,
                             nvars = nvars,
-                            ntimesteps = ntimesteps,
+                            ntimesteps = ntimesteps_chemflux,
                             is_fluxable = is_fluxable)
 
-                if(ntimesteps > 5000){
-                    nchunks <- parallel::detectCores() %/% 2 #overkill?
+                if(ntimesteps_chemflux > 5000){
+                   # (exists('ntimesteps_precip') && ntimesteps_precip > 2e5)){
+                    nchunks <- nthreads %/% 2 #overkill?
                 } else {
-                    nchunks <- parallel::detectCores()
+                    nchunks <- nthreads
                 }
 
                 chunklist <- chunk_df(d = jd,

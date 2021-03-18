@@ -58,8 +58,8 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 3014,discharge,ready,ready,NA,discharge__ms001,NA,NA,NA
 ms006,usgs_discharge,NA,NA,ready,discharge__ms001,"Two sites are colocated with usgs gauges but the data through lter portal has not been updated in 8 years, so using USGS as data source",NA,NA
 ms001,discharge,NA,NA,ready,stream_flux_inst__ms005,NA,NA,NA
-ms002,precipitation,NA,NA,ready,precipitation__ms003,NA,NA,NA
-ms004,precip_gauge_locations,NA,NA,ready,precipitation__ms003,NA,NA,NA
+ms002,precipitation,NA,NA,ready,precip_pchem_pflux__ms003,NA,NA,NA
+ms004,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms003,NA,NA,NA
 ms007,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
 ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
 ms005,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
