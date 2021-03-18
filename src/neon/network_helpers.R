@@ -92,11 +92,18 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             d <- out %>%
                 filter(site_name == !!site_names[y])
 
+            if(sensor){
+                sampling_type <- 'I'
+            } else{
+                sampling_type <- 'G'
+            }
+
             d <- identify_sampling_bypass(df = d,
                                           is_sensor =  sensor,
                                           domain = domain,
                                           network = network,
-                                          prodname_ms = prodname_ms)
+                                          prodname_ms = prodname_ms,
+                                          sampling_type = sampling_type)
 
             d <- d %>%
                 filter(!is.na(val))
