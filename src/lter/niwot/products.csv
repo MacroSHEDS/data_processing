@@ -19,10 +19,10 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 416,precipitation,ready,ready,NA,precipitation__ms003,NA
 414,precipitation,ready,ready,NA,precipitation__ms003,NA
 415,precipitation,ready,ready,NA,precipitation__ms003,NA
-ms003,precipitation,NA,NA,ready,precip_pchem_pflux_ms007,NA
+ms003,precipitation,NA,NA,ready,precip_pchem_pflux__ms007,NA
 ms001,discharge,NA,NA,ready,stream_flux_inst__ms005,NA
 ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms005,NA
-ms004,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux_ms007,NA
+ms004,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms007,NA
 ms006,stream_gauge_locations,NA,NA,ready,NA,NA
 ms007,precip_pchem_pflux,NA,NA,ready,NA,NA
 ms005,stream_flux_inst,NA,NA,ready,NA,NA

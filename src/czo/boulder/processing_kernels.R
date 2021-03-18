@@ -785,6 +785,20 @@ process_2_ms005 <- function(network, domain, prodname_ms){
     return()
 }
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms){
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('precipitation__2435',
+                                           'precipitation__2888',
+                                           'precipitation__2889'))
+
+    return()
+}
+
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms007 <- derive_stream_flux
