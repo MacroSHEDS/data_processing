@@ -3242,7 +3242,7 @@ delineate_watershed_apriori <- function(lat,
                                          z = dem_resolution,
                                          verbose = FALSE)
             },
-            max_attempts = 10
+            max_attempts = 5
         )
 
         # terra::writeRaster(x = dem,
@@ -3511,7 +3511,7 @@ delineate_watershed_by_specification <- function(lat,
                                      z = dem_resolution,
                                      verbose = FALSE)
         },
-        max_attempts = 10
+        max_attempts = 5
     )
 
     raster::writeRaster(x = dem,
@@ -5035,7 +5035,7 @@ delineate_watershed_nhd <- function(lat, long) {
                                          z = 12,
                                          verbose = FALSE)
             },
-            max_attempts = 10
+            max_attempts = 5
         )
 
         temp_raster <- tempfile(fileext = ".tif")
@@ -6928,7 +6928,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                      expand = 200,
                                      verbose = FALSE)
         },
-        max_attempts = 10
+        max_attempts = 5
     )
 
     #add elev column to rain gauges
