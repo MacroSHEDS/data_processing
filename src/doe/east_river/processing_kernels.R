@@ -15,19 +15,30 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.txt',
+    rawfile <- glue('{rd}/{c}.txt',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass)
-#
-#     loginfo(glue('Nothing to do for {p}',
-#             p = set_details$prodname_ms),
-#             logger = logger_module)
+    # R.utils::downloadFile(url = set_details$url,
+    #                       path = raw_data_dest,
+    #                       filename = rawfile,
+    #                       username = set_details$orcid_login,
+    #                       password = set_details$orcid_pass,
+    #                       overwrite = TRUE)
+
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 
     return()
 }
@@ -46,22 +57,23 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
 
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
 
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #stream_chemistry: STATUS=READY
@@ -78,20 +90,23 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #stream_chemistry: STATUS=READY
@@ -108,20 +123,23 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #stream_chemistry: STATUS=READY
@@ -138,20 +156,23 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #stream_chemistry: STATUS=READY
@@ -168,20 +189,23 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #stream_chemistry: STATUS=READY
@@ -198,20 +222,23 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #ws_boundaries: STATUS=READY
@@ -228,20 +255,23 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{c}.zip',
+    rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          path = raw_data_dest,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          overwrite = TRUE)
-    #
-    #     loginfo(glue('Nothing to do for {p}',
-    #             p = set_details$prodname_ms),
-    #             logger = logger_module)
+    login_escape <- sub(pattern = '@',
+                        replacement = '%40',
+                        x = set_details$orcid_login)
+
+    url_with_auth <- sub(pattern = '://',
+                         replacement = paste0('://', login_escape, ':',
+                                              set_details$orcid_pass, '@'),
+                         x = set_details$url)
+
+    download.file(url = url_with_auth,
+                  destfile = rawfile,
+                  quiet = TRUE,
+                  cacheOK = FALSE)
 }
 
 #munge kernels ####

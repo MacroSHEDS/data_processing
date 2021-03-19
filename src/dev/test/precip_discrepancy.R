@@ -1,5 +1,6 @@
 
-aa = read_feather('data/lter/hjandrews/derived/precip_flux_inst__ms902/GSLOOK.feather')
+#nvm. no discrepancy.
+aa = read_feather('data/lter/hjandrews/derived/precip_chemistry__ms901/GSLOOK.feather')
 qq = read_csv('data/lter/hjandrews/raw/precip_chemistry__4022/sitename_NA/CP00201.csv')
 qq %>%
     select(SITECODE, DATE_TIME, UTP) %>%
