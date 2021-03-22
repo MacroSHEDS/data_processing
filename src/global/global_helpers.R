@@ -2040,18 +2040,37 @@ track_new_product <- function(tracker, prodname_ms){
 
 track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker <- tracker[[prodname_ms]][[site_name]]$retrieve
 
-    retrieval_tracker = avail %>%
+    new_avail <- avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
         select(component) %>%
         mutate(mtime = '1900-01-01',
                held_version = '-1',
-               status = 'pending') %>%
+               status = 'pending')
+
+    if(! all(retrieval_tracker$component %in% avail$component)){
+
+        obsolete_components <- retrieval_tracker %>%
+            filter(! component %in% avail$component) %>%
+            pull(component)
+
+        logwarn(msg = glue("Tracked component(s) {tc} no longer available. ",
+                           "Removing from tracker. If this isn't NEON, ",
+                           "investigate.",
+                           tc = paste(obsolete_components,
+                                      collapse = ', ')),
+                logger = logger_module)
+
+        retrieval_tracker <- filter(retrieval_tracker,
+                                    component %in% avail$component)
+    }
+
+    retrieval_tracker <- new_avail %>%
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prodname_ms]][[site_name]]$retrieve = retrieval_tracker
+    tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
 
     return(tracker)
 }
@@ -3724,27 +3743,12 @@ ms_derive <- function(network = domain, domain){
                               n = network,
                               d = domain)))
 
-    # #checks
-    # if(! all(prods$type %in% c('normal', 'derived', 'linked'))){
-    #     stop(glue('All entries in the type column must be one of "normal", ',
-    #               '"derived", "linked" (src/{n}/{d}/products.csv)',
-    #               n = network,
-    #               d = domain))
-    # }
-
-    #check for sitenames in prodnames?
-    # if(){
-    #
-    # }
-
-    #these are the prods that we pretty much (?) always want to derive
+    #determine various categories governing how products should be handled
     has_ms_prodcode <- grepl('^ms[0-9]{3}$',
                              prods$prodcode,
                              perl = TRUE)
 
     is_being_munged <- ! is.na(prods$munge_status) & prods$munge_status == 'ready'
-
-    # is_being_derived <- ! is.na(prods$derive_status) & prods$derive_status == 'ready'
 
     is_self_precursor <- mapply(function(x, y){
                                     precursors <- strsplit(as.character(y),
@@ -3757,12 +3761,15 @@ ms_derive <- function(network = domain, domain){
 
     is_a_link <- ! is.na(prods$derive_status) &
         prods$derive_status == 'linked'
+
     created_links <- prods$prodname[is_a_link]
+
     is_already_linked <- ! is_a_link &
         prods$prodname %in% created_links &
         prods$munge_status == 'ready'
-    # is_a_link <- derstatus_linked &
-    #                  prods$prodname %in% created_links
+
+    is_automated_entry <- ! is.na(prods$notes) &
+        prods$notes == 'automated entry'
 
     #determine which active prods need to be linked (linkprods)
     is_linkprod <- (! is.na(prods$derive_status) &
@@ -3791,17 +3798,6 @@ ms_derive <- function(network = domain, domain){
        is_linkprod[not_rly_linkprod] <- FALSE
     }
 
-    # #determine which active prods need to be compiled from constituents (compprods)
-    # is_compprod <- has_ms_prodcode &
-    #     ! prods$prodname %in% typical_derprods &
-    #     is_being_derived &
-    #     prods$type != 'spatial'
-    #
-    # #determine which prods are "true" active derived prods (derprods)
-    # is_derprod <- has_ms_prodcode &
-    #     is_being_derived &
-    #     prods$prodname %in% typical_derprods
-
     #re-link any already linked prods
     for(i in which(is_already_linked)){
 
@@ -3820,10 +3816,21 @@ ms_derive <- function(network = domain, domain){
 
     #link any new linkprods and create new product entries
     prodcodes_num <- as.numeric(substr(
-        prods$prodcode[grepl('^ms[0-9]{3}$',
+        prods$prodcode[grepl('^ms[0-7][0-9]{2}$',
                              prods$prodcode)],
         start = 3,
         stop = 5))
+
+    code_800_or_900s <- grep(pattern = '^ms[8-9][0-9]{2}$',
+                             x = prods$prodcode[has_ms_prodcode &
+                                                    ! is_automated_entry],
+                             value = TRUE)
+
+    if(length(code_800_or_900s)){
+        stop(glue('ms8XX and ms9XX are reserved prodcodes (generated ',
+                  'automatically). Please rename: ',
+                  paste(code_800_or_900s, collapse = ', ')))
+    }
 
     if(any(is_linkprod)){
 
@@ -6891,9 +6898,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     }, silent = TRUE)
 
     precip_only <- FALSE
-    if('try-error' %in% class(pchem)){
+    if('try-error' %in% class(pchem) || nrow(pchem) == 0){
         precip_only <- TRUE
-        logging::logwarn('No pchem product. IDW-Interpolating precipitation only')
+        logging::logwarn('No (or empty) pchem product. IDW-Interpolating precipitation only')
     }
 
     precip <- try({
@@ -6904,10 +6911,10 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     }, silent = TRUE)
 
     pchem_only <- FALSE
-    if('try-error' %in% class(precip)){
+    if('try-error' %in% class(precip) || nrow(precip) == 0){
         pchem_only <- TRUE
         if(precip_only) stop('Nothing to IDW interpolate. Is this kernel needed?')
-        logging::logwarn('No precip product. IDW-Interpolating pchem only')
+        logging::logwarn('No (or empty) precip product. IDW-Interpolating pchem only')
     }
 
     #project based on average latlong of watershed boundaries
@@ -7404,13 +7411,22 @@ chunk_df <- function(d, nchunks, create_index_column = FALSE){
     nr <- nrow(d)
     chunksize <- nr/nchunks
 
-    # if(nr < chunksize) chunksize <- nr
-    if(create_index_column) d <- mutate(d, ind = 1:n())
+    if(nr > 0){
 
-    chunklist <- split(d,
-                       0:(nr - 1) %/% chunksize)
+        if(create_index_column) d <- mutate(d, ind = 1:n())
 
-    return(chunklist)
+        chunklist <- split(d,
+                           0:(nr - 1) %/% chunksize)
+
+        return(chunklist)
+
+    } else {
+
+        logwarn(msg = 'Trying to chunk an empty tibble. Something is probably wrong',
+                logger = logger_module)
+
+        return(d)
+    }
 }
 
 invalidate_derived_products <- function(successor_string){

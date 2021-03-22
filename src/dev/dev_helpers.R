@@ -135,11 +135,12 @@ compare_interp_methods <- function(){
     plot(m3, main='idw^2 and elev')
 }
 
-invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
+invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
 
     #level is one of 'munge' or 'derive'. that level will be reset.
     #   not currently set up to invalidate level='retrieve'.
-    #prodname_ms is optional. if supplied, only that product will be invalidated
+    #prodname is optional. if supplied, only that product will be invalidated.
+    #   prodname_ms is determined automatically.
 
     if(! level %in% c('munge', 'derive')){
         stop('level must be either "munge" or "derive"')
@@ -148,26 +149,52 @@ invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
     tracker <- get_data_tracker(network = network,
                                 domain = domain)
 
-    if(! is.null(prodname_ms)){
+    if(! is.null(prodname)){
 
-        sublist <- tracker[[prodname_ms]]
+        prodnames_ms <- get_derive_ingredient(network, domain, prodname,
+                              ignore_derprod = level == 'munge',
+                              ignore_derprod900 = TRUE,
+                              accept_multiple = TRUE)
 
-        subl_updt <- recursive_tracker_update(l = sublist,
-                                              elem_name = level,
-                                              new_val = list(status = 'pending',
-                                                             mtime = '1500-01-01'))
-        tracker[[prodname_ms]] <- subl_updt
+        if(level == 'derive'){
+            prodnames_ms <- prodnames_ms[grepl('__ms[0-9]{3}$', prodnames_ms)]
+        }
+
+        if(length(prodnames_ms) == 0){
+            print(glue('Nothing to invalidate'))
+            return(tracker)
+        }
+
+        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} tracker(s):\n{prds}\n',
+                     lvl = toupper(level),
+                     prds = paste(prodnames_ms, collapse = '\n')))
+        Sys.sleep(10)
+
+        for(i in seq_along(prodnames_ms)){
+
+            prodname_ms <- prodnames_ms[i]
+
+            sublist <- tracker[[prodname_ms]]
+
+            subl_updt <- recursive_tracker_update(l = sublist,
+                                                  elem_name = level,
+                                                  new_val = list(status = 'pending',
+                                                                 mtime = '1500-01-01'))
+            tracker[[prodname_ms]] <- subl_updt
+        }
 
         return(tracker)
 
     } else {
 
-        invalidated <- recursive_tracker_update(l = tracker,
-                                                elem_name = level,
-                                                new_val = list(status = 'pending',
-                                                               mtime = '1500-01-01'))
-        return(invalidated)
+        tracker <- recursive_tracker_update(l = tracker,
+                                            elem_name = level,
+                                            new_val = list(status = 'pending',
+                                                           mtime = '1500-01-01'))
+        return(tracker)
     }
+
+    message('Tracker(s) invalidated.')
 }
 
 assign_typical_test_variables <- function(){
