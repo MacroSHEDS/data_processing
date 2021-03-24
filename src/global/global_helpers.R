@@ -960,7 +960,6 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
-
     #Set correct class for each column
     colnames_d <- colnames(d)
 
@@ -2231,111 +2230,112 @@ update_data_tracker_d <- function(network = domain,
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(network=network, domain=domain)
+        tracker <- get_data_tracker(network = network,
+                                    domain = domain)
 
-        dt = tracker[[prodname_ms]][[site_name]]$derive
+        dt <- tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-            msg <- 'Derived product not yet tracked; not updating tracker.'
+            msg <- 'Derived product not yet tracked; not updating derive tracker.'
             logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
+        dt$status <- new_status
+        dt$mtime <- as.character(Sys.time())
+        tracker[[prodname_ms]][[site_name]]$derive <- dt
 
-        tracker[[prodname_ms]][[site_name]]$derive = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
+        assign(x = tracker_name,
+               value = tracker,
+               pos = .GlobalEnv)
     }
 
-    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}',
+                       n = network,
+                       d = domain)
+
     if(! dir.exists('trackerdir')){
-        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+        dir.create(trackerdir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
     }
 
-    trackerfile = glue(trackerdir, '/data_tracker.json')
+    trackerfile <- glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_g <- function(network = domain,
                                   domain,
-                                  tracker = NULL,
-                                  tracker_name = NULL,
-                                  prodname_ms = NULL,
-                                  site_name = NULL,
-                                  new_status = NULL){
+                                  tracker,
+                                  prodname_ms,
+                                  site_name,
+                                  new_status){
 
     #this updates the general section of a data tracker in memory and on disk.
-    #see update_data_tracker_r for the retrieval section and
-    #update_data_tracker_m for the munge section
 
-    #if tracker is supplied, it will be used to write/overwrite the one on disk.
-    #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk, updated, and then written back to disk.
+    #see update_data_tracker_r for the retrieval section,
+    #update_data_tracker_m for the munge section, and
+    #update_data_tracker_d for the derive section
 
-    if(is.null(tracker) && (
-        is.null(tracker_name) || is.null(prodname_ms) ||
-        is.null(new_status) || is.null(site_name)
-    )){
-        msg = paste0('If tracker is not supplied, these args must be:',
-                     'tracker_name, prodname_ms, new_status, new_status.')
-        logerror(msg, logger=logger_module)
-        stop(msg)
+    dt <- tracker[[prodname_ms]][[site_name]]$general
+
+    if(is.null(dt)){
+        return(generate_ms_exception('Product not yet tracked; no action taken.'))
     }
 
-    if(is.null(tracker)){
+    dt$status <- new_status
+    dt$mtime <- as.character(Sys.time())
 
-        tracker = get_data_tracker(network=network, domain=domain)
+    tracker[[prodname_ms]][[site_name]]$general <- dt
 
-        dt = tracker[[prodname_ms]][[site_name]]$general
+    assign(x = 'held_data',
+           value = tracker,
+           pos = .GlobalEnv)
 
-        if(is.null(dt)){
-            return(generate_ms_exception('Product not yet tracked; no action taken.'))
-        }
+    trackerfile <- glue('data/{n}/{d}/data_tracker.json',
+                        n = network,
+                        d = domain)
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
-
-        tracker[[prodname_ms]][[site_name]]$general = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
-    }
-
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
-backup_tracker <- function(path){
+backup_tracker <- function(path,
+                           force = FALSE){
 
-    mch = stringr::str_match(path,
-                             '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+    #force: logical. if FALSE, new tracker backup will only be written once per
+    #   hour. If TRUE, it will be written regardless (up to once per second)
+
+    mch <- stringr::str_match(path,
+                              '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
 
     if(any(is.na(mch))){
         stop('Invalid tracker path or name')
     }
 
     dir.create(glue(mch[1], '/tracker_backups'),
-               recursive=TRUE, showWarnings=FALSE)
+               recursive = TRUE,
+               showWarnings = FALSE)
 
-    tstamp = Sys.time() %>%
-        with_tz(tzone='UTC') %>%
-        format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
+    time_format <- ifelse(force, '%Y%m%dT%H%M%SZ', '%Y%m%dT%HZ')
 
-    newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
-    file.copy(path, newpath, overwrite=FALSE) #write only one tracker per hour
+    tstamp <- Sys.time() %>%
+        with_tz(tzone = 'UTC') %>%
+        format(time_format)
+
+    newpath <- glue('{p}/tracker_backups/{f}_{t}',
+                    p = mch[1],
+                    f = mch[2],
+                    t = tstamp)
+
+    file.copy(from = path,
+              to = newpath,
+              overwrite = FALSE)
 
     #remove tracker backups older than 7 days
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
                       '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
-
-    #return()
 }
 
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
@@ -2390,16 +2390,22 @@ get_product_info <- function(network,
 
     if(status_level == 'derive'){
 
+        custom_prods <- prods %>%
+            filter(grepl('^CUSTOM', prodname))
+
         atypicals_sorted <- prods %>%
-            filter(! prodname %in% !!typical_derprods) %>%
+            filter(! prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
 
         typicals_sorted <- prods %>%
-            filter(prodname %in% !!typical_derprods) %>%
+            filter(prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(order(match(prodname, !!typical_derprods)))
 
         prods <- bind_rows(atypicals_sorted,
-                           typicals_sorted)
+                           typicals_sorted,
+                           custom_prods)
     }
 
     return(prods)
@@ -3656,7 +3662,7 @@ get_derive_ingredient <- function(network,
     #   derived products take precedence over munged products.
     #ignore_derprod900: logical. if TRUE, don't consider any product with an
     #   ms9XX prodcode.
-    #accept_multi_ing: logical. should more than one ingredient be returned?
+    #accept_multiple: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -3774,8 +3780,9 @@ ms_derive <- function(network = domain, domain){
     #determine which active prods need to be linked (linkprods)
     is_linkprod <- (! is.na(prods$derive_status) &
                         prods$derive_status == 'linked') |
-        (prods$prodname %in% canonical_derprods &
-             ! has_ms_prodcode &
+        (prods$prodname %in% canonical_derprods |
+             grepl('CUSTOM', prods$prodname)) &
+             ( ! has_ms_prodcode &
              is_being_munged &
              ! is_self_precursor)
 
@@ -3917,7 +3924,7 @@ ms_derive <- function(network = domain, domain){
 
     #compile any compprods and derive derprods (run all code in derive.R).
     #note: get_product_info() knows it must arrange derive products with
-    #   non-canonicals first.
+    #   non-canonicals first and CUSTOM products last
     source(glue('src/{n}/{d}/derive.R',
                 n = network,
                 d = domain),
@@ -5127,7 +5134,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #   from the supplied chemprod directly, rather than its precursor. passed to
     #   apply_detection_limit_t.
 
-    if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
+    if(! grepl('(precipitation|discharge)', prodname_from_prodname_ms(qprod))){
         stop('Could not determine stream/precip')
     }
 
@@ -7171,7 +7178,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 X = ws_mean_precip,
                 network = network,
                 domain = domain,
-                prodname_ms = precursor_prodnames[grepl('precipitation',
+                prodname_ms = precursor_prodnames[grepl('^precipitation',
                                                         precursor_prodnames)])
 
             write_ms_file(ws_mean_precip,
@@ -8405,12 +8412,18 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         })
 }
 
-clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
+clean_gee_table <- function(ee_ws_table,
+                            sheds,
+                            com_name) {
 
     table_nrow <- sheds %>%
         mutate(nrow = row_number()) %>%
         as.data.frame() %>%
         select(site_name, nrow)
+
+    # if(any(duplicated(colnames(ee_ws_table)))){
+    #     pivot_longer(ee_ws_table, )
+    # }
 
     sm(table <- ee_ws_table %>%
         mutate(nrow = row_number()) %>%
@@ -8438,8 +8451,19 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
     return(table_fin)
 }
 
-get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
-                             ws_prodname, batch = FALSE) {
+get_gee_standard <- function(network,
+                             domain,
+                             gee_id,
+                             band,
+                             prodname,
+                             rez,
+                             ws_prodname,
+                             batch = FALSE){
+
+    asset_path <- paste0('users/',
+                         strsplit(x = gee_login,
+                                  split = '@')[[1]][1],
+                         '/data_aq_sheds')
 
     area <- sf::st_area(ws_prodname)
 
@@ -8456,7 +8480,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
         ee_shape <- sf_as_ee(sheds,
                              via = 'getInfo_to_asset',
-                             assetId = 'users/spencerrhea/data_aq_sheds',
+                             assetId = asset_path,
                              overwrite = TRUE,
                              quiet = TRUE)
 
@@ -8504,7 +8528,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
         fin_table <- read_csv(temp_rgee)
 
         googledrive::drive_rm('GEE/rgee.csv')
-        rgee::ee_manage_delete(path_asset = 'users/spencerrhea/data_aq_sheds',
+        rgee::ee_manage_delete(path_asset = asset_path,
                                quiet = TRUE)
 
         if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
@@ -8515,7 +8539,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             rename(date = imageId,
                    !!sd_name := stdDev,
                    !!median_name := median) %>%
-            pivot_longer(cols = c(sd_name, median_name),
+            pivot_longer(cols = all_of(c(sd_name, median_name)),
                          names_to = 'var',
                          values_to = 'val')
 
@@ -8526,7 +8550,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
         imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
 
-        median <- try(ee_extract(
+        ext_median <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -8534,14 +8558,16 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(median) <= 4 || class(median) == 'try-error') {
+        if(length(ext_median) <= 4 || class(ext_median) == 'try-error') {
             return(NULL)
         }
 
         median_name <- glue('{c}_median', c = prodname)
-        median <- clean_gee_tabel(median, sheds, median_name)
+        ext_median <- clean_gee_table(ee_ws_table = ext_median,
+                                      sheds = sheds,
+                                      com_name = median_name)
 
-        sd <- try(ee_extract(
+        ext_sd <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -8549,21 +8575,20 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(sd) <= 4 || class(sd) == 'try-error') {
-            sd <- tibble()
+        if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
+            ext_sd <- tibble()
         } else {
             sd_name <- glue('{c}_sd', c = prodname)
-            sd <- clean_gee_tabel(sd, sheds, sd_name)
+            ext_sd <- clean_gee_table(ext_sd, sheds, sd_name)
         }
 
-        fin_table <- rbind(median, sd)
+        fin_table <- rbind(ext_median, ext_sd)
 
         fin <- list(table = fin_table,
                     type = 'ee_extract')
     }
 
     return(fin)
-
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -8695,7 +8720,9 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
             final <- rbind(final, final_y)
         }
 
-    final <- pivot_longer(final, cols = c(mean_name, sd_name), names_to = 'var',
+    final <- pivot_longer(final,
+                          cols = all_of(c(mean_name, sd_name)),
+                          names_to = 'var',
                           values_to = 'val')
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
@@ -9901,7 +9928,7 @@ catalog_held_data <- function(network_domain, site_data){
                                     full.names = TRUE,
                                     recursive = TRUE) %>%
                 purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
-                purrr:::reduce(sum)
+                purrr::reduce(sum)
 
             nobs_nonspatial <- nobs_nonspatial + prod_nobs
 

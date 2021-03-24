@@ -1058,25 +1058,25 @@ process_2_ms003 <- function(network, domain, prodname_ms) {
                             domain = domain,
                             prodname_ms = 'precipitation__ms002')
 
-  flux_sites <- generics::intersect(
-    fname_from_fpath(qfiles, include_fext = FALSE),
-    fname_from_fpath(chemfiles, include_fext = FALSE))
+    flux_sites <- base::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
 
-  for(s in flux_sites){
+    for(s in flux_sites){
 
-    flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
-                              qprod = 'precipitation__ms002',
-                              site_name = s))
+        flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
+                                  qprod = 'precipitation__ms002',
+                                  site_name = s))
 
-    if(!is.null(flux)) {
+        if(!is.null(flux)){
 
-      write_ms_file(d = flux,
-                    network = network,
-                    domain = domain,
-                    prodname_ms = prodname_ms,
-                    site_name = s,
-                    level = 'derived',
-                    shapefile = FALSE)
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE)
+        }
     }
-  }
 }
