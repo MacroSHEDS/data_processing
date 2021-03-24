@@ -861,7 +861,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
                                domain = domain,
                                prodname_ms = qprod)
 
-  flux_sites <- generics::intersect(
+  flux_sites <- base::intersect(
     fname_from_fpath(qfiles, include_fext = FALSE),
     fname_from_fpath(chemfiles, include_fext = FALSE))
 

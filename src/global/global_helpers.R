@@ -7944,7 +7944,7 @@ knit_det_limits <- function(network, domain, prodname_ms){
         old_vars <- names(detlim)
         new_vars <- names(detlim_)
 
-        common_vars <- generics::intersect(old_vars, new_vars)
+        common_vars <- base::intersect(old_vars, new_vars)
 
         if(length(common_vars) > 0) {
 
@@ -7953,7 +7953,7 @@ knit_det_limits <- function(network, domain, prodname_ms){
                 old_sites <- names(detlim[[common_vars[p]]])
                 new_sites <- names(detlim_[[common_vars[p]]])
 
-                common_sites <- generics::intersect(old_sites, new_sites)
+                common_sites <- base::intersect(old_sites, new_sites)
 
                 if(!length(common_sites) == 0) {
                     new_sites <- new_sites[!new_sites %in% common_sites]
@@ -9110,7 +9110,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = disch_prodname_ms)
 
-    flux_sites <- generics::intersect(
+    flux_sites <- base::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
         fname_from_fpath(chemfiles, include_fext = FALSE))
 
