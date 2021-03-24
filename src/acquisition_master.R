@@ -184,7 +184,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(email = conf[[gee_login]],
+try(rgee::ee_Initialize(email = gee_login,
                         drive = TRUE))
 
 #set up global logger. network-domain loggers are set up later
@@ -213,9 +213,9 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=4
+dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
-# for(dmnrow in 9){
+
     # drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
@@ -226,9 +226,8 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'ws_boundary__3239')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux__ms004')
+
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -244,16 +243,16 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    ms_retrieve(network = network,
-                domain = domain)
-    ms_munge(network = network,
-             domain = domain)
-    sw(ms_delineate(network = network,
-                    domain = domain,
-                    dev_machine_status = ms_instance$machine_status,
-                    verbose = TRUE))
-    ms_derive(network = network,
-              domain = domain)
+    # ms_retrieve(network = network,
+    #             domain = domain)
+    # ms_munge(network = network,
+    #          domain = domain)
+    # sw(ms_delineate(network = network,
+    #                 domain = domain,
+    #                 dev_machine_status = ms_instance$machine_status,
+    #                 verbose = TRUE))
+    # ms_derive(network = network,
+    #           domain = domain)
     ms_general(network = network,
                domain = domain)
 

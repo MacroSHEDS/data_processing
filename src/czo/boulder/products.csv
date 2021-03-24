@@ -8,10 +8,14 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 2888,precipitation,ready,ready,NA,precipitation__ms006,Gordon Gulch: Lower North Facing,d30b44383d154225b3c99e557d124b7d,ggl-nf-met-120608-WY2020.csv
 2889,precipitation,ready,ready,NA,precipitation__ms006,Gordon Gulch: Lower South Facing,d66f1f3239a94c7682c71217b1a94e0b,ggl-sf-met-120620-WY2020.csv
 ms001,cdnr_discharge,NA,NA,ready,discharge__ms005,NA,NA,NA
-ms002,precip_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms002,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
 ms003,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
 ms004,stream_chemistry,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
 ms005,discharge,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
+ms006,precipitation,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
 ms007,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
 ms008,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms008,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA,NA
