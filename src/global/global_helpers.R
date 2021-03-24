@@ -960,7 +960,6 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
-
     #Set correct class for each column
     colnames_d <- colnames(d)
 
@@ -2040,18 +2039,37 @@ track_new_product <- function(tracker, prodname_ms){
 
 track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker <- tracker[[prodname_ms]][[site_name]]$retrieve
 
-    retrieval_tracker = avail %>%
+    new_avail <- avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
         select(component) %>%
         mutate(mtime = '1900-01-01',
                held_version = '-1',
-               status = 'pending') %>%
+               status = 'pending')
+
+    if(! all(retrieval_tracker$component %in% avail$component)){
+
+        obsolete_components <- retrieval_tracker %>%
+            filter(! component %in% avail$component) %>%
+            pull(component)
+
+        logwarn(msg = glue("Tracked component(s) {tc} no longer available. ",
+                           "Removing from tracker. If this isn't NEON, ",
+                           "investigate.",
+                           tc = paste(obsolete_components,
+                                      collapse = ', ')),
+                logger = logger_module)
+
+        retrieval_tracker <- filter(retrieval_tracker,
+                                    component %in% avail$component)
+    }
+
+    retrieval_tracker <- new_avail %>%
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prodname_ms]][[site_name]]$retrieve = retrieval_tracker
+    tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
 
     return(tracker)
 }
@@ -2212,111 +2230,112 @@ update_data_tracker_d <- function(network = domain,
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(network=network, domain=domain)
+        tracker <- get_data_tracker(network = network,
+                                    domain = domain)
 
-        dt = tracker[[prodname_ms]][[site_name]]$derive
+        dt <- tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-            msg <- 'Derived product not yet tracked; not updating tracker.'
+            msg <- 'Derived product not yet tracked; not updating derive tracker.'
             logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
+        dt$status <- new_status
+        dt$mtime <- as.character(Sys.time())
+        tracker[[prodname_ms]][[site_name]]$derive <- dt
 
-        tracker[[prodname_ms]][[site_name]]$derive = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
+        assign(x = tracker_name,
+               value = tracker,
+               pos = .GlobalEnv)
     }
 
-    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}',
+                       n = network,
+                       d = domain)
+
     if(! dir.exists('trackerdir')){
-        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+        dir.create(trackerdir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
     }
 
-    trackerfile = glue(trackerdir, '/data_tracker.json')
+    trackerfile <- glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_g <- function(network = domain,
                                   domain,
-                                  tracker = NULL,
-                                  tracker_name = NULL,
-                                  prodname_ms = NULL,
-                                  site_name = NULL,
-                                  new_status = NULL){
+                                  tracker,
+                                  prodname_ms,
+                                  site_name,
+                                  new_status){
 
     #this updates the general section of a data tracker in memory and on disk.
-    #see update_data_tracker_r for the retrieval section and
-    #update_data_tracker_m for the munge section
 
-    #if tracker is supplied, it will be used to write/overwrite the one on disk.
-    #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk, updated, and then written back to disk.
+    #see update_data_tracker_r for the retrieval section,
+    #update_data_tracker_m for the munge section, and
+    #update_data_tracker_d for the derive section
 
-    if(is.null(tracker) && (
-        is.null(tracker_name) || is.null(prodname_ms) ||
-        is.null(new_status) || is.null(site_name)
-    )){
-        msg = paste0('If tracker is not supplied, these args must be:',
-                     'tracker_name, prodname_ms, new_status, new_status.')
-        logerror(msg, logger=logger_module)
-        stop(msg)
+    dt <- tracker[[prodname_ms]][[site_name]]$general
+
+    if(is.null(dt)){
+        return(generate_ms_exception('Product not yet tracked; no action taken.'))
     }
 
-    if(is.null(tracker)){
+    dt$status <- new_status
+    dt$mtime <- as.character(Sys.time())
 
-        tracker = get_data_tracker(network=network, domain=domain)
+    tracker[[prodname_ms]][[site_name]]$general <- dt
 
-        dt = tracker[[prodname_ms]][[site_name]]$general
+    assign(x = 'held_data',
+           value = tracker,
+           pos = .GlobalEnv)
 
-        if(is.null(dt)){
-            return(generate_ms_exception('Product not yet tracked; no action taken.'))
-        }
+    trackerfile <- glue('data/{n}/{d}/data_tracker.json',
+                        n = network,
+                        d = domain)
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
-
-        tracker[[prodname_ms]][[site_name]]$general = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
-    }
-
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
-backup_tracker <- function(path){
+backup_tracker <- function(path,
+                           force = FALSE){
 
-    mch = stringr::str_match(path,
-                             '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+    #force: logical. if FALSE, new tracker backup will only be written once per
+    #   hour. If TRUE, it will be written regardless (up to once per second)
+
+    mch <- stringr::str_match(path,
+                              '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
 
     if(any(is.na(mch))){
         stop('Invalid tracker path or name')
     }
 
     dir.create(glue(mch[1], '/tracker_backups'),
-               recursive=TRUE, showWarnings=FALSE)
+               recursive = TRUE,
+               showWarnings = FALSE)
 
-    tstamp = Sys.time() %>%
-        with_tz(tzone='UTC') %>%
-        format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
+    time_format <- ifelse(force, '%Y%m%dT%H%M%SZ', '%Y%m%dT%HZ')
 
-    newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
-    file.copy(path, newpath, overwrite=FALSE) #write only one tracker per hour
+    tstamp <- Sys.time() %>%
+        with_tz(tzone = 'UTC') %>%
+        format(time_format)
+
+    newpath <- glue('{p}/tracker_backups/{f}_{t}',
+                    p = mch[1],
+                    f = mch[2],
+                    t = tstamp)
+
+    file.copy(from = path,
+              to = newpath,
+              overwrite = FALSE)
 
     #remove tracker backups older than 7 days
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
                       '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
-
-    #return()
 }
 
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
@@ -2371,16 +2390,22 @@ get_product_info <- function(network,
 
     if(status_level == 'derive'){
 
+        custom_prods <- prods %>%
+            filter(grepl('^CUSTOM', prodname))
+
         atypicals_sorted <- prods %>%
-            filter(! prodname %in% !!typical_derprods) %>%
+            filter(! prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
 
         typicals_sorted <- prods %>%
-            filter(prodname %in% !!typical_derprods) %>%
+            filter(prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(order(match(prodname, !!typical_derprods)))
 
         prods <- bind_rows(atypicals_sorted,
-                           typicals_sorted)
+                           typicals_sorted,
+                           custom_prods)
     }
 
     return(prods)
@@ -3242,7 +3267,7 @@ delineate_watershed_apriori <- function(lat,
                                          z = dem_resolution,
                                          verbose = FALSE)
             },
-            max_attempts = 10
+            max_attempts = 5
         )
 
         # terra::writeRaster(x = dem,
@@ -3511,7 +3536,7 @@ delineate_watershed_by_specification <- function(lat,
                                      z = dem_resolution,
                                      verbose = FALSE)
         },
-        max_attempts = 10
+        max_attempts = 5
     )
 
     raster::writeRaster(x = dem,
@@ -3637,7 +3662,7 @@ get_derive_ingredient <- function(network,
     #   derived products take precedence over munged products.
     #ignore_derprod900: logical. if TRUE, don't consider any product with an
     #   ms9XX prodcode.
-    #accept_multi_ing: logical. should more than one ingredient be returned?
+    #accept_multiple: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -3724,27 +3749,12 @@ ms_derive <- function(network = domain, domain){
                               n = network,
                               d = domain)))
 
-    # #checks
-    # if(! all(prods$type %in% c('normal', 'derived', 'linked'))){
-    #     stop(glue('All entries in the type column must be one of "normal", ',
-    #               '"derived", "linked" (src/{n}/{d}/products.csv)',
-    #               n = network,
-    #               d = domain))
-    # }
-
-    #check for sitenames in prodnames?
-    # if(){
-    #
-    # }
-
-    #these are the prods that we pretty much (?) always want to derive
+    #determine various categories governing how products should be handled
     has_ms_prodcode <- grepl('^ms[0-9]{3}$',
                              prods$prodcode,
                              perl = TRUE)
 
     is_being_munged <- ! is.na(prods$munge_status) & prods$munge_status == 'ready'
-
-    # is_being_derived <- ! is.na(prods$derive_status) & prods$derive_status == 'ready'
 
     is_self_precursor <- mapply(function(x, y){
                                     precursors <- strsplit(as.character(y),
@@ -3757,18 +3767,22 @@ ms_derive <- function(network = domain, domain){
 
     is_a_link <- ! is.na(prods$derive_status) &
         prods$derive_status == 'linked'
+
     created_links <- prods$prodname[is_a_link]
+
     is_already_linked <- ! is_a_link &
         prods$prodname %in% created_links &
         prods$munge_status == 'ready'
-    # is_a_link <- derstatus_linked &
-    #                  prods$prodname %in% created_links
+
+    is_automated_entry <- ! is.na(prods$notes) &
+        prods$notes == 'automated entry'
 
     #determine which active prods need to be linked (linkprods)
     is_linkprod <- (! is.na(prods$derive_status) &
                         prods$derive_status == 'linked') |
-        (prods$prodname %in% canonical_derprods &
-             ! has_ms_prodcode &
+        (prods$prodname %in% canonical_derprods |
+             grepl('CUSTOM', prods$prodname)) &
+             ( ! has_ms_prodcode &
              is_being_munged &
              ! is_self_precursor)
 
@@ -3791,17 +3805,6 @@ ms_derive <- function(network = domain, domain){
        is_linkprod[not_rly_linkprod] <- FALSE
     }
 
-    # #determine which active prods need to be compiled from constituents (compprods)
-    # is_compprod <- has_ms_prodcode &
-    #     ! prods$prodname %in% typical_derprods &
-    #     is_being_derived &
-    #     prods$type != 'spatial'
-    #
-    # #determine which prods are "true" active derived prods (derprods)
-    # is_derprod <- has_ms_prodcode &
-    #     is_being_derived &
-    #     prods$prodname %in% typical_derprods
-
     #re-link any already linked prods
     for(i in which(is_already_linked)){
 
@@ -3820,10 +3823,21 @@ ms_derive <- function(network = domain, domain){
 
     #link any new linkprods and create new product entries
     prodcodes_num <- as.numeric(substr(
-        prods$prodcode[grepl('^ms[0-9]{3}$',
+        prods$prodcode[grepl('^ms[0-7][0-9]{2}$',
                              prods$prodcode)],
         start = 3,
         stop = 5))
+
+    code_800_or_900s <- grep(pattern = '^ms[8-9][0-9]{2}$',
+                             x = prods$prodcode[has_ms_prodcode &
+                                                    ! is_automated_entry],
+                             value = TRUE)
+
+    if(length(code_800_or_900s)){
+        stop(glue('ms8XX and ms9XX are reserved prodcodes (generated ',
+                  'automatically). Please rename: ',
+                  paste(code_800_or_900s, collapse = ', ')))
+    }
 
     if(any(is_linkprod)){
 
@@ -3910,7 +3924,7 @@ ms_derive <- function(network = domain, domain){
 
     #compile any compprods and derive derprods (run all code in derive.R).
     #note: get_product_info() knows it must arrange derive products with
-    #   non-canonicals first.
+    #   non-canonicals first and CUSTOM products last
     source(glue('src/{n}/{d}/derive.R',
                 n = network,
                 d = domain),
@@ -5035,7 +5049,7 @@ delineate_watershed_nhd <- function(lat, long) {
                                          z = 12,
                                          verbose = FALSE)
             },
-            max_attempts = 10
+            max_attempts = 5
         )
 
         temp_raster <- tempfile(fileext = ".tif")
@@ -5120,7 +5134,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #   from the supplied chemprod directly, rather than its precursor. passed to
     #   apply_detection_limit_t.
 
-    if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
+    if(! grepl('(precipitation|discharge)', prodname_from_prodname_ms(qprod))){
         stop('Could not determine stream/precip')
     }
 
@@ -5157,6 +5171,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
 
     if(nrow(flow) == 0) return(NULL)
     flow_is_highres <- Mode(diff(as.numeric(flow$datetime))) <= 15 * 60
+    if(is.na(flow_is_highres)) flow_is_highres <- FALSE
 
     chem_split <- chem %>%
         group_by(var) %>%
@@ -5172,6 +5187,7 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         chem_chunk <- chem_split[[i]]
 
         chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+        if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
         #if both chem and flow data are low resolution (grab samples),
         #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
@@ -6182,7 +6198,7 @@ read_precip_quickref <- function(network,
     #   raster cell to be reused by shortcut_idw_concflux_v2. These values are
     #   in mm/day
 
-    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
+    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref',
                          n = network,
                          d = domain)
 
@@ -6215,23 +6231,27 @@ read_precip_quickref <- function(network,
     #end dates of a quickref file. this is possible because precip dates can
     #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
     ref_ind_range <- range(refranges_sel$ref_ind)
-    if(dtrange[1] < refranges_sel$startdt && ref_ind_range[1] > 1){
+
+    if(dtrange[1] < refranges_sel$startdt[1] && ref_ind_range[1] > 1){
+
         refranges_sel <- bind_rows(refranges[ref_ind_range[1] - 1, ],
                                    refranges_sel)
     }
-    if(dtrange[2] > refranges_sel$enddt && ref_ind_range[2] < nrow(refranges)){
+
+    if(dtrange[2] > refranges_sel$enddt[nrow(refranges_sel)] &&
+       ref_ind_range[2] < nrow(refranges)){
+
         refranges_sel <- bind_rows(refranges_sel,
                                    refranges[ref_ind_range[2] + 1, ])
     }
 
     quickref <- list()
-    # quickref_inds <- character(length = nrow(refranges))
-    for(i in 1:nrow(refranges)){
+    for(i in 1:nrow(refranges_sel)){
 
-        fn <- paste(strftime(refranges$startdt[i],
+        fn <- paste(strftime(refranges_sel$startdt[i],
                              format = '%Y-%m-%d %H:%M:%S',
                              tz = 'UTC'),
-                    strftime(refranges$enddt[i],
+                    strftime(refranges_sel$enddt[i],
                              format = '%Y-%m-%d %H:%M:%S',
                              tz = 'UTC'),
                     sep = '_')
@@ -6241,56 +6261,12 @@ read_precip_quickref <- function(network,
                            f = fn))
 
         quickref <- append(quickref, qf)
-        # quickref_inds[i] <- names(qf)
-        # quickref[[i]] <- qf[[1]]
     }
 
-    #for some reason the first ref gets duplicated.
+    #for some reason the first ref sometimes gets duplicated?
     quickref <- quickref[! duplicated(names(quickref))]
 
     return(quickref)
-
-    #previous approach: when chunks have a size limit:
-
-    # #not to be confused with the precip idw tempfile (dumpfile),
-    # #the quickref file allows the same precip idw data to be used across all
-    # #chemistry variables when calculating flux. it's stored in 1000-timestep
-    # #chunks
-    #
-    # #set timestep to 0 to get the first chunk. for every thousand timepoints
-    # #thereafter, it will grab the next chunk
-    #
-    # chunk_number <- timestep / 1000 + 1
-    #
-    # if(! chunk_number %% 1 == 0){
-    #     stop('timestep must be a multiple of 1000')
-    # }
-    #
-    # chunkID <- stringr::str_pad(string = chunk_number,
-    #                             width = 3,
-    #                             side = 'left',
-    #                             pad = '0')
-    #
-    # quickref <- tryCatch(
-    #     {
-    #         o <- readRDS(precip_idw_list,
-    #                      glue('data/{n}/{d}/precip_idw_quickref/{s}/chunk{ch}.rds}',
-    #                           n = network,
-    #                           d = domain,
-    #                           s = site_name,
-    #                           ch = chunkID))
-    #         attr(o, 'status') <- 'read'
-    #         return(o)
-    #
-    #     },
-    #     error = function(e)
-    #         {
-    #             o <- list()
-    #             attr(o, 'status') <- 'write'
-    #             return(o)
-    #         })
-    #
-    # return(quickref)
 }
 
 populate_implicit_NAs <- function(d, interval){
@@ -6529,7 +6505,7 @@ synchronize_timestep <- function(d){
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::round_date(
                                     x = datetime,
-                                    unit = '15 min'))
+                                    unit = rounding_intervals[i]))
 
         #split chunk into subchunks. one has duplicate datetimes to summarize,
         #   and the other doesn't. both will be interpolated in a bit.
@@ -6929,9 +6905,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     }, silent = TRUE)
 
     precip_only <- FALSE
-    if('try-error' %in% class(pchem)){
+    if('try-error' %in% class(pchem) || nrow(pchem) == 0){
         precip_only <- TRUE
-        logging::logwarn('No pchem product. IDW-Interpolating precipitation only')
+        logging::logwarn('No (or empty) pchem product. IDW-Interpolating precipitation only')
     }
 
     precip <- try({
@@ -6942,10 +6918,10 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     }, silent = TRUE)
 
     pchem_only <- FALSE
-    if('try-error' %in% class(precip)){
+    if('try-error' %in% class(precip) || nrow(precip) == 0){
         pchem_only <- TRUE
         if(precip_only) stop('Nothing to IDW interpolate. Is this kernel needed?')
-        logging::logwarn('No precip product. IDW-Interpolating pchem only')
+        logging::logwarn('No (or empty) precip product. IDW-Interpolating pchem only')
     }
 
     #project based on average latlong of watershed boundaries
@@ -6966,7 +6942,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                      expand = 200,
                                      verbose = FALSE)
         },
-        max_attempts = 10
+        max_attempts = 5
     )
 
     #add elev column to rain gauges
@@ -7107,28 +7083,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         nthreads <- parallel::detectCores()
 
-        niters <- ifelse(! pchem_only, nrow(precip), nrow(pchem))
-        if(niters > 500000){
-            nsuperchunks <- 3
-            nchunks <- nthreads * nsuperchunks
-        } else if(niters > 100000){
-            nsuperchunks <- 2
-            nchunks <- nthreads * nsuperchunks
-        } else {
-            nsuperchunks <- 1
-            nchunks <- nthreads
-        }
-
-        #     nchunks <- parallel::detectCores() %/% 2
-        # } else if(nrow(precip) > 17000){
-        #     nchunks <- parallel::detectCores() %/% 3
-        # } else {
-        #     nchunks <- parallel::detectCores()
-        # }
-
         ## IDW INTERPOLATE PRECIP FOR ALL TIMESTEPS. STORE CELL VALUES
         ## SO THEY CAN BE USED FOR PFLUX INTERP
         if(! pchem_only){
+
+            ntimesteps_precip <- nrow(precip)
+            nsuperchunks <- ceiling(ntimesteps_precip / 25000 * 2)
+            nchunks_precip <- nthreads * nsuperchunks
 
             precip_superchunklist <- chunk_df(d = precip,
                                               nchunks = nsuperchunks,
@@ -7171,7 +7132,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                 v = 'precipitation',
                                 j = paste('chunk', j + (nthreads * (s - 1))),
                                 ntimesteps = nrow(pchunk),
-                                nvars = nchunks)
+                                nvars = nchunks_precip)
 
                     foreach_return <- shortcut_idw(
                         encompassing_dem = dem,
@@ -7217,7 +7178,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 X = ws_mean_precip,
                 network = network,
                 domain = domain,
-                prodname_ms = precursor_prodnames[grepl('precipitation',
+                prodname_ms = precursor_prodnames[grepl('^precipitation',
                                                         precursor_prodnames)])
 
             write_ms_file(ws_mean_precip,
@@ -7251,7 +7212,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
                 v <- pchem_vars[j]
                 jd <- pchem_setlist[[j]]
-                ntimesteps <- nrow(jd)
+                ntimesteps_chemflux <- nrow(jd)
 
                 if(v %in% pchem_vars_fluxable && ! pchem_only){
                     is_fluxable <- TRUE
@@ -7264,13 +7225,14 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             v = v,
                             j = j,
                             nvars = nvars,
-                            ntimesteps = ntimesteps,
+                            ntimesteps = ntimesteps_chemflux,
                             is_fluxable = is_fluxable)
 
-                if(ntimesteps > 5000){
-                    nchunks <- parallel::detectCores() %/% 2 #overkill?
+                if(ntimesteps_chemflux > 5000){
+                   # (exists('ntimesteps_precip') && ntimesteps_precip > 2e5)){
+                    nchunks <- nthreads %/% 2 #overkill?
                 } else {
-                    nchunks <- parallel::detectCores()
+                    nchunks <- nthreads
                 }
 
                 chunklist <- chunk_df(d = jd,
@@ -7456,13 +7418,22 @@ chunk_df <- function(d, nchunks, create_index_column = FALSE){
     nr <- nrow(d)
     chunksize <- nr/nchunks
 
-    # if(nr < chunksize) chunksize <- nr
-    if(create_index_column) d <- mutate(d, ind = 1:n())
+    if(nr > 0){
 
-    chunklist <- split(d,
-                       0:(nr - 1) %/% chunksize)
+        if(create_index_column) d <- mutate(d, ind = 1:n())
 
-    return(chunklist)
+        chunklist <- split(d,
+                           0:(nr - 1) %/% chunksize)
+
+        return(chunklist)
+
+    } else {
+
+        logwarn(msg = 'Trying to chunk an empty tibble. Something is probably wrong',
+                logger = logger_module)
+
+        return(d)
+    }
 }
 
 invalidate_derived_products <- function(successor_string){
@@ -8441,12 +8412,18 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         })
 }
 
-clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
+clean_gee_table <- function(ee_ws_table,
+                            sheds,
+                            com_name) {
 
     table_nrow <- sheds %>%
         mutate(nrow = row_number()) %>%
         as.data.frame() %>%
         select(site_name, nrow)
+
+    # if(any(duplicated(colnames(ee_ws_table)))){
+    #     pivot_longer(ee_ws_table, )
+    # }
 
     sm(table <- ee_ws_table %>%
         mutate(nrow = row_number()) %>%
@@ -8474,8 +8451,19 @@ clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
     return(table_fin)
 }
 
-get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
-                             ws_prodname, batch = FALSE) {
+get_gee_standard <- function(network,
+                             domain,
+                             gee_id,
+                             band,
+                             prodname,
+                             rez,
+                             ws_prodname,
+                             batch = FALSE){
+
+    asset_path <- paste0('users/',
+                         strsplit(x = gee_login,
+                                  split = '@')[[1]][1],
+                         '/data_aq_sheds')
 
     area <- sf::st_area(ws_prodname)
 
@@ -8492,7 +8480,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
         ee_shape <- sf_as_ee(sheds,
                              via = 'getInfo_to_asset',
-                             assetId = 'users/spencerrhea/data_aq_sheds',
+                             assetId = asset_path,
                              overwrite = TRUE,
                              quiet = TRUE)
 
@@ -8540,7 +8528,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
         fin_table <- read_csv(temp_rgee)
 
         googledrive::drive_rm('GEE/rgee.csv')
-        rgee::ee_manage_delete(path_asset = 'users/spencerrhea/data_aq_sheds',
+        rgee::ee_manage_delete(path_asset = asset_path,
                                quiet = TRUE)
 
         if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
@@ -8551,7 +8539,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             rename(date = imageId,
                    !!sd_name := stdDev,
                    !!median_name := median) %>%
-            pivot_longer(cols = c(sd_name, median_name),
+            pivot_longer(cols = all_of(c(sd_name, median_name)),
                          names_to = 'var',
                          values_to = 'val')
 
@@ -8562,7 +8550,7 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
         imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
 
-        median <- try(ee_extract(
+        ext_median <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -8570,14 +8558,16 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(median) <= 4 || class(median) == 'try-error') {
+        if(length(ext_median) <= 4 || class(ext_median) == 'try-error') {
             return(NULL)
         }
 
         median_name <- glue('{c}_median', c = prodname)
-        median <- clean_gee_tabel(median, sheds, median_name)
+        ext_median <- clean_gee_table(ee_ws_table = ext_median,
+                                      sheds = sheds,
+                                      com_name = median_name)
 
-        sd <- try(ee_extract(
+        ext_sd <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -8585,21 +8575,20 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(sd) <= 4 || class(sd) == 'try-error') {
-            sd <- tibble()
+        if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
+            ext_sd <- tibble()
         } else {
             sd_name <- glue('{c}_sd', c = prodname)
-            sd <- clean_gee_tabel(sd, sheds, sd_name)
+            ext_sd <- clean_gee_table(ext_sd, sheds, sd_name)
         }
 
-        fin_table <- rbind(median, sd)
+        fin_table <- rbind(ext_median, ext_sd)
 
         fin <- list(table = fin_table,
                     type = 'ee_extract')
     }
 
     return(fin)
-
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -8731,7 +8720,9 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
             final <- rbind(final, final_y)
         }
 
-    final <- pivot_longer(final, cols = c(mean_name, sd_name), names_to = 'var',
+    final <- pivot_longer(final,
+                          cols = all_of(c(mean_name, sd_name)),
+                          names_to = 'var',
                           values_to = 'val')
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
@@ -9937,7 +9928,7 @@ catalog_held_data <- function(network_domain, site_data){
                                     full.names = TRUE,
                                     recursive = TRUE) %>%
                 purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
-                purrr:::reduce(sum)
+                purrr::reduce(sum)
 
             nobs_nonspatial <- nobs_nonspatial + prod_nobs
 
