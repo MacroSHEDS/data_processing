@@ -1,7 +1,14 @@
 owrite_tracker = function(network, domain, trck){
-    tracker_path = glue::glue('data/{n}/{d}/data_tracker.json',
-        n=network, d=domain)
-    if(! missing(trck)) held_data = trck
+
+    tracker_path <- glue::glue('data/{n}/{d}/data_tracker.json',
+                               n = network,
+                               d = domain)
+
+    backup_tracker(path = tracker_path,
+                   force = TRUE)
+
+    if(! missing(trck)) held_data <- trck
+
     jsonlite::write_json(held_data, tracker_path)
 }
 

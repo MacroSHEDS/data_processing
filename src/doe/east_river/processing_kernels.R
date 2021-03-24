@@ -346,10 +346,15 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -357,10 +362,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     temp_dir_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
     rel_file <- grep('EastRiver', temp_dir_files, value = TRUE)
 
-
-
     one_site_files <- glue(temp_dir, '/onesite')
-    unlink(one_site_files, recursive = TRUE)
     dir.create(one_site_files)
 
     rel_file_1 <- grep('EastRiver_2014-08_2016-10', rel_file, value = TRUE)
@@ -375,10 +377,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     all_sites <- tibble()
     for(i in 1:length(all_sites_files)){
 
-        site_name <- str_split_fixed(all_sites_files[i], '/', n = Inf)[1,]
-        site_name <- str_split_fixed(site_name[3], '[.]', n = Inf)
-        site_name <- site_name[1,1]
-        site_name <- str_split_fixed(site_name, '_', n = Inf)[1,1]
+        site_name <- str_match(string = all_sites_files[i],
+                               pattern = '([^\\/\\\\]+)_[dD]ischarge.xlsx$')[, 2]
+
         one_site <- readxl::read_excel(all_sites_files[i], sheet = 'Corrected')
         time_col <- grep('time|Time', colnames(one_site), value = TRUE)
         q_col <- grep('cms', colnames(one_site), value = TRUE)
@@ -406,7 +407,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
         mutate(site = 'PH')
 
     all_sites <- rbind(all_sites, one_site)
-
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
@@ -463,10 +463,16 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -602,10 +608,16 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -798,10 +810,16 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -950,10 +968,16 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -1090,10 +1114,16 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -1231,10 +1261,16 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, co
                     s = site_name,
                     c = component)
 
-    try(unlink(temp_dir, recursive = TRUE),
-        silent = TRUE)
+    temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
 
-    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    unlink(paste0(temp_dir, '/*'),
+           recursive = TRUE,
+           force = TRUE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
