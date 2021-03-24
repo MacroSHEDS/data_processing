@@ -1,8 +1,7 @@
-# general kernels ####
 
 #npp: STATUS=READY
 #. handle_errors
-process_3_ms005 <- function(network, domain, prodname_ms, site,
+process_3_ms805 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     site_boundary <- boundaries %>%
@@ -27,7 +26,9 @@ process_3_ms005 <- function(network, domain, prodname_ms, site,
     }
 
     npp <- npp$table %>%
-        mutate(year = as.numeric(year(date))) %>%
+        mutate(year = ifelse(nchar(date) == 4,
+                             date,
+                             as.numeric(lubridate::year(date)))) %>%
         select(-date)
 
 
@@ -38,7 +39,7 @@ process_3_ms005 <- function(network, domain, prodname_ms, site,
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 
     path <- glue('{d}{s}.feather',
-                  d = dir,
+                 d = dir,
                  s = site)
 
     write_feather(npp, path)
@@ -48,19 +49,19 @@ process_3_ms005 <- function(network, domain, prodname_ms, site,
 
 #gpp: STATUS=READY
 #. handle_errors
-process_3_ms006 <- function(network, domain, prodname_ms, site,
+process_3_ms806 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     site_boundary <- boundaries %>%
         filter(site_name == site)
 
     gpp <- try(get_gee_standard(network = network,
-                            domain = domain,
-                            gee_id = 'UMT/NTSG/v2/LANDSAT/GPP',
-                            band = 'GPP',
-                            prodname = 'gpp',
-                            rez = 30,
-                            ws_prodname = site_boundary))
+                                domain = domain,
+                                gee_id = 'UMT/NTSG/v2/LANDSAT/GPP',
+                                band = 'GPP',
+                                prodname = 'gpp',
+                                rez = 30,
+                                ws_prodname = site_boundary))
 
     if(is.null(gpp)) {
         return(generate_ms_exception(glue('No data was retrived for {s}',
@@ -126,7 +127,7 @@ process_3_ms006 <- function(network, domain, prodname_ms, site,
 
 #lai; fpar: STATUS=READY
 #. handle_errors
-process_3_ms007 <- function(network, domain, prodname_ms, site,
+process_3_ms807 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     site_boundary <- boundaries %>%
@@ -260,13 +261,13 @@ process_3_ms007 <- function(network, domain, prodname_ms, site,
 
 #tree_cover; veg_cover; bare_cover: STATUS=READY
 #. handle_errors
-process_3_ms008 <- function(network, domain, prodname_ms, site,
+process_3_ms808 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     site_boundary <- boundaries %>%
         filter(site_name == site)
 
-    if(prodname_ms == 'tree_cover__ms008') {
+    if(prodname_ms == 'tree_cover__ms808') {
         var <- try(get_gee_standard(network = network,
                                     domain = domain,
                                     gee_id = 'MODIS/006/MOD44B',
@@ -276,7 +277,7 @@ process_3_ms008 <- function(network, domain, prodname_ms, site,
                                     ws_prodname = site_boundary))
     }
 
-    if(prodname_ms == 'veg_cover__ms008') {
+    if(prodname_ms == 'veg_cover__ms808') {
         var <- try(get_gee_standard(network=network,
                                 domain=domain,
                                 gee_id='MODIS/006/MOD44B',
@@ -286,7 +287,7 @@ process_3_ms008 <- function(network, domain, prodname_ms, site,
                                 ws_prodname=site_boundary))
     }
 
-    if(prodname_ms == 'bare_cover__ms008') {
+    if(prodname_ms == 'bare_cover__ms808') {
     var <- try(get_gee_standard(network=network,
                             domain=domain,
                             gee_id='MODIS/006/MOD44B',
@@ -339,13 +340,13 @@ process_3_ms008 <- function(network, domain, prodname_ms, site,
 
 #prism_precip; prism_temp_mean: STATUS=READY
 #. handle_errors
-process_3_ms009 <- function(network, domain, prodname_ms, site,
+process_3_ms809 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
   site_boundary <- boundaries %>%
     filter(site_name == site)
 
-  if(prodname_ms == 'prism_precip__ms009') {
+  if(prodname_ms == 'prism_precip__ms809') {
     final <- try(get_gee_standard(network = network,
                                   domain = domain,
                                   gee_id = 'OREGONSTATE/PRISM/AN81d',
@@ -356,7 +357,7 @@ process_3_ms009 <- function(network, domain, prodname_ms, site,
                                   batch = TRUE))
   }
 
-  if(prodname_ms == 'prism_temp_mean__ms009') {
+  if(prodname_ms == 'prism_temp_mean__ms809') {
     final <- try(get_gee_standard(network = network,
                                   domain = domain,
                                   gee_id = 'OREGONSTATE/PRISM/AN81d',
@@ -401,33 +402,33 @@ process_3_ms009 <- function(network, domain, prodname_ms, site,
 
 #start_season; end_season; max_season; season_length: STATUS=READY
 #. handle_errors
-process_3_ms010 <- function(network, domain, prodname_ms, site,
+process_3_ms810 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     site_boundary <- boundaries %>%
         filter(site_name == site)
 
-    if(prodname_ms == 'start_season__ms010') {
+    if(prodname_ms == 'start_season__ms810') {
 
         sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms,
                       time='start_season', ws_prodname=site_boundary, site_name=site))
 
     }
 
-    if(prodname_ms == 'max_season__ms010') {
+    if(prodname_ms == 'max_season__ms810') {
 
         sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms,
                          time='max_season', ws_prodname=site_boundary, site_name=site))
 
     }
 
-    if(prodname_ms == 'end_season__ms010') {
+    if(prodname_ms == 'end_season__ms810') {
 
         sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms,
                          time='end_season', ws_prodname=site_boundary, site_name=site))
     }
 
-    if(prodname_ms == 'season_length__ms010') {
+    if(prodname_ms == 'season_length__ms810') {
 
       sm(get_phonology(network=network, domain=domain, prodname_ms=prodname_ms,
                        time='length_season', ws_prodname=site_boundary, site_name=site))
@@ -438,7 +439,7 @@ process_3_ms010 <- function(network, domain, prodname_ms, site,
 
 #terrain: STATUS=READY
 #. handle_errors
-process_3_ms011 <- function(network, domain, prodname_ms, site,
+process_3_ms811 <- function(network, domain, prodname_ms, site,
                             boundaries) {
 
     dir.create(glue('data/{n}/{d}/ws_traits/terrain/',

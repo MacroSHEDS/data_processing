@@ -19,3 +19,4 @@ data_processing.Rproj
 *.zip
 plots/diagnostic_plots_*
 all_*/
+data.bak
