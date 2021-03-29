@@ -172,7 +172,10 @@ invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
             return(tracker)
         }
 
-        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} tracker(s):\n{prds}\n',
+        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+                     'tracker(s) for {n}-{d}:\n{prds}\n',
+                     n = network,
+                     d = domain,
                      lvl = toupper(level),
                      prds = paste(prodnames_ms, collapse = '\n')))
         Sys.sleep(10)
@@ -739,7 +742,7 @@ list_all_product_dirs <- function(prodname){
 load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
 
     #WARNING: this could easily eat up 20 GB RAM for a product like discharge.
-    #As the dataset grows, that number will increase
+    #As the dataset grows, that number will increase.
 
     #read and combine all files associated with a particular prodname
     #   (e.g. 'discharge' or 'stream_chemistry') across all networks and
@@ -749,8 +752,8 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     #.sort: logical. If TRUE, output will be sorted by site_name, var, datetime.
     #   this takes a few minutes.
     #filter_vars: character vector. for products like stream_chemistry that include
-    #   multiple variables, this filters to just the ones specified (ignoring
-    #   prefix)
+    #   multiple variables, this filters to just the ones specified (ignores
+    #   variable prefixes)
 
     prodname_dirs <- list_all_product_dirs(prodname = prodname)
 
