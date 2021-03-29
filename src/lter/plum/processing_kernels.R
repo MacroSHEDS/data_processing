@@ -1403,7 +1403,7 @@ process_2_ms005 <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = disch_prodname_ms)
 
-    flux_sites <- generics::intersect(
+    flux_sites <- base::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
         fname_from_fpath(chemfiles, include_fext = FALSE))
 
