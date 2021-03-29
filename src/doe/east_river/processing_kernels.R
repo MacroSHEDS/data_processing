@@ -241,7 +241,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                   cacheOK = FALSE)
 }
 
-#ws_boundaries: STATUS=READY
+#ws_boundary: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 
@@ -1250,7 +1250,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
     return()
 }
 
-#ws_boundaries: STATUS=PAUSED
+#ws_boundary: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, component) {
 
@@ -1274,119 +1274,22 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, co
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    path <- paste(list.files(temp_dir, full.names = TRUE), 'data', sep = '/')
 
-    removed_depth <- grepl('.dbf|.prj|.sbn|.sbx|.shp', temp_dir_files)
+    sheds <- sf::st_read(path)
 
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    sheds <- sheds %>%
+        filter(NAME %in% c('Copper', 'Marmot', 'Bradley', 'Rustlers', 'Gothic',
+                           'Quigley', 'Rock', 'Avery')) %>%
+        select(site_name = NAME, area = km2) %>%
+        mutate(area = area*100) %>%
+        mutate(new_a = sf::st_area(geometry))
 
-    shapes_location <- glue(temp_dir, '/ws_boundaries')
-
-    dir.create(shapes_location)
-
-    file.copy(file_paths, shapes_location)
-
-    all_sites <- tibble()
-    for(i in 1:length(file_names)){
-
-        if(file_names[i] == 'locations.csv') next
-
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
-
-        if(length(site_info) == 1) next
-
-        if(length(site_info) == 4){
-            site_name <- site_info[1,1]
-        } else{
-            site_name <- site_info[1,1:(length(site_info)-3)]
-            site_name <- paste(site_name, collapse = '_')
-        }
-
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
-            mutate(site = !!site_name,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
-
-        all_sites <- rbind(all_sites, site_table)
-    }
-
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_unit == 'tdn_g_l' ~ 'TDN',
-                               site_unit == 'ammonia_n_ppm' ~ 'NH3_N')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
-               ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var))
-
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
-
-    d <- ms_conversions(d,
-                        convert_units_from = c('TDN' = 'g/l'),
-                        convert_units_to = c('TDN' = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
-    sites <- unique(d$site_name)
+    sites <- unique(sheds$site_name)
 
     for(s in 1:length(sites)){
 
-        d_site <- d %>%
+        d_site <- sheds %>%
             filter(site_name == !!sites[s])
 
         write_ms_file(d = d_site,
@@ -1395,7 +1298,7 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, co
                       prodname_ms = prodname_ms,
                       site_name = sites[s],
                       level = 'munged',
-                      shapefile = FALSE)
+                      shapefile = TRUE)
     }
 
     unlink(temp_dir, recursive = TRUE)
