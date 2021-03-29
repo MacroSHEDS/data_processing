@@ -322,7 +322,7 @@ process_2_ms002 <- function(network, domain, prodname_ms){
                                    domain = domain,
                                    prodname_ms = qprod))
 
-    flux_sites <- generics::intersect(
+    flux_sites <- base::intersect(
         ue(fname_from_fpath(qfiles, include_fext = FALSE)),
         ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
 
@@ -781,7 +781,7 @@ calc_inst_flux_wrap <- function(chemprod, qprod, prodname_ms) {
                             level = level_q,
                             prodname_ms = qprod)
 
-    flux_sites <- generics::intersect(
+    flux_sites <- base::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
         fname_from_fpath(chemfiles, include_fext = FALSE))
 
