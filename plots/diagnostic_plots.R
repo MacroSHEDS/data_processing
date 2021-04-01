@@ -2,7 +2,7 @@
 # to load necessary packages and helper functions.
 
 #increment this by 0.1 and a new folder will be populated with new diagnostic plots
-vsn = 0.3
+vsn = 0.4
 
 #setup ####
 
@@ -155,13 +155,19 @@ for(i in 1:length(q_dirs)){
     ntw_dmn_prd <- str_match(string = pd,
                              pattern = '^data/(.+?)/(.+?)/derived/(.+?)$')[, 2:4]
 
+    # summarize(d, min=min(date), max=max(date), n=n())->ranges #just for testing
     d <- list.files(pd, full.names = TRUE) %>%
         purrr::map_dfr(read_feather) %>%
         select(-val_err) %>%
         # mutate(val = errors::set_errors(val, val_err),
-        group_by(site_name, date = lubridate::as_date(datetime)) %>%
+        group_by(site_name,
+                 date = lubridate::as_date(datetime)) %>%
         summarize(val = mean(val),
                   .groups = 'drop') %>%
+        # tidyr::complete(date = seq(min(date), max(date), by = 'day')) %>%
+        # imputeTS::na_interpolation('linear',
+        #                            maxgap = 3) %>%
+        # ungroup() %>%
         mutate(year = lubridate::year(date),
                val = val * 86400) %>%
         group_by(site_name, year) %>%
