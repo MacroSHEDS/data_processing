@@ -3308,7 +3308,6 @@ delineate_watershed_apriori <- function(lat,
                 buffer_radius_new <- buffer_radius
 
                 #write and record temp files for the technician to visually inspect
-                tryCatch({
                 wb_sf <- wb %>%
                     raster::rasterToPolygons() %>%
                     sf::st_as_sf() %>%
@@ -3317,7 +3316,6 @@ delineate_watershed_apriori <- function(lat,
                     sf::st_as_sf() %>%
                     fill_sf_holes() %>%
                     sf::st_transform(4326)
-                }, error = function(e) ee <<- e)
 
                 ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
 
@@ -6281,16 +6279,20 @@ ms_linear_interpolate <- function(d, interval){
         stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
     }
 
-    impute_limit <- ifelse(interval == '1 day',
-                           3, #3 days if imputing daily samples
-                           48) #12 hours if imputing continuous (15 min) samples
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
+                                    yes = 3, #is Q-ish
+                                    no = 15) #is chemistry/etc
 
-    # ts_delta_t <- ifelse(interval == '1 day',
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    # ts_delta_t <- ifelse(interval == '1 day', #we might want this if we use na_seadec
     #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
     #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
 
     d_interp <- d %>%
-        # group_by(site_name, var) %>%
         arrange(datetime) %>%
         mutate(
 
@@ -6310,14 +6312,14 @@ ms_linear_interpolate <- function(d, interval){
             #                                start = ,
             #                                end = ,
             #                                deltat = ts_delta_t)),
-            #                         maxgap = impute_limit)
+            #                         maxgap = max_samples_to_impute)
             #
             # } else if(sum(! is.na(val)) > 1){
             val = if(sum(! is.na(val)) > 1){
 
                 #linear interp NA vals
                 imputeTS::na_interpolation(val,
-                                           maxgap = impute_limit)
+                                           maxgap = max_samples_to_impute)
 
             #unless not enough data in group; then do nothing
             } else val
@@ -6337,7 +6339,6 @@ ms_linear_interpolate <- function(d, interval){
                 set_errors(val, #unless not enough error to interp
                            0)
             }) %>%
-        # ungroup() %>%
         select(-err) %>%
         arrange(site_name, var, datetime)
 
