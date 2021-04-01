@@ -213,7 +213,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-#dmnrow=15
+# dmnrow=16
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -251,11 +251,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
-<<<<<<< HEAD
     ms_derive(network = network,
-=======
-    # ms_derive(network = network,
->>>>>>> a6d76472ff5e5aa3130932b8f5a43f4fe1742cee
               domain = domain)
     ms_general(network = network,
                domain = domain)
