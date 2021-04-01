@@ -1278,19 +1278,21 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, co
 
     sheds <- sf::st_read(path)
 
+    projstring <- choose_projection(unprojected = TRUE)
+
     sheds <- sheds %>%
         filter(NAME %in% c('Copper', 'Marmot', 'Bradley', 'Rustlers', 'Gothic',
                            'Quigley', 'Rock', 'Avery')) %>%
         select(site_name = NAME, area = km2) %>%
-        mutate(area = area*100) %>%
-        mutate(new_a = sf::st_area(geometry))
+        mutate(area = area*100)
 
     sites <- unique(sheds$site_name)
 
     for(s in 1:length(sites)){
 
         d_site <- sheds %>%
-            filter(site_name == !!sites[s])
+            filter(site_name == !!sites[s]) %>%
+            sf::st_transform(., crs = projstring)
 
         write_ms_file(d = d_site,
                       network = network,
