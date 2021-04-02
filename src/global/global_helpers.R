@@ -9295,16 +9295,16 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
     }
 }
 
-generate_portal_extras <- function(site_data,
-                                   network_domain,
-                                   thin_portal_data_to_interval = NA){
+postprocess_entire_dataset <- function(site_data,
+                                       network_domain,
+                                       thin_portal_data_to_interval = NA){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::round_date.
     #   set to NA (the dafault) to prevent thinning.
 
     #for post-derive steps that save the portal some processing.
 
-    loginfo(msg = 'Generating portal extras:',
+    loginfo(msg = 'Postprocessing all domains and products:',
             logger = logger_module)
 
     log_with_indent('scaling flux by area', logger = logger_module)
@@ -9329,6 +9329,10 @@ generate_portal_extras <- function(site_data,
         thin_portal_data(network_domain = network_domain,
                          thin_interval = thin_portal_data_to_interval)
     }
+
+    log_with_indent('Completing cases (populating implicit missing rows)',
+                    logger = logger_module)
+    ms_complete_all_cases(site_data = site_data)
 }
 
 thin_portal_data <- function(network_domain, thin_interval){
@@ -10191,6 +10195,35 @@ catalog_held_data <- function(network_domain, site_data){
     #               n_unique_streams = length(unique(stream))) %>%
     #     ungroup() %>%
     #     {sum(.$n_unique_streams)}
+}
+
+ms_complete_all_cases <- function(network_domain, site_data){
+
+    #populates implicit NAs in all feather files across all product directories.
+    #   Note: this only operates on files within data_acquisition/data, NOT within
+    #   portal/data (those files should stay as small as possible).
+
+    #also note: when we switch back to high-res mode, we'll need to see how much
+    #   more space our dataset takes up after this operation. it might be
+    #   several gigs, which could be a problem.
+
+    paths <- list.files(path = 'data/',
+                        pattern = '*.feather',
+                        recursive = TRUE)
+
+    paths <- paths[grepl(pattern = 'derived', x = paths)]
+
+    #RAISE AN ERROR IF ANY 15-MINUTE DATA MAKE IT THROUGH?
+    #WOULD BE HARD. WOULD HAVE TO BE BASED ON ACTUAL INTERVALS AND RLE
+
+    for(p in paths){
+        d <- read_feather(p)
+        # readr::write_file(x = as.character(nobs_nonspatial),
+        #                   file = '../portal/data/general/total_nonspatial_observations.txt')
+    }
+
+    # dir.create('../portal/data/general/catalog_files',
+    #            showWarnings = FALSE)
 }
 
 expo_backoff <- function(expr,
