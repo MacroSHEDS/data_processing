@@ -213,19 +213,19 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-dmnrow=1
-for(dmnrow in 1:nrow(network_domain)){
+dmnrow=9
+for(dmnrow in 9:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    held_data = get_data_tracker(network, domain)
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
-    held_data = invalidate_tracked_data(network, domain, 'derive')
-    owrite_tracker(network, domain)
+    # held_data = get_data_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive')
+    # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
     # owrite_tracker(network, domain)
@@ -243,8 +243,8 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    ms_retrieve(network = network,
-                domain = domain)
+    # ms_retrieve(network = network,
+    #             domain = domain)
     ms_munge(network = network,
              domain = domain)
     sw(ms_delineate(network = network,
