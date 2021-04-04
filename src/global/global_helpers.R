@@ -6108,18 +6108,18 @@ populate_implicit_NAs <- function(d, interval){
         tidyr::complete(datetime = seq(min(datetime),
                                        max(datetime),
                                        by = interval)) %>%
-        mutate(site_name = .$site_name[1],
-               var = .$var[1]) %>%
+        # mutate(site_name = .$site_name[1],
+        #        var = .$var[1]) %>%
         ungroup() %>%
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, everything())
 
     if('ms_status' %in% colnames(complete_d)){
-        is.na(complete_d$ms_status) <- 0
+        complete_d$ms_status[is.na(complete_d$ms_status)] <- 0
     }
 
     if('ms_interp' %in% colnames(complete_d)){
-        is.na(complete_d$ms_interp) <- 0
+        complete_d$ms_interp[is.na(complete_d$ms_interp)] <- 0
     }
 
     return(complete_d)
@@ -9272,7 +9272,9 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
 
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
-                                       thin_portal_data_to_interval = NA){
+                                       thin_portal_data_to_interval = NA,
+                                       populate_implicit_missing_values,
+                                       generate_csv_for_each_product){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::round_date.
     #   set to NA (the dafault) to prevent thinning.
@@ -9656,6 +9658,8 @@ scale_flux_by_area <- function(network_domain, site_data){
     lapply(X = unscaled_acquisition_flux_dirs,
            FUN = unlink,
            recursive = TRUE)
+
+    return(invisible())
 }
 
 approxjoin_datetime <- function(x,
@@ -10335,6 +10339,7 @@ ms_complete_all_cases <- function(network_domain, site_data){
         sites <- unique(d$site_name)
         vars <- unique(d$var)
 
+        dupes_present <- FALSE
         for(s in sites){
             for(v in vars){
 
@@ -10349,11 +10354,16 @@ ms_complete_all_cases <- function(network_domain, site_data){
                 if(length(dt_diff)){
 
                     if(any(dt_diff == 0)){
-                        stop(glue('duplicate datetime found in {pp}',
-                                  pp = p))
+                        warning(glue('Duplicate datetime found in {pp} ({ss}-{vv} slice).',
+                                     'This will be removed, but we should find out what the deal is.',
+                                      pp = p,
+                                      ss = s,
+                                      vv = v))
+
+                        dupes_present <- TRUE
                     }
 
-                    if(any(dt_diff <= 15 * 60)){
+                    if(any(dt_diff <= 15 * 60 & dt_diff != 0)){
                         stop(glue("We need to make sure it's okay to make NAs ",
                                   "explicit, now that we're in high-res mode. ",
                                   "Copy the data directory, comment this error, ",
@@ -10362,18 +10372,27 @@ ms_complete_all_cases <- function(network_domain, site_data){
                                   "cases doesn't make it absurdly huge, then ",
                                   "remove this error and carry on."))
                     }
-
-                    #TODO: after you remove the error catcher above, update this
-                    #call to populate_implicit_NAs so that it chooses '15 min' or
-                    #'1 day' intelligently.
-                    d <- populate_implicit_NAs(d = d,
-                                               interval = '1 day')
-
-                    write_feather(x = d,
-                                  path = p)
                 }
             }
         }
+
+        if(dupes_present){
+            d <- d %>%
+                distinct(site_name, var, datetime,
+                         .keep_all = TRUE) %>%
+                arrange(site_name, var, datetime)
+        }
+
+        #TODO: after you remove the error catcher above, update this
+        #call to populate_implicit_NAs so that it chooses '15 min' or
+        #'1 day' intelligently.
+        d <- populate_implicit_NAs(d = d,
+                                   interval = '1 day')
+
+        any(duplicated(d[, c('datetime', 'site_name', 'var')]))
+
+        write_feather(x = d,
+                      path = p)
     }
 }
 
@@ -10398,17 +10417,29 @@ generate_product_csvs <- function(network_domain, site_data){
     products <- c('stream_chemistry', 'stream_flux_inst_scaled', 'discharge',
                   'precip_chemistry', 'precip_flux_inst_sccaled', 'precipitation')
 
+
     for(p in products){
 
         d <- load_entire_product(prodname = p,
-                                 .sort = TRUE)
+                                 .sort = FALSE)
+
+        warning('there are still duplicates here too!')
+        # zz = d %>%
+        #     select(-ms_status, -ms_interp) %>%
+        #     mutate(val = errors::drop_errors(val)) %>%
+        #     tidyr::pivot_wider(names_from = var,
+        #                        values_from = val,
+        #                        values_fn = length)
+        # zzz = apply(zz[,5:ncol(zz)], 1, function(x)any(! is.na(x) & x > 1))
+        # filter(d, datetime == as.POSIXct('2003-08-20 00:00:00', tz='UTC'), site_name=='JBHH', var=='GN_PO4_P')
 
         d %>%
             select(-ms_status, -ms_interp) %>%
-            mutate(val_err = errors(val),
-                   val = errors::drop_errors(val)) %>%
+            mutate(val = errors::drop_errors(val)) %>%
             tidyr::pivot_wider(names_from = var,
-                               values_from = val) %>%
+                               values_from = val,
+                               values_fn = mean) %>%
+            arrange(datetime) %>%
             readr::write_csv(file = glue('output/all_chemQPflux_csv_wide/{pp}.csv',
                                          pp = p))
     }
