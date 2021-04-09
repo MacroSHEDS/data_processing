@@ -10415,7 +10415,7 @@ generate_product_csvs <- function(network_domain, site_data){
                       file = 'output/all_chemQPflux_csv_wide/README.txt')
 
     products <- c('stream_chemistry', 'stream_flux_inst_scaled', 'discharge',
-                  'precip_chemistry', 'precip_flux_inst_sccaled', 'precipitation')
+                  'precip_chemistry', 'precip_flux_inst_scaled', 'precipitation')
 
 
     for(p in products){
@@ -10439,7 +10439,7 @@ generate_product_csvs <- function(network_domain, site_data){
             tidyr::pivot_wider(names_from = var,
                                values_from = val,
                                values_fn = mean) %>%
-            arrange(datetime) %>%
+            arrange(network, domain, site_name, datetime) %>%
             readr::write_csv(file = glue('output/all_chemQPflux_csv_wide/{pp}.csv',
                                          pp = p))
     }
