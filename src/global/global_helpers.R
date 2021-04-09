@@ -651,7 +651,7 @@ extract_var_prefix <- function(x){
     return(prefix)
 }
 
-d_raw_csv <- function(filepath,
+ms_read_raw_csv <- function(filepath,
                             preprocessed_tibble,
                             datetime_cols,
                             datetime_tz,
@@ -8330,10 +8330,10 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
 
 clean_gee_table <- function(ee_ws_table,
                             reducer) {
-    
-    col_names <- colnames(ee_ws_table) 
+
+    col_names <- colnames(ee_ws_table)
     col_names <- col_names[!grepl('site_name', col_names)]
-    
+
     table_fin <- ee_ws_table %>%
         pivot_longer(cols = !!col_names, values_to = 'val', names_to = 'var_date') %>%
         mutate(var = str_split_fixed(var_date, 'X', n = Inf)[,1],
@@ -8341,7 +8341,7 @@ clean_gee_table <- function(ee_ws_table,
         mutate(var = glue('{v}_{r}',
                           v = var,
                           r = reducer)) %>%
-        select(site_name, datetime, var, val) 
+        select(site_name, datetime, var, val)
 
     return(table_fin)
 }
@@ -8411,11 +8411,11 @@ get_gee_standard <- function(network,
         ee_monitoring(ee_task)
 
         temp_rgee <- tempfile(fileext = '.csv')
-        googledrive::drive_download(file = 'GEE/rgee.csv', 
+        googledrive::drive_download(file = 'GEE/rgee.csv',
                                     temp_rgee)
 
-        # Seems to be broken 
-        # rgee::ee_drive_to_local(task = ee_task, 
+        # Seems to be broken
+        # rgee::ee_drive_to_local(task = ee_task,
         #                         dsn = temp_rgee,
         #                         overwrite = TRUE,
         #                         quiet = TRUE)
@@ -10307,6 +10307,11 @@ ms_complete_all_cases <- function(network_domain, site_data){
     #   more space our dataset takes up after this operation. it might be
     #   several gigs, which could be a problem.
 
+    #if a stretch of missing records longer than one week (STOPPED HERE MID-SENTENCE)month occurs in
+    #winter, ms_complete_all_cases assumes recording stopped
+    #for sites that don't record data when the stream is frozen, cases will be completed with 0s instead
+    #of NAs.
+
     paths <- list.files(path = 'data',
                         pattern = '*.feather',
                         recursive = TRUE,
@@ -10843,7 +10848,7 @@ get_nrcs_soils <- function(network,
     #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
     # }
     # soil_masked@data@isfactor <- FALSE
-    # 
+    #
     # mapview::mapview(soil_masked)
     # raster::plot(soil_masked)
 
