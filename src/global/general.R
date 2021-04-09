@@ -5,7 +5,7 @@ source('src/global/general_kernels.R',
        local = TRUE)
 
 unprod <- univ_products %>%
-  filter(status == 'ready')
+  filter(status == 'ready') 
 
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
@@ -13,15 +13,15 @@ files <- list.files(glue('data/{n}/{d}/derived/',
 
 ws_prodname <- grep('ws_boundary', files, value = TRUE)
 
-sheds <- try(read_combine_shapefiles(network = network,
+boundaries <- try(read_combine_shapefiles(network = network,
                                      domain = domain,
                                      prodname_ms = ws_prodname))
 
-if(class(sheds)[1] == 'ms_err' | is.null(sheds[1])){
+if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
     stop('Watershed boundaries are required for general products')
 }
 
-site_names <- unique(sheds$site_name)
+site_names <- unique(boundaries$site_name)
 
 for(i in 1:nrow(unprod)){
 
@@ -41,6 +41,7 @@ for(i in 1:nrow(unprod)){
             logger = logger_module)
 
     for(k in 1:length(site_names)){
+    #for(k in c(26, 27)){
 
         site_name <- site_names[k]
 
@@ -79,8 +80,8 @@ for(i in 1:nrow(unprod)){
                                   args = list(network = network,
                                               domain = domain,
                                               prodname_ms = prodname_ms,
-                                              site = site_name,
-                                              boundaries = sheds)))
+                                              site_name = site_name,
+                                              boundaries = boundaries)))
 
         if(is_ms_exception(general_msg)){
 

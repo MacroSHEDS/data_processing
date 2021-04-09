@@ -274,7 +274,7 @@ process_1_2919 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_2783 <- function(network, domain, prodname_ms, site_name, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
