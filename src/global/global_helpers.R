@@ -10623,3 +10623,43 @@ get_nrcs_soils <- function(network,
     # soil_pores <- soilDB::SDA_query(cokey_to_chkey_sql_pores)
 
 }
+
+load_spatial_data <- function(){
+    
+    spatial_files <- googledrive::drive_ls(googledrive::as_id('1EaEjkCb_U4zvLCXrULRTU-4yPC95jS__'))
+    
+    drive_files <- str_split_fixed(spatial_files$name, '\\.', n = Inf)[,1]
+    
+    held_files <- list.files('data/spatial/')
+    
+    needed_files <- drive_files[!drive_files %in% held_files]
+    
+    needed_files <- paste0(needed_files, '.zip')
+    
+    needed_sets <- spatial_files %>%
+        filter(name %in% needed_files)
+    
+    if(nrow(needed_sets) == 0){
+        return('all files loaded onto local machine')
+    }
+    
+    for(i in 1:nrow(needed_sets)){
+        
+        zip_path <- glue('data/spatial/{n}', n = needed_sets$name[i])
+        
+        googledrive::drive_download(file = googledrive::as_id(needed_sets$id[i]),
+                                    path = zip_path)
+        
+        unzip(zipfile = zip_path,
+              exdir = 'data/spatial')
+        
+        file_check <- list.files('data/spatial')
+        
+        if('__MACOSX' %in% file_check){
+            unlink('data/spatial/__MACOSX', recursive = T)
+        }
+        
+        file.remove(zip_path)
+        
+    }
+}
