@@ -8323,45 +8323,25 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         select(band)$
         map(function(x){
             date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-            x$set("RGEE_NAME", date)
+            name <- ee$String$cat(col_name, date)
+            x$select(band)$rename(name)
         })
 }
 
 clean_gee_table <- function(ee_ws_table,
-                            sheds,
-                            com_name) {
-
-    table_nrow <- sheds %>%
-        mutate(nrow = row_number()) %>%
-        as.data.frame() %>%
-        select(site_name, nrow)
-
-    # if(any(duplicated(colnames(ee_ws_table)))){
-    #     pivot_longer(ee_ws_table, )
-    # }
-
-    sm(table <- ee_ws_table %>%
-        mutate(nrow = row_number()) %>%
-        full_join(table_nrow) %>%
-        select(-nrow))
-
-    col_names <- colnames(table)
-
-    leng <- length(col_names) -1
-
-    table_time <- table %>%
-        pivot_longer(col_names[1:leng])
-
-    for(i in 1:nrow(table_time)) {
-        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2],
-                                                         pattern = 'X', n = 2)[2]
-    }
-
-    table_fin <- table_time %>%
-        dplyr::select(-name) %>%
-        mutate(date = ymd(date)) %>%
-        mutate(var = !!com_name) %>%
-        rename(val = value)
+                            reducer) {
+    
+    col_names <- colnames(ee_ws_table) 
+    col_names <- col_names[!grepl('site_name', col_names)]
+    
+    table_fin <- ee_ws_table %>%
+        pivot_longer(cols = !!col_names, values_to = 'val', names_to = 'var_date') %>%
+        mutate(var = str_split_fixed(var_date, 'X', n = Inf)[,1],
+               datetime = str_split_fixed(var_date, 'X', n = Inf)[,2]) %>%
+        mutate(var = glue('{v}_{r}',
+                          v = var,
+                          r = reducer)) %>%
+        select(site_name, datetime, var, val) 
 
     return(table_fin)
 }
@@ -8372,17 +8352,12 @@ get_gee_standard <- function(network,
                              band,
                              prodname,
                              rez,
-                             ws_prodname,
+                             site_boundary,
                              batch = FALSE){
 
-    asset_path <- paste0('users/',
-                         strsplit(x = gee_login,
-                                  split = '@')[[1]][1],
-                         '/data_aq_sheds')
+    area <- sf::st_area(site_boundary)
 
-    area <- sf::st_area(ws_prodname)
-
-    sheds <- ws_prodname %>%
+    sheds <- site_boundary %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -8392,6 +8367,9 @@ get_gee_standard <- function(network,
     site <- unique(sheds$site_name)
 
     if(as.numeric(area) > 10528200 || batch){
+
+        user_info <- rgee::ee_user_info(quiet = TRUE)
+        asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
 
         ee_shape <- sf_as_ee(sheds,
                              via = 'getInfo_to_asset',
@@ -8423,19 +8401,24 @@ get_gee_standard <- function(network,
                                 s = site,
                                 p = prodname)
 
-        task <- ee$batch$Export$table$toDrive(collection = gee,
+        ee_task <- ee$batch$Export$table$toDrive(collection = gee,
                                               description = ee_description,
                                               fileFormat = 'CSV',
                                               folder = 'GEE',
                                               fileNamePrefix = 'rgee')
 
-        task$start()
-        ee_monitoring(task)
+        ee_task$start()
+        ee_monitoring(ee_task)
 
         temp_rgee <- tempfile(fileext = '.csv')
-        rgee::ee_drive_to_local(task, temp_rgee,
-                                overwrite = TRUE,
-                                quiet = TRUE)
+        googledrive::drive_download(file = 'GEE/rgee.csv', 
+                                    temp_rgee)
+
+        # Seems to be broken 
+        # rgee::ee_drive_to_local(task = ee_task, 
+        #                         dsn = temp_rgee,
+        #                         overwrite = TRUE,
+        #                         quiet = TRUE)
 
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_median', c = prodname)
@@ -8451,7 +8434,7 @@ get_gee_standard <- function(network,
         }
         fin_table <- fin_table %>%
             select(site_name, stdDev, median, imageId) %>%
-            rename(date = imageId,
+            rename(datetime = imageId,
                    !!sd_name := stdDev,
                    !!median_name := median) %>%
             pivot_longer(cols = all_of(c(sd_name, median_name)),
@@ -8477,10 +8460,8 @@ get_gee_standard <- function(network,
             return(NULL)
         }
 
-        median_name <- glue('{c}_median', c = prodname)
         ext_median <- clean_gee_table(ee_ws_table = ext_median,
-                                      sheds = sheds,
-                                      com_name = median_name)
+                                      reducer = 'median')
 
         ext_sd <- try(ee_extract(
             x = imgcol,
@@ -8493,8 +8474,7 @@ get_gee_standard <- function(network,
         if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
             ext_sd <- tibble()
         } else {
-            sd_name <- glue('{c}_sd', c = prodname)
-            ext_sd <- clean_gee_table(ext_sd, sheds, sd_name)
+            ext_sd <- clean_gee_table(ext_sd, reducer = 'sd')
         }
 
         fin_table <- rbind(ext_median, ext_sd)
@@ -8558,17 +8538,17 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
+get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                           site_name) {
 
 
-    geom_check <- sf::st_geometry_type(ws_prodname)
+    geom_check <- sf::st_geometry_type(site_boundary)
 
     if(!geom_check == 'POLYGON'){
-        ws_prodname <- sf::st_cast(ws_prodname, 'POLYGON')
+        site_boundary <- sf::st_cast(site_boundary, 'POLYGON')
     }
 
-    sheds <- ws_prodname %>%
+    sheds <- site_boundary %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -8638,7 +8618,8 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
     final <- pivot_longer(final,
                           cols = all_of(c(mean_name, sd_name)),
                           names_to = 'var',
-                          values_to = 'val')
+                          values_to = 'val') %>%
+        mutate(var = paste0('vd_', var))
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
                 n = network, d = domain, p = time)
@@ -10689,4 +10670,209 @@ fill_sf_holes <- function(x){
     sf::st_geometry(x) <- wb_geom
 
     return(x)
+}
+
+get_nrcs_soils <- function(network,
+                           domain,
+                           nrcs_var_name,
+                           site,
+                           ws_boundaries){
+
+    # Use soilDB to download  soil map unit key (mukey) calssification raster
+    site_boundary <- ws_boundaries %>%
+        filter(site_name == site)
+
+    bb <- sf::st_bbox(site_boundary)
+
+    soil <- try(sw(soilDB::mukey.wcs(aoi = bb,
+                                 db = 'gssurgo',
+                                 quiet = TRUE)))
+
+    # should build a chunking method for this
+    if(class(soil) == 'try-error'){
+
+        this_var_tib <- tibble(site_name = site,
+                               year = NA,
+                               var =  names(nrcs_var_name),
+                               val = NA)
+
+        return(generate_ms_exception(glue('{s} is too large',
+                                          s = site)))
+    }
+
+    mukey_values <- unique(soil@data@values)
+
+    #### Grab soil vars
+
+    # Query Soil Data Acess (SDA) to get the component key (cokey) in each mukey.
+    #### each map unit made up of componets but components do not have
+    #### spatial informaiton associted with them, but they do include information
+    #### on the percentage of each mukey that is made up of each component.
+    #### This informaiton on compositon is held in the component table in the
+    #### comppct_r column, givin in a percent
+
+    mukey_sql <- soilDB::format_SQL_in_statement(mukey_values)
+    component_sql <- sprintf("SELECT cokey, mukey, compname, comppct_r, majcompflag FROM component WHERE mukey IN %s", mukey_sql)
+    component <- sm(soilDB::SDA_query(component_sql))
+
+    # Check is soil data is available
+    if(length(unique(component$compname)) == 1 &&
+       unique(component$compname) == 'NOTCOM'){
+
+        this_var_tib <- tibble(site_name = site,
+                               year = NA,
+                               var =  names(nrcs_var_name),
+                               val = NA)
+
+        return(generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = site)))
+    }
+
+    cokey <- unique(component[,1])
+    cokey <- data.frame(ID=cokey)
+
+
+    # Query SDA for the componets to get infromation on their horizons from the
+    #### chorizon table. Each componet is made up of soil horizons (layer of soil
+    #### vertically) identified by a chkey.
+    #### Informaiton about the depth of each horizon is needed to calculate weighted
+    #### averges of any parameter for the whole soil column
+    #### hzdept_r = depth to top of horizon
+    #### hzdepb_r = depth to bottom of horizon
+    #### om_r = percent organic matter
+    cokey_sql <- soilDB::format_SQL_in_statement(cokey$ID)
+    chorizon_sql <- sprintf(paste0('SELECT cokey, chkey, hzname, desgnmaster, hzdept_r, hzdepb_r, ',
+                                         paste(nrcs_var_name, collapse = ', '),
+                                         ' FROM chorizon WHERE cokey IN %s'), cokey_sql)
+
+    full_soil_data <- sm(soilDB::SDA_query(chorizon_sql))
+
+    # Calculate weighted average for the entire soil column. This involves 3 steps.
+    #### First the component's weighted average of all horizones. Second, the
+    #### weighted avergae of each component in a map unit. And third, the weighted
+    #### average of all mukeys in the watershed (weighted by their area)
+
+    # cokey weighted average of all horizones
+    soil_data_joined <- full_join(full_soil_data, component, by = c("cokey"))
+
+    all_soil_vars <- tibble()
+    for(s in 1:length(nrcs_var_name)){
+
+        this_var <- unname(nrcs_var_name[s])
+
+        soil_data_one_var <- soil_data_joined %>%
+            select(cokey, chkey, hzname, desgnmaster, hzdept_r, hzdepb_r,
+                   !!this_var, mukey, compname, comppct_r, majcompflag)
+
+        cokey_size <- soil_data_one_var %>%
+            filter(!is.na(.data[[this_var]])) %>%
+            mutate(layer_size = hzdepb_r-hzdept_r) %>%
+            group_by(cokey) %>%
+            summarise(cokey_size = sum(layer_size)) %>%
+            ungroup()
+
+        cokey_weighted_av <- soil_data_one_var %>%
+            filter(!is.na(.data[[this_var]])) %>%
+            mutate(layer_size = hzdepb_r-hzdept_r) %>%
+            left_join(., cokey_size, by = 'cokey') %>%
+            mutate(layer_prop = layer_size/cokey_size) %>%
+            mutate(value_mat_weith = .data[[this_var]] * layer_prop)  %>%
+            group_by(mukey, cokey) %>%
+            summarise(value_comp = sum(value_mat_weith),
+                      comppct_r = unique(comppct_r)) %>%
+            ungroup()
+
+        # mukey weighted average of all compenets
+        mukey_weighted_av <- cokey_weighted_av %>%
+            group_by(mukey) %>%
+            mutate(comppct_r_sum = sum(comppct_r)) %>%
+            summarise(value_mukey = sum(value_comp*(comppct_r/comppct_r_sum)))
+
+        # Watershed weighted average
+        site_boundary_p <- sf::st_transform(site_boundary, crs = sf::st_crs(soil))
+
+        soil_masked <- sw(raster::mask(soil, site_boundary_p))
+
+        watershed_mukey_values <- soil_masked@data@values %>%
+            as_tibble() %>%
+            filter(!is.na(value)) %>%
+            group_by(value) %>%
+            summarise(n = n()) %>%
+            rename(mukey = value) %>%
+            left_join(mukey_weighted_av, by = 'mukey')
+
+
+        # Info on soil data
+        # query SDA's Mapunit Aggregated Attribute table (muaggatt) by mukey.
+        # table information found here: https://sdmdataaccess.sc.egov.usda.gov/documents/TableColumnDescriptionsReport.pdf
+        # https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/survey/geo/?cid=nrcs142p2_053631
+        # how the tables relate using mukey, cokey, and chkey is here: https://www.nrcs.usda.gov/Internet/FSE_DOCUMENTS/nrcs142p2_050900.pdf
+
+        if(all(is.na(watershed_mukey_values$value_mukey))){
+
+            watershed_value <- NA
+        } else{
+
+            watershed_mukey_values_weighted <- watershed_mukey_values %>%
+                #mutate(n = ifelse(is.na(value_mukey), NA, n)) %>%
+                mutate(sum = sum(n, na.rm = TRUE)) %>%
+                mutate(prop = n/sum)
+                #mutate(value_mukey = ifelse(is.na(value_mukey), 0, value_mukey))
+
+            watershed_mukey_values_weighted <- watershed_mukey_values_weighted %>%
+                mutate(weighted_av = prop*value_mukey)
+
+            watershed_value <- sum(watershed_mukey_values_weighted$weighted_av,
+                                   na.rm = TRUE)
+
+            watershed_value <- round(watershed_value, 2)
+        }
+
+        this_var_tib <- tibble(site_name = site,
+                               year = NA,
+                               var =  names(nrcs_var_name[s]),
+                               val = watershed_value)
+
+        all_soil_vars <- rbind(all_soil_vars, this_var_tib)
+    }
+
+    return(all_soil_vars)
+
+    # #Used to visualize raster
+    # for(i in 1:nrow(watershed_mukey_values_weighted)){
+    #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
+    # }
+    # soil_masked@data@isfactor <- FALSE
+    # 
+    # mapview::mapview(soil_masked)
+    # raster::plot(soil_masked)
+
+    # Other table in SDA system
+    # # component table
+    # compnent_sql <- soilDB::format_SQL_in_statement(cokey$ID)
+    # component_sql <- sprintf("SELECT cokey, runoff, compname, compkind, comppct_r, majcompflag, otherph, localphase, slope_r, hydricrating, taxorder, taxsuborder, taxsubgrp, taxpartsize FROM component WHERE cokey IN %s", compnent_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+    #
+    # chtext
+    # compnent_sql <- soilDB::format_SQL_in_statement(full_soil_data$chkey)
+    # component_sql <- sprintf("SELECT texture, stratextsflag, rvindicator, texdesc, chtgkey FROM chtexturegrp WHERE chkey IN %s", compnent_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+
+    # component_sql <- sprintf("SELECT musym, brockdepmin, wtdepannmin, wtdepaprjunmin, niccdcd FROM muaggatt WHERE mukey IN %s", mukey_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+    #
+    # # corestrictions table
+    # corestrictions_sql <- sprintf("SELECT cokey, reskind, resdept_r, resdepb_r, resthk_r FROM corestrictions WHERE cokey IN %s", compnent_sql)
+    # corestrictions_return <- soilDB::SDA_query(corestrictions_sql)
+    #
+    # # cosoilmoist table
+    # cosoilmoist_sql <- sprintf("SELECT cokey,  FROM cosoilmoist WHERE cokey IN %s", compnent_sql)
+    # corestrictions_return <- soilDB::SDA_query(corestrictions_sql)
+    #
+    # # pores
+    # chkey_sql <- soilDB::format_SQL_in_statement(unique(full_soil_data$chkey))
+    # cokey_to_chkey_sql_pores <- sprintf(paste0('SELECT chkey, poresize FROM chpores WHERE chkey IN %s'), chkey_sql)
+    #
+    # soil_pores <- soilDB::SDA_query(cokey_to_chkey_sql_pores)
+
 }
