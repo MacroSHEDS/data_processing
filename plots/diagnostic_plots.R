@@ -40,7 +40,7 @@ dmncolors = dmncolors[1:length(domains)]
 dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
            showWarnings = FALSE)
 
-# all Q (line plot with log Y) ####
+# [OBSOLETE] all Q (line plot with log Y) ####
 
 q_dirs <- list_all_product_dirs('discharge')
 log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
@@ -57,7 +57,7 @@ axis(2, at=log(log_ticks), labels = log_ticks)
 axis(1, seq(1950, 2020, 5))
 
 legend_map = tibble(domain = character(), colors = list())
-plotted_site_tally = 0
+plotted_site_tally = omitted_site_tally = 0
 for(i in 1:length(q_dirs)){
 
     pd = q_dirs[i]
@@ -72,14 +72,23 @@ for(i in 1:length(q_dirs)){
         # mutate(val = errors::set_errors(val, val_err),
         group_by(site_name,
                  date = lubridate::as_date(datetime)) %>%
-        summarize(val = mean(val),
+        summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        # tidyr::complete(date = seq(min(date), max(date), by = 'day')) %>%
-        # imputeTS::na_interpolation('linear',
-        #                            maxgap = 3) %>%
-        # ungroup() %>%
+        arrange(date) %>%
+        mutate(
+            val = if(sum(! is.na(val)) > 1)
+                {
+                    imputeTS::na_interpolation(val,
+                                               maxgap = 40)
+                } else val) %>%
+        ungroup() %>%
         mutate(year = lubridate::year(date),
-               val = val * 86400) %>%
+               val = val * 86400)
+
+    print(tapply(d$val, list(d$site_name, d$year), function(x) sum(! is.na(x))))
+    # tapply(d$val, list(d$site_name, d$year), function(x) sum(is.na(x)))
+
+    d = d %>%
         group_by(site_name, year) %>%
         summarize(val = sum(val, na.rm = FALSE),
                   .groups = 'drop') %>%
@@ -114,7 +123,12 @@ for(i in 1:length(q_dirs)){
             print('These sites have annual runoff values over 2000 mm:')
         }
         if(maxq > 2000) message(site, ': ', round(maxq, 1))
-        if(any(! is.na(ds$val))) plotted_site_tally = plotted_site_tally + 1
+        if(any(! is.na(ds$val))){
+            plotted_site_tally = plotted_site_tally + 1
+        } else {
+            omitted_site_tally = omitted_site_tally + 1
+            print(paste(site, 'omitted'))
+        }
         lines(ds$year, ds$val, col=alpha(colors[color_ind], 0.7), lwd = 2.5)
     }
 
@@ -161,7 +175,7 @@ for(i in 1:length(q_dirs)){
         select(-val_err) %>%
         # mutate(val = errors::set_errors(val, val_err),
         group_by(site_name, date = lubridate::as_date(datetime)) %>%
-        summarize(val = mean(val),
+        summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
         mutate(year = lubridate::year(date),
                val = val * 86400) %>%
