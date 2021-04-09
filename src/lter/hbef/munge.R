@@ -6,7 +6,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'munge',
                               get_statuses = 'ready')
 
-# i=4
+# i=6
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
