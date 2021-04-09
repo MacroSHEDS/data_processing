@@ -8347,45 +8347,25 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
         select(band)$
         map(function(x){
             date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-            x$set("RGEE_NAME", date)
+            name <- ee$String$cat(col_name, date)
+            x$select(band)$rename(name)
         })
 }
 
 clean_gee_table <- function(ee_ws_table,
-                            sheds,
-                            com_name) {
-
-    table_nrow <- sheds %>%
-        mutate(nrow = row_number()) %>%
-        as.data.frame() %>%
-        select(site_name, nrow)
-
-    # if(any(duplicated(colnames(ee_ws_table)))){
-    #     pivot_longer(ee_ws_table, )
-    # }
-
-    sm(table <- ee_ws_table %>%
-        mutate(nrow = row_number()) %>%
-        full_join(table_nrow) %>%
-        select(-nrow))
-
-    col_names <- colnames(table)
-
-    leng <- length(col_names) -1
-
-    table_time <- table %>%
-        pivot_longer(col_names[1:leng])
-
-    for(i in 1:nrow(table_time)) {
-        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2],
-                                                         pattern = 'X', n = 2)[2]
-    }
-
-    table_fin <- table_time %>%
-        dplyr::select(-name) %>%
-        mutate(date = ymd(date)) %>%
-        mutate(var = !!com_name) %>%
-        rename(val = value)
+                            reducer) {
+    
+    col_names <- colnames(ee_ws_table) 
+    col_names <- col_names[!grepl('site_name', col_names)]
+    
+    table_fin <- ee_ws_table %>%
+        pivot_longer(cols = !!col_names, values_to = 'val', names_to = 'var_date') %>%
+        mutate(var = str_split_fixed(var_date, 'X', n = Inf)[,1],
+               datetime = str_split_fixed(var_date, 'X', n = Inf)[,2]) %>%
+        mutate(var = glue('{v}_{r}',
+                          v = var,
+                          r = reducer)) %>%
+        select(site_name, datetime, var, val) 
 
     return(table_fin)
 }
@@ -8396,17 +8376,12 @@ get_gee_standard <- function(network,
                              band,
                              prodname,
                              rez,
-                             ws_prodname,
+                             site_boundary,
                              batch = FALSE){
 
-    asset_path <- paste0('users/',
-                         strsplit(x = gee_login,
-                                  split = '@')[[1]][1],
-                         '/data_aq_sheds')
+    area <- sf::st_area(site_boundary)
 
-    area <- sf::st_area(ws_prodname)
-
-    sheds <- ws_prodname %>%
+    sheds <- site_boundary %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -8416,6 +8391,9 @@ get_gee_standard <- function(network,
     site <- unique(sheds$site_name)
 
     if(as.numeric(area) > 10528200 || batch){
+
+        user_info <- rgee::ee_user_info(quiet = TRUE)
+        asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
 
         ee_shape <- sf_as_ee(sheds,
                              via = 'getInfo_to_asset',
@@ -8447,19 +8425,24 @@ get_gee_standard <- function(network,
                                 s = site,
                                 p = prodname)
 
-        task <- ee$batch$Export$table$toDrive(collection = gee,
+        ee_task <- ee$batch$Export$table$toDrive(collection = gee,
                                               description = ee_description,
                                               fileFormat = 'CSV',
                                               folder = 'GEE',
                                               fileNamePrefix = 'rgee')
 
-        task$start()
-        ee_monitoring(task)
+        ee_task$start()
+        ee_monitoring(ee_task)
 
         temp_rgee <- tempfile(fileext = '.csv')
-        rgee::ee_drive_to_local(task, temp_rgee,
-                                overwrite = TRUE,
-                                quiet = TRUE)
+        googledrive::drive_download(file = 'GEE/rgee.csv', 
+                                    temp_rgee)
+
+        # Seems to be broken 
+        # rgee::ee_drive_to_local(task = ee_task, 
+        #                         dsn = temp_rgee,
+        #                         overwrite = TRUE,
+        #                         quiet = TRUE)
 
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_median', c = prodname)
@@ -8475,7 +8458,7 @@ get_gee_standard <- function(network,
         }
         fin_table <- fin_table %>%
             select(site_name, stdDev, median, imageId) %>%
-            rename(date = imageId,
+            rename(datetime = imageId,
                    !!sd_name := stdDev,
                    !!median_name := median) %>%
             pivot_longer(cols = all_of(c(sd_name, median_name)),
@@ -8501,10 +8484,8 @@ get_gee_standard <- function(network,
             return(NULL)
         }
 
-        median_name <- glue('{c}_median', c = prodname)
         ext_median <- clean_gee_table(ee_ws_table = ext_median,
-                                      sheds = sheds,
-                                      com_name = median_name)
+                                      reducer = 'median')
 
         ext_sd <- try(ee_extract(
             x = imgcol,
@@ -8517,8 +8498,7 @@ get_gee_standard <- function(network,
         if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
             ext_sd <- tibble()
         } else {
-            sd_name <- glue('{c}_sd', c = prodname)
-            ext_sd <- clean_gee_table(ext_sd, sheds, sd_name)
+            ext_sd <- clean_gee_table(ext_sd, reducer = 'sd')
         }
 
         fin_table <- rbind(ext_median, ext_sd)
@@ -8582,17 +8562,17 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
+get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                           site_name) {
 
 
-    geom_check <- sf::st_geometry_type(ws_prodname)
+    geom_check <- sf::st_geometry_type(site_boundary)
 
     if(!geom_check == 'POLYGON'){
-        ws_prodname <- sf::st_cast(ws_prodname, 'POLYGON')
+        site_boundary <- sf::st_cast(site_boundary, 'POLYGON')
     }
 
-    sheds <- ws_prodname %>%
+    sheds <- site_boundary %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -8662,7 +8642,8 @@ get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
     final <- pivot_longer(final,
                           cols = all_of(c(mean_name, sd_name)),
                           names_to = 'var',
-                          values_to = 'val')
+                          values_to = 'val') %>%
+        mutate(var = paste0('vd_', var))
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
                 n = network, d = domain, p = time)
@@ -10605,13 +10586,13 @@ get_nrcs_soils <- function(network,
     return(all_soil_vars)
 
     # #Used to visualize raster
-    for(i in 1:nrow(watershed_mukey_values_weighted)){
-      soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
-    }
-    soil_masked@data@isfactor <- FALSE
-
-    mapview::mapview(soil_masked)
-    raster::plot(soil_masked)
+    # for(i in 1:nrow(watershed_mukey_values_weighted)){
+    #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
+    # }
+    # soil_masked@data@isfactor <- FALSE
+    # 
+    # mapview::mapview(soil_masked)
+    # raster::plot(soil_masked)
 
     # Other table in SDA system
     # # component table
@@ -10619,6 +10600,11 @@ get_nrcs_soils <- function(network,
     # component_sql <- sprintf("SELECT cokey, runoff, compname, compkind, comppct_r, majcompflag, otherph, localphase, slope_r, hydricrating, taxorder, taxsuborder, taxsubgrp, taxpartsize FROM component WHERE cokey IN %s", compnent_sql)
     # component_return <- soilDB::SDA_query(component_sql)
     #
+    # chtext
+    # compnent_sql <- soilDB::format_SQL_in_statement(full_soil_data$chkey)
+    # component_sql <- sprintf("SELECT texture, stratextsflag, rvindicator, texdesc, chtgkey FROM chtexturegrp WHERE chkey IN %s", compnent_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+
     # component_sql <- sprintf("SELECT musym, brockdepmin, wtdepannmin, wtdepaprjunmin, niccdcd FROM muaggatt WHERE mukey IN %s", mukey_sql)
     # component_return <- soilDB::SDA_query(component_sql)
     #
