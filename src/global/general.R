@@ -7,6 +7,9 @@ source('src/global/general_kernels.R',
 unprod <- univ_products %>%
   filter(status == 'ready') 
 
+# Load spatial files from Drive if not already held on local machine
+load_spatial_data()
+
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
                          d = domain))
