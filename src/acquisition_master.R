@@ -49,6 +49,11 @@ suppressPackageStartupMessages({
 
 })
 
+#set the dataset version. This is used to name the output dataset and diagnostic
+#plots. it will eventually be set automatically at the start of each run.
+#(or after each run that results in a change)
+vsn <- 0.4
+
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
 
@@ -264,6 +269,7 @@ logger_module <- 'ms.module'
 
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
+                           dataset_version = vsn,
                            thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = TRUE)
