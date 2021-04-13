@@ -6080,7 +6080,7 @@ read_precip_quickref <- function(network,
     return(quickref)
 }
 
-populate_implicit_NAs <- function(d, interval){
+populate_implicit_NAs <- function(d, interval, val_fill = NA){
 
     #this would be more flexible if we could pass column names as
     #   positional args and use them in group_by and mutate
@@ -6088,6 +6088,9 @@ populate_implicit_NAs <- function(d, interval){
     #d: a ms tibble with at minimum datetime, site_name, and var columns
     #interval: the interval along which to populate missing values. (must be
     #   either '15 min' or '1 day'.
+    #val_fill: character or NA. the token with which to populate missing
+    #   elements of the `val` column. All other columns will be populated
+    #   invariably with NA or 0. See details.
 
     #this function makes implicit missing timeseries records explicit,
     #   by populating rows so that the datetime column is complete
@@ -6095,7 +6098,8 @@ populate_implicit_NAs <- function(d, interval){
     #   samples are taken every 15 minutes, but some samples are skipped
     #   (rows not present), this will create those rows. If ms_status or
     #   ms_interp columns are present, their new records will be populated
-    #   with 0s. Any other columns will be populated wiith NAs.
+    #   with 0s. The val column will be populated with whatever is passed to
+    #   val_fill. Any other columns will be populated with NAs.
 
     #returns d, complete with new rows, sorted by site_name, then var, then datetime
 
@@ -6104,6 +6108,7 @@ populate_implicit_NAs <- function(d, interval){
     }
 
     complete_d <- d %>%
+        mutate(fill_marker = 1) %>%
         group_by(site_name, var) %>%
         tidyr::complete(datetime = seq(min(datetime),
                                        max(datetime),
@@ -6113,6 +6118,11 @@ populate_implicit_NAs <- function(d, interval){
         ungroup() %>%
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, everything())
+
+    if(! is.na(val_fill)){
+        complete_d$val[is.na(complete_d$fill_marker)] <- val_fill
+    }
+    complete_d$fill_marker <- NULL
 
     if('ms_status' %in% colnames(complete_d)){
         complete_d$ms_status[is.na(complete_d$ms_status)] <- 0
@@ -10307,10 +10317,10 @@ ms_complete_all_cases <- function(network_domain, site_data){
     #   more space our dataset takes up after this operation. it might be
     #   several gigs, which could be a problem.
 
-    #if a stretch of missing records longer than one week (STOPPED HERE MID-SENTENCE)month occurs in
-    #winter, ms_complete_all_cases assumes recording stopped
-    #for sites that don't record data when the stream is frozen, cases will be completed with 0s instead
-    #of NAs.
+    #For special cases (currently only McMurdo), winter data gaps in discharge
+    #   timeseries will be populated with 0 instead of NA. McMurdo's winter is
+    #   identified as any series of NAs longer than 180 days occurring between
+    #   jan 2 and dec 30.
 
     paths <- list.files(path = 'data',
                         pattern = '*.feather',
@@ -10372,10 +10382,40 @@ ms_complete_all_cases <- function(network_domain, site_data){
         #TODO: after you remove the error catcher above, update this
         #call to populate_implicit_NAs so that it chooses '15 min' or
         #'1 day' intelligently.
+
         d <- populate_implicit_NAs(d = d,
                                    interval = '1 day')
 
-        any(duplicated(d[, c('datetime', 'site_name', 'var')]))
+        if(grepl('/mcmurdo/', p) && grepl('/discharge__', p)){
+
+            #for sites/products with more than one variable prefix, something more
+            #sophisticated will be needed. for mcmurdo, all discharge is IS_discharge
+            d <- d %>%
+                group_split(site_name, var,
+                            year = lubridate::year(datetime)) %>%
+                purrr::map_dfr(function(x){
+
+                    na_runlengths <- rle(is.na(x$val))
+                    na_len <- na_runlengths$lengths
+                    is_na <- na_runlengths$values
+
+                    if(any(is_na[c(1, length(is_na))])) return(x)
+
+                    winter_run <- which(is_na & na_len > 180)
+
+                    if(length(winter_run)){
+
+                        csums <- cumsum(na_len[1:winter_run])
+                        winter_inds <- (csums[length(csums) - 1] + 1) :
+                            csums[length(csums)]
+                        x$val[winter_inds] <- 0
+                        x$ms_interp[winter_inds] <- 1
+                    }
+
+                    return(x)
+                }) %>%
+                arrange(site_name, var, datetime)
+        }
 
         write_feather(x = d,
                       path = p)
