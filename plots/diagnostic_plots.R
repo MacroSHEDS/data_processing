@@ -5,10 +5,14 @@
 
 #increment this by 0.1 and a new folder will be populated with new diagnostic plots
 vsn = 0.4
+q_interp_limit = 40
+p_interp_limit = 40
+chem_interp_limit = 40
 
 #setup ####
 
 library(RColorBrewer)
+library(viridis)
 
 ws_areas <- site_data %>%
     filter(as.logical(in_workflow)) %>%
@@ -79,7 +83,7 @@ for(i in 1:length(q_dirs)){
             val = if(sum(! is.na(val)) > 1)
                 {
                     imputeTS::na_interpolation(val,
-                                               maxgap = 40)
+                                               maxgap = q_interp_limit)
                 } else val) %>%
         ungroup() %>%
         mutate(year = lubridate::year(date),
@@ -156,6 +160,9 @@ dev.off()
 
 # Q by domain (line plots stitched, log Y) ####
 
+q_dirs <- list_all_product_dirs('discharge')
+log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
+
 pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/Q_by_domain.pdf'))
 
@@ -177,6 +184,19 @@ for(i in 1:length(q_dirs)){
         group_by(site_name, date = lubridate::as_date(datetime)) %>%
         summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
+        arrange(date) %>%
+        mutate(
+            val = if(sum(! is.na(val)) > 1)
+            {
+                imputeTS::na_interpolation(val,
+                                           maxgap = q_interp_limit)
+            } else val) %>%
+        ungroup()
+
+    # zz = filter(d, site_name == 'MARTINELLI', year(date) == 1994) %>% arrange(date)
+    # plot(zz$date, zz$val)
+
+    d <- d %>%
         mutate(year = lubridate::year(date),
                val = val * 86400) %>%
         group_by(site_name, year) %>%
@@ -193,6 +213,21 @@ for(i in 1:length(q_dirs)){
                                    sep = ' > ')) %>%
         select(year, ntw_dmn_sit, val) %>%
         arrange(ntw_dmn_sit, year)
+
+    hi_q = d %>%
+        mutate(val = exp(val),
+               site = stringr::str_match(ntw_dmn_sit, '> (\\w+)$')[, 2],
+               domain = stringr::str_match(ntw_dmn_sit, '> (\\w+) >')[, 2],
+               # domain = stringr::str_split(ntw_dmn_sit, ' > ')[[1]][2],
+               yearval = paste(year, round(val, 1), sep=': ')) %>%
+        filter(val > 2000)
+    if(nrow(hi_q)){
+        sitechunks = split(hi_q, hi_q$site)
+        for(sc in sitechunks){
+            message(sc$domain[1], ' > ', sc$site[1], ':\n\t',
+                    paste(sc$yearval, collapse = '\n\t'))
+        }
+    }
 
     legend_map = tibble(site = character(), color = character(), lty=numeric())
     n_available_colors = palettes[i, 'maxcolors']
@@ -236,9 +271,11 @@ for(i in 1:length(q_dirs)){
     }
 
     defpar = par(lend=1)
-    legend(x=1949, y=quantile(ylims, 0.97), legend=legend_map$site, bty = 'n',
-           col = legend_map$color,
-           lty=legend_map$lty, seg.len=4, lwd=3)
+    if(length(legend_map$site)){
+        legend(x=1949, y=quantile(ylims, 0.97), legend=legend_map$site, bty = 'n',
+               col = legend_map$color,
+               lty=legend_map$lty, seg.len=4, lwd=3)
+    }
 
     par(defpar)
 }
@@ -706,5 +743,59 @@ graphics::text(x=quantile(1:nsites, 0.15),
                y=quantile(ylims, 0.9), adj=0, col='pink',
                labels=paste0('Missing domains: ',
                              paste(excluded_domains, collapse = ', ')))
+
+dev.off()
+
+#annual coverage by domain and site ####
+
+pdf(width=11, height=9, onefile=TRUE,
+    file=paste0('plots/diagnostic_plots_',  vsn, '/Q_coverage.pdf'))
+
+q = load_entire_product('discharge')
+dmns = unique(q$domain)
+current_year = lubridate::year(Sys.Date())
+
+for(dmn in dmns){
+
+    earliest_year = lubridate::year(min(q$datetime[q$domain == dmn]))
+    nyears = current_year - earliest_year
+    yrcols = viridis(n = nyears)
+
+    sites = unique(q$site_name[q$domain == dmn])
+    if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
+
+    plotrc = ceiling(sqrt(length(sites)))
+    # plotc = floor(sqrt(length(sites)))
+    doyseq = seq(1, 366, 30)
+    par(mfrow=c(plotrc, plotrc), mar=c(1,2,0,0), oma=c(0,0,2,0))
+
+    for(s in sites){
+
+        plot(NA, NA, xlim=c(1, 366), ylim=c(0, nyears), xaxs='i', yaxs='i',
+             ylab = '', xlab = '', yaxt='n', cex.axis=0.6, xaxt='n', xpd=NA)
+        axis(1, doyseq, doyseq, tick=FALSE, line = -2, cex.axis=0.8)
+        axis(2, 1:nyears, earliest_year:(current_year - 1), las=2, cex.axis=0.6,
+             hadj=0.7)
+
+        qsub = q %>%
+            filter(domain == dmn, site_name == s) %>%
+            mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+                   yr_offset = lubridate::year(datetime) - earliest_year)
+
+        lubridate::year(qsub$datetime) <- 1972
+        yrs = unique(qsub$yr_offset)
+
+        for(i in 1:length(yrs)){
+            qss = qsub %>%
+                filter(yr_offset == yrs[i]) %>%
+                arrange(doy)
+            lines(qss$doy, c(scale(drop_errors(qss$val))) + qss$yr_offset, col=yrcols[i])
+        }
+
+        mtext(s, 3, outer=FALSE, line=-2)
+    }
+
+    mtext(paste0(dmn, ' (DOY vs. Year)'), 3, outer=TRUE)
+}
 
 dev.off()
