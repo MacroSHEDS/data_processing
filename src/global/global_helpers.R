@@ -9263,6 +9263,7 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
 
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
+                                       dataset_version,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product){
@@ -9319,6 +9320,95 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent('NOT generating analysis-ready CSVs',
                         logger = logger_module)
     }
+
+    log_with_indent(glue('Generating output dataset v',
+                         dataset_version),
+                    logger = logger_module)
+    generate_output_dataset(vsn = dataset_version)
+
+}
+
+generate_output_dataset <- function(vsn){
+
+    tryCatch({
+        system(paste0('find data -path "*derived/*.feather" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    }, error = function(e){
+        stop(glue('generate_output_dataset can only run on a unix-like machine ',
+                  'with `find` and `rsync` installed'),
+             call. = FALSE)
+    })
+
+    # system2('find', c('data', '-path', '"*derived/*.feather"', '-printf',
+    #                   '%P\\\\0\\\\n', '|', 'rsync', '-av', '--files-from=-',
+    #                   'data', paste0('macrosheds_dataset_v', vsn)))
+
+    find_dirs_within_outputdata <- function(keyword, vsn){
+
+        files <- dir(path = paste0('macrosheds_dataset_v', vsn),
+                     pattern = paste0(keyword, '*'),
+                     recursive = TRUE,
+                     full.names = TRUE,
+                     include.dirs = TRUE)
+
+        return(files)
+    }
+
+    dirs_to_delete <- c()
+
+    #collect compprod dirs (intermediate products) that shouldn't be in the
+    #final dataset
+    for(k in c('cdnr_discharge__', 'usgs_discharge__')){
+
+        dirs_to_delete <- c(dirs_to_delete,
+          find_dirs_within_outputdata(keyword = k, vsn = vsn))
+    }
+
+    #collect pre-idw precip dirs (also intermediate products)
+    #that shouldn't be in the final dataset
+     pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
+                                            vsn = vsn)
+
+     ppaths <- str_match(string = pfpaths,
+                         pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
+         sort()
+
+     pfac <- factor(ppaths)
+     dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
+
+     for(dr in dirs_with_p_compprods){
+
+         precip_dirs <- list.files(path = dr,
+                                   pattern = '^precipitation__')
+
+         if(length(precip_dirs) != 2){
+             stop('there should only be two precip dirs in consideration here')
+         }
+
+         dir_to_delete_ind <- str_match(string = precip_dirs,
+                                        pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
+            as.numeric() %>%
+            which.min()
+
+         dirs_to_delete <- c(dirs_to_delete,
+                             paste0(dr, precip_dirs[dir_to_delete_ind]))
+     }
+
+     #drop em all from the final dataset
+     for(dr in dirs_to_delete){
+         unlink(x = dr,
+                recursive = TRUE)
+     }
+
+     #put convenience functions in there
+     file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
+               to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
+
+     #add notes
+     warning("Don't forget to add notes! (and eventually generated changelog automatically)")
+
+     #zip it up
+     #...
 }
 
 thin_portal_data <- function(network_domain, thin_interval){
@@ -10449,7 +10539,9 @@ generate_product_csvs <- function(network_domain, site_data){
         d <- load_entire_product(prodname = p,
                                  .sort = FALSE)
 
-        warning('there are still duplicates here too!')
+        if(nrow(d) != nrow(distinct(d, datetime, site_name, var))){
+            print(paste('there are still duplicates in', p))
+        }
         # zz = d %>%
         #     select(-ms_status, -ms_interp) %>%
         #     mutate(val = errors::drop_errors(val)) %>%
