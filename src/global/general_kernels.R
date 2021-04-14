@@ -31,7 +31,7 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_name,
     }
     npp <- npp$table %>%
       select(site_name, year=datetime, var, val)
-    
+
     dir <- glue('data/{n}/{d}/ws_traits/npp/',
                  n = network,
                  d = domain)
@@ -79,6 +79,7 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
             mutate(doy = substr(datetime, 5,7)) %>%
             mutate(date_ = ymd(paste(year, '01', '01', sep = '-'))) %>%
             mutate(datetime = as.Date(as.numeric(doy), format = '%j', origin = date_)) %>%
+            mutate(year = as.numeric(year)) %>%
             select(site_name, datetime, year, val, var)
     } else {
         gpp <- gpp$table %>%
@@ -109,8 +110,8 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
         mutate(var = 'va_gpp_sd_space')
 
     gpp_final <- rbind(gpp_sum, gpp_sd_year, gpp_sd)
-    
-    gpp_raw <- gpp %>% 
+
+    gpp_raw <- gpp %>%
         select(site_name, datetime, val, var)
 
     dir <- glue('data/{n}/{d}/ws_traits/gpp/',
@@ -176,10 +177,10 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
     lai_means <- lai %>%
         filter(var == 'vb_lai_median') %>%
         group_by(site_name, year) %>%
-        summarise(lai_max = max(val, na.rm = TRUE),
-                  lai_min = min(val, na.rm = TRUE),
-                  lai_mean = mean(val, na.rm = TRUE),
-                  lai_sd_year = sd(val, na.rm = TRUE)) %>%
+        summarise(vb_lai_max = max(val, na.rm = TRUE),
+                  vb_lai_min = min(val, na.rm = TRUE),
+                  vb_lai_mean = mean(val, na.rm = TRUE),
+                  vb_lai_sd_year = sd(val, na.rm = TRUE)) %>%
       pivot_longer(cols = c('vb_lai_max', 'vb_lai_min', 'vb_lai_mean', 'vb_lai_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
@@ -244,37 +245,37 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
     fpar_means <- fpar %>%
       filter(var == 'vb_fpar_median') %>%
       group_by(site_name, year) %>%
-      summarise(fpar_max = max(val, na.rm = TRUE),
-                fpar_min = min(val, na.rm = TRUE),
-                fpar_mean = mean(val, na.rm = TRUE),
-                fpar_sd_year = sd(val, na.rm = TRUE)) %>%
+      summarise(vb_fpar_max = max(val, na.rm = TRUE),
+                vb_fpar_min = min(val, na.rm = TRUE),
+                vb_fpar_mean = mean(val, na.rm = TRUE),
+                vb_fpar_sd_year = sd(val, na.rm = TRUE)) %>%
       pivot_longer(cols = c('vb_fpar_max', 'vb_fpar_min', 'vb_fpar_mean', 'vb_fpar_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
-    
+
     fpar_sd <- fpar %>%
       filter(var == 'vb_fpar_sd') %>%
       group_by(site_name, year) %>%
       summarise(val = mean(val, na.rm = TRUE)) %>%
       mutate(var = 'vb_fpar_sd_space')
-    
+
     fpar_final <- rbind(fpar_means, fpar_sd)
-    
+
     fpar_raw <- fpar %>%
       select(site_name, datetime, val, var)
-    
+
     dir <- glue('data/{n}/{d}/ws_traits/fpar/',
                 n = network, d = domain)
-    
+
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-    
+
     sum_path <- glue('{d}sum_{s}.feather',
                       d = dir,
                       s = site_name)
     raw_path <- glue('{d}raw_{s}.feather',
                      d = dir,
                      s = site_name)
-    
+
     write_feather(fpar_final, sum_path)
     write_feather(fpar_raw, raw_path)
   }
@@ -404,28 +405,28 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
 
 
     final <- final$table %>%
-        mutate(datetime = ymd(datetime)) 
-    
+        mutate(datetime = ymd(datetime))
+
     if(grepl('prism_precip', prodname_ms)){
-    
+
       final_sum_c <- final %>%
         filter(var == 'cc_precip_median') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
-        summarise(prism_cumulative_precip = sum(val, na.rm = TRUE),
-                  prism_precip_sd_year = sd(val, na.rm = TRUE)) %>%
+        summarise(cc_cumulative_precip = sum(val, na.rm = TRUE),
+                  cc_precip_sd_year = sd(val, na.rm = TRUE)) %>%
         pivot_longer(cols = c('cc_cumulative_precip', 'cc_precip_sd_year'),
                      names_to = 'var',
                      values_to = 'val') %>%
         filter(val > 0)
-      
+
       final_sum_sd <- final %>%
         filter(var == 'cc_precip_sd') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
         mutate(var = 'cc_precip_sd_space')
-      
+
       final_sum <- rbind(final_sum_c, final_sum_sd)
     } else{
 
@@ -433,8 +434,8 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
         filter(var == 'cc_temp_mean_median') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
-        summarise(prism_temp_mean = mean(val, na.rm = TRUE),
-                  prism_temp_sd_year = sd(val, na.rm = TRUE)) %>%
+        summarise(cc_temp_mean = mean(val, na.rm = TRUE),
+                  cc_temp_sd_year = sd(val, na.rm = TRUE)) %>%
         pivot_longer(cols = c('cc_temp_mean', 'cc_temp_sd_year'),
                      names_to = 'var',
                      values_to = 'val')
@@ -445,12 +446,13 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
         group_by(site_name, year) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
         mutate(var = 'cc_temp_sd_space')
-      
+
       final_sum <- rbind(final_temp, temp_sd)
     }
 
 
   type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
+  type <- ifelse(type == 'prism_precip', 'cc_precip', 'cc_temp')
 
   dir <- glue('data/{n}/{d}/ws_traits/{v}/',
               n = network, d = domain, v = type)
@@ -546,7 +548,7 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_name,
     slope <- raster::raster(slope_path) %>%
       terra::crop(., site_boundary) %>%
       terra::mask(., site_boundary)
-    
+
     slope_values <- raster::values(slope)
     slope_mean <- mean(slope_values, na.rm = TRUE)
     slope_sd <- sd(slope_values, na.rm = TRUE)
@@ -558,15 +560,15 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_name,
     aspect <- raster::raster(aspect_path) %>%
       terra::crop(., site_boundary) %>%
       terra::mask(., site_boundary)
-    
+
     aspect_values <- raster::values(aspect)
     aspect_mean <- mean(aspect_values, na.rm = TRUE)
     aspect_sd <- sd(aspect_values, na.rm = TRUE)
 
     site_terrain <- tibble(site_name = site_name,
                            year = NA,
-                           var = c('te_slope_mean', 'te_slope_sd', 'te_elev_mean', 
-                                   'te_elev_sd', 'te_elev_min', 'te_elev_max', 
+                           var = c('te_slope_mean', 'te_slope_sd', 'te_elev_mean',
+                                   'te_elev_sd', 'te_elev_min', 'te_elev_max',
                                    'te_aspect_mean', 'te_aspect_sd'),
                            val = c(slope_mean, slope_sd, elev_mean, elev_sd, elev_min,
                                    elev_max, aspect_mean, aspect_sd))
@@ -720,49 +722,49 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
   nlcd_dir <- glue('data/{n}/{d}/ws_traits/nlcd/',
                    n = network,
                    d = domain)
-  
+
   dir.create(nlcd_dir,
              recursive = TRUE,
              showWarnings = FALSE)
-  
+
   # Load landcover defs
-  color_key = read.csv('data/nlcd/pixel_color_key.csv')
-  
+  color_key = read_csv('data/spatial/nlcd/pixel_color_key.csv')
+
   nlcd_summary = color_key %>%
     as_tibble() %>%
     select(1, 3) %>%
     rename(id = class_code) %>%
     mutate(id = as.character(id))
-  
+
   # 1992 to common name here: https://pubs.usgs.gov/of/2008/1379/pdf/ofr2008-1379.pdf
-  color_key_1992 = read.csv('data/nlcd/1992_pixel_color_key.csv')
-  
+  color_key_1992 = read_csv('data/spatial/nlcd/1992_pixel_color_key.csv')
+
   nlcd_summary_1992 = color_key_1992 %>%
     as_tibble() %>%
     select(class_code, macrosheds_1992_code, macrosheds_code) %>%
     rename(id = class_code) %>%
     mutate(id = as.character(id))
-  
+
   # Get site boundary and check if the watershed is in Puerto Rico, Alaska, or Hawaii
   site_boundary <- boundaries %>%
     filter(site_name == !!site_name)
 
-  ak_bb <- sf::st_bbox(obj	= c(xmin = -173, ymin = 51.22, xmax = -129, 
+  ak_bb <- sf::st_bbox(obj	= c(xmin = -173, ymin = 51.22, xmax = -129,
                                ymax = 71.35), crs = 4326) %>%
     sf::st_as_sfc(., crs = 4326)
-  
-  pr_bb <- sf::st_bbox(obj	= c(xmin = -67.95, ymin = 17.91, xmax = -65.22, 
+
+  pr_bb <- sf::st_bbox(obj	= c(xmin = -67.95, ymin = 17.91, xmax = -65.22,
                                ymax = 18.51), crs = 4326) %>%
     sf::st_as_sfc(., crs = 4326)
-  
-  hi_bb <- sf::st_bbox(obj	= c(xmin = -160.24, ymin = 18.91, xmax = -154.81, 
+
+  hi_bb <- sf::st_bbox(obj	= c(xmin = -160.24, ymin = 18.91, xmax = -154.81,
                                ymax = 22.23), crs = 4326) %>%
     sf::st_as_sfc(., crs = 4326)
-  
+
   is_ak <- length(sm(sf::st_intersects(ak_bb, site_boundary))[[1]]) == 1
   is_pr <- length(sm(sf::st_intersects(pr_bb, site_boundary))[[1]]) == 1
   is_hi <- length(sm(sf::st_intersects(hi_bb, site_boundary))[[1]]) == 1
-  
+
   if(is_ak){ nlcd_epochs = c('2001_AK', '2011_AK', '2016_AK') }
   if(is_pr){ nlcd_epochs = '2001_PR' }
   if(is_hi){ nlcd_epochs = '2001_HI' }
@@ -823,18 +825,18 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
     }
 
     if(e == 1992){
-  
+
       nlcd_e = full_join(nlcd_summary_1992,
                          tabulated_values,
                          by = 'id') %>%
-        mutate(sum = sum(CellTally, na.rm = TRUE)) 
+        mutate(sum = sum(CellTally, na.rm = TRUE))
 
       nlcd_e_1992names <- nlcd_e %>%
         mutate(percent = round((CellTally/sum)*100, 1)) %>%
         mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
         select(var = macrosheds_1992_code, val = percent) %>%
-        mutate(year = !!e) 
-      
+        mutate(year = !!e)
+
       nlcd_e_norm_names <- nlcd_e %>%
         group_by(macrosheds_code) %>%
         summarise(CellTally1992 = sum(CellTally, na.rm = TRUE)) %>%
@@ -843,12 +845,12 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
         mutate(percent = round((CellTally1992/sum)*100, 1)) %>%
         mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
         select(var = macrosheds_code, val = percent) %>%
-        mutate(year = !!e)  
-      
+        mutate(year = !!e)
+
       nlcd_e <- rbind(nlcd_e_1992names, nlcd_e_norm_names)
-      
+
     } else{
-      
+
       nlcd_e = full_join(nlcd_summary,
                          tabulated_values,
                          by = 'id')
@@ -857,9 +859,9 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
         mutate(percent = round((CellTally*100)/sum(CellTally, na.rm = TRUE), 1)) %>%
         mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
         select(var = macrosheds_code, val = percent) %>%
-        mutate(year = !!e) 
+        mutate(year = !!e)
     }
-    
+
     nlcd_all = rbind(nlcd_all, nlcd_e)
   }
 
@@ -883,24 +885,24 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_name,
   # https://gaftp.epa.gov/Epadatacommons/ORD/NHDPlusLandscapeAttributes/LakeCat/Documentation/DataDictionary.html
   # https://www.sciencebase.gov/catalog/item/53481333e4b06f6ce034aae7
   # https://github.com/USEPA/StreamCat/blob/master/ControlTable_StreamCat.csv
-  
+
   nadp_dir <- glue('data/{n}/{d}/ws_traits/nadp/',
                    n = network,
                    d = domain)
-  
+
   dir.create(nadp_dir, recursive = TRUE)
 
   nadp_files <- list.files('data/spatial/ndap', recursive = TRUE, full.names = TRUE)
 
-  nadp_crs <- sf::st_crs(raster::raster(nadp_files[1])) 
+  nadp_crs <- sf::st_crs(raster::raster(nadp_files[1]))
 
   site_boundary <- boundaries %>%
     filter(site_name == !!site_name) %>%
     sf::st_transform(., nadp_crs)
 
-  site_boundary <- as(site_boundary, "Spatial") %>% 
-    terra::vect() 
-  
+  site_boundary <- as(site_boundary, "Spatial") %>%
+    terra::vect()
+
   all_vars <- tibble()
   for(p in 1:length(nadp_files)){
 
@@ -910,15 +912,15 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_name,
     nadp_rast <- try(terra::rast(nadp_files[p]) %>%
                        terra::crop(site_boundary) %>%
                        terra::mask(site_boundary))
-    
+
     if(class(nadp_rast) == 'try-error') {
       return(generate_ms_exception(glue('No data was retrived for {s}',
                                         s = site_name)))
     }
 
-    val <- mean(terra::values(nadp_rast), na.rm = TRUE) 
+    val <- mean(terra::values(nadp_rast), na.rm = TRUE)
 
-    one_year_var <- tibble(year = year, 
+    one_year_var <- tibble(year = year,
                            val = val,
                            var = var)
 
@@ -950,67 +952,193 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_3_ms815 <- function(network, domain, prodname_ms, site_name,
                             boundaries) {
-  
+
   # https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1304
 
   thickness_dir <- glue('data/{n}/{d}/ws_traits/pelletier_soil_thickness/',
                    n = network,
                    d = domain)
-  
+
   dir.create(thickness_dir, recursive = TRUE, showWarnings = FALSE)
-  
+
   thinkness_files <- 'data/spatial/pelletier_soil_thickness/average_soil_and_sedimentary-deposit_thickness.tif'
 
   thinkness_rast <- terra::rast(thinkness_files)
-  thinkness_crs <- terra::crs(thinkness_rast) 
-  
+  thinkness_crs <- terra::crs(thinkness_rast)
+
   site_boundary <- boundaries %>%
     filter(site_name == !!site_name)
-  
+
   site_boundary_buf <- sw(sm(site_boundary %>%
     sf::st_buffer(., 0.01) %>%
     sf::st_transform(., thinkness_crs)))
-  
+
   site_boundary <- site_boundary %>%
     sf::st_transform(., thinkness_crs)
-  
-  site_boundary_buf <- as(site_boundary_buf, "Spatial") %>% 
-    terra::vect() 
-  
+
+  site_boundary_buf <- as(site_boundary_buf, "Spatial") %>%
+    terra::vect()
+
   rast_masked <- thinkness_rast %>%
-    terra::crop(site_boundary_buf) 
-  
+    terra::crop(site_boundary_buf)
+
   terra::values(rast_masked)[terra::values(rast_masked) == -1] <- NA
   terra::values(rast_masked)[terra::values(rast_masked) > 50] <- NA
 
-  weighted_results <- raster::extract(as(rast_masked, 'Raster'), site_boundary, 
+  weighted_results <- raster::extract(as(rast_masked, 'Raster'), site_boundary,
                                       weights = T, normalizeWeights = F)
 
   vals_w <- weighted_results[[1]] %>%
-    as_tibble() 
-  
+    as_tibble()
+
   ws_nas <- filter(vals_w, is.na(value))
-  
+
   vals_w <- vals_w %>%
     filter(!is.na(value)) %>%
     mutate(new = value*weight)
-  
+
   percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
-  
+
   val <- sum(vals_w$new)/sum(vals_w$weight)
-  
-  thinkness_tib <- tibble(year = NA, 
+
+  thinkness_tib <- tibble(year = NA,
                           val = val,
                           var = 'pi_soil_thickness',
                           pctCellErr = percent_na,
                           ms_status = NA)  %>%
     mutate(site_name = !!site_name) %>%
     select(site_name, year, var, val, pctCellErr, ms_status)
-  
+
   write_feather(thinkness_tib, glue('{d}{s}.feather',
                                d = thickness_dir,
                                s = site_name))
 }
 
+#geochemical: STATUS=READY
+#. handle_errors
+process_3_ms816 <- function(network, domain, prodname_ms, site_name,
+                            boundaries) {
 
+  geomchem_dir <- glue('data/{n}/{d}/ws_traits/geochemical',
+                       n = network,
+                       d = domain)
 
+  dir.create(geomchem_dir, recursive = TRUE, showWarnings = FALSE)
+
+  geomchem_files <- list.files('data/spatial/geochemical/', recursive = TRUE, full.names = TRUE)
+
+  geomchem_crs <- sf::st_crs(raster::raster(geomchem_files[1]))
+
+  site_boundary <- boundaries %>%
+    filter(site_name == !!site_name) %>%
+    sf::st_transform(., geomchem_crs)
+
+  site_boundary_buf <- sw(sm(site_boundary %>%
+                               sf::st_buffer(., 0.01) %>%
+                               sf::st_transform(., geomchem_crs))) %>%
+    as(., "Spatial") %>%
+    terra::vect()
+
+  all_vars <- tibble()
+  for(p in 1:length(geomchem_files)){
+
+    var <- str_split_fixed(geomchem_files[p], '/', n = Inf)[1,4]
+    var <- str_split_fixed(var, '[.]', n = Inf)[1,1]
+    var <- str_split_fixed(var, '_', n = Inf)[1,1]
+
+    geom_rast <- try(terra::rast(geomchem_files[p]) %>%
+                       terra::crop(site_boundary_buf))
+
+    if(class(geom_rast) == 'try-error') {
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
+    }
+
+    weighted_results <- raster::extract(as(geom_rast, 'Raster'), site_boundary,
+                                        weights = T, normalizeWeights = F)
+
+    vals_w <- weighted_results[[1]] %>%
+      as_tibble()
+
+    ws_nas <- filter(vals_w, is.na(value))
+
+    vals_w <- vals_w %>%
+      filter(!is.na(value)) %>%
+      mutate(new = value*weight)
+
+    percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
+
+    val <- sum(vals_w$new)/sum(vals_w$weight)
+    val_sd <- sd(vals_w$new)
+
+    one_var <- tibble(val = c(val, val_sd),
+                      var = c(paste0(var, '_mean'), paste0(var, '_sd')),
+                      pctCellErr = percent_na)
+
+    all_vars <- rbind(all_vars, one_var)
+  }
+
+  all_vars <- all_vars %>%
+    mutate(site_name = !!site_name,
+           year = NA,
+           var = paste0('pd_geo_', var)) %>%
+    select(site_name, year, var, val)
+
+  write_feather(all_vars, glue('{d}/{s}.feather',
+                               d = geomchem_dir,
+                               s = site_name))
+}
+
+#ndvi: STATUS=READY
+#. handle_errors
+process_3_ms817 <- function(network, domain, prodname_ms, site_name,
+                            boundaries) {
+
+  site_boundary <- boundaries %>%
+    filter(site_name == !!site_name)
+
+  ndvi <- try(get_gee_standard(network = network,
+                               domain = domain,
+                               gee_id = 'MODIS/006/MOD13Q1',
+                               band = 'NDVI',
+                               prodname = 'vb_ndvi',
+                               rez = 250,
+                               site_boundary = site_boundary,
+                               qa_band = 'DetailedQA',
+                               bit_mask = '11'))
+
+  if(is.null(ndvi)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site_name)))
+  }
+
+  if(class(ndvi) == 'try-error'){
+    return(generate_ms_err(glue('error in retrieving {s}',
+                                s = site_name)))
+  }
+
+  if(ndvi$type == 'ee_extract'){
+    ndvi$table <- ndvi$table %>%
+      mutate(var = substr(var, 7, nchar(var)))
+
+  }
+
+  ndvi <- ndvi$table %>%
+    mutate(datetime = ymd(datetime)) %>%
+    select(site_name, datetime, var, val) %>%
+    mutate(val = val/100)
+
+  dir <- glue('data/{n}/{d}/ws_traits/ndvi/',
+              n = network,
+              d = domain)
+
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+
+  path <- glue('{d}{s}.feather',
+               d = dir,
+               s = site_name)
+
+  write_feather(ndvi, path)
+
+  return()
+}

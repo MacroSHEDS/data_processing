@@ -5,7 +5,10 @@ source('src/global/general_kernels.R',
        local = TRUE)
 
 unprod <- univ_products %>%
-  filter(status == 'ready') 
+  filter(status == 'ready')
+
+# Load spatial files from Drive if not already held on local machine (takes a long time)
+# load_spatial_data()
 
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
@@ -55,6 +58,8 @@ for(i in 1:nrow(unprod)){
         general_status <- get_general_status(tracker = held_data,
                                              prodname_ms = prodname_ms,
                                              site_name = site_name)
+
+        general_status <- 'pending'
 
         if(general_status %in% c('ok', 'no_data_avail')){
 
