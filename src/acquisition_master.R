@@ -49,6 +49,11 @@ suppressPackageStartupMessages({
 
 })
 
+#set the dataset version. This is used to name the output dataset and diagnostic
+#plots. it will eventually be set automatically at the start of each run.
+#(or after each run that results in a change)
+vsn <- 0.4
+
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
 
@@ -168,7 +173,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = FALSE,
+ms_instance <- ms_init(use_ms_error_handling = T,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -214,7 +219,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=1
+# dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -262,9 +267,12 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms.module'
 
-generate_portal_extras(site_data = site_data,
-                       network_domain = network_domain,
-                       thin_portal_data_to_interval = '1 day')
+postprocess_entire_dataset(site_data = site_data,
+                           network_domain = network_domain,
+                           dataset_version = vsn,
+                           thin_portal_data_to_interval = NA,#'1 day',
+                           populate_implicit_missing_values = TRUE,
+                           generate_csv_for_each_product = TRUE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
