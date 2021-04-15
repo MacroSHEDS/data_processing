@@ -6080,9 +6080,12 @@ read_precip_quickref <- function(network,
     return(quickref)
 }
 
-populate_implicit_NAs <- function(d, interval, val_fill = NA){
+populate_implicit_NAs <- function(d,
+                                  interval,
+                                  val_fill = NA,
+                                  edges_only = FALSE){
 
-    #this would be more flexible if we could pass column names as
+    #TODO: this would be more flexible if we could pass column names as
     #   positional args and use them in group_by and mutate
 
     #d: a ms tibble with at minimum datetime, site_name, and var columns
@@ -6091,6 +6094,10 @@ populate_implicit_NAs <- function(d, interval, val_fill = NA){
     #val_fill: character or NA. the token with which to populate missing
     #   elements of the `val` column. All other columns will be populated
     #   invariably with NA or 0. See details.
+    #edges_only: logical. if TRUE, only two filler rows will be inserted into each
+    #   gap, one just after the gap begins and the other just before the gap ends.
+    #   If FALSE (the default), the gap will be fully populated according to
+    #   the methods outlined in the details section.
 
     #this function makes implicit missing timeseries records explicit,
     #   by populating rows so that the datetime column is complete
@@ -6119,10 +6126,11 @@ populate_implicit_NAs <- function(d, interval, val_fill = NA){
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, everything())
 
+    if(! any(is.na(complete_d$fill_marker))) return(d)
+
     if(! is.na(val_fill)){
         complete_d$val[is.na(complete_d$fill_marker)] <- val_fill
     }
-    complete_d$fill_marker <- NULL
 
     if('ms_status' %in% colnames(complete_d)){
         complete_d$ms_status[is.na(complete_d$ms_status)] <- 0
@@ -6131,6 +6139,31 @@ populate_implicit_NAs <- function(d, interval, val_fill = NA){
     if('ms_interp' %in% colnames(complete_d)){
         complete_d$ms_interp[is.na(complete_d$ms_interp)] <- 0
     }
+
+    if(edges_only){
+
+        midgap_rows <- rle2(is.na(complete_d$fill_marker)) %>%
+            filter(values == TRUE) %>%
+        # if(nrow(fill_runs) == 0) return(d)
+        # midgap_rows <- fill_runs %>%
+            select(starts, stops) %>%
+            {purrr::map2(.x = .$starts,
+                         .y = .$stops,
+                         ~seq(.x, .y))} %>%
+            purrr::map(~( if(length(.x) <= 2)
+                {
+                    return(NULL)
+                } else {
+                    return(.x[2:(length(.x) - 1)])
+                }
+            )) %>%
+            unlist()
+
+        complete_d <- slice(complete_d,
+                            -midgap_rows)
+    }
+
+    complete_d$fill_marker <- NULL
 
     return(complete_d)
 }
@@ -9312,6 +9345,10 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
+    log_with_indent('Inserting gap-border NAs in portal dataset (so plots show gaps)',
+                    logger = logger_module)
+    insert_gap_border_NAs(site_data = site_data)
+
     if(generate_csv_for_each_product){
         log_with_indent('Generating an analysis-ready CSV for each product',
                         logger = logger_module)
@@ -10397,11 +10434,86 @@ catalog_held_data <- function(network_domain, site_data){
     #     {sum(.$n_unique_streams)}
 }
 
+greatest_common_divisor <- function(a, b){
+
+    stopifnot(is.numeric(a), is.numeric(b))
+
+    if(length(a) == 1){
+        a <- rep(a, times = length(b))
+    } else if(length(b) == 1){
+        b <- rep(b, times = length(a))
+    }
+
+    n <- length(a)
+    e <- d <- g <- numeric(n)
+
+    for(k in 1:n){
+
+        u <- c(1, 0, abs(a[k]))
+        v <- c(0, 1, abs(b[k]))
+
+        while(v[3] != 0){
+
+            q <- floor(u[3]/v[3])
+            t <- u - v * q
+            u <- v
+            v <- t
+        }
+
+        e[k] <- u[1] * sign(a[k])
+        d[k] <- u[2] * sign(a[k])
+        g[k] <- u[3]
+    }
+
+    return(g)
+}
+
+least_common_multiple <- function(a, b){
+
+    stopifnot(is.numeric(a), is.numeric(b))
+
+    if(length(a) == 1){
+        a <- rep(a, times = length(b))
+    } else if(length(b) == 1){
+        b <- rep(b, times = length(a))
+    }
+
+    g <- greatest_common_divisor(a, b)
+
+    return(a/g * b)
+}
+
+ms_determine_data_interval <- function(d){
+
+    #calculates the mode interval in each column, then returns the
+    #   greatest common divisor of those modes as the interval, in minutes.
+
+    vars <- unique(d$var)
+
+    interval_modes <- c()
+    for(v in vars){
+        time_diffs <- diff(d$datetime[d$var == v])
+        units(time_diffs) = 'mins'
+        interval_modes <- c(interval_modes, Mode(time_diffs))
+    }
+
+    interval_modes <- interval_modes[! is.na(interval_modes)]
+
+    if(! length(interval_modes)){
+        next
+    }
+
+    data_interval <- Reduce(greatest_common_divisor, interval_modes)
+
+    return(data_interval)
+}
+
 ms_complete_all_cases <- function(network_domain, site_data){
 
     #populates implicit NAs in all feather files across all product directories.
     #   Note: this only operates on files within data_acquisition/data, NOT within
-    #   portal/data (those files should stay as small as possible).
+    #   portal/data (those files should stay as small as possible. see
+    #   insert_gap_border_NAs).
 
     #also note: when we switch back to high-res mode, we'll need to see how much
     #   more space our dataset takes up after this operation. it might be
@@ -10469,12 +10581,20 @@ ms_complete_all_cases <- function(network_domain, site_data){
                 arrange(site_name, var, datetime)
         }
 
-        #TODO: after you remove the error catcher above, update this
-        #call to populate_implicit_NAs so that it chooses '15 min' or
-        #'1 day' intelligently.
+        interv_mins <- ms_determine_data_interval(d = d)
+
+        if(interv_mins %% 1440 == 0){
+            data_interval <- '1 day'
+        } else if(interv_mins %% 15 == 0){
+            data_interval <- '15 mins'
+        } else {
+            stop(glue('data interval should be either 1 day or 15 minutes. If ',
+                      'this has changed, updates the conditional above this error ',
+                      'and check for needed updates elsewhere'))
+        }
 
         d <- populate_implicit_NAs(d = d,
-                                   interval = '1 day')
+                                   interval = data_interval)
 
         if(grepl('/mcmurdo/', p) && grepl('/discharge__', p)){
 
@@ -10509,6 +10629,58 @@ ms_complete_all_cases <- function(network_domain, site_data){
 
         write_feather(x = d,
                       path = p)
+    }
+}
+
+insert_gap_border_NAs <- function(network_domain, site_data){
+
+    #populates rows bordering missing data segments with NA data, so that
+    #   gaps are properly plotted by dygraphs, etc.
+    #   Note: this only operates on files within portal/data, NOT within
+    #   data_acquisition/data (see ms_complete_all_cases)
+
+    #TODO: make the following documentation true. for now, nothing is done
+    #   differently for mcmurdo, meaning the portal shows gaps for mcmurdo's
+    #   winter where the public export data has 0s.
+    #For special cases (currently only McMurdo), rows bordering winter data gaps
+    #   in discharge timeseries will be populated with 0 instead of NA.
+    #   McMurdo's winter is identified as any series of NAs longer than 180 days
+    #   occurring between jan 2 and dec 30.
+
+    #notice: running this function multiple times without rebuilding the portal
+    #   dataset will keep adding NA rows to the beginning and end of each data
+    #   gap. Basically, if you run this n times you'll fill data gaps of up
+    #   to length n/2. This isn't a problem.
+
+    paths <- list.files(path = '../portal/data',
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- paths[! grepl(pattern = '/general/', x = paths)]
+
+    for(p in paths){
+
+        d <- read_feather(p)
+
+        interv_mins <- ms_determine_data_interval(d = d)
+
+        if(interv_mins %% 1440 == 0){
+            data_interval <- '1 day'
+        } else if(interv_mins %% 15 == 0){
+            data_interval <- '15 mins'
+        } else {
+            stop(glue('data interval should be either 1 day or 15 minutes. If ',
+                      'this has changed, updates the conditional above this error ',
+                      'and check for needed updates elsewhere'))
+        }
+
+        d <- populate_implicit_NAs(d = d,
+                                   interval = data_interval,
+                                   edges_only = TRUE)
+
+        # write_feather(x = d,
+        #               path = p)
     }
 }
 
