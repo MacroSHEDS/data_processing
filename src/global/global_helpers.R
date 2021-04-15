@@ -10499,9 +10499,7 @@ ms_determine_data_interval <- function(d){
 
     interval_modes <- interval_modes[! is.na(interval_modes)]
 
-    if(! length(interval_modes)){
-        next
-    }
+    if(! length(interval_modes)) return(NA_real_)
 
     data_interval <- Reduce(greatest_common_divisor, interval_modes)
 
@@ -10665,7 +10663,9 @@ insert_gap_border_NAs <- function(network_domain, site_data){
 
         interv_mins <- ms_determine_data_interval(d = d)
 
-        if(interv_mins %% 1440 == 0){
+        if(is.na(interv_mins)){
+            next
+        } else if(interv_mins %% 1440 == 0){
             data_interval <- '1 day'
         } else if(interv_mins %% 15 == 0){
             data_interval <- '15 mins'
@@ -10679,8 +10679,8 @@ insert_gap_border_NAs <- function(network_domain, site_data){
                                    interval = data_interval,
                                    edges_only = TRUE)
 
-        # write_feather(x = d,
-        #               path = p)
+        write_feather(x = d,
+                      path = p)
     }
 }
 
