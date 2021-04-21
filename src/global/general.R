@@ -5,7 +5,11 @@ source('src/global/general_kernels.R',
        local = TRUE)
 
 unprod <- univ_products %>%
-  filter(status == 'ready') 
+  filter(status == 'ready')
+
+# Load spatial files from Drive if not already held on local machine
+# (takes a long time)
+# load_spatial_data()
 
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
@@ -41,7 +45,6 @@ for(i in 1:nrow(unprod)){
             logger = logger_module)
 
     for(k in 1:length(site_names)){
-    #for(k in c(26, 27)){
 
         site_name <- site_names[k]
 
