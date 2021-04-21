@@ -8357,18 +8357,60 @@ force_monotonic_locf <- function(v, ascending = TRUE){
     return(v)
 }
 
-get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
+get_gee_imgcol <- function(gee_id, band, prodname, start, end, qaqc=FALSE,
+                           qa_band = NULL, bit_mask = NULL) {
 
     col_name <- paste0(prodname, 'X')
 
-    gee_imcol <- ee$ImageCollection(gee_id)$
-        filterDate(start, end)$
-        select(band)$
-        map(function(x){
-            date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-            name <- ee$String$cat(col_name, date)
-            x$select(band)$rename(name)
-        })
+    if(qaqc){
+
+        # Mask bad pixles functions
+        get_gee_QABits <- function(image) {
+            # Convert binary (character) to decimal (little endian)
+            qa <- sum(2^(which(rev(unlist(strsplit(as.character(bit_mask), "")) == 1))-1))
+            # Return a mask band image, giving the qa value.
+            image$bitwiseAnd(qa)$lt(1)
+        }
+        clean_gee_img <- function(img) {
+            # Extract the selected band
+            img_values <- img$select(band)
+
+            # Extract the quality band
+            img_qa <- img$select(qa_band)
+
+            # Select pixels to mask
+            quality_mask <- get_gee_QABits(img_qa)
+
+            # Mask pixels with value zero.
+            img_values$updateMask(quality_mask)
+
+            return(img_values)
+
+        }
+
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            filterDate(start, end)$
+            map(clean_gee_img)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                name <- ee$String$cat(col_name, date)
+                x$select(band)$rename(name)
+            })
+
+
+    } else{
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            filterDate(start, end)$
+            select(band)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                name <- ee$String$cat(col_name, date)
+                x$select(band)$rename(name)
+            })
+    }
+
+    return(gee_imcol)
+
 }
 
 clean_gee_table <- function(ee_ws_table,
@@ -8396,7 +8438,18 @@ get_gee_standard <- function(network,
                              prodname,
                              rez,
                              site_boundary,
-                             batch = FALSE){
+                             batch = FALSE,
+                             qa_band = NULL,
+                             bit_mask = NULL){
+
+    qaqc <- FALSE
+    if(!is.null(qa_band) || !is.null(bit_mask)){
+        if(any(is.null(qa_band), is.null(bit_mask))){
+            stop('qa_band and bit_mask must be fined is one is provided')
+        } else{
+            qaqc <- TRUE
+        }
+    }
 
     area <- sf::st_area(site_boundary)
 
@@ -8411,6 +8464,29 @@ get_gee_standard <- function(network,
 
     if(as.numeric(area) > 10528200 || batch){
 
+        # Mask bad pixles functions
+        get_gee_QABits <- function(image) {
+            # Convert binary (character) to decimal (little endian)
+            qa <- sum(2^(which(rev(unlist(strsplit(as.character(bit_mask), "")) == 1))-1))
+            # Return a mask band image, giving the qa value.
+            image$bitwiseAnd(qa)$lt(1)
+        }
+        clean_gee_img <- function(img) {
+            # Extract the selected band
+            img_values <- img$select(band)
+
+            # Extract the quality band
+            img_qa <- img$select(qa_band)
+
+            # Select pixels to mask
+            quality_mask <- get_gee_QABits(img_qa)
+
+            # Mask pixels with value zero.
+            img_values$updateMask(quality_mask)
+
+        }
+
+
         user_info <- rgee::ee_user_info(quiet = TRUE)
         asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
 
@@ -8420,18 +8496,20 @@ get_gee_standard <- function(network,
                              overwrite = TRUE,
                              quiet = TRUE)
 
-        imgcol <- ee$ImageCollection(gee_id)$select(band)
+        if(qaqc){
+            imgcol <- ee$ImageCollection(gee_id)$map(clean_gee_img)$select(band)
+        }else{
+            imgcol <- ee$ImageCollection(gee_id)$select(band)
+        }
 
         flat_img <- imgcol$map(function(image) {
-            image$select(band)$reduceRegions(
+            image$reduceRegions(
                 collection = ee_shape,
                 reducer = ee$Reducer$stdDev()$combine(
                     reducer2 = ee$Reducer$median(),
                     sharedInputs = TRUE),
                 scale = rez
-            )$map(function(f) {
-                f$set('imageId', image$id())
-            })
+            )
         })$flatten()
 
         gee <- flat_img$select(propertySelectors = c('site_name', 'imageId',
@@ -8451,13 +8529,13 @@ get_gee_standard <- function(network,
                                               fileNamePrefix = 'rgee')
 
         ee_task$start()
-        ee_monitoring(ee_task)
+        ee_monitoring(ee_task, quiet = TRUE)
 
         temp_rgee <- tempfile(fileext = '.csv')
         googledrive::drive_download(file = 'GEE/rgee.csv',
-                                    temp_rgee)
-
-        # Seems to be broken
+                                    temp_rgee,
+                                    verbose = FALSE)
+     # Seems to be broken
         # rgee::ee_drive_to_local(task = ee_task,
         #                         dsn = temp_rgee,
         #                         overwrite = TRUE,
@@ -8466,15 +8544,17 @@ get_gee_standard <- function(network,
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_median', c = prodname)
 
-        fin_table <- read_csv(temp_rgee)
+        fin_table <- read_csv(temp_rgee) %>%
+            mutate(imageId = substr(`system:index`, 1, 10))
 
-        googledrive::drive_rm('GEE/rgee.csv')
+        googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
         rgee::ee_manage_delete(path_asset = asset_path,
                                quiet = TRUE)
 
         if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
             return(NULL)
         }
+
         fin_table <- fin_table %>%
             select(site_name, stdDev, median, imageId) %>%
             rename(datetime = imageId,
@@ -8489,7 +8569,12 @@ get_gee_standard <- function(network,
 
     } else {
 
-        imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
+        imgcol <- get_gee_imgcol(gee_id,
+                                 band,
+                                 prodname,
+                                 '1957-10-25',
+                                 '2040-01-01',
+                                 qaqc = qaqc)
 
         ext_median <- try(ee_extract(
             x = imgcol,
@@ -8584,92 +8669,94 @@ get_relative_uncert <- function(x){
 get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                           site_name) {
 
-
-    geom_check <- sf::st_geometry_type(site_boundary)
-
-    if(!geom_check == 'POLYGON'){
-        site_boundary <- sf::st_cast(site_boundary, 'POLYGON')
-    }
-
-    sheds <- site_boundary %>%
-        as.data.frame() %>%
-        sf::st_as_sf() %>%
-        select(site_name) %>%
-        sf::st_transform(4326) %>%
-        sf::st_set_crs(4326)
-
-    sheds_point <- sheds[1,] %>%
+    sheds_point <- site_boundary %>%
         sf::st_centroid() %>%
         sf::st_bbox()
 
-    long <- as.numeric(sheds_point[2])
+    long <- as.numeric(sheds_point[1])
 
-    place <- ifelse(long > 97.5, 'west', 'east')
+    place <- ifelse(long > -97.5, 'east', 'west')
 
-    year_files <- list.files(glue('data/general_raw/phenology/{u}/{p}',
+    year_files <- list.files(glue('data/spatial/phenology/{u}/{p}',
                              p = place,
                              u = time))
+
+    site_boundary <- sf::st_transform(site_boundary,
+                                      '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
 
     years <- as.numeric(str_split_fixed(year_files, '[.]', n = 2)[,1])
 
     final <- tibble()
-        for(y in 1:length(years)) {
+    for(y in 1:length(years)) {
 
-            path <- glue('data/general_raw/phenology/{u}/{p}/{t}.tif',
-                         u = time, p = place, t = years[y])
+        path <- glue('data/spatial/phenology/{u}/{p}/{t}.tif',
+                     u = time, p = place, t = years[y])
 
-            phenology <- terra::rast(path)
+        phenology <- raster::raster(path)
 
-            terra::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+        raster::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
 
-            sheds_vect <- sheds %>%
-                terra::vect() %>%
-                terra::project('+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+        phenology_mask <- try(phenology %>%
+            raster::crop(site_boundary) %>%
+            raster::mask(site_boundary))
 
-            look <- terra::extract(phenology, sheds_vect) %>%
-                as.data.frame()
+        if(class(phenology_mask) == 'try-error') {
+            return(generate_ms_exception(glue('No data was retrived for {s}',
+                                              s = site_name)))
+        }
 
-            rm(phenology)
+        # weighted_results <- raster::extract(phenology, site_boundary,
+        #                                     weights = T,
+        #                                     normalizeWeights = F)
+        #
+        # vals_w <- weighted_results[[1]] %>%
+        #     as_tibble()
+        #
+        # ws_nas <- filter(vals_w, is.na(value))
+        #
+        # vals_w <- vals_w %>%
+        #     filter(!is.na(value)) %>%
+        #     mutate(new = value*weight)
+        # percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
+        # val <- sum(vals_w$new)/sum(vals_w$weight)
+        # val_sd <- sd(vals_w$new)
+        # rm(phenology)
 
-            name <- names(look)[2]
+        phenology_values <- raster::values(phenology_mask)
+        val <- mean(phenology_values, na.rm = TRUE)
+        val_sd <- sd(phenology_values, na.rm = TRUE)
+        percent_na <- 0
 
-            col_name <- case_when(time == 'start_season' ~ 'sos',
-                                  time == 'end_season' ~ 'eos',
-                                  time == 'max_season' ~ 'mos',
-                                  time == 'length_season' ~ 'los')
+        col_name <- case_when(time == 'start_season' ~ 'sos',
+                              time == 'end_season' ~ 'eos',
+                              time == 'max_season' ~ 'mos',
+                              time == 'length_season' ~ 'los')
 
-            mean_name <- glue('{n}_mean', n = col_name)
-            sd_name <- glue('{n}_sd', n = col_name)
+        mean_name <- glue('{n}_mean', n = col_name)
+        sd_name <- glue('{n}_sd', n = col_name)
 
-            look <- look %>%
-                group_by(ID) %>%
-                summarize(!!mean_name := round(mean(.data[[name]], na.rm = TRUE)),
-                          !!sd_name := sd(.data[[name]], na.rm = TRUE))
+        one_var <- tibble(!!mean_name := val,
+                          !!sd_name := val_sd,
+                          pctCellErr = percent_na,
+                          site_name = site_name,
+                          year = years[y])
 
-            sheds_name <- sheds %>%
-                as_tibble() %>%
-                select(-geometry) %>%
-                mutate(ID = row_number()) %>%
-                mutate(year = !!years[y])
-
-            final_y <- full_join(look, sheds_name, by = 'ID') %>%
-                select(-ID)
-
-            final <- rbind(final, final_y)
+        final <- rbind(final, one_var)
         }
 
     final <- pivot_longer(final,
                           cols = all_of(c(mean_name, sd_name)),
                           names_to = 'var',
                           values_to = 'val') %>%
-        mutate(var = paste0('vd_', var))
+        mutate(var = paste0('vd_', var)) %>%
+        select(year, site_name, var, val, pctCellErr)
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
                 n = network, d = domain, p = time)
 
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 
-    final_path <- glue('data/{n}/{d}/ws_traits/{p}/{s}.feather',
+    final_path <- glue('data/{n}/{d}/ws_traits/{p}/sum_{s}.feather',
                        n = network,
                        d = domain,
                        p = time,
@@ -11122,11 +11209,15 @@ get_nrcs_soils <- function(network,
             watershed_value <- NA
         } else{
 
+            total_cells <- sum(watershed_mukey_values$n)
+            na_cells <- watershed_mukey_values %>%
+                filter(is.na(value_mukey))
+            na_cells <- sum(na_cells$n)
+
             watershed_mukey_values_weighted <- watershed_mukey_values %>%
-                #mutate(n = ifelse(is.na(value_mukey), NA, n)) %>%
+                filter(!is.na(value_mukey)) %>%
                 mutate(sum = sum(n, na.rm = TRUE)) %>%
                 mutate(prop = n/sum)
-                #mutate(value_mukey = ifelse(is.na(value_mukey), 0, value_mukey))
 
             watershed_mukey_values_weighted <- watershed_mukey_values_weighted %>%
                 mutate(weighted_av = prop*value_mukey)
@@ -11135,12 +11226,14 @@ get_nrcs_soils <- function(network,
                                    na.rm = TRUE)
 
             watershed_value <- round(watershed_value, 2)
+            na_prop <- round((100*(na_cells/total_cells)), 2)
         }
 
-        this_var_tib <- tibble(site_name = site,
-                               year = NA,
+        this_var_tib <- tibble(year = NA,
+                               site_name = site,
                                var =  names(nrcs_var_name[s]),
-                               val = watershed_value)
+                               val = watershed_value,
+                               pctCellErr = na_prop)
 
         all_soil_vars <- rbind(all_soil_vars, this_var_tib)
     }
@@ -11183,5 +11276,94 @@ get_nrcs_soils <- function(network,
     # cokey_to_chkey_sql_pores <- sprintf(paste0('SELECT chkey, poresize FROM chpores WHERE chkey IN %s'), chkey_sql)
     #
     # soil_pores <- soilDB::SDA_query(cokey_to_chkey_sql_pores)
+
+}
+
+load_spatial_data <- function(){
+
+    spatial_files <- googledrive::drive_ls(googledrive::as_id('1EaEjkCb_U4zvLCXrULRTU-4yPC95jS__'))
+
+    drive_files <- str_split_fixed(spatial_files$name, '\\.', n = Inf)[,1]
+
+    dir.create('data/spatial', showWarnings = F)
+    held_files <- list.files('data/spatial/')
+
+    needed_files <- drive_files[!drive_files %in% held_files]
+
+    print(paste0(paste(needed_files, collapse = ' '), ' are needed'))
+
+    needed_files <- paste0(needed_files, '.zip')
+
+    needed_sets <- spatial_files %>%
+        filter(name %in% needed_files)
+
+    if(nrow(needed_sets) == 0){
+        return('all files loaded onto local machine')
+    }
+
+    for(i in 1:nrow(needed_sets)){
+
+        zip_path <- glue('data/spatial/{n}', n = needed_sets$name[i])
+
+        print(paste0('Downloading ', needed_sets$name[i]))
+        googledrive::drive_download(file = googledrive::as_id(needed_sets$id[i]),
+                                    path = zip_path)
+
+        print(paste0('Unzipping ', needed_sets$name[i]))
+        unzip(zipfile = zip_path,
+              exdir = 'data/spatial')
+
+        file_check <- list.files('data/spatial')
+
+        if('__MACOSX' %in% file_check){
+            unlink('data/spatial/__MACOSX', recursive = T)
+        }
+
+        file.remove(zip_path)
+
+    }
+}
+
+extract_ws_mean <- function(site_boundary, raster_path){
+
+    rast_file <- terra::rast(raster_path)
+    rast_crs <- terra::crs(rast_file)
+
+    site_boundary_buf <- sw(sm(site_boundary %>%
+                                   sf::st_buffer(., 0.01) %>%
+                                   sf::st_transform(., rast_crs)))
+
+    site_boundary <- site_boundary %>%
+        sf::st_transform(., rast_crs)
+
+    site_boundary_buf <- as(site_boundary_buf, "Spatial") %>%
+        terra::vect()
+
+    rast_masked <- rast_file %>%
+        terra::crop(site_boundary_buf)
+
+    weighted_results <- raster::extract(as(rast_masked, 'Raster'), site_boundary,
+                                        weights = T, normalizeWeights = F)
+
+    vals_w <- weighted_results[[1]] %>%
+        as_tibble()
+
+    ws_nas <- filter(vals_w, is.na(value))
+
+    vals_w <- vals_w %>%
+        filter(!is.na(value)) %>%
+        mutate(new = value*weight)
+
+    sd <- sd(vals_w$value)
+
+    percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
+
+    val <- sum(vals_w$new)/sum(vals_w$weight)
+
+    fin <- c(mean = val,
+             sd = sd,
+             pctCellErr = percent_na)
+
+    return(fin)
 
 }
