@@ -2692,7 +2692,7 @@ ms_delineate <- function(network,
 
             # specs=list(buffer_radius_m=1000,snap_siatance_m=150,snap_method='standard',
             #            dem_resolution=10,breach_method='lc',burn_streams=FALSE)
-            catch <- delineate_watershed_by_specification(
+            delineate_watershed_by_specification(
                 lat = site_locations$latitude[i],
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
@@ -2704,7 +2704,8 @@ ms_delineate <- function(network,
                 breach_method = specs$breach_method,
                 burn_streams = specs$burn_streams,
                 write_dir = site_dir,
-                verbose = verbose)
+                verbose = verbose) %>%
+                invisible()
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -5789,7 +5790,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         #   But stream_flux_inst is not scaled by area when it's derived (that
         #   happens later), so we're going to derive precip_flux_inst
         #   as unscaled here, and then both can be scaled the same way in
-        #   scale_flux_by_area. So we caculate flux in kg/(ha * d) as above,
+        #   scale_flux_by_area. So we calculate flux in kg/(ha * d) as above,
         #   then multiply by watershed area in hectares.
 
         quickref_ind <- as.character(quickref_inds[k])
@@ -6316,8 +6317,7 @@ synchronize_timestep <- function(d){
                              duplicated(sitevar_chunk$datetime,
                                         fromLast = TRUE))
 
-        #average values for duplicate timestamps (these shouldn't make it to
-        #this stage, but accidents happen)
+        #average values for duplicate timestamps
         if(dupes_present){
 
             logwarn(msg = glue('Duplicate datetimes found for site: {s}, var: {v}',
