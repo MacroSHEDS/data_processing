@@ -6159,9 +6159,10 @@ populate_implicit_NAs <- function(d,
                 }
             )) %>%
             unlist()
-
-        complete_d <- slice(complete_d,
-                            -midgap_rows)
+        if(! is.null(midgap_rows)){
+            complete_d <- slice(complete_d,
+                                -midgap_rows)
+        }
     }
 
     complete_d$fill_marker <- NULL
@@ -9450,6 +9451,46 @@ postprocess_entire_dataset <- function(site_data,
                     logger = logger_module)
     generate_output_dataset(vsn = dataset_version)
 
+    # log_with_indent(glue('Removing unneeded files from portal dataset.',
+    #                 logger = logger_module)
+    # clean_portal_dataset()
+}
+
+clean_portal_dataset <- function(){
+
+    #not needed yet, but soon we'll go over the 6000 file limit and need to
+    #trim down. we can then host static files somewhere else for download,
+    #and the portal can just hold files needed for viz. still might become a
+    #problem.
+
+    #at that time we can remove ws_boundary files and unscaled flux (will need
+    #to update biplot to receive precip_flux_scaled)
+
+    find_dirs_within_portaldata <- function(keyword){
+
+        files <- dir(path = '../portal/data',
+                     pattern = paste0(keyword, '*'),
+                     recursive = TRUE,
+                     full.names = TRUE,
+                     include.dirs = TRUE)
+
+        return(files)
+    }
+
+    dirs_to_delete <- c()
+
+    #watershed boundaries are
+    for(k in c('ws_boundary')){
+
+        dirs_to_delete <- c(dirs_to_delete,
+                            find_dirs_within_portaldata(keyword = k))
+    }
+
+    #drop em all from the final dataset
+    for(dr in dirs_to_delete){
+        unlink(x = dr,
+               recursive = TRUE)
+    }
 }
 
 generate_output_dataset <- function(vsn){
@@ -9781,13 +9822,16 @@ scale_flux_by_area <- function(network_domain, site_data){
 
             flux_var_dir <- try(
                 {
-                    list.files(path = glue('data/{n}/{d}/derived',
-                                           n = ntw,
-                                           d = dmn),
-                                           # v = flux_var),
-                               pattern = flux_var,
-                               full.names = FALSE,
-                               recursive = FALSE)
+                    ff <- list.files(path = glue('data/{n}/{d}/derived',
+                                                 n = ntw,
+                                                 d = dmn),
+                                                 # v = flux_var),
+                                     pattern = flux_var,
+                                     full.names = FALSE,
+                                     recursive = FALSE)
+
+                    ff <- ff[! grepl(pattern = 'inst_scaled',
+                                     x = ff)]
                 },
                 silent = TRUE
             )
@@ -10668,13 +10712,15 @@ ms_complete_all_cases <- function(network_domain, site_data){
 
         interv_mins <- ms_determine_data_interval(d = d)
 
-        if(interv_mins %% 1440 == 0){
+        if(is.na(interv_mins)){ #only one value, so no interval
+            next
+        } else if(interv_mins %% 1440 == 0){
             data_interval <- '1 day'
         } else if(interv_mins %% 15 == 0){
             data_interval <- '15 mins'
         } else {
             stop(glue('data interval should be either 1 day or 15 minutes. If ',
-                      'this has changed, updates the conditional above this error ',
+                      'this has changed, update the conditional above this error ',
                       'and check for needed updates elsewhere'))
         }
 
