@@ -57,8 +57,8 @@ load_entire_product <- function(macrosheds_root,
         return(unprefixed)
     }
 
-    avail_prodnames <- c('discharge', 'stream_chemistry', 'stream_flux_inst',
-                         'precipitation', 'precip_chemistry', 'precip_flux_inst')
+    avail_prodnames <- c('discharge', 'stream_chemistry', 'stream_flux_inst_scaled',
+                         'precipitation', 'precip_chemistry', 'precip_flux_inst_scaled')
 
     if(! prodname %in% avail_prodnames){
         stop(paste0('prodname must be one of: ',
