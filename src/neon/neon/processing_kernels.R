@@ -392,12 +392,12 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
                                       1, 0)) %>%
             select(-shipmentWarmQF, -sampleCondition) %>%
-            mutate(var = case_when(var == 'Si' ~ 'SiO2',
+            mutate(var = case_when(var == 'Si' ~ 'Si',
                                    var == 'Ortho - P' ~ 'PO4_P',
                                    var == 'NO3+NO2 - N' ~ 'NO3_NO2_N',
-                                   var == 'NO2 - N' ~ 'NO3_N',
+                                   var == 'NO2 - N' ~ 'NO2_N',
                                    var == 'NH4 - N' ~ 'NH4_N',
-                                   var == 'conductivity' ~ 'spCond',
+                                   var == 'specificConductance' ~ 'spCond',
                                    var == 'UV Absorbance (280 nm)' ~ 'abs280',
                                    var == 'UV Absorbance (250 nm)' ~ 'abs250',
                                    TRUE ~ var)) %>%
