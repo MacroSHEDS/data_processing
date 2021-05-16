@@ -8431,6 +8431,9 @@ get_gee_standard <- function(network,
 
     if(as.numeric(area) > 10528200 || batch){
 
+        # Remove file if is in drive
+        googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
+
         # Mask bad pixles functions
         get_gee_QABits <- function(image) {
             # Convert binary (character) to decimal (little endian)
