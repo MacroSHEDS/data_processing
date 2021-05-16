@@ -617,8 +617,82 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                          data_col_pattern = '#V#',
                          summary_flagcols = 'comments',
                          is_sensor = FALSE)
+    
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_to_drop = list('QUAL_FLAG' = '1',
+                                                         'MAINTENANCE_FLAG' = '1',
+                                                         'INCOMPLETE_FLAG' = '1'),
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
+                                                       'MAINTENANCE_FLAG' = c('0', '.'),
+                                                       'INCOMPLETE_FLAG' = c('0', '.')))
+    
+    # Convert from cm/s to liters/s
+    d <- d %>%
+      mutate(val = val*1000)
+    
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+    
+    d <- synchronize_timestep(d)
+    
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    
+    return(d)
 
     return(d)
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_16 <- function(network, domain, prodname_ms, site_name,
+                         component){
+  
+  
+  rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                  n = network,
+                  d = domain,
+                  p = prodname_ms,
+                  s = site_name,
+                  c = component)
+  
+  d <- read.csv(rawfile, colClasses = "character") %>%
+    mutate(RecDay = ifelse(nchar(RecDay) == 1, paste0(0, RecDay), RecDay)) 
+  
+  d <- ms_read_raw_csv(preprocessed_tibble = d,
+                       datetime_cols = list('RecYear' = '%Y',
+                                            'RecMonth' = '%m',
+                                            'RecDay' = '%d'),
+                       datetime_tz = 'US/Central',
+                       site_name_col = 'Watershed',
+                       alt_site_name = list('N04D' = 'n04d',
+                                            'N02B' = 'n02b',
+                                            'N01B' = 'n01b',
+                                            'N20B' = 'n20b'),
+                       data_cols =  c('Tmean' = 'temp'),
+                       data_col_pattern = '#V#',
+                       sampling_type = 'I',
+                       is_sensor = TRUE)
+  
+  d %>%
+    ggplot(aes(datetime, `IS_temp__|dat`, colour = site_name)) +
+    geom_line()
+  
+  d <- ms_cast_and_reflag(d,
+                          varflag_col_pattern = NA)
+
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
+  
+  d <- synchronize_timestep(d)
+  
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+  
+  return(d)
 }
 
 #precip_chemistry: STATUS=READY
@@ -821,7 +895,8 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__50',
                                            'stream_chemistry__51',
-                                           'stream_chemistry__20'))
+                                           'stream_chemistry__20',
+                                           'stream_chemistry__16'))
 
     return()
 }

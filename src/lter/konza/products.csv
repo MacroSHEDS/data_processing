@@ -7,7 +7,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 51,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 20,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 21,stream_chemistry,ready,pending,NA,NA,NA,"ASW011,ASW012"
-16,stream_chemistry,ready,NA,NA,NA,NA,NA
+16,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 43,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 4,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 230,precip_gauge_locations,ready,ready,NA,precip_pchem_pflux__ms004,NA,GIS300
