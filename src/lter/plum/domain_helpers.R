@@ -88,12 +88,12 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
                                 varflag_col_pattern = NA)
 
         }
-    #
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
+
+     #d <- carry_uncertainty(d,
+     #                       network = network,
+     #                       domain = domain,
+     #                       prodname_ms = prodname_ms)
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -157,7 +157,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -209,7 +209,7 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_name,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -256,12 +256,12 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_name,
                             summary_flags_dirty = list('Flag' = 2),
                             summary_flags_to_drop = list('Flag' = 'DROP'),
                             varflag_col_pattern = NA)
-    #
+
     # d <- carry_uncertainty(d,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -313,7 +313,7 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_name,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -364,7 +364,7 @@ munge_precip <- function(network, domain, prodname_ms, site_name,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -406,7 +406,7 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_name,
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
