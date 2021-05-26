@@ -1,7 +1,7 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
 152,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,
+159,stream_chemistry,pending,pending,,stream_chemistry__ms001,,
 142,discharge,ready,ready,NA,stream_flux_inst__ms004,NA,
-159,stream_temperature,ready,ready,NA,stream_chemistry__ms001,NA,
 167,precipitation,ready,ready,NA,precip_pchem_pflux__ms005,NA,"167_TIPBUCK_CRREL_2007-2016.txt,167_TIPBUCK_HR1A_2001-2016.txt,167_TIPBUCK_CPEAK_1993-2016.txt"
 157,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms005,NA,
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms004,NA,
