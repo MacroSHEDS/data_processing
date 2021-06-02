@@ -5,7 +5,7 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
-# i=1
+# i=15
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -40,7 +40,7 @@ for(i in 1:nrow(prod_info)){
 
     avail_sites <- unique(avail_sets$site_name)
 
-    #j=1
+    # j=1
     for(j in 1:length(avail_sites)){
 
         site_name <- avail_sites[j]
