@@ -628,6 +628,20 @@ process_1_4020 <- function(network, domain, prodname_ms, site_name,
                             summary_flags_dirty = list(
                                 WATERTEMP_MEAN_FLAG = c('B', 'M', 'S', 'Q')))
 
+    d__ <- d_ %>%
+        mutate(day = day(datetime),
+               month = month(datetime),
+               year = year(datetime)) %>%
+        group_by(site_name, day, month, year, var) %>%
+        summarize(val = mean(val, na.rm = T),
+                  ms_status = max(ms_status)) %>%
+        ungroup() %>%
+        mutate(datetime = ymd(paste(year, month, day, sep = '-'))) %>%
+        select(site_name, datetime, var, val, ms_status)
+
+
+
+
     #Join 2 datasets by removing daily averages when sensor data is available
     # start_dates_daily <- d %>%
     #     group_by(site_name) %>%
@@ -643,7 +657,12 @@ process_1_4020 <- function(network, domain, prodname_ms, site_name,
     #     mutate(alter_data = ifelse(min <= d_min, 1, 0)) %>%
     #     filter(alter_data == 1 | is.na(alter_data))
 
-    d <- rbind(d, d_)
+    d <- rbind(d, d__)
+
+    d <- d %>%
+        group_by(datetime, site_name, var) %>%
+        summarise(val = mean(val, na.rm = T),
+                  ms_status = max(ms_status, na.rm = T))
 
     d <- carry_uncertainty(d,
                            network = network,
