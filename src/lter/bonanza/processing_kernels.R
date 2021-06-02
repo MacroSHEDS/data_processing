@@ -159,7 +159,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     look <- read.csv(rawfile, colClasses = 'character')
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(Date.Time = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c(Date.Time = '%m/%e/%Y %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
                          site_name_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
@@ -206,8 +206,8 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
-    
+
+
     ggplot(d, aes(datetime, val , colour = site_name)) + geom_line()
 
     d <- carry_uncertainty(d,
