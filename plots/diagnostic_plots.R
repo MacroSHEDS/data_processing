@@ -1046,3 +1046,64 @@ for(dmn in dmns){
 }
 
 dev.off()
+
+#annual NO3-N concentration coverage by domain and site ####
+
+#for this to work properly, reload the version of load_entire_product that's in
+#   the public export dataset. it can start from any root (and you'll need to
+#   start from the public export root to avoid reading raw precip gauge data)
+
+p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v0.4/',
+                        prodname = 'stream_chemistry',
+                        filter_vars = 'NO3_N')
+
+pdf(width=11, height=9, onefile=TRUE,
+    file=paste0('plots/diagnostic_plots_',  vsn, '/streamchem_NO3-N_coverage.pdf'))
+
+dmns = unique(p$domain)
+current_year = lubridate::year(Sys.Date())
+
+for(dmn in dmns){
+
+    earliest_year = lubridate::year(min(p$datetime[p$domain == dmn]))
+    nyears = current_year - earliest_year
+    yrcols = viridis(n = nyears)
+
+    sites = unique(p$site_name[p$domain == dmn])
+    if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
+
+    plotrc = ceiling(sqrt(length(sites)))
+    # plotc = floor(sqrt(length(sites)))
+    doyseq = seq(1, 366, 30)
+    par(mfrow=c(plotrc, plotrc), mar=c(1,2,0,0), oma=c(0,0,2,0))
+
+    for(s in sites){
+
+        plot(NA, NA, xlim=c(1, 366), ylim=c(0, nyears), xaxs='i', yaxs='i',
+             ylab = '', xlab = '', yaxt='n', cex.axis=0.6, xaxt='n', xpd=NA)
+        axis(1, doyseq, doyseq, tick=FALSE, line = -2, cex.axis=0.8)
+        axis(2, 1:nyears, earliest_year:(current_year - 1), las=2, cex.axis=0.6,
+             hadj=0.7)
+
+        psub = p %>%
+            filter(domain == dmn, site_name == s) %>%
+            mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+                   yr_offset = lubridate::year(datetime) - earliest_year)
+
+        lubridate::year(psub$datetime) <- 1972
+        yrs = unique(psub$yr_offset)
+
+        for(i in 1:length(yrs)){
+            pss = psub %>%
+                filter(yr_offset == yrs[i]) %>%
+                arrange(doy)
+            lines(pss$doy, c(scale(drop_errors(pss$val))) + pss$yr_offset, col=yrcols[i])
+        }
+
+        mtext(s, 3, outer=FALSE, line=-2)
+    }
+
+    mtext(paste0(dmn, ' (DOY vs. Year)'), 3, outer=TRUE)
+}
+
+dev.off()
