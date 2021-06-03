@@ -415,7 +415,7 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
         #_only_ run it here. that will take some investigation though. for one
         #thing, we'd need to consider giant bind_rows operations above when
         #operating in high-res mode
-        out_filt <- synchronize_timestep(out_filt)
+        # out_filt <- synchronize_timestep(out_filt)
 
         prod_dir <- glue('data/{n}/{d}/munged/{p}',
                          n = network,

@@ -24,7 +24,7 @@ process_0_142 <- function(set_details, network, domain){
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_0_159 <- function(set_details, network, domain){
 
@@ -97,7 +97,8 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                                         'Conductivity.uS.cm.' = 'spCond',
                                         'DON.uM.' = 'DON',
                                         'SUVA.L.mg.1.m.1.' = 'abs254',
-                                        'pH' = 'pH'),
+                                        'pH' = 'pH',
+                                        'Temperature.degC.' = 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = '0')
@@ -158,7 +159,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     look <- read.csv(rawfile, colClasses = 'character')
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(Date.Time = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c(Date.Time = '%m/%e/%Y %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
                          site_name_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
@@ -179,7 +180,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
-#stream_temperature: STATUS=READY
+#stream_chemistry: STATUS=PENDING
 #. handle_errors
 process_1_159 <- function(network, domain, prodname_ms, site_name,
                           component) {
@@ -191,7 +192,8 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    raw <- read.delim(rawfile, colClasses = 'character')
+    raw <- read.delim(rawfile, colClasses = 'character') %>%
+        filter(X0CM != -9999)
 
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(DATE = '%m/%d/%Y',
@@ -204,6 +206,9 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+
+
+    ggplot(d, aes(datetime, val , colour = site_name)) + geom_line()
 
     d <- carry_uncertainty(d,
                            network = network,
