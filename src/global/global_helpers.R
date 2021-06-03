@@ -2055,8 +2055,7 @@ track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
             pull(component)
 
         logwarn(msg = glue("Tracked component(s) {tc} no longer available. ",
-                           "Removing from tracker. If this isn't NEON, ",
-                           "investigate.",
+                           "Removing from tracker.",
                            tc = paste(obsolete_components,
                                       collapse = ', ')),
                 logger = logger_module)
@@ -6216,18 +6215,21 @@ ms_linear_interpolate <- function(d, interval){
     #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
     #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
 
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
     d_interp <- d %>%
-        arrange(datetime) %>%
         mutate(
 
             #make binary column to track which points are interped
-            ms_interp = case_when(
-                is.na(ms_status) ~ 1,
-                TRUE ~ 0),
+            # ms_interp = case_when(
+            #     is.na(ms_status) ~ 1,
+            #     TRUE ~ 0),
 
-            #carry status to interped rows
-            ms_status = imputeTS::na_locf(ms_status,
-                                          na_remaining = 'rev'),
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant, but can't hurt)
+            ms_status <- imputeTS::na_locf(ms_status,
+                                           na_remaining = 'rev'),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -6245,11 +6247,9 @@ ms_linear_interpolate <- function(d, interval){
                 imputeTS::na_interpolation(val,
                                            maxgap = max_samples_to_impute)
 
-            #unless not enough data in group; then do nothing
+                #unless not enough data in group; then do nothing
             } else val
         ) %>%
-
-        filter(! is.na(val)) %>%
         mutate(
             err = errors(val), #extract error from data vals
             err = case_when(
@@ -6263,8 +6263,13 @@ ms_linear_interpolate <- function(d, interval){
                 set_errors(val, #unless not enough error to interp
                            0)
             }) %>%
-        select(-err) %>%
+        select(any_of(c('datetime', 'site_name', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_name, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
 
     return(d_interp)
 }
@@ -8902,7 +8907,7 @@ load_config_datasets <- function(from_where){
         ms_vars <- sm(googlesheets4::read_sheet(
             conf$variables_gsheet,
             na = c('', 'NA'),
-            col_types = 'cccccccnncc'
+            col_types = 'cccccccnnccnn'
         ))
 
         site_data <- sm(googlesheets4::read_sheet(
@@ -9009,7 +9014,7 @@ ms_write_confdata <- function(x,
     }
 
     type_string <- case_when(
-        which_dataset == 'ms_vars' ~ 'cccccccnncc',
+        which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
         which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
@@ -10614,7 +10619,7 @@ least_common_multiple <- function(a, b){
     return(a/g * b)
 }
 
-ms_determine_data_interval <- function(d){
+ms_determine_data_interval <- function(d, per_column = FALSE){
 
     #calculates the mode interval in each column, then returns the
     #   greatest common divisor of those modes as the interval, in minutes.
@@ -10626,6 +10631,11 @@ ms_determine_data_interval <- function(d){
         time_diffs <- diff(d$datetime[d$var == v])
         units(time_diffs) = 'mins'
         interval_modes <- c(interval_modes, Mode(time_diffs))
+    }
+
+    if(per_column){
+        names(interval_modes) <- vars
+        return(interval_modes)
     }
 
     interval_modes <- interval_modes[! is.na(interval_modes)]
