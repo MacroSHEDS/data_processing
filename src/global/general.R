@@ -59,6 +59,7 @@ for(i in 1:nrow(unprod)){
                                              prodname_ms = prodname_ms,
                                              site_name = site_name)
 
+        #general_status <- 'pending'
         if(general_status %in% c('ok', 'no_data_avail')){
 
             loginfo(glue('Nothing to do for product: {p}, site: {s}',
