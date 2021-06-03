@@ -779,15 +779,26 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
                                ymax = 22.23), crs = 4326) %>%
     sf::st_as_sfc(., crs = 4326)
 
+  usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
+                               ymax = 49.384), crs = 4326) %>%
+    sf::st_as_sfc(., crs = 4326)
+
   is_ak <- length(sm(sf::st_intersects(ak_bb, site_boundary))[[1]]) == 1
   is_pr <- length(sm(sf::st_intersects(pr_bb, site_boundary))[[1]]) == 1
   is_hi <- length(sm(sf::st_intersects(hi_bb, site_boundary))[[1]]) == 1
+  is_usa <- length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 1
 
   if(is_ak){ nlcd_epochs = c('2001_AK', '2011_AK', '2016_AK') }
   if(is_pr){ nlcd_epochs = '2001_PR' }
   if(is_hi){ nlcd_epochs = '2001_HI' }
-  if(!is_ak && !is_pr && !is_hi){
+  if(is_usa){
     nlcd_epochs = as.character(c(1992, 2001, 2004, 2006, 2008, 2011, 2013, 2016))
+  }
+
+  if(!is_ak && !is_pr && !is_hi && !is_usa){
+
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
   }
 
   wb_ee = sf_as_ee(site_boundary)
@@ -983,8 +994,15 @@ process_3_ms815 <- function(network, domain, prodname_ms, site_name,
   thinkness_files <- 'data/spatial/pelletier_soil_thickness/average_soil_and_sedimentary-deposit_thickness.tif'
 
 
-  ws_values <- extract_ws_mean(site_boundary = site_boundary,
-                              raster_path = thinkness_files)
+  ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
+                              raster_path = thinkness_files))
+
+
+  if(class(ws_values) == 'try-error'){
+
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site_name)))
+  }
 
   thinkness_tib <- tibble(year = NA,
                           val = unname(ws_values['mean']),
