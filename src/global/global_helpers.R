@@ -8465,6 +8465,9 @@ get_gee_standard <- function(network,
 
     if(as.numeric(area) > 10528200 || batch){
 
+        # Remove file if is in drive
+        googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
+
         # Mask bad pixles functions
         get_gee_QABits <- function(image) {
             # Convert binary (character) to decimal (little endian)
@@ -8627,6 +8630,10 @@ detection_limit_as_uncertainty <- function(detlim){
 }
 
 carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
+
+    # Filter out any rows where vals are outside realistic  range, defined
+    # in variables sheet
+    d <- ms_check_range(d)
 
     u <- identify_detection_limit_t(d,
                                     network = network,
@@ -8902,7 +8909,7 @@ load_config_datasets <- function(from_where){
         ms_vars <- sm(googlesheets4::read_sheet(
             conf$variables_gsheet,
             na = c('', 'NA'),
-            col_types = 'cccccccnncc'
+            col_types = 'cccccccnnccnn'
         ))
 
         site_data <- sm(googlesheets4::read_sheet(
@@ -10974,7 +10981,13 @@ combine_ws_boundaries <- function(){
                  delete_layer = TRUE,
                  quiet = TRUE)
 
-    setwd('../../data_acquisition/')
+    if(ms_instance$op_system == 'windows'){
+        setwd('../../')
+        setwd('data_processing/')
+    } else{
+        setwd('../../data_acquisition/')
+    }
+
 }
 
 get_osm_roads <- function(extent_raster, outfile = NULL){
@@ -11412,4 +11425,35 @@ extract_ws_mean <- function(site_boundary, raster_path){
 
     return(fin)
 
+}
+
+ms_check_range <- function(d){
+
+    d_vars <- unique(d$var)
+
+    for(c in 1:length(d_vars)){
+
+        var_p_frop <- drop_var_prefix(d_vars[c])
+
+        min_val <- ms_vars %>%
+            filter(variable_code == !!var_p_frop) %>%
+            pull(val_min)
+
+        if(!is.na(min_val)){
+            d <- d %>%
+                mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) < !!min_val, NA, val))
+        }
+
+        max_val <- ms_vars %>%
+            filter(variable_code == !!var_p_frop) %>%
+            pull(val_max)
+
+        if(!is.na(max_val)){
+            d <- d %>%
+                mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) > !!max_val, NA, val))
+        }
+    }
+
+    d <- d %>%
+        filter(!is.na(val))
 }

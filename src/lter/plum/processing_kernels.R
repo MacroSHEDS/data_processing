@@ -621,11 +621,11 @@ process_1_155 <- function(network, domain, prodname_ms, site_name,
 
     }
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
+     #d <- carry_uncertainty(d,
+     #                       network = network,
+     #                       domain = domain,
+     #                       prodname_ms = prodname_ms)
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
@@ -760,11 +760,7 @@ process_1_393 <-  function(network, domain, prodname_ms, site_name,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
+
     # d <- synchronize_timestep(d)
     #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
