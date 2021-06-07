@@ -44,6 +44,12 @@ for(i in 1:nrow(prod_info)){
                                               site_name = site_name,
                                               prodname_ms = prodname_ms,
                                               tracker = held_data)
+
+            munge_rtn <- munge_combined_split(network = network,
+                                              domain = domain,
+                                              site_name = site_name,
+                                              prodname_ms = prodname_ms,
+                                              tracker = held_data)
         } else{
 
             munge_rtn <- munge_combined(network = network,

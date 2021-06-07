@@ -2,11 +2,11 @@ loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
 prod_info <- get_product_info(network = network,
-                              domain = domain,
-                              status_level = 'derive',
-                              get_statuses = 'ready')
+                             domain = domain,
+                             status_level = 'derive',
+                             get_statuses = 'ready')
 
-# i=1
+# i=4
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -29,26 +29,26 @@ for(i in 1:nrow(prod_info)){
                                   domain = domain,
                                   tracker = held_data)
 
-        } else {
-            logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
-                         'it before deriving from it.', p=prodname_ms), logger=logger_module)
-            next
-          }
+            } else {
+                logwarn(glue('Product {p} is not yet tracked. Retrieve and munge ',
+                             'it before deriving from it.', p=prodname_ms), logger=logger_module)
+          next
+        }
     }
 
     derive_status <- get_derive_status(tracker = held_data,
-                                       prodname_ms = prodname_ms,
-                                       site_name = site_name)
+                                     prodname_ms = prodname_ms,
+                                     site_name = site_name)
 
     if(derive_status == 'ok'){
-          loginfo(glue('Nothing to do for {p}',
-                       p=prodname_ms),
-                  logger=logger_module)
-        next
-      } else {
-      loginfo(glue('Deriving {p}',
-                   p=prodname_ms),
-              logger=logger_module)
+        loginfo(glue('Nothing to do for {p}',
+                     p=prodname_ms),
+                logger=logger_module)
+      next
+    } else {
+        loginfo(glue('Deriving {p}',
+                     p=prodname_ms),
+                logger=logger_module)
     }
 
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
@@ -66,12 +66,12 @@ for(i in 1:nrow(prod_info)){
                           site_name=site_name, new_status=stts)
 
     if(stts == 'ok'){
-      msg = glue('Derived {p} ({n}/{d}/{s})',
-                 p = prodname_ms,
-                 n = network,
-                 d = domain,
-                 s = site_name)
-      loginfo(msg, logger=logger_module)
+        msg <- glue('Derived {p} ({n}/{d}/{s})',
+                   p = prodname_ms,
+                   n = network,
+                   d = domain,
+                   s = site_name)
+        loginfo(msg, logger=logger_module)
     }
 
     write_metadata_d(network = network,
