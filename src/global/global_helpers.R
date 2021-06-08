@@ -1607,7 +1607,8 @@ ms_conversions <- function(d,
 
     vars <- drop_var_prefix(d$var)
 
-    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'NH4', 'NH3', 'NO3_NO2')
+    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                           'NO3_NO2')
 
     if(! missing(keep_molecular)){
         if(any(! keep_molecular %in% convert_molecules)){
@@ -1625,6 +1626,7 @@ ms_conversions <- function(d,
         NO3 = 'N',
         NH3 = 'N',
         SiO2 = 'Si',
+        SiO3 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
         NO3_NO2 = 'N')
