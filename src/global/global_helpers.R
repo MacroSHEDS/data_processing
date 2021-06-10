@@ -6221,13 +6221,8 @@ ms_linear_interpolate <- function(d, interval){
     d_interp <- d %>%
         mutate(
 
-            #make binary column to track which points are interped
-            # ms_interp = case_when(
-            #     is.na(ms_status) ~ 1,
-            #     TRUE ~ 0),
-
             #carry ms_status to any rows that have just been populated (probably
-            #redundant, but can't hurt)
+            #redundant now, but can't hurt)
             ms_status <- imputeTS::na_locf(ms_status,
                                            na_remaining = 'rev'),
 
