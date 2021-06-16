@@ -11487,7 +11487,7 @@ download_from_googledrive <- function(set_details, network, domain){
     raw_files <- googledrive::drive_ls(googledrive::as_id(raw_files$id))
 
     prod_folder <- raw_files %>%
-        filter(name == !! prodname)
+        filter(name == !! set_details$prodname_ms)
 
     prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
 

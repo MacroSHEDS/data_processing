@@ -5,7 +5,7 @@ prod_info <- get_product_info(network = network,
                              status_level = 'munge',
                              get_statuses = 'ready')
 
-# i=4
+# i=3
 for(i in 1:nrow(prod_info)){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -37,13 +37,7 @@ for(i in 1:nrow(prod_info)){
                          s=site_name, p=prodname_ms), logger=logger_module)
         }
 
-        if(grepl('stream_chemistry', prodname_ms)){
-
-            munge_rtn <- munge_time_component(network = network,
-                                              domain = domain,
-                                              site_name = site_name,
-                                              prodname_ms = prodname_ms,
-                                              tracker = held_data)
+        if(grepl('stream_chemistry|precipitation', prodname_ms)){
 
             munge_rtn <- munge_combined_split(network = network,
                                               domain = domain,

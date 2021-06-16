@@ -260,8 +260,8 @@ for(dmnrow in 1:nrow(network_domain)){
                     verbose = TRUE))
     ms_derive(network = network,
               domain = domain)
-    ms_general(network = network,
-               domain = domain)
+    # ms_general(network = network,
+    #            domain = domain)
 
     retain_ms_globals(ms_globals)
 }
