@@ -21,6 +21,9 @@ process_0_VERSIONLESS004 <- download_from_googledrive
 #. handle_errors
 process_0_VERSIONLESS005 <- download_from_googledrive
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS006 <- download_from_googledrive
 
 #munge kernels ####
 
@@ -946,6 +949,62 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
                       site_name = sites[s],
                       level = 'munged',
                       shapefile = TRUE)
+    }
+
+    return()
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, component) {
+
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name)
+
+    rawfile <- list.files(rawfile, full.names = TRUE)
+
+    d <- read_delim(rawfile, delim = ';', col_types = cols(.default = "c")) %>%
+        mutate(site = 'Svartberget') %>%
+        rename(precip = 2)
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Datum' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT+2',
+                         site_name_col = 'site',
+                         data_cols =  c('precip' = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
+
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+
+    d <- synchronize_timestep(d)
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
+    sites <- unique(d$site_name)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_name == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
     }
 
     return()
