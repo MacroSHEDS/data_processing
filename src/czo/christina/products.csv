@@ -7,7 +7,8 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 2565,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,stroud water research center,54dbaa2fb67646b7b62a5aa47b2bdd7d,!!SEARCH(CONTAINS(HOURLY_PRECIP))
 ms001,stream_chemistry,NA,NA,ready,stream_inst_flux__ms002,NA,NA,NA
 ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
-ms003,precip_gauge_locations,NA,NA,NA,precip_pchem_pflux__ms004,NA,NA,NA
+ms003,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms004,NA,NA,NA
 ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms004,automated entry,NA,NA
 ms005,discharge,NA,NA,linked,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
