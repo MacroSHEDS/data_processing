@@ -922,7 +922,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
         rename(geometry = x)
 
     all_sheds <- rbind(sites16, sites15, sites6, sites7, sites12, sites13,
-                       sites14, sites9, single_sites)
+                       sites14, sites9, single_sites) %>%
+        sf::st_transform(projstring)
 
     kry_gauges <- site_data %>%
         filter(network == 'krycklan',
