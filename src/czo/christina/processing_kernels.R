@@ -199,7 +199,8 @@ process_1_2407 <- function(network, domain, prodname_ms, site_name, components) 
                var,
                val = value,
                datetime,
-               ms_status)
+               ms_status) %>%
+        filter(var != 'alk')
 
     d <- identify_sampling_bypass(df = all_,
                                   is_sensor = FALSE,
@@ -632,7 +633,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 #. handle_errors
 process_2_ms002 <- derive_stream_flux
 
-#precip_gauge_locations
+#precip_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms003 <- precip_gauge_from_site_data
 
