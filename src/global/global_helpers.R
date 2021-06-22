@@ -1607,7 +1607,8 @@ ms_conversions <- function(d,
 
     vars <- drop_var_prefix(d$var)
 
-    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'NH4', 'NH3', 'NO3_NO2')
+    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                           'NO3_NO2')
 
     if(! missing(keep_molecular)){
         if(any(! keep_molecular %in% convert_molecules)){
@@ -1625,6 +1626,7 @@ ms_conversions <- function(d,
         NO3 = 'N',
         NH3 = 'N',
         SiO2 = 'Si',
+        SiO3 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
         NO3_NO2 = 'N')
@@ -11457,3 +11459,74 @@ ms_check_range <- function(d){
     d <- d %>%
         filter(!is.na(val))
 }
+
+download_from_googledrive <- function(set_details, network, domain){
+
+    prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitename_NA',
+                          n = network,
+                          d = domain,
+                          p = set_details$prodname_ms)
+
+    id <- googledrive::as_id('178OOGxx1xM3C7m-Tdx6j5Dk_kxfWLJvw')
+    gd_files <- googledrive::drive_ls(id, recursive = TRUE)
+
+    network_id <- gd_files %>%
+        filter(name == !!network)
+
+    network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+
+    domain_id <- network_files %>%
+        filter(name == !!domain)
+
+    domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+
+    raw_files <- domain_files %>%
+        filter(name == 'raw')
+
+    raw_files <- googledrive::drive_ls(googledrive::as_id(raw_files$id))
+
+    prod_folder <- raw_files %>%
+        filter(name == !! set_details$prodname_ms)
+
+    prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    held_files <- list.files(raw_data_dest)
+
+    drive_files <- prod_files$name
+
+    if(any(! drive_files %in% held_files)) {
+
+        loginfo(glue('Retrieving {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+
+        needed_files <- drive_files[! drive_files %in% held_files]
+
+        prod_files_neeed <- prod_files %>%
+            filter(name %in% needed_files)
+
+        for(i in 1:nrow(prod_files_neeed)){
+
+            raw_file_path <- glue('{rd}/{n}',
+                                  rd = raw_data_dest,
+                                  n = prod_files_neeed$name[i])
+
+
+            status <- googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
+                                        path = raw_file_path,
+                                        overwrite = TRUE)
+        }
+    } else{
+        loginfo(glue('Nothing to do for {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+    }
+
+    return()
+}
+
