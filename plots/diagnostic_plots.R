@@ -1115,7 +1115,7 @@ for(dmn in dmns){
 
 dev.off()
 
-#Q and air temp (just Niwot for now) ####
+#Q and air temp (just Niwot and Plum for now) ####
 
 library(geoknife)
 library(data.table)
@@ -1130,8 +1130,8 @@ geoknife::query(webdatasets[475], 'variables')
 # webdata(webdatasets[452])
 webdata('topowx')
 
-niwot_sites <- site_data %>%
-    filter(domain == 'niwot',
+qair_sites <- site_data %>%
+    filter(domain %in% c('niwot', 'plum'),
            site_type == 'stream_gauge',
            in_workflow == TRUE) %>%
     select(site_name, longitude, latitude) %>%
@@ -1139,7 +1139,7 @@ niwot_sites <- site_data %>%
     # sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326)
 
 # stencil = simplegeom(as(niwot_sites, 'Spatial'))
-stencil = simplegeom(niwot_sites)
+stencil = simplegeom(qair_sites)
 fabric = webdata(list(times = as.POSIXct(c('1981-01-01', '2020-12-31')),
     url = 'https://cida.usgs.gov/thredds/dodsC/topowx',
     variables = 'tmax'))
@@ -1206,7 +1206,7 @@ dmns = unique(q$domain)
 current_year = lubridate::year(Sys.Date())
 
 # for(dmn in dmns){
-for(dmn in 'niwot'){
+for(dmn in c('niwot', 'plum')){
 
     earliest_year = lubridate::year(min(q$datetime[q$domain == dmn]))
     nyears = current_year - earliest_year
@@ -1274,3 +1274,5 @@ for(dmn in 'niwot'){
 }
 
 dev.off()
+
+save.image('NA_Q_image.rda')
