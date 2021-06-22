@@ -8973,7 +8973,8 @@ load_config_datasets <- function(from_where){
 write_portal_config_datasets <- function(){
 
     #so we don't have to read these from gdrive when running the app in
-    #production
+    #production. also, nice to report download sizes this way and avoid some
+    #real-time calculation.
 
     dir.create('../portal/data/general',
                showWarnings = FALSE,
@@ -8981,6 +8982,50 @@ write_portal_config_datasets <- function(){
 
     write_csv(ms_vars, '../portal/data/general/variables.csv')
     write_csv(site_data, '../portal/data/general/site_data.csv')
+}
+
+compute_download_filesizes <- function(){
+
+    #determines approximate sizes of downloadable zipfiles for each domain.
+    #doing it here saves computation time in the portal.
+
+    dir.create('../portal/data/general/download_sizes',
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dmn_dirs <- list.files('../portal/data/')
+    dmn_dirs <- dmn_dirs[! dmn_dirs == c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
+
+    dmn_dl_size <- data.frame(domain = dmn_dirs,
+                              dl_size_MB = NA_character_)
+
+    for(i in seq_along(dmn_dirs)){
+
+        dmnfiles <- list.files(paste0('../portal/data/', dmn_dirs[i]),
+                               full.names = TRUE,
+                               recursive = TRUE,
+                               include.dirs = FALSE,
+                               pattern = '\\.feather$')
+
+        dmnfilesizes <- sapply(dmnfiles, file.size)
+
+        if(length(dmnfilesizes)){
+
+            total_MB <- dmnfilesizes %>%
+                sum() %>%
+                {. / 1e6 * 0.12} %>% # 0.12 is the approximate compression ratio after zipping
+                round(1) %>%
+                as.character()
+
+        } else {
+            total_MB <- 'pending'
+        }
+
+        dmn_dl_size$dl_size_MB[i] <- ifelse(total_MB == '0', '< 1', total_MB)
+    }
+
+    write_csv(x = dmn_dl_size,
+              file = '../portal/data/general/download_sizes/timeseries.csv')
 }
 
 ms_write_confdata <- function(x,
@@ -9461,6 +9506,10 @@ postprocess_entire_dataset <- function(site_data,
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
     # clean_portal_dataset()
+
+    log_with_indent('Calculating sizes of downloadable files',
+                    logger = logger_module)
+    compute_download_filesizes()
 }
 
 clean_portal_dataset <- function(){
