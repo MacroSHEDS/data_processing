@@ -24,7 +24,7 @@ process_0_142 <- function(set_details, network, domain){
     return()
 }
 
-#stream_chemistry: STATUS=PENDING
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_159 <- function(set_details, network, domain){
 
@@ -180,7 +180,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
-#stream_chemistry: STATUS=PENDING
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_159 <- function(network, domain, prodname_ms, site_name,
                           component) {
@@ -202,13 +202,12 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'SITE',
                          data_cols =  c('X0CM'= 'temp'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-
-    ggplot(d, aes(datetime, val , colour = site_name)) + geom_line()
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -331,7 +330,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__152',
-                                           'stream_temperature__159'))
+                                           'stream_chemistry__159'))
 }
 
 #precip_gauge_locations: STATUS=READY

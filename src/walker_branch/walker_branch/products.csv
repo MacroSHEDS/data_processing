@@ -1,0 +1,11 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,precipitation,ready,ready,NA,precip_flux_inst__ms003,https://tes-sfa.ornl.gov/sites/default/files/WBW_hourly_precipitation.csv https://tes-sfa.ornl.gov/sites/default/files/WBW_daily_precipitation.csv,WBW_hourly_precipitation.csv__|WBW_daily_precipitation.csv
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,https://tes-sfa.ornl.gov/sites/default/files/WBW_daily_discharge.csv https://tes-sfa.ornl.gov/sites/default/files/WBW_15-minute_discharge.csv,WBW_15-minute_discharge.csv__|WBW_daily_discharge.csv
+VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,https://tes-sfa.ornl.gov/sites/default/files/WBW_east_stream_chemistry.csv https://tes-sfa.ornl.gov/sites/default/files/WBW_west_stream_chemistry.csv,WBW_east_stream_chemistry.csv__|WBW_west_stream_chemistry.csv
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms002,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms003,NA,NA
+ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms003,automated entry,NA
+ms004,discharge,NA,NA,linked,NA,automated entry,NA
+ms005,stream_chemistry,NA,NA,linked,NA,automated entry,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA
