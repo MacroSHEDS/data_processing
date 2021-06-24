@@ -5963,6 +5963,8 @@ write_precip_quickref <- function(precip_idw_list,
                                 tz = 'UTC'),
                        sep = '_')
 
+    chunkfile <- str_replace_all(chunkfile, ':', '-')
+
     saveRDS(object = precip_idw_list,
             file = glue('{qd}/{cf}', #omitting extension for easier parsing
                         qd = quickref_dir,
@@ -6063,10 +6065,10 @@ read_precip_quickref <- function(network,
     for(i in 1:nrow(refranges_sel)){
 
         fn <- paste(strftime(refranges_sel$startdt[i],
-                             format = '%Y-%m-%d %H:%M:%S',
+                             format = '%Y-%m-%d %H-%M-%S',
                              tz = 'UTC'),
                     strftime(refranges_sel$enddt[i],
-                             format = '%Y-%m-%d %H:%M:%S',
+                             format = '%Y-%m-%d %H-%M-%S',
                              tz = 'UTC'),
                     sep = '_')
 
@@ -7149,7 +7151,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                             foreach_chunk
                         }
 
-                    ms_unparallelize(clst)
+                        ms_unparallelize(clst)
+
 
                     rm(chemflux_chunklist); gc()
 
@@ -8754,10 +8757,12 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
         final <- rbind(final, one_var)
         }
 
-    final <- pivot_longer(final,
-                          cols = all_of(c(mean_name, sd_name)),
-                          names_to = 'var',
-                          values_to = 'val') %>%
+    final <- final %>%
+        mutate(!!mean_name := round(.data[[mean_name]])) %>%
+        pivot_longer(final,
+                     cols = all_of(c(mean_name, sd_name)),
+                     names_to = 'var',
+                     values_to = 'val') %>%
         mutate(var = paste0('vd_', var)) %>%
         select(year, site_name, var, val, pctCellErr)
 
@@ -10026,8 +10031,8 @@ approxjoin_datetime <- function(x,
                         .cols = everything()) %>%
             as.data.table()
     } else {
-        x <- rename(x, datetime_x = datetime) %>% as.data.table()
-        y <- rename(y, datetime_y = datetime) %>% as.data.table()
+        x <- dplyr::rename(x, datetime_x = datetime) %>% as.data.table()
+        y <- dplyr::rename(y, datetime_y = datetime) %>% as.data.table()
     }
 
     #alternative implementation of the "on" argument in data.table joins...
