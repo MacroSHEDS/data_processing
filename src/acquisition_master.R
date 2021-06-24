@@ -191,6 +191,7 @@ gee_login <- case_when(
 
 try(rgee::ee_Initialize(email = gee_login,
                         drive = TRUE))
+
 googledrive::drive_auth(email = gee_login)
 
 #set up global logger. network-domain loggers are set up later
