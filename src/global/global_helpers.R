@@ -6205,7 +6205,12 @@ ms_linear_interpolate <- function(d, interval){
     var <- drop_var_prefix(d$var[1])
     max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
                                     yes = 3, #is Q-ish
-                                    no = 15) #is chemistry/etc
+                                    #(15 is what we picked originally for
+                                    #chem/etc, but this prevents us from generating
+                                    #daily flux estimates for a lot of sites that
+                                    #sample at monthly intervals. setting to 31
+                                    #for now.
+                                    no = 31) #is chemistry/etc
 
     if(interval == '15 min'){
         max_samples_to_impute <- max_samples_to_impute * 96
@@ -9587,49 +9592,49 @@ generate_output_dataset <- function(vsn){
 
     #collect pre-idw precip dirs (also intermediate products)
     #that shouldn't be in the final dataset
-     pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
-                                            vsn = vsn)
+    pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
+                                           vsn = vsn)
 
-     ppaths <- str_match(string = pfpaths,
-                         pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
-         sort()
+    ppaths <- str_match(string = pfpaths,
+                        pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
+        sort()
 
-     pfac <- factor(ppaths)
-     dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
+    pfac <- factor(ppaths)
+    dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
 
-     for(dr in dirs_with_p_compprods){
+    for(dr in dirs_with_p_compprods){
 
-         precip_dirs <- list.files(path = dr,
-                                   pattern = '^precipitation__')
+        precip_dirs <- list.files(path = dr,
+                                  pattern = '^precipitation__')
 
-         if(length(precip_dirs) != 2){
-             stop('there should only be two precip dirs in consideration here')
-         }
+        if(length(precip_dirs) != 2){
+            stop('there should only be two precip dirs in consideration here')
+        }
 
-         dir_to_delete_ind <- str_match(string = precip_dirs,
-                                        pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
-            as.numeric() %>%
-            which.min()
+        dir_to_delete_ind <- str_match(string = precip_dirs,
+                                       pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
+           as.numeric() %>%
+           which.min()
 
-         dirs_to_delete <- c(dirs_to_delete,
-                             paste0(dr, precip_dirs[dir_to_delete_ind]))
-     }
+        dirs_to_delete <- c(dirs_to_delete,
+                            paste0(dr, precip_dirs[dir_to_delete_ind]))
+    }
 
-     #drop em all from the final dataset
-     for(dr in dirs_to_delete){
-         unlink(x = dr,
-                recursive = TRUE)
-     }
+    #drop em all from the final dataset
+    for(dr in dirs_to_delete){
+        unlink(x = dr,
+               recursive = TRUE)
+    }
 
-     #put convenience functions in there
-     file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
-               to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
+    #put convenience functions in there
+    file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
+              to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
 
-     #add notes
-     warning("Don't forget to add notes! (and eventually generated changelog automatically)")
+    #add notes
+    warning("Don't forget to add notes! (and eventually generate changelog automatically)")
 
-     #zip it up
-     #...
+    #zip it up
+    #...
 }
 
 thin_portal_data <- function(network_domain, thin_interval){
