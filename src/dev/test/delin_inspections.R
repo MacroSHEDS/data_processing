@@ -167,6 +167,9 @@ sf::st_read('data/czo/boulder/derived/ws_boundary__ms000/BC_SW_20/BC_SW_20.shp')
 mapview::mapview(zz)
 
 
+sf::st_read('~/git/macrosheds/data_acquisition/data/lter/arctic/derived/ws_boundary__ms000/Trevor_Creek_Main/Trevor_Creek_Main.shp')->zz
+mapview::mapview(zz)
+zz2=zz
 sf::st_read('~/git/macrosheds/data_acquisition/data/lter/bonanza/derived/ws_boundary__ms000/C2/C2.shp')->zz
 mapview::mapview(zz)
 sf::st_read('~/git/macrosheds/data_acquisition/data/lter/luquillo//derived/ws_boundary__ms000/RI/RI.shp')->zz
