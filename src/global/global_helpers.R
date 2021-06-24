@@ -2460,7 +2460,8 @@ prodname_from_prodname_ms <- function(prodname_ms){
 }
 
 ms_retrieve <- function(network = domain,
-                        domain){
+                        domain,
+                        prodname_filter = NULL){
 
     #execute main retrieval script for this network-domain
     norm_retrieve <- file.exists(glue('src/{n}/{d}/retrieve.R',
@@ -2495,12 +2496,13 @@ ms_retrieve <- function(network = domain,
 }
 
 ms_munge <- function(network = domain,
-                     domain){
+                     domain,
+                     prodname_filter = NULL){
 
     #execute main munge script for this network-domain
     norm_munge <- file.exists(glue('src/{n}/{d}/munge.R',
-                                      n = network,
-                                      d = domain))
+                                   n = network,
+                                   d = domain))
 
     if(norm_munge){
         source(glue('src/{n}/{d}/munge.R',
@@ -3666,7 +3668,9 @@ get_derive_ingredient <- function(network,
     return(prodname_ms)
 }
 
-ms_derive <- function(network = domain, domain){
+ms_derive <- function(network = domain,
+                      domain,
+                      prodname_filter = NULL){
 
     #categorize munged products. some are complete after munging, so they
     #   get hardlinked. some need to be compiled into canonical form (e.g.
@@ -3749,12 +3753,23 @@ ms_derive <- function(network = domain, domain){
                                                  prodname = prods$prodname[i]) %>%
                                prodcode_from_prodname_ms()
 
-        create_derived_links(network = network,
-                             domain = domain,
-                             prodname_ms = paste(prods$prodname[i],
-                                                 prods$prodcode[i],
-                                                 sep = '__'),
-                             new_prodcode = linked_prodcode)
+        tryCatch({
+            create_derived_links(network = network,
+                                 domain = domain,
+                                 prodname_ms = paste(prods$prodname[i],
+                                                     prods$prodcode[i],
+                                                     sep = '__'),
+                                 new_prodcode = linked_prodcode)
+        },
+        error = function(e){
+            logwarn(glue('Failed to link {p} to derive/',
+                         p = paste(prods$prodname[i],
+                                   prods$prodcode[i],
+                                   sep = '__')),
+                         logger = logger_module)
+            }
+        )
+
     }
 
     #link any new linkprods and create new product entries
