@@ -5,11 +5,15 @@ prod_info <- get_product_info(network = network,
                               status_level = 'retrieve',
                               get_statuses = 'ready')
 
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
 # In the future when we want to get all small usgs sites, this could be changed
 usgs_sites <- c('black_earth_creek' = '05406457')
 
 # i=1
-for(i in 1:nrow(prod_info)){
+for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
