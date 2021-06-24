@@ -35,6 +35,11 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_name,
     npp <- npp$table %>%
       select(year=datetime, site_name, var, val)
 
+    if(all(is.na(npp$val))) {
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
+    }
+
     dir <- glue('data/{n}/{d}/ws_traits/npp/',
                  n = network,
                  d = domain)
@@ -89,7 +94,12 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
             mutate(datetime = ymd(datetime)) %>%
             mutate(year = year(datetime))  %>%
             select(site_name, datetime, year, var, val)
-  }
+    }
+
+    if(all(gpp$val == 0)){
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
+    }
 
     gpp_sum <- gpp %>%
         filter(var == 'va_gpp_median') %>%
@@ -179,7 +189,12 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
                     mutate(year = year(datetime)) %>%
                     mutate(var =  substr(var, 7, nchar(var))) %>%
                     select(site_name, datetime, year, var, val)
-                }
+            }
+
+        if(all(lai$val == 0)){
+          return(generate_ms_exception(glue('No data was retrived for {s}',
+                                            s = site_name)))
+        }
 
     lai_means <- lai %>%
         filter(var == 'vb_lai_median') %>%
@@ -251,6 +266,11 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
             mutate(year = year(datetime))  %>%
             mutate(var =  substr(var, 7, nchar(var))) %>%
             select(site_name, datetime, year, var, val)
+    }
+
+    if(all(fpar$val == 0)){
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
     }
 
     fpar_means <- fpar %>%
@@ -420,6 +440,11 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
         mutate(datetime = substr(datetime, 0, 8)) %>%
         mutate(datetime = ymd(datetime))
 
+    if(all(is.na(final$val))){
+      return(generate_ms_exception(glue('No data was retrived for {s}',
+                                        s = site_name)))
+    }
+
     if(grepl('prism_precip', prodname_ms)){
 
       final_sum_c <- final %>%
@@ -551,6 +576,7 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_name,
 
     # Elevation
     elev_values <- raster::values(dem)
+    elev_values <- elev_values[elev_values >= 0]
     elev_mean <- mean(elev_values, na.rm = TRUE)
     elev_sd <- sd(elev_values, na.rm = TRUE)
     elev_min <- min(elev_values, na.rm = TRUE)
@@ -1155,6 +1181,7 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_name,
 process_3_ms818 <- function(network, domain, prodname_ms, site_name,
                             boundaries) {
 
+  # https://gaftp.epa.gov/epadatacommons/ORD/NHDPlusLandscapeAttributes/StreamCat/Documentation/DataDictionary.html
   # https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1304
 
   bfi_dir <- glue('data/{n}/{d}/ws_traits/bfi/',
@@ -1269,6 +1296,82 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_name,
 
   write_feather(tcw, raw_path)
   write_feather(tcw_final, sum_path)
+
+  return()
+}
+
+#et_ref: STATUS=READY
+#. handle_errors
+process_3_ms820 <- function(network, domain, prodname_ms, site_name,
+                            boundaries) {
+
+  site_boundary <- boundaries %>%
+    filter(site_name == !!site_name)
+
+  final <- try(get_gee_standard(network = network,
+                                domain = domain,
+                                gee_id = 'IDAHO_EPSCOR/GRIDMET',
+                                band = 'eto',
+                                prodname = 'ci_et_ref',
+                                rez = 4000,
+                                site_boundary = site_boundary,
+                                batch = TRUE))
+
+
+  if(is.null(final)) {
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site_name)))
+  }
+
+  if(class(final) == 'try-error'){
+    return(generate_ms_err(glue('error in retrieving {s}',
+                                s = site_name)))
+  }
+
+  final <- final$table %>%
+    mutate(datetime = substr(datetime, 0, 8)) %>%
+    mutate(datetime = ymd(datetime))
+
+  if(all(is.na(final$val))){
+    return(generate_ms_exception(glue('No data was retrived for {s}',
+                                      s = site_name)))
+  }
+
+  final_ <- final %>%
+    filter(var == 'ci_et_ref_median') %>%
+    mutate(year = year(datetime)) %>%
+    group_by(site_name, year) %>%
+    summarise(ci_et_ref_mean = mean(val, na.rm = TRUE),
+              ci_et_ref_sd_year = sd(val, na.rm = TRUE)) %>%
+    pivot_longer(cols = c('ci_et_ref_mean', 'ci_et_ref_sd_year'),
+                 names_to = 'var',
+                 values_to = 'val')
+
+  temp_sd <- final %>%
+    filter(var == 'ci_et_ref_sd') %>%
+    mutate(year = year(datetime)) %>%
+    group_by(site_name, year) %>%
+    summarise(val = mean(val, na.rm = TRUE)) %>%
+    mutate(var = 'ci_et_ref_sd_space')
+
+  final_sum <- rbind(final_, temp_sd) %>%
+    select(year, site_name, var, val)
+
+  final <- final %>%
+    select(datetime, site_name, var, val)
+
+  dir <- glue('data/{n}/{d}/ws_traits/et_ref/',
+              n = network, d = domain)
+
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+
+  path_sum <- glue('data/{n}/{d}/ws_traits/{v}/sum_{s}.feather',
+                   n = network, d = domain, v = 'et_ref', s = site_name)
+  path_raw <- glue('data/{n}/{d}/ws_traits/{v}/raw_{s}.feather',
+                   n = network, d = domain, v = 'et_ref', s = site_name)
+
+  write_feather(final, path_raw)
+  write_feather(final_sum, path_sum)
 
   return()
 }
