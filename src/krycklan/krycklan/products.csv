@@ -2,7 +2,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,NA
 VERSIONLESS002,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,NA,NA
 VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,NA
-VERSIONLESS004,stream_temperature,ready,pending,NA,stream_chemistry__ms001,NA,NA
+VERSIONLESS004,stream_temperature,ready,ready,NA,stream_chemistry__ms001,NA,NA
 VERSIONLESS005,ws_boundary,ready,ready,NA,NA,NA,NA
 VERSIONLESS006,precipitation,ready,ready,NA,precip_pchem_pflux__ms002,NA,NA
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms001,NA,NA
