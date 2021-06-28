@@ -1,0 +1,12 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,precipitation,ready,ready,NA,precip_flux_inst__ms003,NA,krew_precip
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,krew_discharge
+VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,krew_stream_chem
+VERSIONLESS004,ws_boundary,ready,ready,NA,NA,NA,krew_ws_boundary
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms002,precip_gauge_locations,NA,NA,ready,NA,NA,NA
+ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
+ms004,discharge,NA,NA,linked,NA,automated entry,NA
+ms005,stream_chemistry,NA,NA,linked,NA,automated entry,NA
+ms006,ws_boundary,NA,NA,linked,NA,automated entry,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA
