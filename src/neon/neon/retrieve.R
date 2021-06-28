@@ -14,7 +14,7 @@ neon_streams <- site_data %>%
            in_workflow == 1) %>%
     pull(site_name)
 
-for(i in 1:nrow(prod_info)){
+for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
 

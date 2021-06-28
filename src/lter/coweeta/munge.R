@@ -1,10 +1,16 @@
 loginfo('Beginning munge', logger=logger_module)
 
-prod_info = get_product_info(network=network, domain=domain,
-                             status_level='munge', get_statuses='ready')
+prod_info = get_product_info(network = network,
+                             domain = domain,
+                             status_level = 'munge',
+                             get_statuses = 'ready')
+
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
 
 # i=5
-for(i in 1:nrow(prod_info)){
+for(i in seq_len(nrow(prod_info))){
     # for(i in 5){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
