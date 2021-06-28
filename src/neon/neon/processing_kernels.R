@@ -27,7 +27,7 @@ process_0_DP1.20093 <- function(set_details, network, domain){
     return()
 }
 
-#stream_nitrate: STATUS=READY
+#stream_nitrate: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20033 <- function(set_details, network, domain){
 
@@ -52,7 +52,7 @@ process_0_DP1.20033 <- function(set_details, network, domain){
     return()
 }
 
-#stream_PAR: STATUS=READY
+#stream_PAR: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20042 <- function(set_details, network, domain){
 
@@ -77,7 +77,7 @@ process_0_DP1.20042 <- function(set_details, network, domain){
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20053 <- function(set_details, network, domain){
 
@@ -131,7 +131,7 @@ process_0_DP1.00004 <- function(set_details, network, domain){
     return()
 }
 
-#stream_gases: STATUS=READY
+#stream_gases: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20097 <- function(set_details, network, domain){
 
@@ -208,7 +208,7 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     return()
 }
 
-#stream_quality: STATUS=READY
+#stream_quality: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20288 <- function(set_details, network, domain){
 
@@ -379,7 +379,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             filter(!is.na(val)) %>%
             rename(site_name = siteID,
                    datetime = collectDate) %>%
-            mutate(datetime = force_tz(datetime, tzone = 'UTC'))
+            mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
+            filter(!is.na(val))
 
 
     }
@@ -400,10 +401,17 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
                                    var == 'specificConductance' ~ 'spCond',
                                    var == 'UV Absorbance (280 nm)' ~ 'abs280',
                                    var == 'UV Absorbance (250 nm)' ~ 'abs250',
+                                   var == 'UV Absorbance (254 nm)' ~ 'abs254',
                                    TRUE ~ var)) %>%
             mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
             filter(var != 'TSS - Dry Mass') %>%
             mutate(datetime = force_tz(datetime, 'UTC'))
+
+        # TEMPORARILY REMOVING NEON NUTRIENT DATA #
+        out_lab <- out_lab %>%
+          filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
+                              'TPN', 'TDN', 'PO4_P')) %>%
+          filter(!is.na(val))
 
   }
 
@@ -435,14 +443,15 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         summarize(
             val = mean(val, na.rm=TRUE),
             ms_status = max(ms_status, na.rm = TRUE)) %>%
-        mutate(val = ifelse(is.nan(val), NA, val))
+        mutate(val = ifelse(is.nan(val), NA, val)) %>%
+        filter(!is.na(val))
 
     }
 
     return(out_sub)
 }
 
-#stream_nitrate: STATUS=READY
+#stream_nitrate: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -479,7 +488,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_PAR: STATUS=READY
+#stream_PAR: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -520,7 +529,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -637,7 +646,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_gases: STATUS=READY
+#stream_gases: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -723,7 +732,7 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
 
 }
 
-#stream_quality: STATUS=READY
+#stream_quality: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -1080,3 +1089,7 @@ process_2_ms003 <- function(network, domain, prodname_ms) {
         }
     }
 }
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_stream_flux
