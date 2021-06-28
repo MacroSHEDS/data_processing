@@ -752,9 +752,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
                ms_status = 0) %>%
         select(datetime, site_name, val, var, ms_status)
 
-    look <- d %>%
-        group_by(datetime, site_name, var) %>%
-        summarise(n = n())
+    # look <- d %>%
+    #     group_by(datetime, site_name, var) %>%
+    #     summarise(n = n())
 
     # need to add overwrite options
     d <- identify_sampling_bypass(d,
@@ -765,6 +765,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
                                   prodname_ms = prodname_ms,
                                   sampling_type = 'G')
 
+    #107482
     # Units are in ppb, converting to mg/L
     d <- d %>%
         mutate(val = val/1000)
