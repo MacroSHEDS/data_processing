@@ -773,6 +773,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
     d <- read_delim(rawfile, delim = '\t', skip = 4, col_types = cols(.default = "c"))
 
+    d <- d %>%
+        rename(temp_c = 3)
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT+2',
@@ -804,7 +807,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
                                               'Site64' = '64',
                                               'Site65' = '65',
                                               'Site66' = '66'),
-                         data_cols =  c('TW °C' = 'temp'),
+                         data_cols =  c('temp_c' = 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
 
