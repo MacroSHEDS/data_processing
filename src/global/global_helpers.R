@@ -2057,8 +2057,7 @@ track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
             pull(component)
 
         logwarn(msg = glue("Tracked component(s) {tc} no longer available. ",
-                           "Removing from tracker. If this isn't NEON, ",
-                           "investigate.",
+                           "Removing from tracker.",
                            tc = paste(obsolete_components,
                                       collapse = ', ')),
                 logger = logger_module)
@@ -2461,7 +2460,8 @@ prodname_from_prodname_ms <- function(prodname_ms){
 }
 
 ms_retrieve <- function(network = domain,
-                        domain){
+                        domain,
+                        prodname_filter = NULL){
 
     #execute main retrieval script for this network-domain
     norm_retrieve <- file.exists(glue('src/{n}/{d}/retrieve.R',
@@ -2496,12 +2496,13 @@ ms_retrieve <- function(network = domain,
 }
 
 ms_munge <- function(network = domain,
-                     domain){
+                     domain,
+                     prodname_filter = NULL){
 
     #execute main munge script for this network-domain
     norm_munge <- file.exists(glue('src/{n}/{d}/munge.R',
-                                      n = network,
-                                      d = domain))
+                                   n = network,
+                                   d = domain))
 
     if(norm_munge){
         source(glue('src/{n}/{d}/munge.R',
@@ -3667,7 +3668,9 @@ get_derive_ingredient <- function(network,
     return(prodname_ms)
 }
 
-ms_derive <- function(network = domain, domain){
+ms_derive <- function(network = domain,
+                      domain,
+                      prodname_filter = NULL){
 
     #categorize munged products. some are complete after munging, so they
     #   get hardlinked. some need to be compiled into canonical form (e.g.
@@ -3750,12 +3753,23 @@ ms_derive <- function(network = domain, domain){
                                                  prodname = prods$prodname[i]) %>%
                                prodcode_from_prodname_ms()
 
-        create_derived_links(network = network,
-                             domain = domain,
-                             prodname_ms = paste(prods$prodname[i],
-                                                 prods$prodcode[i],
-                                                 sep = '__'),
-                             new_prodcode = linked_prodcode)
+        tryCatch({
+            create_derived_links(network = network,
+                                 domain = domain,
+                                 prodname_ms = paste(prods$prodname[i],
+                                                     prods$prodcode[i],
+                                                     sep = '__'),
+                                 new_prodcode = linked_prodcode)
+        },
+        error = function(e){
+            logwarn(glue('Failed to link {p} to derive/',
+                         p = paste(prods$prodname[i],
+                                   prods$prodcode[i],
+                                   sep = '__')),
+                         logger = logger_module)
+            }
+        )
+
     }
 
     #link any new linkprods and create new product entries
@@ -6220,18 +6234,16 @@ ms_linear_interpolate <- function(d, interval){
     #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
     #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
 
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
     d_interp <- d %>%
-        arrange(datetime) %>%
         mutate(
 
-            #make binary column to track which points are interped
-            ms_interp = case_when(
-                is.na(ms_status) ~ 1,
-                TRUE ~ 0),
-
-            #carry status to interped rows
-            ms_status = imputeTS::na_locf(ms_status,
-                                          na_remaining = 'rev'),
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant now, but can't hurt)
+            ms_status <- imputeTS::na_locf(ms_status,
+                                           na_remaining = 'rev'),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -6249,11 +6261,9 @@ ms_linear_interpolate <- function(d, interval){
                 imputeTS::na_interpolation(val,
                                            maxgap = max_samples_to_impute)
 
-            #unless not enough data in group; then do nothing
+                #unless not enough data in group; then do nothing
             } else val
         ) %>%
-
-        filter(! is.na(val)) %>%
         mutate(
             err = errors(val), #extract error from data vals
             err = case_when(
@@ -6267,8 +6277,13 @@ ms_linear_interpolate <- function(d, interval){
                 set_errors(val, #unless not enough error to interp
                            0)
             }) %>%
-        select(-err) %>%
+        select(any_of(c('datetime', 'site_name', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_name, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
 
     return(d_interp)
 }
@@ -8980,7 +8995,8 @@ load_config_datasets <- function(from_where){
 write_portal_config_datasets <- function(){
 
     #so we don't have to read these from gdrive when running the app in
-    #production
+    #production. also, nice to report download sizes this way and avoid some
+    #real-time calculation.
 
     dir.create('../portal/data/general',
                showWarnings = FALSE,
@@ -8988,6 +9004,50 @@ write_portal_config_datasets <- function(){
 
     write_csv(ms_vars, '../portal/data/general/variables.csv')
     write_csv(site_data, '../portal/data/general/site_data.csv')
+}
+
+compute_download_filesizes <- function(){
+
+    #determines approximate sizes of downloadable zipfiles for each domain.
+    #doing it here saves computation time in the portal.
+
+    dir.create('../portal/data/general/download_sizes',
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dmn_dirs <- list.files('../portal/data/')
+    dmn_dirs <- dmn_dirs[! dmn_dirs == c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
+
+    dmn_dl_size <- data.frame(domain = dmn_dirs,
+                              dl_size_MB = NA_character_)
+
+    for(i in seq_along(dmn_dirs)){
+
+        dmnfiles <- list.files(paste0('../portal/data/', dmn_dirs[i]),
+                               full.names = TRUE,
+                               recursive = TRUE,
+                               include.dirs = FALSE,
+                               pattern = '\\.feather$')
+
+        dmnfilesizes <- sapply(dmnfiles, file.size)
+
+        if(length(dmnfilesizes)){
+
+            total_MB <- dmnfilesizes %>%
+                sum() %>%
+                {. / 1e6 * 0.12} %>% # 0.12 is the approximate compression ratio after zipping
+                round(1) %>%
+                as.character()
+
+        } else {
+            total_MB <- 'pending'
+        }
+
+        dmn_dl_size$dl_size_MB[i] <- ifelse(total_MB == '0', '< 1', total_MB)
+    }
+
+    write_csv(x = dmn_dl_size,
+              file = '../portal/data/general/download_sizes/timeseries.csv')
 }
 
 ms_write_confdata <- function(x,
@@ -9023,7 +9083,7 @@ ms_write_confdata <- function(x,
     }
 
     type_string <- case_when(
-        which_dataset == 'ms_vars' ~ 'cccccccnncc',
+        which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
         which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
@@ -9468,6 +9528,10 @@ postprocess_entire_dataset <- function(site_data,
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
     # clean_portal_dataset()
+
+    log_with_indent('Calculating sizes of downloadable files',
+                    logger = logger_module)
+    compute_download_filesizes()
 }
 
 clean_portal_dataset <- function(){
@@ -9545,49 +9609,49 @@ generate_output_dataset <- function(vsn){
 
     #collect pre-idw precip dirs (also intermediate products)
     #that shouldn't be in the final dataset
-     pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
-                                            vsn = vsn)
+    pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
+                                           vsn = vsn)
 
-     ppaths <- str_match(string = pfpaths,
-                         pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
-         sort()
+    ppaths <- str_match(string = pfpaths,
+                        pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
+        sort()
 
-     pfac <- factor(ppaths)
-     dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
+    pfac <- factor(ppaths)
+    dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
 
-     for(dr in dirs_with_p_compprods){
+    for(dr in dirs_with_p_compprods){
 
-         precip_dirs <- list.files(path = dr,
-                                   pattern = '^precipitation__')
+        precip_dirs <- list.files(path = dr,
+                                  pattern = '^precipitation__')
 
-         if(length(precip_dirs) != 2){
-             stop('there should only be two precip dirs in consideration here')
-         }
+        if(length(precip_dirs) != 2){
+            stop('there should only be two precip dirs in consideration here')
+        }
 
-         dir_to_delete_ind <- str_match(string = precip_dirs,
-                                        pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
-            as.numeric() %>%
-            which.min()
+        dir_to_delete_ind <- str_match(string = precip_dirs,
+                                       pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
+           as.numeric() %>%
+           which.min()
 
-         dirs_to_delete <- c(dirs_to_delete,
-                             paste0(dr, precip_dirs[dir_to_delete_ind]))
-     }
+        dirs_to_delete <- c(dirs_to_delete,
+                            paste0(dr, precip_dirs[dir_to_delete_ind]))
+    }
 
-     #drop em all from the final dataset
-     for(dr in dirs_to_delete){
-         unlink(x = dr,
-                recursive = TRUE)
-     }
+    #drop em all from the final dataset
+    for(dr in dirs_to_delete){
+        unlink(x = dr,
+               recursive = TRUE)
+    }
 
-     #put convenience functions in there
-     file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
-               to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
+    #put convenience functions in there
+    file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
+              to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
 
-     #add notes
-     warning("Don't forget to add notes! (and eventually generated changelog automatically)")
+    #add notes
+    warning("Don't forget to add notes! (and eventually generate changelog automatically)")
 
-     #zip it up
-     #...
+    #zip it up
+    #...
 }
 
 thin_portal_data <- function(network_domain, thin_interval){
@@ -10628,7 +10692,7 @@ least_common_multiple <- function(a, b){
     return(a/g * b)
 }
 
-ms_determine_data_interval <- function(d){
+ms_determine_data_interval <- function(d, per_column = FALSE){
 
     #calculates the mode interval in each column, then returns the
     #   greatest common divisor of those modes as the interval, in minutes.
@@ -10640,6 +10704,11 @@ ms_determine_data_interval <- function(d){
         time_diffs <- diff(d$datetime[d$var == v])
         units(time_diffs) = 'mins'
         interval_modes <- c(interval_modes, Mode(time_diffs))
+    }
+
+    if(per_column){
+        names(interval_modes) <- vars
+        return(interval_modes)
     }
 
     interval_modes <- interval_modes[! is.na(interval_modes)]

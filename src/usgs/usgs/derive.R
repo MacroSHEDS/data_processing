@@ -8,7 +8,11 @@ prod_info <- get_product_info(network = network,
                               status_level = 'derive',
                               get_statuses = 'ready')
 
-for(i in 1:nrow(prod_info)){
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
+for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i],
                            '__',

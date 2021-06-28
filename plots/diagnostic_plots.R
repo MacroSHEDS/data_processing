@@ -2,6 +2,13 @@
 # to load necessary packages and helper functions.
 
 #TODO: tabulate siteyears dropped from each summary due to presence of NAs
+#change all the coverage plots so that they scale by site (like:
+# qsub = q %>%
+#     filter(domain == dmn, site_name == s) %>%
+#     mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+#            yr_offset = lubridate::year(datetime) - earliest_year,
+#            val = errors::drop_errors(val),
+#            val = scale(val))
 
 q_interp_limit = 1#240
 p_interp_limit = 1
@@ -1046,3 +1053,226 @@ for(dmn in dmns){
 }
 
 dev.off()
+
+#annual NO3-N concentration coverage by domain and site ####
+
+#for this to work properly, reload the version of load_entire_product that's in
+#   the public export dataset. it can start from any root (and you'll need to
+#   start from the public export root to avoid reading raw precip gauge data)
+
+p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v0.4/',
+                        prodname = 'stream_chemistry',
+                        filter_vars = 'NO3_N')
+
+pdf(width=11, height=9, onefile=TRUE,
+    file=paste0('plots/diagnostic_plots_',  vsn, '/streamchem_NO3-N_coverage.pdf'))
+
+dmns = unique(p$domain)
+current_year = lubridate::year(Sys.Date())
+
+for(dmn in dmns){
+
+    earliest_year = lubridate::year(min(p$datetime[p$domain == dmn]))
+    nyears = current_year - earliest_year
+    yrcols = viridis(n = nyears)
+
+    sites = unique(p$site_name[p$domain == dmn])
+    if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
+
+    plotrc = ceiling(sqrt(length(sites)))
+    # plotc = floor(sqrt(length(sites)))
+    doyseq = seq(1, 366, 30)
+    par(mfrow=c(plotrc, plotrc), mar=c(1,2,0,0), oma=c(0,0,2,0))
+
+    for(s in sites){
+
+        plot(NA, NA, xlim=c(1, 366), ylim=c(0, nyears), xaxs='i', yaxs='i',
+             ylab = '', xlab = '', yaxt='n', cex.axis=0.6, xaxt='n', xpd=NA)
+        axis(1, doyseq, doyseq, tick=FALSE, line = -2, cex.axis=0.8)
+        axis(2, 1:nyears, earliest_year:(current_year - 1), las=2, cex.axis=0.6,
+             hadj=0.7)
+
+        psub = p %>%
+            filter(domain == dmn, site_name == s) %>%
+            mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+                   yr_offset = lubridate::year(datetime) - earliest_year)
+
+        lubridate::year(psub$datetime) <- 1972
+        yrs = unique(psub$yr_offset)
+
+        for(i in 1:length(yrs)){
+            pss = psub %>%
+                filter(yr_offset == yrs[i]) %>%
+                arrange(doy)
+            lines(pss$doy, c(scale(drop_errors(pss$val))) + pss$yr_offset, col=yrcols[i])
+        }
+
+        mtext(s, 3, outer=FALSE, line=-2)
+    }
+
+    mtext(paste0(dmn, ' (DOY vs. Year)'), 3, outer=TRUE)
+}
+
+dev.off()
+
+#Q and air temp (just Niwot and Plum for now) ####
+
+library(geoknife)
+library(data.table)
+
+webdatasets = query('webdata') #return all sets
+# grep('NCEP', title(webdatasets), value = TRUE)[5]
+# grep('NCEP', title(webdatasets))[5]
+grep('emperature', title(webdatasets), value = F)[204]
+webdata(webdatasets[475])
+geoknife::query(webdatasets[475], 'variables')
+# webdata(webdatasets[99])
+# webdata(webdatasets[452])
+webdata('topowx')
+
+qair_sites <- site_data %>%
+    filter(domain %in% c('niwot', 'plum'),
+           site_type == 'stream_gauge',
+           in_workflow == TRUE) %>%
+    select(site_name, longitude, latitude) %>%
+    data.table::transpose(make.names = 'site_name')
+    # sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326)
+
+# stencil = simplegeom(as(niwot_sites, 'Spatial'))
+stencil = simplegeom(qair_sites)
+fabric = webdata(list(times = as.POSIXct(c('1981-01-01', '2020-12-31')),
+    url = 'https://cida.usgs.gov/thredds/dodsC/topowx',
+    variables = 'tmax'))
+
+job = geoknife(stencil, fabric, wait = FALSE)
+successful(job)
+running(job)
+# job = cancel(job)
+tmax = result(job)
+
+fabric = webdata(list(times = as.POSIXct(c('1981-01-01', '2020-12-31')),
+    url = 'https://cida.usgs.gov/thredds/dodsC/topowx',
+    variables = 'tmin'))
+job = geoknife(stencil, fabric, wait = FALSE)
+tmin = result(job)
+
+
+# library(RCurl)
+# url <- 'ftp://ftp.cdc.noaa.gov/Projects/NARR/Dailies/monolevel/air.sfc.1981.nc'
+# userpwd <- "anonymous:anonymous@"
+# filenames <- getURL(url,
+#                     userpwd = userpwd)
+#                     # ftp.use.epsv = FALSE,
+#                     # dirlistonly = TRUE)
+# airt <- getURLContent(url,
+#                       userpwd = userpwd)
+
+# library(ncdf4)
+# library(raster)
+#
+# wgs84_wkt = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0'
+# download.file('ftp://anonymous:anonymous@ftp.cdc.noaa.gov/Projects/NARR/Dailies/monolevel/air.sfc.1981.nc',
+#               destfile = '/tmp/air.sfc.1981.nc')
+# airt_ncdf <- nc_open('/tmp/air.sfc.1981.nc')
+# lonvec <- ncvar_get(airt_ncdf, 'lon')
+# latvec <- ncvar_get(airt_ncdf, 'lat', verbose = FALSE)
+# timevec <- ncvar_get(airt_ncdf, 'time')
+# airt <- ncvar_get(airt_ncdf, 'air')
+# missing_data_val = ncatt_get(airt_ncdf, 'air', '_FillValue')$value
+# nc_close(airt_ncdf)
+# airt[airt == missing_data_val] = NA
+#
+# airt_timeslice <- airt[, , 1]
+# airr <- raster(t(airt_timeslice),
+#                xmn = min(lonvec),
+#                xmx = max(lonvec),
+#                ymn = min(latvec),
+#                ymx = max(latvec),
+#                crs = CRS(wgs84_wkt)) %>%
+#     raster::flip(direction = 'y')
+#
+# plot(airr)
+
+# u = 'https://cida.usgs.gov/thredds/ncss/topowx?var=tmax&var=tmin&north=51.1916&west=-125.0000&east=-66.6750&south=24.1166&disableLLSubset=on&disableProjSubset=on&horizStride=1&time_start=1948-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1'
+# r = httr::GET(u)
+# json = httr::content(r, as="text", encoding="UTF-8")
+# d = try(jsonlite::fromJSON(json), silent=TRUE)
+
+pdf(width=11, height=9, onefile=TRUE,
+    file=paste0('plots/diagnostic_plots_',  vsn, '/Q_and_airtemp.pdf'))
+
+q = load_entire_product('discharge')
+dmns = unique(q$domain)
+current_year = lubridate::year(Sys.Date())
+
+# for(dmn in dmns){
+for(dmn in c('niwot', 'plum')){
+
+    earliest_year = lubridate::year(min(q$datetime[q$domain == dmn]))
+    nyears = current_year - earliest_year
+    yrcols = viridis(n = nyears)
+
+    sites = unique(q$site_name[q$domain == dmn])
+    if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
+
+    plotrc = ceiling(sqrt(length(sites)))
+    # plotc = floor(sqrt(length(sites)))
+    doyseq = seq(1, 366, 30)
+    par(mfrow=c(plotrc, plotrc), mar=c(1,2,0,0), oma=c(0,0,2,0))
+
+    for(s in sites){
+
+        plot(NA, NA, xlim=c(1, 366), ylim=c(0, nyears), xaxs='i', yaxs='i',
+            ylab = '', xlab = '', yaxt='n', cex.axis=0.6, xaxt='n', xpd=NA)
+        axis(1, doyseq, doyseq, tick=FALSE, line = -2, cex.axis=0.8)
+        axis(2, 1:nyears, earliest_year:(current_year - 1), las=2, cex.axis=0.6,
+            hadj=0.7)
+
+        qsub = q %>%
+            filter(domain == dmn, site_name == s) %>%
+            mutate(val = errors::drop_errors(val),
+                   val = scale(val)[, 1])
+
+        q_year_range = range(year(qsub$datetime))
+
+        tmax_site = as_tibble(tmax) %>%
+            select(datetime = DateTime, !!s) %>%
+            filter(datetime >= as.POSIXct(paste0(q_year_range[1], '-01-01')),
+                   datetime <= as.POSIXct(paste0(q_year_range[2], '-12-31'))) %>%
+            rename(tmax = !!s) %>%
+            mutate(datetime = floor_date(datetime, unit = 'days'))
+
+        qsub = full_join(qsub, tmax_site, by = 'datetime') %>%
+            mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+                   yr_offset = lubridate::year(datetime) - earliest_year) %>%
+            arrange(datetime)
+
+        # lubridate::year(qsub$datetime) <- 1972
+        yrs = unique(qsub$yr_offset)
+
+        for(i in 1:length(yrs)){
+
+            qss = qsub %>%
+                filter(yr_offset == yrs[i]) %>%
+                arrange(doy)
+
+            qss_subzero_max = mutate(qss,
+                                     val = ifelse(tmax <= 0,
+                                                  min(val, na.rm = TRUE),
+                                                  NA))
+
+            lines(x = qss_subzero_max$doy,
+                  y = qss_subzero_max$val + qss_subzero_max$yr_offset,
+                  col = 'gray85', lwd = 5, lend = 2)
+            lines(qss$doy, qss$val + qss$yr_offset, col=yrcols[i])
+        }
+
+        mtext(s, 3, outer=FALSE, line=-2)
+    }
+
+    mtext(paste0(dmn, ' (DOY vs. Year)'), 3, outer=TRUE)
+}
+
+dev.off()
+
+save.image('NA_Q_image.rda')
