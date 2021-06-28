@@ -272,6 +272,8 @@ for(dmnrow in 1:nrow(network_domain)){
     retain_ms_globals(ms_globals)
 }
 
+logger_module <- 'ms.module'
+
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
