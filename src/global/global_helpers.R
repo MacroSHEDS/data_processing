@@ -6224,12 +6224,7 @@ ms_linear_interpolate <- function(d, interval){
     var <- drop_var_prefix(d$var[1])
     max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
                                     yes = 3, #is Q-ish
-                                    #(15 is what we picked originally for
-                                    #chem/etc, but this prevents us from generating
-                                    #daily flux estimates for a lot of sites that
-                                    #sample at monthly intervals. setting to 31
-                                    #for now.
-                                    no = 31) #is chemistry/etc
+                                    no = 15) #is chemistry/etc
 
     if(interval == '15 min'){
         max_samples_to_impute <- max_samples_to_impute * 96
