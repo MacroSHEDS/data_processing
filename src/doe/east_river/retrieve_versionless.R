@@ -26,11 +26,15 @@ prod_info <- get_product_info(network = network,
     filter(grepl(pattern = '^VERSIONLESS',
                  x = prodcode))
 
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
 if(nrow(prod_info) == 0) return()
 
 site_name <- 'sitename_NA'
 
-for(i in 1:nrow(prod_info)){
+for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
 
