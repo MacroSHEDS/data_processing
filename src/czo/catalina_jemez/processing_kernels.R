@@ -449,9 +449,45 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
                     s = site_name,
                     c = component)
 
-    d <- read.csv(rawfile, colClasses = 'character') %>%
+    d <- read.csv(rawfile, colClasses = 'character')
+
+    col_names <- colnames(d)
+    units <- as.character(d[1,])
+
+    names(units) <- col_names
+    units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
+                                   'Method', 'SampleType', 'SampleMedium', 'pH',
+                                   'ph.1','Temp', 'FI', 'HIX', 'SUVA', 'SamplingNote',
+                                   'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
+                                   'UVA254'),
+                                 collapse = '|'), col_names)]
+
+    units <- units[! grepl('mg/L', units)]
+
+    d <- d %>%
         mutate(SiteCode = str_replace_all(SiteCode, '[/]', '_')) %>%
         filter(! SiteCode %in% c('missing2', 'missing1', ''))
+
+    col_names_to_vars <- c('pH', 'Temp' = 'temp', 'EC' = 'spCond',
+                           'TIC', 'TOC', 'TN', 'F', 'Cl', 'NO2',
+                           'Br', 'NO3', 'SO4', 'PO4', 'Ca', 'Mg',
+                           'Na', 'K', 'Sr', 'Si28' = 'Si', 'B', 'Be9' = 'Be',
+                           'Al27' = 'Al', 'Ti49', 'V51' = 'V',
+                           'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
+                           'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu',
+                           'Zn64' = 'Zn', 'As75' = 'As', 'Se78',
+                           'Y89' = 'Y', 'Mo98' = 'Mo', 'Ag107' = 'Ag',
+                           'Cd114' = 'Cd', 'Sn118', 'Sb121' = 'Sb',
+                           'Ba138' = 'Ba', 'La139' = 'La', 'Ce140' = 'Ce',
+                           'Pr141' = 'Pr', 'Nd145', 'Sm147',
+                           'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
+                           'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
+                           'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
+                           'TI205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
+                           'NH4.N' = 'NH4_N', 'Ca40' = 'Ca', 'Mg24' = 'Mg',
+                           'Na23' = 'Na', 'K39' = 'K', 'Sr88' = 'Sr', 'B11' = 'B',
+                           'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2', 'Br.' = 'Br',
+                           'NO3.' = 'NO3', 'SO4.' = 'SO4', 'PO4.' = 'PO4')
 
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
@@ -467,23 +503,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
                                               'RedondoMeadow' = 'FLUME_RM',
                                               'UpperLaJara' = 'FLUME_ULJ',
                                               'LowerRedondo' = 'FLUME_LR'),
-                         data_cols =  c('pH', 'Temp' = 'temp', 'EC' = 'spCond',
-                                        'TIC', 'TOC', 'TN', 'F', 'Cl', 'NO2',
-                                        'Br', 'NO3', 'SO4', 'PO4', 'Ca', 'Mg',
-                                        'Na', 'K', 'Sr', 'Si', 'B', 'Be9' = 'Be',
-                                        'Al27' = 'Al', 'Ti49', 'V51' = 'V',
-                                        'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
-                                        'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu',
-                                        'Zn64' = 'Zn', 'As75' = 'As', 'Se78',
-                                        'Y89' = 'Y', 'Mo98' = 'Mo', 'Ag107' = 'Ag',
-                                        'Cd114' = 'Cd', 'Sn118', 'Sb121' = 'Sb',
-                                        'Ba138' = 'Ba', 'La139' = 'La', 'Ce140' = 'Ce',
-                                        'Pr141' = 'Pr', 'Nd145', 'Sm147',
-                                        'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
-                                        'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
-                                        'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
-                                        'TI205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                                        'NH4.N' = 'NH4_N'),
+                         data_cols = col_names_to_vars,
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = FALSE)
@@ -491,81 +511,27 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
+    for(i in 1:length(units)){
+        new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
+
+        if(length(new_name) == 0) { next }
+
+        names(units)[i] <- unname(new_name)
+    }
+
+    units <- units[names(units) %in% unname(col_names_to_vars)]
+
+    units <- tolower(units)
+    new_units_names <- names(units)
+    units <- str_replace_all(units, 'umoles/l', 'umol/l')
+    names(units) <- new_units_names
+
+    new_units <- rep('mg/l', length(units))
+    names(new_units) <- names(units)
+
     d <- ms_conversions(d,
-                        convert_units_from = c('Be' = 'ug/l',
-                                               'Al' = 'ug/l',
-                                               'Ti49' = 'ug/l',
-                                               'V' = 'ug/l',
-                                               'Cr' = 'ug/l',
-                                               'Mn' = 'ug/l',
-                                               'Fe' = 'ug/l',
-                                               'Co' = 'ug/l',
-                                               'Ni60' = 'ug/l',
-                                               'Cu' = 'ug/l',
-                                               'Zn' = 'ug/l',
-                                               'As' = 'ug/l',
-                                               'Se78' = 'ug/l',
-                                               'Y' = 'ug/l',
-                                               'Mo' = 'ug/l',
-                                               'Ag' = 'ug/l',
-                                               'Cd' = 'ug/l',
-                                               'Sn' = 'ug/l',
-                                               'Sb' = 'ug/l',
-                                               'Ba' = 'ug/l',
-                                               'La' = 'ng/l',
-                                               'Ce' = 'ng/l',
-                                               'Pr' = 'ng/l',
-                                               'Nd145' = 'ng/l',
-                                               'Sm147' = 'ng/l',
-                                               'Eu' = 'ng/l',
-                                               'Gd157' = 'ng/l',
-                                               'Tb' = 'ng/l',
-                                               'Dy' = 'ng/l',
-                                               'Ho' = 'ng/l',
-                                               'Er' = 'ng/l',
-                                               'Tm' = 'ng/l',
-                                               'Yb' = 'ng/l',
-                                               'Lu' = 'ng/l',
-                                               'Tl' = 'ug/l',
-                                               'Pb' = 'ug/l',
-                                               'U' = 'ng/l'),
-                        convert_units_to = c('Be' = 'mg/l',
-                                             'Al' = 'mg/l',
-                                             'Ti49' = 'mg/l',
-                                             'V' = 'mg/l',
-                                             'Cr' = 'mg/l',
-                                             'Mn' = 'mg/l',
-                                             'Fe' = 'mg/l',
-                                             'Co' = 'mg/l',
-                                             'Ni60' = 'mg/l',
-                                             'Cu' = 'mg/l',
-                                             'Zn' = 'mg/l',
-                                             'As' = 'mg/l',
-                                             'Se78' = 'mg/l',
-                                             'Y' = 'mg/l',
-                                             'Mo' = 'mg/l',
-                                             'Ag' = 'mg/l',
-                                             'Cd' = 'mg/l',
-                                             'Sn' = 'mg/l',
-                                             'Sb' = 'mg/l',
-                                             'Ba' = 'mg/l',
-                                             'La' = 'mg/l',
-                                             'Ce' = 'mg/l',
-                                             'Pr' = 'mg/l',
-                                             'Nd145' = 'mg/l',
-                                             'Sm147' = 'mg/l',
-                                             'Eu' = 'mg/l',
-                                             'Gd157' = 'mg/l',
-                                             'Tb' = 'mg/l',
-                                             'Dy' = 'mg/l',
-                                             'Ho' = 'mg/l',
-                                             'Er' = 'mg/l',
-                                             'Tm' = 'mg/l',
-                                             'Yb' = 'mg/l',
-                                             'Lu' = 'mg/l',
-                                             'Tl' = 'mg/l',
-                                             'Pb' = 'mg/l',
-                                             'U' = 'mg/l'))
+                        convert_units_from = units,
+                        convert_units_to = new_units)
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -738,7 +704,8 @@ process_1_2532 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -777,7 +744,8 @@ process_1_2491 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -813,7 +781,8 @@ process_1_2494 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -861,7 +830,8 @@ process_1_2531 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -901,7 +871,8 @@ process_1_2475 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -966,7 +937,8 @@ process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -1008,7 +980,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
                                     SiteCode == 'B2D-PSC' ~ 'B2D_PS',
                                     TRUE ~ SiteCode))
 
-    if(! 'EC' %in% names(d)){
+    if(! 'SO4' %in% names(d)){
         return(NULL)
     }
 
@@ -1037,7 +1009,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
                                         'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
                                         'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
                                         'Tl205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                                        'NH4.N' = 'NH4_N', 'Ortho.P' = 'SRP'),
+                                        'NH4.N' = 'NH4_N'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = FALSE)
@@ -1142,8 +1114,41 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
                     s = site_name,
                     c = component)
 
-    d <- read.csv(rawfile, colClasses = 'character') %>%
+    d <- read.csv(rawfile, colClasses = 'character')
+
+    col_names <- colnames(d)
+    units <- as.character(d[1,])
+
+    names(units) <- col_names
+    units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
+                                   'Method', 'SampleType', 'SampleMedium', 'pH',
+                                   'ph.1','Temp', 'FI', 'HIX', 'SUVA', 'SamplingNote',
+                                   'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
+                                   'UVA254', 'Offser', 'Cond'),
+                                 collapse = '|'), col_names)]
+
+    units <- units[! grepl('mg/L', units)]
+
+    d <- d %>%
         filter(SiteCode %in% c('RainColl_Burn_Low_OC', 'RainColl_MCZOB'))
+
+    col_names_to_vars <- c('pH', 'EC' = 'spCond', 'Cond' = 'spCond', 'TIC', 'TOC', 'TN', 'F', 'Cl',
+                           'NO2', 'Br', 'NO3', 'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
+                           'Na23' = 'Na', 'Mg24' = 'Mg', 'Al27' = 'Al', 'Si28' = 'Si',
+                           'P31' = 'P', 'K39' = 'K', 'Ca40' = 'Ca', 'Ti49',
+                           'V52' = 'V', 'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
+                           'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
+                           'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',
+                           'Ag107' = 'Ag', 'Cd114' = 'Cd', 'Sn118',
+                           'Sb121' = 'Sb', 'Ba138' = 'Ba', 'La139' = 'La',
+                           'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
+                           'Sm147' = 'Sm', 'Eu153' = 'Eu', 'Gd157',
+                           'Tb159' = 'Tb', 'Dy164' = 'Dy', 'Ho165' = 'Ho',
+                           'Er166' = 'Er', 'Tm169' = 'Tm', 'Yb174' = 'Yb',
+                           'Lu175' = 'Lu', 'Tl205' = 'Tl', 'Pb208' = 'Pb',
+                           'U238' = 'U', 'F.'= 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2',
+                           'Br.' = 'Br', 'NO3.' = 'NO3', 'SO4.' = 'SO4',
+                           'PO4.' = 'PO4')
 
     if(nrow(d) == 0){
         return(NULL)
@@ -1155,23 +1160,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
                          site_name_col = 'SiteCode',
                          alt_site_name = list('Burn_Met_Low' = 'RainColl_Burn_Low_OC',
                                               'MCZOB_met' = 'RainColl_MCZOB'),
-                         data_cols =  c('TIC', 'TOC', 'TN', 'F', 'Cl', 'NO2',
-                                        'Br', 'NO3', 'SO4', 'PO4', 'Be9' = 'Be',
-                                        'B11' = 'B', 'Na23' = 'Na', 'Mg24' = 'Mg',
-                                        'Al27' = 'Al', 'Si28' = 'Si', 'K39' = 'K',
-                                        'Ca40' = 'Ca', 'Ti49', 'V51' = 'V',
-                                        'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
-                                        'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu',
-                                        'Zn64' = 'Zn', 'As75' = 'As', 'Se78',
-                                        'Sr88' = 'Sr', 'Y89' = 'Y', 'Zr90' = 'Zr',
-                                        'Mo98' = 'Mo', 'Ag107' = 'Ag', 'Cd111',
-                                        'Sn118', 'Sb121' = 'Sb', 'Ba138' = 'Ba',
-                                        'La139' = 'La', 'Ce140' = 'Ce', 'Pr141' = 'Pr',
-                                        'Nd145', 'Sm147', 'Eu153' = 'Eu',
-                                        'Gd157', 'Tb159' = 'Tb', 'Dy164' = 'Dy',
-                                        'Ho165' = 'Ho', 'Er166' = 'Er', 'Tm169' = 'Tm',
-                                        'Yb174' = 'Yb', 'Lu175' = 'Lu', 'Tl205' = 'Tl',
-                                        'Pb208' = 'Pb', 'U238' = 'U', 'NH4.N' = 'NH4_N'),
+                         data_cols =  col_names_to_vars,
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = FALSE)
@@ -1179,112 +1168,27 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
-                        convert_units_from = c('F' = 'umol/l',
-                                               'Cl' = 'umol/l',
-                                               'NO2' = 'umol/l',
-                                               'Br' = 'umol/l',
-                                               'NO3' = 'umol/l',
-                                               'SO4' = 'umol/l',
-                                               'PO4' = 'umol/l',
-                                               'Be' = 'ug/l',
-                                               'B' = 'ug/l',
-                                               'Na' = 'ug/l',
-                                               'Mg' = 'ug/l',
-                                               'Al' = 'ug/l',
-                                               'Si' = 'ug/l',
-                                               'K' = 'ug/l',
-                                               'Ca' = 'ug/l',
-                                               'Ti49' = 'ug/l',
-                                               'V' = 'ug/l',
-                                               'Cr' = 'ug/l',
-                                               'Mn' = 'ug/l',
-                                               'Fe' = 'ug/l',
-                                               'Co' = 'ug/l',
-                                               'Ni60' = 'ug/l',
-                                               'Cu' = 'ug/l',
-                                               'Zn' = 'ug/l',
-                                               'As' = 'ug/l',
-                                               'Se78' = 'ug/l',
-                                               'Sr' = 'ug/l',
-                                               'Y' = 'ug/l',
-                                               'Zr' = 'ug/l',
-                                               'Mo' = 'ug/l',
-                                               'Ag' = 'ug/l',
-                                               'Cd111' = 'ug/l',
-                                               'Sn118' = 'ug/l',
-                                               'Sb' = 'ug/l',
-                                               'Ba' = 'ug/l',
-                                               'La' = 'ng/l',
-                                               'Ce' = 'ng/l',
-                                               'Pr' = 'ng/l',
-                                               'Nd145' = 'ng/l',
-                                               'Sm147' = 'ng/l',
-                                               'Eu' = 'ng/l',
-                                               'Gd157' = 'ng/l',
-                                               'Tb' = 'ng/l',
-                                               'Dy' = 'ng/l',
-                                               'Ho' = 'ng/l',
-                                               'Er' = 'ng/l',
-                                               'Tm' = 'ng/l',
-                                               'Yb' = 'ng/l',
-                                               'Lu' = 'ng/l',
-                                               'Tl' = 'ug/l',
-                                               'Pb' = 'ug/l',
-                                               'U' = 'ng/l'),
-                        convert_units_to = c('F' = 'mg/l',
-                                             'Cl' = 'mg/l',
-                                             'NO2' = 'mg/l',
-                                             'Br' = 'mg/l',
-                                             'NO3' = 'mg/l',
-                                             'SO4' = 'mg/l',
-                                             'PO4' = 'mg/l',
-                                             'Be' = 'mg/l',
-                                             'B' = 'mg/l',
-                                             'Na' = 'mg/l',
-                                             'Mg' = 'mg/l',
-                                             'Al' = 'mg/l',
-                                             'Si' = 'mg/l',
-                                             'K' = 'mg/l',
-                                             'Ca' = 'mg/l',
-                                             'Ti49' = 'mg/l',
-                                             'V' = 'mg/l',
-                                             'Cr' = 'mg/l',
-                                             'Mn' = 'mg/l',
-                                             'Fe' = 'mg/l',
-                                             'Co' = 'mg/l',
-                                             'Ni60' = 'mg/l',
-                                             'Cu' = 'mg/l',
-                                             'Zn' = 'mg/l',
-                                             'As' = 'mg/l',
-                                             'Se78' = 'mg/l',
-                                             'Sr' = 'mg/l',
-                                             'Y' = 'mg/l',
-                                             'Zr' = 'mg/l',
-                                             'Mo' = 'mg/l',
-                                             'Ag' = 'mg/l',
-                                             'Cd111' = 'mg/l',
-                                             'Sn118' = 'mg/l',
-                                             'Sb' = 'mg/l',
-                                             'Ba' = 'mg/l',
-                                             'La' = 'mg/l',
-                                             'Ce' = 'mg/l',
-                                             'Pr' = 'mg/l',
-                                             'Nd145' = 'mg/l',
-                                             'Sm147' = 'mg/l',
-                                             'Eu' = 'mg/l',
-                                             'Gd157' = 'mg/l',
-                                             'Tb' = 'mg/l',
-                                             'Dy' = 'mg/l',
-                                             'Ho' = 'mg/l',
-                                             'Er' = 'mg/l',
-                                             'Tm' = 'mg/l',
-                                             'Yb' = 'mg/l',
-                                             'Lu' = 'mg/l',
-                                             'Tl' = 'mg/l',
-                                             'Pb' = 'mg/l',
-                                             'U' = 'mg/l'))
+    for(i in 1:length(units)){
+        new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
 
+        if(length(new_name) == 0) { next }
+
+        names(units)[i] <- unname(new_name)
+    }
+
+    units <- units[names(units) %in% unname(col_names_to_vars)]
+
+    units <- tolower(units)
+    new_units_names <- names(units)
+    units <- str_replace_all(units, 'umoles/l', 'umol/l')
+    names(units) <- new_units_names
+
+    new_units <- rep('mg/l', length(units))
+    names(new_units) <- names(units)
+
+    d <- ms_conversions(d,
+                        convert_units_from = units,
+                        convert_units_to = new_units)
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
@@ -1316,7 +1220,8 @@ process_1_2415 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  c('PRECIP' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -1356,7 +1261,8 @@ process_1_2425 <- function(network, domain, prodname_ms, site_name, component) {
                          data_cols =  precip_cat,
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
