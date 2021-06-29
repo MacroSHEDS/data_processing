@@ -627,7 +627,10 @@ identify_sampling_bypass <- function(df,
     }
 
     correct_names <- all_vars %>%
-        select(site_name, new_var, var)
+        select(site_name, new_var, var) %>%
+        group_by(site_name, var) %>%
+        summarise(new_var = first(new_var)) %>%
+        ungroup()
 
     df <- left_join(df, correct_names, by = c("site_name", "var")) %>%
         select(datetime, site_name, var=new_var, val, ms_status)
