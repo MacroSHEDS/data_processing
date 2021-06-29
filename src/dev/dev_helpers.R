@@ -789,4 +789,76 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     return(d)
 }
 
+generate_diagnostic_plots <- function(network, domain, product){
+    
+    path <- glue('data/{n}/{d}/derived/{p}/',
+                 n = network,
+                 d = domain,
+                 p = product)
+
+    all_files <- list.files(path, full.names = TRUE)
+    dataset <- map_dfr(all_files, read_feather)
+    
+    high_values <- dataset %>%
+        group_by(var) %>%
+        summarise(confidence_in = quantile(val, .99)) 
+    
+    dataset_check <- dataset %>%
+        left_join(., high_values, by = 'var') %>%
+        filter(ms_interp == 0) %>%
+        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0))) 
+
+    vars <- unique(dataset$var)
+    sites <- unique(dataset_check$site_name)
+    sites_in_workflow <- site_data %>%
+        filter(domain == !!domain,
+               network == !!network,
+               in_workflow == 1) %>%
+        pull(site_name)
+    sites <- sites[sites %in% sites_in_workflow]
+    
+    output_path <- glue('plots/{n}/{d}/plots',
+                        n = network,
+                        d = domain)
+    dir.create(output_path, recursive = T)
+    
+    all_plot_list = list()
+    for(i in 1:length(vars)) {
+        plot_list = list()
+        for(s in 1:length(sites)){
+            p <- dataset_check %>%
+                filter(site_name  == !!sites[s],
+                       var == !!vars[i]) %>%
+                ggplot(aes(datetime, val, color = suspect)) +
+                geom_point() +
+                ggthemes::theme_few() +
+                scale_color_manual(values = c('#000000', '#FF0000')) +
+                ggtitle(paste0('var: ', vars[i], '    site_name:', sites[s])) +
+                theme(legend.position = 'none')
+            plot_list[[s]] = p
+            names(plot_list)[s] <- paste(vars[i], sites[s], sep = '_')
+        }
+        all_plot_list <- c(all_plot_list, plot_list)
+    }
+    
+    for(i in 1:length(all_plot_list)) {
+        name_plot <- names(all_plot_list)[i]
+        file_name = paste(glue('plots/{n}/{d}/plots/',
+                               n = network,
+                               d = domain), name_plot, ".pdf", sep="")
+        pdf(file_name)
+        print(all_plot_list[[i]])
+        dev.off()
+    }
+
+
+    pdftools::pdf_combine(list.files(output_path, full.names = TRUE), 
+                output = glue('plots/{n}/{d}/{p}_dignostic.pdf',
+                              n = network,
+                              d = domain,
+                              p = product))
+    
+    unlink(output_path, recursive = TRUE)
+
+}
 
