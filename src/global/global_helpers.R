@@ -11730,26 +11730,26 @@ generate_watershed_summaries <- function(){
     nlcd_fils <- fils[grepl('nlcd', fils)]
 
     nlcd <- map_dfr(nlcd_fils, read_feather) %>%
-        filter(var %in% c('vg_nlcd_barren',
-                          'vg_nlcd_crop',
-                          'vg_nlcd_dev_hi',
-                          'vg_nlcd_dev_low',
-                          'vg_nlcd_dev_med',
-                          'vg_nlcd_dev_open',
-                          'vg_nlcd_forest_dec',
-                          'vg_nlcd_forest_evr',
-                          'vg_nlcd_forest_mix',
-                          'vg_nlcd_grass',
-                          'vg_nlcd_ice_snow',
-                          'vg_nlcd_pasture',
-                          'vg_nlcd_shrub',
-                          'vg_nlcd_water',
-                          'vg_nlcd_wetland_herb',
-                          'vg_nlcd_wetland_wood',
-                          'vg_nlcd_shrub_dwr',
-                          'vg_nlcd_sedge',
-                          'vg_lncd_lichens',
-                          'vg_nlcd_moss')) %>%
+        filter(var %in% c('lg_nlcd_barren',
+                          'lg_nlcd_crop',
+                          'lg_nlcd_dev_hi',
+                          'lg_nlcd_dev_low',
+                          'lg_nlcd_dev_med',
+                          'lg_nlcd_dev_open',
+                          'lg_nlcd_forest_dec',
+                          'lg_nlcd_forest_evr',
+                          'lg_nlcd_forest_mix',
+                          'lg_nlcd_grass',
+                          'lg_nlcd_ice_snow',
+                          'lg_nlcd_pasture',
+                          'lg_nlcd_shrub',
+                          'lg_nlcd_water',
+                          'lg_nlcd_wetland_herb',
+                          'lg_nlcd_wetland_wood',
+                          'lg_nlcd_shrub_dwr',
+                          'lg_nlcd_sedge',
+                          'lg_lncd_lichens',
+                          'lg_nlcd_moss')) %>%
         group_by(site_name) %>%
         mutate(max_year = max(year)) %>%
         filter(year == max_year) %>%
@@ -11784,7 +11784,7 @@ generate_watershed_summaries <- function(){
     et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
 
     et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
-        filter(var %in% c('ci_et_grass_ref_mean'),
+        filter(var %in% c('ck_et_grass_ref_mean'),
                !is.na(val)) %>%
         select(-year) %>%
         group_by(site_name) %>%
