@@ -20,6 +20,8 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 74,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,
 105,discharge,ready,ready,NA,discharge__ms001,NA
 105,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,
+169,discharge,ready,ready,,discharge__ms001,
+170,discharge,ready,ready,,discharge__ms001,
 416,precipitation,ready,ready,NA,precipitation__ms003,NA
 414,precipitation,ready,ready,NA,precipitation__ms003,NA
 415,precipitation,ready,ready,NA,precipitation__ms003,NA
