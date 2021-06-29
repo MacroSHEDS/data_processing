@@ -66,6 +66,14 @@ process_0_74 <- retrieve_niwot
 #. handle_errors
 process_0_105 <- retrieve_niwot
 
+#discharge: STATUS=READY
+#. handle_errors
+process_0_169 <- retrieve_niwot
+
+#discharge: STATUS=READY
+#. handle_errors
+process_0_170 <- retrieve_niwot
+
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_416 <- retrieve_niwot
@@ -1530,7 +1538,7 @@ process_1_111 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
                              site_name_col = 'local_site',
-                             alt_site_name = list('ALBION' = 'alb'),
+                             alt_site_name = list('MARTINELLI' = 'mar'),
                              data_cols =  c('temperature' = 'temp'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'notes',
@@ -1604,7 +1612,7 @@ process_1_74 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
                              site_name_col = 'local_site',
-                             alt_site_name = list('ALBION' = 'alb'),
+                             alt_site_name = list('SADDLE' = 'sdl'),
                              data_cols =  c('temperature' = 'temp'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'notes',
@@ -1624,7 +1632,7 @@ process_1_74 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
                              site_name_col = 'local_site',
-                             alt_site_name = list('MARTINELLI' = 'mar'),
+                             alt_site_name = list('SADDLE' = 'sdl'),
                              data_cols =  'discharge',
                              summary_flagcols = 'notes',
                              data_col_pattern = '#V#',
@@ -1678,7 +1686,7 @@ process_1_105 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
                              site_name_col = 'local_site',
-                             alt_site_name = list('ALBION' = 'alb'),
+                             alt_site_name = list('GREEN4' = 'gl4'),
                              data_cols =  c('temperature' = 'temp'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'notes',
@@ -1743,6 +1751,129 @@ process_1_105 <- function(network, domain, prodname_ms, site_name,
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
+    return(d)
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_1_169 <- function(network, domain, prodname_ms, site_name,
+                          component) {
+    
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+        
+        d <- ms_read_raw_csv(filepath = rawfile,
+                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_tz = 'US/Mountain',
+                             site_name_col = 'local_site',
+                             data_cols =  'discharge',
+                             data_col_pattern = '#V#',
+                             summary_flagcols = 'notes',
+                             is_sensor = TRUE)
+        
+        flag_vals <- c('flow data interpolated and not based on stage records',
+                       'flow data preliminary and subject to change',
+                       'flow data estimated indirectly and not based on continuous level record',
+                       'record affected by failed interface board - use with care',
+                       'flow data estimated from interpolation or recession',
+                       'flow data estimated from interpolation or recession',
+                       'flow data estimated because water level was below channel sensors',
+                       'flow data estimated from interpolation',
+                       'flow data based upon intermittent estimates',
+                       'flow data estimated from field observations',
+                       'flow data estimated from recession and weekly observations',
+                       'flow data estimated from observations',
+                       'flow data estimated/interpolated by recession analysis',
+                       'flow data interpolated',
+                       'flow data estimated',
+                       'flow data estimated from intermittent observation',
+                       'flow data estimated by recession observation of 2 October',
+                       'flow data interpolated because there was no record due to a jammed float')
+        
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                summary_flags_clean = list('notes' = 'NaN'),
+                                summary_flags_dirty = list('notes' = flag_vals))
+        
+        # Convert from daily volume to l/s
+        d <- d %>%
+            mutate(val = (val*1000)/86400)
+    
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+    
+    d <- synchronize_timestep(d)
+    
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    
+    return(d)
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_1_170 <- function(network, domain, prodname_ms, site_name,
+                          component) {
+    
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+    
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'US/Mountain',
+                         alt_site_name = list('GREEN5' = 'GL5'),
+                         site_name_col = 'local_site',
+                         data_cols =  'discharge',
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'notes',
+                         is_sensor = TRUE)
+    
+    flag_vals <- c('flow data interpolated and not based on stage records',
+                   'flow data preliminary and subject to change',
+                   'flow data estimated indirectly and not based on continuous level record',
+                   'record affected by failed interface board - use with care',
+                   'flow data estimated from interpolation or recession',
+                   'flow data estimated from interpolation or recession',
+                   'flow data estimated because water level was below channel sensors',
+                   'flow data estimated from interpolation',
+                   'flow data based upon intermittent estimates',
+                   'flow data estimated from field observations',
+                   'flow data estimated from recession and weekly observations',
+                   'flow data estimated from observations',
+                   'flow data estimated/interpolated by recession analysis',
+                   'flow data interpolated',
+                   'flow data estimated',
+                   'flow data estimated from intermittent observation',
+                   'flow data estimated by recession observation of 2 October',
+                   'flow data interpolated because there was no record due to a jammed float')
+    
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list('notes' = 'NaN'),
+                            summary_flags_dirty = list('notes' = flag_vals))
+    
+    # Convert from daily volume to l/s
+    d <- d %>%
+        mutate(val = (val*1000)/86400)
+    
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+    
+    d <- synchronize_timestep(d)
+    
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    
     return(d)
 }
 
@@ -1899,7 +2030,9 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                      input_prodname_ms = c('discharge__102',
                                            'discharge__111',
                                            'discharge__74',
-                                           'discharge__105'))
+                                           'discharge__105',
+                                           'discharge__169',
+                                           'discharge__170'))
 
     return()
 }
