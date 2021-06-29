@@ -96,7 +96,7 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
             select(site_name, datetime, year, var, val)
     }
 
-    if(all(gpp$val == 0)){
+    if(all(gpp$val == 0) || all(is.na(gpp$val))){
       return(generate_ms_exception(glue('No data was retrived for {s}',
                                         s = site_name)))
     }
@@ -191,7 +191,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
                     select(site_name, datetime, year, var, val)
             }
 
-        if(all(lai$val == 0)){
+        if(all(lai$val == 0) || all(is.na(lai$val))){
           return(generate_ms_exception(glue('No data was retrived for {s}',
                                             s = site_name)))
         }
@@ -268,7 +268,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
             select(site_name, datetime, year, var, val)
     }
 
-    if(all(fpar$val == 0)){
+    if(all(fpar$val == 0) || all(is.na(fpar$val))){
       return(generate_ms_exception(glue('No data was retrived for {s}',
                                         s = site_name)))
     }
@@ -440,7 +440,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
         mutate(datetime = substr(datetime, 0, 8)) %>%
         mutate(datetime = ymd(datetime))
 
-    if(all(is.na(final$val))){
+    if(all(is.na(final$val)) || all(final$val == 0)){
       return(generate_ms_exception(glue('No data was retrived for {s}',
                                         s = site_name)))
     }
@@ -959,7 +959,8 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_name,
     var <- str_split_fixed(str_split_fixed(nadp_files[p], '/', n = Inf)[1,5], '_', Inf)[1,2]
 
     ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
-                                     raster_path = nadp_files[p]))
+                                     raster_path = nadp_files[p]),
+                     silent = TRUE)
 
     if(class(ws_values) == 'try-error') {
       return(generate_ms_exception(glue('No data was retrived for {s}',
@@ -1067,7 +1068,8 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_name,
     var <- str_split_fixed(var, '_', n = Inf)[1,1]
 
     ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
-                                 raster_path = geomchem_files[p]))
+                                 raster_path = geomchem_files[p]),
+                     silent = TRUE)
 
     if(class(ws_values) == 'try-error') {
       return(generate_ms_exception(glue('No data was retrived for {s}',
@@ -1196,7 +1198,8 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_name,
     filter(site_name == !!site_name)
 
   ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
-                                   raster_path = bfi_files))
+                                   raster_path = bfi_files),
+                   silent = TRUE)
 
   if(class(ws_values) == 'try-error') {
     return(generate_ms_exception(glue('No data was retrived for {s}',
@@ -1332,7 +1335,7 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_name,
     mutate(datetime = substr(datetime, 0, 8)) %>%
     mutate(datetime = ymd(datetime))
 
-  if(all(is.na(final$val))){
+  if(all(is.na(final$val)) || all(final$val == 0)){
     return(generate_ms_exception(glue('No data was retrived for {s}',
                                       s = site_name)))
   }
