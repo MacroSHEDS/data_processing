@@ -11,7 +11,7 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_name,
                                 domain = domain,
                                 gee_id = 'UMT/NTSG/v2/LANDSAT/NPP',
                                 band = 'annualNPP',
-                                prodname = 'va_npp',
+                                prodname = 'npp',
                                 rez = 30,
                                 site_boundary = site_boundary))
 
@@ -49,7 +49,9 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_name,
     path <- glue('{d}sum_{s}.feather',
                  d = dir,
                  s = site_name)
-
+    
+    npp <- append_unprod_prefix(npp, prodname_ms)
+    
     write_feather(npp, path)
 
     return()
@@ -67,7 +69,7 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
                                 domain = domain,
                                 gee_id = 'UMT/NTSG/v2/LANDSAT/GPP',
                                 band = 'GPP',
-                                prodname = 'va_gpp',
+                                prodname = 'gpp',
                                 rez = 30,
                                 site_boundary = site_boundary))
 
@@ -102,25 +104,25 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
     }
 
     gpp_sum <- gpp %>%
-        filter(var == 'va_gpp_median') %>%
+        filter(var == 'gpp_median') %>%
         group_by(site_name, year, var) %>%
         summarise(val = sum(val, na.rm = TRUE),
                   count = n()) %>%
         mutate(val = (val/(count*16))*365) %>%
-        mutate(var = 'va_gpp_sum') %>%
+        mutate(var = 'gpp_sum') %>%
         select(-count)
 
     gpp_sd_year <- gpp %>%
-        filter(var == 'va_gpp_median') %>%
+        filter(var == 'gpp_median') %>%
         group_by(site_name, year, var) %>%
         summarise(val = sd(val, na.rm = TRUE)) %>%
-        mutate(var = 'va_gpp_sd_year')
+        mutate(var = 'gpp_sd_year')
 
     gpp_sd <- gpp %>%
-        filter(var == 'va_gpp_sd') %>%
+        filter(var == 'gpp_sd') %>%
         group_by(site_name, year, var) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'va_gpp_sd_space')
+        mutate(var = 'gpp_sd_space')
 
     gpp_final <- rbind(gpp_sum, gpp_sd_year, gpp_sd) %>%
       select(year, site_name, var, val)
@@ -140,8 +142,11 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_name,
     raw_path <- glue('{d}raw_{s}.feather',
                      d = dir,
                      s = site_name)
-
+    
+    gpp_final <- append_unprod_prefix(gpp_final, prodname_ms)
     write_feather(gpp_final, sum_path)
+    
+    gpp_raw <- append_unprod_prefix(gpp_raw, prodname_ms)
     write_feather(gpp_raw, raw_path)
 
     return()
@@ -160,7 +165,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
                                     domain = domain,
                                     gee_id = 'MODIS/006/MOD15A2H',
                                     band = 'Lai_500m',
-                                    prodname = 'vb_lai',
+                                    prodname = 'lai',
                                     rez = 500,
                                     site_boundary = site_boundary,
                                     qa_band = 'FparLai_QC',
@@ -197,21 +202,21 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
         }
 
     lai_means <- lai %>%
-        filter(var == 'vb_lai_median') %>%
+        filter(var == 'lai_median') %>%
         group_by(site_name, year) %>%
-        summarise(vb_lai_max = max(val, na.rm = TRUE),
-                  vb_lai_min = min(val, na.rm = TRUE),
-                  vb_lai_mean = mean(val, na.rm = TRUE),
-                  vb_lai_sd_year = sd(val, na.rm = TRUE)) %>%
-      pivot_longer(cols = c('vb_lai_max', 'vb_lai_min', 'vb_lai_mean', 'vb_lai_sd_year'),
+        summarise(lai_max = max(val, na.rm = TRUE),
+                  lai_min = min(val, na.rm = TRUE),
+                  lai_mean = mean(val, na.rm = TRUE),
+                  lai_sd_year = sd(val, na.rm = TRUE)) %>%
+      pivot_longer(cols = c('lai_max', 'lai_min', 'lai_mean', 'lai_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
 
     lai_sd <- lai %>%
-        filter(var == 'vb_lai_sd') %>%
+        filter(var == 'lai_sd') %>%
         group_by(site_name, year) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'vb_lai_sd_space')
+        mutate(var = 'lai_sd_space')
 
     lai_final <- rbind(lai_means, lai_sd) %>%
       select(year, site_name, var, val)
@@ -229,7 +234,10 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
     raw_path <- glue('{d}raw_{s}.feather',
                      d = dir, s = site_name)
 
+    lai_final <- append_unprod_prefix(lai_final, prodname_ms)
     write_feather(lai_final, sum_path)
+    
+    lai_raw <- append_unprod_prefix(lai_raw, prodname_ms)
     write_feather(lai_raw, raw_path)
   }
 
@@ -238,7 +246,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
                                  domain = domain,
                                  gee_id = 'MODIS/006/MOD15A2H',
                                  band = 'Fpar_500m',
-                                 prodname = 'vb_fpar',
+                                 prodname = 'fpar',
                                  rez = 500,
                                  site_boundary = site_boundary,
                                  qa_band = 'FparLai_QC',
@@ -274,21 +282,21 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
     }
 
     fpar_means <- fpar %>%
-      filter(var == 'vb_fpar_median') %>%
+      filter(var == 'fpar_median') %>%
       group_by(site_name, year) %>%
-      summarise(vb_fpar_max = max(val, na.rm = TRUE),
-                vb_fpar_min = min(val, na.rm = TRUE),
-                vb_fpar_mean = mean(val, na.rm = TRUE),
-                vb_fpar_sd_year = sd(val, na.rm = TRUE)) %>%
-      pivot_longer(cols = c('vb_fpar_max', 'vb_fpar_min', 'vb_fpar_mean', 'vb_fpar_sd_year'),
+      summarise(fpar_max = max(val, na.rm = TRUE),
+                fpar_min = min(val, na.rm = TRUE),
+                fpar_mean = mean(val, na.rm = TRUE),
+                fpar_sd_year = sd(val, na.rm = TRUE)) %>%
+      pivot_longer(cols = c('fpar_max', 'fpar_min', 'fpar_mean', 'fpar_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
 
     fpar_sd <- fpar %>%
-      filter(var == 'vb_fpar_sd') %>%
+      filter(var == 'fpar_sd') %>%
       group_by(site_name, year) %>%
       summarise(val = mean(val, na.rm = TRUE)) %>%
-      mutate(var = 'vb_fpar_sd_space')
+      mutate(var = 'fpar_sd_space')
 
     fpar_final <- rbind(fpar_means, fpar_sd) %>%
       select(year, site_name, var, val)
@@ -308,7 +316,10 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_name,
                      d = dir,
                      s = site_name)
 
+    fpar_final <- append_unprod_prefix(fpar_final, prodname_ms)
     write_feather(fpar_final, sum_path)
+    
+    fpar_raw <- append_unprod_prefix(fpar_raw, prodname_ms)
     write_feather(fpar_raw, raw_path)
   }
 
@@ -328,7 +339,7 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_name,
                                     domain = domain,
                                     gee_id = 'MODIS/006/MOD44B',
                                     band = 'Percent_Tree_Cover',
-                                    prodname = 'vb_tree_cover',
+                                    prodname = 'tree_cover',
                                     rez = 250,
                                     site_boundary = site_boundary))
     }
@@ -338,7 +349,7 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_name,
                                 domain=domain,
                                 gee_id='MODIS/006/MOD44B',
                                 band='Percent_NonTree_Vegetation',
-                                prodname='vb_veg_cover',
+                                prodname='veg_cover',
                                 rez=250,
                                 site_boundary=site_boundary))
     }
@@ -348,7 +359,7 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_name,
                             domain=domain,
                             gee_id='MODIS/006/MOD44B',
                             band='Percent_NonVegetated',
-                            prodname='vb_bare_cover',
+                            prodname='bare_cover',
                             rez=250,
                             site_boundary=site_boundary))
   }
@@ -390,6 +401,7 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_name,
                  d = dir,
                  s = site_name)
 
+    var_final <- append_unprod_prefix(var_final, prodname_ms)
     write_feather(var_final, path)
 
     return()
@@ -408,7 +420,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
                                   domain = domain,
                                   gee_id = 'OREGONSTATE/PRISM/AN81d',
                                   band = 'ppt',
-                                  prodname = 'cc_precip',
+                                  prodname = 'precip',
                                   rez = 4000,
                                   site_boundary = site_boundary,
                                   batch = TRUE))
@@ -419,7 +431,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
                                   domain = domain,
                                   gee_id = 'OREGONSTATE/PRISM/AN81d',
                                   band = 'tmean',
-                                  prodname = 'cc_temp_mean',
+                                  prodname = 'temp_mean',
                                   rez = 4000,
                                   site_boundary = site_boundary,
                                   batch = TRUE))
@@ -448,22 +460,22 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
     if(grepl('prism_precip', prodname_ms)){
 
       final_sum_c <- final %>%
-        filter(var == 'cc_precip_median') %>%
+        filter(var == 'precip_median') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
-        summarise(cc_cumulative_precip = sum(val, na.rm = TRUE),
-                  cc_precip_sd_year = sd(val, na.rm = TRUE)) %>%
-        pivot_longer(cols = c('cc_cumulative_precip', 'cc_precip_sd_year'),
+        summarise(cumulative_precip = sum(val, na.rm = TRUE),
+                  precip_sd_year = sd(val, na.rm = TRUE)) %>%
+        pivot_longer(cols = c('cumulative_precip', 'precip_sd_year'),
                      names_to = 'var',
                      values_to = 'val') %>%
         filter(val > 0)
 
       final_sum_sd <- final %>%
-        filter(var == 'cc_precip_sd') %>%
+        filter(var == 'precip_sd') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'cc_precip_sd_space')
+        mutate(var = 'precip_sd_space')
 
       final_sum <- rbind(final_sum_c, final_sum_sd) %>%
         select(year, site_name, var, val)
@@ -471,21 +483,21 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
     } else{
 
       final_temp <- final %>%
-        filter(var == 'cc_temp_mean_median') %>%
+        filter(var == 'temp_mean_median') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
-        summarise(cc_temp_mean = mean(val, na.rm = TRUE),
-                  cc_temp_sd_year = sd(val, na.rm = TRUE)) %>%
-        pivot_longer(cols = c('cc_temp_mean', 'cc_temp_sd_year'),
+        summarise(temp_mean = mean(val, na.rm = TRUE),
+                  temp_sd_year = sd(val, na.rm = TRUE)) %>%
+        pivot_longer(cols = c('temp_mean', 'temp_sd_year'),
                      names_to = 'var',
                      values_to = 'val')
 
       temp_sd <- final %>%
-        filter(var == 'cc_temp_mean_sd') %>%
+        filter(var == 'temp_mean_sd') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_name, year) %>%
         summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'cc_temp_sd_space')
+        mutate(var = 'temp_sd_space')
 
       final_sum <- rbind(final_temp, temp_sd) %>%
         select(year, site_name, var, val)
@@ -507,7 +519,10 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_name,
   path_raw <- glue('data/{n}/{d}/ws_traits/{v}/raw_{s}.feather',
                    n = network, d = domain, v = type, s = site_name)
 
+  final <- append_unprod_prefix(final, prodname_ms)
   write_feather(final, path_raw)
+  
+  final_sum <- append_unprod_prefix(final_sum, prodname_ms)
   write_feather(final_sum, path_sum)
 
   return()
@@ -611,11 +626,13 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_name,
 
     site_terrain <- tibble(year = NA,
                            site_name = site_name,
-                           var = c('te_slope_mean', 'te_slope_sd', 'te_elev_mean',
-                                   'te_elev_sd', 'te_elev_min', 'te_elev_max',
-                                   'te_aspect_mean', 'te_aspect_sd'),
+                           var = c('slope_mean', 'slope_sd', 'elev_mean',
+                                   'elev_sd', 'elev_min', 'elev_max',
+                                   'aspect_mean', 'aspect_sd'),
                            val = c(slope_mean, slope_sd, elev_mean, elev_sd, elev_min,
                                    elev_max, aspect_mean, aspect_sd))
+
+    site_terrain <- append_unprod_prefix(site_terrain, prodname_ms)
 
     write_feather(site_terrain, glue('data/{n}/{d}/ws_traits/terrain/{s}.feather',
                                      n = network,
@@ -637,13 +654,13 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_name,
                                   domain = domain,
                                   nrcs_var_name = c(
                                     # percent
-                                    'pf_soil_org' = 'om_r',
+                                    'soil_org' = 'om_r',
                                     # percent
-                                    'pf_soil_sand' = 'sandtotal_r',
+                                    'soil_sand' = 'sandtotal_r',
                                     # percent
-                                    'pf_soil_silt' = 'silttotal_r',
+                                    'soil_silt' = 'silttotal_r',
                                     # percent
-                                    'pf_soil_clay' = 'claytotal_r',
+                                    'soil_clay' = 'claytotal_r',
                                     # mass/volume
                                     # 'soil_partical_density' = 'partdensity',
                                     # micrometers per second
@@ -651,27 +668,27 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_name,
                                     # centimeters of water per centimeter of soil,
                                     # quantity of water that the soil is capable
                                     # of storing for use by plants
-                                    'pf_soil_awc' = 'awc_r',
+                                    'soil_awc' = 'awc_r',
                                     # Water content, 1/10 bar, is the amount of soil
                                     # water retained at a tension of 15 bars, expressed
                                     # as a volumetric percentage of the whole
                                     # soil material.
-                                     'pf_soil_water_0.1bar' = 'wtenthbar_r',
+                                     'soil_water_0.1bar' = 'wtenthbar_r',
                                     # Water content, 1/3 bar, is the amount of soil
                                     # water retained at a tension of 15 bars, expressed
                                     # as a volumetric percentage of the whole
                                     # soil material. 15 bar = wilting point
-                                     'pf_soil_water_0.33bar' = 'wthirdbar_r',
+                                     'soil_water_0.33bar' = 'wthirdbar_r',
                                     # Water content, 15 bar, is the amount of soil
                                     # water retained at a tension of 15 bars, expressed
                                     # as a volumetric percentage of the whole
                                     # soil material. 15 bar = field capacity
-                                     'pf_soil_water_15bar' = 'wfifteenbar_r',
+                                     'soil_water_15bar' = 'wfifteenbar_r',
                                     # Water content, 0 bar, is the amount of soil
                                     # water retained at a tension of 15 bars, expressed
                                     # as a volumetric percentage of the whole
                                     # soil material.
-                                     'pf_soil_water_0bar' = 'wsatiated_r',
+                                     'soil_water_0bar' = 'wsatiated_r',
                                     # percent of carbonates, by weight, in the
                                     # fraction of the soil less than 2 millimeters
                                     # in size.
@@ -685,7 +702,7 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_name,
                                     # be held by the soil, expressed in terms of
                                     # milliequivalents per 100 grams of soil at
                                     # neutrality (pH 7.0)
-                                     'pf_soil_cat_exchange_7' = 'cec7_r',
+                                     'soil_cat_exchange_7' = 'cec7_r',
                                     # Effective cation-exchange capacity refers to
                                     # the sum of extractable cations plus aluminum
                                     # expressed in terms of milliequivalents per
@@ -712,7 +729,7 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_name,
                                     # pH is the 1:1 water method. A crushed soil
                                     # sample is mixed with an equal amount of water,
                                     # and a measurement is made of the suspension.
-                                     'pf_soil_ph' = 'ph1to1h2o_r'),
+                                     'soil_ph' = 'ph1to1h2o_r'),
                                     # Bulk density, one-third bar, is the ovendry
                                     # weight of the soil material less than 2
                                     # millimeters in size per unit volume of soil
@@ -749,6 +766,7 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_name,
     if(is_ms_exception(soil_tib)) {
         return(soil_tib)
     } else{
+        soil_tib <- append_unprod_prefix(soil_tib, prodname_ms)
         write_feather(soil_tib, glue('data/{n}/{d}/ws_traits/nrcs_soils/{s}.feather',
                                      n = network,
                                      d = domain,
@@ -922,10 +940,10 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_name,
 
   nlcd_final <- nlcd_all %>%
     mutate(year = as.numeric(year),
-           site_name = !!site_name,
-           var = paste0('vg_', var)) %>%
+           site_name = !!site_name) %>%
     select(year, site_name, var, val)
 
+  nlcd_final <- append_unprod_prefix(nlcd_final, prodname_ms)
   write_feather(nlcd_final, glue('{d}sum_{s}.feather',
                                  d = nlcd_dir,
                                  s = site_name))
@@ -981,22 +999,23 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_name,
   }
 
   fin_nadp <- all_vars %>%
-    mutate(var = case_when(var == 'ca' ~ 'ch_annual_Ca_flux',
-                           var == 'cl' ~ 'ch_annual_Cl_flux',
-                           var == 'hplus' ~ 'ch_annual_H_flux',
-                           var == 'k' ~ 'ch_annual_K_flux',
-                           var == 'mg' ~ 'ch_annual_Mg_flux',
-                           var == 'na' ~ 'ch_annual_Na_flux',
-                           var == 'nh4' ~ 'ch_annual_NH4_flux',
-                           var == 'no3' ~ 'ch_annual_NO3_flux',
-                           var == 'so4' ~ 'ch_annual_SO4_flux',
-                           var == 'splusn' ~ 'ch_annual_S_N_flux',
-                           var == 'totalN' ~ 'ch_annual_N_flux')) %>%
+    mutate(var = case_when(var == 'ca' ~ 'annual_Ca_flux',
+                           var == 'cl' ~ 'annual_Cl_flux',
+                           var == 'hplus' ~ 'annual_H_flux',
+                           var == 'k' ~ 'annual_K_flux',
+                           var == 'mg' ~ 'annual_Mg_flux',
+                           var == 'na' ~ 'annual_Na_flux',
+                           var == 'nh4' ~ 'annual_NH4_flux',
+                           var == 'no3' ~ 'annual_NO3_flux',
+                           var == 'so4' ~ 'annual_SO4_flux',
+                           var == 'splusn' ~ 'annual_S_N_flux',
+                           var == 'totalN' ~ 'annual_N_flux')) %>%
     mutate(var = paste0(var, '_', type)) %>%
     mutate(site_name = !!site_name,
            year = as.numeric(year)) %>%
     select(year, site_name, var, val)
 
+  fin_nadp <- append_unprod_prefix(fin_nadp, prodname_ms)
   write_feather(fin_nadp, glue('{d}sum_{s}.feather',
                                d = nadp_dir,
                                s = site_name))
@@ -1033,12 +1052,13 @@ process_3_ms815 <- function(network, domain, prodname_ms, site_name,
 
   thinkness_tib <- tibble(year = NA,
                           val = unname(ws_values['mean']),
-                          var = 'pi_soil_thickness',
+                          var = 'soil_thickness',
                           pctCellErr = unname(ws_values['pctCellErr']),
                           ms_status = NA)  %>%
     mutate(site_name = !!site_name) %>%
     select(year, site_name, var, val, pctCellErr)
 
+  thinkness_tib <- append_unprod_prefix(thinkness_tib, prodname_ms)
   write_feather(thinkness_tib, glue('{d}{s}.feather',
                                d = thickness_dir,
                                s = site_name))
@@ -1090,9 +1110,10 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_name,
   all_vars <- all_vars %>%
     mutate(site_name = !!site_name,
            year = NA,
-           var = paste0('pd_geo_', var)) %>%
+           var = paste0('geo_', var)) %>%
     select(year, site_name, var, val)
 
+  all_vars <- append_unprod_prefix(all_vars, prodname_ms)
   write_feather(all_vars, glue('{d}/{s}.feather',
                                d = geomchem_dir,
                                s = site_name))
@@ -1110,7 +1131,7 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_name,
                                domain = domain,
                                gee_id = 'MODIS/006/MOD13Q1',
                                band = 'NDVI',
-                               prodname = 'vb_ndvi',
+                               prodname = 'ndvi',
                                rez = 250,
                                site_boundary = site_boundary,
                                qa_band = 'SummaryQA',
@@ -1140,21 +1161,21 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_name,
     mutate(val = val/100)
 
   ndvi_means <- ndvi %>%
-    filter(var == 'vb_ndvi_median') %>%
+    filter(var == 'ndvi_median') %>%
     group_by(site_name, year) %>%
     summarise(vb_ndvi_max = max(val, na.rm = TRUE),
               vb_ndvi_min = min(val, na.rm = TRUE),
               vb_ndvi_mean = mean(val, na.rm = TRUE),
               vb_ndvi_sd_year = sd(val, na.rm = TRUE)) %>%
-    pivot_longer(cols = c('vb_ndvi_max', 'vb_ndvi_min', 'vb_ndvi_mean', 'vb_ndvi_sd_year'),
+    pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
                  names_to = 'var',
                  values_to = 'val')
 
   ndvi_sd <- ndvi %>%
-    filter(var == 'vb_ndvi_sd') %>%
+    filter(var == 'ndvi_sd') %>%
     group_by(site_name, year) %>%
     summarise(val = mean(val, na.rm = TRUE)) %>%
-    mutate(var = 'vb_ndvi_sd_space')
+    mutate(var = 'ndvi_sd_space')
 
   ndvi_final <- rbind(ndvi_means, ndvi_sd) %>%
     select(year, site_name, var, val)
@@ -1172,7 +1193,10 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_name,
   raw_path <- glue('{d}raw_{s}.feather',
                    d = dir, s = site_name)
 
+  ndvi_final <- append_unprod_prefix(ndvi_final, prodname_ms)
   write_feather(ndvi_final, sum_path)
+  
+  ndvi_raw <- append_unprod_prefix(ndvi_raw, prodname_ms)
   write_feather(ndvi_raw, raw_path)
 
   return()
@@ -1212,12 +1236,13 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_name,
 
   bfi_tib <- tibble(year = NA,
                     val = c(val_mean, val_sd),
-                    var = c('hd_bfi_mean', 'hd_bfi_sd'),
+                    var = c('bfi_mean', 'bfi_sd'),
                     pctCellErr = percent_na,
                     ms_status = NA)  %>%
     mutate(site_name = !!site_name) %>%
     select(year, site_name, var, val, pctCellErr)
 
+  bfi_tib <- append_unprod_prefix(bfi_tib, prodname_ms)
   write_feather(bfi_tib, glue('{d}{s}.feather',
                                     d = bfi_dir,
                                     s = site_name))
@@ -1235,7 +1260,7 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_name,
                               domain = domain,
                               gee_id = 'Oxford/MAP/TCW_5km_Monthly',
                               band = 'Mean',
-                              prodname = 'vh_tcw',
+                              prodname = 'tcw',
                               rez = 5000,
                               site_boundary = site_boundary))
 
@@ -1261,21 +1286,21 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_name,
   }
 
   tcw_means <- tcw %>%
-    filter(var == 'vh_tcw_median') %>%
+    filter(var == 'tcw_median') %>%
     group_by(site_name, year) %>%
     summarise(vh_tcw_max = max(val, na.rm = TRUE),
               vh_tcw_min = min(val, na.rm = TRUE),
               vh_tcw_mean = mean(val, na.rm = TRUE),
               vh_tcw_sd_year = sd(val, na.rm = TRUE)) %>%
-    pivot_longer(cols = c('vh_tcw_max', 'vh_tcw_min', 'vh_tcw_mean', 'vh_tcw_sd_year'),
+    pivot_longer(cols = c('tcw_max', 'tcw_min', 'tcw_mean', 'tcw_sd_year'),
                  names_to = 'var',
                  values_to = 'val')
 
   tcw_sd <- tcw %>%
-    filter(var == 'vh_tcw_sd') %>%
+    filter(var == 'tcw_sd') %>%
     group_by(site_name, year) %>%
     summarise(val = mean(val, na.rm = TRUE)) %>%
-    mutate(var = 'vh_tcw_sd_space')
+    mutate(var = 'tcw_sd_space')
 
   tcw_final <- rbind(tcw_means, tcw_sd) %>%
     select(year, site_name, var, val)
@@ -1297,7 +1322,10 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_name,
                    d = dir,
                    s = site_name)
 
+  tcw <- append_unprod_prefix(tcw, prodname_ms)
   write_feather(tcw, raw_path)
+  
+  tcw_final <- append_unprod_prefix(tcw_final, prodname_ms)
   write_feather(tcw_final, sum_path)
 
   return()
@@ -1315,7 +1343,7 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_name,
                                 domain = domain,
                                 gee_id = 'IDAHO_EPSCOR/GRIDMET',
                                 band = 'eto',
-                                prodname = 'ci_et_ref',
+                                prodname = 'et_ref',
                                 rez = 4000,
                                 site_boundary = site_boundary,
                                 batch = TRUE))
@@ -1341,21 +1369,21 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_name,
   }
 
   final_ <- final %>%
-    filter(var == 'ci_et_ref_median') %>%
+    filter(var == 'et_ref_median') %>%
     mutate(year = year(datetime)) %>%
     group_by(site_name, year) %>%
-    summarise(ci_et_ref_mean = mean(val, na.rm = TRUE),
-              ci_et_ref_sd_year = sd(val, na.rm = TRUE)) %>%
-    pivot_longer(cols = c('ci_et_ref_mean', 'ci_et_ref_sd_year'),
+    summarise(et_ref_mean = mean(val, na.rm = TRUE),
+              et_ref_sd_year = sd(val, na.rm = TRUE)) %>%
+    pivot_longer(cols = c('et_ref_mean', 'et_ref_sd_year'),
                  names_to = 'var',
                  values_to = 'val')
 
   temp_sd <- final %>%
-    filter(var == 'ci_et_ref_sd') %>%
+    filter(var == 'et_ref_sd') %>%
     mutate(year = year(datetime)) %>%
     group_by(site_name, year) %>%
     summarise(val = mean(val, na.rm = TRUE)) %>%
-    mutate(var = 'ci_et_ref_sd_space')
+    mutate(var = 'et_ref_sd_space')
 
   final_sum <- rbind(final_, temp_sd) %>%
     select(year, site_name, var, val)
@@ -1373,7 +1401,10 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_name,
   path_raw <- glue('data/{n}/{d}/ws_traits/{v}/raw_{s}.feather',
                    n = network, d = domain, v = 'et_ref', s = site_name)
 
+  final <- append_unprod_prefix(final, prodname_ms)
   write_feather(final, path_raw)
+  
+  final_sum <- append_unprod_prefix(final_sum, prodname_ms)
   write_feather(final_sum, path_sum)
 
   return()
