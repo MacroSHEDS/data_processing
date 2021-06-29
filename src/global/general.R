@@ -27,6 +27,7 @@ if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
 
 site_names <- unique(boundaries$site_name)
 
+# i=3
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
