@@ -9529,6 +9529,21 @@ postprocess_entire_dataset <- function(site_data,
     #                 logger = logger_module)
     # clean_portal_dataset()
 
+    log_with_indent('Generating spatial summary data',
+                    logger = logger_module)
+    generate_watershed_summaries()
+
+    log_with_indent('Generating spatial timeseries data',
+                    logger = logger_module)
+    generate_watershed_raw_spatial_dataset()
+
+    log_with_indent('Generating biplot dataset',
+                    logger = logger_module)
+    compute_yearly_summary(network_domain_default_sites,
+                           filter_ms_interp = FALSE,
+                           filter_ms_status = FALSE)
+    compute_yearly_summary_ws(network_domain_default_sites)
+
     log_with_indent('Calculating sizes of downloadable files',
                     logger = logger_module)
     compute_download_filesizes()
@@ -11604,3 +11619,775 @@ download_from_googledrive <- function(set_details, network, domain){
     return()
 }
 
+generate_watershed_summaries <- function(){
+
+    fils <- list.files('../portal/data', recursive = T, full.names = T)
+    fils <- fils[grepl('ws_traits', fils)]
+
+    wide_spat_data <- site_data %>%
+        filter(in_workflow == 1,
+               site_type == 'stream_gauge') %>%
+        select(network, domain, site_name, ws_area_ha)
+
+    # Prism precip
+    precip_files <- fils[grepl('cc_precip', fils)]
+    precip_files <- precip_files[grepl('sum', precip_files)]
+
+    precip <- map_dfr(precip_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'cc_cumulative_precip') %>%
+        group_by(site_name) %>%
+        summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(cc_mean_annual_precip))
+
+    # Prism temp
+    temp_files <- fils[grepl('cc_temp', fils)]
+    temp_files <- temp_files[grepl('sum', temp_files)]
+
+    temp <- map_dfr(temp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'cc_temp_mean') %>%
+        group_by(site_name) %>%
+        summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(cc_mean_annual_temp))
+
+    # start of season
+    sos_files <- fils[grepl('start_season', fils)]
+
+    sos <- map_dfr(sos_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_sos_mean') %>%
+        group_by(site_name) %>%
+        summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_sos))
+
+    # end of season
+    eos_files <- fils[grepl('end_season', fils)]
+
+    eos <- map_dfr(eos_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_eos_mean') %>%
+        group_by(site_name) %>%
+        summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_eos))
+
+    # end of season
+    los_files <- fils[grepl('length_season', fils)]
+
+    los <- map_dfr(los_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_los_mean') %>%
+        group_by(site_name) %>%
+        summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_los))
+
+    # gpp
+    gpp_files <- fils[grepl('gpp', fils)]
+    gpp_files <- gpp_files[grepl('sum', gpp_files)]
+
+    gpp <- map_dfr(gpp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'va_gpp_sum') %>%
+        group_by(site_name) %>%
+        summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(va_mean_annual_gpp))
+
+    # npp
+    npp_files <- fils[grepl('npp', fils)]
+
+    npp <- map_dfr(npp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'va_npp_median') %>%
+        group_by(site_name) %>%
+        summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(va_mean_annual_npp))
+
+    # terrain
+    terrain_fils <- fils[grepl('terrain', fils)]
+
+    terrain <- map_dfr(terrain_fils, read_feather) %>%
+        filter(var %in% c('te_elev_mean',
+                          'te_elev_min',
+                          'te_elev_max',
+                          'te_aspect_mean',
+                          'te_slope_mean')) %>%
+        select(-year) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # bfi
+    bfi_fils <- fils[grepl('bfi', fils)]
+
+    bfi <- map_dfr(bfi_fils, read_feather) %>%
+        filter(var %in% c('hd_bfi_mean')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # nlcd
+    nlcd_fils <- fils[grepl('nlcd', fils)]
+
+    nlcd <- map_dfr(nlcd_fils, read_feather) %>%
+        filter(var %in% c('vg_nlcd_barren',
+                          'vg_nlcd_crop',
+                          'vg_nlcd_dev_hi',
+                          'vg_nlcd_dev_low',
+                          'vg_nlcd_dev_med',
+                          'vg_nlcd_dev_open',
+                          'vg_nlcd_forest_dec',
+                          'vg_nlcd_forest_evr',
+                          'vg_nlcd_forest_mix',
+                          'vg_nlcd_grass',
+                          'vg_nlcd_ice_snow',
+                          'vg_nlcd_pasture',
+                          'vg_nlcd_shrub',
+                          'vg_nlcd_water',
+                          'vg_nlcd_wetland_herb',
+                          'vg_nlcd_wetland_wood',
+                          'vg_nlcd_shrub_dwr',
+                          'vg_nlcd_sedge',
+                          'vg_lncd_lichens',
+                          'vg_nlcd_moss')) %>%
+        group_by(site_name) %>%
+        mutate(max_year = max(year)) %>%
+        filter(year == max_year) %>%
+        select(-year, -max_year) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # soil
+    soil_fils <- fils[grepl('soil', fils)]
+
+    soil <- map_dfr(soil_fils, read_feather) %>%
+        filter(var %in% c('pf_soil_org',
+                          'pf_soil_sand',
+                          'pf_soil_silt',
+                          'pf_soil_clay',
+                          'pf_soil_ph')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # soil thickness
+    soil_thickness_fils <- fils[grepl('pelletier_soil_thickness', fils)]
+
+    soil_thickness <- map_dfr(soil_thickness_fils, read_feather) %>%
+        filter(var %in% c('pi_soil_thickness')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val') %>%
+        mutate(pi_soil_thickness = round(pi_soil_thickness, 2))
+
+    # et_ref
+    et_ref_fils <- fils[grepl('et_ref', fils)]
+    et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
+
+    et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
+        filter(var %in% c('ci_et_grass_ref_mean'),
+               !is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_name) %>%
+        summarise(ci_mean_annual_et = mean(val))
+
+    # geological chem
+    geochem_fils <- fils[grepl('geochemical', fils)]
+
+    geochem <- map_dfr(geochem_fils, read_feather) %>%
+        filter(var %in% c('pd_geo_Al2O3_mean',
+                          'pd_geo_CaO_mean',
+                          'pd_geo_CompressStrength_mean',
+                          'pd_geo_Fe2O3_mean',
+                          'pd_geo_HydaulicCond_mean',
+                          'pd_geo_K2O_mean',
+                          'pd_geo_MgO_mean',
+                          'pd_geo_N_mean',
+                          'pd_geo_Na2O_mean',
+                          'pd_geo_P2O5_mean',
+                          'pd_geo_S_mean',
+                          'pd_geo_SiO2_mean'),
+               !is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_name, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+
+    watershed_summaries <- full_join(wide_spat_data, precip, by = 'site_name') %>%
+        full_join(temp, by = 'site_name') %>%
+        full_join(sos, by = 'site_name') %>%
+        full_join(eos, by = 'site_name') %>%
+        full_join(los, by = 'site_name') %>%
+        full_join(gpp, by = 'site_name') %>%
+        full_join(npp, by = 'site_name') %>%
+        full_join(terrain, by = 'site_name') %>%
+        full_join(bfi, by = 'site_name') %>%
+        full_join(nlcd, by = 'site_name') %>%
+        full_join(soil, by = 'site_name') %>%
+        full_join(soil_thickness, by = 'site_name') %>%
+        full_join(et_ref_thickness, by = 'site_name') %>%
+        full_join(geochem, by = 'site_name')
+
+    dir.create('../portal/data/general/spatial_downloadables',
+               recursive = TRUE,
+               showWarnings = FALSE)
+
+    write_csv(watershed_summaries,
+              '../portal/data/general/spatial_downloadables/watershed_summaries.csv')
+}
+
+generate_watershed_raw_spatial_dataset <- function(){
+
+    domains <- list.files('../portal/data/')
+    domains <- domains[!grepl('general', domains)]
+
+    ws_trait_folders <- unique(list.files(glue('../portal/data/{d}/ws_traits',
+                                               d = domains)))
+
+    all_files <- list.files('../portal/data',
+                            recursive = TRUE,
+                            full.names = TRUE)
+
+    raw_spatial_dat <- tibble()
+    for(i in 1:length(ws_trait_folders)){
+
+        trait_files <- all_files[grepl(ws_trait_folders[i], all_files)]
+
+        if(! length(trait_files)) next
+
+        extention <- str_split_fixed(trait_files, '/', n = Inf)[,5]
+        check_sum_raw <- str_split_fixed(extention, '_', n = Inf)[,1]
+        sum_raw_prez <- unique(check_sum_raw)
+
+        if(sum_raw_prez == 'sum' || ! all(c('raw', 'sum') %in% sum_raw_prez)){
+
+            all_trait <- map_dfr(trait_files, read_feather)
+
+            if(all(c('datetime', 'year') %in% colnames(all_trait))){
+
+                all_trait <- sw(all_trait %>%
+                    mutate(datetime = case_when(
+                        is.na(datetime) ~ ymd(paste(year, 1, 1, sep = '-')),
+                        ! is.na(datetime) ~ datetime)) %>%
+                    select(-year))
+
+            } else if('year' %in% colnames(all_trait)){
+
+                all_trait <- sw(all_trait %>%
+                    mutate(datetime = ymd(paste(year, 1, 1, sep = '-'))) %>%
+                    select(-year))
+
+            } else NULL
+        }
+
+        if(all(c('raw', 'sum') %in% sum_raw_prez)){
+            trait_files <- trait_files[grepl('raw', trait_files)]
+
+            all_trait <- map_dfr(trait_files, read_feather)
+        }
+
+        raw_spatial_dat <- rbind.fill(raw_spatial_dat, all_trait)
+    }
+
+    site_doms <- site_data %>%
+        select(network, domain, site_name)
+
+    raw_spatial_dat <- raw_spatial_dat %>%
+        filter(!is.na(val)) %>%
+        left_join(site_doms, by = 'site_name') %>%
+        mutate(date = as.Date(datetime)) %>%
+        select(network, domain, site_name, var, date, val, pctCellErr)
+
+    spat_variable <- unique(raw_spatial_dat$var)
+
+    # universal_products_meta <- universal_products %>%
+    #     select(data_class, data_source, data_class_code, data_source_code)
+    #
+    # meta_data <- variables %>%
+    #     filter(variable_code %in% !!spat_variable) %>%
+    #     select(variable_code, variable_name, unit,
+    #            type = variable_type,
+    #            subtype = variable_subtype) %>%
+    #     mutate(data_class_code = substr(variable_code, 0, 1),
+    #            data_source_code = substr(variable_code, 2, 2)) %>%
+    #     left_join(universal_products_meta, by = c('data_class_code', 'data_source_code')) %>%
+    #     select(-data_class_code, -data_source_code)
+
+    category_codes <- univ_products %>%
+        select(variable_category_code = data_class_code,
+               variable_category = data_class) %>%
+        distinct() %>%
+        arrange(variable_category_code)
+
+    datasource_codes <- univ_products %>%
+        select(data_source_code, data_source) %>%
+        distinct() %>%
+        arrange(data_source_code)
+
+    write_fst(raw_spatial_dat,
+              '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
+    write_csv(category_codes,
+              '../portal/data/general/spatial_downloadables/variable_category_codes.csv')
+    write_csv(datasource_codes,
+              '../portal/data/general/spatial_downloadables/data_source_codes.csv')
+}
+
+compute_yearly_summary <- function(filter_ms_interp = FALSE,
+                                   filter_ms_status = FALSE){
+
+    # this and compute_yearly_summary_ws should probably be combined at some point, but for now,
+    # compute_yearly_summary_ws() appends compute_yearly_summary with ws_traits
+
+    #df = default sites for each domain
+    df <- site_data %>%
+        group_by(network, domain) %>%
+        summarize(site_name = first(site_name),
+                  pretty_domain = first(pretty_domain),
+                  pretty_network = first(pretty_network),
+                  .groups = 'drop') %>%
+        select(pretty_network, network, pretty_domain, domain,
+               default_site = site_name)
+
+    all_domain <- tibble()
+    for(i in 1:nrow(df)) {
+
+        dom <- df$domain[i]
+
+        net <- df$network[i]
+
+        dom_path <- glue('../portal/data/{d}/stream_chemistry/', d = dom)
+
+        site_files <- list.files(dom_path)
+
+        sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
+
+        stream_sites <- site_data %>%
+            filter(domain == dom,
+                   site_type == 'stream_gauge') %>%
+            filter(site_name %in% sites) %>%
+            pull(site_name)
+
+        all_sites <- tibble()
+
+        if(length(stream_sites) == 0) {
+
+        } else{
+
+            for(p in 1:length(stream_sites)) {
+
+                path_chem <- glue("../portal/data/{d}/stream_chemistry/{s}.feather",
+                                  d = dom,
+                                  s = stream_sites[p])
+
+                path_q <- glue("../portal/data/{d}/discharge/{s}.feather",
+                               d = dom,
+                               s = stream_sites[p])
+
+                path_flux <- glue("../portal/data/{d}/stream_flux_inst_scaled/{s}.feather",
+                                  d = dom,
+                                  s = stream_sites[p])
+
+                path_precip <- glue("../portal/data/{d}/precipitation/{s}.feather",
+                                    d = dom,
+                                    s = stream_sites[p])
+
+                path_precip_chem <- glue("../portal/data/{d}/precip_chemistry/{s}.feather",
+                                         d = dom,
+                                         s = stream_sites[p])
+
+                path_precip_flux <- glue("../portal/data/{d}/precip_flux_inst_scaled/{s}.feather",
+                                         d = dom,
+                                         s = stream_sites[p])
+
+                #Stream discharge ####
+                if(!file.exists(path_q)) {
+                    site_q <- tibble()
+                    q_record_length <- 365
+                } else {
+
+                    site_q <- sm(read_feather(path_q)) %>%
+                        mutate(Year = year(datetime),
+                               Month = month(datetime),
+                               Day = day(datetime)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    q_record_length <- detrmin_mean_record_length(site_q)
+
+                    if(filter_ms_interp){
+                        site_q <- site_q %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_q <- site_q %>%
+                            filter(ms_status == 0)
+                    }
+
+                    if(nrow(site_q) == 0){
+                        site_q <- tibble()
+                        q_record_length <- 365
+                    } else{
+
+                        site_q <- site_q %>%
+                            group_by(site_name, Year, Month, Day) %>%
+                            summarise(val = mean(val, na.rm = T)) %>%
+                            ungroup() %>%
+                            mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                            mutate(val = val*86400) %>%
+                            group_by(site_name, Date, Year) %>%
+                            summarise(val = sum(val, na.rm = TRUE),
+                                      count = n()) %>%
+                            mutate(val = val/1000) %>%
+                            mutate(missing = (q_record_length-count)/q_record_length) %>%
+                            mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                            ungroup() %>%
+                            select(-count) %>%
+                            mutate(var = 'discharge') %>%
+                            mutate(domain = dom)
+                    }
+
+                }
+
+                all_sites <- rbind(all_sites, site_q)
+
+                #Stream chemistry concentration ####
+                if(!file.exists(path_chem)) {
+                    site_chem <- tibble()
+                } else {
+
+                    #first taking a monthly mean and then taking a yearly mean from monthly
+                    #mean. This is to try to limit sampling bias, where 100 samples are taken
+                    #in the summer but only a few in the winter
+
+                    site_chem <- sm(read_feather(path_chem) %>%
+                                        mutate(Year = year(datetime),
+                                               Month = month(datetime),
+                                               Day = day(datetime)) %>%
+                                        select(-datetime)) %>%
+                        mutate(var = drop_var_prefix(var)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    if(filter_ms_interp){
+                        site_chem <- site_chem %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_chem <- site_chem %>%
+                            filter(ms_status == 0)
+                    }
+
+                    site_chem <- site_chem %>%
+                        group_by(site_name, Year, Month, Day, var) %>%
+                        summarise(val = mean(val, na.rm = TRUE)) %>%
+                        ungroup() %>%
+                        mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                        select(-Month) %>%
+                        group_by(site_name, Date, Year, var) %>%
+                        summarise(val = mean(val, na.rm = TRUE),
+                                  count = n()) %>%
+                        ungroup() %>%
+                        mutate(missing = (q_record_length-count)/q_record_length) %>%
+                        mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                        select(-count) %>%
+                        mutate(var = glue('{v}_conc', v = var)) %>%
+                        mutate(domain = dom)
+                }
+
+                all_sites <- rbind(all_sites, site_chem)
+
+                #Stream chemistry flux ####
+                if(!file.exists(path_flux)) {
+                    site_flux <- tibble()
+                } else {
+
+                    site_flux <- read_feather(path_flux)  %>%
+                        mutate(Year = year(datetime),
+                               Month = month(datetime),
+                               Day = day(datetime)) %>%
+                        select(-datetime) %>%
+                        mutate(var = drop_var_prefix(var)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    if(filter_ms_interp){
+                        site_flux <- site_flux %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_flux <- site_flux %>%
+                            filter(ms_status == 0)
+                    }
+
+                    site_flux <- site_flux %>%
+                        group_by(site_name, Year, Month, Day, var) %>%
+                        summarise(val = mean(val, na.rm = T)) %>%
+                        ungroup() %>%
+                        group_by(site_name, Year, var) %>%
+                        mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                        ungroup() %>%
+                        group_by(site_name, Date, Year, var) %>%
+                        summarise(val = sum(val, na.rm = TRUE),
+                                  count = n()) %>%
+                        ungroup() %>%
+                        mutate(missing = (q_record_length-count)/q_record_length) %>%
+                        mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                        select(-count) %>%
+                        mutate(var = glue('{v}_flux', v = var)) %>%
+                        mutate(domain = dom)
+
+                    site_flux[is.numeric(site_flux) & site_flux <= 0.00000001] <- NA
+                }
+
+                all_sites <- rbind(all_sites, site_flux)
+
+                #Precipitation ####
+                if(!file.exists(path_precip)) {
+                    site_precip <- tibble()
+                } else {
+
+                    site_precip <- sm(read_feather(path_precip)) %>%
+                        mutate(Year = year(datetime),
+                               Month = month(datetime),
+                               Day = day(datetime)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    if(filter_ms_interp){
+                        site_precip <- site_precip %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_precip <- site_precip %>%
+                            filter(ms_status == 0)
+                    }
+
+                    site_precip <- site_precip %>%
+                        group_by(site_name, Year, Month, Day) %>%
+                        summarise(val = sum(val, na.rm = T)) %>%
+                        ungroup() %>%
+                        mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                        group_by(site_name, Date, Year) %>%
+                        summarise(val = sum(val, na.rm = TRUE),
+                                  count = n()) %>%
+                        ungroup() %>%
+                        mutate(missing = (365-count)/365) %>%
+                        mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                        select(-count) %>%
+                        mutate(var = 'precip') %>%
+                        mutate(domain = dom)
+
+                }
+
+                all_sites <- rbind(all_sites, site_precip)
+
+                #Precipitation chemistry concentration ####
+                if(!file.exists(path_precip_chem)) {
+                    site_precip_chem <- tibble()
+                } else {
+
+                    site_precip_chem <- sm(read_feather(path_precip_chem) %>%
+                                               mutate(Year = year(datetime),
+                                                      Month = month(datetime),
+                                                      Day = day(datetime)) %>%
+                                               select(-datetime)) %>%
+                        mutate(var = drop_var_prefix(var)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    if(filter_ms_interp){
+                        site_precip_chem <- site_precip_chem %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_precip_chem <- site_precip_chem %>%
+                            filter(ms_status == 0)
+                    }
+
+                    site_precip_chem <- site_precip_chem %>%
+                        group_by(site_name, Year, Month, Day, var) %>%
+                        summarise(val = mean(val, na.rm = TRUE)) %>%
+                        ungroup() %>%
+                        mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                        select(-Month) %>%
+                        group_by(site_name, Date, Year, var) %>%
+                        summarise(val = mean(val, na.rm = TRUE),
+                                  count = n()) %>%
+                        ungroup() %>%
+                        mutate(missing = (356-count)/365) %>%
+                        mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                        select(-count) %>%
+                        mutate(var = glue('{v}_precip_conc', v = var)) %>%
+                        mutate(domain = dom)
+
+                }
+
+                all_sites <- rbind(all_sites, site_precip_chem)
+
+                #Precipitation chemistry flux ####
+                if(!file.exists(path_precip_flux)) {
+                    site_precip_flux <- tibble()
+                } else {
+
+                    site_precip_flux <- read_feather(path_precip_flux)  %>%
+                        mutate(Year = year(datetime),
+                               Month = month(datetime),
+                               Day = day(datetime)) %>%
+                        select(-datetime) %>%
+                        mutate(var = drop_var_prefix(var)) %>%
+                        filter(Year != year(Sys.Date()))
+
+                    if(filter_ms_interp){
+                        site_precip_flux <- site_precip_flux %>%
+                            filter(ms_interp == 0)
+                    }
+                    if(filter_ms_status){
+                        site_precip_flux <- site_precip_flux %>%
+                            filter(ms_status == 0)
+                    }
+
+                    site_precip_flux <- site_precip_flux %>%
+                        group_by(site_name, Year, Month, Day, var) %>%
+                        summarise(val = mean(val, na.rm = T)) %>%
+                        ungroup() %>%
+                        group_by(site_name, Year, var) %>%
+                        mutate(Date = ymd(paste(Year, 1, 1, sep = '-'))) %>%
+                        ungroup() %>%
+                        group_by(site_name, Date, Year, var) %>%
+                        summarise(val = sum(val, na.rm = TRUE),
+                                  count = n()) %>%
+                        ungroup() %>%
+                        mutate(missing = (356-count)/365) %>%
+                        mutate(missing = ifelse(missing < 0, 0, missing)) %>%
+                        mutate(var = glue('{v}_precip_flux', v = var)) %>%
+                        mutate(domain = dom) %>%
+                        select(-count)
+
+                    site_precip_flux[is.numeric(site_precip_flux) & site_precip_flux <= 0.00000001] <- NA
+                }
+
+                all_sites <- rbind(all_sites, site_precip_flux)
+            }
+        }
+
+        all_domain <-  rbind.fill(all_domain, all_sites)
+
+    }
+
+    all_domain <- all_domain %>%
+        mutate(missing = missing*100) %>%
+        mutate(missing = as.numeric(substr(missing, 1, 2))) %>%
+        mutate(val = round(val, 4))
+
+    dir.create('../portal/data/general/biplot')
+
+    if(filter_ms_interp && filter_ms_status){
+        write_feather(all_domain, '../portal/data/general/biplot/year_interp0_status0.feather')
+    }
+
+    if(filter_ms_interp && !filter_ms_status){
+        write_feather(all_domain, '../portal/data/general/biplot/year_interp0.feather')
+    }
+
+    if(!filter_ms_interp && filter_ms_status){
+        write_feather(all_domain, '../portal/data/general/biplot/year_status0.feather')
+    }
+
+    if(!filter_ms_interp && ! filter_ms_status){
+        write_feather(all_domain, '../portal/data/general/biplot/year.feather')
+    }
+}
+
+compute_yearly_summary_ws <- function() {
+
+    #df = default sites for each domain
+    df <- site_data %>%
+        group_by(network, domain) %>%
+        summarize(site_name = first(site_name),
+                  pretty_domain = first(pretty_domain),
+                  pretty_network = first(pretty_network),
+                  .groups = 'drop') %>%
+        select(pretty_network, network, pretty_domain, domain,
+               default_site = site_name)
+
+    all_domain <- tibble()
+    for(i in 1:nrow(df)) {
+
+        dom <- df$domain[i]
+
+        net <- df$network[i]
+
+        dom_path <- glue('../portal/data/{d}/ws_traits', d = dom)
+
+        prod_files <- list.files(dom_path, full.names = T, recursive = T)
+
+        prod_files <- prod_files[! grepl('raw_', prod_files)]
+
+        all_prods <- tibble()
+
+        if(!length(prod_files) == 0){
+
+            for(p in 1:length(prod_files)) {
+
+                prod_tib <- read_feather(prod_files[p])
+
+                prod_names <- names(prod_tib)
+
+                if(! 'pctCellErr' %in% prod_names){
+                    prod_tib <- prod_tib %>%
+                        mutate(pctCellErr = NA)
+                }
+
+                all_prods <- rbind(all_prods, prod_tib)
+
+            }
+
+            all_prods <- all_prods %>%
+                mutate(Date = ymd(paste0(year, '-01', '-01'))) %>%
+                mutate(domain = dom) %>%
+                rename(Year = year)
+
+            all_domain <- rbind(all_domain, all_prods)
+        }
+    }
+
+    # Remove standard deviation
+    all_ws_vars <- unique(all_domain$var)
+    ws_vars_keep <- all_ws_vars[! grepl('sd', all_ws_vars)]
+    ws_vars_keep <- ws_vars_keep[! grepl('1992', ws_vars_keep)]
+
+    all_domain <- all_domain %>%
+        filter(var %in% !!ws_vars_keep)
+
+    summary_file_paths <- grep('year', list.files('../portal/data/general/biplot',
+                                                  full.names = TRUE), value = T)
+
+    for(s in 1:length(summary_file_paths)){
+
+        conc_sum <- read_feather(summary_file_paths[s]) %>%
+            mutate(pctCellErr = NA)
+
+        all_domain <- all_domain %>%
+            mutate(missing = 0)
+
+        final <- rbind(conc_sum, all_domain)
+
+        areas <- site_data %>%
+            filter(site_type == 'stream_gauge') %>%
+            select(site_name, domain, val = ws_area_ha) %>%
+            mutate(Date = NA,
+                   Year = NA,
+                   var = 'area') %>%
+            filter(!is.na(val)) %>%
+            mutate(missing = 0) %>%
+            mutate(pctCellErr = NA)
+
+        #calc area normalized q
+        area_q <- areas %>%
+            select(site_name, domain, area = val) %>%
+            full_join(., conc_sum, by = c('site_name', 'domain')) %>%
+            mutate(discharge_a = ifelse(var == 'discharge', val/(area*10000), NA)) %>%
+            mutate(discharge_a = discharge_a*1000) %>%
+            filter(!is.na(discharge_a)) %>%
+            mutate(var = 'discharge_a') %>%
+            select(-val, -area) %>%
+            rename(val = discharge_a)
+
+        final <- rbind(final, areas, area_q) %>%
+            filter(Year < year(Sys.Date()) | is.na(Year))
+
+        write_feather(final, summary_file_paths[s])
+    }
+}
