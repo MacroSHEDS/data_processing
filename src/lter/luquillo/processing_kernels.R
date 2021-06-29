@@ -302,8 +302,15 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
         p_name <- 'Rainfall.mm.'
     }
 
-    d <- read.csv(rawfile,
-                  colClasses = 'character') %>%
+    if(component == 'El Verde Field Station Rainfall in Millimeters (2010-Current)'){
+      d <- read.delim(rawfile, sep = ',', quote = '') %>%
+        mutate(X.DATE = substr(X.DATE, 2, nchar(X.DATE))) %>%
+        rename(DATE = X.DATE)
+    } else{
+      d <- read.csv(rawfile,
+                    colClasses = 'character')
+    }
+    d <- d %>%
       mutate(site = 'El_Verde') %>%
       mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
              day = str_split_fixed(DATE, '/', n = Inf)[,2],
