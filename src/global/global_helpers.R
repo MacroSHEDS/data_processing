@@ -8781,7 +8781,6 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                      cols = all_of(c(mean_name, sd_name)),
                      names_to = 'var',
                      values_to = 'val') %>%
-        mutate(var = paste0('vd_', var)) %>%
         select(year, site_name, var, val, pctCellErr)
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
@@ -8795,6 +8794,7 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                        p = time,
                        s = site_name)
 
+    final <- append_unprod_prefix(final, prodname_ms)
     write_feather(final, final_path)
 
     #return()
@@ -12393,4 +12393,26 @@ compute_yearly_summary_ws <- function() {
 
         write_feather(final, summary_file_paths[s])
     }
+}
+
+append_unprod_prefix <- function(d, prodname_ms){
+    
+    prodname_ms <- str_split_fixed(prodname_ms, '__', n = 2)[1,]
+    prodname <- prodname_ms[1]
+    prodcode <- prodname_ms[2]
+    
+    this_product <- univ_products %>%
+        filter(prodname == !!prodname & prodcode == !!prodcode) 
+    
+    data_class <- this_product %>%
+        pull(data_class_code)
+    
+    data_source <- this_product %>%
+        pull(data_source_code)
+    
+    d <- d %>%
+        mutate(var = paste0(data_class, data_source, '_', var))
+    
+    
+    return(d)
 }
