@@ -4792,7 +4792,10 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
 create_portal_links <- function(network, domain){
 
     #for hardlinking derived products to the portal directory. this applies to all
-    #derived products.
+    #derived products except cdnr_discharge, usgs_discharge, and pre-idw precipitation.
+    #we will eventually let portal users view and download uninterpolated (spatially)
+    #rain gauge data, and at that time we may choose to simply delete the sections
+    #below (**) that filters those datasets
 
     derive_dir <- glue('data/{n}/{d}/derived',
                        n = network,
@@ -4805,10 +4808,31 @@ create_portal_links <- function(network, domain){
                showWarnings = FALSE,
                recursive = TRUE)
 
+    dirs_to_ignore <- c()
     dirs_to_build <- list.dirs(derive_dir,
                                recursive = TRUE)
     dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
 
+    dirs_to_ignore <- c(dirs_to_ignore,
+                        dirs_to_build[grepl(pattern = '(?:/cdnr_discharge|/usgs_discharge)',
+                                            x = dirs_to_build)])
+
+    ppaths <- grep(pattern = '/precipitation__ms[0-9]{3}$',
+                   x = dirs_to_build,
+                   value = TRUE) %>%
+        sort()
+
+    if(length(ppaths) > 2){
+        stop("more than 2 derived precipitation products? what's going on here?")
+    }
+
+    # ** here's the first section referenced in the docstring above ---
+    if(length(ppaths) == 2){
+        dirs_to_ignore <- c(dirs_to_ignore, ppaths[1])
+    }
+    # see the next double-asterisk for the second and final section---
+
+    dirs_to_build <- dirs_to_build[! dirs_to_build %in% dirs_to_ignore]
     dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
 
     for(dr in dirs_to_build){
@@ -4827,6 +4851,16 @@ create_portal_links <- function(network, domain){
                                      recursive = TRUE,
                                      full.names = TRUE)
 
+    # ** here's the second and final section referenced in the docstring above ---
+    files_to_link_from <- files_to_link_from[! grepl(
+        pattern = paste0('(?:',
+                         paste(paste0('^',
+                               dirs_to_ignore),
+                         collapse = '|'),
+                         ')'),
+        x = files_to_link_from)]
+    # ---
+
     files_to_link_to <- convert_derive_path_to_portal_path(
         paths = files_to_link_from)
 
@@ -4835,8 +4869,6 @@ create_portal_links <- function(network, domain){
         invisible(sw(file.link(to = files_to_link_to[i],
                                from = files_to_link_from[i])))
     }
-
-    #return()
 }
 
 convert_munge_path_to_derive_path <- function(paths,
@@ -12396,23 +12428,23 @@ compute_yearly_summary_ws <- function() {
 }
 
 append_unprod_prefix <- function(d, prodname_ms){
-    
+
     prodname_ms <- str_split_fixed(prodname_ms, '__', n = 2)[1,]
     prodname <- prodname_ms[1]
     prodcode <- prodname_ms[2]
-    
+
     this_product <- univ_products %>%
-        filter(prodname == !!prodname & prodcode == !!prodcode) 
-    
+        filter(prodname == !!prodname & prodcode == !!prodcode)
+
     data_class <- this_product %>%
         pull(data_class_code)
-    
+
     data_source <- this_product %>%
         pull(data_source_code)
-    
+
     d <- d %>%
         mutate(var = paste0(data_class, data_source, '_', var))
-    
-    
+
+
     return(d)
 }
