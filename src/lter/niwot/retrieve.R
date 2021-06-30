@@ -31,27 +31,27 @@ for(i in seq_len(nrow(prod_info))){
 
     if(is_ms_err(avail_sets)) next
 
-    avail_sites <- unique(avail_sets$site_name)
+    avail_sites <- unique(avail_sets$site_code)
 
     for(j in 1:length(avail_sites)){
 
-        site_name <- avail_sites[j]
+        site_code <- avail_sites[j]
 
-        avail_site_sets <- avail_sets[avail_sets$site_name == site_name, ,
+        avail_site_sets <- avail_sets[avail_sets$site_code == site_code, ,
                                              drop=FALSE]
 
-        if(! site_is_tracked(held_data, prodname_ms, site_name)){
-            held_data <<- insert_site_skeleton(held_data, prodname_ms, site_name,
+        if(! site_is_tracked(held_data, prodname_ms, site_code)){
+            held_data <<- insert_site_skeleton(held_data, prodname_ms, site_code,
                                               site_components=avail_site_sets$component)
 
         }
 
-    held_data <<- track_new_site_components(held_data, prodname_ms, site_name,
+    held_data <<- track_new_site_components(held_data, prodname_ms, site_code,
                                            avail_site_sets)
 
     if(is_ms_err(held_data)) next
 
-    retrieval_details <- populate_set_details(held_data, prodname_ms, site_name,
+    retrieval_details <- populate_set_details(held_data, prodname_ms, site_code,
                                               avail_site_sets, latest_vsn)
 
     if(is_ms_err(retrieval_details)) next
@@ -61,11 +61,11 @@ for(i in seq_len(nrow(prod_info))){
     if(nrow(new_sets) == 0){
 
         loginfo(glue('Nothing to do for {s} {p}',
-                     s=site_name, p=prodname_ms), logger=logger_module)
+                     s=site_code, p=prodname_ms), logger=logger_module)
                         next
             } else {
                     loginfo(glue('Retrieving {s} {p}',
-                                 s=site_name, p=prodname_ms), logger=logger_module)
+                                 s=site_code, p=prodname_ms), logger=logger_module)
         }
     update_data_tracker_r(network=network, domain=domain, tracker=held_data)
 
@@ -77,7 +77,7 @@ for(i in seq_len(nrow(prod_info))){
                               domain = domain,
                               tracker_name = 'held_data',
                               prodname_ms = prodname_ms,
-                              site_name = site_name,
+                              site_code = site_code,
                               new_status = 'pending')
          }
     }

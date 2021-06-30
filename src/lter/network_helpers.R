@@ -36,7 +36,7 @@ get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
 
-    #returns: tibble with url, site_name, component (aka element_name)
+    #returns: tibble with url, site_code, component (aka element_name)
 
     name_endpoint <- 'https://pasta.lternet.edu/package/name/eml/'
     dl_endpoint <- 'https://pasta.lternet.edu/package/data/eml/'
@@ -67,20 +67,20 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     names[is.na(names)] <- 'sitename_NA'
 
     avail_sets <- tibble(url=dl_urls,
-        site_name=names,
+        site_code=names,
         component=reqdata[,3])
 
     return(avail_sets)
 }
 
-populate_set_details <- function(tracker, prodname_ms, site_name, avail,
+populate_set_details <- function(tracker, prodname_ms, site_code, avail,
     latest_vsn){
     #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
     prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     retrieval_tracker = avail %>%
@@ -145,7 +145,7 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
 
         retrieval_tracker <- retrieval_tracker[! old_bool, ]
 
-        tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
+        tracker[[prodname_ms]][[site_code]]$retrieve <- retrieval_tracker
         held_data <<- tracker
     }
 
@@ -158,7 +158,7 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
 
         if(!nrow(email_update) == 0) {
 
-            sites <- unique(email_update$site_name)
+            sites <- unique(email_update$site_code)
             sites <- paste(sites, collapse = ', ')
 
             components <- unique(email_update$component)
@@ -200,7 +200,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
         s = sets[i, ]
 
         msg = glue('Retrieving {st}, {p}, {c}',
-            st=s$site_name, p=s$prodname_ms, c=s$component)
+            st=s$site_code, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -220,7 +220,7 @@ download_raw_file <- function(network, domain, set_details, file_type = '.csv') 
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
 
     dir.create(raw_data_dest,
                showWarnings = FALSE,

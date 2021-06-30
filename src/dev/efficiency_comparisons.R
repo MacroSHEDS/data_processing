@@ -1,8 +1,8 @@
 #munge pipeline 1 (averaging duplicates) ####
 ff = expression({dd[1:s,] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    group_by(datetime, site_name) %>%
+    group_by(datetime, site_code) %>%
     summarize(
         discharge = case_when(
             length(discharge) > 1 ~ mean(discharge, na.rm=TRUE),
@@ -11,9 +11,9 @@ ff = expression({dd[1:s,] %>%
     ungroup()
 })
 gg = expression({d[1:s, ] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    group_by(datetime, site_name) %>%
+    group_by(datetime, site_code) %>%
     summarize(
         discharge = case_when(
             length(discharge) > 1 ~ mean(discharge, na.rm=TRUE),
@@ -26,18 +26,18 @@ compare_efficiency(ff, gg, 10, 1e5,
 
 #munge pipeline 1 (first non-NA duplicate) ####
 ff = expression({dd[1:s,] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    group_by(datetime, site_name) %>%
+    group_by(datetime, site_code) %>%
     mutate(discharge = first(na.omit(discharge))) %>%
     summarize(
         discharge = first(na.omit(discharge)),
         ms_status = numeric_any(ms_status)) %>%
     ungroup()})
 gg = expression({d[1:s,] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    group_by(datetime, site_name) %>%
+    group_by(datetime, site_code) %>%
     mutate(discharge = first(na.omit(discharge))) %>%
     summarize(
         discharge = first(na.omit(discharge)),
@@ -49,25 +49,25 @@ compare_efficiency(ff, gg, 10, 1e5,
 #munge pipeline 1 (least-NA row duplicate via rowwise) ####
 
 ff <- expression({dd[1:s,] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    rowwise(datetime, site_name) %>%
+    rowwise(datetime, site_code) %>%
     mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
     ungroup() %>%
-    arrange(datetime, site_name, NAsum) %>%
+    arrange(datetime, site_code, NAsum) %>%
     select(-NAsum) %>%
-    distinct(datetime, site_name, .keep_all = TRUE) %>%
-    arrange(site_name, datetime)})
+    distinct(datetime, site_code, .keep_all = TRUE) %>%
+    arrange(site_code, datetime)})
 gg <- expression({d[1:s,] %>%
-    filter_at(vars(-site_name, -datetime, -ms_status),
+    filter_at(vars(-site_code, -datetime, -ms_status),
               any_vars(! is.na(.))) %>%
-    rowwise(datetime, site_name) %>%
+    rowwise(datetime, site_code) %>%
     mutate(NAsum = sum(is.na(c_across(-ms_status)))) %>%
     ungroup() %>%
-    arrange(datetime, site_name, NAsum) %>%
+    arrange(datetime, site_code, NAsum) %>%
     select(-NAsum) %>%
-    distinct(datetime, site_name, .keep_all = TRUE) %>%
-    arrange(site_name, datetime)})
+    distinct(datetime, site_code, .keep_all = TRUE) %>%
+    arrange(site_code, datetime)})
 compare_efficiency(ff, gg, 10, 1e5,
                    outfile='plots/efficiency_comparisons/Xleast_NA_rowwise.png')
 

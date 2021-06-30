@@ -45,7 +45,7 @@ process_0_2851 <- function(set_details, network, domain) {
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
 
     dir.create(raw_data_dest,
                showWarnings = FALSE,
@@ -65,14 +65,14 @@ process_0_2851 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_6421 <- function(network, domain, prodname_ms, site_name,
+process_1_6421 <- function(network, domain, prodname_ms, site_code,
                            component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -85,7 +85,7 @@ process_1_6421 <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = list('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -107,14 +107,14 @@ process_1_6421 <- function(network, domain, prodname_ms, site_name,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_6470 <- function(network, domain, prodname_ms, site_name,
+process_1_6470 <- function(network, domain, prodname_ms, site_code,
                            component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -127,7 +127,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = list('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('discharge..L.s.' = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -149,14 +149,14 @@ process_1_6470 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation; discharge: STATUS=PENDING
 #. handle_errors
-process_1_4680 <- function(network, domain, prodname_ms, site_name,
+process_1_4680 <- function(network, domain, prodname_ms, site_code,
                            components) {
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = components)
 
     rawfile <- glue('{rd}/{c}',
@@ -174,14 +174,14 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
         all_sites <- tibble()
         for(p in 1:length(rain_files)){
 
-            site_name <- ifelse(grepl('Rain 9', rain_files[p]),
+            site_code <- ifelse(grepl('Rain 9', rain_files[p]),
                                 'rain_gauge9',
                                 'rain_gauge11')
 
             site <- readxl::read_xlsx(rain_files[p]) %>%
                 rename(date = 1,
                       rain = 2) %>%
-                mutate(site = !!site_name) %>%
+                mutate(site = !!site_code) %>%
                 select(date, rain, site)
 
             all_sites <- rbind(all_sites, site)
@@ -190,7 +190,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                              datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('rain' = 'precipitation'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE)
@@ -233,7 +233,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                              datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('q' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE)
@@ -260,14 +260,14 @@ process_1_4680 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2851 <- function(network, domain, prodname_ms, site_name,
+process_1_2851 <- function(network, domain, prodname_ms, site_code,
                            component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- readxl::read_xlsx(rawfile) %>%
@@ -276,8 +276,8 @@ process_1_2851 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'sample_location',
-                         alt_site_name = list('Tyger_River_hwy49' = 'A17',
+                         site_code_col = 'sample_location',
+                         alt_site_code = list('Tyger_River_hwy49' = 'A17',
                                               'Isaacs_Creek_Bombing_Rang' = 'B16',
                                               'Enoree_River_Jones_Ford' = 'C15',
                                               'Johns_Creek' = 'D14',

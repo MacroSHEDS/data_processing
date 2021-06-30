@@ -76,7 +76,7 @@ process_0_182 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_name,
+process_1_20 <- function(network, domain, prodname_ms, site_code,
                          component){
 
     if(component == 'All Sites Basic Field Stream Chemistry Data'){
@@ -87,7 +87,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile1,
@@ -106,7 +106,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                                               'year' = '%Y',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-4',
-                         site_name_col = 'Sample_ID',
+                         site_code_col = 'Sample_ID',
                          data_cols =  c('Temp' = 'temp',
                                         'pH'='pH',
                                         'Cond' = 'spCond',
@@ -157,7 +157,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_174 <- function(network, domain, prodname_ms, site_name,
+process_1_174 <- function(network, domain, prodname_ms, site_code,
                           component){
 
   # Luquillo's metadata says NO3_N units are in mg/l but they are very high so
@@ -166,7 +166,7 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile,
@@ -185,8 +185,8 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
                                               'year' = '%Y',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-4',
-                         site_name_col = 'Sample_ID',
-                         alt_site_name = list('Bisley_Tower' = 'RCB',
+                         site_code_col = 'Sample_ID',
+                         alt_site_code = list('Bisley_Tower' = 'RCB',
                                               'El_Verde' = 'RCEV'),
                          data_cols =  c('pH'='pH',
                                         'Cond' = 'spCond',
@@ -236,14 +236,14 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_90 <- function(network, domain, prodname_ms, site_name,
+process_1_90 <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile,
@@ -261,7 +261,7 @@ process_1_90 <- function(network, domain, prodname_ms, site_name,
                                               'month' = '%m',
                                               'year' = '%Y'),
                          datetime_tz = 'Etc/GMT-4',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('Precipitationmm'='precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
@@ -286,14 +286,14 @@ process_1_90 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_14 <- function(network, domain, prodname_ms, site_name,
+process_1_14 <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     if(!component == 'El Verde Field Station Rainfall in Millimeters (1975-1989)'){
@@ -329,7 +329,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
                                                   'month' = '%m',
                                                   'year' = '%Y'),
                              datetime_tz = 'Etc/GMT-4',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  precip_name_def,
                              summary_flagcols = 'Field.Comments',
                              data_col_pattern = '#V#',
@@ -348,7 +348,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
                                                   'month' = '%m',
                                                   'year' = '%Y'),
                              datetime_tz = 'Etc/GMT-4',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  precip_name_def,
                              data_col_pattern = '#V#',
                              set_to_NA = '-9999',
@@ -374,7 +374,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_156 <- function(network, domain, prodname_ms, site_name,
+process_1_156 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     #info on luqillo data
@@ -386,7 +386,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
                        n = network,
                        d = domain,
                        p = prodname_ms,
-                       s = site_name,
+                       s = site_code,
                        c = component)
 
         d <- read.csv(rawfile,
@@ -405,8 +405,8 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
                                                   'month' = '%m',
                                                   'year' = '%Y'),
                              datetime_tz = 'Etc/GMT-4',
-                             site_name_col = 'name',
-                             alt_site_name = list('Q1' = 'meanTempq1',
+                             site_code_col = 'name',
+                             alt_site_code = list('Q1' = 'meanTempq1',
                                                   'Q2' = 'meanTempq2',
                                                   'Q3' = 'meanTempq3'),
                              data_cols =  c('value'='temp'),
@@ -422,7 +422,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
                        n = network,
                        d = domain,
                        p = prodname_ms,
-                       s = site_name,
+                       s = site_code,
                        c = component)
 
         #Converting from mm/day to leters/s
@@ -447,7 +447,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
                                                   'month' = '%m',
                                                   'year' = '%Y'),
                              datetime_tz = 'Etc/GMT-4',
-                             site_name_col = 'name',
+                             site_code_col = 'name',
                              data_cols =  c('value'='discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = '-9999',
@@ -474,7 +474,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
 
 #discharge: STATUS=PAUSED
 #. handle_errors
-process_1_182 <- function(network, domain, prodname_ms, site_name,
+process_1_182 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     # There seems to be something wrong with this data product. around 2010
@@ -484,7 +484,7 @@ process_1_182 <- function(network, domain, prodname_ms, site_name,
                      n = network,
                      d = domain,
                      p = prodname_ms,
-                     s = site_name,
+                     s = site_code,
                      c = component)
 
       d <- read.csv(rawfile,
@@ -507,7 +507,7 @@ process_1_182 <- function(network, domain, prodname_ms, site_name,
                                                 'year' = '%Y',
                                                 'time' = '%H:%M'),
                            datetime_tz = 'Etc/GMT-4',
-                           site_name_col = 'site',
+                           site_code_col = 'site',
                            data_cols =  c('q'='discharge'),
                            summary_flagcols = 'code',
                            data_col_pattern = '#V#',

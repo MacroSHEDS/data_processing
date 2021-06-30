@@ -25,7 +25,7 @@ if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
     stop('Watershed boundaries are required for general products')
 }
 
-site_names <- unique(boundaries$site_name)
+site_codes <- unique(boundaries$site_code)
 
 # i=3
 for(i in 1:nrow(unprod)){
@@ -45,27 +45,27 @@ for(i in 1:nrow(unprod)){
                  p = prodname_ms),
             logger = logger_module)
 
-    for(k in 1:length(site_names)){
+    for(k in 1:length(site_codes)){
 
-        site_name <- site_names[k]
+        site_code <- site_codes[k]
 
-        if(! site_is_tracked(held_data, prodname_ms, site_name)){
+        if(! site_is_tracked(held_data, prodname_ms, site_code)){
 
-            held_data[[prodname_ms]][[site_name]]$general$status <- 'pending'
-            held_data[[prodname_ms]][[site_name]]$general$mtime <- '1500-01-01'
+            held_data[[prodname_ms]][[site_code]]$general$status <- 'pending'
+            held_data[[prodname_ms]][[site_code]]$general$mtime <- '1500-01-01'
             held_data <<- held_data
         }
 
         general_status <- get_general_status(tracker = held_data,
                                              prodname_ms = prodname_ms,
-                                             site_name = site_name)
+                                             site_code = site_code)
 
         #general_status <- 'pending'
         if(general_status %in% c('ok', 'no_data_avail')){
 
             loginfo(glue('Nothing to do for product: {p}, site: {s}',
                          p = prodname_ms,
-                         s = site_name),
+                         s = site_code),
                     logger = logger_module)
 
             next
@@ -74,7 +74,7 @@ for(i in 1:nrow(unprod)){
 
             loginfo(glue('Working on product: {p}, site: {s}',
                          p = prodname_ms,
-                         s = site_name),
+                         s = site_code),
                      logger = logger_module)
         }
 
@@ -85,7 +85,7 @@ for(i in 1:nrow(unprod)){
                                   args = list(network = network,
                                               domain = domain,
                                               prodname_ms = prodname_ms,
-                                              site_name = site_name,
+                                              site_code = site_code,
                                               boundaries = boundaries)))
 
         if(is_ms_exception(general_msg)){
@@ -109,13 +109,13 @@ for(i in 1:nrow(unprod)){
 
         msg <- glue(msg_string,
                     p = prodname_ms,
-                    s = site_name)
+                    s = site_code)
 
         update_data_tracker_g(network = network,
                               domain = domain,
                               tracker = held_data,
                               prodname_ms = prodname_ms,
-                              site_name = site_name,
+                              site_code = site_code,
                               new_status = new_status)
 
         loginfo(msg = msg,

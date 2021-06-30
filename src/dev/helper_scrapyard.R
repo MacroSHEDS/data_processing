@@ -197,18 +197,18 @@ process_2_13TEST <- function(network, domain, prodname_ms){
 
     precip2 <- precip2 %>%
         mutate(datetime = lubridate::year(datetime)) %>% #temporary
-        group_by(site_name, datetime) %>%
+        group_by(site_code, datetime) %>%
         summarize(
             precip = mean(precip, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        filter(site_name %in% rg$site_name)
+        filter(site_code %in% rg$site_code)
 
     for(j in 1){
         # for(j in 1:nrow(wb)){
 
         wbj <- slice(wb, j)
-        site_name <- wbj$site_name
+        site_code <- wbj$site_code
         dem_wbj <- terra::crop(dem, wbj)
         dem_wbj <- terra::mask(dem_wbj, wbj)
 
@@ -233,7 +233,7 @@ process_2_13TEST <- function(network, domain, prodname_ms){
         }
 
         site_precip2 <- tibble(datetime = precip_dt,
-                               site_name = site_name,
+                               site_code = site_code,
                                precip = ws_mean_precip,
                                ms_status = precip_status)
     }
@@ -330,14 +330,14 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
         flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
                                      qprod = qprod,
-                                     site_name = s,
+                                     site_code = s,
                                      dt_round_interv = 'hours')))
 
         ue(write_ms_file(d = flux,
                          network = network,
                          domain = domain,
                          prodname_ms = prodname_ms,
-                         site_name = s,
+                         site_code = s,
                          level = 'derived',
                          shapefile = FALSE,
                          link_to_portal = TRUE))
@@ -374,14 +374,14 @@ idw_log <- function(phase, from_env, ...){
     if(phase == 'wb'){
 
         msg <- glue('site: {s}; {ii}/{w}',
-                    s = site_name,
+                    s = site_code,
                     ii = i,
                     w = nrow(wb))
 
     } else if(phase == 'var'){
 
         msg <- glue('site: {s}; var: {vv}; {jj}/{nv}',
-                    s = site_name,
+                    s = site_code,
                     vv = v,
                     jj = j,
                     nv = nvars)
@@ -460,7 +460,7 @@ gee_to_timeseries <- function(gee_id, band, com_name, start, end, ws_bound,
             mutate(nrow = row_number()) %>%
             as.data.frame() %>%
             #need common col name for watershed
-            dplyr::select(site_name, nrow)
+            dplyr::select(site_code, nrow)
 
         table <- ee_ws_table %>%
             mutate(nrow = row_number()) %>%
@@ -576,13 +576,13 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
 
 # we used to link some munged and some derived products to the data portal.
 #   now we only link derived products, so this function is deprecated
-    create_portal_link <- function(network, domain, prodname_ms, site_name,
+    create_portal_link <- function(network, domain, prodname_ms, site_code,
                                level = 'derived', dir = FALSE){
 
     #level is either 'munged' or 'derived', corresponding to the
     #   location, within the data_acquisition system, of the data to be linked.
     #   DEPRECATED. only derived files should be linked to the portal.
-    #if dir=TRUE, treat site_name as a directory name, and link all files
+    #if dir=TRUE, treat site_code as a directory name, and link all files
     #   within (necessary for e.g. shapefiles, which often come with other files)
 
     if(! level %in% c('munged', 'derived')){
@@ -601,7 +601,7 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
 
         portal_site_file = glue('{pd}/{s}.feather',
                                 pd = portal_prod_dir,
-                                s = site_name)
+                                s = site_code)
 
         #if there's already a data file for this site-time-product in
         #the portal repo, remove it
@@ -615,7 +615,7 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
                          d = domain,
                          l = level,
                          p = prodname_ms,
-                         s = site_name)
+                         s = site_code)
 
         invisible(sw(file.link(to = portal_site_file,
                                from = site_file)))
@@ -627,7 +627,7 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
                          d = domain,
                          l = level,
                          p = prodname_ms,
-                         s = site_name)
+                         s = site_code)
 
         portal_prod_dir <- glue('../portal/data/{d}/{p}',
                                 d = domain,
@@ -654,7 +654,7 @@ sourceflags_to_ms_status <- function(d, flagstatus_mappings,
 
 #this is now handled by munge_by_site()
 #. handle_errors
-munge_by_site_product <- function(network, domain, site_name, prodname_ms, tracker,
+munge_by_site_product <- function(network, domain, site_code, prodname_ms, tracker,
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
@@ -670,7 +670,7 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_name)
+                                           site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -688,7 +688,7 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
                                args = list(network = network,
                                            domain = domain,
                                            prodname_ms = prodname_ms,
-                                           site_name = site_name,
+                                           site_code = site_code,
                                            component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
@@ -696,7 +696,7 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
         }
     }
 
-    site <- unique(out$site_name)
+    site <- unique(out$site_code)
 
     if(length(site) > 1) {
         stop('multiple sites encountered in a dataset that should contain only one')
@@ -711,7 +711,7 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
-                  site_name = site,
+                  site_code = site,
                   level = 'munged',
                   shapefile = is_spatial,
                   link_to_portal = FALSE)
@@ -720,14 +720,14 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = 'ok')
 
     msg <- glue('munged {p} ({n}/{d}/{s})',
                 p = prodname_ms,
                 n = network,
                 d = domain,
-                s = site_name)
+                s = site_code)
 
     loginfo(msg,
             logger = logger_module)
@@ -736,13 +736,13 @@ munge_by_site_product <- function(network, domain, site_name, prodname_ms, track
 }
 
 #now we just load delin specs from acquisition_master.R
-read_wb_delin_specs <- function(network, domain, site_name){
+read_wb_delin_specs <- function(network, domain, site_code){
 
     ds <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
                    error = function(e){
                        empty_tibble <- tibble(network = 'a',
                                               domain = 'a',
-                                              site_name = 'a',
+                                              site_code = 'a',
                                               buffer_radius_m = 1,
                                               snap_method = 'a',
                                               snap_distance_m = 1,
@@ -754,7 +754,7 @@ read_wb_delin_specs <- function(network, domain, site_name){
     ds <- filter(ds,
                  network == !!network,
                  domain == !!domain,
-                 site_name == !!site_name)
+                 site_code == !!site_code)
 
     return(ds)
 }
@@ -789,13 +789,13 @@ calc_inst_flux_wrap <- function(chemprod, qprod, prodname_ms) {
 
         flux <- sw(calc_inst_flux(chemprod = chemprod,
                                   qprod = qprod,
-                                  site_name = s))
+                                  site_code = s))
 
         write_ms_file(d = flux,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = s,
+                      site_code = s,
                       level = 'derived',
                       shapefile = FALSE)
     }
@@ -819,7 +819,7 @@ precip_idw <- function(precip_prodname,
         precip <- read_combine_feathers(network = network,
                                                                             domain = domain,
                                                                                                                 prodname_ms = precip_prodname) %>%
-            filter(site_name %in% rg$site_name)
+            filter(site_code %in% rg$site_code)
             # precip = manufacture_uncert_msdf(precip)
 
             precip_varname <- precip$var[1]
@@ -849,7 +849,7 @@ precip_idw <- function(precip_prodname,
                                         #this block is for testing only (makes dataset smaller)
                                         # mutate(datetime = lubridate::year(datetime)) %>% #by year
                                         # # # mutate(datetime = lubridate::as_date(datetime)) %>% #by day
-                                        # group_by(site_name, datetime) %>%
+                                        # group_by(site_code, datetime) %>%
                                         # summarize(
                                         #     precip = mean(precip, na.rm=TRUE),
                                         #     ms_status = numeric_any(ms_status),
@@ -857,7 +857,7 @@ precip_idw <- function(precip_prodname,
                                         # ungroup() %>%
 
                                         select(-ms_status, -ms_interp, -var) %>%
-                                                tidyr::pivot_wider(names_from = site_name,
+                                                tidyr::pivot_wider(names_from = site_code,
                                                                                               values_from = val) %>%
                                     left_join(status_cols,
                                                                 by = 'datetime') %>%
@@ -898,7 +898,7 @@ precip_idw <- function(precip_prodname,
                                                                                               'get_detlim_precursors', 'apply_detection_limit_t',
                                                                                                                        'write_ms_file', 'err_df_to_matrix', 'idw_log_timestep')
 
-                                                      shed_names <- pull(wb, site_name)
+                                                      shed_names <- pull(wb, site_code)
 
                                                       fils <- list.files('data/lter/hjandrews/derived/ws_boundary__ms008', full.names = T)
 
@@ -910,10 +910,10 @@ precip_idw <- function(precip_prodname,
                                                                       wbi <- slice(wb, i)
 
                                                                               # wbi <- sf::st_read(fils[i])
-                                                                              site_name <- wbi$site_name
+                                                                              site_code <- wbi$site_code
 
                                                                               idw_log_wb(verbose = verbose,
-                                                                                                            site_name = site_name,
+                                                                                                            site_code = site_code,
                                                                                                                                i = i,
                                                                                                                                nw = nrow(wb))
 
@@ -921,7 +921,7 @@ precip_idw <- function(precip_prodname,
                                                                                                                                                             wshd_bnd = wbi,
                                                                                                                                                                                                    data_locations = rg,
                                                                                                                                                                                                    data_values = precip,
-                                                                                                                                                                                                                                          stream_site_name = site_name,
+                                                                                                                                                                                                                                          stream_site_code = site_code,
                                                                                                                                                                                                                                           output_varname = precip_varname,
                                                                                                                                                                                                                                                                                  elev_agnostic = FALSE,
                                                                                                                                                                                                                                                                                  verbose = verbose)
@@ -943,7 +943,7 @@ precip_idw <- function(precip_prodname,
                                                                                                                                   network = network,
                                                                                                                                                         domain = domain,
                                                                                                                                                         prodname_ms = precip_prodname_out,
-                                                                                                                                                                              site_name = site_name,
+                                                                                                                                                                              site_code = site_code,
                                                                                                                                                                               level = 'derived',
                                                                                                                                                                                                     shapefile = FALSE,
                                                                                                                                                                                                     link_to_portal = FALSE)
@@ -971,7 +971,7 @@ pchem_idw <- function(pchem_prodname,
         pchem <- read_combine_feathers(network = network,
                                                                           domain = domain,
                                                                                                              prodname_ms = pchem_prodname) %>%
-            filter(site_name %in% rg$site_name)
+            filter(site_code %in% rg$site_code)
             # pchem = manufacture_uncert_msdf(pchem)
 
             #project based on average latlong of watershed boundaries
@@ -1005,7 +1005,7 @@ pchem_idw <- function(pchem_prodname,
                                         pchem_setlist[[i]] <- pchem %>%
                                                         filter(var == v) %>%
                                                                     select(-var, -ms_status, -ms_interp) %>%
-                                                                                tidyr::pivot_wider(names_from = site_name,
+                                                                                tidyr::pivot_wider(names_from = site_code,
                                                                                                                                   values_from = val) %>%
                                                     left_join(status_cols,
                                                                                     by = 'datetime') %>%
@@ -1027,10 +1027,10 @@ pchem_idw <- function(pchem_prodname,
                                         for(i in 1:nrow(wb)){
 
                                                     wbi <- slice(wb, i)
-                                            site_name <- wbi$site_name
+                                            site_code <- wbi$site_code
 
                                                     idw_log_wb(verbose = verbose,
-                                                                                  site_name = site_name,
+                                                                                  site_code = site_code,
                                                                                                      i = i,
                                                                                                      nw = nrow(wb))
 
@@ -1046,7 +1046,7 @@ pchem_idw <- function(pchem_prodname,
                                                                     v <- pchem_vars[j]
 
                                                                                 idw_log_var(verbose = verbose,
-                                                                                                                    site_name = site_name,
+                                                                                                                    site_code = site_code,
                                                                                                                                             v = v,
                                                                                                                                             j = j,
                                                                                                                                                                     nvars = nvars)
@@ -1056,7 +1056,7 @@ pchem_idw <- function(pchem_prodname,
                                                                                                                       wshd_bnd = wbi,
                                                                                                                                                data_locations = rg,
                                                                                                                                                data_values = pchem_setlist[[j]],
-                                                                                                                                                                        stream_site_name = site_name,
+                                                                                                                                                                        stream_site_code = site_code,
                                                                                                                                                                         output_varname = v,
                                                                                                                                                                                                  elev_agnostic = TRUE,
                                                                                                                                                                                                  verbose = verbose)
@@ -1064,7 +1064,7 @@ pchem_idw <- function(pchem_prodname,
 
                                                             #     if(j == 1){
                                                             #         datetime_out <- select(ws_mean, datetime)
-                                                            #         site_name_out <- select(ws_mean, site_name)
+                                                            #         site_code_out <- select(ws_mean, site_code)
                                                             #         ms_status_out <- ws_mean$ms_status
                                                             #         ms_interp_out <- ws_mean$ms_interp
                                                             #
@@ -1081,7 +1081,7 @@ pchem_idw <- function(pchem_prodname,
                                                             # }
 
                                                             # #reassemble tibbles
-                                                            # ws_mean_d <- bind_cols(datetime_out, site_name_out, ws_mean_d)
+                                                            # ws_mean_d <- bind_cols(datetime_out, site_code_out, ws_mean_d)
                                                             # ws_mean_d$ms_status <- ms_status_out
                                                             # ws_mean_d$ms_interp <- ms_interp_out
 
@@ -1103,7 +1103,7 @@ pchem_idw <- function(pchem_prodname,
                                                                                                                 network = network,
                                                                                                                                       domain = domain,
                                                                                                                                       prodname_ms = pchem_prodname_out,
-                                                                                                                                                            site_name = site_name,
+                                                                                                                                                            site_code = site_code,
                                                                                                                                                             level = 'derived',
                                                                                                                                                                                   shapefile = FALSE,
                                                                                                                                                                                   link_to_portal = FALSE)
@@ -1132,12 +1132,12 @@ flux_idw <- function(pchem_prodname,
         pchem <- read_combine_feathers(network = network,
                                                                           domain = domain,
                                                                                                              prodname_ms = pchem_prodname) %>%
-            filter(site_name %in% rg$site_name)
+            filter(site_code %in% rg$site_code)
             # pchem = manufacture_uncert_msdf(pchem)
             precip <- read_combine_feathers(network = network,
                                                                                 domain = domain,
                                                                                                                     prodname_ms = precip_prodname) %>%
-                    filter(site_name %in% rg$site_name)
+                    filter(site_code %in% rg$site_code)
                     # precip = manufacture_uncert_msdf(precip)
 
                     #project based on average latlong of watershed boundaries
@@ -1162,7 +1162,7 @@ flux_idw <- function(pchem_prodname,
                                     #clean precip and arrange for matrixification
                                     precip <- precip %>%
                                                 select(-ms_status, -ms_interp, -var) %>%
-                                                        tidyr::pivot_wider(names_from = site_name,
+                                                        tidyr::pivot_wider(names_from = site_code,
                                                                                                       values_from = val) %>%
                                             left_join(status_cols,
                                                                         by = 'datetime') %>%
@@ -1195,7 +1195,7 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                         pchem_setlist_fluxable[[i]] <- pchem %>%
                                                                                                                                                                         filter(var == v) %>%
                                                                                                                                                                                     select(-var, -ms_status, -ms_interp) %>%
-                                                                                                                                                                                                tidyr::pivot_wider(names_from = site_name,
+                                                                                                                                                                                                tidyr::pivot_wider(names_from = site_code,
                                                                                                                                                                                                                                                   values_from = val) %>%
                                                                                                                                                                     left_join(status_cols,
                                                                                                                                                                                                     by = 'datetime') %>%
@@ -1218,10 +1218,10 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                         for(i in 1:nrow(wb)){
 
                                                                                                                                                                     wbi <- slice(wb, i)
-                                                                                                                                                            site_name <- wbi$site_name
+                                                                                                                                                            site_code <- wbi$site_code
 
                                                                                                                                                                     idw_log_wb(verbose = verbose,
-                                                                                                                                                                                                  site_name = site_name,
+                                                                                                                                                                                                  site_code = site_code,
                                                                                                                                                                                                                      i = i,
                                                                                                                                                                                                                      nw = nrow(wb))
 
@@ -1236,7 +1236,7 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                                                     v <- pchem_vars_fluxable[j]
 
                                                                                                                                                                                                 idw_log_var(verbose = verbose,
-                                                                                                                                                                                                                                    site_name = site_name,
+                                                                                                                                                                                                                                    site_code = site_code,
                                                                                                                                                                                                                                                             v = v,
                                                                                                                                                                                                                                                             j = j,
                                                                                                                                                                                                                                                                                     nvars = nvars_fluxable)
@@ -1246,7 +1246,7 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                                                                                                                                                           data_locations = rg,
                                                                                                                                                                                                                                                                                           precip_values = precip,
                                                                                                                                                                                                                                                                                                                             chem_values = pchem_setlist_fluxable[[j]],
-                                                                                                                                                                                                                                                                                                                            stream_site_name = site_name,
+                                                                                                                                                                                                                                                                                                                            stream_site_code = site_code,
                                                                                                                                                                                                                                                                                                                                                               output_varname = v,
                                                                                                                                                                                                                                                                                                                                                               verbose = verbose)
                                                                                                                                                                                                         }
@@ -1264,7 +1264,7 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                                                                                                 #                  network = network,
                                                                                                                                                                                                                                 #                  domain = domain,
                                                                                                                                                                                                                                 #                  prodname_ms = prodname_ms,
-                                                                                                                                                                                                                                #                  site_name = site_name,
+                                                                                                                                                                                                                                #                  site_code = site_code,
                                                                                                                                                                                                                                 #                  level = 'derived',
                                                                                                                                                                                                                                 #                  shapefile = FALSE,
                                                                                                                                                                                                                                 #                  link_to_portal = FALSE))
@@ -1281,7 +1281,7 @@ flux_idw <- function(pchem_prodname,
                                                                                                                                                                                                                                         network = network,
                                                                                                                                                                                                                                                               domain = domain,
                                                                                                                                                                                                                                                               prodname_ms = flux_prodname_out,
-                                                                                                                                                                                                                                                                                    site_name = site_name,
+                                                                                                                                                                                                                                                                                    site_code = site_code,
                                                                                                                                                                                                                                                                                     level = 'derived',
                                                                                                                                                                                                                                                                                                           shapefile = FALSE,
                                                                                                                                                                                                                                                                                                           link_to_portal = FALSE)
@@ -1294,7 +1294,7 @@ flux_idw <- function(pchem_prodname,
 }
 
 shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
-                                                                    precip_values, chem_values, stream_site_name,
+                                                                    precip_values, chem_values, stream_site_code,
                                                                                                       output_varname, verbose = FALSE){
 
         #superseded by shortcut_idw_concflux_v2
@@ -1305,9 +1305,9 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         #derived values: watershed average concentration and ws ave flux.
 
         #encompassing_dem must cover the area of wshd_bnd and precip_gauges
-        #wshd_bnd is an sf object with columns site_name and geometry
+        #wshd_bnd is an sf object with columns site_code and geometry
         #it represents a single watershed boundary
-        #data_locations is an sf object with columns site_name and geometry
+        #data_locations is an sf object with columns site_code and geometry
         #it represents all sites (e.g. rain gauges) that will be used in
         #the interpolation
         #precip_values is a data.frame with one column each for datetime and ms_status,
@@ -1316,7 +1316,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
         #and an additional named column of data values for each
         #precip chemistry location.
 
-        # loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_name),
+        # loginfo(glue('shortcut_idw_concflux: working on {ss}', ss=stream_site_code),
         #     logger = logger_module)
 
         common_dts <- base::intersect(as.character(precip_values$datetime),
@@ -1361,7 +1361,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                             inv_distmat_p <- matrix(NA, nrow = length(dem_wb), ncol = ncol(p_matrix),
                                                                                                 dimnames = list(NULL, colnames(p_matrix)))
                                             for(k in 1:ncol(p_matrix)){
-                                                        dk <- filter(data_locations, site_name == colnames(p_matrix)[k])
+                                                        dk <- filter(data_locations, site_code == colnames(p_matrix)[k])
                                                     inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
                                                                     terra::values(.)
                                                                         inv_dist2[is.na(elevs)] <- NA #mask
@@ -1372,7 +1372,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                 inv_distmat_c <- matrix(NA, nrow = length(dem_wb), ncol = ncol(c_matrix),
                                                                                                     dimnames = list(NULL, colnames(c_matrix)))
                                                     for(k in 1:ncol(c_matrix)){
-                                                                dk <- filter(data_locations, site_name == colnames(c_matrix)[k])
+                                                                dk <- filter(data_locations, site_code == colnames(c_matrix)[k])
                                                             inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
                                                                             terra::values(.)
                                                                                 inv_dist2[is.na(elevs)] <- NA
@@ -1390,7 +1390,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                                         for(k in 1:ntimesteps){
 
                                                                                     idw_log_timestep(verbose = verbose,
-                                                                                                                              site_name = stream_site_name,
+                                                                                                                              site_code = stream_site_code,
                                                                                                                                                        v = output_varname,
                                                                                                                                                        k = k,
                                                                                                                                                                                 ntimesteps = ntimesteps,
@@ -1417,10 +1417,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                                                                                                                                                                        recursive = FALSE))
 
                                                                                                     #determine data-elevation relationship for interp weighting (p only)
-                                                                                                    d_elev <- tibble(site_name = rownames(pk),
+                                                                                                    d_elev <- tibble(site_code = rownames(pk),
                                                                                                                                               precip = pk[,1]) %>%
                                                                                                                 left_join(data_locations,
-                                                                                                                                                by = 'site_name')
+                                                                                                                                                by = 'site_code')
                                                                                                                         mod <- lm(precip ~ elevation, data = d_elev)
                                                                                                                         ab <- as.list(mod$coefficients)
 
@@ -1463,7 +1463,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                                                             # for(k in 1000:1400){
 
                                                                                             idw_log_timestep(verbose = verbose,
-                                                                                                                                      site_name = stream_site_name,
+                                                                                                                                      site_code = stream_site_code,
                                                                                                                                                                v = output_varname,
                                                                                                                                                                k = k,
                                                                                                                                                                                         ntimesteps = ntimesteps,
@@ -1515,10 +1515,10 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                                                                                                         weightmat_c <- gpuR::t(inv_distmat_c_sub_norm)
 
                                                                                                                                         #determine data-elevation relationship for interp weighting (p only)
-                                                                                                                                        d_elev <- tibble(site_name = rownames(pk),
+                                                                                                                                        d_elev <- tibble(site_code = rownames(pk),
                                                                                                                                                                                   precip = pk[,1]) %>%
                                                                                                                                                     left_join(data_locations,
-                                                                                                                                                                                    by = 'site_name')
+                                                                                                                                                                                    by = 'site_code')
                                                                                                                                                             mod <- lm(precip ~ elevation, data = d_elev)
                                                                                                                                                             ab <- as.list(mod$coefficients)
 
@@ -1572,7 +1572,7 @@ shortcut_idw_concflux <- function(encompassing_dem, wshd_bnd, data_locations,
                                                                 # compare_interp_methods()
 
                                                                 ws_means <- tibble(datetime = d_dt,
-                                                                                                          site_name = stream_site_name,
+                                                                                                          site_code = stream_site_code,
                                                                                                                                  var = output_varname,
                                                                                                                                  concentration = ws_mean_conc,
                                                                                                                                                         flux = ws_mean_flux,
@@ -1689,11 +1689,11 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
     sheds <- ws_prodname %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
-        select(site_name) %>%
+        select(site_code) %>%
         sf::st_transform(4326) %>%
         sf::st_set_crs(4326)
 
-    site <- unique(sheds$site_name)
+    site <- unique(sheds$site_code)
 
     ee_shape <- sf_as_ee(sheds,
                          via = 'getInfo_to_asset',
@@ -1715,7 +1715,7 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
         })
     })$flatten()
 
-    gee <- flat_img$select(propertySelectors = c('site_name', 'imageId',
+    gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
                                                  'stdDev', 'median'),
                            retainGeometry = FALSE)
 
@@ -1744,7 +1744,7 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
     median_name <- glue('{c}_median', c = prodname)
 
     fin_table <- read_csv(temp_rgee) %>%
-        select(site_name, stdDev, median, imageId) %>%
+        select(site_code, stdDev, median, imageId) %>%
         rename(date = imageId,
                !!sd_name := stdDev,
                !!median_name := median) %>%
@@ -1848,9 +1848,9 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
     #     for(p in 1:nrow(sheds)){
     #         site_d_val <- image_info[["features"]][[p]][["properties"]][[band]]
     #         site_d_val <- ifelse(is.null(site_d_val), NA, site_d_val)
-    #         site_name_p <- image_info[["features"]][[p]][["properties"]][["site_name"]]
+    #         site_code_p <- image_info[["features"]][[p]][["properties"]][["site_code"]]
     #         one_y_d <- tibble(val = site_d_val,
-    #                           site_name = site_name_p,
+    #                           site_code = site_code_p,
     #                           date = id)
     #
     #         all_sites_m <- rbind(all_sites_m, one_y_d)
@@ -1881,9 +1881,9 @@ get_gee_large <- function(network, domain, gee_id, band, prodname, rez,
     #     for(p in 1:nrow(sheds)){
     #         site_d_val <- image_info[["features"]][[p]][["properties"]][[band]]
     #         site_d_val <- ifelse(is.null(site_d_val), NA, site_d_val)
-    #         site_name_p <- image_info[["features"]][[p]][["properties"]][["site_name"]]
+    #         site_code_p <- image_info[["features"]][[p]][["properties"]][["site_code"]]
     #         one_y_d <- tibble(val = site_d_val,
-    #                           site_name = site_name_p,
+    #                           site_code = site_code_p,
     #                           date = id)
     #
     #         all_sites_sd <- rbind(all_sites_sd, one_y_d)
