@@ -2,14 +2,13 @@
 #and shape files, not including those in data_acquisition/data/*/raw/ directories
 
 library(tidyverse)
-library(plyr)
-# library(glue)
 library(feather)
 library(fst)
 library(sf)
 
-pattern = 'site_code'
+pattern = 'site_name'
 replacement = 'site_code'
+
 setwd('~/git/macrosheds')
 
 #1. update feather files (data_acquisition) ####
@@ -66,7 +65,9 @@ for(i in seq_along(all_shp)){
     }
 
     colnames(d) = sub(pattern, replacement, colnames(d))
-    sf::st_write(d, f)
+    sf::st_write(d, f,
+                 delete_layer = TRUE,
+                 quiet = TRUE)
 }
 
 #3. update feather files (portal) ####
@@ -103,7 +104,7 @@ unchanged_shapes2 = c()
 for(i in seq_along(all_shp)){
 
     f = all_shp[i]
-    d = sf::st_read(f)
+    d = sf::st_read(f, quiet = TRUE)
 
     if(! pattern %in% colnames(d)){
         unchanged_shapes2 = append(unchanged_shapes2, i)
@@ -112,12 +113,14 @@ for(i in seq_along(all_shp)){
     }
 
     colnames(d) = sub(pattern, replacement, colnames(d))
-    sf::st_write(d, f)
+    sf::st_write(d, f,
+                 delete_layer = TRUE,
+                 quiet = TRUE)
 }
 
 #5. update any other files piecemeal ####
 
 p = 'portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst'
 read_fst(p) %>%
-    rename(!!replacement := !!pattern) %>%
+    dplyr::rename(!!replacement := !!pattern) %>%
     write_fst(p)
