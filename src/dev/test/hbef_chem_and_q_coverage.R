@@ -19,7 +19,7 @@ load_entire_product <- function(macrosheds_root,
     #    across all networks and domains. Available prodnames are:
     #    discharge, stream_chemistry, stream_flux_inst, precipitation,
     #    precip_chemistry, precip_flux_inst.
-    # sort_result: logical. If TRUE, output will be sorted by site_name, var,
+    # sort_result: logical. If TRUE, output will be sorted by site_code, var,
     #    datetime. this may take a few additional minutes for some products in
     #    the full 15m dataset.
     # filter_vars: character vector. for products like stream_chemistry that include
@@ -78,7 +78,7 @@ load_entire_product <- function(macrosheds_root,
                    network = network_domain[1],
                    domain = network_domain[2]) %>%
             select(-val_err) %>%
-            select(datetime, network, domain, site_name, var, val, ms_status,
+            select(datetime, network, domain, site_code, var, val, ms_status,
                    ms_interp) %>%
             bind_rows(d)
     }
@@ -96,7 +96,7 @@ load_entire_product <- function(macrosheds_root,
 
     if(sort_result){
         d <- arrange(d,
-                     site_name, var, datetime)
+                     site_code, var, datetime)
     }
 
     return(d)
@@ -111,7 +111,7 @@ zz %>%
     filter(domain=='hbef') %>%
     mutate(var2 = drop_var_prefix(var)) %>%
     filter(var2 == 'Ca') %>%
-    group_by(var2, year(datetime), site_name) %>%
+    group_by(var2, year(datetime), site_code) %>%
     summarize(n = n()) %>%
     as.data.frame() %>%
     tail()
@@ -124,6 +124,6 @@ qq <- load_entire_product(
 qq %>%
     filter(domain=='hbef') %>%
     # mutate(var2 = drop_var_prefix(var)) %>%
-    group_by(var, year(datetime), site_name) %>%
+    group_by(var, year(datetime), site_code) %>%
     summarize(n = n()) %>%
     as.data.frame()

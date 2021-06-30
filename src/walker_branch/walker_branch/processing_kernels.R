@@ -9,7 +9,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -61,7 +61,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -113,7 +113,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -162,7 +162,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
     files <- str_split_fixed(component, '__[|]', n = Inf)[1,]
 
@@ -172,7 +172,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
                            n = network,
                            d = domain,
                            p = prodname_ms,
-                           s = site_name,
+                           s = site_code,
                            c = daily_file)
 
     hourly_file <- grep('hourly', files, value = TRUE)
@@ -181,7 +181,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
                            n = network,
                            d = domain,
                            p = prodname_ms,
-                           s = site_name,
+                           s = site_code,
                            c = hourly_file)
 
     daily_dat <- read.csv(raw_file_daily, colClasses = 'character') %>%
@@ -190,7 +190,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
                                  datetime_cols = list('Date' = '%Y%m%d'),
                                  datetime_tz = 'US/Eastern',
-                                 site_name_col = 'site',
+                                 site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  data_col_pattern = '#V#',
                                  is_sensor = TRUE)
@@ -216,7 +216,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
                                  datetime_cols = list('DATE' = '%Y%m%d',
                                                       'TIME' = '%H:%M'),
                                  datetime_tz = 'US/Eastern',
-                                 site_name_col = 'site',
+                                 site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  summary_flagcols = 'FLAG',
                                  data_col_pattern = '#V#',
@@ -240,18 +240,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -260,7 +260,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
     files <- str_split_fixed(component, '__[|]', n = Inf)[1,]
 
@@ -270,7 +270,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
                            n = network,
                            d = domain,
                            p = prodname_ms,
-                           s = site_name,
+                           s = site_code,
                            c = daily_file)
 
     min_file <- grep('minute', files, value = TRUE)
@@ -279,7 +279,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
                             n = network,
                             d = domain,
                             p = prodname_ms,
-                            s = site_name,
+                            s = site_code,
                             c = min_file)
 
     daily_dat <- read.csv(raw_file_daily, colClasses = 'character') %>%
@@ -288,9 +288,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
                                  datetime_cols = list('DATE' = '%Y%m%d'),
                                  datetime_tz = 'US/Eastern',
-                                 site_name_col = 'name',
+                                 site_code_col = 'name',
                                  data_cols =  c('value' = 'discharge'),
-                                 alt_site_name = list(east_fork = 'EF_DISCHARGE',
+                                 alt_site_code = list(east_fork = 'EF_DISCHARGE',
                                                       west_fork = 'WF_DISCHARGE'),
                                  data_col_pattern = '#V#',
                                  summary_flagcols = 'CODE',
@@ -325,9 +325,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     min_dat <- ms_read_raw_csv(preprocessed_tibble = min_dat,
                                datetime_cols = list('DATE' = '%Y%m%d'),
                                datetime_tz = 'US/Eastern',
-                               site_name_col = 'name',
+                               site_code_col = 'name',
                                data_cols =  c('value' = 'discharge'),
-                               alt_site_name = list(east_fork = 'EF_DISCHARGE',
+                               alt_site_code = list(east_fork = 'EF_DISCHARGE',
                                                     west_fork = 'WF_DISCHARGE'),
                                data_col_pattern = '#V#',
                                summary_flagcols = 'CODE',
@@ -360,18 +360,18 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -380,7 +380,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
     files <- str_split_fixed(component, '__[|]', n = Inf)[1,]
 
@@ -390,7 +390,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
                            n = network,
                            d = domain,
                            p = prodname_ms,
-                           s = site_name,
+                           s = site_code,
                            c = east_file)
 
     west_file <- grep('west', files, value = TRUE)
@@ -399,7 +399,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
                          n = network,
                          d = domain,
                          p = prodname_ms,
-                         s = site_name,
+                         s = site_code,
                          c = west_file)
 
     west_dat <- read.csv(raw_file_west, colClasses = 'character') %>%
@@ -408,7 +408,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
     west_dat <- ms_read_raw_csv(preprocessed_tibble = west_dat,
                                 datetime_cols = list('DATE' = '%Y%m%d'),
                                 datetime_tz = 'US/Eastern',
-                                site_name_col = 'site',
+                                site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',
                                                'PH' = 'pH',
@@ -465,7 +465,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
     east_dat <- ms_read_raw_csv(preprocessed_tibble = east_dat,
                                 datetime_cols = list('DATE' = '%Y%m%d'),
                                 datetime_tz = 'US/Eastern',
-                                site_name_col = 'site',
+                                site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',
                                                'PH' = 'pH',
@@ -527,18 +527,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }

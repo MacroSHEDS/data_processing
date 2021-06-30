@@ -25,29 +25,29 @@ for(i in seq_len(nrow(prod_info))){
 
     for(j in 1:length(sites)){
 
-        site_name <- sites[j]
+        site_code <- sites[j]
 
         munge_status <- get_munge_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
-                                         site_name = site_name)
+                                         site_code = site_code)
         if(munge_status == 'ok'){
             loginfo(glue('Nothing to do for {s} {p}',
-                         s=site_name, p=prodname_ms), logger=logger_module)
+                         s=site_code, p=prodname_ms), logger=logger_module)
             next
         } else {
             loginfo(glue('Munging {s} {p}',
-                         s=site_name, p=prodname_ms), logger=logger_module)
+                         s=site_code, p=prodname_ms), logger=logger_module)
         }
 
         if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
             munge_rtn <- munge_combined_split(network = network,
                                               domain = domain,
-                                              site_name = site_name,
+                                              site_code = site_code,
                                               prodname_ms = prodname_ms,
                                               tracker = held_data)
         } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn <- munge_by_site(network, domain, site_name, prodname_ms, held_data)
+            munge_rtn <- munge_by_site(network, domain, site_code, prodname_ms, held_data)
         }
 
         if(is_ms_err(munge_rtn)){
@@ -57,7 +57,7 @@ for(i in seq_len(nrow(prod_info))){
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   prodname_ms = prodname_ms,
-                                  site_name = site_name,
+                                  site_code = site_code,
                                   new_status = 'error')
 
         } else if(is_blacklist_indicator(munge_rtn)){

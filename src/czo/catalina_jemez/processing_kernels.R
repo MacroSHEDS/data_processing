@@ -197,7 +197,7 @@ process_0_2425 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
     #CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2504/
     #Hydroshare: https://www.hydroshare.org/resource/c0e5094d1de54547a304d4dec3a7b3ff/
@@ -205,7 +205,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -213,11 +213,11 @@ process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
     if(!grepl('MCZOB', component)) {
 
         col_names <- names(d)
-        site_name_cols <- col_names[!grepl('DateTime|time', col_names)]
+        site_code_cols <- col_names[!grepl('DateTime|time', col_names)]
         datetime_col <- col_names[grepl('DateTime|time', col_names)]
 
         d <- d %>%
-            pivot_longer(cols = site_name_cols, names_to = 'sites', values_to = 'discharge') %>%
+            pivot_longer(cols = site_code_cols, names_to = 'sites', values_to = 'discharge') %>%
             filter(discharge != '[cfs]') %>%
             mutate(time = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,2]) %>%
             mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
@@ -227,7 +227,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
                              datetime_cols = list('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'sites',
+                             site_code_col = 'sites',
                              data_cols =  'discharge',
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -247,7 +247,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
                              datetime_cols = list('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('Streamflow' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -272,7 +272,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_name, component) {
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_6686 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/6686/
     #https://www.hydroshare.org/resource/7703d249f062428b8229c03ce072e5c6/
@@ -283,7 +283,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -299,7 +299,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_name, component) {
                              datetime_cols = list('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('StreamFlow' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -322,7 +322,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_name, component) {
                              datetime_cols = list('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('WaterTemp' = 'temp'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -343,7 +343,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_name, component) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2644 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2644/
     #https://www.hydroshare.org/resource/3c1fd54381764e5b8865609cb4127d63/
@@ -352,7 +352,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -363,7 +363,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('StreamFlow' = 'discharge'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -383,7 +383,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_name, component) {
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2497 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2497/
     #https://www.hydroshare.org/resource/9d7dd6ca40984607ad74a00ab0b5121b/
@@ -392,7 +392,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -404,7 +404,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_name, component) {
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('Temp' = 'temp'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -416,7 +416,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_name, component) {
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
-                             site_name_col = 'site',
+                             site_code_col = 'site',
                              data_cols =  c('Flow' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -437,7 +437,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_name, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
 
     # CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/4135/
     # Hydroshare: https://www.hydroshare.org/resource/553c42d3a8ee40309b2d77071aa25f2e/
@@ -446,7 +446,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -494,8 +494,8 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'SiteCode',
-                         alt_site_name = list('HistoryGrove' = c('FLUME_HG', 'FLUME_HG16', 'FLUME_HG_16'),
+                         site_code_col = 'SiteCode',
+                         alt_site_code = list('HistoryGrove' = c('FLUME_HG', 'FLUME_HG16', 'FLUME_HG_16'),
                                               'LowerJaramillo' = 'FLUME_LJ',
                                               'UpperJaramillo' = 'FLUME_UJ',
                                               'LowerLaJara' = c('FLUME_LLJ', 'FLUME_LLJ16', 'FLUME_LLJ_16'),
@@ -545,7 +545,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_name, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2740 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2740/
     #https://www.hydroshare.org/resource/3df05937abfc4cb59b8be04d674c4b48/
@@ -554,7 +554,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -566,8 +566,8 @@ process_1_2740 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('DateTime' = '%m/%e/%Y'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'SiteCode',
-                         alt_site_name = list('MarshallGulch' = 'MG_WEIR',
+                         site_code_col = 'SiteCode',
+                         alt_site_code = list('MarshallGulch' = 'MG_WEIR',
                                               'OracleRidge' = 'OR_low',
                                               'Bigelow' = 'BGZOB_Flume'),
                          data_cols =  c('pH', 'EC' = 'spCond', 'TIC', 'TOC', 'TN',
@@ -674,7 +674,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2532 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2532/
     #https://www.hydroshare.org/resource/f5ae15fbdcc9425e847060f89da61557/
@@ -683,7 +683,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -700,7 +700,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_name, component) {
                          datetime_cols = list('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'sites',
+                         site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -720,14 +720,14 @@ process_1_2532 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2491 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2491 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/346cf577d01e4b2b90ff1cef86e789bb/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -740,7 +740,7 @@ process_1_2491 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -760,7 +760,7 @@ process_1_2491 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2494 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/1dc7b0975ae2469a96e3458075d3b75c/
 
@@ -768,7 +768,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -777,7 +777,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -797,7 +797,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2531 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2531/
     #https://www.hydroshare.org/resource/172de7fe091f48d98b1d380da5851932/
@@ -805,7 +805,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -826,7 +826,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'sites',
+                         site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -846,14 +846,14 @@ process_1_2531 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2475 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/0ba983afc62647dc8cfbd91058cfc56d/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -867,7 +867,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -887,7 +887,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2543/
     #https://www.hydroshare.org/resource/f7df7b07ea19477ab7ea701c34bc356b/
@@ -895,7 +895,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     if(grepl('Winter', component)){
@@ -925,7 +925,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         alt_site_name = list('MG_PC1' = 'Schist',
+                         alt_site_code = list('MG_PC1' = 'Schist',
                                               'MG_PC2' = 'FernValley',
                                               'MG_Outlet' = 'Outlet',
                                               'MG_BurntMeadow' = 'BurntMeadow',
@@ -933,7 +933,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
                                               'MG_PC3' = 'Granite',
                                               'MG_Weir' = 'Weir',
                                               'MG_Lemmon' = 'MtLemmon'),
-                         site_name_col = 'sites',
+                         site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -953,7 +953,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/5491/
     #https://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24/
@@ -961,7 +961,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -991,7 +991,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
                          datetime_cols = list('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'SiteCode',
+                         site_code_col = 'SiteCode',
                          data_cols =  c('pH', 'EC' = 'spCond',
                                         'TIC', 'TOC', 'TN', 'F.' = 'F', 'Cl.' = 'Cl',
                                         'NO2.' = 'NO2', 'Br.' = 'Br', 'NO3.' = 'NO3',
@@ -1103,7 +1103,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/5491/
     #https://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24/
@@ -1111,7 +1111,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -1157,8 +1157,8 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'SiteCode',
-                         alt_site_name = list('Burn_Met_Low' = 'RainColl_Burn_Low_OC',
+                         site_code_col = 'SiteCode',
+                         alt_site_code = list('Burn_Met_Low' = 'RainColl_Burn_Low_OC',
                                               'MCZOB_met' = 'RainColl_MCZOB'),
                          data_cols =  col_names_to_vars,
                          data_col_pattern = '#V#',
@@ -1199,7 +1199,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2415 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2415 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/5ca1378090884e72a8dcb796d882bb07/
 
@@ -1207,7 +1207,7 @@ process_1_2415 <- function(network, domain, prodname_ms, site_name, component) {
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -1216,7 +1216,7 @@ process_1_2415 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('PRECIP' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -1236,14 +1236,14 @@ process_1_2415 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2425 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2425 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/1db7abcf0eb64ef49000c46a6133949d/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -1257,7 +1257,7 @@ process_1_2425 <- function(network, domain, prodname_ms, site_name, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  precip_cat,
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
@@ -1323,13 +1323,13 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 
     for(i in 1:length(sites)) {
 
-        site_full <- filter(d, site_name == !!sites[i])
+        site_full <- filter(d, site_code == !!sites[i])
 
         write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[i],
+                      site_code = sites[i],
                       level = 'derived',
                       shapefile = FALSE)
     }
@@ -1382,13 +1382,13 @@ process_2_ms002 <- function(network, domain, prodname_ms){
 
     for(i in 1:length(sites)) {
 
-        site_full <- filter(d, site_name == !!sites[i])
+        site_full <- filter(d, site_code == !!sites[i])
 
         write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[i],
+                      site_code = sites[i],
                       level = 'derived',
                       shapefile = FALSE)
     }
@@ -1440,13 +1440,13 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 
     for(i in 1:length(sites)) {
 
-        site_full <- filter(d, site_name == !!sites[i])
+        site_full <- filter(d, site_code == !!sites[i])
 
         write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[i],
+                      site_code = sites[i],
                       level = 'derived',
                       shapefile = FALSE)
     }
@@ -1498,13 +1498,13 @@ process_2_ms004 <- function(network, domain, prodname_ms){
 
     for(i in 1:length(sites)) {
 
-        site_full <- filter(d, site_name == !!sites[i])
+        site_full <- filter(d, site_code == !!sites[i])
 
         write_ms_file(d = site_full,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[i],
+                      site_code = sites[i],
                       level = 'derived',
                       shapefile = FALSE)
     }

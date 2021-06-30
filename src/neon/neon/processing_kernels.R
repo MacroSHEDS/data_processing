@@ -6,7 +6,7 @@ process_0_DP1.20093 <- function(set_details, network, domain){
     # set_details=s
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE),
         silent = TRUE)
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
@@ -14,13 +14,13 @@ process_0_DP1.20093 <- function(set_details, network, domain){
     if(class(data_pile) == 'try-error'){
         return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                           p = set_details$prodname_ms,
-                                          s = set_details$site_name,
+                                          s = set_details$site_code,
                                           c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -32,20 +32,20 @@ process_0_DP1.20093 <- function(set_details, network, domain){
 process_0_DP1.20033 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -57,20 +57,20 @@ process_0_DP1.20033 <- function(set_details, network, domain){
 process_0_DP1.20042 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -82,20 +82,20 @@ process_0_DP1.20042 <- function(set_details, network, domain){
 process_0_DP1.20053 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -107,26 +107,26 @@ process_0_DP1.20053 <- function(set_details, network, domain){
 process_0_DP1.00004 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE, avg=30),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
     # out_sub = data_pile$BP_30min %>%
-    #     mutate(site_name=paste0(set_details$site_name, updown)) %>%
-    #     select(site_name, startDateTime, staPresMean, staPresFinalQF)
+    #     mutate(site_code=paste0(set_details$site_code, updown)) %>%
+    #     select(site_code, startDateTime, staPresMean, staPresFinalQF)
 
     return()
 }
@@ -136,20 +136,20 @@ process_0_DP1.00004 <- function(set_details, network, domain){
 process_0_DP1.20097 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -163,7 +163,7 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     #stop('disabled. waiting on NEON to fix this product')
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                                  site=set_details$site_name,
+                                                  site=set_details$site_code,
                                                   startdate=set_details$component,
                                                   enddate=set_details$component,
                                                   package='basic',
@@ -173,13 +173,13 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -191,7 +191,7 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     #neon's level data and eventually estimating discharge
 
     # drc = glue('data/neon/neon/raw/surfaceElev_sensorpos/{s}',
-    #     s=set_details$site_name)
+    #     s=set_details$site_code)
     # dir.create(drc, showWarnings=FALSE, recursive=TRUE)
     # f = glue(drc, '/{p}.feather', p=set_details$component)
     #
@@ -213,20 +213,20 @@ process_0_DP1.20016 <- function(set_details, network, domain){
 process_0_DP1.20288 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
+        site=set_details$site_code, startdate=set_details$component,
         enddate=set_details$component, package='basic', check.size=FALSE),
         silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name, c=set_details$component)
+        s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -238,20 +238,20 @@ process_0_DP1.20288 <- function(set_details, network, domain){
 process_0_DP1.00006 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_name, startdate=set_details$component,
+                                             site=set_details$site_code, startdate=set_details$component,
                                              enddate=set_details$component, package='basic', check.size=FALSE),
                      silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_name, c=set_details$component)
+                         s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -263,20 +263,20 @@ process_0_DP1.00006 <- function(set_details, network, domain){
 process_0_DP4.00130 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_name, startdate=set_details$component,
+                                             site=set_details$site_code, startdate=set_details$component,
                                              enddate=set_details$component, package='basic', check.size=FALSE),
                      silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_name, c=set_details$component)
+                         s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -288,20 +288,20 @@ process_0_DP4.00130 <- function(set_details, network, domain){
 process_0_DP1.00013 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_name, startdate=set_details$component,
+                                             site=set_details$site_code, startdate=set_details$component,
                                              enddate=set_details$component, package='basic', check.size=FALSE),
                      silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                         p = set_details$prodname_ms,
-                                        s = set_details$site_name,
+                                        s = set_details$site_code,
                                         c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_name, c=set_details$component)
+                         s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -316,7 +316,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name,
+                          s = set_details$site_code,
                           c = set_details$component)
 
     dir.create(path = raw_data_dest,
@@ -351,12 +351,12 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20093 <- function(network, domain, prodname_ms, site_code,
     component){
-    # site_name=site_name; component=in_comp
+    # site_code=site_code; component=in_comp
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
 
@@ -377,7 +377,7 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             pivot_longer(cols = c('ANC', 'alk'), names_to = 'var',
                          values_to = 'val') %>%
             filter(!is.na(val)) %>%
-            rename(site_name = siteID,
+            rename(site_code = siteID,
                    datetime = collectDate) %>%
             mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
             filter(!is.na(val))
@@ -388,7 +388,7 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
   if(relevant_file2 %in% rawfiles){
 
         out_lab <- read_feather(glue(rawdir, '/', relevant_file2)) %>%
-            select(site_name = siteID, datetime = collectDate, var = analyte,
+            select(site_code = siteID, datetime = collectDate, var = analyte,
                    val = analyteConcentration, shipmentWarmQF, sampleCondition) %>%
             mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
                                       1, 0)) %>%
@@ -439,7 +439,7 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
       }
 
     out_sub <- out_sub %>%
-        group_by(datetime, site_name, var) %>%
+        group_by(datetime, site_code, var) %>%
         summarize(
             val = mean(val, na.rm=TRUE),
             ms_status = max(ms_status, na.rm = TRUE)) %>%
@@ -453,12 +453,12 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
 
 #stream_nitrate: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20033 <- function(network, domain, prodname_ms, site_code,
     component){
-    # prodname_ms=prodname_ms; site_name=site_name; component=in_comp
+    # prodname_ms=prodname_ms; site_code=site_code; component=in_comp
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles = list.files(rawdir)
 
@@ -478,10 +478,10 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
 
     out_sub <- rawd %>%
         mutate(
-            site_name=paste0(siteID, updown), #append "-up" to upstream site_names
+            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
             datetime = force_tz(startDateTime, 'UTC'), #GMT -> UTC
             surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
-        select(site_name, datetime=startDateTime, val=surfWaterNitrateMean,
+        select(site_code, datetime=startDateTime, val=surfWaterNitrateMean,
                ms_status = finalQF) %>%
       mutate(var = 'NO3_N')
 
@@ -490,11 +490,11 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
 
 #stream_PAR: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20042 <- function(network, domain, prodname_ms, site_code,
     component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
 
@@ -514,15 +514,15 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
 
     out_sub <- rawd %>%
         mutate(
-            site_name=paste0(siteID, updown), #append "-up" to upstream site_names
+            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
             datetime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        group_by(datetime, site_name) %>%
+        group_by(datetime, site_code) %>%
         summarize(
             val = mean(PARMean, na.rm=TRUE),
             ms_status = numeric_any(PARFinalQF)) %>%
         ungroup() %>%
       mutate(var = 'PAR') %>%
-        select(site_name, datetime=datetime, var, val, ms_status)
+        select(site_code, datetime=datetime, var, val, ms_status)
 
     out_sub[is.na(out_sub)] <- NA
 
@@ -531,14 +531,14 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
 
 #stream_temperature: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20053 <- function(network, domain, prodname_ms, site_code,
     component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     rawfiles <- list.files(rawdir)
@@ -562,14 +562,14 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     #                siteID = paste0(siteID, updown))
 
     out_sub <- rawd %>%
-      mutate(site_name = paste0(siteID, updown)) %>%
+      mutate(site_code = paste0(siteID, updown)) %>%
       mutate(datetime = force_tz(startDateTime, 'UTC')) %>%
-      group_by(datetime, site_name) %>%
+      group_by(datetime, site_code) %>%
       summarize(val = mean(surfWaterTempMean, na.rm=TRUE),
                 ms_status = numeric_any(finalQF)) %>%
       ungroup() %>%
       mutate(var = 'temp') %>%
-      select(site_name, datetime, var, val, ms_status)
+      select(site_code, datetime, var, val, ms_status)
 
     out_sub[is.na(out_sub)] <- NA
 
@@ -578,7 +578,7 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     # d <- ms_read_raw_csv(preprocessed_tibble = rawd,
     #                      datetime_cols = c(startDateTime = '%Y-%m-%d %H:%M:%S'),
     #                      datetime_tz = 'UTC',
-    #                      site_name_col = 'siteID',
+    #                      site_code_col = 'siteID',
     #                      data_cols = c(surfWaterTempMean = 'temp'),
     #                      data_col_pattern = '#V#',
     #                      is_sensor = TRUE,
@@ -605,10 +605,10 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
 
 #air_pressure: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
     component){
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -631,14 +631,14 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
 
     out_sub = out_sub %>%
         mutate(
-            site_name=paste0(siteID, updown), #append "-up" to upstream site_names
+            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
             startDateTime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        group_by(startDateTime, site_name) %>%
+        group_by(startDateTime, site_code) %>%
         summarize(
             staPresMean = mean(staPresMean, na.rm=TRUE),
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
-        select(site_name, datetime=startDateTime, airpressure=staPresMean,
+        select(site_code, datetime=startDateTime, airpressure=staPresMean,
             ms_status)
 
     out_sub <- synchronize_timestep(d = out_sub)
@@ -648,11 +648,11 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
 
 #stream_gases: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20097 <- function(network, domain, prodname_ms, site_code,
     component){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles = list.files(rawdir)
 
@@ -696,7 +696,7 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
                 'N2O' = mean(concentrationN2O, na.rm = TRUE),
                 ms_status = max(error, na.rm = TRUE)) %>%
         ungroup() %>%
-        rename(site_name = siteID) %>%
+        rename(site_code = siteID) %>%
       pivot_longer(cols = c('CH4', 'CO2', 'N2O'), names_to = 'var', values_to = 'val')
 
     return(out_sub)
@@ -704,11 +704,11 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
 
 #surface_elevation: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
     component){
 
   rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
   rawfiles <- list.files(rawdir)
 
@@ -722,7 +722,7 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
       mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
       mutate(ms_status = ifelse(is.na(ms_status), 0, ms_status)) %>%
       mutate(var = 'stage_height') %>%
-      select(site_name = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
+      select(site_code = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
 
   } else {
     return(generate_ms_exception('Missing discharge files'))
@@ -734,11 +734,11 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
 
 #stream_quality: STATUS=PAUSED
 #. handle_errors
-process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.20288 <- function(network, domain, prodname_ms, site_code,
     component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
     relevant_file1 <- 'waq_instantaneous.feather'
@@ -762,8 +762,8 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     updown = determine_upstream_downstream(rawd)
 
     out_sub <- rawd %>%
-      mutate(site_name=paste0(site_name, updown)) %>%
-      select(site_name,
+      mutate(site_code=paste0(site_code, updown)) %>%
+      select(site_code,
              datetime=startDateTime,
              'spCond__|dat'=specificConductance,
              'spCond__|flg' = specificCondFinalQF,
@@ -789,11 +789,11 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.00006 <- function(network, domain, prodname_ms, site_code,
                                 component) {
 
   rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
   rawfiles <- list.files(rawdir)
 
@@ -804,26 +804,26 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
     rawd2 <- read_feather(glue(rawdir, '/', relevant_file2))
 
     out_sub2 <- rawd2 %>%
-      mutate(site_name=paste(site_name, horizontalPosition, sep = '_'),
+      mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
              datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
       mutate(secPrecipRangeQF = ifelse(is.na(secPrecipRangeQF), 0, secPrecipRangeQF),
              secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
       mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
                                 1, 0)) %>%
       mutate(var = 'precipitation') %>%
-      select(site_name, datetime, var, val = secPrecipBulk, ms_status)
+      select(site_code, datetime, var, val = secPrecipBulk, ms_status)
   }
 
   if(relevant_file1 %in% rawfiles) {
     rawd1 <- read_feather(glue(rawdir, '/', relevant_file1))
 
     out_sub1 <- rawd1 %>%
-      mutate(site_name=paste(site_name, horizontalPosition, sep = '_'),
+      mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
              datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
       mutate(ms_status = ifelse(priPrecipFinalQF == 1,
                                 1, 0)) %>%
       mutate(var = 'precipitation') %>%
-      select(site_name, datetime, var, val = priPrecipBulk, ms_status)
+      select(site_code, datetime, var, val = priPrecipBulk, ms_status)
   }
 
   if(!relevant_file1 %in% rawfiles && ! relevant_file2 %in% rawfiles) {
@@ -845,11 +845,11 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_DP4.00130 <-function(network, domain, prodname_ms, site_name,
+process_1_DP4.00130 <-function(network, domain, prodname_ms, site_code,
                                    component){
 
   rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
   rawfiles <- list.files(rawdir)
 
@@ -865,7 +865,7 @@ process_1_DP4.00130 <-function(network, domain, prodname_ms, site_name,
       mutate(ms_status = ifelse(dischargeFinalQF == 1 | dischargeFinalQFSciRvw == 1,
                                 1, 0)) %>%
       mutate(var = 'discharge') %>%
-      select(site_name = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
+      select(site_code = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
 
   } else {
     return(generate_ms_exception('Missing discharge files'))
@@ -877,11 +877,11 @@ process_1_DP4.00130 <-function(network, domain, prodname_ms, site_name,
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
+process_1_DP1.00013 <- function(network, domain, prodname_ms, site_code,
                                 component){
 
   rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
   rawfiles <- list.files(rawdir)
 
@@ -918,7 +918,7 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
              'pH__|flg' = NA) %>%
       select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg')) %>%
       mutate(across(contains('|flg'), ~ifelse(is.na(.x), 0, 1))) %>%
-      mutate(site_name = !!site_name) %>%
+      mutate(site_code = !!site_code) %>%
       select(-namedLocation)
 
     out_sub <- ms_cast_and_reflag(out_sub,
@@ -934,14 +934,14 @@ process_1_DP1.00013 <- function(network, domain, prodname_ms, site_name,
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
                                      component){
 
     rawdir1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     rawfile1 <- glue(rawdir1, '/NEONAquaticWatershed.zip')
@@ -958,9 +958,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
                      quiet = TRUE) %>%
         filter(Science != 'Lake') %>%
         # mutate(area = WSAreaKm2 * 100) %>%
-        select(site_name = SiteID, geometry = geometry) %>%
+        select(site_code = SiteID, geometry = geometry) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     if(nrow(d) == 0) stop('no rows in sf object')
 
@@ -977,7 +977,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
 
         # dir.create(path = glue(munged_data_dest,
         #                        '/',
-        #                        d$site_name[i]),
+        #                        d$site_code[i]),
         #            showWarnings = FALSE,
         #            recursive = TRUE)
 
@@ -985,7 +985,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = d$site_name[i],
+                      site_code = d$site_code[i],
                       level = 'munged',
                       shapefile = TRUE)
     }
@@ -1036,14 +1036,14 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
         if(length(file) == 1) {
 
             precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_name = !!sites[i]) %>%
+                mutate(site_code = !!sites[i]) %>%
                 mutate(var = 'IS_precipitation')
         } else {
 
             file <- grep('900', file, value = TRUE)
 
             precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_name = !!sites[i]) %>%
+                mutate(site_code = !!sites[i]) %>%
                 mutate(var = 'IS_precipitation')
         }
 
@@ -1075,7 +1075,7 @@ process_2_ms003 <- function(network, domain, prodname_ms) {
 
         flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
                                   qprod = 'precipitation__ms002',
-                                  site_name = s))
+                                  site_code = s))
 
         if(!is.null(flux)){
 
@@ -1083,7 +1083,7 @@ process_2_ms003 <- function(network, domain, prodname_ms) {
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = s,
+                      site_code = s,
                       level = 'derived',
                       shapefile = FALSE)
         }

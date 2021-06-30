@@ -9,7 +9,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -52,7 +52,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -96,7 +96,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -151,7 +151,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -191,13 +191,13 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=PENDING
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -210,12 +210,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
     all_met <- tibble()
     for(i in 1:length(rel_file_path)){
-        site_name <- str_split_fixed(relevant_file[i], '/', n = Inf)[1,2]
-        site_name <- str_split_fixed(site_name, '_', n = Inf)[1,1:2]
-        site_name <- tolower(paste(site_name, collapse = '_'))
+        site_code <- str_split_fixed(relevant_file[i], '/', n = Inf)[1,2]
+        site_code <- str_split_fixed(site_code, '_', n = Inf)[1,1:2]
+        site_code <- tolower(paste(site_code, collapse = '_'))
 
         met <- read.csv(rel_file_path[i], colClasses = 'character') %>%
-            mutate(site = !!site_name)
+            mutate(site = !!site_code)
 
         all_met <- rbind(all_met, met)
     }
@@ -224,7 +224,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(preprocessed_tibble = all_met,
                          datetime_cols = list('Date' = '%m/%d/%y'),
                          datetime_tz = 'America/Los_Angeles',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('PRECIPITATION' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
@@ -245,18 +245,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -266,13 +266,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -284,7 +284,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('DATE_TIME' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Los_Angeles',
-                         site_name_col = 'SITECODE',
+                         site_code_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
@@ -315,18 +315,18 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -336,13 +336,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -356,7 +356,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
-                         site_name_col = 'SITECODE',
+                         site_code_col = 'SITECODE',
                          data_cols =  c(PH='pH',
                                         COND='spCond',
                                         ALK='alk',
@@ -403,18 +403,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -424,7 +424,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
 #ws_boundary: STATUS=PENDING
 #. handle_errors
-process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/discharge__VERSIONLESS002/sitename_NA/krew_discharge.zip',
                     n = network,
@@ -440,11 +440,11 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
     wb <- sf::st_read(rel_file_path,
                       stringsAsFactors = FALSE,
                       quiet = TRUE) %>%
-        select(site_name = watershed,
+        select(site_code = watershed,
                area = Area_ha,
                geometry = geometry) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(temp_dir)
 
@@ -452,14 +452,14 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
         new_wb <- wb[i,]
 
-        site_name <- as_tibble(new_wb) %>%
-            pull(site_name)
+        site_code <- as_tibble(new_wb) %>%
+            pull(site_code)
 
         write_ms_file(d = new_wb,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = site_name,
+                      site_code = site_code,
                       level = 'munged',
                       shapefile = TRUE,
                       link_to_portal = FALSE)
@@ -470,13 +470,13 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -490,7 +490,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
-                         site_name_col = 'SITECODE',
+                         site_code_col = 'SITECODE',
                          data_cols =  c(PH='pH',
                                         COND='spCond',
                                         ALK='alk',
@@ -536,18 +536,18 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }

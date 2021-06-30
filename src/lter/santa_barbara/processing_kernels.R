@@ -401,20 +401,20 @@ process_1_4005 <- munge_santa_barbara_precip
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_6 <- function(network, domain, prodname_ms, site_name,
+process_1_6 <- function(network, domain, prodname_ms, site_code,
                         component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
                          datetime_tz = 'US/Pacific',
-                         site_name_col = 'site_code',
+                         site_code_col = 'site_code',
                          data_cols =  c('nh4_uM' = 'NH4',
                                         'no3_uM' = 'NO3_NO2',
                                         'po4_uM' = 'PO4',

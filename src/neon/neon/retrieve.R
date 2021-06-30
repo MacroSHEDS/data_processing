@@ -12,7 +12,7 @@ neon_streams <- site_data %>%
     filter(domain == 'neon',
            site_type == 'stream_gauge',
            in_workflow == 1) %>%
-    pull(site_name)
+    pull(site_code)
 
 for(i in seq_len(nrow(prod_info))){
 
@@ -39,38 +39,38 @@ for(i in seq_len(nrow(prod_info))){
     if(is_ms_err(avail_sets)) next
 
     #retrieve data by site; log acquisitions and revisions
-    avail_sites <- unique(avail_sets$site_name)
+    avail_sites <- unique(avail_sets$site_code)
 
     #filter for only neon stream sites
     avail_sites <- avail_sites[avail_sites %in% neon_streams]
 
     for(j in 1:length(avail_sites)){
 
-        site_name <- avail_sites[j]
-        avail_site_sets <- avail_sets[avail_sets$site_name == site_name, ,
+        site_code <- avail_sites[j]
+        avail_site_sets <- avail_sets[avail_sets$site_code == site_code, ,
             drop=FALSE]
 
         if(! site_is_tracked(tracker = held_data,
                              prodname_ms = prodname_ms,
-                             site_name = site_name)){
+                             site_code = site_code)){
 
             held_data <<- insert_site_skeleton(
                 tracker = held_data,
                 prodname_ms = prodname_ms,
-                site_name = site_name,
+                site_code = site_code,
                 site_components = avail_site_sets$component
             )
         }
 
         held_data <<- track_new_site_components(tracker = held_data,
                                                 prodname_ms = prodname_ms,
-                                                site_name = site_name,
+                                                site_code = site_code,
                                                 avail = avail_site_sets)
         if(is_ms_err(held_data)) next
 
         retrieval_details <- populate_set_details(tracker = held_data,
                                                   prodname_ms = prodname_ms,
-                                                  site_name = site_name,
+                                                  site_code = site_code,
                                                   avail = avail_site_sets)
         if(is_ms_err(retrieval_details)) next
 
@@ -78,13 +78,13 @@ for(i in seq_len(nrow(prod_info))){
 
         if(nrow(new_sets) == 0){
             loginfo(glue('Nothing to do for {s} {p}',
-                         s = site_name,
+                         s = site_code,
                          p = prodname_ms),
                     logger = logger_module)
             next
         } else {
             loginfo(glue('Retrieving {s} {p}',
-                         s = site_name,
+                         s = site_code,
                          p = prodname_ms),
                     logger = logger_module)
         }
@@ -102,7 +102,7 @@ for(i in seq_len(nrow(prod_info))){
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   prodname_ms = prodname_ms,
-                                  site_name = site_name,
+                                  site_code = site_code,
                                   new_status = 'pending')
         }
     }

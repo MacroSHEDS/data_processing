@@ -64,19 +64,19 @@ process_0_3200 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_700 <- function(network, domain, prodname_ms, site_name,
+process_1_700 <- function(network, domain, prodname_ms, site_code,
                           component) {
-    # site_name=site_name; component=in_comp
+    # site_code=site_code; component=in_comp
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'Site',
-                         alt_site_name = list('GFCP' = 'GFCPisco',
+                         site_code_col = 'Site',
+                         alt_site_code = list('GFCP' = 'GFCPisco',
                                               'GFGL' = 'GFGLisco',
                                               'GFVN' = 'GFVNisco',
                                               'GRGF' = 'grgf',
@@ -118,18 +118,18 @@ process_1_700 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_900 <- function(network, domain, prodname_ms, site_name,
+process_1_900 <- function(network, domain, prodname_ms, site_code,
                           component) {
-    # site_name=site_name; component=in_comp
+    # site_code=site_code; component=in_comp
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'Site',
+                         site_code_col = 'Site',
                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
                                        'temperature'='temp', 'dox'='DO', 'ph'='pH',
                                        'Turbidity'='turbid', 'Ecoli'),
@@ -158,16 +158,16 @@ process_1_900 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_800 <- function(network, domain, prodname_ms, site_name,
+process_1_800 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
                                        'sulfate'='SO4', 'nitrogen_total'='TN',
                                        'phosphorus_total'='TP'),
@@ -200,16 +200,16 @@ process_1_800 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_3110 <- function(network, domain, prodname_ms, site_name,
+process_1_3110 <- function(network, domain, prodname_ms, site_code,
                            component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'Rain_Gauge_ID',
+                         site_code_col = 'Rain_Gauge_ID',
                          data_cols = c('Precipitation_mm'='precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -224,17 +224,17 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
     d <- d %>%
       rename(val = 3) %>%
-      mutate(site_name = str_split_fixed(site_name, '_', n = Inf)[,1]) %>%
-      group_by(datetime, site_name) %>%
+      mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[,1]) %>%
+      group_by(datetime, site_code) %>%
       summarise(val = mean(val, na.rm = TRUE))
 
-    rain_gauges <- unique(d$site_name)
+    rain_gauges <- unique(d$site_code)
 
     final <- tibble()
     for(i in 1:length(rain_gauges)) {
 
       onesite <- d %>%
-        filter(site_name == rain_gauges[i])
+        filter(site_code == rain_gauges[i])
 
       dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
 
@@ -242,7 +242,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
       fin <- full_join(with_0s, onesite, by = 'datetime') %>%
         mutate(val = ifelse(is.na(val), 0, val)) %>%
-        mutate(site_name = rain_gauges[i])
+        mutate(site_code = rain_gauges[i])
 
       final <- rbind(final, fin)
     }
@@ -265,10 +265,10 @@ process_1_3110 <- function(network, domain, prodname_ms, site_name,
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_3200 <- function(network, domain, prodname_ms, site_name, component){
+process_1_3200 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawdir <- glue('data/{n}/{d}/raw/{p}',
                    n=network, d=domain, p=prodname_ms)
@@ -289,22 +289,22 @@ process_1_3200 <- function(network, domain, prodname_ms, site_name, component){
 
     shp_files <- shp_files[!grepl('.shp.xml', shp_files)]
 
-    full_site_name <- str_split_fixed(shp_files, '[/]', n = Inf)[,8]
-    full_site_name <- str_split_fixed(full_site_name, '[.]', n = Inf)[,1]
+    full_site_code <- str_split_fixed(shp_files, '[/]', n = Inf)[,8]
+    full_site_code <- str_split_fixed(full_site_code, '[.]', n = Inf)[,1]
 
     for(i in 1:length(shp_files)){
 
-        site_name <- case_when(full_site_name == 'Baisman_Run' ~ 'BARN',
-                               full_site_name == 'Carroll_Park' ~ 'GFCP',
-                               full_site_name == 'Dead_Run' ~ 'DRKR',
-                               full_site_name == 'Glyndon' ~ 'GFGL',
-                               full_site_name == 'Gwynnbrook' ~ 'GFGB',
-                               full_site_name == 'McDonogh' ~ 'MCDN',
-                               full_site_name == 'Pond_Branch' ~ 'POBR',
-                               full_site_name == 'Villa_Nova' ~ 'GFVN')
+        site_code <- case_when(full_site_code == 'Baisman_Run' ~ 'BARN',
+                               full_site_code == 'Carroll_Park' ~ 'GFCP',
+                               full_site_code == 'Dead_Run' ~ 'DRKR',
+                               full_site_code == 'Glyndon' ~ 'GFGL',
+                               full_site_code == 'Gwynnbrook' ~ 'GFGB',
+                               full_site_code == 'McDonogh' ~ 'MCDN',
+                               full_site_code == 'Pond_Branch' ~ 'POBR',
+                               full_site_code == 'Villa_Nova' ~ 'GFVN')
 
         wb <- st_read(shp_files[i]) %>%
-          mutate(site_name = !!site_name[i],
+          mutate(site_code = !!site_code[i],
                  area = Area_m2/10000) %>%
           select(-Area_m2) %>%
           sf::st_transform(4326)
@@ -313,7 +313,7 @@ process_1_3200 <- function(network, domain, prodname_ms, site_name, component){
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = site_name[i],
+                      site_code = site_code[i],
                       level = 'munged',
                       shapefile = TRUE,
                       link_to_portal = FALSE)

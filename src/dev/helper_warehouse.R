@@ -55,23 +55,23 @@ populate_missing_shiny_files = function(domain){
     list.files('data/hbef/')
 
     qq = read_feather('data/hbef/discharge.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    qq = filter(qq, site_code == 'donkey')
+    qq = bind_rows(qq, tibble(site_code='ARIK', datetime=as.POSIXct('2019-01-01')))
     write_feather(qq, 'data/neon/discharge.feather')
 
     qq = read_feather('data/hbef/flux.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    qq = filter(qq, site_code == 'donkey')
+    qq = bind_rows(qq, tibble(site_code='ARIK', datetime=as.POSIXct('2019-01-01')))
     write_feather(qq, 'data/neon/flux.feather')
 
     qq = read_feather('data/hbef/pchem.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    qq = filter(qq, site_code == 'donkey')
+    qq = bind_rows(qq, tibble(site_code='ARIK', datetime=as.POSIXct('2019-01-01')))
     write_feather(qq, 'data/neon/pchem.feather')
 
     qq = read_feather('data/hbef/precip.feather')
-    qq = filter(qq, site_name == 'donkey')
-    qq = bind_rows(qq, tibble(site_name='ARIK', datetime=as.POSIXct('2019-01-01')))
+    qq = filter(qq, site_code == 'donkey')
+    qq = bind_rows(qq, tibble(site_code='ARIK', datetime=as.POSIXct('2019-01-01')))
     write_feather(qq, 'data/neon/precip.feather')
 
 }
@@ -214,7 +214,7 @@ identify_detection_limit_t <- function(X, network, domain,
     #of detection limits with size equal to that of X.
 
     #X is a 2d array-like object with column names. must have datetime and
-    #site_name columns.
+    #site_code columns.
 
     #the detection limit (number of decimal places)
     #of each column is written to data/<network>/<domain>/detection_limits.json
@@ -226,7 +226,7 @@ identify_detection_limit_t <- function(X, network, domain,
     #non-numeric columns are not considered variables and are given detlims of
     #NA, beginning at the earliest datetime for each site. If
     #return_detlims == TRUE, these columns are populated with NAs.
-    #macrosheds-canonical columns (datetime, site_name, ms_status, ms_interp)
+    #macrosheds-canonical columns (datetime, site_code, ms_status, ms_interp)
     #are recognized as non-variables and given detection limits of NA
 
     #detection limit (detlim) for each site-variable-datetime is computed as the
@@ -236,14 +236,14 @@ identify_detection_limit_t <- function(X, network, domain,
     #cumulative maximum detlims. Each time the detlim increases,
     #a new startdt and limit are recorded.
 
-    #X will be sorted ascendingly by site_name and then datetime.
+    #X will be sorted ascendingly by site_code and then datetime.
 
     X <- as_tibble(X) %>%
-        arrange(site_name, datetime)
+        arrange(site_code, datetime)
 
-    # if(! 'site_name' %in% colnames(X)){
+    # if(! 'site_code' %in% colnames(X)){
     #     sitename_present <- FALSE
-    #     X$site_name = '0'
+    #     X$site_code = '0'
     # } else {
     #     sitename_present <- TRUE
     # }
@@ -377,7 +377,7 @@ identify_detection_limit_t <- function(X, network, domain,
                          X = X,
                          varnms = colnames(X),
                          MoreArgs = list(dt = X$datetime,
-                                         sn = X$site_name),
+                                         sn = X$site_code),
                          SIMPLIFY = FALSE)
 
     } else {
@@ -398,7 +398,7 @@ identify_detection_limit_t <- function(X, network, domain,
         #                                                 output = 'vector')
         #                  },
         #                  dt = X$datetime,
-        #                  sn = X$site_name) %>%
+        #                  sn = X$site_code) %>%
         detlim <- mapply(FUN = function(X, varnms, dt, sn){
                              identify_detection_limit_v(x = X,
                                                         varnm = varnms,
@@ -409,7 +409,7 @@ identify_detection_limit_t <- function(X, network, domain,
                          X = X,
                          varnms = colnames(X),
                          MoreArgs = list(dt = X$datetime,
-                                         sn = X$site_name),
+                                         sn = X$site_code),
                          SIMPLIFY = FALSE) %>%
             as_tibble()
 
@@ -422,7 +422,7 @@ identify_detection_limit_t <- function(X, network, domain,
 #this version of synchronize_timestep is from the old wide-format days
 synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
 
-    #d is a data.frame or tibble with columns datetime, site_name,
+    #d is a data.frame or tibble with columns datetime, site_code,
     #ms_status, and one or more data columns. if ms_interp column is already
     #included with input, its values will be carried through to the output.
     #desired_interval is a character string that can be parsed by the "by"
@@ -433,8 +433,8 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated
 
-    non_data_columns <- c('datetime', 'site_name', 'ms_status', 'ms_interp')
-    uniq_sites <- unique(d$site_name)
+    non_data_columns <- c('datetime', 'site_code', 'ms_status', 'ms_interp')
+    uniq_sites <- unique(d$site_code)
 
     d <- d %>%
         filter(! is.na(datetime)) %>%
@@ -452,7 +452,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
                                              desired_interval)) %>%
         mutate_at(vars(one_of('ms_status', 'ms_interp')),
                   as.logical) %>%
-        group_by(datetime, site_name) %>%
+        group_by(datetime, site_code) %>%
         summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
         ungroup() %>%
         arrange(datetime))
@@ -462,7 +462,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     fulldt = seq(daterange[1],
                  daterange[2],
                  by = desired_interval)
-    fulldt = tibble(site_name = rep(uniq_sites,
+    fulldt = tibble(site_code = rep(uniq_sites,
                                     each = length(fulldt)),
                     datetime = rep(fulldt,
                                    times = length(uniq_sites)))
@@ -481,7 +481,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
     #interpolate up to impute_limit; remove empty rows; populate ms_interp column
     d_adjusted <- d %>%
         full_join(fulldt, #right_join would be more efficient, but this is future-proof
-                  by = c('datetime', 'site_name')) %>%
+                  by = c('datetime', 'site_code')) %>%
         arrange(datetime) %>%
         mutate_at(vars(-one_of(c(non_data_columns, insufficient_data_cols))),
                   imputeTS::na_interpolation,
@@ -493,7 +493,7 @@ synchronize_timestep <- function(d, desired_interval, impute_limit = 30){
             ms_interp = ifelse(is.na(ms_interp), TRUE, ms_interp),
             ms_status = as.numeric(ms_status),
             ms_interp = as.numeric(ms_interp)) %>%
-        select(site_name, datetime, everything()) %>%
+        select(site_code, datetime, everything()) %>%
         relocate(ms_status, .after = last_col()) %>%
         relocate(ms_interp, .after = last_col())
 
@@ -512,7 +512,7 @@ insert_uncertainty_df <- function(x, uncert){
     # #i started updating this to work with longform, but then realized
     # #we don't need a function for that
     #x is a standard macrosheds dataframe/tibble with columns: datetime,
-    #   site_name, var, val, ms_status, (ms_interp optional)
+    #   site_code, var, val, ms_status, (ms_interp optional)
     #uncert is a vector of uncertainty values to be inserted as error into the
     #   val column.
 

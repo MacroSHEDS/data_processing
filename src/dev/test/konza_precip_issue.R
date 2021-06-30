@@ -5,18 +5,18 @@ munged_p = read_feather('data/lter/konza/munged/precipitation__4/002C.feather')
 
 p = mutate(raw_p,
            datetime = mdy(RecDate),
-           site_name = watershed,
+           site_code = watershed,
            network = 'lter',
            domain = 'konza',
            var='GN_precipitation',
            val = as.numeric(ppt)) %>%
-    select(datetime, site_name, network, domain, site_name, var, val)
+    select(datetime, site_code, network, domain, site_code, var, val)
 
 earliest_year = lubridate::year(min(p$datetime[p$domain == dmn]))
 nyears = current_year - earliest_year
 yrcols = viridis(n = nyears)
 
-sites = unique(p$site_name[p$domain == dmn])
+sites = unique(p$site_code[p$domain == dmn])
 if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
 plotrc = ceiling(sqrt(length(sites)))
@@ -33,7 +33,7 @@ for(s in sites){
          hadj=0.7)
 
     psub = p %>%
-        filter(domain == dmn, site_name == s) %>%
+        filter(domain == dmn, site_code == s) %>%
         mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                yr_offset = lubridate::year(datetime) - earliest_year)
 
@@ -65,7 +65,7 @@ earliest_year = lubridate::year(min(p$datetime[p$domain == dmn]))
 nyears = current_year - earliest_year
 yrcols = viridis(n = nyears)
 
-sites = unique(p$site_name[p$domain == dmn])
+sites = unique(p$site_code[p$domain == dmn])
 if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
 plotrc = ceiling(sqrt(length(sites)))
@@ -82,7 +82,7 @@ for(s in sites){
          hadj=0.7)
 
     psub = p %>%
-        filter(domain == dmn, site_name == s) %>%
+        filter(domain == dmn, site_code == s) %>%
         mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                yr_offset = lubridate::year(datetime) - earliest_year)
 

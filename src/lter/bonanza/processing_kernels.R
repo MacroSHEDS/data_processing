@@ -64,14 +64,14 @@ process_0_157 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_152 <- function(network, domain, prodname_ms, site_name,
+process_1_152 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     # Bonanza appears to set values to 0 when the sample was not recorded
@@ -80,8 +80,8 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(Sample.Date = '%m/%d/%Y'),
                          datetime_tz = 'US/Alaska',
-                         site_name_col = 'Watershed',
-                         alt_site_name = list('boston_creek' = 'Boston Creek'),
+                         site_code_col = 'Watershed',
+                         alt_site_code = list('boston_creek' = 'Boston Creek'),
                          data_cols =  c('Nitrate.uM.' = 'NO3',
                                         'Sulfate.uM.' = 'SO4',
                                         'Chloride.uM.' = 'Cl',
@@ -146,14 +146,14 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_142 <- function(network, domain, prodname_ms, site_name,
+process_1_142 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     look <- read.csv(rawfile, colClasses = 'character')
@@ -161,7 +161,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(Date.Time = '%m/%e/%Y %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
-                         site_name_col = 'Watershed',
+                         site_code_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
@@ -182,14 +182,14 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_159 <- function(network, domain, prodname_ms, site_name,
+process_1_159 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     raw <- read.delim(rawfile, colClasses = 'character') %>%
@@ -199,7 +199,7 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = c(DATE = '%m/%d/%Y',
                                            TIME = '%H:%M'),
                          datetime_tz = 'US/Alaska',
-                         site_name_col = 'SITE',
+                         site_code_col = 'SITE',
                          data_cols =  c('X0CM'= 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
@@ -221,7 +221,7 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_167 <- function(network, domain, prodname_ms, site_name,
+process_1_167 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     # There is anoth precip product (384) which uses weighing buckets that is
@@ -230,7 +230,7 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     raw <- read.csv(rawfile, colClasses = 'character') %>%
@@ -241,9 +241,9 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = c(date = '%Y-%m-%d',
                                            time = '%H%M'),
                          datetime_tz = 'US/Alaska',
-                         site_name_col = 'site_id',
+                         site_code_col = 'site_id',
                          summary_flagcols = 'flag',
-                         alt_site_name = list('CRREL' = 'CRREL-Met'),
+                         alt_site_code = list('CRREL' = 'CRREL-Met'),
                          data_cols =  c('value'= 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
@@ -273,14 +273,14 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_157 <- function(network, domain, prodname_ms, site_name,
+process_1_157 <- function(network, domain, prodname_ms, site_code,
                           component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     raw <- read.delim(rawfile, header = TRUE, colClasses = 'character', skip=3, sep=',')
@@ -288,8 +288,8 @@ process_1_157 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(Date.Off = '%m/%d/%Y'),
                          datetime_tz = 'GMT',
-                         site_name_col = 'SiteID',
-                         alt_site_name = list('CRREL' = 'AK01'),
+                         site_code_col = 'SiteID',
+                         alt_site_code = list('CRREL' = 'AK01'),
                          data_cols = c('Ca',
                                            'Mg',
                                            'K',
