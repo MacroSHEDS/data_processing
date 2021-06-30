@@ -1,9 +1,9 @@
-populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_name){
+populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
 
     retrieval_tracker <- retrieval_tracker %>%
         mutate(needed = ifelse(held_version == -1, TRUE, FALSE))
@@ -12,7 +12,7 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_name){
 
     file_path <- glue('data/usgs/usgs/raw/{p}/{s}/{c}.feather',
                       p = prodname_ms,
-                      s = site_name,
+                      s = site_code,
                       c = retrieval_tracker$component)
 
     all_com_last_records <- tibble()
@@ -47,9 +47,9 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_name){
 
 
     retrieval_tracker <- retrieval_tracker %>%
-        mutate(site_name = !!site_name,
+        mutate(site_code = !!site_code,
                prodname_ms = !!prodname_ms) %>%
-        select(prodname_ms, site_name, site_no, component, data_type_cd, end_date, status, needed)
+        select(prodname_ms, site_code, site_no, component, data_type_cd, end_date, status, needed)
 
     return(retrieval_tracker)
 }
@@ -66,7 +66,7 @@ get_usgs_data <-  function(sets, silent=TRUE){
         s = sets[i, ]
 
         msg = glue('Retrieving {st}, {p}, {c}',
-                   st=s$site_name, p=s$prodname_ms, c=s$component)
+                   st=s$site_code, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', str_split_fixed(s$prodname_ms, '__', n = Inf)[1,2]))
@@ -117,7 +117,7 @@ get_usgs_verstion <- function(prodname_ms,
     }
 
     parm_info <- parm_info %>%
-        mutate(site_name = !!names(usgs_site),
+        mutate(site_code = !!names(usgs_site),
                url = NA) %>%
         rename(component = parm_cd)
 

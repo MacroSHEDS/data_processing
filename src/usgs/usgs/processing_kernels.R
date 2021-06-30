@@ -9,7 +9,7 @@ process_0_1 <- function(set_details, network, domain){
                          n=network,
                          d=domain,
                          p=set_details$prodname_ms,
-                         s=set_details$site_name)
+                         s=set_details$site_code)
 
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -33,7 +33,7 @@ process_0_2 <- function(set_details, network, domain){
                        n=network,
                        d=domain,
                        p=set_details$prodname_ms,
-                       s=set_details$site_name)
+                       s=set_details$site_code)
 
   dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -57,7 +57,7 @@ process_0_3 <- function(set_details, network, domain){
                        n=network,
                        d=domain,
                        p=set_details$prodname_ms,
-                       s=set_details$site_name)
+                       s=set_details$site_code)
 
   dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -73,20 +73,20 @@ process_0_3 <- function(set_details, network, domain){
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_name,
+process_1_1 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- read_feather(rawfile) %>%
         rename(datetime = dateTime,
                val = X_00060_00000) %>%
-        mutate(site_name = !!site_name) %>%
+        mutate(site_code = !!site_code) %>%
         mutate(var = 'discharge',
                val = val * 28.31685,
                ms_status = ifelse(X_00060_00000_cd == 'A', 0, 1)) %>%
-        select(site_name, datetime, val, var, ms_status)
+        select(site_code, datetime, val, var, ms_status)
 
     d <- identify_sampling_bypass(d,
                                   is_sensor = TRUE,
@@ -108,11 +108,11 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2 <- function(network, domain, prodname_ms, site_name,
+process_1_2 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- read_feather(rawfile)
 
@@ -137,10 +137,10 @@ process_1_2 <- function(network, domain, prodname_ms, site_name,
     d <- d %>%
         rename(datetime = dateTime,
                val = !!val_col) %>%
-        mutate(site_name = !!site_name) %>%
+        mutate(site_code = !!site_code) %>%
         mutate(ms_status = ifelse(.data[[qaqc_col]] == 'A', 0, 1)) %>%
         mutate(var = !!macrosheds_var$macrosheds_var) %>%
-        select(site_name, datetime, val, var, ms_status)
+        select(site_code, datetime, val, var, ms_status)
 
     d <- identify_sampling_bypass(d,
                                   is_sensor = TRUE,
@@ -162,11 +162,11 @@ process_1_2 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_3 <- function(network, domain, prodname_ms, site_name,
+process_1_3 <- function(network, domain, prodname_ms, site_code,
                             component){
 
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
   d <- read_feather(rawfile)
 
@@ -192,7 +192,7 @@ process_1_3 <- function(network, domain, prodname_ms, site_name,
            var,
            val = result_va,
            ms_status) %>%
-    mutate(site_name := !!site_name)
+    mutate(site_code := !!site_code)
 
   # need to add overwrite options
   d <- identify_sampling_bypass(d,

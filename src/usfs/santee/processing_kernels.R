@@ -9,7 +9,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -52,7 +52,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -95,7 +95,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -134,13 +134,13 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -154,7 +154,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'Instr_ID',
+                         site_code_col = 'Instr_ID',
                          data_cols =  c(Rainfall = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -173,18 +173,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -194,13 +194,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -215,7 +215,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     d_h <- ms_read_raw_csv(filepath = rel_file_path1,
                            datetime_cols = list('Date' = '%m/%e/%Y'),
                            datetime_tz = 'US/Eastern',
-                           site_name_col = 'Location',
+                           site_code_col = 'Location',
                            data_cols =  c(Dailyflow = 'discharge'),
                            data_col_pattern = '#V#',
                            is_sensor = TRUE)
@@ -226,7 +226,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     d_m <- ms_read_raw_csv(filepath = rel_file_path2,
                          datetime_cols = list('Date_time' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'America/Los_Angeles',
-                         site_name_col = 'Location',
+                         site_code_col = 'Location',
                          data_cols =  c(Flow_liter = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -249,18 +249,18 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -270,13 +270,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
@@ -290,7 +290,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
     d_h <- ms_read_raw_csv(filepath = relevant_file1,
                          datetime_cols = c(Date = '%m/%e/%Y'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'Location',
+                         site_code_col = 'Location',
                          data_cols =  c(pH='pH',
                                         NO3_NO2_N_mgL='NO3_NO2_N',
                                         NH4_N_mgL='NH4_N',
@@ -318,7 +318,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
     d_m <- ms_read_raw_csv(filepath = relevant_file2,
                            datetime_cols = c(Date_time = '%m/%e/%Y %H:%M:%S'),
                            datetime_tz = 'US/Eastern',
-                           site_name_col = 'Location',
+                           site_code_col = 'Location',
                            data_cols =  c(TDN_mgL = 'TDN',
                                           TDP_mgL = 'TDP',
                                           NH4_N_mgL = 'NH4_N',
@@ -366,18 +366,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }

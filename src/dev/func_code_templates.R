@@ -6,7 +6,7 @@
 #     TRUE ~ discharge),
 
 # handling of detection limits, uncertainty, grab vs sensor vs spatial, time
-#zone, etc also note: datetime and site_name mutations must happen before
+#zone, etc also note: datetime and site_code mutations must happen before
 #identification of detlims (process_1_1).
 # any other initial mutuations should happen after
 
@@ -18,13 +18,13 @@
 
 #product: STATUS=PENDING
 #. handle_errors
-process_1_XXX <- function(network, domain, prodname_ms, site_name,
+process_1_XXX <- function(network, domain, prodname_ms, site_code,
                           component){
                           # components){
 
 
     ADD TO THIS: handling of detection limits, uncertainty, grab vs sensor vs spatial, etc
-        also note: datetime and site_name mutations must happen before identification of detlims (process_1_1).
+        also note: datetime and site_code mutations must happen before identification of detlims (process_1_1).
         any other initial mutuations should happen after
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv', #rawfile1
@@ -32,7 +32,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
                    # c = components[X])
 
@@ -52,7 +52,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
                                         EVENT_CODE = NA)))
     d <- d %>%
         # Flag = 'c'))) %>% #all flags are acceptable for this product
-        rename(site_name = WS,
+        rename(site_code = WS,
                datetime = DATETIME,
                discharge = Discharge_ls) %>%
         # rename_all(dplyr::recode, #essentially rename_if_exists
@@ -67,7 +67,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
             # datetime = with_tz(as_datetime(d$datetime[1], 'US/Eastern'), 'UTC'),
             #if just days:
             mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
-            site_name = paste0('w', site_name),
+            site_code = paste0('w', site_code),
             # ms_status = 0) %>% #only if you don't need sourceflags_to_ms_status
             # ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #same
             # ms_status = as.logical(ms_status)) %>% #if you're summarizing_all
@@ -76,9 +76,9 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
             NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
             PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
         select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
-        filter_at(vars(-site_name, -datetime, -ms_status),
+        filter_at(vars(-site_code, -datetime, -ms_status),
                   any_vars(! is.na(.))) %>% #probs redund with synchronize_timestep, but whatevs
-        group_by(datetime, site_name) %>% #remove dupes
+        group_by(datetime, site_code) %>% #remove dupes
         summarize(
             discharge = mean(discharge, na.rm = TRUE),
             ms_status = numeric_any(ms_status)) %>%
@@ -88,7 +88,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
         # select(-ms_status, everything()) #old way
         relocate(ms_status, .after = last_col()) %>% #new way
         relocate(ms_interp, .after = last_col()) %>% #sometimes gotta call twice
-        arrange(site_name, datetime)
+        arrange(site_code, datetime)
 
     d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
 
@@ -109,7 +109,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_name,
 
 #ws_boundary; stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_3239 <- function(network, domain, prodname_ms, site_name,
+process_1_3239 <- function(network, domain, prodname_ms, site_code,
                            components){
 
     component <- ifelse(prodname_ms == 'stream_gauge_locations__3239',
@@ -120,7 +120,7 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name)
+                   s = site_code)
     rawfile1 <- glue(rawdir1, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile1,
@@ -134,10 +134,10 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
         d <- sf::st_read(rawdir1,
                          stringsAsFactors = FALSE,
                          quiet = TRUE) %>%
-            select(site_name = SITECODE,
+            select(site_code = SITECODE,
                    geometry = geometry) %>%
             sf::st_transform(projstring) %>%
-            arrange(site_name) %>%
+            arrange(site_code) %>%
             sf::st_zm(drop = TRUE,
                       what = 'ZM')
 
@@ -146,23 +146,23 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
         d <- sf::st_read(rawdir1,
                          stringsAsFactors = FALSE,
                          quiet = TRUE) %>%
-            select(site_name = WS_,
+            select(site_code = WS_,
                    area = F_AREA,
                    geometry = geometry) %>%
-            filter(! grepl('^[0-9][0-9]?a$', site_name)) %>% #remove areas below station
+            filter(! grepl('^[0-9][0-9]?a$', site_code)) %>% #remove areas below station
             mutate(  #for consistency with name elsewhere
-                site_name = stringr::str_pad(site_name,
+                site_code = stringr::str_pad(site_code,
                                              width = 2,
                                              pad = '0'),
-                site_name = paste0('GSWS', site_name),
-                site_name = ifelse(site_name == 'GSWSMACK',
+                site_code = paste0('GSWS', site_code),
+                site_code = ifelse(site_code == 'GSWSMACK',
                                    'GSMACK',
-                                   site_name),
-                site_name = ifelse(site_name == 'GSWS04',
+                                   site_code),
+                site_code = ifelse(site_code == 'GSWS04',
                                    'GSLOOK',
-                                   site_name)) %>%
+                                   site_code)) %>%
             sf::st_transform(projstring) %>%
-            arrange(site_name)
+            arrange(site_code)
     }
 
     unlink(zipped_files)
@@ -174,7 +174,7 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation; precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_5482 <- function(network, domain, prodname_ms, site_name,
+process_1_5482 <- function(network, domain, prodname_ms, site_code,
                            components){
 
     component <- ifelse(prodname_ms == 'precip_gauge_locations__5482',
@@ -185,7 +185,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                     n=network,
                     d=domain,
                     p=prodname_ms,
-                    s=site_name,
+                    s=site_code,
                     c=component)
 
     if(prodname_ms == 'precip_gauge_locations__5482'){
@@ -197,7 +197,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
                              SITECODE = 'c',
                              LATITUDE = 'd',
                              LONGITUDE = 'd'))) %>%
-            rename(site_name = SITECODE)
+            rename(site_code = SITECODE)
 
         sp::coordinates(d) <- ~LONGITUDE+LATITUDE
         d <- sf::st_as_sf(d)
@@ -222,12 +222,12 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
 
         d <- d %>%
             rename(datetime = DATE,
-                   site_name = SITECODE,
+                   site_code = SITECODE,
                    precip = PRECIP_TOT_DAY) %>%
             mutate(datetime = lubridate::ymd(datetime, tz = 'UTC')) %>%
-            filter_at(vars(-site_name, -datetime, -ms_status),
+            filter_at(vars(-site_code, -datetime, -ms_status),
                       any_vars(! is.na(.))) %>%
-            group_by(datetime, site_name) %>%
+            group_by(datetime, site_code) %>%
             summarize(
                 precip = mean(precip, na.rm=TRUE),
                 ms_status = numeric_any(ms_status)) %>%
@@ -276,7 +276,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_name,
     #                     SO4SCODE='c', CLCODE='c', DOCCODE='c',
     #                     PVOLCODE='c', ANCACODE='c'))) %>%
     #     filter(! TYPE  %in% c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')) %>%
-    #     rename(site_name = SITECODE,
+    #     rename(site_code = SITECODE,
     #            datetime = DATE_TIME) %>%
     #     rename_all(dplyr::recode,
     #                #conc colnames

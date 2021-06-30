@@ -9,17 +9,17 @@ retrieve_mcmurdo <- function(set_details, network, domain) {
 }
 
 
-munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
+munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                     component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
-    if(site_name %in% c('BOHNER', 'HUEY', 'SANTAFE', 'PRISCU', 'LAWSON', 'HOUSE')) {
+    if(site_code %in% c('BOHNER', 'HUEY', 'SANTAFE', 'PRISCU', 'LAWSON', 'HOUSE')) {
 
         d <- read.csv(rawfile, colClasses = 'character', skip = 36)
     } else {
@@ -52,7 +52,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
                                  datetime_cols = list('date' = '%d-%m-%Y',
                                                       'time' = '%H:%M'),
                                  datetime_tz = 'Antarctica/McMurdo',
-                                 site_name_col = 'STRMGAGEID',
+                                 site_code_col = 'STRMGAGEID',
                                  data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                                  summary_flagcols = 'DIS_COMMENTS',
                                  data_col_pattern = '#V#',
@@ -71,7 +71,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
                                  datetime_cols = list('date' = '%d-%m-%Y',
                                                       'time' = '%H:%M'),
                                  datetime_tz = 'Antarctica/McMurdo',
-                                 site_name_col = 'STRMGAGEID',
+                                 site_code_col = 'STRMGAGEID',
                                  data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                                  summary_flagcols = 'DISCHARGE_QLTY',
                                  data_col_pattern = '#V#',
@@ -99,7 +99,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
                                  datetime_cols = list('date' = '%d-%m-%Y',
                                                       'time' = '%H:%M'),
                                  datetime_tz = 'Antarctica/McMurdo',
-                                 site_name_col = 'STRMGAGEID',
+                                 site_code_col = 'STRMGAGEID',
                                  data_cols =  c('WATER_TEMP' = 'temp',
                                                 'CONDUCTIVITY' = 'spCond'),
                                  data_col_pattern = '#V#',
@@ -120,7 +120,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_name,
                                  datetime_cols = list('date' = '%d-%m-%Y',
                                                       'time' = '%H:%M'),
                                  datetime_tz = 'Antarctica/McMurdo',
-                                 site_name_col = 'STRMGAGEID',
+                                 site_code_col = 'STRMGAGEID',
                                  data_cols =  c('WATER_TEMP' = 'temp',
                                                 'CONDUCTANCE' = 'spCond'),
                                  data_col_pattern = '#V#',

@@ -9,7 +9,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -51,7 +51,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -84,7 +84,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -117,7 +117,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -150,7 +150,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -183,7 +183,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -216,7 +216,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -249,7 +249,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -278,13 +278,13 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.delim(rawfile, sep = ',') %>%
@@ -294,7 +294,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('dateTime' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('PrecipRate' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -316,18 +316,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -337,13 +337,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_name, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -377,7 +377,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     all_sites <- tibble()
     for(i in 1:length(all_sites_files)){
 
-        site_name <- str_match(string = all_sites_files[i],
+        site_code <- str_match(string = all_sites_files[i],
                                pattern = '([^\\/\\\\]+)_[dD]ischarge.xlsx$')[, 2]
 
         one_site <- readxl::read_excel(all_sites_files[i], sheet = 'Corrected')
@@ -385,7 +385,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
         q_col <- grep('cms', colnames(one_site), value = TRUE)
         one_site <- one_site %>%
             select('standard_time' = !!time_col, 'q' = !!q_col) %>%
-            mutate(site = !!site_name)
+            mutate(site = !!site_code)
 
         all_sites <- rbind(one_site, all_sites)
     }
@@ -411,7 +411,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols =  c('q' = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -432,18 +432,18 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -453,14 +453,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -497,10 +497,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
         if(length(site_info) == 1) next
 
         if(length(site_info) == 2){
-            site_name <- site_info[1,1]
+            site_code <- site_info[1,1]
         } else{
-            site_name <- site_info[1,1:(length(site_info)-1)]
-            site_name <- paste(site_name, collapse = '_')
+            site_code <- site_info[1,1:(length(site_info)-1)]
+            site_code <- paste(site_code, collapse = '_')
         }
 
         site_var <- site_info[1,length(site_info)]
@@ -513,7 +513,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
         site_table <- site_table %>%
             rename(val = !!colname) %>%
-            mutate(site = !!site_name,
+            mutate(site = !!site_code,
                    site_var = !!site_var,
                    site_var_unit = !!colname,
                    file_name = !!file_names[i])
@@ -539,7 +539,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
                site != 'er_plm6') %>%
         mutate(var = case_when(site_var == 'deltad' ~ 'deuterium',
                                site_var == 'deltao18' ~ 'd18O')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
+        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',
                                      site == 'bradley' ~ 'Bradley',
                                      site == 'copper' ~ 'Copper',
@@ -554,7 +554,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status) %>%
+        select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var))
 
@@ -576,18 +576,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -599,13 +599,13 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -641,22 +641,22 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
         if(grepl('aqlithiumion_aslithium|aqberylliumion_asberyllium', file_names[i])){
 
             if(length(site_info) == 4){
-                site_name <- site_info[1,1]
+                site_code <- site_info[1,1]
             } else{
-                site_name <- site_info[1,1:(length(site_info)-3)]
-                site_name <- paste(site_name, collapse = '_')
+                site_code <- site_info[1,1:(length(site_info)-3)]
+                site_code <- paste(site_code, collapse = '_')
             }
 
         } else{
             if(length(site_info) == 3){
-                site_name <- site_info[1,1]
+                site_code <- site_info[1,1]
             } else{
-                 site_name <- site_info[1,1:(length(site_info)-2)]
-                 site_name <- paste(site_name, collapse = '_')
+                 site_code <- site_info[1,1:(length(site_info)-2)]
+                 site_code <- paste(site_code, collapse = '_')
             }
         }
 
-        #site_name_alt <- paste(site_info[1,1:2], collapse = '_')
+        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
         site_var <- site_info[1,length(site_info)-1]
         site_unit <- str_remove(site_info[1,length(site_info)], '.csv')
 
@@ -666,7 +666,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
         site_table <- site_table %>%
             rename(val = !!colname) %>%
-            mutate(site = !!site_name,
+            mutate(site = !!site_code,
                    site_var = !!site_var,
                    site_unit = !!site_unit,
                    site_var_unit = !!colname,
@@ -735,7 +735,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
                                site_var_unit == 'vanadium_ppb' ~ 'V',
                                site_var_unit == 'zinc_ppb' ~ 'Zn',
                                site_var_unit == 'zirconium_ppb' ~ 'Zr')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
+        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',
                                      site == 'bradley' ~ 'Bradley',
                                      site == 'copper' ~ 'Copper',
@@ -750,10 +750,10 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status)
+        select(datetime, site_code, val, var, ms_status)
 
     # look <- d %>%
-    #     group_by(datetime, site_name, var) %>%
+    #     group_by(datetime, site_code, var) %>%
     #     summarise(n = n())
 
     # need to add overwrite options
@@ -779,18 +779,18 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -802,13 +802,13 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -842,13 +842,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
         if(length(site_info) == 1) next
 
         if(length(site_info) == 5){
-            site_name <- site_info[1,1]
+            site_code <- site_info[1,1]
         } else{
-            site_name <- site_info[1,1:(length(site_info)-4)]
-            site_name <- paste(site_name, collapse = '_')
+            site_code <- site_info[1,1:(length(site_info)-4)]
+            site_code <- paste(site_code, collapse = '_')
         }
 
-        #site_name_alt <- paste(site_info[1,1:2], collapse = '_')
+        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
         site_var <- site_info[1,length(site_info)-3]
         site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
         site_unit <- paste(site_unit, collapse = '_')
@@ -859,7 +859,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
 
         site_table <- site_table %>%
             rename(val = !!colname) %>%
-            mutate(site = !!site_name,
+            mutate(site = !!site_code,
                    site_var = !!site_var,
                    site_unit = !!site_unit,
                    site_var_unit = !!colname,
@@ -888,7 +888,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
                                site_var == 'nitrate' ~ 'NO3',
                                site_var == 'phosphate' ~ 'PO4',
                                site_var == 'sulfate' ~ 'SO4')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
+        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',
                                      site == 'bradley' ~ 'Bradley',
                                      site == 'copper' ~ 'Copper',
@@ -903,7 +903,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status) %>%
+        select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var))
 
@@ -937,18 +937,18 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -960,13 +960,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -1000,10 +1000,10 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
         if(length(site_info) == 1) next
 
         if(length(site_info) == 4){
-            site_name <- site_info[1,1]
+            site_code <- site_info[1,1]
         } else{
-            site_name <- site_info[1,1:(length(site_info)-3)]
-            site_name <- paste(site_name, collapse = '_')
+            site_code <- site_info[1,1:(length(site_info)-3)]
+            site_code <- paste(site_code, collapse = '_')
         }
 
         site_var <- site_info[1,length(site_info)-3]
@@ -1016,7 +1016,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
 
         site_table <- site_table %>%
             rename(val = !!colname) %>%
-            mutate(site = !!site_name,
+            mutate(site = !!site_code,
                    site_var = !!site_var,
                    site_unit = !!site_unit,
                    site_var_unit = !!colname,
@@ -1043,7 +1043,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
                site != 'er_plm6') %>%
         mutate(var = case_when(site_unit == 'dic_mg_l' ~ 'DIC',
                                site_unit == 'npoc_mg_l' ~ 'DOC')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
+        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',
                                      site == 'bradley' ~ 'Bradley',
                                      site == 'copper' ~ 'Copper',
@@ -1058,7 +1058,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status) %>%
+        select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var))
 
@@ -1080,18 +1080,18 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -1103,7 +1103,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_name, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
 
     # TDN is listed as g/l it appears but comparing to anoth east river
     # data prod, it looks like (and makes snese) that the unit is ug/l
@@ -1112,7 +1112,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -1146,10 +1146,10 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
         if(length(site_info) == 1) next
 
         if(length(site_info) == 4){
-            site_name <- site_info[1,1]
+            site_code <- site_info[1,1]
         } else{
-            site_name <- site_info[1,1:(length(site_info)-3)]
-            site_name <- paste(site_name, collapse = '_')
+            site_code <- site_info[1,1:(length(site_info)-3)]
+            site_code <- paste(site_code, collapse = '_')
         }
 
         site_var <- site_info[1,length(site_info)-3]
@@ -1162,7 +1162,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
 
         site_table <- site_table %>%
             rename(val = !!colname) %>%
-            mutate(site = !!site_name,
+            mutate(site = !!site_code,
                    site_var = !!site_var,
                    site_unit = !!site_unit,
                    site_var_unit = !!colname,
@@ -1189,7 +1189,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
                site != 'er_plm6') %>%
         mutate(var = case_when(site_unit == 'tdn_g_l' ~ 'TDN',
                                site_unit == 'ammonia_n_ppm' ~ 'NH3_N')) %>%
-        mutate(site_name = case_when(site == 'avery' ~ 'Avery',
+        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',
                                      site == 'bradley' ~ 'Bradley',
                                      site == 'copper' ~ 'Copper',
@@ -1204,7 +1204,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_name, val, var, ms_status) %>%
+        select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var))
 
@@ -1230,18 +1230,18 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
 
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
-    sites <- unique(d$site_name)
+    sites <- unique(d$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- d %>%
-            filter(site_name == !!sites[s])
+            filter(site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = FALSE)
     }
@@ -1253,13 +1253,13 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_name, co
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
@@ -1284,22 +1284,22 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_name, co
     sheds <- sheds %>%
         filter(NAME %in% c('Copper', 'Marmot', 'Bradley', 'Rustlers', 'Gothic',
                            'Quigley', 'Rock', 'Avery')) %>%
-        select(site_name = NAME, area = km2) %>%
+        select(site_code = NAME, area = km2) %>%
         mutate(area = area*100)
 
-    sites <- unique(sheds$site_name)
+    sites <- unique(sheds$site_code)
 
     for(s in 1:length(sites)){
 
         d_site <- sheds %>%
-            filter(site_name == !!sites[s]) %>%
+            filter(site_code == !!sites[s]) %>%
             sf::st_transform(., crs = projstring)
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = sites[s],
+                      site_code = sites[s],
                       level = 'munged',
                       shapefile = TRUE)
     }
