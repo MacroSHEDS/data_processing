@@ -19,7 +19,7 @@ ms000 is a reserved name for wbs that we delineate
 after munge: ALL CLEANING-TYPE STUFF SHOULD BE DONE
     assume that if you're in a derive kernel:
         there are no duplicates, empty rows, local timezones, etc., and that all ms_statuses and ms_interps are in place
-derive kernels must always be site-agnostic, i.e. they should operate on site_name='sitename_NA'
+derive kernels must always be site-agnostic, i.e. they should operate on site_code='sitename_NA'
     this way, invalidate_derived_products will work as-is and... probably other stuff will be more convenient
 precip stuff can be adjusted to the nearest day; everything else to the nearest hour
 

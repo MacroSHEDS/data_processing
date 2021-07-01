@@ -327,7 +327,7 @@ manufacture_uncert_msdf <- function(df, errval = 0.1){
     return(df)
 }
 
-testtb <- tibble(site_name = c('a','a','b','b'),
+testtb <- tibble(site_code = c('a','a','b','b'),
                  datetime = as.POSIXct(1:4, origin='2000-01-01'),
                  pH__val = 1:4, pHCODE = c('y','y','y','n'),
                  alk__val = 1:4, alkCODE = c('n','y','y','y'),
@@ -508,7 +508,7 @@ delineate_watershed_test1 <- function(lat, long, crs,
 populate_kernel_env <- function(include_extension = FALSE){
 
     #use this to quickly populate the variables needed inside a munge kernel,
-    #   namely network, domain, site_name, prodname_ms, and component. Just
+    #   namely network, domain, site_code, prodname_ms, and component. Just
     #   call this function, then go to the console and
     #   tab-complete your way through a path (such as
     #   'data/lter/hbef/raw/precipitation__13/sitename_NA/HBEF daily precip.csv')
@@ -530,7 +530,7 @@ populate_kernel_env <- function(include_extension = FALSE){
     network <- rgx[, 2]
     domain <- rgx[, 3]
     prodname_ms <- rgx[, 4]
-    site_name <- rgx[, 5]
+    site_code <- rgx[, 5]
 
     if(include_extension){
         component <- rgx[, 6]
@@ -542,15 +542,15 @@ populate_kernel_env <- function(include_extension = FALSE){
     assign('network', network, envir = .GlobalEnv)
     assign('domain', domain, envir = .GlobalEnv)
     assign('prodname_ms', prodname_ms, envir = .GlobalEnv)
-    assign('site_name', site_name, envir = .GlobalEnv)
+    assign('site_code', site_code, envir = .GlobalEnv)
     assign('component', component, envir = .GlobalEnv)
 
-    msg <- glue('network: {n}\ndomain: {d}\nprodname_ms: {p}\nsite_name: {s}\n',
+    msg <- glue('network: {n}\ndomain: {d}\nprodname_ms: {p}\nsite_code: {s}\n',
                 'component: {cp}',
                 n = network,
                 d = domain,
                 p = prodname_ms,
-                s = site_name,
+                s = site_code,
                 cp = component)
 
     message(msg)
@@ -658,11 +658,11 @@ dy_examine <- function(d, shape = 'long', site, ...){
     #for quickly plotting time series in order to zoom in on points, so you
     #don't have to make an xts object and all that crap
 
-    #d is either a standard ms tibble, or a tibble/df with datetime, site_name,
+    #d is either a standard ms tibble, or a tibble/df with datetime, site_code,
     #   and var columns.
     #shape is either 'long' (standard ms tibble) or 'wide'
-    #site is a single site name, present in d$site_name. site can be NA if there
-    #   is no site_name column
+    #site is a single site name, present in d$site_code. site can be NA if there
+    #   is no site_code column
     #... = variable names
 
     #usage example: dy_examine(d, 'long', 'upper_ipswich', IS_discharge, GN_NH4_N)
@@ -671,12 +671,12 @@ dy_examine <- function(d, shape = 'long', site, ...){
     dots = match.call(expand.dots = FALSE)$...
     arg_names = vapply(dots, as.character, '')
 
-    if(! is.na(site)) d = filter(d, site_name == !!site)
+    if(! is.na(site)) d = filter(d, site_code == !!site)
 
     if(shape == 'wide'){
 
         if(any(! arg_names %in% colnames(d))){
-            v = colnames(select(d, -one_of('site_name')))
+            v = colnames(select(d, -one_of('site_code')))
             stop(glue('no data to plot. available variables for {s} are: {vv}',
                       s = site,
                       vv = paste(v, collapse = ", ")))
@@ -749,7 +749,7 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     #   domains. Run the setup portion of acquisition_master
     #   (the part before the main loop) to load necessary packages and helper
     #   functions
-    #.sort: logical. If TRUE, output will be sorted by site_name, var, datetime.
+    #.sort: logical. If TRUE, output will be sorted by site_code, var, datetime.
     #   this takes a few minutes.
     #filter_vars: character vector. for products like stream_chemistry that include
     #   multiple variables, this filters to just the ones specified (ignores
@@ -776,14 +776,14 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
                    network = network_domain[1],
                    domain = network_domain[2]) %>%
             select(-val_err) %>%
-            select(datetime, network, domain, site_name, var, val, ms_status,
+            select(datetime, network, domain, site_code, var, val, ms_status,
                    ms_interp) %>%
             bind_rows(d)
     }
 
     if(.sort){
         d <- arrange(d,
-                     site_name, var, datetime)
+                     site_code, var, datetime)
     }
 
     return(d)
@@ -809,12 +809,12 @@ generate_diagnostic_plots <- function(network, domain, product){
         mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0))) 
 
     vars <- unique(dataset$var)
-    sites <- unique(dataset_check$site_name)
+    sites <- unique(dataset_check$site_code)
     sites_in_workflow <- site_data %>%
         filter(domain == !!domain,
                network == !!network,
                in_workflow == 1) %>%
-        pull(site_name)
+        pull(site_code)
     sites <- sites[sites %in% sites_in_workflow]
     
     output_path <- glue('plots/{n}/{d}/plots',
@@ -827,13 +827,13 @@ generate_diagnostic_plots <- function(network, domain, product){
         plot_list = list()
         for(s in 1:length(sites)){
             p <- dataset_check %>%
-                filter(site_name  == !!sites[s],
+                filter(site_code  == !!sites[s],
                        var == !!vars[i]) %>%
                 ggplot(aes(datetime, val, color = suspect)) +
                 geom_point() +
                 ggthemes::theme_few() +
                 scale_color_manual(values = c('#000000', '#FF0000')) +
-                ggtitle(paste0('var: ', vars[i], '    site_name:', sites[s])) +
+                ggtitle(paste0('var: ', vars[i], '    site_code:', sites[s])) +
                 theme(legend.position = 'none')
             plot_list[[s]] = p
             names(plot_list)[s] <- paste(vars[i], sites[s], sep = '_')

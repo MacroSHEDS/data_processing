@@ -102,14 +102,14 @@ process_1_9030 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9002 <- function(network, domain, prodname_ms, site_name,
+process_1_9002 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -137,7 +137,7 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
                                  datetime_cols = list('date' = '%d-%m-%Y',
                                                       'time' = '%H:%M'),
                                  datetime_tz = 'Antarctica/McMurdo',
-                                 site_name_col = 'STRMGAGEID',
+                                 site_code_col = 'STRMGAGEID',
                                  data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                                  summary_flagcols = 'DISCHARGE_QLTY',
                                  data_col_pattern = '#V#',
@@ -157,7 +157,7 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -186,14 +186,14 @@ process_1_9002 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9003 <- function(network, domain, prodname_ms, site_name,
+process_1_9003 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -220,7 +220,7 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DSCHRGE_RATE' = 'discharge'),
                              summary_flagcols = 'DSCHRGE_QLTY',
                              data_col_pattern = '#V#',
@@ -240,7 +240,7 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -269,14 +269,14 @@ process_1_9003 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9007 <- function(network, domain, prodname_ms, site_name,
+process_1_9007 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -303,7 +303,7 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DSCHRGE_RATE' = 'discharge'),
                              summary_flagcols = 'DSCHRGE_QLTY',
                              data_col_pattern = '#V#',
@@ -323,7 +323,7 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -352,14 +352,14 @@ process_1_9007 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9009 <- function(network, domain, prodname_ms, site_name,
+process_1_9009 <- function(network, domain, prodname_ms, site_code,
                            component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -389,7 +389,7 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHARGE_QLTY',
                              data_col_pattern = '#V#',
@@ -414,7 +414,7 @@ process_1_9009 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -468,14 +468,14 @@ process_1_9018 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9022 <- function(network, domain, prodname_ms, site_name,
+process_1_9022 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -502,7 +502,7 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHG_COM',
                              data_col_pattern = '#V#',
@@ -522,7 +522,7 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -551,14 +551,14 @@ process_1_9022 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9021 <- function(network, domain, prodname_ms, site_name,
+process_1_9021 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -587,7 +587,7 @@ process_1_9021 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DIS_COMMENTS',
                              data_col_pattern = '#V#',
@@ -607,7 +607,7 @@ process_1_9021 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp',
                                             'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -645,14 +645,14 @@ process_1_9016 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9029 <- function(network, domain, prodname_ms, site_name,
+process_1_9029 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character', skip = 36)
@@ -682,7 +682,7 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
                              summary_flagcols = 'DISCHARGE_QLTY',
                              data_col_pattern = '#V#',
@@ -701,7 +701,7 @@ process_1_9029 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('date' = '%d-%m-%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
-                             site_name_col = 'STRMGAGEID',
+                             site_code_col = 'STRMGAGEID',
                              data_cols =  c('WATER_TEMP' = 'temp'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'WATER_TEMP_QLTY',
@@ -745,14 +745,14 @@ process_1_9017 <- munge_mcmurdo_discharge
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_24 <- function(network, domain, prodname_ms, site_name,
+process_1_24 <- function(network, domain, prodname_ms, site_code,
                         component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
 
@@ -768,7 +768,7 @@ process_1_24 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
-                         site_name_col = 'STRMGAGEID',
+                         site_code_col = 'STRMGAGEID',
                          data_cols =  c('DOC'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
@@ -792,14 +792,14 @@ process_1_24 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_name,
+process_1_20 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
 
@@ -824,7 +824,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
-                         site_name_col = 'STRMGAGEID',
+                         site_code_col = 'STRMGAGEID',
                          data_cols =  c('Li' = 'Li',
                                         'Na' = 'Na',
                                         'K' = 'K',
@@ -873,14 +873,14 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_21 <- function(network, domain, prodname_ms, site_name,
+process_1_21 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
 
@@ -900,7 +900,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
-                         site_name_col = 'STRMGAGEID',
+                         site_code_col = 'STRMGAGEID',
                          data_cols =  c('N.NO3' = 'NO3_N',
                                         'N.NO2' = 'NO2_N',
                                         'N.NH4' = 'NH4_N',

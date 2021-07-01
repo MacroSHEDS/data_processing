@@ -1,4 +1,4 @@
-"network","domain","site_name","buffer_radius_m","snap_method","snap_distance_m","dem_resolution"
+"network","domain","site_code","buffer_radius_m","snap_method","snap_distance_m","dem_resolution"
 "lter","niwot","SADDLE",100,"standard",150,10
 "lter","niwot","MARTINELLI",100,"standard",150,10
 "lter","niwot","GREEN4",100,"standard",150,10

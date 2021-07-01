@@ -24,17 +24,17 @@ detrmin_arctic_site <- function(component){
     return(site)
 }
 
-munge_discharge <- function(network, domain, prodname_ms, site_name,
+munge_discharge <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
-    alt_site_names <- detrmin_arctic_site(component)
+    alt_site_codes <- detrmin_arctic_site(component)
 
     if(grepl('discharge', prodname_ms)){
 
@@ -53,8 +53,8 @@ munge_discharge <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(filepath = rawfile,
                              datetime_cols = list('Date' = '%d-%b-%y'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols =  q_name,
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -85,8 +85,8 @@ munge_discharge <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(filepath = rawfile,
                              datetime_cols = list('Date' = '%d-%b-%y'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols =  temp_name,
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -111,17 +111,17 @@ munge_discharge <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_discharge_temp <- function(network, domain, prodname_ms, site_name,
+munge_discharge_temp <- function(network, domain, prodname_ms, site_code,
                                  component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
-    alt_site_names <- detrmin_arctic_site(component)
+    alt_site_codes <- detrmin_arctic_site(component)
 
     if(grepl('discharge', prodname_ms)){
 
@@ -141,8 +141,8 @@ munge_discharge_temp <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols =  q_name,
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -175,8 +175,8 @@ munge_discharge_temp <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols = temp_name,
                              set_to_NA = c('-1111', '-1.111'),
                              data_col_pattern = '#V#',
@@ -200,25 +200,25 @@ munge_discharge_temp <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_toolik <- function(network, domain, prodname_ms, site_name,
+munge_toolik <- function(network, domain, prodname_ms, site_code,
                                  component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = 'Toolik_Inlet_Main')
+        mutate(site_code = 'Toolik_Inlet_Main')
 
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%m/%d/%y %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Q_m3sec' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -238,7 +238,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%m/%d/%y %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Water_Temp_C' = 'temp',
                                             'Conductivity_uScm' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -264,25 +264,25 @@ munge_toolik <- function(network, domain, prodname_ms, site_name,
 }
 
 
-munge_toolik_2 <- function(network, domain, prodname_ms, site_name,
+munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = 'Toolik_Inlet_Main')
+        mutate(site_code = 'Toolik_Inlet_Main')
 
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%d-%b-%Y %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Q_m3sec' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -302,7 +302,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%d-%b-%Y %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Water_Temp_C' = 'temp',
                                             'Conductivity_uScm' = 'spCond'),
                              data_col_pattern = '#V#',

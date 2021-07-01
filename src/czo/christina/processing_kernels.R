@@ -77,13 +77,13 @@ process_0_2565 <- function(set_details, network, domain) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2407 <- function(network, domain, prodname_ms, site_name, components) {
+process_1_2407 <- function(network, domain, prodname_ms, site_code, components) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = components)
 
     fils <- rawfile[!grepl('HEADER', rawfile)]
@@ -195,7 +195,7 @@ process_1_2407 <- function(network, domain, prodname_ms, site_name, components) 
         mutate(datetime = as_datetime(paste(date, time, sep = ' '), format = '%Y%m%d %H:%M', tz = 'America/New_York')) %>%
         mutate(datetime = with_tz(datetime, 'UTC')) %>%
         mutate(ms_status = 0) %>%
-        select(site_name = site,
+        select(site_code = site,
                var,
                val = value,
                datetime,
@@ -227,14 +227,14 @@ process_1_2407 <- function(network, domain, prodname_ms, site_name, components) 
 
 #stream_chemistry: STATUS=PENDING
 #. handle_errors
-process_1_1000 <- function(network, domain, prodname_ms, site_name, components) {
+process_1_1000 <- function(network, domain, prodname_ms, site_code, components) {
 
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = components)
 
     #look <- read.csv(rawfile, colClasses = 'character')
@@ -350,7 +350,7 @@ process_1_1000 <- function(network, domain, prodname_ms, site_name, components) 
         mutate(datetime = as_datetime(paste(date, time, sep = ' '), format = '%Y%m%d %H:%M', tz = 'America/New_York')) %>%
         mutate(datetime = with_tz(datetime, 'UTC')) %>%
         mutate(ms_status = 0) %>%
-        select(site_name = site,
+        select(site_code = site,
                var,
                val = value,
                datetime,
@@ -381,13 +381,13 @@ process_1_1000 <- function(network, domain, prodname_ms, site_name, components) 
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2400 <- function(network, domain, prodname_ms, site_name, components) {
+process_1_2400 <- function(network, domain, prodname_ms, site_code, components) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = components)
 
     all <- tibble()
@@ -422,8 +422,8 @@ process_1_2400 <- function(network, domain, prodname_ms, site_name, components) 
         summarise(val = mean(value, na.rm = TRUE)) %>%
         ungroup() %>%
         filter(!is.na(val)) %>%
-        rename(site_name = SiteCode, var = name) %>%
-        arrange(site_name, var, datetime) %>%
+        rename(site_code = SiteCode, var = name) %>%
+        arrange(site_code, var, datetime) %>%
         mutate(ms_status = 0)
 
     d <- identify_sampling_bypass(df = d,
@@ -448,14 +448,14 @@ process_1_2400 <- function(network, domain, prodname_ms, site_name, components) 
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2465 <- function(network, domain, prodname_ms, site_name, components) {
+process_1_2465 <- function(network, domain, prodname_ms, site_code, components) {
 
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = components)
 
     look <- read.csv(rawfile[1], colClasses = 'character')
@@ -479,8 +479,8 @@ process_1_2465 <- function(network, domain, prodname_ms, site_name, components) 
     d <- ms_read_raw_csv(preprocessed_tibble = all,
                          datetime_cols = list('date' = '%Y%m%d %H:%S'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'SiteCode',
-                         alt_site_name = list('WCCLAB' = 'WCCLABTEMP'),
+                         site_code_col = 'SiteCode',
+                         alt_site_code = list('WCCLAB' = 'WCCLABTEMP'),
                          data_cols = c(temperature = 'temp'),
                          set_to_NA = c('-9999'),
                          data_col_pattern = '#V#',
@@ -503,10 +503,10 @@ process_1_2465 <- function(network, domain, prodname_ms, site_name, components) 
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1001 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_1001 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.dat',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
 
     fil <- str_split_fixed(component, '_', n = Inf)[1,4]
@@ -549,7 +549,7 @@ process_1_1001 <- function(network, domain, prodname_ms, site_name, component) {
                          datetime_cols = list('date' = '%Y%m%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols = 'discharge',
                          set_to_NA = c('-9999'),
                          data_col_pattern = '#V#',
@@ -575,11 +575,11 @@ process_1_1001 <- function(network, domain, prodname_ms, site_name, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2565 <- function(network, domain, prodname_ms, site_name, components) {
+process_1_2565 <- function(network, domain, prodname_ms, site_code, components) {
 
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_name, c=components)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     d <- read.delim(rawfile, colClasses = 'character',  sep = '\t', skip = 19) %>%
             mutate(site = 'SWRC_met')
@@ -590,7 +590,7 @@ process_1_2565 <- function(network, domain, prodname_ms, site_name, components) 
                                               'Date' = '%e',
                                               'Hour' = '%H'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
+                         site_code_col = 'site',
                          data_cols = c('Precipitation.mm.' = 'precipitation'),
                          set_to_NA = c('-9999'),
                          data_col_pattern = '#V#',

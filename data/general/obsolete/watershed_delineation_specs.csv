@@ -1,4 +1,4 @@
-network,domain,site_name,buffer_radius_m,snap_method,snap_distance_m,dem_resolution
+network,domain,site_code,buffer_radius_m,snap_method,snap_distance_m,dem_resolution
 lter,hjandrews,GSLOOK,100,standard,150,10
 lter,hjandrews,GSWS01,100,jenson,150,10
 lter,hjandrews,GSWS02,100,standard,150,10
