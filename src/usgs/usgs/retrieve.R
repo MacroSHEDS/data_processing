@@ -29,7 +29,7 @@ for(i in seq_len(nrow(prod_info))){
     # j=1
     for(j in 1:length(usgs_sites)){
 
-        site_name <- names(usgs_sites[j])
+        site_code <- names(usgs_sites[j])
 
         latest_vsn <- get_usgs_verstion(prodname_ms = prodname_ms,
                                         domain = domain,
@@ -37,18 +37,18 @@ for(i in seq_len(nrow(prod_info))){
                                         usgs_site = usgs_sites[j])
 
         avail_site_sets <- latest_vsn %>%
-            select(url, site_name, component)
+            select(url, site_code, component)
 
-        if(! site_is_tracked(held_data, prodname_ms, site_name)){
+        if(! site_is_tracked(held_data, prodname_ms, site_code)){
             held_data <<- insert_site_skeleton(tracker = held_data,
                                                prodname_ms = prodname_ms,
-                                               site_name = site_name,
+                                               site_code = site_code,
                                                site_components = avail_site_sets$component)
         }
 
         held_data <<- track_new_site_components(held_data,
                                                 prodname_ms,
-                                                site_name,
+                                                site_code,
                                                 avail_site_sets)
 
         if(is_ms_err(held_data)) next
@@ -56,7 +56,7 @@ for(i in seq_len(nrow(prod_info))){
         retrieval_details <<- populate_set_details(tracker = held_data,
                                                    prodname_ms = prodname_ms,
                                                    latest_vsn = latest_vsn,
-                                                   site_name = site_name)
+                                                   site_code = site_code)
 
         if(is_ms_err(retrieval_details)) next
 
@@ -64,7 +64,7 @@ for(i in seq_len(nrow(prod_info))){
 
         if(nrow(new_sets) == 0){
             loginfo(glue('Nothing to do for {s} {p}',
-                         s=site_name, p=prodname_ms), logger=logger_module)
+                         s=site_code, p=prodname_ms), logger=logger_module)
             next
         }
 
@@ -77,7 +77,7 @@ for(i in seq_len(nrow(prod_info))){
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   prodname_ms = prodname_ms,
-                                  site_name = site_name,
+                                  site_code = site_code,
                                   new_status = 'pending')
 
         }

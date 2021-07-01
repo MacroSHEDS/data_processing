@@ -8,14 +8,14 @@ retrieve_santa_barbara <- function(set_details, network, domain) {
     return()
 }
 
-munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_name,
+munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
          component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     sbc_gauge <- grepl('SBC ', component, fixed = T)
@@ -39,14 +39,14 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_name,
     }
 
     d <- read.csv(rawfile1, colClasses = "character") %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     if(sbc_gauge && component != 'Precipitation SBC GV201, all years') {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('timestamp_UTC' = '%Y-%m-%dT%H:%M'),
                              datetime_tz = 'UTC',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA =  c('-999', '-999.00', '-999.0'),
@@ -56,7 +56,7 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                              datetime_tz = 'UTC',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-999', '-999.00', '-999.0'),
@@ -78,26 +78,26 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_name,
+munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     site <- str_split_fixed(component, ' ', n = Inf)[1,]
     site <- str_split_fixed(site[3], ',', n = Inf)[1,1]
 
     d <- read.csv(rawfile1, colClasses = "character") %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                          datetime_tz = 'UTC',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('discharge_lps' = 'discharge'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-999', '-999.00', '-999.0'),

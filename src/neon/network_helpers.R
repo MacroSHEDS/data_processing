@@ -11,7 +11,7 @@ get_neon_data <- function(domain,
         s <- sets[i, ]
 
         msg <- glue('Retrieving {st}, {p}, {c}',
-                    st = s$site_name,
+                    st = s$site_code,
                     p = s$prodname_ms,
                     c = s$component)
 
@@ -41,10 +41,10 @@ get_neon_data <- function(domain,
     }
 }
 
-munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE){
-    # site_name=sites[j]; tracker=held_data
+munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE){
+    # site_code=sites[j]; tracker=held_data
 
-    retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_name)
+    retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -62,7 +62,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                               args=list(network = network,
                                         domain = domain,
                                         prodname_ms = prodname_ms,
-                                        site_name = site_name,
+                                        site_code = site_code,
                                         component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
@@ -72,7 +72,7 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
     }
 
     if(nrow(out) == 0) {
-        return(generate_ms_err(paste0('All data failed QA or no data is avalible at ', site_name)))
+        return(generate_ms_err(paste0('All data failed QA or no data is avalible at ', site_code)))
     }
 
         sensor <- case_when(prodname_ms == 'stream_chemistry__DP1.20093' ~ FALSE,
@@ -86,11 +86,11 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                             prodname_ms == 'discharge__DP4.00130' ~ TRUE,
                             prodname_ms == 'surface_elevation__DP1.20016' ~ TRUE)
 
-        site_names <- unique(out$site_name)
-        for(y in 1:length(site_names)) {
+        site_codes <- unique(out$site_code)
+        for(y in 1:length(site_codes)) {
 
             d <- out %>%
-                filter(site_name == !!site_names[y])
+                filter(site_code == !!site_codes[y])
 
             if(sensor){
                 sampling_type <- 'I'
@@ -135,18 +135,18 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                           network = network,
                           domain = domain,
                           prodname_ms = prodname_ms,
-                          site_name = site_names[y],
+                          site_code = site_codes[y],
                           level = 'munged',
                           shapefile = FALSE,
                           link_to_portal = FALSE)
     }
 
     update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site_name=site_name,
+        tracker_name='held_data', prodname_ms=prodname_ms, site_code=site_code,
         new_status='ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
-            p=prodname_ms, n=network, d=domain, s=site_name)
+            p=prodname_ms, n=network, d=domain, s=site_code)
     loginfo(msg, logger=logger_module)
 
     return('sitemunge complete')
@@ -209,7 +209,7 @@ get_neon_product_specs <- function(code){
 
 get_avail_neon_product_sets <- function(prodcode_full){
 
-    #returns: tibble with url, site_name, component columns
+    #returns: tibble with url, site_code, component columns
 
     avail_sets = tibble()
 
@@ -223,17 +223,17 @@ get_avail_neon_product_sets <- function(prodcode_full){
     avail_sets = stringr::str_match(urls,
         '(?:.*)/([A-Z]{4})/([0-9]{4}-[0-9]{2})') %>%
         as_tibble(.name_repair='unique') %>%
-        rename(url=`...1`, site_name=`...2`, component=`...3`)
+        rename(url=`...1`, site_code=`...2`, component=`...3`)
 
     return(avail_sets)
 }
 
-populate_set_details <- function(tracker, prodname_ms, site_name, avail){
+populate_set_details <- function(tracker, prodname_ms, site_code, avail){
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
 
     rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
     rgx_capt = str_match(avail$url, rgx)[, -1]

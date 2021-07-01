@@ -1,5 +1,5 @@
 #. handle_errors
-munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
+munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
@@ -7,7 +7,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
     #(neon and konza have this arrangement). if not all components
     #will be munged, use the "components" column in products.csv
 
-    #site_name is either the true name of a site, like "watershed1", or
+    #site_code is either the true name of a site, like "watershed1", or
     #   the standin "sitename_NA" that we use elsewhere. If the latter,
     #   this munge engine will look inside the munged file to determine
     #   the name of the site. This is necessary when the true site name isn't
@@ -19,7 +19,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_name)
+                                           site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -42,7 +42,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                                args = list(network = network,
                                            domain = domain,
                                            prodname_ms = prodname_ms,
-                                           site_name = site_name,
+                                           site_code = site_code,
                                            component = in_comp)))
 
         if(is_ms_err(out_comp)) return(out_comp)
@@ -64,13 +64,13 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
         }
     }
 
-    if(site_name == 'sitename_NA' && ! is_empty(out)){
-        site_name_from_file <- unique(out$site_name)
+    if(site_code == 'sitename_NA' && ! is_empty(out)){
+        site_code_from_file <- unique(out$site_code)
     } else {
-        site_name_from_file <- site_name
+        site_code_from_file <- site_code
     }
 
-    if(length(site_name_from_file) > 1) {
+    if(length(site_code_from_file) > 1) {
         stop('multiple sites encountered in a dataset that should contain only one')
     }
 
@@ -94,7 +94,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = site_name_from_file,
+                      site_code = site_code_from_file,
                       level = 'munged',
                       shapefile = is_spatial,
                       link_to_portal = FALSE)
@@ -104,14 +104,14 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = 'ok')
 
     msg <- glue('munged {p} ({n}/{d}/{s})',
                 p = prodname_ms,
                 n = network,
                 d = domain,
-                s = site_name)
+                s = site_code)
 
     loginfo(msg,
             logger = logger_module)
@@ -120,7 +120,7 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 }
 
 #. handle_errors
-munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
+munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
                            spatial_regex = '(location|boundary)',
                            silent = TRUE){
 
@@ -134,7 +134,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_name)
+                                           site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -157,7 +157,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                                args = list(network = network,
                                            domain = domain,
                                            prodname_ms = prodname_ms,
-                                           site_name = site_name,
+                                           site_code = site_code,
                                            component = in_comp)))
 
         if(is.null(out_comp)) next
@@ -168,7 +168,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   set_details = list(prodname_ms = prodname_ms,
-                                                     site_name = site_name,
+                                                     site_code = site_code,
                                                      component = in_comp),
                                   new_status = 'blacklist')
             next
@@ -198,13 +198,13 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         }
     }
 
-    sites <- unique(out$site_name)
+    sites <- unique(out$site_code)
 
     for(i in seq_along(sites)){
 
         filt_site <- sites[i]
 
-        out_comp_filt <- filter(out, site_name == !!filt_site)
+        out_comp_filt <- filter(out, site_code == !!filt_site)
 
         if(! is_spatial){
 
@@ -224,7 +224,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = filt_site,
+                      site_code = filt_site,
                       level = 'munged',
                       shapefile = is_spatial,
                       link_to_portal = FALSE)
@@ -234,14 +234,14 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = 'ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
                p = prodname_ms,
                n = network,
                d = domain,
-               s = site_name)
+               s = site_code)
 
     loginfo(msg,
             logger = logger_module)
@@ -250,7 +250,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
 }
 
 #. handle_errors
-munge_combined_split <- function(network, domain, site_name, prodname_ms, tracker,
+munge_combined_split <- function(network, domain, site_code, prodname_ms, tracker,
                                  spatial_regex = '(location|boundary)',
                                  silent = TRUE){
 
@@ -266,7 +266,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_name)
+                                           site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -286,7 +286,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
                            args = list(network = network,
                                        domain = domain,
                                        prodname_ms = prodname_ms,
-                                       site_name = site_name,
+                                       site_code = site_code,
                                        components = components)))
 
     if(is_ms_err(out_comp)){
@@ -299,12 +299,12 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
         return(out_comp)
     }
 
-    sites <- unique(out_comp$site_name)
+    sites <- unique(out_comp$site_code)
 
     for(i in 1:length(sites)){
 
         filt_site <- sites[i]
-        out_comp_filt <- filter(out_comp, site_name == filt_site)
+        out_comp_filt <- filter(out_comp, site_code == filt_site)
 
         if(! is_spatial){
 
@@ -324,7 +324,7 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = filt_site,
+                      site_code = filt_site,
                       level = 'munged',
                       shapefile = is_spatial,
                       link_to_portal = FALSE)
@@ -334,14 +334,14 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = 'ok')
 
     msg = glue('munged {p} ({n}/{d}/{s})',
                p = prodname_ms,
                n = network,
                d = domain,
-               s = site_name)
+               s = site_code)
 
     loginfo(msg,
             logger = logger_module)
@@ -350,12 +350,12 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 }
 
 #. handle_errors
-munge_time_component <-  function(network, domain, site_name, prodname_ms, tracker,
+munge_time_component <-  function(network, domain, site_code, prodname_ms, tracker,
                                   silent = TRUE){
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_name)
+                                           site_code)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -373,7 +373,7 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                                args = list(network = network,
                                            domain = domain,
                                            prodname_ms = prodname_ms,
-                                           site_name = site_name,
+                                           site_code = site_code,
                                            component = in_comp)))
 
         if(is.null(out_comp)) next
@@ -383,7 +383,7 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   set_details = list(prodname_ms = prodname_ms,
-                                                     site_name = site_name,
+                                                     site_code = site_code,
                                                      component = in_comp),
                                   new_status = 'blacklist')
             next
@@ -399,12 +399,12 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
         }
     }
 
-    sites <- unique(out$site_name)
+    sites <- unique(out$site_code)
 
     for(i in 1:length(sites)){
 
         filt_site <- sites[i]
-        out_filt <- filter(out, site_name == filt_site)
+        out_filt <- filter(out, site_code == filt_site)
 
         #sometimes files are divided up temporally, and the last
         #row of one file gets rounded to the same datetime as the first
@@ -437,14 +437,14 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = 'ok')
 
     msg <- glue('munged {p} ({n}/{d}/{s})',
                 p = prodname_ms,
                 n = network,
                 d = domain,
-                s = site_name)
+                s = site_code)
 
     loginfo(msg,
             logger = logger_module)

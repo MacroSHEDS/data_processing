@@ -447,21 +447,21 @@ process_1_10521 <- munge_discharge_temp
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1333 <- function(network, domain, prodname_ms, site_name,
+process_1_1333 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%d-%b-%y'),
                          datetime_tz = 'America/Anchorage',
-                         site_name_col = 'Site',
-                         alt_site_name = list('Oksrukuyik_Creek' = '5'),
+                         site_code_col = 'Site',
+                         alt_site_code = list('Oksrukuyik_Creek' = '5'),
                          data_cols =  c('Discharge2' = 'discharge'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111'),
@@ -572,17 +572,17 @@ process_1_10049 <- munge_discharge_temp
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_10395 <- function(network, domain, prodname_ms, site_name,
+process_1_10395 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
-    alt_site_names <- detrmin_arctic_site(component)
+    alt_site_codes <- detrmin_arctic_site(component)
 
     if(grepl('discharge', prodname_ms)){
 
@@ -606,8 +606,8 @@ process_1_10395 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols =  'discharge',
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -645,8 +645,8 @@ process_1_10395 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols = c('temperature' = 'temp'),
                              set_to_NA = c('-1111', '-1.111'),
                              data_col_pattern = '#V#',
@@ -674,17 +674,17 @@ process_1_10395 <- function(network, domain, prodname_ms, site_name,
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_10396 <- function(network, domain, prodname_ms, site_name,
+process_1_10396 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
-    alt_site_names <- detrmin_arctic_site(component)
+    alt_site_codes <- detrmin_arctic_site(component)
 
     if(grepl('discharge', prodname_ms)){
 
@@ -708,8 +708,8 @@ process_1_10396 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols =  'discharge',
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -730,8 +730,8 @@ process_1_10396 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%d-%b-%y',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
-                             alt_site_name = alt_site_names,
+                             site_code_col = 'River',
+                             alt_site_code = alt_site_codes,
                              data_cols = c('HOBO.Temperature...C.' = 'temp'),
                              set_to_NA = c('-1111', '-1.111'),
                              data_col_pattern = '#V#',
@@ -767,14 +767,14 @@ process_1_10511 <- munge_discharge_temp
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_10303 <- function(network, domain, prodname_ms, site_name,
+process_1_10303 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
@@ -789,17 +789,17 @@ process_1_10303 <- function(network, domain, prodname_ms, site_name,
         ungroup() %>%
         filter(count >= 300) %>%
         mutate(River = str_replace_all(River, ' ', '_')) %>%
-        mutate(site_name = paste(River, Station, sep = '_')) %>%
-        select(site_name)
+        mutate(site_code = paste(River, Station, sep = '_')) %>%
+        select(site_code)
 
     d <- d %>%
-        mutate(site_name = paste(River, Station, sep = '_')) %>%
-        mutate(site_name = str_replace_all(site_name, ' ', '_')) %>%
-        mutate(site_name = case_when(site_name == 'Oksrukuyik_Creek_Wolf_Creek' ~ 'Wolf_Creek',
-                                     site_name == 'Kuparuk_River_Hershey_Creek' ~ 'Hershey_Creek',
-                                     TRUE ~ site_name)) %>%
+        mutate(site_code = paste(River, Station, sep = '_')) %>%
+        mutate(site_code = str_replace_all(site_code, ' ', '_')) %>%
+        mutate(site_code = case_when(site_code == 'Oksrukuyik_Creek_Wolf_Creek' ~ 'Wolf_Creek',
+                                     site_code == 'Kuparuk_River_Hershey_Creek' ~ 'Hershey_Creek',
+                                     TRUE ~ site_code)) %>%
         select(-River) %>%
-        right_join(., sites_lots, by = 'site_name')
+        right_join(., sites_lots, by = 'site_code')
 
     na_vec <- vector('character', 64)
 
@@ -872,7 +872,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_name,
 
     d <- d %>%
         full_join(var_names, by = 'Type') %>%
-        select(site_name, datetime=Date, val=Value, Comments, var) %>%
+        select(site_code, datetime=Date, val=Value, Comments, var) %>%
         mutate(ms_status = case_when(Comments == 'ISCO' ~ 0,
                                      Comments == ' ' ~ 0,
                                      TRUE ~ 1)) %>%
@@ -886,7 +886,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_name,
                !is.na(var)) %>%
         select(-date, -time) %>%
         mutate(datetime = with_tz(datetime, 'UTC')) %>%
-        group_by(site_name, datetime, var) %>%
+        group_by(site_code, datetime, var) %>%
         summarise(val = mean(val, na.rm = TRUE),
                   ms_status = max(ms_status, na.rm = TRUE)) %>%
         ungroup() %>%
@@ -1001,20 +1001,20 @@ process_1_10303 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_1489 <- function(network, domain, prodname_ms, site_name,
+process_1_1489 <- function(network, domain, prodname_ms, site_code,
                            component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date' = '%Y%m%d'),
                          datetime_tz = 'America/Anchorage',
-                         site_name_col = 'Station',
+                         site_code_col = 'Station',
                          data_cols = c('Daily_Precip_Total_mm' = 'precipitation'),
                          is_sensor = TRUE,
                          set_to_NA = '#N/A',
@@ -1042,14 +1042,14 @@ process_1_1489 <- function(network, domain, prodname_ms, site_name,
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20120 <- function(network, domain, prodname_ms, site_name,
+process_1_20120 <- function(network, domain, prodname_ms, site_code,
                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
@@ -1063,10 +1063,10 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
+                             site_code_col = 'River',
                              data_cols = c('Discharge..m3.sec.' = 'discharge'),
                              is_sensor = TRUE,
-                             alt_site_name = list('Roche_Moutonnee_Creek_Main' = 'Roche Moutonnee Creek',
+                             alt_site_code = list('Roche_Moutonnee_Creek_Main' = 'Roche Moutonnee Creek',
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
@@ -1087,10 +1087,10 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'River',
+                             site_code_col = 'River',
                              data_cols = 'temp',
                              is_sensor = TRUE,
-                             alt_site_name = list('Roche_Moutonnee_Creek_Main' = 'Roche Moutonnee Creek',
+                             alt_site_code = list('Roche_Moutonnee_Creek_Main' = 'Roche Moutonnee Creek',
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
@@ -1195,18 +1195,18 @@ process_1_10070 <- munge_toolik
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_10591 <- function(network, domain, prodname_ms, site_name,
+process_1_10591 <- function(network, domain, prodname_ms, site_code,
                                             component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = 'Toolik_Inlet_Main') %>%
+        mutate(site_code = 'Toolik_Inlet_Main') %>%
         rename(Date_Time = 1)
 
     d <- d[4:nrow(d),]
@@ -1216,7 +1216,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Q_m3sec' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -1236,7 +1236,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_name,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Water_Temp_C' = 'temp',
                                             'Conductivity_uScm' = 'spCond'),
                              data_col_pattern = '#V#',

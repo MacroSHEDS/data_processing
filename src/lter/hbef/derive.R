@@ -1,5 +1,5 @@
 loginfo('Beginning derive', logger=logger_module)
-site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
+site_code <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
 prod_info <- get_product_info(network = network,
                              domain = domain,
@@ -25,7 +25,7 @@ for(i in seq_len(nrow(prod_info))){
                                            prodname_ms = prodname_ms)
             held_data <<- insert_site_skeleton(tracker = held_data,
                                              prodname_ms = prodname_ms,
-                                             site_name = site_name,
+                                             site_code = site_code,
                                              site_components = 'NA')
             update_data_tracker_d(network = network,
                                   domain = domain,
@@ -39,7 +39,7 @@ for(i in seq_len(nrow(prod_info))){
 
     derive_status <- get_derive_status(tracker = held_data,
                                        prodname_ms = prodname_ms,
-                                       site_name = site_name)
+                                       site_code = site_code)
 
     if(derive_status == 'ok'){
         loginfo(glue('Nothing to do for {p}',
@@ -66,7 +66,7 @@ for(i in seq_len(nrow(prod_info))){
                           domain = domain,
                           tracker_name = 'held_data',
                           prodname_ms = prodname_ms,
-                          site_name = site_name,
+                          site_code = site_code,
                           new_status = stts)
 
     if(stts == 'ok'){
@@ -74,7 +74,7 @@ for(i in seq_len(nrow(prod_info))){
                     p = prodname_ms,
                     n = network,
                     d = domain,
-                    s = site_name)
+                    s = site_code)
         loginfo(msg, logger=logger_module)
     }
 

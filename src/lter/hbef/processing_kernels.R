@@ -6,7 +6,7 @@ process_0_1 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
 
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -26,7 +26,7 @@ process_0_13 <- function(set_details, network, domain){
                           n = network,
                           d = domain,
                           p = set_details$prodname_ms,
-                          s = set_details$site_name)
+                          s = set_details$site_code)
 
     dir.create(raw_data_dest,
                showWarnings = FALSE,
@@ -49,7 +49,7 @@ process_0_208 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
     if(set_details$component == 'Analytical Methods'){
@@ -79,7 +79,7 @@ process_0_107 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
 
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -96,7 +96,7 @@ process_0_100 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
 
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
@@ -116,7 +116,7 @@ process_0_94 <- function(set_details, network, domain) {
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
     rawfile=glue(raw_data_dest, '/', set_details$component)
@@ -132,21 +132,21 @@ process_0_94 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_name,
+process_1_1 <- function(network, domain, prodname_ms, site_code,
     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATETIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'WS',
-                         alt_site_name = list('w1' = c('1', 'W1'),
+                         site_code_col = 'WS',
+                         alt_site_code = list('w1' = c('1', 'W1'),
                                               'w2' = c('2', 'W2'),
                                               'w3' = c('3', 'W3'),
                                               'w4' = c('4', 'W4'),
@@ -176,7 +176,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_13 <- function(network, domain, prodname_ms, site_name,
+process_1_13 <- function(network, domain, prodname_ms, site_code,
     component){
 
     if(component == 'site info'){
@@ -188,14 +188,14 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATE = '%Y-%m-%d'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'rainGage',
+                         site_code_col = 'rainGage',
                          data_cols = c(Precip = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
@@ -217,7 +217,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_208 <- function(network, domain, prodname_ms, site_name,
+process_1_208 <- function(network, domain, prodname_ms, site_code,
     component){
 
     if(component == 'Analytical Methods'){
@@ -229,15 +229,15 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_name,
+                    s = site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(date = '%Y-%m-%d',
                                            timeEST = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site',
-                         alt_site_name = list('w1' = c('1', 'W1'),
+                         site_code_col = 'site',
+                         alt_site_code = list('w1' = c('1', 'W1'),
                                               'w2' = c('2', 'W2'),
                                               'w3' = c('3', 'W3'),
                                               'w4' = c('4', 'W4'),
@@ -282,11 +282,11 @@ process_1_208 <- function(network, domain, prodname_ms, site_name,
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_94 <- function(network, domain, prodname_ms, site_name,
+process_1_94 <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
 
     rawfile <- glue(rawdir, '/', component)
 
@@ -300,13 +300,13 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
                       quiet = TRUE) %>%
         # mutate(WSHEDS0_ID = ifelse(is.na(WSHEDS0_ID), 0, WSHEDS0_ID)) %>%
         filter(!is.na(WS)) %>% #ignore encompassing, non-experimental watershed
-        select(site_name = WSHEDS0_ID,
+        select(site_code = WSHEDS0_ID,
                area = AREA,
                perimeter = PERIMETER,
                geometry = geometry) %>%
-        mutate(site_name = paste0('w', site_name)) %>%
+        mutate(site_code = paste0('w', site_code)) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -314,14 +314,14 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
 
         new_wb <- wb[i,]
 
-        site_name <- as_tibble(new_wb) %>%
-            pull(site_name)
+        site_code <- as_tibble(new_wb) %>%
+            pull(site_code)
 
         write_ms_file(d = new_wb,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = site_name,
+                      site_code = site_code,
                       level = 'munged',
                       shapefile = TRUE,
                       link_to_portal = FALSE)
@@ -332,11 +332,11 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
 
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_100 <- function(network, domain, prodname_ms, site_name,
+process_1_100 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
     rawfile <- glue(rawdir, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile,
@@ -348,10 +348,10 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
     rg_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                           quiet = TRUE) %>%
         filter(! is.na(GAGE_NUM)) %>%
-        select(site_name = ID,
+        select(site_code = ID,
                geometry = geometry) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -364,7 +364,7 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = rg$site_name,
+                      site_code = rg$site_code,
                       level = 'munged',
                       shapefile = TRUE,
                       link_to_portal = FALSE)
@@ -375,11 +375,11 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
 
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_107 <- function(network, domain, prodname_ms, site_name,
+process_1_107 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
     rawfile <- glue(rawdir, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile,
@@ -391,11 +391,11 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
     weirs_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                              quiet = TRUE) %>%
         filter(! is.na(WEIR_NUM)) %>%
-        select(site_name = WEIR_NUM,
+        select(site_code = WEIR_NUM,
                geometry = geometry) %>%
-        mutate(site_name = paste0('w', site_name)) %>%
+        mutate(site_code = paste0('w', site_code)) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -408,7 +408,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = w$site_name,
+                      site_code = w$site_code,
                       level = 'munged',
                       shapefile = TRUE,
                       link_to_portal = FALSE)
