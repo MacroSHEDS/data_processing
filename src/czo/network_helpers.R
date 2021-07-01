@@ -25,14 +25,14 @@ get_czo_product_version <- function(prodname_ms, domain, hydroshare_code, data_t
 construct_czo_product_sets <- function(hydroshare_code, component, data_tracker,
                                        latest_vsn){
 
-    #returns: tibble with url, site_name, component (aka element_name)
+    #returns: tibble with url, site_code, component (aka element_name)
 
     name_endpoint <- 'https://www.hydroshare.org/hsapi/resource/'
     mid_names <- '/files/'
 
     prod_url <- paste0(name_endpoint, hydroshare_code, mid_names, component)
 
-    site_names_all <- c()
+    site_codes_all <- c()
     components_all <- c()
     for(d in 1:length(component)){
 
@@ -40,33 +40,33 @@ construct_czo_product_sets <- function(hydroshare_code, component, data_tracker,
 
         if(length(component_split) > 1){
 
-            site_name <- component_split[1]
+            site_code <- component_split[1]
             components_single <- component_split[2]
         } else{
-            site_name <- 'sitename_NA'
+            site_code <- 'sitename_NA'
             components_single <- component_split
         }
 
-        site_names_all <- append(site_names_all, site_name)
+        site_codes_all <- append(site_codes_all, site_code)
         components_all <- append(components_all, components_single)
     }
 
 
     avail_sets <- tibble(url = prod_url,
-        site_name = site_names_all,
+        site_code = site_codes_all,
         component = components_all,
         avail_version = latest_vsn)
 
     return(avail_sets)
 }
 
-populate_set_details <- function(tracker, prodname_ms, site_name, avail){
+populate_set_details <- function(tracker, prodname_ms, site_code, avail){
     #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker_old = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker_old = tracker[[prodname_ms]][[site_code]]$retrieve
 
     prodcode = prodcode_from_prodname_ms(prodname_ms)
 
@@ -94,7 +94,7 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail){
 
         if(!nrow(email_update) == 0) {
 
-            sites <- unique(email_update$site_name)
+            sites <- unique(email_update$site_code)
             sites <- paste(sites, collapse = ', ')
 
             components <- unique(email_update$component)
@@ -136,7 +136,7 @@ get_czo_data <- function(domain, sets, tracker, silent=TRUE){
         s = sets[i, ]
 
         msg = glue('Retrieving {st}, {p}, {c}',
-            st=s$site_name, p=s$prodname_ms, c=s$component)
+            st=s$site_code, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -156,7 +156,7 @@ download_raw_file <- function(network, domain, set_details, file_type = '.csv') 
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
 
     dir.create(raw_data_dest,
                showWarnings = FALSE,
@@ -235,9 +235,9 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
                    datetime = measDate) %>%
             mutate(var = 'discharge',
                    ms_status = ifelse(!flagA %in% c('P', 'p', 'A', 'a') | !is.na(flagB), 1, 0),
-                   site_name = !!names(sites)[s],
+                   site_code = !!names(sites)[s],
                    val = val * 28.31685) %>%
-            select(site_name, datetime, var, val, ms_status) %>%
+            select(site_code, datetime, var, val, ms_status) %>%
             filter(!is.na(val)) %>%
             mutate(datetime = paste0(as.character(datetime), ' ', '12:00:00')) %>%
             mutate(datetime = as_datetime(datetime, format = '%Y-%m-%d %H:%M:%S', tz = 'America/Denver')) %>%
@@ -274,7 +274,7 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_name = names(sites)[s],
+                      site_code = names(sites)[s],
                       level = 'derived',
                       shapefile = FALSE,
                       link_to_portal = FALSE)

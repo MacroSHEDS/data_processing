@@ -4,7 +4,7 @@
 #TODO: tabulate siteyears dropped from each summary due to presence of NAs
 #change all the coverage plots so that they scale by site (like:
 # qsub = q %>%
-#     filter(domain == dmn, site_name == s) %>%
+#     filter(domain == dmn, site_code == s) %>%
 #     mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
 #            yr_offset = lubridate::year(datetime) - earliest_year,
 #            val = errors::drop_errors(val),
@@ -22,7 +22,7 @@ library(viridis)
 
 ws_areas <- site_data %>%
     filter(as.logical(in_workflow)) %>%
-    select(network, domain, site_name, ws_area_ha)
+    select(network, domain, site_code, ws_area_ha)
 
 pals = c('Blues', 'Greens', 'Greys', 'Reds', 'Purples',
          'PuRd')# 'YlOrBr', 'OrRd', 'RdPu', 'Oranges', 'YlGnBu', 'PuRd')
@@ -80,13 +80,13 @@ dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
 #         purrr::map_dfr(read_feather) %>%
 #         select(-val_err) %>%
 #         # mutate(val = errors::set_errors(val, val_err),
-#         group_by(site_name,
+#         group_by(site_code,
 #                  date = lubridate::as_date(datetime)) %>%
 #         summarize(val = mean(val, na.rm = TRUE),
 #                   .groups = 'drop') %>%
 #         ungroup() %>%
-#         arrange(site_name, date) %>%
-#         group_by(site_name) %>%
+#         arrange(site_code, date) %>%
+#         group_by(site_code) %>%
 #         mutate(
 #             val = if(sum(! is.na(val)) > 1)
 #                 {
@@ -97,21 +97,21 @@ dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
 #         mutate(year = lubridate::year(date),
 #                val = val * 86400)
 #
-#     print(tapply(d$val, list(d$site_name, d$year), function(x) sum(! is.na(x))))
-#     # tapply(d$val, list(d$site_name, d$year), function(x) sum(is.na(x)))
+#     print(tapply(d$val, list(d$site_code, d$year), function(x) sum(! is.na(x))))
+#     # tapply(d$val, list(d$site_code, d$year), function(x) sum(is.na(x)))
 #
 #     d = d %>%
-#         group_by(site_name, year) %>%
+#         group_by(site_code, year) %>%
 #         summarize(val = sum(val, na.rm = FALSE),
 #                   .groups = 'drop') %>%
-#         arrange(site_name, year) %>%
+#         arrange(site_code, year) %>%
 #         mutate(network = ntw_dmn_prd[1],
 #                domain = ntw_dmn_prd[2]) %>%
 #         left_join(ws_areas,
-#                   by = c('network', 'domain', 'site_name')) %>%
+#                   by = c('network', 'domain', 'site_code')) %>%
 #         mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
 #                val = log(val / 1000 * 1e9 / ws_area_mm2),
-#                ntw_dmn_sit = paste(network, domain, site_name,
+#                ntw_dmn_sit = paste(network, domain, site_code,
 #                                    sep = ' > ')) %>%
 #         select(year, ntw_dmn_sit, val) %>%
 #         arrange(ntw_dmn_sit, year)
@@ -190,12 +190,12 @@ for(i in 1:length(q_dirs)){
         purrr::map_dfr(read_feather) %>%
         select(-val_err) %>%
         # mutate(val = errors::set_errors(val, val_err),
-        group_by(site_name,
+        group_by(site_code,
                  date = lubridate::as_date(datetime)) %>%
         summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        arrange(site_name, date) %>%
-        group_by(site_name) %>%
+        arrange(site_code, date) %>%
+        group_by(site_code) %>%
         mutate(
             val = if(sum(! is.na(val)) > 1)
             {
@@ -209,7 +209,7 @@ for(i in 1:length(q_dirs)){
     # plot(gg, type='l')
     #
     # yrcols = viridis(n = 39)
-    # dd = filter(d, site_name == 'MARTINELLI') %>%
+    # dd = filter(d, site_code == 'MARTINELLI') %>%
     #     mutate(doy = as.numeric(strftime(date, format = '%j', tz='UTC'))) %>%
     #     group_split(year = year(date)) %>% as.list()
     # plot(1, 1, type='n', xlim=c(1, 366), ylim=c(0, 100))
@@ -218,24 +218,24 @@ for(i in 1:length(q_dirs)){
     #     lines(yy$doy, c(scale(yy$val)) + i, col=yrcols[i])
     # }
 
-    # zz = filter(d, site_name == 'MARTINELLI', year(date) == 1994) %>% arrange(date)
-    # zz = filter(d, site_name == 'ALBION', year(date) == 1999) %>% arrange(date)
+    # zz = filter(d, site_code == 'MARTINELLI', year(date) == 1994) %>% arrange(date)
+    # zz = filter(d, site_code == 'ALBION', year(date) == 1999) %>% arrange(date)
     # plot(zz$date, zz$val)
 
     d <- d %>%
         mutate(year = lubridate::year(date),
                val = val * 86400) %>%
-        group_by(site_name, year) %>%
+        group_by(site_code, year) %>%
         summarize(val = sum(val, na.rm = FALSE),
                   .groups = 'drop') %>%
-        # arrange(site_name, year) %>%
+        # arrange(site_code, year) %>%
         mutate(network = ntw_dmn_prd[1],
                domain = ntw_dmn_prd[2]) %>%
         left_join(ws_areas,
-                  by = c('network', 'domain', 'site_name')) %>%
+                  by = c('network', 'domain', 'site_code')) %>%
         mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
                val = log(val / 1000 * 1e9 / ws_area_mm2),
-               ntw_dmn_sit = paste(network, domain, site_name,
+               ntw_dmn_sit = paste(network, domain, site_code,
                                    sep = ' > ')) %>%
         select(year, ntw_dmn_sit, val) %>%
         arrange(ntw_dmn_sit, year)
@@ -338,21 +338,21 @@ for(i in 1:length(chemvars)){
     }
 
     d_by_max = d %>%
-        group_by(network, domain, site_name) %>%
+        group_by(network, domain, site_code) %>%
         summarize(maxval = max(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        mutate(ntw_dmn_sit = paste(network, domain, site_name,
+        mutate(ntw_dmn_sit = paste(network, domain, site_code,
                                    sep = ' > '))
 
     site_order = d_by_max$ntw_dmn_sit[order(d_by_max$maxval)]
 
     d_boxplot = d %>%
         mutate(val = errors::drop_errors(val)) %>%
-        group_by(network, domain, site_name) %>%
+        group_by(network, domain, site_code) %>%
         summarize(box_stats = list(boxplot.stats(val)),
                   .groups = 'drop') %>%
         mutate(color = dmncolors[match(domain, domains)],
-               ntw_dmn_sit = paste(network, domain, site_name,
+               ntw_dmn_sit = paste(network, domain, site_code,
                                    sep = ' > '))
 
     included_domain_inds = which(domains %in% unique(d_by_max$domain))
@@ -386,9 +386,9 @@ for(i in 1:length(chemvars)){
 
     axis_seq_1 = seq(1, nsites, 2)
     axis_seq_2 = seq(2, nsites, 2)
-    axis(1, at=axis_seq_1, labels=d_boxplot$site_name[axis_seq_1],
+    axis(1, at=axis_seq_1, labels=d_boxplot$site_code[axis_seq_1],
          las=2, cex.axis=0.6, tcl=-0.6)
-    axis(1, at=axis_seq_2, labels=d_boxplot$site_name[axis_seq_2],
+    axis(1, at=axis_seq_2, labels=d_boxplot$site_code[axis_seq_2],
          las=2, cex.axis=0.6, tcl=-0.6, line=6.5, tick=FALSE)
     axis(1, at=axis_seq_2, labels=rep('', length(axis_seq_2)), tcl=-7)
     legend('topright', legend=included_domains, lty=1, col=included_dmncolors, bty='n', lwd=3,
@@ -472,7 +472,7 @@ for(k in 1:length(fluxvars)){
 
         dflux_var_year = dflux %>%
             filter(domain == ntw_dmn_prd[2]) %>%
-            mutate(ntw_dmn_sit = paste(network, domain, site_name,
+            mutate(ntw_dmn_sit = paste(network, domain, site_code,
                                        sep = ' > '),
                    date = lubridate::as_date(datetime),
                    # year = lubridate::year(datetime),
@@ -506,11 +506,11 @@ for(k in 1:length(fluxvars)){
             summarize(val = sum(val, na.rm = FALSE), #
                       .groups = 'drop') %>%
             tidyr::extract(col = ntw_dmn_sit,
-                           into = c('network', 'domain', 'site_name'),
+                           into = c('network', 'domain', 'site_code'),
                            regex = '(.+?) > (.+?) > (.+)',
                            remove = FALSE) %>%
             left_join(ws_areas,
-                      by = c('network', 'domain', 'site_name')) %>%
+                      by = c('network', 'domain', 'site_code')) %>%
             mutate(val = log(val / ws_area_ha)) %>%
             select(year, ntw_dmn_sit, flux = val) %>%
             arrange(ntw_dmn_sit, year)
@@ -518,13 +518,13 @@ for(k in 1:length(fluxvars)){
         dflow = list.files(pd, full.names = TRUE) %>%
             purrr::map_dfr(read_feather) %>%
             select(-val_err) %>%
-            group_by(site_name,
+            group_by(site_code,
                      date = lubridate::as_date(datetime)) %>%
             summarize(val = mean(val, na.rm = TRUE),
                       .groups = 'drop') %>%
 
-            arrange(site_name, date) %>%
-            group_by(site_name) %>%
+            arrange(site_code, date) %>%
+            group_by(site_code) %>%
             mutate(
                 val = if(sum(! is.na(val)) > 1)
                 {
@@ -535,17 +535,17 @@ for(k in 1:length(fluxvars)){
 
             mutate(year = lubridate::year(date),
                    val = val * 86400) %>%
-            group_by(site_name, year) %>%
+            group_by(site_code, year) %>%
             summarize(val = sum(val, na.rm = FALSE), #
                       .groups = 'drop') %>%
-            arrange(site_name, year) %>%
+            arrange(site_code, year) %>%
             mutate(network = ntw_dmn_prd[1],
                    domain = ntw_dmn_prd[2]) %>%
             left_join(ws_areas,
-                      by = c('network', 'domain', 'site_name')) %>%
+                      by = c('network', 'domain', 'site_code')) %>%
             mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
                    val = log(val / 1000 * 1e9 / ws_area_mm2),
-                   ntw_dmn_sit = paste(network, domain, site_name,
+                   ntw_dmn_sit = paste(network, domain, site_code,
                                        sep = ' > ')) %>%
             select(year, ntw_dmn_sit, flow = val) %>%
             arrange(ntw_dmn_sit, year)
@@ -647,7 +647,7 @@ for(k in 1:length(fluxvars)){
 
         dflux_var_year = dflux %>%
             filter(domain == ntw_dmn_prd[2]) %>%
-            mutate(ntw_dmn_sit = paste(network, domain, site_name,
+            mutate(ntw_dmn_sit = paste(network, domain, site_code,
                                        sep = ' > '),
                    date = lubridate::as_date(datetime),
                    # year = lubridate::year(datetime),
@@ -670,11 +670,11 @@ for(k in 1:length(fluxvars)){
             summarize(val = sum(val, na.rm = FALSE), #
                       .groups = 'drop') %>%
             tidyr::extract(col = ntw_dmn_sit,
-                           into = c('network', 'domain', 'site_name'),
+                           into = c('network', 'domain', 'site_code'),
                            regex = '(.+?) > (.+?) > (.+)',
                            remove = FALSE) %>%
             left_join(ws_areas,
-                      by = c('network', 'domain', 'site_name')) %>%
+                      by = c('network', 'domain', 'site_code')) %>%
             mutate(val = log(val / ws_area_ha)) %>%
             # filter(! is.na(val)) %>%
             select(year, ntw_dmn_sit, domain, flux = val) %>%
@@ -760,12 +760,12 @@ for(i in 1:length(q_dirs)){
         purrr::map_dfr(read_feather) %>%
         select(-val_err) %>%
         # mutate(val = errors::set_errors(val, val_err),
-        group_by(site_name,
+        group_by(site_code,
                  date = lubridate::as_date(datetime)) %>%
         summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        arrange(site_name, date) %>%
-        group_by(site_name) %>%
+        arrange(site_code, date) %>%
+        group_by(site_code) %>%
         mutate(
             val = if(sum(! is.na(val)) > 1)
             {
@@ -775,17 +775,17 @@ for(i in 1:length(q_dirs)){
         ungroup() %>%
         mutate(year = lubridate::year(date),
                val = val * 86400) %>%
-        group_by(site_name, year) %>%
+        group_by(site_code, year) %>%
         summarize(val = sum(val, na.rm = FALSE), #
                   .groups = 'drop') %>%
-        arrange(site_name, year) %>%
+        arrange(site_code, year) %>%
         mutate(network = ntw_dmn_prd[1],
                domain = ntw_dmn_prd[2]) %>%
         left_join(ws_areas,
-                  by = c('network', 'domain', 'site_name')) %>%
+                  by = c('network', 'domain', 'site_code')) %>%
         mutate(ws_area_mm2 = ws_area_ha * 10000 * 1e6,
                val = val / 1000 * 1e9 / ws_area_mm2,
-               ntw_dmn_sit = paste(network, domain, site_name,
+               ntw_dmn_sit = paste(network, domain, site_code,
                                    sep = ' > ')) %>%
         select(year, ntw_dmn_sit, val) %>%
         arrange(ntw_dmn_sit, year)
@@ -804,7 +804,7 @@ for(i in 1:length(q_dirs)){
         summarize(box_stats = list(boxplot.stats(val)),
                   .groups = 'drop') %>%
         mutate(color = dmncolors[ntw_dmn_prd[2] == domains],
-               site_name = str_match(ntw_dmn_sit, '.+? > .+? > (.+)$')[, 2]) %>%
+               site_code = str_match(ntw_dmn_sit, '.+? > .+? > (.+)$')[, 2]) %>%
         bind_rows(d_boxplot)
 }
 
@@ -853,9 +853,9 @@ for(j in 1:nsites){
 
 axis_seq_1 = seq(1, nsites, 2)
 axis_seq_2 = seq(2, nsites, 2)
-axis(1, at=axis_seq_1, labels=d_boxplot$site_name[axis_seq_1],
+axis(1, at=axis_seq_1, labels=d_boxplot$site_code[axis_seq_1],
      las=2, cex.axis=0.6, tcl=-0.6)
-axis(1, at=axis_seq_2, labels=d_boxplot$site_name[axis_seq_2],
+axis(1, at=axis_seq_2, labels=d_boxplot$site_code[axis_seq_2],
      las=2, cex.axis=0.6, tcl=-0.6, line=6.5, tick=FALSE)
 axis(1, at=axis_seq_2, labels=rep('', length(axis_seq_2)), tcl=-7)
 legend('topright', legend=included_domains, lty=1, col=included_dmncolors, bty='n', lwd=3,
@@ -889,7 +889,7 @@ for(dmn in dmns){
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
-    sites = unique(q$site_name[q$domain == dmn])
+    sites = unique(q$site_code[q$domain == dmn])
     if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
     plotrc = ceiling(sqrt(length(sites)))
@@ -906,7 +906,7 @@ for(dmn in dmns){
              hadj=0.7)
 
         qsub = q %>%
-            filter(domain == dmn, site_name == s) %>%
+            filter(domain == dmn, site_code == s) %>%
             mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                    yr_offset = lubridate::year(datetime) - earliest_year)
 
@@ -949,7 +949,7 @@ for(dmn in dmns){
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
-    sites = unique(p$site_name[p$domain == dmn])
+    sites = unique(p$site_code[p$domain == dmn])
     if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
     plotrc = ceiling(sqrt(length(sites)))
@@ -966,7 +966,7 @@ for(dmn in dmns){
              hadj=0.7)
 
         psub = p %>%
-            filter(domain == dmn, site_name == s) %>%
+            filter(domain == dmn, site_code == s) %>%
             mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                    yr_offset = lubridate::year(datetime) - earliest_year)
 
@@ -1015,7 +1015,7 @@ for(dmn in dmns){
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
-    sites = unique(p$site_name[p$domain == dmn])
+    sites = unique(p$site_code[p$domain == dmn])
     if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
     plotrc = ceiling(sqrt(length(sites)))
@@ -1032,7 +1032,7 @@ for(dmn in dmns){
              hadj=0.7)
 
         psub = p %>%
-            filter(domain == dmn, site_name == s) %>%
+            filter(domain == dmn, site_code == s) %>%
             mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                    yr_offset = lubridate::year(datetime) - earliest_year)
 
@@ -1076,7 +1076,7 @@ for(dmn in dmns){
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
-    sites = unique(p$site_name[p$domain == dmn])
+    sites = unique(p$site_code[p$domain == dmn])
     if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
     plotrc = ceiling(sqrt(length(sites)))
@@ -1093,7 +1093,7 @@ for(dmn in dmns){
              hadj=0.7)
 
         psub = p %>%
-            filter(domain == dmn, site_name == s) %>%
+            filter(domain == dmn, site_code == s) %>%
             mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
                    yr_offset = lubridate::year(datetime) - earliest_year)
 
@@ -1134,8 +1134,8 @@ qair_sites <- site_data %>%
     filter(domain %in% c('niwot', 'plum'),
            site_type == 'stream_gauge',
            in_workflow == TRUE) %>%
-    select(site_name, longitude, latitude) %>%
-    data.table::transpose(make.names = 'site_name')
+    select(site_code, longitude, latitude) %>%
+    data.table::transpose(make.names = 'site_code')
     # sf::st_as_sf(coords = c('longitude', 'latitude'), crs = 4326)
 
 # stencil = simplegeom(as(niwot_sites, 'Spatial'))
@@ -1212,7 +1212,7 @@ for(dmn in c('niwot', 'plum')){
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
-    sites = unique(q$site_name[q$domain == dmn])
+    sites = unique(q$site_code[q$domain == dmn])
     if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
 
     plotrc = ceiling(sqrt(length(sites)))
@@ -1229,7 +1229,7 @@ for(dmn in c('niwot', 'plum')){
             hadj=0.7)
 
         qsub = q %>%
-            filter(domain == dmn, site_name == s) %>%
+            filter(domain == dmn, site_code == s) %>%
             mutate(val = errors::drop_errors(val),
                    val = scale(val)[, 1])
 

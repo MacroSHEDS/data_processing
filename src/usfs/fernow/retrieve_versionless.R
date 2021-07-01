@@ -18,7 +18,7 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-site_name <- 'sitename_NA'
+site_code <- 'sitename_NA'
 
 for(i in seq_len(nrow(prod_info))){
 
@@ -40,12 +40,12 @@ for(i in seq_len(nrow(prod_info))){
 
     if(! site_is_tracked(tracker = held_data,
                          prodname_ms = prodname_ms,
-                         site_name = site_name)){
+                         site_code = site_code)){
 
         held_data <<- insert_site_skeleton(
             tracker = held_data,
             prodname_ms = prodname_ms,
-            site_name = site_name,
+            site_code = site_code,
             site_components = prod_info$components[i],
             versionless = TRUE
         )
@@ -59,7 +59,7 @@ for(i in seq_len(nrow(prod_info))){
                      n = network,
                      d = domain,
                      p = prodname_ms,
-                     s = site_name)
+                     s = site_code)
 
     dir.create(path = dest_dir,
                showWarnings = FALSE,
@@ -68,7 +68,7 @@ for(i in seq_len(nrow(prod_info))){
     retrieve_versionless_product(network = network,
                                  domain = domain,
                                  prodname_ms = prodname_ms,
-                                 site_name = site_name,
+                                 site_code = site_code,
                                  tracker = held_data)
 
     if(! is.na(prod_info$munge_status[i])){
@@ -76,7 +76,7 @@ for(i in seq_len(nrow(prod_info))){
                               domain = domain,
                               tracker_name = 'held_data',
                               prodname_ms = prodname_ms,
-                              site_name = site_name,
+                              site_code = site_code,
                               new_status = 'pending')
     }
     # }

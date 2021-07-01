@@ -1,24 +1,24 @@
 
 construct_usfs_product_sets <- function(prod_url, prodname){
 
-    #returns: tibble with url, site_name, component (aka element_name)
+    #returns: tibble with url, site_code, component (aka element_name)
 
     avail_sets <- tibble(
         url = prod_url,
-        site_name = 'sitename_NA',
+        site_code = 'sitename_NA',
         component = prodname,
         )
 
     return(avail_sets)
 }
 
-populate_set_details <- function(tracker, prodname_ms, site_name, avail, latest_vsn){
+populate_set_details <- function(tracker, prodname_ms, site_code, avail, latest_vsn){
     # tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker_old = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker_old = tracker[[prodname_ms]][[site_code]]$retrieve
 
     prodcode = prodcode_from_prodname_ms(prodname_ms)
 
@@ -53,7 +53,7 @@ get_usfs_data <- function(domain, sets, tracker, silent=TRUE){
         s = sets[i, ]
 
         msg = glue('Retrieving {st}, {p}, {c}',
-            st=s$site_name, p=s$prodname_ms, c=s$component)
+            st=s$site_code, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -73,7 +73,7 @@ download_raw_file <- function(network, domain, set_details, file_type = '.csv') 
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
 
     dir.create(raw_data_dest,
                showWarnings = FALSE,

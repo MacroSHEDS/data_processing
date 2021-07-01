@@ -153,14 +153,14 @@ process_0_230 <- function(set_details, network, domain){
 
 #discharge_N04D: STATUS=READY
 #. handle_errors
-process_1_7 <- function(network, domain, prodname_ms, site_name,
+process_1_7 <- function(network, domain, prodname_ms, site_code,
                         component){
 
   rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -182,8 +182,8 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
-                       alt_site_name = list('N04D' = 'n04d'),
+                       site_code_col = 'Watershed',
+                       alt_site_code = list('N04D' = 'n04d'),
                        data_cols =  c('Discharge' = 'discharge'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'QualFlag',
@@ -214,14 +214,14 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
 
 #discharge_N20B: STATUS=READY
 #. handle_errors
-process_1_8 <- function(network, domain, prodname_ms, site_name,
+process_1_8 <- function(network, domain, prodname_ms, site_code,
                         component){
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -243,8 +243,8 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
-                       alt_site_name = list('N20B' = 'n20b'),
+                       site_code_col = 'Watershed',
+                       alt_site_code = list('N20B' = 'n20b'),
                        data_cols =  c('Discharge' = 'discharge'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'QualFlag',
@@ -275,14 +275,14 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
 
 #discharge_N01B: STATUS=READY
 #. handle_errors
-process_1_9 <- function(network, domain, prodname_ms, site_name,
+process_1_9 <- function(network, domain, prodname_ms, site_code,
                         component){
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -304,8 +304,8 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
-                       alt_site_name = list('N01B' = 'n01b'),
+                       site_code_col = 'Watershed',
+                       alt_site_code = list('N01B' = 'n01b'),
                        data_cols =  c('Discharge' = 'discharge'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'QualFlag',
@@ -336,14 +336,14 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
 
 #discharge_N02B: STATUS=READY
 #. handle_errors
-process_1_10 <- function(network, domain, prodname_ms, site_name,
+process_1_10 <- function(network, domain, prodname_ms, site_code,
                          component){
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -365,8 +365,8 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
-                       alt_site_name = list('N02B' = 'n02b'),
+                       site_code_col = 'Watershed',
+                       alt_site_code = list('N02B' = 'n02b'),
                        data_cols =  c('Discharge' = 'discharge'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'QualFlag',
@@ -397,14 +397,14 @@ process_1_10 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_50 <- function(network, domain, prodname_ms, site_name,
+process_1_50 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -453,8 +453,8 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'WATERSHED',
-                       alt_site_name = list('N04D' = 'n04d',
+                       site_code_col = 'WATERSHED',
+                       alt_site_code = list('N04D' = 'n04d',
                                            'N02B'='n02b',
                                            'N20B' = 'n20b',
                                            'N01B' = 'n01b',
@@ -503,14 +503,14 @@ process_1_50 <- function(network, domain, prodname_ms, site_name,
 
 #stream_conductivity: STATUS=READY
 #. handle_errors
-process_1_51 <- function(network, domain, prodname_ms, site_name,
+process_1_51 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- ms_read_raw_csv(filepath = rawfile1,
@@ -519,8 +519,8 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
                                             'RecDay' = '%d',
                                             'RecTime' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Site',
-                       alt_site_name = list('N04D' = 'n04d',
+                       site_code_col = 'Site',
+                       alt_site_code = list('N04D' = 'n04d',
                                             'N02B'='n02b',
                                             'N20B' = 'n20b',
                                             'N01B' = 'n01b'),
@@ -532,7 +532,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
       rename(val = 3) %>%
       mutate(var = 'GN_spCond',
            ms_status = 0) %>%
-      filter(site_name %in% c('N04D', 'N02B', 'N20B', 'N01B'))
+      filter(site_code %in% c('N04D', 'N02B', 'N20B', 'N01B'))
 
   d <- carry_uncertainty(d,
                          network = network,
@@ -548,14 +548,14 @@ process_1_51 <- function(network, domain, prodname_ms, site_name,
 
 #stream_suspended_sediments: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_name,
+process_1_20 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -578,7 +578,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                                             'day' = '%d',
                                             'time' = '%H%M'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
+                       site_code_col = 'Watershed',
                        data_cols =  c('TSS', 'VSS'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'comments',
@@ -605,7 +605,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 
 #stream_water_quality: STATUS=PENDING
 #. handle_errors
-process_1_21 <- function(network, domain, prodname_ms, site_name,
+process_1_21 <- function(network, domain, prodname_ms, site_code,
                          component) {
   # Meta data says precip chem in everything (so idk what that's about)
 
@@ -613,7 +613,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -626,7 +626,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                        datetime_cols = list('Date' = '%m/%d/%Y',
                                             'Time' = '%H:%M:%S'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'site',
+                       site_code_col = 'site',
                        data_cols =  c('Spcond' = 'SpCond'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'comments',
@@ -635,14 +635,14 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
 
 #stream_temperature: STATUS=READY
 #. handle_errors
-process_1_21 <- function(network, domain, prodname_ms, site_name,
+process_1_21 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -650,14 +650,14 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_43 <- function(network, domain, prodname_ms, site_name,
+process_1_43 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -675,8 +675,8 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                                             'RecMonth' = '%m',
                                             'day' = '%d'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'Watershed',
-                       alt_site_name = list('002C' = c('R20B', '001c', 'r20b', '001c'),
+                       site_code_col = 'Watershed',
+                       alt_site_code = list('002C' = c('R20B', '001c', 'r20b', '001c'),
                                             '020B' = '020b',
                                             'HQ02' = c('00HQ', '00hq', 'hq'),
                                             'N4DF' = c('N04D', 'n04d'),
@@ -718,14 +718,14 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_4 <- function(network, domain, prodname_ms, site_name,
+process_1_4 <- function(network, domain, prodname_ms, site_code,
                          component) {
 
   rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   d <- read.csv(rawfile1, colClasses = "character")
@@ -733,8 +733,8 @@ process_1_4 <- function(network, domain, prodname_ms, site_name,
   d <- ms_read_raw_csv(filepath = rawfile1,
                        datetime_cols = list('RecDate' = '%m/%d/%Y'),
                        datetime_tz = 'US/Central',
-                       site_name_col = 'watershed',
-                       alt_site_name = list('HQ02' = 'HQ'),
+                       site_code_col = 'watershed',
+                       alt_site_code = list('HQ02' = 'HQ'),
                        data_cols =  c('ppt' = 'precipitation'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'Comments',
@@ -761,21 +761,21 @@ process_1_4 <- function(network, domain, prodname_ms, site_name,
 
 #precip_gauge_locations; stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_230 <- function(network, domain, prodname_ms, site_name,
+process_1_230 <- function(network, domain, prodname_ms, site_code,
                         component) {
 
   rawzip <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   rawpath <- glue('data/{n}/{d}/raw/{p}/{s}',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_name,
+                  s = site_code,
                   c = component)
 
   zipped_files <- unzip(zipfile = rawzip,
@@ -786,7 +786,7 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
 
   if(prodname_ms == 'precip_gauge_locations__230') {
   gauges <- sf::st_read(paste0(rawpath, '/', component)) %>%
-    mutate(site_name = case_when(RAINGAUGE == 'PPTSE' ~'002C',
+    mutate(site_code = case_when(RAINGAUGE == 'PPTSE' ~'002C',
                                  RAINGAUGE == 'PPT4B' ~ '004B',
                                  RAINGAUGE == 'PPTUB' ~ '020B',
                                  RAINGAUGE == 'PPTK4' ~ 'K01B',
@@ -796,18 +796,18 @@ process_1_230 <- function(network, domain, prodname_ms, site_name,
                                  RAINGAUGE == 'PPTN4PC' ~ 'N4DU',
                                  RAINGAUGE == 'PPTUA' ~ 'R01A',
                                  RAINGAUGE == 'PPTHQ2' ~ 'HQ02')) %>%
-    filter(! is.na(site_name)) %>%
-    select(site_name, geometry) %>%
+    filter(! is.na(site_code)) %>%
+    select(site_code, geometry) %>%
     sf::st_transform(projstring) %>%
-    arrange(site_name)
+    arrange(site_code)
   } else {
     gauges <- sf::st_read(paste0(rawpath, '/', component)) %>%
       filter(! is.na(DATES_SAMP),
              STATION != 'ESH',
              STATION != 'ESF') %>%
-      select(site_name = STATION, geometry) %>%
+      select(site_code = STATION, geometry) %>%
       sf::st_transform(projstring) %>%
-      arrange(site_name)
+      arrange(site_code)
   }
 
   unlink(zipped_files)
@@ -870,13 +870,13 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     flux <- sw(calc_inst_flux(chemprod = chemprod,
                                  qprod = qprod,
                                  level = 'derived',
-                                 site_name = s))
+                                 site_code = s))
 
     write_ms_file(d = flux,
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
-                  site_name = s,
+                  site_code = s,
                   level = 'derived',
                   shapefile = FALSE,
                   link_to_portal = FALSE)

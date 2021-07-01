@@ -21,14 +21,14 @@ ipswich_dam <- c(444, 445, 446, 447, 513, 514, 448, 532, 533, 534)
 governors_academy <- c(68, 69, 70, 140, 141, 142, 143)
 mbl_marshview <- c(67, 179, 180, 181, 239, 359, 385, 417, 423, 496, 542, 162, 343)
 
-munge_plum_combined <- function(network, domain, prodname_ms, site_name,
+munge_plum_combined <- function(network, domain, prodname_ms, site_code,
                                 component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -42,7 +42,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
               code %in% ipswich_dam ~ 'ipswich_dam')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     if(grepl('stream_chemistry', prodname_ms)) {
 
@@ -50,7 +50,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Temp' = 'temp',
                                             'SpCond' = 'spCond',
                                             'DOConc' = 'DO',
@@ -78,7 +78,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE,
@@ -101,14 +101,14 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
+munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
                                 component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -122,7 +122,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
                       code %in% ipswich_dam ~ 'ipswich_dam')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     if(grepl('stream_chemistry', prodname_ms)) {
 
@@ -130,7 +130,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Temp' = 'temp'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE,
@@ -142,7 +142,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
                              datetime_cols = list('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'US/Eastern',
-                             site_name_col = 'site_name',
+                             site_code_col = 'site_name',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE,
@@ -165,14 +165,14 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_plum_temp_cond <- function(network, domain, prodname_ms, site_name,
+munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
                               component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -186,13 +186,13 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_name,
                       code %in% ipswich_dam ~ 'ipswich_dam')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('Temperature' = 'temp',
                                         'Sp_Cond' = 'spCond'),
                          summary_flagcols = 'Flag',
@@ -217,14 +217,14 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_name,
+munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
                                  component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -238,13 +238,13 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_name,
                       code %in% ipswich_dam ~ 'ipswich_dam')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('Temp' = 'temp',
                                         'Sp_Cond' = 'spCond'),
                          summary_flagcols = 'Flag',
@@ -269,14 +269,14 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_plum_temp_do <- function(network, domain, prodname_ms, site_name,
+munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
                                  component) {
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -290,13 +290,13 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_name,
                       code %in% ipswich_dam ~ 'ipswich_dam')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('Temp' = 'temp',
                                         'DO_Concentration' = 'DO'),
                          summary_flagcols = 'Flag',
@@ -321,14 +321,14 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_precip <- function(network, domain, prodname_ms, site_name,
+munge_precip <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -337,7 +337,7 @@ munge_precip <- function(network, domain, prodname_ms, site_name,
                       code %in% mbl_marshview ~ 'mbl_marshview')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)  %>%
+        mutate(site_code = !!site)  %>%
         mutate(hour = str_split_fixed(Time, ':', n = Inf)[,1]) %>%
         mutate(minute = str_split_fixed(Time, ':', n = Inf)[,2]) %>%
         mutate(day = str_split_fixed(Date, '-', n = Inf)[,1]) %>%
@@ -352,7 +352,7 @@ munge_precip <- function(network, domain, prodname_ms, site_name,
                          datetime_cols = list('Date' = '%d-%b-%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
@@ -372,14 +372,14 @@ munge_precip <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-munge_precip_alt <- function(network, domain, prodname_ms, site_name,
+munge_precip_alt <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_name,
+                   s = site_code,
                    c = component)
 
     code <- prodcode_from_prodname_ms(prodname_ms)
@@ -388,13 +388,13 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_name,
                       code %in% mbl_marshview ~ 'mbl_marshview')
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site_name = !!site)
+        mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
-                         site_name_col = 'site_name',
+                         site_code_col = 'site_name',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)

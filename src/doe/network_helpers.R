@@ -1,7 +1,7 @@
 retrieve_doe_product <- function(network,
                                  domain,
                                  prodname_ms,
-                                 site_name,
+                                 site_code,
                                  tracker,
                                  url,
                                  orcid_login,
@@ -10,14 +10,14 @@ retrieve_doe_product <- function(network,
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
 
-    rt <- tracker[[prodname_ms]][[site_name]]$retrieve
+    rt <- tracker[[prodname_ms]][[site_code]]$retrieve
 
 
     held_dt <- as.POSIXct(rt$held_version,
                           tz = 'UTC')
 
     deets <- list(prodname_ms = prodname_ms,
-                  site_name = site_name,
+                  site_code = site_code,
                   component = rt$component,
                   last_mod_dt = held_dt,
                   url = url,
