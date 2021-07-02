@@ -2182,27 +2182,68 @@ update_data_tracker_m <- function(network = domain,
     #see update_data_tracker_r for the retrieval section and
     #update_data_tracker_d for the derive section
 
-    tracker = get_data_tracker(network=network, domain=domain)
+    # #OBSOLETE? in addition, if new_status == 'ok', this function looks for the word
+    # #"linked" in the "derive_status"
+    # #column of the products.csv file for the corresponding network, domain,
+    # #and linkprod row, and changes it to NA it if found.
+    # #that way, any new versions of munged products will be re-linked to derive/.
+    #
+    # if(new_status == 'ok'){
+    #
+    #     prodfile <- glue('src/{n}/{d}/products.csv',
+    #                      n = network,
+    #                      d = domain)
+    #
+    #     prods <- sm(read_csv(prodfile))
+    #
+    #     # prodcode <- prodcode_from_prodname_ms(prodname_ms)
+    #     prodname <- prodname_from_prodname_ms(prodname_ms)
+    #     prodcode <- prods %>%
+    #         filter(prodname == !!prodname,
+    #                grepl('ms[0-9]{3}', prodcode)) %>%
+    #         pull(prodcode)
+    #
+    #     rind <- which(prods$prodcode == prodcode & prods$prodname == prodname)
+    #     sts <- prods$derive_status[rind]
+    #
+    #     for(i in seq_along(rind)){
+    #
+    #         if(! is.na(sts[i]) && sts[i] == 'linked'){
+    #             prods$derive_status[rind[i]] <- NA_character_
+    #         }
+    #     }
+    #
+    #     write_csv(x = prods,
+    #               file = prodfile)
+    # }
 
-    mt = tracker[[prodname_ms]][[site_code]]$munge
+    tracker <- get_data_tracker(network = network,
+                                domain = domain)
 
-    mt$status = new_status
-    mt$mtime = as.character(Sys.time())
+    mt <- tracker[[prodname_ms]][[site_code]]$munge
 
-    tracker[[prodname_ms]][[site_code]]$munge = mt
+    mt$status <- new_status
+    mt$mtime <- as.character(Sys.time())
 
-    assign(tracker_name, tracker, pos=.GlobalEnv)
+    tracker[[prodname_ms]][[site_code]]$munge <- mt
 
-    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
-    if(! dir.exists('trackerdir')){
-        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+    assign(x = tracker_name,
+           value = tracker,
+           pos = .GlobalEnv)
+
+    trackerdir <- glue('data/{n}/{d}',
+                       n = network,
+                       d = domain)
+
+    if(! dir.exists(trackerdir)){
+        dir.create(trackerdir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
     }
 
-    trackerfile = glue(trackerdir, '/data_tracker.json')
+    trackerfile <- glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_d <- function(network = domain,
@@ -2258,7 +2299,7 @@ update_data_tracker_d <- function(network = domain,
                        n = network,
                        d = domain)
 
-    if(! dir.exists('trackerdir')){
+    if(! dir.exists(trackerdir)){
         dir.create(trackerdir,
                    showWarnings = FALSE,
                    recursive = TRUE)
@@ -3756,23 +3797,29 @@ ms_derive <- function(network = domain,
                                                  prodname = prods$prodname[i]) %>%
                                prodcode_from_prodname_ms()
 
+        prodname_ms_source <- paste(prods$prodname[i],
+                                    prods$prodcode[i],
+                                    sep = '__')
+
         tryCatch({
             create_derived_links(network = network,
                                  domain = domain,
-                                 prodname_ms = paste(prods$prodname[i],
-                                                     prods$prodcode[i],
-                                                     sep = '__'),
+                                 prodname_ms = prodname_ms_source,
                                  new_prodcode = linked_prodcode)
         },
         error = function(e){
             logwarn(glue('Failed to link {p} to derive/',
-                         p = paste(prods$prodname[i],
-                                   prods$prodcode[i],
-                                   sep = '__')),
+                         p = prodname_ms_source),
                          logger = logger_module)
             }
         )
 
+        write_metadata_d_linkprod(network = network,
+                                  domain = domain,
+                                  prodname_ms_mr = prodname_ms_source,
+                                  prodname_ms_d = paste0(prods$prodname[i],
+                                                         '__',
+                                                         linked_prodcode))
     }
 
     #link any new linkprods and create new product entries
@@ -3850,6 +3897,13 @@ ms_derive <- function(network = domain,
             derive_status = 'linked',
             notes = 'automated entry')
         }
+
+        write_metadata_d_linkprod(network = network,
+                                  domain = domain,
+                                  prodname_ms_mr = prodname_ms_source,
+                                  prodname_ms_d = paste0(prodname,
+                                                         '__',
+                                                         newcode))
     }
 
     waiting_retrv_kerns <- prods %>%
@@ -3883,6 +3937,21 @@ ms_derive <- function(network = domain,
                 n = network,
                 d = domain),
            local = TRUE)
+
+
+    # ws_bound_prod <- list.files(glue('data/{n}/{d}/derived',
+    #                                  n = network,
+    #                                  d = domain),
+    #                             pattern = '^ws_boundary__ms',
+    #                             include.dirs = TRUE) %>%
+    #     sort(decreasing = TRUE) %>%
+    #     {.[1]}
+    #
+    # if(length(ws_bound_prod) && ! is.na(ws_bound_prod)){
+    #     write_metadata_d(network = network,
+    #                      domain = domain,
+    #                      prodname_ms = ws_bound_prod)
+    # }
 
     #link all derived products to the data portal directory
     create_portal_links(network = network,
@@ -4403,10 +4472,11 @@ update_product_file <- function(network,
     # if(network == domain){
     #     write_csv(prods, glue('src/{n}/products.csv', n=network))
     # } else {
-    write_csv(prods, glue('src/{n}/{d}/products.csv', n=network, d=domain))
+    write_csv(x = prods,
+              file = glue('src/{n}/{d}/products.csv',
+                          n = network,
+                          d = domain))
     # }
-
-    #return()
 }
 
 update_product_statuses <- function(network, domain){
@@ -4795,7 +4865,7 @@ create_portal_links <- function(network, domain){
     #derived products except cdnr_discharge, usgs_discharge, and pre-idw precipitation.
     #we will eventually let portal users view and download uninterpolated (spatially)
     #rain gauge data, and at that time we may choose to simply delete the sections
-    #below (**) that filters those datasets
+    #below (**) that filters those datasets.
 
     derive_dir <- glue('data/{n}/{d}/derived',
                        n = network,
@@ -7477,7 +7547,7 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
     #see write_metadata_m for munged macrosheds data and write_metadata_d
     #for derived macrosheds data
 
-    #also see read_metadata_r
+    #also see read_metadata_r and read_metadata_m
 
     #create raw directory if necessary
 
@@ -7517,20 +7587,50 @@ read_metadata_r <- function(network, domain, prodname_ms){
 
     #this reads the metadata file for retrieved macrosheds data
 
-    #also see write_metadata_r, write_metadata_m, and write_metadata_d
+    #also see write_metadata_r, write_metadata_m, and write_metadata_d,
+    #and read_metadata_m
+
+    if(length(prodname_ms) != 1){
+        stop('prodname_ms must be length 1')
+    }
+
+    if(prodname_ms == '<no precursors>'){
+        return('N/A or Derived from lat/long (see site data table)')
+    }
 
     murlfile <- glue('data/{n}/{d}/raw/documentation/documentation_{p}.txt',
                      n = network,
                      d = domain,
                      p = prodname_ms)
 
-    murl <- readr::read_file(murlfile)#, silent = TRUE)
+    murl <- readr::read_file(murlfile)
 
-    # if('try-error' %in% class(murl)){
-    #     return(NULL)
-    # } else {
     return(murl)
-    # }
+}
+
+read_metadata_m <- function(network, domain, prodname_ms){
+
+    #this reads the metadata file for munged macrosheds data
+
+    #also see write_metadata_r, write_metadata_m, and write_metadata_d,
+    #and read_metadata_r
+
+    if(length(prodname_ms) != 1){
+        stop('prodname_ms must be length 1')
+    }
+
+    if(prodname_ms == '<no precursors>'){
+        return('No munge kernel')
+    }
+
+    mdocf <- glue('data/{n}/{d}/munged/documentation/documentation_{p}.txt',
+                  n = network,
+                  d = domain,
+                  p = prodname_ms)
+
+    mdoc <- readr::read_file(mdocf)
+
+    return(mdoc)
 }
 
 get_precursors <- function(network, domain, prodname_ms){
@@ -7563,14 +7663,20 @@ get_precursors <- function(network, domain, prodname_ms){
 
 document_kernel_code <- function(network, domain, prodname_ms, level){
 
-    #this documents the code used to munge macrosheds data from raw source data.
-    #see document_code_d for derived macrosheds data
+    #this documents (as metadata) the code used to retrieve/munge/derive
+    #macrosheds data. prodname_ms == 'ws_boundary__msXXX' is handled as
+    #a special case.
 
     #level is numeric 0, 1, or 2, corresponding to raw, munged, derived
 
     if(! is.numeric(level) || ! level %in% 0:2){
         stop('level must be numeric 0, 1, or 2')
     }
+
+    # if(grepl('ws_boundary__ms000', prodname_ms)){
+    #     return(paste0('See ms_delineate(), which can be found in\n',
+    #                   'https://github.com/MacroSHEDS/data_processing/blob/master/src/global_helpers.R'))
+    # }
 
     kernel_file <- glue('src/{n}/{d}/processing_kernels.R',
                         n = network,
@@ -7580,14 +7686,19 @@ document_kernel_code <- function(network, domain, prodname_ms, level){
 
     sw(source(kernel_file, local = TRUE))
 
-    # kernel_func <- tryCatch({
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
     fnc <- mget(paste0('process_', level, '_', prodcode),
                 envir = thisenv,
                 inherits = FALSE,
                 ifnotfound = list(''))[[1]] #arg only available in mget
     kernel_func <- paste(deparse(fnc), collapse = '\n')
-    # }, error = function(e) return(NULL))
+    func_name <- glue('process_{l}_{pc}',
+                      l = level,
+                      pc = prodcode_from_prodname_ms(prodname_ms))
+
+    kernel_func <- paste(func_name,
+                         kernel_func,
+                         sep = ' <- ')
 
     return(kernel_func)
 }
@@ -7598,7 +7709,7 @@ write_metadata_m <- function(network, domain, prodname_ms, tracker){
     #see write_metadata_r for retrieved macrosheds data and write_metadata_d
     #for derived macrosheds data
 
-    #also see read_metadata_r
+    #also see read_metadata_r and read_metadata_m
 
     #assemble metadata
     sitelist <- names(tracker[[prodname_ms]])
@@ -7617,17 +7728,17 @@ write_metadata_m <- function(network, domain, prodname_ms, tracker){
                          domain = paste0("'", domain, "'"),
                          prodname_ms = paste0("'", prodname_ms, "'"),
                          # site_code = paste0("'", site_code, "'"),
-                         site_code = glue("<each of: '",
+                         site_code = glue("<separately, each of: '",
                                           paste(sitelist,
                                                 collapse = "', '"),
-                                          "'>"),
+                                          "', with corresponding component>"),
                          `component(s)` = paste0('\n',
                                                  paste(compsbysite,
                                                        collapse = '\n')))
 
-    metadata_r <- read_metadata_r(network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms)
+    # metadata_r <- read_metadata_r(network = network,
+    #                               domain = domain,
+    #                               prodname_ms = prodname_ms)
 
     code_m <- document_kernel_code(network = network,
                                    domain = domain,
@@ -7637,9 +7748,9 @@ write_metadata_m <- function(network, domain, prodname_ms, tracker){
     mdoc <- read_file('src/templates/write_metadata_m_boilerplate.txt') %>%
         glue(.,
              p = prodname_ms,
-             mr = metadata_r,
-             k = code_m,
-             a = paste(names(display_args),
+             # mr = metadata_r,
+             mk = code_m,
+             ma = paste(names(display_args),
                        display_args,
                        sep = ' = ',
                        collapse = '\n'))
@@ -7659,31 +7770,31 @@ write_metadata_m <- function(network, domain, prodname_ms, tracker){
     readr::write_file(mdoc,
                       file = data_acq_file)
 
-    #create portal directory if necessary
-    portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
-                       d = domain)
-    dir.create(portal_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    #hardlink file
-    portal_file <- glue('{pd}/documentation_{p}.txt',
-                        pd = portal_dir,
-                        p = prodname_ms)
-    unlink(portal_file)
-    invisible(sw(file.link(to = portal_file,
-                           from = data_acq_file)))
-
-    #return()
+    # #create portal directory if necessary
+    # portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
+    #                    d = domain)
+    # dir.create(portal_dir,
+    #            showWarnings = FALSE,
+    #            recursive = TRUE)
+    #
+    # #hardlink file
+    # portal_file <- glue('{pd}/documentation_{p}.txt',
+    #                     pd = portal_dir,
+    #                     p = prodname_ms)
+    # unlink(portal_file)
+    # invisible(sw(file.link(to = portal_file,
+    #                        from = data_acq_file)))
 }
 
-write_metadata_d <- function(network, domain, prodname_ms){
+write_metadata_d <- function(network,
+                             domain,
+                             prodname_ms){
 
     #this writes the metadata file for derived macrosheds data
     #see write_metadata_r for retrieved macrosheds data and write_metadata_m
     #for munged macrosheds data
 
-    #also see read_metadata_r
+    #also see read_metadata_r and read_metadata_m
 
     #assemble metadata
     display_args <- list(network = paste0("'", network, "'"),
@@ -7694,20 +7805,80 @@ write_metadata_d <- function(network, domain, prodname_ms){
                                  domain = domain,
                                  prodname_ms = prodname_ms)
 
-    code_d <- document_kernel_code(network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms,
-                                   level = 2)
+    if(length(precursors == 1) && precursors == 'no precursors'){
+
+        if(grepl('(^cdnr_|^usgs_)', prodname_ms)){
+            return()
+        } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms)){
+            stop(glue('do we need to catch {p}?', p = prodname_ms))
+        }
+    }
+
+    precursors_m <- precursors[! is_derived_product(precursors)]
+    precursors_d <- precursors[is_derived_product(precursors)]
+
+    if(length(precursors_m) == 1 && precursors_m == 'no precursors'){
+        precursors_m <- '<no precursors>'
+    }
+
+    if(length(precursors_d) & ! length(precursors_m)){
+
+        precursors_m <- glue('<NA: all immediate precursors ({dp}) are derived products>',
+                             dp = paste(precursors_d,
+                                        collapse = ', '))
+        urls_r <- NULL
+        docs_m <- c()
+        code_d <- document_kernel_code(network = network,
+                                       domain = domain,
+                                       prodname_ms = prodname_ms,
+                                       level = 2)
+    } else {
+
+        urls_r <- sapply(precursors_m,
+                         function(x){
+                             read_metadata_r(network = network,
+                                             domain = domain,
+                                             prodname_ms = x)
+                         })
+
+        docs_m <- sapply(precursors_m,
+                         function(x){
+                             read_metadata_m(network = network,
+                                             domain = domain,
+                                             prodname_ms = x)
+                         })
+
+        code_d <- lapply(c(precursors_d, prodname_ms),
+                         function(x){
+                             document_kernel_code(network = network,
+                                                  domain = domain,
+                                                  prodname_ms = x,
+                                                  level = 2)
+                         })
+    }
 
     ddoc <- read_file('src/templates/write_metadata_d_boilerplate.txt') %>%
         glue(.,
              p = prodname_ms,
-             mp = paste(precursors, collapse = '\n'),
-             k = code_d,
-             a = paste(names(display_args),
+             mp = paste(precursors_m,
+                        collapse = '\n'),
+             ru = ifelse(is.null(urls_r),
+                         '<NA: See documentation for derived precursors>',
+                         paste(paste0(paste0(names(urls_r),
+                                             ':\n'),
+                                      unname(urls_r)),
+                               collapse = '\n\n')),
+             flux_note = ifelse(grepl('flux', prodname_ms),
+                                read_file('src/templates/flux_note.txt'),
+                                ''),
+             dk = paste(code_d,
+                        collapse = '\n\n'),
+             da = paste(names(display_args),
                        display_args,
                        sep = ' = ',
-                       collapse = '\n'))
+                       collapse = '\n'),
+             mb = paste(docs_m,
+                        collapse = '\n\n'))
 
     #create derived directory if necessary
     derived_dir <- glue('data/{n}/{d}/derived/documentation',
@@ -7725,23 +7896,91 @@ write_metadata_d <- function(network, domain, prodname_ms){
     readr::write_file(ddoc,
                       file = data_acq_file)
 
-    #create portal directory if necessary
-    portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
-                       d = domain)
-                       # p = strsplit(prodname_ms, '__')[[1]][1])
-    dir.create(portal_dir,
+    # #create portal directory if necessary
+    # portal_dir <- glue('../portal/data/{d}/documentation', #portal ignores network
+    #                    d = domain)
+    #                    # p = strsplit(prodname_ms, '__')[[1]][1])
+    # dir.create(portal_dir,
+    #            showWarnings = FALSE,
+    #            recursive = TRUE)
+    #
+    # #hardlink file
+    # portal_file <- glue('{pd}/documentation_{p}.txt',
+    #                     pd = portal_dir,
+    #                     p = prodname_ms)
+    # unlink(portal_file) #this will overwrite any munged product supervened by derive
+    # invisible(sw(file.link(to = portal_file,
+    #                        from = data_acq_file)))
+}
+
+write_metadata_d_linkprod <- function(network,
+                                      domain,
+                                      prodname_ms_mr,
+                                      prodname_ms_d){
+
+    #this writes the metadata file for macrosheds linkprods.
+    #see write_metadata_d for standard derived products
+
+    #assemble metadata
+    url_r <- try(read_metadata_r(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms_mr),
+                 silent = TRUE)
+
+    if(inherits(url_r, 'try-error') || ! length(url_r)){
+
+        if(prodname_from_prodname_ms(prodname_ms_d) == 'ws_boundary'){
+            url_r <- 'NA: Derived from lat/long (see site data table)'
+        } else {
+            url_r <- 'NA'
+        }
+    }
+
+    doc_m <- read_metadata_m(network = network,
+                             domain = domain,
+                             prodname_ms = prodname_ms_mr)
+
+    if(inherits(doc_m, 'try-error') || ! length(doc_m)){
+
+        if(prodname_from_prodname_ms(prodname_ms_d) == 'ws_boundary'){
+            doc_m <- read_file('src/templates/ws_bounds_note.txt')
+        } else {
+            doc_m <- 'NA'
+        }
+
+    } else {
+
+        if(prodname_from_prodname_ms(prodname_ms_d) == 'ws_boundary'){
+            ws_bounds_note <- read_file('src/templates/ws_bounds_note.txt')
+        } else {
+            ws_bounds_note <- ''
+        }
+    }
+
+    ddoc <- read_file('src/templates/write_metadata_d_linkprod_boilerplate.txt') %>%
+        glue(.,
+             p = prodname_ms_d,
+             ru = url_r,
+             flux_note = ifelse(grepl('flux', prodname_ms_d),
+                                read_file('src/templates/flux_note.txt'),
+                                ''),
+             mb = doc_m,
+             ws_bounds_note = ws_bounds_note)
+
+    #create derived directory if necessary
+    derived_dir <- glue('data/{n}/{d}/derived/documentation',
+                        n = network,
+                        d = domain)
+    dir.create(derived_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    #hardlink file
-    portal_file <- glue('{pd}/documentation_{p}.txt',
-                        pd = portal_dir,
-                        p = prodname_ms)
-    unlink(portal_file) #this will overwrite any munged product supervened by derive
-    invisible(sw(file.link(to = portal_file,
-                           from = data_acq_file)))
-
-    #return()
+    #write metadata file
+    data_acq_file <- glue('{dd}/documentation_{p}.txt',
+                          dd = derived_dir,
+                          p = prodname_ms_d)
+    readr::write_file(ddoc,
+                      file = data_acq_file)
 }
 
 identify_detection_limit_s <- function(x){

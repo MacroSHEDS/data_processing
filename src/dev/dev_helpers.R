@@ -172,13 +172,13 @@ invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
             return(tracker)
         }
 
-        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+        message(glue('FIVE SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
                      'tracker(s) for {n}-{d}:\n{prds}\n',
                      n = network,
                      d = domain,
                      lvl = toupper(level),
                      prds = paste(prodnames_ms, collapse = '\n')))
-        Sys.sleep(10)
+        Sys.sleep(5)
 
         for(i in seq_along(prodnames_ms)){
 
@@ -196,6 +196,13 @@ invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
         return(tracker)
 
     } else {
+
+        message(glue('FIVE SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+                     'tracker(s) for {n}-{d}:\nALL PRODUCTS\n',
+                     n = network,
+                     d = domain,
+                     lvl = toupper(level)))
+        Sys.sleep(5)
 
         tracker <- recursive_tracker_update(l = tracker,
                                             elem_name = level,
@@ -639,7 +646,11 @@ invalidate_all = function(){
 drop_automated_entries <- function(path = '.'){
 
     #this drops rows with "automated entry" from all products.csv files
-    #found below the specified path
+    #found below the specified path. Only works on unix-like machines.
+
+    if(.Platform$OS.type == 'windows'){
+        stop("this could be made to work on windows, but it doesn't yet")
+    }
 
     system(glue("find {p} -name 'products.csv' | ",
                 "xargs sed -e '/automated entry/d' -i.TMPBAK",
@@ -790,7 +801,7 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
 }
 
 generate_diagnostic_plots <- function(network, domain, product){
-    
+
     path <- glue('data/{n}/{d}/derived/{p}/',
                  n = network,
                  d = domain,
@@ -798,15 +809,15 @@ generate_diagnostic_plots <- function(network, domain, product){
 
     all_files <- list.files(path, full.names = TRUE)
     dataset <- map_dfr(all_files, read_feather)
-    
+
     high_values <- dataset %>%
         group_by(var) %>%
-        summarise(confidence_in = quantile(val, .99)) 
-    
+        summarise(confidence_in = quantile(val, .99))
+
     dataset_check <- dataset %>%
         left_join(., high_values, by = 'var') %>%
         filter(ms_interp == 0) %>%
-        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0))) 
+        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0)))
 
     vars <- unique(dataset$var)
     sites <- unique(dataset_check$site_code)
@@ -816,12 +827,12 @@ generate_diagnostic_plots <- function(network, domain, product){
                in_workflow == 1) %>%
         pull(site_code)
     sites <- sites[sites %in% sites_in_workflow]
-    
+
     output_path <- glue('plots/{n}/{d}/plots',
                         n = network,
                         d = domain)
     dir.create(output_path, recursive = T)
-    
+
     all_plot_list = list()
     for(i in 1:length(vars)) {
         plot_list = list()
@@ -840,7 +851,7 @@ generate_diagnostic_plots <- function(network, domain, product){
         }
         all_plot_list <- c(all_plot_list, plot_list)
     }
-    
+
     for(i in 1:length(all_plot_list)) {
         name_plot <- names(all_plot_list)[i]
         file_name = paste(glue('plots/{n}/{d}/plots/',
@@ -852,12 +863,12 @@ generate_diagnostic_plots <- function(network, domain, product){
     }
 
 
-    pdftools::pdf_combine(list.files(output_path, full.names = TRUE), 
+    pdftools::pdf_combine(list.files(output_path, full.names = TRUE),
                 output = glue('plots/{n}/{d}/{p}_dignostic.pdf',
                               n = network,
                               d = domain,
                               p = product))
-    
+
     unlink(output_path, recursive = TRUE)
 
 }
