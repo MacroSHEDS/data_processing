@@ -220,10 +220,11 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=15
+# dmnrow=1
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
+    # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -251,21 +252,18 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                 #domain = domain,
-                 #prodname_filter = c('stream_chemistry'))
-                 domain = domain)
+                # prodname_filter = c('stream_chemistry'),
+                domain = domain)
     ms_munge(network = network,
-              #domain = domain,
-              #prodname_filter = c('stream_chemistry'))
-              domain = domain)
+             #prodname_filter = c('stream_chemistry'),
+             domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # domain = domain,
-              # prodname_filter = c('stream_chemistry'))
-               domain = domain)
+              # prodname_filter = c('stream_chemistry'),
+              domain = domain)
     ms_general(network = network,
                domain = domain)
 
