@@ -302,15 +302,6 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
     d <- d %>%
         mutate(val = val * 28.317)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -366,15 +357,6 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code,
                                 summary_flags_dirty = list(
                                     PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
                                     EVENT_CODE = c('INSREM', 'MAINTE')))
-
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
-
-        d <- synchronize_timestep(d)
-
-        d <- apply_detection_limit_t(d, network, domain, prodname_ms)
     }
 
     return(d)
@@ -426,15 +408,6 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list(
                                 TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
                             summary_flags_clean = list(TYPE = 'F'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -498,15 +471,6 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
         stop(glue('hjandrews has added a new pchem gauge that we havent mapped',
                   ' to a location'))
     }
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -663,15 +627,6 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code,
         group_by(datetime, site_code, var) %>%
         summarise(val = mean(val, na.rm = T),
                   ms_status = max(ms_status, na.rm = T))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
