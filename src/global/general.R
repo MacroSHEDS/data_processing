@@ -27,9 +27,8 @@ if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
 
 site_codes <- unique(boundaries$site_code)
 
-# i=3
+# i=10
 for(i in 1:nrow(unprod)){
-
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
@@ -60,7 +59,7 @@ for(i in 1:nrow(unprod)){
                                              prodname_ms = prodname_ms,
                                              site_code = site_code)
 
-        #general_status <- 'pending'
+        # general_status <- 'pending'
         if(general_status %in% c('ok', 'no_data_avail')){
 
             loginfo(glue('Nothing to do for product: {p}, site: {s}',

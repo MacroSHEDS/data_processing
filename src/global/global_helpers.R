@@ -8994,40 +8994,18 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
         path <- glue('data/spatial/phenology/{u}/{p}/{t}.tif',
                      u = time, p = place, t = years[y])
 
-        phenology <- raster::raster(path)
+        ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
+                                         raster_path = path),
+                         silent = TRUE)
 
-        raster::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
-
-        phenology_mask <- try(phenology %>%
-            raster::crop(site_boundary) %>%
-            raster::mask(site_boundary))
-
-        if(class(phenology_mask) == 'try-error') {
+        if(class(ws_values) == 'try-error') {
             return(generate_ms_exception(glue('No data was retrived for {s}',
                                               s = site_code)))
         }
 
-        # weighted_results <- raster::extract(phenology, site_boundary,
-        #                                     weights = T,
-        #                                     normalizeWeights = F)
-        #
-        # vals_w <- weighted_results[[1]] %>%
-        #     as_tibble()
-        #
-        # ws_nas <- filter(vals_w, is.na(value))
-        #
-        # vals_w <- vals_w %>%
-        #     filter(!is.na(value)) %>%
-        #     mutate(new = value*weight)
-        # percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
-        # val <- sum(vals_w$new)/sum(vals_w$weight)
-        # val_sd <- sd(vals_w$new)
-        # rm(phenology)
-
-        phenology_values <- raster::values(phenology_mask)
-        val <- mean(phenology_values, na.rm = TRUE)
-        val_sd <- sd(phenology_values, na.rm = TRUE)
-        percent_na <- 0
+        val <- ws_values['mean']
+        val_sd <- ws_values['sd']
+        percent_na <- ws_values['pctCellErr']
 
         col_name <- case_when(time == 'start_season' ~ 'sos',
                               time == 'end_season' ~ 'eos',
@@ -9048,8 +9026,7 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
 
     final <- final %>%
         mutate(!!mean_name := round(.data[[mean_name]])) %>%
-        pivot_longer(final,
-                     cols = all_of(c(mean_name, sd_name)),
+        pivot_longer(cols = all_of(c(mean_name, sd_name)),
                      names_to = 'var',
                      values_to = 'val') %>%
         select(year, site_code, var, val, pctCellErr)
