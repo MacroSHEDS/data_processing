@@ -46,7 +46,7 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('timestamp_UTC' = '%Y-%m-%dT%H:%M'),
                              datetime_tz = 'UTC',
-                             site_code_col = 'site_name',
+                             site_code_col = 'site_code',
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA =  c('-999', '-999.00', '-999.0'),
@@ -56,7 +56,7 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                              datetime_tz = 'UTC',
-                             site_code_col = 'site_name',
+                             site_code_col = 'site_code',
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-999', '-999.00', '-999.0'),
@@ -65,15 +65,6 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -97,7 +88,7 @@ munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_cod
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                          datetime_tz = 'UTC',
-                         site_code_col = 'site_name',
+                         site_code_col = 'site_code',
                          data_cols =  c('discharge_lps' = 'discharge'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-999', '-999.00', '-999.0'),
@@ -105,15 +96,6 @@ munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_cod
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }

@@ -133,15 +133,9 @@ process_1_152 <- function(network, domain, prodname_ms, site_code,
                                              'TDN' = 'mg/l',
                                              'SiO2' = 'mg/l',
                                              'DON' = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    
+    return(d)
+    
 }
 
 #discharge: STATUS=READY
@@ -169,15 +163,9 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+    
+    return(d)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #stream_chemistry: STATUS=READY
@@ -207,16 +195,9 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+    
+    return(d)
 
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #precipitation: STATUS=READY
@@ -260,15 +241,9 @@ process_1_167 <- function(network, domain, prodname_ms, site_code,
         d <- d %>%
             filter(datetime >= '1998-01-01')
     }
+    
+    return(d)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #precip_chemistry: STATUS=READY
@@ -309,15 +284,9 @@ process_1_157 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_dirty = list('Invalcode' = 'x'),
                             summary_flags_to_drop = list('Invalcode' = 'BAD'),
                             varflag_col_pattern = NA)
+    
+    return(d)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
 #derive kernels ####

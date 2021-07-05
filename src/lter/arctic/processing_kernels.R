@@ -170,15 +170,6 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
 
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -236,15 +227,6 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
                               varflag_col_pattern = NA)
 
   }
-
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
-
-  d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -474,26 +456,18 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                              E_pheophy = 'mg/cm2',
                                              T_ECHL = 'mg/cm2',
                                              CH4 = 'mg/l'))
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
+    
     remove_1_vars <- d %>%
-        group_by(site_code, var) %>%
-        summarise(n = n()) %>%
-        filter(n == 1) %>%
-        select(-n) %>%
-        mutate(remove = 1)
+      group_by(site_code, var) %>%
+      summarise(n = n()) %>%
+      filter(n == 1) %>%
+      select(-n) %>%
+      mutate(remove = 1)
 
     d <- d %>%
-        left_join(., remove_1_vars, by = c('site_code', 'var')) %>%
-        filter(is.na(remove)) %>%
-        select(-remove)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+      left_join(., remove_1_vars, by = c('site_code', 'var')) %>%
+      filter(is.na(remove)) %>%
+      select(-remove)
 
     return(d)
 }
@@ -524,15 +498,6 @@ process_1_1489 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_clean = list('Flag_Daily_Precip_Total_mm' = ''),
                             summary_flags_dirty = list('Flag_Daily_Precip_Total_mm' = 'E'),
                             varflag_col_pattern = NA)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -601,15 +566,6 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
                                                                           'WINTER')),
                                 varflag_col_pattern = NA)
     }
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -713,7 +669,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_code_col = 'site_name',
+                             site_code_col = 'site_code',
                              data_cols =  c('Q_m3sec' = 'discharge'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-1111', '-1.111'),
@@ -733,7 +689,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
-                             site_code_col = 'site_name',
+                             site_code_col = 'site_code',
                              data_cols =  c('Water_Temp_C' = 'temp',
                                             'Conductivity_uScm' = 'spCond'),
                              data_col_pattern = '#V#',
@@ -745,15 +701,6 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
                                 variable_flags_to_drop = NA,
                                 variable_flags_clean = NA)
     }
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -780,7 +727,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
-                         site_code_col = 'site_name',
+                         site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
@@ -796,15 +743,6 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -830,7 +768,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
-                         site_code_col = 'site_name',
+                         site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
@@ -846,15 +784,6 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -882,7 +811,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
-                         site_code_col = 'site_name',
+                         site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
@@ -898,15 +827,6 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }

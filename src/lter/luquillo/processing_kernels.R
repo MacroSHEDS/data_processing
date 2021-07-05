@@ -141,17 +141,6 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                                              NH4_N = 'mg/l',
                                              PO4_P = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
     return(d)
 }
 
@@ -220,17 +209,6 @@ process_1_174 <- function(network, domain, prodname_ms, site_code,
                                              PO4_P = 'mg/l',
                                              NO3_N = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
     return(d)
 }
 
@@ -270,17 +248,6 @@ process_1_90 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
     return(d)
 }
 
@@ -358,17 +325,6 @@ process_1_14 <- function(network, domain, prodname_ms, site_code,
                                 varflag_col_pattern = NA)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
     return(d)
 }
 
@@ -457,18 +413,6 @@ process_1_156 <- function(network, domain, prodname_ms, site_code,
                                 varflag_col_pattern = NA)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -524,18 +468,6 @@ process_1_182 <- function(network, domain, prodname_ms, site_code,
     #m3 to liters
     d <- d %>%
         mutate(val = val*1000)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms)
 
     return(d)
 }
