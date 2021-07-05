@@ -52,7 +52,7 @@ suppressPackageStartupMessages({
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
 #(or after each run that results in a change)
-vsn <- 0.4
+vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
@@ -220,7 +220,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=1
+# dmnrow=5
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -230,12 +230,15 @@ for(dmnrow in 1:nrow(network_domain)){
     domain <- network_domain$domain[dmnrow]
 
     # held_data = get_data_tracker(network, domain)
+
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_chemistry')
+
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,

@@ -139,13 +139,6 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
         }
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 

@@ -868,8 +868,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                      quiet = TRUE) %>%
         select(site_code = Huvudomr,
                geometry = geometry) %>%
-        mutate(site_code = paste0('Site', site_code)) %>%
-        sf::st_transform(projstring)
+        mutate(site_code = paste0('Site', site_code)) 
 
     # Watershed boundaries don't include subbasins of if they are also gauges
     # comnining them here
@@ -881,6 +880,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site6', 'Site5')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        fill_sf_holes() %>%
         mutate(site_code = 'Site6') %>%
         rename(geometry = x)
 
@@ -888,6 +888,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site7', 'Site2', 'Site4')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        fill_sf_holes() %>%
         mutate(site_code = 'Site7') %>%
         rename(geometry = x)
 
@@ -895,6 +896,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site9', 'Site6', 'Site2', 'Site7', 'Site4', 'Site5')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        fill_sf_holes() %>%
         mutate(site_code = 'Site9') %>%
         rename(geometry = x)
 
@@ -902,6 +904,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site12', 'Site1', 'Site3', 'Site10')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        fill_sf_holes() %>%
         mutate(site_code = 'Site12') %>%
         rename(geometry = x)
 
@@ -916,6 +919,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site14', 'Site21', 'Site20')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        #fill_sf_holes() %>%
         mutate(site_code = 'Site14') %>%
         rename(geometry = x)
 
@@ -923,18 +927,20 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         filter(site_code %in% c('Site15', 'Site22')) %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        #fill_sf_holes() %>%
         mutate(site_code = 'Site15') %>%
         rename(geometry = x)
 
     sites16 <- d %>%
         sf::st_union() %>%
         sf::st_as_sf() %>%
+        #fill_sf_holes() %>%
         mutate(site_code = 'Site16') %>%
         rename(geometry = x)
 
     all_sheds <- rbind(sites16, sites15, sites6, sites7, sites12, sites13,
                        sites14, sites9, single_sites) %>%
-        sf::st_transform(projstring)
+        sf::st_transform(., crs = projstring)
 
     kry_gauges <- site_data %>%
         filter(network == 'krycklan',
