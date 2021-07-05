@@ -801,11 +801,18 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
 }
 
 generate_diagnostic_plots <- function(network, domain, product){
-
-    path <- glue('data/{n}/{d}/derived/{p}/',
-                 n = network,
-                 d = domain,
-                 p = product)
+    
+    if(grepl('__ms', product)){
+        path <- glue('data/{n}/{d}/derived/{p}/',
+                     n = network,
+                     d = domain,
+                     p = product)
+    } else{
+        path <- glue('data/{n}/{d}/munged/{p}/',
+                     n = network,
+                     d = domain,
+                     p = product)
+    }
 
     all_files <- list.files(path, full.names = TRUE)
     dataset <- map_dfr(all_files, read_feather)

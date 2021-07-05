@@ -98,16 +98,6 @@ munge_discharge <- function(network, domain, prodname_ms, site_code,
                                 variable_flags_clean = NA)
     }
 
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -188,15 +178,6 @@ munge_discharge_temp <- function(network, domain, prodname_ms, site_code,
                                 variable_flags_clean = NA)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -250,16 +231,6 @@ munge_toolik <- function(network, domain, prodname_ms, site_code,
                                 variable_flags_to_drop = NA,
                                 variable_flags_clean = NA)
     }
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -314,15 +285,6 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
                                 variable_flags_to_drop = NA,
                                 variable_flags_clean = NA)
     }
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }

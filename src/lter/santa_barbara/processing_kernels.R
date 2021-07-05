@@ -450,15 +450,6 @@ process_1_6 <- function(network, domain, prodname_ms, site_code,
                                              'TPN' = 'mg/l',
                                              'TPP' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 

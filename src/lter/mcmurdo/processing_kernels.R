@@ -174,14 +174,7 @@ process_1_9002 <- function(network, domain, prodname_ms, site_code,
                                                          'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -257,14 +250,7 @@ process_1_9003 <- function(network, domain, prodname_ms, site_code,
                                                          'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -340,14 +326,7 @@ process_1_9007 <- function(network, domain, prodname_ms, site_code,
                                                          'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -431,15 +410,7 @@ process_1_9009 <- function(network, domain, prodname_ms, site_code,
                                                          'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
+    return(d)
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -539,14 +510,7 @@ process_1_9022 <- function(network, domain, prodname_ms, site_code,
                                                          'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 #stream_chemistry; discharge: STATUS=READY
@@ -624,14 +588,7 @@ process_1_9021 <- function(network, domain, prodname_ms, site_code,
                                                              'fair', 'Good', 'good'))
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 
@@ -720,14 +677,7 @@ process_1_9029 <- function(network, domain, prodname_ms, site_code,
                                 varflag_col_pattern = NA)
         }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+    return(d)
 }
 
 
@@ -777,15 +727,6 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
                             varflag_col_pattern = NA)
 
     d <- filter_single_samp_sites(d)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -859,15 +800,6 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                         convert_units_from = c('SO4' = 'mg/l'),
                         convert_units_to = c('SO4' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -925,19 +857,8 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                                              'NH4_N' = 'mg/l',
                                              'SRP' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
-
 
 #derive kernels ####
 

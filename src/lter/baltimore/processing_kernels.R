@@ -104,15 +104,6 @@ process_1_700 <- function(network, domain, prodname_ms, site_code,
                         convert_units_to = c(PO4_P = 'mg/l',
                                              SO4 = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -143,15 +134,6 @@ process_1_900 <- function(network, domain, prodname_ms, site_code,
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l'),
                         convert_units_to = c(PO4_P = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -185,15 +167,6 @@ process_1_800 <- function(network, domain, prodname_ms, site_code,
                         convert_units_to = c(PO4_P = 'mg/l',
                                              TP = 'mg/l',
                                              SO4 = 'mg/l'))
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
       return(d)
 }
@@ -250,15 +223,6 @@ process_1_3110 <- function(network, domain, prodname_ms, site_code,
     d <- final %>%
       mutate(var = 'IS_precipitation',
              ms_status = 0)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
