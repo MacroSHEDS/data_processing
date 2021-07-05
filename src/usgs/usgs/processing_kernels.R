@@ -94,15 +94,6 @@ process_1_1 <- function(network, domain, prodname_ms, site_code,
                                   domain = domain,
                                   prodname_ms = prodname_ms)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -147,15 +138,6 @@ process_1_2 <- function(network, domain, prodname_ms, site_code,
                                   network = network,
                                   domain = domain,
                                   prodname_ms = prodname_ms)
-
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -203,14 +185,7 @@ process_1_3 <- function(network, domain, prodname_ms, site_code,
                                 prodname_ms = prodname_ms,
                                 sampling_type = parm_to_var$sampling)
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
-
-  d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+  return(d)
 }
 
 #derive kernels ####
