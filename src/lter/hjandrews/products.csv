@@ -16,3 +16,4 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 ms001,stream_flux_inst,NA,NA,ready,NA,NA
 ms002,precip_pchem_pflux,NA,NA,ready,NA,NA
 ms003,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA
+ms006,ws_boundary,NA,NA,linked,NA,automated entry
