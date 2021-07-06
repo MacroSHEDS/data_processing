@@ -1,0 +1,6 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,discharge_v2
+VERSIONLESS002,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,stream_chem_v2
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms002,discharge,NA,NA,linked,NA,automated entry,NA
+ms003,stream_chemistry,NA,NA,linked,NA,automated entry,NA
