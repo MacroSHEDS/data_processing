@@ -133,6 +133,15 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- 'n00b'
         op_system <- 'mac'
     }
+    
+    res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'nick'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
 
     # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
     # if(! 'try-error' %in% class(res)){
