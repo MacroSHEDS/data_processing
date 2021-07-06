@@ -10205,7 +10205,8 @@ retrieve_versionless_product <- function(network,
                                   prodcode_from_prodname_ms(prodname_ms)))
 
     rt <- tracker[[prodname_ms]][[site_name]]$retrieve
-
+    
+#i = 1
     for(i in 1:nrow(rt)){
 
         held_dt <- as.POSIXct(rt$held_version[i],

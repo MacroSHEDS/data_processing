@@ -150,6 +150,15 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- NA
     }
+    
+    res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'nick'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
 
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
@@ -184,15 +193,15 @@ googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 conf <- jsonlite::fromJSON('config.json')
 
 #connect rgee to earth engine and python
-gee_login <- case_when(
-    ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
-    TRUE ~ 'UNKNOWN')
-
-try(rgee::ee_Initialize(email = gee_login,
-                        drive = TRUE))
-
-googledrive::drive_auth(email = gee_login)
+# gee_login <- case_when(
+#     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
+#     ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
+#     TRUE ~ 'UNKNOWN')
+# 
+# try(rgee::ee_Initialize(email = gee_login,
+#                         drive = TRUE))
+# 
+# googledrive::drive_auth(email = gee_login)
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -220,7 +229,10 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=8
+
+# network <- 'usfs'
+# domain <- 'tenderfoot'
+ dmnrow=23
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -251,21 +263,21 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                 domain = domain,
-                 prodname_filter = c('stream_chemistry'))
-                # domain = domain)
+                 #domain = domain,
+                 #prodname_filter = c('stream_chemistry'))
+                 domain = domain)
     ms_munge(network = network,
-              domain = domain,
-              prodname_filter = c('stream_chemistry'))
-             # domain = domain)
+              #domain = domain,
+             # prodname_filter = c('stream_chemistry'))
+              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-               domain = domain,
-               prodname_filter = c('stream_chemistry'))
-              # domain = domain)
+               #domain = domain,
+              # prodname_filter = c('stream_chemistry'))
+               domain = domain)
     ms_general(network = network,
                domain = domain)
 
