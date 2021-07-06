@@ -24,7 +24,7 @@ process_0_142 <- function(set_details, network, domain){
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_159 <- function(set_details, network, domain){
 
@@ -74,6 +74,9 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
+    # Bonanza appears to set values to 0 when the sample was not recorded
+    # This is likely not the best approach in case there are real values that
+    # are 0 and recorded with a single 0, may be worth contacting the domain
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(Sample.Date = '%m/%d/%Y'),
                          datetime_tz = 'US/Alaska',
@@ -94,9 +97,11 @@ process_1_152 <- function(network, domain, prodname_ms, site_name,
                                         'Conductivity.uS.cm.' = 'spCond',
                                         'DON.uM.' = 'DON',
                                         'SUVA.L.mg.1.m.1.' = 'abs254',
-                                        'pH' = 'pH'),
+                                        'pH' = 'pH',
+                                        'Temperature.degC.' = 'temp'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         set_to_NA = '0')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -154,12 +159,13 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     look <- read.csv(rawfile, colClasses = 'character')
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(Date.Time = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c(Date.Time = '%m/%e/%Y %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
                          site_name_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -174,7 +180,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_name,
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 }
 
-#stream_temperature: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_159 <- function(network, domain, prodname_ms, site_name,
                           component) {
@@ -186,7 +192,8 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    raw <- read.delim(rawfile, colClasses = 'character')
+    raw <- read.delim(rawfile, colClasses = 'character') %>%
+        filter(X0CM != -9999)
 
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(DATE = '%m/%d/%Y',
@@ -195,10 +202,12 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'SITE',
                          data_cols =  c('X0CM'= 'temp'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -215,6 +224,8 @@ process_1_159 <- function(network, domain, prodname_ms, site_name,
 process_1_167 <- function(network, domain, prodname_ms, site_name,
                           component) {
 
+    # There is anoth precip product (384) which uses weighing buckets that is
+    # better for snow but less accurate for rain
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -235,12 +246,20 @@ process_1_167 <- function(network, domain, prodname_ms, site_name,
                          alt_site_name = list('CRREL' = 'CRREL-Met'),
                          data_cols =  c('value'= 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         set_to_NA = c('-9999', '999.00', '-9999.000', '-7999.000',
+                                       '999.000'))
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('flag' = 'Q'),
                             summary_flags_clean = list('flag' = 'G'),
                             varflag_col_pattern = NA)
+
+    if(component == '167_TIPBUCK_CPEAK_1993-2016.txt'){
+
+        d <- d %>%
+            filter(datetime >= '1998-01-01')
+    }
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -311,7 +330,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__152',
-                                           'stream_temperature__159'))
+                                           'stream_chemistry__159'))
 }
 
 #precip_gauge_locations: STATUS=READY

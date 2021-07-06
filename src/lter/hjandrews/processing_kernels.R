@@ -209,6 +209,36 @@ process_0_3239 <- function(set_details, network, domain) {
     return()
 }
 
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_0_4020 <- function(set_details, network, domain){
+
+    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         p = set_details$prodname_ms,
+                         s = set_details$site_name)
+
+    dir.create(raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    fext <- ifelse(set_details$component %in% c('HT00441'),
+                   '.txt',
+                   '.csv')
+
+    download.file(url = set_details$url,
+                  destfile = glue(raw_data_dest,
+                                  '/',
+                                  set_details$component,
+                                  '.csv'),
+                  cacheOK = FALSE,
+                  method = 'curl')
+
+    return()
+}
+
 #munge kernels ####
 
 #discharge: STATUS=READY
@@ -230,8 +260,34 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                          site_name_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),
                          data_col_pattern = '#V#',
+                         alt_site_name = list('GSMACK' = 'GSWSMA'),
                          is_sensor = TRUE,
                          summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
+
+    # In 1995 HJ Andrews put a fish ladder around the GSWSMA (it is also gauged
+    # called GSWSMF). A new measurment called GSWSMC is a sum of GSWSMF and
+    # GSWSMA. We are calling GSWSMA, GSMACK and when the fish ladder is added
+    # GSMACK will refer to GSWSMC
+
+    # It as looks like at 	2018-09-30 16:05:00, GSWSMC is just GSWSMA X 2. May
+    # be worth contacting the domain
+    GSMACK <- d %>%
+        filter(site_name == 'GSMACK') %>%
+        filter(datetime < '1995-09-30 22:00:00')
+
+    GSWSMC <- d %>%
+        filter(site_name == 'GSWSMC') %>%
+        filter(datetime > '1995-09-30 22:00:00') %>%
+        mutate(site_name = 'GSMACK')
+
+
+    d <- d %>%
+        filter(site_name != 'GSWSMA',
+               site_name != 'GSWSMC',
+               site_name != 'GSWSMF',
+               site_name != 'GSMACK')
+
+    d <- rbind(d, GSWSMC, GSMACK)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -241,6 +297,10 @@ process_1_4341 <- function(network, domain, prodname_ms, site_name,
                             summary_flags_dirty = list(
                                 ESTCODE = c('Q', 'S', 'P'),
                                 EVENT_CODE = c('INSREM', 'MAINTE')))
+
+    #convert cfs to liters/s
+    d <- d %>%
+        mutate(val = val * 28.317)
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -501,10 +561,13 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
                 site_name = paste0('GSWS', site_name),
                 site_name = ifelse(site_name == 'GSWSMACK',
                                    'GSMACK',
-                                   site_name),
-                site_name = ifelse(site_name == 'GSWS04',
-                                   'GSLOOK',
                                    site_name)) %>%
+                #GSWS04 is GSLOOK, but that shapefile is missing subwatersheds,
+                #   so we're going to drop it here and delineate it ourselves
+                # site_name = ifelse(site_name == 'GSWS04',
+                #                    'GSLOOK',
+                #                    site_name)) %>%
+            filter(site_name != 'GSWS04') %>%
             sf::st_transform(projstring) %>%
             arrange(site_name)
     }
@@ -513,6 +576,106 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 
     return(d)
 }
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_4020 <- function(network, domain, prodname_ms, site_name,
+                           components){
+
+
+    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HT00441.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name)
+
+    d <- ms_read_raw_csv(filepath = rawfile1,
+                         datetime_cols = c(DATE = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-8',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(WATERTEMP_MEAN_DAY = 'temp'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE,
+                         summary_flagcols = c('WATERTEMP_MEAN_FLAG'))
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(
+                                WATERTEMP_MEAN_FLAG = c('A', 'E')),
+                            summary_flags_dirty = list(
+                                WATERTEMP_MEAN_FLAG = c('B', 'M', 'S', 'Q')))
+
+    rawfile2 = glue('data/{n}/{d}/raw/{p}/{s}/HT00451.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name)
+
+
+    d_ <- ms_read_raw_csv(filepath = rawfile2,
+                         datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT-8',
+                         site_name_col = 'SITECODE',
+                         data_cols =  c(WATERTEMP_MEAN = 'temp'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE,
+                         summary_flagcols = c('WATERTEMP_MEAN_FLAG'))
+
+    d_ <- ms_cast_and_reflag(d_,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(
+                                WATERTEMP_MEAN_FLAG = c('A', 'E')),
+                            summary_flags_dirty = list(
+                                WATERTEMP_MEAN_FLAG = c('B', 'M', 'S', 'Q')))
+
+    d__ <- d_ %>%
+        mutate(day = day(datetime),
+               month = month(datetime),
+               year = year(datetime)) %>%
+        group_by(site_name, day, month, year, var) %>%
+        summarize(val = mean(val, na.rm = T),
+                  ms_status = max(ms_status)) %>%
+        ungroup() %>%
+        mutate(datetime = ymd(paste(year, month, day, sep = '-'))) %>%
+        select(site_name, datetime, var, val, ms_status)
+
+
+
+
+    #Join 2 datasets by removing daily averages when sensor data is available
+    # start_dates_daily <- d %>%
+    #     group_by(site_name) %>%
+    #     summarise(d_min = min(datetime, na.rm = T),
+    #               d_max = max(datetime, na.rm = T))
+    #
+    # start_dates_sub <- d_ %>%
+    #     group_by(site_name) %>%
+    #     summarise(min = min(datetime, na.rm = T),
+    #               max = max(datetime, na.rm = T))
+    #
+    # check <- full_join(start_dates_sub, start_dates_daily, by = 'site_name') %>%
+    #     mutate(alter_data = ifelse(min <= d_min, 1, 0)) %>%
+    #     filter(alter_data == 1 | is.na(alter_data))
+
+    d <- rbind(d, d__)
+
+    d <- d %>%
+        group_by(datetime, site_name, var) %>%
+        summarise(val = mean(val, na.rm = T),
+                  ms_status = max(ms_status, na.rm = T))
+
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+
+    d <- synchronize_timestep(d)
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
+    return(d)
+}
+
 
 #derive kernels ####
 
@@ -527,6 +690,18 @@ process_1_3239 <- function(network, domain, prodname_ms, site_name,
 # #precip_flux_inst: STATUS=PAUSED
 # #. handle_errors
 # process_2_ms004 <- derive_precip_flux
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms) {
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_chemistry__4020',
+                                           'stream_chemistry__4021'))
+    return()
+}
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors

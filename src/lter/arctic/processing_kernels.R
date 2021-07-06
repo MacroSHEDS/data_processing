@@ -261,9 +261,14 @@ process_1_10303 <- function(network, domain, prodname_ms, site_name,
                     s = site_name,
                     c = component)
 
-    d <- read.csv(rawfile, colClasses = 'character')
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        as_tibble()
 
-    d <- d[4:nrow(d),]
+    #TODO: this product changed file formats around jan 2021. the kernel still works
+    #if we just comment this next line, but it could probably stand a thorough
+    #check (for new flag values, etc)
+
+    # d <- d[4:nrow(d),]
 
     check <- d %>%
         group_by(River, Station) %>%
@@ -562,7 +567,8 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
-                             summary_flagcols = 'Comments')
+                             summary_flagcols = 'Comments',
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 summary_flags_clean = list('Comments' = ''),
@@ -586,7 +592,8 @@ process_1_20120 <- function(network, domain, prodname_ms, site_name,
                                                   'Trevor_Creek_Main' = 'Trevor Creek'),
                              set_to_NA = c('-9999', '-1111'),
                              data_col_pattern = '#V#',
-                             summary_flagcols = 'Comments')
+                             summary_flagcols = 'Comments',
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 summary_flags_clean = list('Comments' = ''),
@@ -770,7 +777,6 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -779,7 +785,8 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -802,7 +809,6 @@ process_1_20103 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_20111 <- function(network, domain, prodname_ms, site_name,
@@ -821,7 +827,6 @@ process_1_20111 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -830,7 +835,8 @@ process_1_20111 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -873,7 +879,6 @@ process_1_20112 <- function(network, domain, prodname_ms, site_name,
 
     d <- d[4:nrow(d),]
 
-    #Incorectly identifying installed as grab
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
@@ -882,7 +887,8 @@ process_1_20112 <- function(network, domain, prodname_ms, site_name,
                                         'DOC..mg.L.' = 'DOC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-1111', '-1.111', '-9999'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
@@ -1009,7 +1015,7 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
     for(i in 1:length(sites)) {
 
         precip <- read_feather('data/lter/arctic/munged/precipitation__1489/TLKMAIN.feather') %>%
-            mutate(site_name == !! sites[i])
+            mutate(site_name = !! sites[i])
 
       write_feather(precip, glue('{n}{s}.feather',
                                  n = new_dir,

@@ -1,7 +1,14 @@
 owrite_tracker = function(network, domain, trck){
-    tracker_path = glue::glue('data/{n}/{d}/data_tracker.json',
-        n=network, d=domain)
-    if(! missing(trck)) held_data = trck
+
+    tracker_path <- glue::glue('data/{n}/{d}/data_tracker.json',
+                               n = network,
+                               d = domain)
+
+    backup_tracker(path = tracker_path,
+                   force = TRUE)
+
+    if(! missing(trck)) held_data <- trck
+
     jsonlite::write_json(held_data, tracker_path)
 }
 
@@ -135,11 +142,12 @@ compare_interp_methods <- function(){
     plot(m3, main='idw^2 and elev')
 }
 
-invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
+invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
 
     #level is one of 'munge' or 'derive'. that level will be reset.
     #   not currently set up to invalidate level='retrieve'.
-    #prodname_ms is optional. if supplied, only that product will be invalidated
+    #prodname is optional. if supplied, only that product will be invalidated.
+    #   prodname_ms is determined automatically.
 
     if(! level %in% c('munge', 'derive')){
         stop('level must be either "munge" or "derive"')
@@ -148,26 +156,55 @@ invalidate_tracked_data <- function(network, domain, level, prodname_ms = NULL){
     tracker <- get_data_tracker(network = network,
                                 domain = domain)
 
-    if(! is.null(prodname_ms)){
+    if(! is.null(prodname)){
 
-        sublist <- tracker[[prodname_ms]]
+        prodnames_ms <- get_derive_ingredient(network, domain, prodname,
+                              ignore_derprod = level == 'munge',
+                              ignore_derprod900 = TRUE,
+                              accept_multiple = TRUE)
 
-        subl_updt <- recursive_tracker_update(l = sublist,
-                                              elem_name = level,
-                                              new_val = list(status = 'pending',
-                                                             mtime = '1500-01-01'))
-        tracker[[prodname_ms]] <- subl_updt
+        if(level == 'derive'){
+            prodnames_ms <- prodnames_ms[grepl('__ms[0-9]{3}$', prodnames_ms)]
+        }
+
+        if(length(prodnames_ms) == 0){
+            print(glue('Nothing to invalidate'))
+            return(tracker)
+        }
+
+        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+                     'tracker(s) for {n}-{d}:\n{prds}\n',
+                     n = network,
+                     d = domain,
+                     lvl = toupper(level),
+                     prds = paste(prodnames_ms, collapse = '\n')))
+        Sys.sleep(10)
+
+        for(i in seq_along(prodnames_ms)){
+
+            prodname_ms <- prodnames_ms[i]
+
+            sublist <- tracker[[prodname_ms]]
+
+            subl_updt <- recursive_tracker_update(l = sublist,
+                                                  elem_name = level,
+                                                  new_val = list(status = 'pending',
+                                                                 mtime = '1500-01-01'))
+            tracker[[prodname_ms]] <- subl_updt
+        }
 
         return(tracker)
 
     } else {
 
-        invalidated <- recursive_tracker_update(l = tracker,
-                                                elem_name = level,
-                                                new_val = list(status = 'pending',
-                                                               mtime = '1500-01-01'))
-        return(invalidated)
+        tracker <- recursive_tracker_update(l = tracker,
+                                            elem_name = level,
+                                            new_val = list(status = 'pending',
+                                                           mtime = '1500-01-01'))
+        return(tracker)
     }
+
+    message('Tracker(s) invalidated.')
 }
 
 assign_typical_test_variables <- function(){
@@ -688,3 +725,140 @@ dy_examine <- function(d, shape = 'long', site, ...){
             # stackedGraph = TRUE,
             # fillGraph = TRUE,
 }
+
+list_all_product_dirs <- function(prodname){
+
+    prodname_dirs <- list.dirs(path = 'data',
+                               full.names = TRUE,
+                               recursive = TRUE)
+
+    prodname_dirs <- grep(pattern = paste0('derived/', prodname, '__'),
+                          x = prodname_dirs,
+                          value = TRUE)
+
+    return(prodname_dirs)
+}
+
+load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
+
+    #WARNING: this could easily eat up 20 GB RAM for a product like discharge.
+    #As the dataset grows, that number will increase.
+
+    #read and combine all files associated with a particular prodname
+    #   (e.g. 'discharge' or 'stream_chemistry') across all networks and
+    #   domains. Run the setup portion of acquisition_master
+    #   (the part before the main loop) to load necessary packages and helper
+    #   functions
+    #.sort: logical. If TRUE, output will be sorted by site_name, var, datetime.
+    #   this takes a few minutes.
+    #filter_vars: character vector. for products like stream_chemistry that include
+    #   multiple variables, this filters to just the ones specified (ignores
+    #   variable prefixes)
+
+    prodname_dirs <- list_all_product_dirs(prodname = prodname)
+
+    d <- tibble()
+    for(pd in prodname_dirs){
+
+        network_domain <- str_match(string = pd,
+                                    pattern = '^data/(.+?)/(.+?)/.+$')[, 2:3]
+
+        d0 <- list.files(pd, full.names = TRUE) %>%
+            purrr::map_dfr(read_feather)
+
+        if(! missing(filter_vars)){
+            d0 <- filter(d0,
+                        drop_var_prefix(var) %in% filter_vars)
+        }
+
+        d <- d0 %>%
+            mutate(val = errors::set_errors(val, val_err),
+                   network = network_domain[1],
+                   domain = network_domain[2]) %>%
+            select(-val_err) %>%
+            select(datetime, network, domain, site_name, var, val, ms_status,
+                   ms_interp) %>%
+            bind_rows(d)
+    }
+
+    if(.sort){
+        d <- arrange(d,
+                     site_name, var, datetime)
+    }
+
+    return(d)
+}
+
+generate_diagnostic_plots <- function(network, domain, product){
+    
+    path <- glue('data/{n}/{d}/derived/{p}/',
+                 n = network,
+                 d = domain,
+                 p = product)
+
+    all_files <- list.files(path, full.names = TRUE)
+    dataset <- map_dfr(all_files, read_feather)
+    
+    high_values <- dataset %>%
+        group_by(var) %>%
+        summarise(confidence_in = quantile(val, .99)) 
+    
+    dataset_check <- dataset %>%
+        left_join(., high_values, by = 'var') %>%
+        filter(ms_interp == 0) %>%
+        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0))) 
+
+    vars <- unique(dataset$var)
+    sites <- unique(dataset_check$site_name)
+    sites_in_workflow <- site_data %>%
+        filter(domain == !!domain,
+               network == !!network,
+               in_workflow == 1) %>%
+        pull(site_name)
+    sites <- sites[sites %in% sites_in_workflow]
+    
+    output_path <- glue('plots/{n}/{d}/plots',
+                        n = network,
+                        d = domain)
+    dir.create(output_path, recursive = T)
+    
+    all_plot_list = list()
+    for(i in 1:length(vars)) {
+        plot_list = list()
+        for(s in 1:length(sites)){
+            p <- dataset_check %>%
+                filter(site_name  == !!sites[s],
+                       var == !!vars[i]) %>%
+                ggplot(aes(datetime, val, color = suspect)) +
+                geom_point() +
+                ggthemes::theme_few() +
+                scale_color_manual(values = c('#000000', '#FF0000')) +
+                ggtitle(paste0('var: ', vars[i], '    site_name:', sites[s])) +
+                theme(legend.position = 'none')
+            plot_list[[s]] = p
+            names(plot_list)[s] <- paste(vars[i], sites[s], sep = '_')
+        }
+        all_plot_list <- c(all_plot_list, plot_list)
+    }
+    
+    for(i in 1:length(all_plot_list)) {
+        name_plot <- names(all_plot_list)[i]
+        file_name = paste(glue('plots/{n}/{d}/plots/',
+                               n = network,
+                               d = domain), name_plot, ".pdf", sep="")
+        pdf(file_name)
+        print(all_plot_list[[i]])
+        dev.off()
+    }
+
+
+    pdftools::pdf_combine(list.files(output_path, full.names = TRUE), 
+                output = glue('plots/{n}/{d}/{p}_dignostic.pdf',
+                              n = network,
+                              d = domain,
+                              p = product))
+    
+    unlink(output_path, recursive = TRUE)
+
+}
+

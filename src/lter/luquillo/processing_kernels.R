@@ -127,22 +127,19 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
                                         'TSS'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
-                        convert_units_from = c(Cl = 'ug/l',
-                                               NO3_N = 'ug/l',
+                        convert_units_from = c(NO3_N = 'ug/l',
                                                NH4_N = 'ug/l',
-                                               PO4_P = 'ug/l',
-                                               DOC = 'ug/l'),
-                        convert_units_to = c(Cl = 'mg/l',
-                                             NO3_N = 'mg/l',
+                                               PO4_P = 'ug/l'),
+                        convert_units_to = c(NO3_N = 'mg/l',
                                              NH4_N = 'mg/l',
-                                             PO4_P = 'mg/l',
-                                             DOC = 'mg/l'))
+                                             PO4_P = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -163,6 +160,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_name,
 process_1_174 <- function(network, domain, prodname_ms, site_name,
                           component){
 
+  # Luquillo's metadata says NO3_N units are in mg/l but they are very high so
+  # I am assuming they must be in ug/l, will check with Luquillo.
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -205,7 +204,8 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
                                         'SiO2'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -213,10 +213,12 @@ process_1_174 <- function(network, domain, prodname_ms, site_name,
     d <- ms_conversions(d,
                         convert_units_from = c(Cl = 'ug/l',
                                                NH4_N = 'ug/l',
-                                               PO4_P = 'ug/l'),
+                                               PO4_P = 'ug/l',
+                                               NO3_N = 'ug/l'),
                         convert_units_to = c(Cl = 'mg/l',
                                              NH4_N = 'mg/l',
-                                             PO4_P = 'mg/l'))
+                                             PO4_P = 'mg/l',
+                                             NO3_N = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -300,8 +302,15 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
         p_name <- 'Rainfall.mm.'
     }
 
-    d <- read.csv(rawfile,
-                  colClasses = 'character') %>%
+    if(component == 'El Verde Field Station Rainfall in Millimeters (2010-Current)'){
+      d <- read.delim(rawfile, sep = ',', quote = '') %>%
+        mutate(X.DATE = substr(X.DATE, 2, nchar(X.DATE))) %>%
+        rename(DATE = X.DATE)
+    } else{
+      d <- read.csv(rawfile,
+                    colClasses = 'character')
+    }
+    d <- d %>%
       mutate(site = 'El_Verde') %>%
       mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
              day = str_split_fixed(DATE, '/', n = Inf)[,2],
@@ -367,6 +376,9 @@ process_1_14 <- function(network, domain, prodname_ms, site_name,
 #. handle_errors
 process_1_156 <- function(network, domain, prodname_ms, site_name,
                           component){
+
+    #info on luqillo data
+    #https://www.sas.upenn.edu/lczodata/content/quebrada-three-bisley-q3
 
     if(prodname_ms == 'stream_chemistry__156'){
 
@@ -460,11 +472,14 @@ process_1_156 <- function(network, domain, prodname_ms, site_name,
     return(d)
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_182 <- function(network, domain, prodname_ms, site_name,
                           component){
 
+    # There seems to be something wrong with this data product. around 2010
+    # they switch from one rating curve to another and it seems that the
+    # values are too/unreal
       rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                      n = network,
                      d = domain,
@@ -548,7 +563,7 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                      domain = domain,
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('discharge__156',
-                                           'discharge__182',
+                                           #'discharge__182',
                                            'usgs_discharge__ms001'))
     return()
 }
@@ -574,10 +589,22 @@ process_2_ms004 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms005 <- stream_gauge_from_site_data
 
-#stream_inst_flux: STATUS=READY
+#stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms006 <- derive_stream_flux
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms007 <- function(network, domain, prodname_ms) {
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('precipitation__90',
+                                           'precipitation__14'))
+    return()
+}
+
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms007 <- derive_precip_pchem_pflux
+process_2_ms008 <- derive_precip_pchem_pflux

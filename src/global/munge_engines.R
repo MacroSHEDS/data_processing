@@ -25,12 +25,17 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
         return(generate_ms_err('missing retrieval log'))
     }
 
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
+    processing_func <- get(paste0('process_1_', prodcode))
+
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     out <- tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        prodcode <- prodcode_from_prodname_ms(prodname_ms)
-
-        processing_func <- get(paste0('process_1_', prodcode))
         in_comp <- retrieval_log[k, 'component', drop=TRUE]
 
         out_comp <- sw(do.call(processing_func,
@@ -40,8 +45,22 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
                                            site_name = site_name,
                                            component = in_comp)))
 
-        if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out = bind_rows(out, out_comp)
+        if(is_ms_err(out_comp)) return(out_comp)
+
+        if(! is_ms_exception(out_comp)){
+
+            if(is_spatial){
+
+                #internal data.table error encountered here for hbef -> discharge__1
+                out <- data.table::rbindlist(list(out, out_comp),
+                                             use.names = TRUE,
+                                             fill = TRUE) %>%
+                    as_tibble()
+
+            } else {
+                out <- bind_rows(out, out_comp)
+            }
+
         }
     }
 
@@ -57,10 +76,19 @@ munge_by_site <- function(network, domain, site_name, prodname_ms, tracker,
 
     if(! is_empty(out)){
 
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
+        if(! is_spatial){
+
+            #sometimes files are divided up temporally, and the last
+            #row of one file gets rounded to the same datetime as the first
+            #row of another. It's also possible that there are gaps between
+            #successive files that could be filled. we can resolve all that by
+            #re-synchronizing here.
+            #of course, it's mad inefficient to run this twice, so maybe we should
+            #_only_ run it here. that will take some investigation though. for one
+            #thing, we'd need to consider giant bind_rows operations above when
+            #operating in high-res mode
+            out <- synchronize_timestep(out)
+        }
 
         write_ms_file(d = out,
                       network = network,
@@ -112,12 +140,17 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         return(generate_ms_err('missing retrieval log'))
     }
 
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
+    processing_func <- get(paste0('process_1_', prodcode))
+
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     out <- tibble()
     for(k in 1:nrow(retrieval_log)){
 
-        prodcode <- prodcode_from_prodname_ms(prodname_ms)
-
-        processing_func <- get(paste0('process_1_', prodcode))
         in_comp <- pull(retrieval_log[k, 'component'])
 
         out_comp <- sw(do.call(processing_func,
@@ -130,6 +163,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         if(is.null(out_comp)) next
 
         if(is_blacklist_indicator(out_comp)){
+
             update_data_tracker_r(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',
@@ -143,22 +177,47 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
         #BUILD THIS REGION INTO A HANDLE-ALL FUNC
         #IS IT POSSIBLE TO return(next)?
 
-        if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
-            out <- bind_rows(out, out_comp)
+        if(is_ms_err(out_comp)) return(out_comp)
+
+        if(! is_ms_exception(out_comp)){
+
+            if(is_spatial){
+
+                out <- data.table::rbindlist(list(out, out_comp),
+                                             use.names = TRUE,
+                                             fill = TRUE) %>%
+                    as_tibble()
+
+            } else {
+
+                #internal dplyr error encountered here for konza -> precip_gauge_locations__230
+                # out <- bind_rows_sf(out, as_tibble(out_comp))
+                out <- bind_rows(out, out_comp)
+            }
+
         }
     }
 
     sites <- unique(out$site_name)
 
-    for(i in 1:length(sites)){
+    for(i in seq_along(sites)){
 
         filt_site <- sites[i]
         out_comp_filt <- filter(out, site_name == filt_site)
 
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
+        if(! is_spatial){
+
+            #sometimes files are divided up temporally, and the last
+            #row of one file gets rounded to the same datetime as the first
+            #row of another. It's also possible that there are gaps between
+            #successive files that could be filled. we can resolve all that by
+            #re-synchronizing here.
+            #of course, it's mad inefficient to run this twice, so maybe we should
+            #_only_ run it here. that will take some investigation though. for one
+            #thing, we'd need to consider giant bind_rows operations above when
+            #operating in high-res mode
+            out_comp_filt <- synchronize_timestep(out_comp_filt)
+        }
 
         write_ms_file(d = out_comp_filt,
                       network = network,
@@ -168,7 +227,7 @@ munge_combined <- function(network, domain, site_name, prodname_ms, tracker,
                       level = 'munged',
                       shapefile = is_spatial,
                       link_to_portal = FALSE)
-        }
+    }
 
     update_data_tracker_m(network = network,
                           domain = domain,
@@ -214,6 +273,11 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
 
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
+    is_spatial <- ifelse(grepl(spatial_regex,
+                               prodname_ms),
+                         TRUE,
+                         FALSE)
+
     processing_func <- get(paste0('process_1_', prodcode))
     components <- pull(retrieval_log, component)
 
@@ -241,10 +305,19 @@ munge_combined_split <- function(network, domain, site_name, prodname_ms, tracke
         filt_site <- sites[i]
         out_comp_filt <- filter(out_comp, site_name == filt_site)
 
-        is_spatial <- ifelse(grepl(spatial_regex,
-                                   prodname_ms),
-                             TRUE,
-                             FALSE)
+        if(! is_spatial){
+
+            #sometimes files are divided up temporally, and the last
+            #row of one file gets rounded to the same datetime as the first
+            #row of another. It's also possible that there are gaps between
+            #successive files that could be filled. we can resolve all that by
+            #re-synchronizing here.
+            #of course, it's mad inefficient to run this twice, so maybe we should
+            #_only_ run it here. that will take some investigation though. for one
+            #thing, we'd need to consider giant bind_rows operations above when
+            #operating in high-res mode
+            out_comp_filt <- synchronize_timestep(out_comp_filt)
+        }
 
         write_ms_file(d = out_comp_filt,
                       network = network,
@@ -318,33 +391,46 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
         #BUILD THIS REGION INTO A HANDLE-ALL FUNC
         #IS IT POSSIBLE TO return(next)?
 
-        if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
+        if(is_ms_err(out_comp)) return(out_comp)
+
+        if(! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }
     }
 
-        sites <- unique(out$site_name)
+    sites <- unique(out$site_name)
 
-        for(i in 1:length(sites)){
+    for(i in 1:length(sites)){
 
-            filt_site <- sites[i]
-            out_filt <- filter(out, site_name == filt_site)
+        filt_site <- sites[i]
+        out_filt <- filter(out, site_name == filt_site)
 
-            prod_dir = glue('data/{n}/{d}/munged/{p}',
-                            n = network,
-                            d = domain,
-                            p = prodname_ms)
+        #sometimes files are divided up temporally, and the last
+        #row of one file gets rounded to the same datetime as the first
+        #row of another. It's also possible that there are gaps between
+        #successive files that could be filled. we can resolve all that by
+        #re-synchronizing here.
+        #of course, it's mad inefficient to run this twice, so maybe we should
+        #_only_ run it here. that will take some investigation though. for one
+        #thing, we'd need to consider giant bind_rows operations above when
+        #operating in high-res mode
+        # out_filt <- synchronize_timestep(out_filt)
 
-            dir.create(prod_dir,
-                       showWarnings = FALSE,
-                       recursive = TRUE)
+        prod_dir <- glue('data/{n}/{d}/munged/{p}',
+                         n = network,
+                         d = domain,
+                         p = prodname_ms)
 
-            site_file = glue('{pd}/{s}.feather',
-                             pd = prod_dir,
-                             s = sites[i])
+        dir.create(prod_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
 
-            write_feather(out_filt, site_file)
-            }
+        site_file <- glue('{pd}/{s}.feather',
+                          pd = prod_dir,
+                          s = sites[i])
+
+        write_feather(out_filt, site_file)
+    }
 
     update_data_tracker_m(network = network,
                           domain = domain,
@@ -353,15 +439,14 @@ munge_time_component <-  function(network, domain, site_name, prodname_ms, track
                           site_name = site_name,
                           new_status = 'ok')
 
-    msg = glue('munged {p} ({n}/{d}/{s})',
-               p = prodname_ms,
-               n = network,
-               d = domain,
-               s = site_name)
+    msg <- glue('munged {p} ({n}/{d}/{s})',
+                p = prodname_ms,
+                n = network,
+                d = domain,
+                s = site_name)
 
     loginfo(msg,
             logger = logger_module)
 
     return()
-
 }

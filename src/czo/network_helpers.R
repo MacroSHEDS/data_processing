@@ -13,7 +13,8 @@ get_czo_product_version <- function(prodname_ms, domain, hydroshare_code, data_t
     download.file(url = url_request_search,
                   destfile = search_results,
                   cacheOK = FALSE,
-                  method = 'curl')
+                  method = 'curl',
+                  quiet = TRUE)
 
     search_results_list <- read_json(search_results)
     newest_vsn <- search_results_list[["date_last_updated"]]
@@ -85,6 +86,41 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail){
         stop(msg)
     }
 
+    if(any(retrieval_tracker$needed)) {
+
+        email_update <- retrieval_tracker %>%
+            filter(held_version != -1) %>%
+            filter(avail_version !=  held_version)
+
+        if(!nrow(email_update) == 0) {
+
+            sites <- unique(email_update$site_name)
+            sites <- paste(sites, collapse = ', ')
+
+            components <- unique(email_update$component)
+            components <- paste(components, collapse = ', ')
+
+            logwarn(msg = glue('The domain had updated product: {p}',
+                               p = prodname_ms))
+
+            update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
+                               'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
+                               ' Check meta data to ensure munge and retrival code is ',
+                               'still acceptable for this version of the product ',
+                               '(units have not changed, there are no new variables, ',
+                               'variables names have not changed, etc.).',
+                               n = network,
+                               d = domain,
+                               p = prodname_ms,
+                               s = sites,
+                               c = components)
+
+            email_err(msgs = update_msg,
+                      addrs = conf$report_emails,
+                      pw = conf$gmail_pw)
+        }
+    }
+
     return(retrieval_tracker)
 }
 
@@ -99,7 +135,7 @@ get_czo_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {st}, {p}, {c}',
+        msg = glue('Retrieving {st}, {p}, {c}',
             st=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
@@ -281,7 +317,8 @@ get_czo_components <- function(search_string, hydroshare_code) {
         download.file(url = url_request_search,
                       destfile = search_results,
                       cacheOK = FALSE,
-                      method = 'curl')
+                      method = 'curl',
+                      quiet = TRUE)
 
         search_results_list <- read_json(search_results)[['results']]
         search_results <- sapply (search_results_list, '[[', 2)

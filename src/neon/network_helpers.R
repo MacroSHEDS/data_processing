@@ -10,7 +10,7 @@ get_neon_data <- function(domain,
 
         s <- sets[i, ]
 
-        msg <- glue('Processing {st}, {p}, {c}',
+        msg <- glue('Retrieving {st}, {p}, {c}',
                     st = s$site_name,
                     p = s$prodname_ms,
                     c = s$component)
@@ -27,6 +27,11 @@ get_neon_data <- function(domain,
                                       domain = domain))
 
         new_status <- evaluate_result_status(result)
+
+        if(new_status == 'error'){
+            logging::logwarn(result,
+                         logger = logger_module)
+        }
 
         update_data_tracker_r(network = network,
                               domain = domain,
@@ -77,7 +82,9 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
                             prodname_ms == 'stream_gases__DP1.20097' ~ FALSE,
                             prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
                             prodname_ms == 'precip_chemistry__DP1.00013' ~ FALSE,
-                            prodname_ms == 'precipitation__DP1.00006' ~ TRUE)
+                            prodname_ms == 'precipitation__DP1.00006' ~ TRUE,
+                            prodname_ms == 'discharge__DP4.00130' ~ TRUE,
+                            prodname_ms == 'surface_elevation__DP1.20016' ~ TRUE)
 
         site_names <- unique(out$site_name)
         for(y in 1:length(site_names)) {
@@ -85,11 +92,18 @@ munge_neon_site <- function(domain, site_name, prodname_ms, tracker, silent=TRUE
             d <- out %>%
                 filter(site_name == !!site_names[y])
 
+            if(sensor){
+                sampling_type <- 'I'
+            } else{
+                sampling_type <- 'G'
+            }
+
             d <- identify_sampling_bypass(df = d,
                                           is_sensor =  sensor,
                                           domain = domain,
                                           network = network,
-                                          prodname_ms = prodname_ms)
+                                          prodname_ms = prodname_ms,
+                                          sampling_type = sampling_type)
 
             d <- d %>%
                 filter(!is.na(val))

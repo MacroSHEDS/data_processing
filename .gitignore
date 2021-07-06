@@ -17,3 +17,9 @@ transfer_data
 googlesheet_service_accnt.json
 data_processing.Rproj
 .Rdata
+*.zip
+plots/diagnostic_plots_*
+all_*/
+data.bak
+macrosheds_dataset_v*
+data_hbef_highres

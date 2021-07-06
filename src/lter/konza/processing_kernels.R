@@ -155,35 +155,33 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_t = nchar(RecHour)) %>%
-      mutate(num_d = nchar(Recday)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', RecHour),
-                              num_t == 2 ~ paste0('01', RecHour),
-                              num_t == 3 ~ paste0('0', RecHour),
-                              num_t == 4 ~ as.character(RecHour),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(Recday)), as.character(Recday))) %>%
-      select(-num_t, -RecHour, -num_d, -Recday)
+        mutate(num_d = nchar(RECDAY)) %>%
+        mutate(num_m = nchar(RECMONTH)) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
+        mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
-                                              'RecMonth' = '%m',
-                                              'day' = '%d',
-                                              'time' = '%H%M'),
+                         datetime_cols = list('RECYEAR' = '%Y',
+                                              'month' = '%m',
+                                              'day' = '%d'),
                          datetime_tz = 'US/Central',
-                         site_name_col = 'Watershed',
+                         site_name_col = 'WATERSHED',
                          alt_site_name = list('N04D' = 'n04d'),
-                         data_cols =  c('Discharge' = 'discharge'),
+                         data_cols =  c('MEANDISCHARGE' = 'discharge'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'QualFlag',
-                         is_sensor = TRUE)
+                         summary_flagcols = c('QUAL_FLAG', 'MAINTENANCE_FLAG',
+                                              'INCOMPLETE_FLAG'),
+                         is_sensor = TRUE,
+                         set_to_NA = '.')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
-                            summary_flags_dirty = list('QualFlag' = 1),
-                            summary_flags_to_drop = list('QualFlag' = 6))
+                            summary_flags_to_drop = list('QUAL_FLAG' = '1',
+                                                         'MAINTENANCE_FLAG' = '1',
+                                                         'INCOMPLETE_FLAG' = '1'),
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
+                                                       'MAINTENANCE_FLAG' = c('0', '.'),
+                                                       'INCOMPLETE_FLAG' = c('0', '.')))
 
     # Convert from cm/s to liters/s
     d <- d %>%
@@ -206,49 +204,47 @@ process_1_7 <- function(network, domain, prodname_ms, site_name,
 process_1_8 <- function(network, domain, prodname_ms, site_name,
                         component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_name,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_name,
+                     c = component)
 
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_t = nchar(RecHour)) %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', RecHour),
-                              num_t == 2 ~ paste0('01', RecHour),
-                              num_t == 3 ~ paste0('0', RecHour),
-                              num_t == 4 ~ as.character(RecHour),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_t, -RecHour, -num_d, -RecDay)
+        mutate(num_d = nchar(RECDAY)) %>%
+        mutate(num_m = nchar(RECMONTH)) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
+        mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
-                                              'RecMonth' = '%m',
-                                              'day' = '%d',
-                                              'time' = '%H%M'),
+                         datetime_cols = list('RECYEAR' = '%Y',
+                                              'month' = '%m',
+                                              'day' = '%d'),
                          datetime_tz = 'US/Central',
-                         site_name_col = 'Watershed',
+                         site_name_col = 'WATERSHED',
                          alt_site_name = list('N20B' = 'n20b'),
-                         data_cols =  c('Discharge' = 'discharge'),
+                         data_cols =  c('MEANDISCHARGE' = 'discharge'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'QualFlag',
-                         is_sensor = TRUE)
+                         summary_flagcols = c('QUAL_FLAG', 'MAINTENANCE_FLAG',
+                                              'INCOMPLETE_FLAG'),
+                         is_sensor = TRUE,
+                         set_to_NA = '.')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
-                            summary_flags_dirty = list('QualFlag' = 1),
-                            summary_flags_to_drop = list('QualFlag' = 6))
+                            summary_flags_to_drop = list('QUAL_FLAG' = '1',
+                                                         'MAINTENANCE_FLAG' = '1',
+                                                         'INCOMPLETE_FLAG' = '1'),
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
+                                                       'MAINTENANCE_FLAG' = c('0', '.'),
+                                                       'INCOMPLETE_FLAG' = c('0', '.')))
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      mutate(val = val*1000)
+        mutate(val = val*1000)
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -267,49 +263,47 @@ process_1_8 <- function(network, domain, prodname_ms, site_name,
 process_1_9 <- function(network, domain, prodname_ms, site_name,
                         component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_name,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_name,
+                     c = component)
 
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_t = nchar(RecHour)) %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', RecHour),
-                              num_t == 2 ~ paste0('01', RecHour),
-                              num_t == 3 ~ paste0('0', RecHour),
-                              num_t == 4 ~ as.character(RecHour),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_t, -RecHour, -num_d, -RecDay)
+        mutate(num_d = nchar(RECDAY)) %>%
+        mutate(num_m = nchar(RECMONTH)) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
+        mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
-                                              'RecMonth' = '%m',
-                                              'day' = '%d',
-                                              'time' = '%H%M'),
+                         datetime_cols = list('RECYEAR' = '%Y',
+                                              'month' = '%m',
+                                              'day' = '%d'),
                          datetime_tz = 'US/Central',
-                         site_name_col = 'Watershed',
+                         site_name_col = 'WATERSHED',
                          alt_site_name = list('N01B' = 'n01b'),
-                         data_cols =  c('Discharge' = 'discharge'),
+                         data_cols =  c('MEANDISCHARGE' = 'discharge'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'QualFlag',
-                         is_sensor = TRUE)
+                         summary_flagcols = c('QUAL_FLAG', 'MAINTENANCE_FLAG',
+                                              'INCOMPLETE_FLAG'),
+                         is_sensor = TRUE,
+                         set_to_NA = '.')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
-                            summary_flags_dirty = list('QualFlag' = 1),
-                            summary_flags_to_drop = list('QualFlag' = 6))
+                            summary_flags_to_drop = list('QUAL_FLAG' = '1',
+                                                         'MAINTENANCE_FLAG' = '1',
+                                                         'INCOMPLETE_FLAG' = '1'),
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
+                                                       'MAINTENANCE_FLAG' = c('0', '.'),
+                                                       'INCOMPLETE_FLAG' = c('0', '.')))
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      mutate(val = val*1000)
+        mutate(val = val*1000)
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -328,50 +322,46 @@ process_1_9 <- function(network, domain, prodname_ms, site_name,
 process_1_10 <- function(network, domain, prodname_ms, site_name,
                          component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_name,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_name,
+                     c = component)
 
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_t = nchar(RecHour)) %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', RecHour),
-                              num_t == 2 ~ paste0('01', RecHour),
-                              num_t == 3 ~ paste0('0', RecHour),
-                              num_t == 4 ~ as.character(RecHour),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_t, -RecHour, -num_d, -RecDay)
+      mutate(num_d = nchar(RECDAY)) %>%
+      mutate(num_m = nchar(RECMONTH)) %>%
+      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
+      mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
-                                              'RecMonth' = '%m',
-                                              'day' = '%d',
-                                              'time' = '%H%M'),
+                         datetime_cols = list('RECYEAR' = '%Y',
+                                              'month' = '%m',
+                                              'day' = '%d'),
                          datetime_tz = 'US/Central',
-                         site_name_col = 'Watershed',
+                         site_name_col = 'WATERSHED',
                          alt_site_name = list('N02B' = 'n02b'),
-                         data_cols =  c('Discharge' = 'discharge'),
+                         data_cols =  c('MEANDISCHARGE' = 'discharge'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'QualFlag',
-                         is_sensor = TRUE)
+                         summary_flagcols = c('QUAL_FLAG', 'MAINTENANCE_FLAG',
+                                              'INCOMPLETE_FLAG'),
+                         is_sensor = TRUE,
+                         set_to_NA = '.')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
-                            summary_flags_dirty = list('QualFlag' = 1),
-                            summary_flags_to_drop = list('QualFlag' = 6))
+                            summary_flags_to_drop = list('QUAL_FLAG' = '1',
+                                                         'MAINTENANCE_FLAG' = '1',
+                                                         'INCOMPLETE_FLAG' = '1'),
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
+                                                       'MAINTENANCE_FLAG' = c('0', '.'),
+                                                       'INCOMPLETE_FLAG' = c('0', '.')))
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      # One value seems unrealistically hight
-      filter(val < 5000) %>%
       mutate(val = val*1000)
 
     d <- carry_uncertainty(d,
@@ -623,12 +613,85 @@ process_1_21 <- function(network, domain, prodname_ms, site_name,
                                               'Time' = '%H:%M:%S'),
                          datetime_tz = 'US/Central',
                          site_name_col = 'site',
-                         data_cols =  c('Spcond' = 'SpCond'),
+                         data_cols =  c('SpCond' = 'spCond',
+                                        'Temp' = 'temp',
+                                        'pH' = 'pH',
+                                        'ODO' = 'DO',
+                                        'ODOsat' = 'DO_sat'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'comments',
-                         is_sensor = FALSE)
+                         summary_flagcols = 'Comments',
+                         is_sensor = TRUE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_to_drop = list('Comments' = 'REMOVE'),
+                            summary_flags_clean = list('Comments' = c('')))
+
+    # Convert from cm/s to liters/s
+    d <- d %>%
+      mutate(val = ifelse(var == 'IS_spCond', val*1000, val))
+
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+
+    d <- synchronize_timestep(d)
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
 
     return(d)
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_16 <- function(network, domain, prodname_ms, site_name,
+                         component){
+
+
+  rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                  n = network,
+                  d = domain,
+                  p = prodname_ms,
+                  s = site_name,
+                  c = component)
+
+  d <- read.csv(rawfile, colClasses = "character") %>%
+    mutate(RecDay = ifelse(nchar(RecDay) == 1, paste0(0, RecDay), RecDay))
+
+  d <- ms_read_raw_csv(preprocessed_tibble = d,
+                       datetime_cols = list('RecYear' = '%Y',
+                                            'RecMonth' = '%m',
+                                            'RecDay' = '%d'),
+                       datetime_tz = 'US/Central',
+                       site_name_col = 'Watershed',
+                       alt_site_name = list('N04D' = 'n04d',
+                                            'N02B' = 'n02b',
+                                            'N01B' = 'n01b',
+                                            'N20B' = 'n20b'),
+                       data_cols =  c('Tmean' = 'temp'),
+                       data_col_pattern = '#V#',
+                       sampling_type = 'I',
+                       is_sensor = TRUE)
+
+  d %>%
+    ggplot(aes(datetime, `IS_temp__|dat`, colour = site_name)) +
+    geom_line()
+
+  d <- ms_cast_and_reflag(d,
+                          varflag_col_pattern = NA)
+
+  d <- carry_uncertainty(d,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
+
+  d <- synchronize_timestep(d)
+
+  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
+  return(d)
 }
 
 #precip_chemistry: STATUS=READY
@@ -670,21 +733,29 @@ process_1_43 <- function(network, domain, prodname_ms, site_name,
                          summary_flagcols = 'Comments',
                          is_sensor = FALSE)
 
+    # Could use a search function to look for words that indicates bad data.
+    # over all the data with comments seem to indicate the data is in some way
+    # compromised
+    d <- d %>%
+       mutate(Comments = ifelse(Comments != '', 'bad', 'ok'))
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             variable_flags_to_drop = NA,
                             variable_flags_clean = NA,
-                            summary_flags_to_drop = list(Comments = 'bad'),
-                            summary_flags_dirty = list(Comments = 'remove'))
+                            summary_flags_dirty = list(Comments = 'bad'),
+                            summary_flags_to_drop = list(Comments = 'remove'))
 
     d <- ms_conversions(d,
-                        # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
-                        #                       'NH4', 'NH3'),
-                        convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                               TPsN = 'ug/l', SRP = 'ug/l',
+                        convert_units_from = c(NO3_N = 'ug/l',
+                                               NH4_N = 'ug/l',
+                                               TPsN = 'ug/l',
+                                               SRP = 'ug/l',
                                                TPP = 'ug/l'),
-                        convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                             TPsN = 'mg/l', SRP = 'mg/l',
+                        convert_units_to = c(NO3_N = 'mg/l',
+                                             NH4_N = 'mg/l',
+                                             TPsN = 'mg/l',
+                                             SRP = 'mg/l',
                                              TPP = 'mg/l'))
 
     d <- carry_uncertainty(d,
@@ -823,7 +894,8 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('stream_chemistry__50',
                                            'stream_chemistry__51',
-                                           'stream_chemistry__20'))
+                                           'stream_chemistry__20',
+                                           'stream_chemistry__16'))
 
     return()
 }

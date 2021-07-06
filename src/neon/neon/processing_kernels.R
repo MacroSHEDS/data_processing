@@ -5,12 +5,20 @@
 process_0_DP1.20093 <- function(set_details, network, domain){
     # set_details=s
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
     # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                          p = set_details$prodname_ms,
+                                          s = set_details$site_name,
+                                          c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -19,15 +27,23 @@ process_0_DP1.20093 <- function(set_details, network, domain){
     return()
 }
 
-#stream_nitrate: STATUS=READY
+#stream_nitrate: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20033 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -36,15 +52,23 @@ process_0_DP1.20033 <- function(set_details, network, domain){
     return()
 }
 
-#stream_PAR: STATUS=READY
+#stream_PAR: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20042 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -53,15 +77,23 @@ process_0_DP1.20042 <- function(set_details, network, domain){
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20053 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -74,11 +106,19 @@ process_0_DP1.20053 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00004 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=30)
+        enddate=set_details$component, package='basic', check.size=FALSE, avg=30),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -91,15 +131,23 @@ process_0_DP1.00004 <- function(set_details, network, domain){
     return()
 }
 
-#stream_gases: STATUS=READY
+#stream_gases: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20097 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -112,11 +160,22 @@ process_0_DP1.20097 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20016 <- function(set_details, network, domain){
 
-    stop('disabled. waiting on NEON to fix this product')
+    #stop('disabled. waiting on NEON to fix this product')
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5)
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
+                                                  site=set_details$site_name,
+                                                  startdate=set_details$component,
+                                                  enddate=set_details$component,
+                                                  package='basic',
+                                                  check.size=FALSE,
+                                                  avg=5))
+
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
@@ -149,15 +208,23 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     return()
 }
 
-#stream_quality: STATUS=READY
+#stream_quality: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20288 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
         site=set_details$site_name, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE)
+        enddate=set_details$component, package='basic', check.size=FALSE),
+        silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
         s=set_details$site_name, c=set_details$component)
 
@@ -170,11 +237,44 @@ process_0_DP1.20288 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00006 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
                                              site=set_details$site_name, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE)
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
+                         s=set_details$site_name, c=set_details$component)
+
+    serialize_list_to_dir(data_pile, raw_data_dest)
+
+    return()
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_0_DP4.00130 <- function(set_details, network, domain){
+
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
+                                             site=set_details$site_name, startdate=set_details$component,
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
+
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
                          s=set_details$site_name, c=set_details$component)
 
@@ -187,11 +287,19 @@ process_0_DP1.00006 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00013 <- function(set_details, network, domain){
 
-    data_pile = neonUtilities::loadByProduct(set_details$prodcode_full,
+    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
                                              site=set_details$site_name, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE)
+                                             enddate=set_details$component, package='basic', check.size=FALSE),
+                     silent = TRUE)
 
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    if(class(data_pile) == 'try-error'){
+      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                        p = set_details$prodname_ms,
+                                        s = set_details$site_name,
+                                        c = set_details$component)))
+    }
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
                          wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
                          s=set_details$site_name, c=set_details$component)
 
@@ -271,7 +379,8 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             filter(!is.na(val)) %>%
             rename(site_name = siteID,
                    datetime = collectDate) %>%
-            mutate(datetime = force_tz(datetime, tzone = 'UTC'))
+            mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
+            filter(!is.na(val))
 
 
     }
@@ -284,18 +393,25 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
             mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
                                       1, 0)) %>%
             select(-shipmentWarmQF, -sampleCondition) %>%
-            mutate(var = case_when(var == 'Si' ~ 'SiO2',
+            mutate(var = case_when(var == 'Si' ~ 'Si',
                                    var == 'Ortho - P' ~ 'PO4_P',
                                    var == 'NO3+NO2 - N' ~ 'NO3_NO2_N',
-                                   var == 'NO2 - N' ~ 'NO3_N',
+                                   var == 'NO2 - N' ~ 'NO2_N',
                                    var == 'NH4 - N' ~ 'NH4_N',
-                                   var == 'conductivity' ~ 'spCond',
+                                   var == 'specificConductance' ~ 'spCond',
                                    var == 'UV Absorbance (280 nm)' ~ 'abs280',
                                    var == 'UV Absorbance (250 nm)' ~ 'abs250',
+                                   var == 'UV Absorbance (254 nm)' ~ 'abs254',
                                    TRUE ~ var)) %>%
             mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
             filter(var != 'TSS - Dry Mass') %>%
             mutate(datetime = force_tz(datetime, 'UTC'))
+
+        # TEMPORARILY REMOVING NEON NUTRIENT DATA #
+        out_lab <- out_lab %>%
+          filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
+                              'TPN', 'TDN', 'PO4_P')) %>%
+          filter(!is.na(val))
 
   }
 
@@ -327,14 +443,15 @@ process_1_DP1.20093 <- function(network, domain, prodname_ms, site_name,
         summarize(
             val = mean(val, na.rm=TRUE),
             ms_status = max(ms_status, na.rm = TRUE)) %>%
-        mutate(val = ifelse(is.nan(val), NA, val))
+        mutate(val = ifelse(is.nan(val), NA, val)) %>%
+        filter(!is.na(val))
 
     }
 
     return(out_sub)
 }
 
-#stream_nitrate: STATUS=READY
+#stream_nitrate: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -371,7 +488,7 @@ process_1_DP1.20033 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_PAR: STATUS=READY
+#stream_PAR: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -412,7 +529,7 @@ process_1_DP1.20042 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20053 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -529,7 +646,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#stream_gases: STATUS=READY
+#stream_gases: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -585,14 +702,37 @@ process_1_DP1.20097 <- function(network, domain, prodname_ms, site_name,
     return(out_sub)
 }
 
-#surface_elevation: STATUS=PENDING (not yet needed. waiting on neon)
+#surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_name,
     component){
-    NULL
+
+  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+
+  rawfiles <- list.files(rawdir)
+
+  relevant_file <- 'EOS_5_min.feather'
+
+  if(relevant_file %in% rawfiles) {
+
+    rawd <- read_feather(glue(rawdir, '/', relevant_file))
+
+    out_sub <- rawd %>%
+      mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
+      mutate(ms_status = ifelse(is.na(ms_status), 0, ms_status)) %>%
+      mutate(var = 'stage_height') %>%
+      select(site_name = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
+
+  } else {
+    return(generate_ms_exception('Missing discharge files'))
+  }
+
+  return(out_sub)
+
 }
 
-#stream_quality: STATUS=READY
+#stream_quality: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
     component){
@@ -623,13 +763,22 @@ process_1_DP1.20288 <- function(network, domain, prodname_ms, site_name,
 
     out_sub <- rawd %>%
       mutate(site_name=paste0(site_name, updown)) %>%
-      select(site_name, datetime=startDateTime, 'spCond__|dat'=specificConductance,
-             'spCond__|flg' = specificCondFinalQF, 'DO__|dat'=dissolvedOxygen,
-             'DO__|flg' = dissolvedOxygenFinalQF, 'pH__|dat' = pH,
-             'pH__|flg' = pHFinalQF, 'CHL__|dat'=chlorophyll,
-             'CHL__|flg' = chlorophyllFinalQF,'turbid__|dat'=turbidity,
-             'turbid__|flg' = turbidityFinalQF, 'FDOM__|dat'=fDOM,
-             'FDOM__|flg' = fDOMFinalQF)
+      select(site_name,
+             datetime=startDateTime,
+             'spCond__|dat'=specificConductance,
+             'spCond__|flg' = specificCondFinalQF,
+             'DO__|dat'=dissolvedOxygen,
+             'DO__|flg' = dissolvedOxygenFinalQF,
+             'pH__|dat' = pH,
+             'pH__|flg' = pHFinalQF,
+             'CHL__|dat'=chlorophyll,
+             'CHL__|flg' = chlorophyllFinalQF,
+             'turbid__|dat'=turbidity,
+             'turbid__|flg' = turbidityFinalQF,
+             'FDOM__|dat'=fDOM,
+             'FDOM__|flg' = fDOMFinalQF,
+             'DO_sat__|dat' = dissolvedOxygenSaturation,
+             'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
 
     out_sub <- ms_cast_and_reflag(out_sub,
                                   variable_flags_clean = 0,
@@ -688,6 +837,38 @@ process_1_DP1.00006 <- function(network, domain, prodname_ms, site_name,
   } else {
     if(relevant_file1 %in% rawfiles) { out_sub <- out_sub1 }
     if(relevant_file2 %in% rawfiles) { out_sub <- out_sub2 }
+  }
+
+  return(out_sub)
+
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_1_DP4.00130 <-function(network, domain, prodname_ms, site_name,
+                                   component){
+
+  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+
+  rawfiles <- list.files(rawdir)
+
+  relevant_file <- 'csd_continuousDischarge.feather'
+
+  if(relevant_file %in% rawfiles) {
+
+    rawd <- read_feather(glue(rawdir, '/', relevant_file))
+
+    out_sub <- rawd %>%
+      mutate(dischargeFinalQFSciRvw = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw),
+             dischargeFinalQF = ifelse(is.na(dischargeFinalQF), 0, dischargeFinalQF)) %>%
+      mutate(ms_status = ifelse(dischargeFinalQF == 1 | dischargeFinalQFSciRvw == 1,
+                                1, 0)) %>%
+      mutate(var = 'discharge') %>%
+      select(site_name = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
+
+  } else {
+    return(generate_ms_exception('Missing discharge files'))
   }
 
   return(out_sub)
@@ -886,25 +1067,29 @@ process_2_ms003 <- function(network, domain, prodname_ms) {
                             domain = domain,
                             prodname_ms = 'precipitation__ms002')
 
-  flux_sites <- generics::intersect(
-    fname_from_fpath(qfiles, include_fext = FALSE),
-    fname_from_fpath(chemfiles, include_fext = FALSE))
+    flux_sites <- base::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
 
-  for(s in flux_sites){
+    for(s in flux_sites){
 
-    flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
-                              qprod = 'precipitation__ms002',
-                              site_name = s))
+        flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
+                                  qprod = 'precipitation__ms002',
+                                  site_name = s))
 
-    if(!is.null(flux)) {
+        if(!is.null(flux)){
 
-      write_ms_file(d = flux,
-                    network = network,
-                    domain = domain,
-                    prodname_ms = prodname_ms,
-                    site_name = s,
-                    level = 'derived',
-                    shapefile = FALSE)
+        write_ms_file(d = flux,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_name = s,
+                      level = 'derived',
+                      shapefile = FALSE)
+        }
     }
-  }
 }
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_stream_flux

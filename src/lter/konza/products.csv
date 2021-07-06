@@ -1,13 +1,13 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
-7,discharge,ready,ready,NA,discharge__ms001,N04D,ASD021
-8,discharge,ready,ready,NA,discharge__ms001,N20B,ASD041
-9,discharge,ready,ready,NA,discharge__ms001,N01B,ASD051
-10,discharge,ready,ready,NA,discharge__ms001,N02B,ASD061
+7,discharge,ready,ready,NA,discharge__ms001,N04D,ASD022
+8,discharge,ready,ready,NA,discharge__ms001,N20B,ASD042
+9,discharge,ready,ready,NA,discharge__ms001,N01B,ASD052
+10,discharge,ready,ready,NA,discharge__ms001,N02B,ASD062
 50,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 51,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 20,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 21,stream_chemistry,ready,pending,NA,NA,NA,"ASW011,ASW012"
-16,stream_chemistry,ready,NA,NA,NA,NA,NA
+16,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,NA
 43,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 4,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,NA,NA
 230,precip_gauge_locations,ready,ready,NA,precip_pchem_pflux__ms004,NA,GIS300
@@ -17,5 +17,8 @@ ms002,stream_chemistry,NA,NA,ready,stream_flux_inst_ms003,NA,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA
 ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms004,automated entry,NA
-ms005,precip_gauge_locations,NA,NA,linked,NA,automated entry,NA
-ms006,stream_gauge_locations,NA,NA,linked,NA,automated entry,NA
+ms005,precip_gauge_locations,NA,NA,ready,NA,automated entry,NA
+ms006,stream_gauge_locations,NA,NA,ready,NA,automated entry,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA

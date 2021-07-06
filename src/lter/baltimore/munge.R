@@ -5,8 +5,12 @@ prod_info <- get_product_info(network = network,
                               status_level = 'munge',
                               get_statuses = 'ready')
 
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
 # i=4
-for(i in 1:nrow(prod_info)){
+for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -42,10 +46,10 @@ for(i in 1:nrow(prod_info)){
             }
 
         munge_rtn <- munge_combined(network = network,
-                                   domain = domain,
-                                   site_name = site_name,
-                                   prodname_ms = prodname_ms,
-                                   tracker = held_data)
+                                    domain = domain,
+                                    site_name = site_name,
+                                    prodname_ms = prodname_ms,
+                                    tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
 

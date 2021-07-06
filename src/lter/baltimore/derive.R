@@ -1,13 +1,17 @@
 loginfo('Beginning derive', logger=logger_module)
 site_name <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'derive', 
+                              status_level = 'derive',
                               get_statuses = 'ready')
 
-# i=1
-for(i in 1:nrow(prod_info)){
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
+# i=6
+for(i in seq_len(nrow(prod_info))){
     # for(i in 2){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -20,7 +24,7 @@ for(i in 1:nrow(prod_info)){
 
             held_data <<- track_new_product(tracker = held_data,
                                            prodname_ms = prodname_ms)
-            
+
             held_data <<- insert_site_skeleton(tracker = held_data,
                                               prodname_ms = prodname_ms,
                                               site_name = site_name,

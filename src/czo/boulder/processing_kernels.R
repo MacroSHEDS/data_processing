@@ -27,7 +27,31 @@ process_0_2919 <- function(set_details, network, domain) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_2785 <- function(set_details, network, domain) {
+process_0_2783 <- function(set_details, network, domain) {
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = NULL)
+
+    return()
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_0_3064 <- function(set_details, network, domain) {
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = NULL)
+
+    return()
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_0_3065 <- function(set_details, network, domain) {
 
     download_raw_file(network = network,
                       domain = domain,
@@ -252,7 +276,7 @@ process_1_2919 <- function(network, domain, prodname_ms, site_name,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2785 <- function(network, domain, prodname_ms, site_name, component) {
+process_1_2783 <- function(network, domain, prodname_ms, site_name, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -262,98 +286,71 @@ process_1_2785 <- function(network, domain, prodname_ms, site_name, component) {
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site = case_when(grepl('GGL_SW_0', NLOC_ID) ~ 'GGL',
-                                grepl('GGU_SW_0', NLOC_ID) ~ 'GGU',
-                                grepl('GGU_SPW_1', NLOC_ID) ~ 'GGU_SPW1',
-                                grepl('GGU_SPW_2', NLOC_ID) ~ 'GGU_SPW2',
-                                NLOC_ID == 'BC_SW_6' ~ 'BC_SW_6',
-                                NLOC_ID == 'BC_SW_2' ~ 'BC_SW_2',
-                                NLOC_ID == 'BC_SW_4' ~ 'BC_SW_4',
-                                NLOC_ID == 'BC_SW_12' ~ 'BC_SW_12',
-                                NLOC_ID == 'BC_SW_14' ~ 'BC_SW_14',
-                                NLOC_ID == 'BC_SW_17' ~ 'BC_SW_17',
-                                NLOC_ID == 'BC_SW_18' ~ 'BC_SW_18',
-                                NLOC_ID == 'BC_SW_20' ~ 'BC_SW_20',
-                                NLOC_ID == 'BT_SW_0' ~ 'BT_SW_0')) %>%
-        filter(!is.na(site)) %>%
-        filter(SAMPLE_TYPE %in% c('SW', 'SPW')) %>%
-        filter(X == "") %>%
-        filter(X.1 == "") %>%
-        mutate(TIME = ifelse(nchar(TIME) == 7, paste0(0, TIME), TIME))
-
-    d[d == 'null'] <- NA
+        filter(Location %in% c('BC_SW_6', 'BC_SW_2', 'BC_SW_4', 'BC_SW_12',
+                              'BC_SW_14', 'BC_SW_17', 'BC_SW_18', 'BC_SW_20',
+                              'BT_SW_0'))
 
     d <- d %>%
-        mutate(Si..umol.L. = round(((as.numeric(Si..umol.L.)*28.0855)/1000), 3)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP.ppm.), Si..umol.L., Si.ICP.ppm.))
-
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
+        mutate(Si = as.character(Si))
 
     #Assuming IN means TIN
     #Skipped d180, not sure unit
-    #Skipped Tritium.TU., not sure what unit it is in
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DATE_COLLECTION' = '%m/%e/%y',
-                                              'TIME' = '%I:%M %p'),
+                         datetime_cols = list('Date' = '%m/%d/%y',
+                                              'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_name_col = 'site',
+                         site_name_col = 'Location',
                          data_cols =  c('Lab.pH' = 'pH',
-                                        'Lab.Cond.uS.cm.' = 'spCond',
-                                        'ALK.mg.L.' = 'alk',
+                                        'Water.Temp.C.' = 'temp',
+                                        'Lab.Cond..uS.cm.' = 'spCond',
                                         'H..uEQ.L.' = 'H',
-                                        'NH4..uEQ.L.' = 'NH4',
                                         'Ca...uEQ.L.' = 'Ca',
-                                        'Mg...uEQ.L.' = 'Mg',
-                                        'Na..uEQ.L.' = 'Na',
-                                        'K..uEQ.L.' = 'K',
+                                        'K..ppm.' = 'K',
+                                        'Mg...ppm.' = 'Mg',
+                                        'Na..ppm.' = 'Na',
+                                        'NH4..uEQ.L.' = 'NH4',
                                         'Cl..uEQ.L.' = 'Cl',
                                         'NO3..uEQ.L.' = 'NO3',
                                         'SO4..uEQ.L.' = 'SO4',
-                                        'PO4.3..uEQ.L.' = 'PO4',
-                                        'SUM.' = 'cationCharge',
-                                        'SUM..1' = 'anionCharge',
-                                        'Charge.Bal' = 'ionBalance',
-                                        'TDN.umol.L.' = 'TDN',
-                                        'DON.umol.L.' = 'DON',
-                                        'IN.umol.L.' = 'TIN',
-                                        'TP.umol.L.' = 'TP',
-                                        'TDP.umol.L.' = 'TDP',
-                                        'PP.umol.L.' = 'TPP',
-                                        'DOP.umol.L.' = 'DOP',
-                                        'IP.umol.L.' = 'TIP',
-                                        'DOC.mg.C.L' = 'DOC',
-                                        'TN.umol.L.' = 'TN',
-                                        'PN.umol.L.' = 'TPN',
-                                        'Water.Temp.C.' = 'temp',
-                                        'Chl.a.ug.L.' = 'CHL',
-                                        'Phaeophytin.ug.L.' = 'pheophy',
-                                        'Mn..umol.L.' = 'Mn',
                                         'Si' = 'Si',
-                                        'Fe..umol.L.' = 'Fe',
-                                        'Al..uEQ.L.' = 'Al'),
+                                        'PO4.3...uEQ.L.' = 'PO4',
+                                        'ALK.mg.L.' = 'alk',
+                                        'TDN..umol.L.' = 'TDN',
+                                        'DON..umol.L.' = 'DON',
+                                        'IN..umol.L.' = 'TIN',
+                                        'TP..umol.L.' = 'TP',
+                                        'TDP..umol.L.' = 'TDP',
+                                        'PP..umol.L.' = 'TPP',
+                                        'DOP..umol.L.' = 'DOP',
+                                        'IP..umol.L.' = 'TIP',
+                                        'DOC.mg.C.L' = 'DOC',
+                                        'TN..umol.L.' = 'TN',
+                                        'PN..umol.L.' = 'TPN',
+                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Phaeophytin.ug.L.' = 'pheophy',
+                                        'Mn..ppm.' = 'Mn',
+                                        'Fe..ppm.' = 'Fe',
+                                        'Al..ppm.' = 'Al',
+                                        'd180.mill' = 'd18O'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
-                         summary_flagcols = 'COMMENTS',
                          is_sensor = FALSE)
 
-    d <- d %>%
-        mutate(COMMENTS = ifelse(is.na(COMMENTS) | COMMENTS == 'precipitation event based auto sampling', 'DIRTY', 'CLEAN'))
-
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U', '<0.145',
+                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
+                                                     '<0.145',
                                                      'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP', 'NV', 'QNS',
-                                                     'T ERR'),
-                            variable_flags_to_drop = 'DROP',
-                            summary_flags_clean = list('COMMENTS' = 'CLEAN'),
-                            summary_flags_dirty = list('COMMENTS' = 'DIRTY'))
+                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                                                     'NV', 'QNS', 'T ERR'),
+                            variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',
-                                               'Mg' = 'ueq/l',
-                                               'Na' = 'ueq/l',
-                                               'K' = 'ueq/l',
                                                'Cl' = 'ueq/l',
                                                'NO3' = 'ueq/l',
                                                'SO4' = 'ueq/l',
@@ -366,20 +363,13 @@ process_1_2785 <- function(network, domain, prodname_ms, site_name, component) {
                                                'TPP' = 'umol/l',
                                                'DOP' = 'umol/l',
                                                'TIP' = 'umol/l',
-                                               'DOC' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
                                                'CHL' = 'ug/l',
-                                               'pheophy' = 'ug/l',
-                                               'Mn' = 'umol/l',
-                                               'Fe' = 'umol/l',
-                                               'Al' = 'ueq/l'),
+                                               'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
                                              'Ca' = 'mg/l',
-                                             'Mg' = 'mg/l',
-                                             'Na' = 'mg/l',
-                                             'K' = 'mg/l',
                                              'Cl' = 'mg/l',
                                              'NO3' = 'mg/l',
                                              'SO4' = 'mg/l',
@@ -392,14 +382,262 @@ process_1_2785 <- function(network, domain, prodname_ms, site_name, component) {
                                              'TPP' = 'mg/l',
                                              'DOP' = 'mg/l',
                                              'TIP' = 'mg/l',
-                                             'DOC' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
                                              'CHL' = 'mg/l',
-                                             'pheophy' = 'mg/l',
-                                             'Mn' = 'mg/l',
-                                             'Fe' = 'mg/l',
-                                             'Al' = 'mg/l'))
+                                             'pheophy' = 'mg/l'))
+
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+
+    d <- synchronize_timestep(d)
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
+    return(d)
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_3064 <- function(network, domain, prodname_ms, site_name, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        filter(Location %in% c('BT_SW_0', 'BT_SW_O', 'BT_SW_o'))
+
+    d <- d %>%
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
+        mutate(Si = as.character(Si))
+
+    #Assuming IN means TIN
+    #Skipped d180, not sure unit
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = '%m/%d/%y',
+                                              'Time' = '%H:%M'),
+                         datetime_tz = 'US/Mountain',
+                         site_name_col = 'Location',
+                         alt_site_name = list('BT_SW_0' = c('BT_SW_0', 'BT_SW_O', 'BT_SW_o')),
+                         data_cols =  c('Lab.pH' = 'pH',
+                                        'Water.Temp.C.' = 'temp',
+                                        'Lab.Cond..uS.cm.' = 'spCond',
+                                        'H..uEQ.L.' = 'H',
+                                        'Ca...uEQ.L.' = 'Ca',
+                                        'K..ppm.' = 'K',
+                                        'Mg...ppm.' = 'Mg',
+                                        'Na..ppm.' = 'Na',
+                                        'NH4..uEQ.L.' = 'NH4',
+                                        'Cl..uEQ.L.' = 'Cl',
+                                        'NO3..uEQ.L.' = 'NO3',
+                                        'SO4..uEQ.L.' = 'SO4',
+                                        'Si' = 'Si',
+                                        'PO4.3...uEQ.L.' = 'PO4',
+                                        'ALK.mg.L.' = 'alk',
+                                        'TDN..umol.L.' = 'TDN',
+                                        'DON..umol.L.' = 'DON',
+                                        'IN..umol.L.' = 'TIN',
+                                        'TP..umol.L.' = 'TP',
+                                        'TDP..umol.L.' = 'TDP',
+                                        'PP..umol.L.' = 'TPP',
+                                        'DOP..umol.L.' = 'DOP',
+                                        'IP..umol.L.' = 'TIP',
+                                        'DOC.mg.C.L' = 'DOC',
+                                        'TN..umol.L.' = 'TN',
+                                        'PN..umol.L.' = 'TPN',
+                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Phaeophytin.ug.L.' = 'pheophy',
+                                        'Mn..ppm.' = 'Mn',
+                                        'Fe..ppm.' = 'Fe',
+                                        'Al..ppm.' = 'Al',
+                                        'd180.mill' = 'd18O'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = '',
+                         var_flagcol_pattern = '#V#.CTS',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
+                                                     '<0.145',
+                                                     'charge balance difference > 10%',
+                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                                                     'NV', 'QNS', 'T ERR'),
+                            variable_flags_to_drop = 'DROP')
+
+    d <- ms_conversions(d,
+                        convert_units_from = c('H' = 'ueq/l',
+                                               'NH4' = 'ueq/l',
+                                               'Ca' = 'ueq/l',
+                                               'Cl' = 'ueq/l',
+                                               'NO3' = 'ueq/l',
+                                               'SO4' = 'ueq/l',
+                                               'PO4' = 'ueq/l',
+                                               'TDN' = 'umol/l',
+                                               'DON' = 'umol/l',
+                                               'TIN' = 'umol/l',
+                                               'TP' = 'umol/l',
+                                               'TDP' = 'umol/l',
+                                               'TPP' = 'umol/l',
+                                               'DOP' = 'umol/l',
+                                               'TIP' = 'umol/l',
+                                               'TN' = 'umol/l',
+                                               'TPN' = 'umol/l',
+                                               'CHL' = 'ug/l',
+                                               'pheophy' = 'ug/l'),
+                        convert_units_to = c('H' = 'mg/l',
+                                             'NH4' = 'mg/l',
+                                             'Ca' = 'mg/l',
+                                             'Cl' = 'mg/l',
+                                             'NO3' = 'mg/l',
+                                             'SO4' = 'mg/l',
+                                             'PO4' = 'mg/l',
+                                             'TDN' = 'mg/l',
+                                             'DON' = 'mg/l',
+                                             'TIN' = 'mg/l',
+                                             'TP' = 'mg/l',
+                                             'TDP' = 'mg/l',
+                                             'TPP' = 'mg/l',
+                                             'DOP' = 'mg/l',
+                                             'TIP' = 'mg/l',
+                                             'TN' = 'mg/l',
+                                             'TPN' = 'mg/l',
+                                             'CHL' = 'mg/l',
+                                             'pheophy' = 'mg/l'))
+
+    d <- carry_uncertainty(d,
+                           network = network,
+                           domain = domain,
+                           prodname_ms = prodname_ms)
+
+    d <- synchronize_timestep(d)
+
+    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
+
+    return(d)
+}
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_3065 <- function(network, domain, prodname_ms, site_name, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_name,
+                    c = component)
+
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        filter(Location %in% c('GGL_SW_0_ISCO', 'GGU_SW_0_ISCO', 'GGU_SW_0',
+                               'GGU_SPW_1', 'GGU_SPW_2', 'GGL_SW_0'))
+
+    d <- d %>%
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
+        mutate(Si = as.character(Si))
+
+    #Assuming IN means TIN
+    #Skipped d180, not sure unit
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = '%m/%d/%y',
+                                              'Time' = '%H:%M'),
+                         datetime_tz = 'US/Mountain',
+                         site_name_col = 'Location',
+                         alt_site_name = list('GGL' = c('GGL_SW_0_ISCO', 'GGL_SW_0'),
+                                              'GGU' = c('GGU_SW_0_ISCO', 'GGU_SW_0'),
+                                              'GGU_SPW1' = 'GGU_SPW_1',
+                                              'GGU_SPW2' = 'GGU_SPW_2'),
+                         data_cols =  c('Lab.pH' = 'pH',
+                                        'Water.Temp.C.' = 'temp',
+                                        'Lab.Cond..uS.cm.' = 'spCond',
+                                        'H..uEQ.L.' = 'H',
+                                        'Ca...uEQ.L.' = 'Ca',
+                                        'K..ppm.' = 'K',
+                                        'Mg...ppm.' = 'Mg',
+                                        'Na..ppm.' = 'Na',
+                                        'NH4..uEQ.L.' = 'NH4',
+                                        'Cl..uEQ.L.' = 'Cl',
+                                        'NO3..uEQ.L.' = 'NO3',
+                                        'SO4..uEQ.L.' = 'SO4',
+                                        'Si' = 'Si',
+                                        'PO4.3...uEQ.L.' = 'PO4',
+                                        'ALK.mg.L.' = 'alk',
+                                        'TDN..umol.L.' = 'TDN',
+                                        'DON..umol.L.' = 'DON',
+                                        'IN..umol.L.' = 'TIN',
+                                        'TP..umol.L.' = 'TP',
+                                        'TDP..umol.L.' = 'TDP',
+                                        'PP..umol.L.' = 'TPP',
+                                        'DOP..umol.L.' = 'DOP',
+                                        'IP..umol.L.' = 'TIP',
+                                        'DOC.mg.C.L' = 'DOC',
+                                        'TN..umol.L.' = 'TN',
+                                        'PN..umol.L.' = 'TPN',
+                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Phaeophytin.ug.L.' = 'pheophy',
+                                        'Mn..ppm.' = 'Mn',
+                                        'Fe..ppm.' = 'Fe',
+                                        'Al..ppm.' = 'Al',
+                                        'd180.mill' = 'd18O'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = '',
+                         var_flagcol_pattern = '#V#.CTS',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
+                                                     '<0.145',
+                                                     'charge balance difference > 10%',
+                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                                                     'NV', 'QNS', 'T ERR'),
+                            variable_flags_to_drop = 'DROP')
+
+    d <- ms_conversions(d,
+                        convert_units_from = c('H' = 'ueq/l',
+                                               'NH4' = 'ueq/l',
+                                               'Ca' = 'ueq/l',
+                                               'Cl' = 'ueq/l',
+                                               'NO3' = 'ueq/l',
+                                               'SO4' = 'ueq/l',
+                                               'PO4' = 'ueq/l',
+                                               'TDN' = 'umol/l',
+                                               'DON' = 'umol/l',
+                                               'TIN' = 'umol/l',
+                                               'TP' = 'umol/l',
+                                               'TDP' = 'umol/l',
+                                               'TPP' = 'umol/l',
+                                               'DOP' = 'umol/l',
+                                               'TIP' = 'umol/l',
+                                               'TN' = 'umol/l',
+                                               'TPN' = 'umol/l',
+                                               'CHL' = 'ug/l',
+                                               'pheophy' = 'ug/l'),
+                        convert_units_to = c('H' = 'mg/l',
+                                             'NH4' = 'mg/l',
+                                             'Ca' = 'mg/l',
+                                             'Cl' = 'mg/l',
+                                             'NO3' = 'mg/l',
+                                             'SO4' = 'mg/l',
+                                             'PO4' = 'mg/l',
+                                             'TDN' = 'mg/l',
+                                             'DON' = 'mg/l',
+                                             'TIN' = 'mg/l',
+                                             'TP' = 'mg/l',
+                                             'TDP' = 'mg/l',
+                                             'TPP' = 'mg/l',
+                                             'DOP' = 'mg/l',
+                                             'TIP' = 'mg/l',
+                                             'TN' = 'mg/l',
+                                             'TPN' = 'mg/l',
+                                             'CHL' = 'mg/l',
+                                             'pheophy' = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -471,89 +709,70 @@ process_1_3639 <- function(network, domain, prodname_ms, site_name, component) {
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        filter(SAMPLE_TYPE %in% c('P')) %>%
-        mutate(site = case_when(NLOC_ID %in% c('GGU_P_OPEN', 'GGU_P_Open') ~ 'GGL_SF_Met',
-                                NLOC_ID %in% c('BT_P_OPEN', 'BT_P_Open', 'BT_P_Met_Open',
+        mutate(site = case_when(Location %in% c('GGU_P_OPEN', 'GGU_P_Open') ~ 'GGL_SF_Met',
+                                Location %in% c('BT_P_OPEN', 'BT_P_Open', 'BT_P_Met_Open',
                                                'BT_Met_P_Open', 'Bet_Met_P_Open') ~ 'BT_Met')) %>%
-        filter(!is.na(site)) %>%
-        filter(X == "") %>%
-        filter(X.1 == "") %>%
-        mutate(TIME = ifelse(nchar(TIME) == 7, paste0(0, TIME), TIME))
-
-    d[d == 'null'] <- NA
+        filter(!is.na(site))
 
     d <- d %>%
         mutate(Si..umol.L. = round(((as.numeric(Si..umol.L.)*28.0855)/1000), 3)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP.ppm.), Si..umol.L., Si.ICP.ppm.))
-
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.), Si..umol.L., Si.ICP..ppm.))
 
     #Assuming IN means TIN
     #Skipped d180, not sure unit
-    #Skipped Tritium.TU., not sure what unit it is in
-    #Check ion balance
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DATE_COLLECTION' = '%m/%e/%y',
-                                              'TIME' = '%I:%M %p'),
+                         datetime_cols = list('Date' = '%m/%d/%y',
+                                              'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_name_col = 'site',
                          data_cols =  c('Lab.pH' = 'pH',
-                                        'Lab.Cond.uS.cm.' = 'spCond',
-                                        'ALK.mg.L.' = 'alk',
+                                        'Lab.Cond..uS.cm.' = 'spCond',
                                         'H..uEQ.L.' = 'H',
-                                        'NH4..uEQ.L.' = 'NH4',
                                         'Ca...uEQ.L.' = 'Ca',
-                                        'Mg...uEQ.L.' = 'Mg',
-                                        'Na..uEQ.L.' = 'Na',
-                                        'K..uEQ.L.' = 'K',
+                                        'K..ppm.' = 'K',
+                                        'Mg...ppm.' = 'Mg',
+                                        'Na..ppm.' = 'Na',
+                                        'NH4..uEQ.L.' = 'NH4',
                                         'Cl..uEQ.L.' = 'Cl',
                                         'NO3..uEQ.L.' = 'NO3',
                                         'SO4..uEQ.L.' = 'SO4',
-                                        'PO4.3..uEQ.L.' = 'PO4',
-                                        'SUM.' = 'cationCharge',
-                                        'SUM..1' = 'anionCharge',
-                                        'Charge.Bal' = 'ionBalance',
-                                        'TDN.umol.L.' = 'TDN',
-                                        'DON.umol.L.' = 'DON',
-                                        'IN.umol.L.' = 'TIN',
-                                        'TP.umol.L.' = 'TP',
-                                        'TDP.umol.L.' = 'TDP',
-                                        'PP.umol.L.' = 'TPP',
-                                        'DOP.umol.L.' = 'DOP',
-                                        'IP.umol.L.' = 'TIP',
-                                        'DOC.mg.C.L' = 'DOC',
-                                        'TN.umol.L.' = 'TN',
-                                        'PN.umol.L.' = 'TPN',
-                                        'Water.Temp.C.' = 'temp',
-                                        'Chl.a.ug.L.' = 'CHL',
-                                        'Phaeophytin.ug.L.' = 'pheophy',
-                                        'Mn..umol.L.' = 'Mn',
                                         'Si' = 'Si',
-                                        'Fe..umol.L.' = 'Fe',
-                                        'Al..uEQ.L.' = 'Al'),
+                                        'PO4.3...uEQ.L.' = 'PO4',
+                                        'ALK.mg.L.' = 'alk',
+                                        'TDN..umol.L.' = 'TDN',
+                                        'DON..umol.L.' = 'DON',
+                                        'IN..umol.L.' = 'TIN',
+                                        'TP..umol.L.' = 'TP',
+                                        'TDP..umol.L.' = 'TDP',
+                                        'PP..umol.L.' = 'TPP',
+                                        'DOP..umol.L.' = 'DOP',
+                                        'IP..umol.L.' = 'TIP',
+                                        'DOC.mg.C.L' = 'DOC',
+                                        'TN..umol.L.' = 'TN',
+                                        'PN..umol.L.' = 'TPN',
+                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Phaeophytin.ug.L.' = 'pheophy',
+                                        'Mn..ppm.' = 'Mn',
+                                        'Fe..ppm.' = 'Fe',
+                                        'Al..ppm.' = 'Al',
+                                        'd180.mill' = 'd18O'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
-                         summary_flagcols = 'COMMENTS',
                          is_sensor = FALSE)
 
-    d <- d %>%
-        mutate(COMMENTS = ifelse(is.na(COMMENTS) | COMMENTS == 'precipitation event based auto sampling', 'DIRTY', 'CLEAN'))
-
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U', '<0.145',
+                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
+                                                     '<0.145',
                                                      'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP', 'NV', 'QNS',
-                                                     'T ERR'),
-                            variable_flags_to_drop = 'DROP',
-                            summary_flags_clean = list('COMMENTS' = 'CLEAN'),
-                            summary_flags_dirty = list('COMMENTS' = 'DIRTY'))
+                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                                                     'NV', 'QNS', 'T ERR'),
+                            variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',
-                                               'Mg' = 'ueq/l',
-                                               'Na' = 'ueq/l',
-                                               'K' = 'ueq/l',
                                                'Cl' = 'ueq/l',
                                                'NO3' = 'ueq/l',
                                                'SO4' = 'ueq/l',
@@ -566,20 +785,13 @@ process_1_3639 <- function(network, domain, prodname_ms, site_name, component) {
                                                'TPP' = 'umol/l',
                                                'DOP' = 'umol/l',
                                                'TIP' = 'umol/l',
-                                               'DOC' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
                                                'CHL' = 'ug/l',
-                                               'pheophy' = 'ug/l',
-                                               'Mn' = 'umol/l',
-                                               'Fe' = 'umol/l',
-                                               'Al' = 'ueq/l'),
+                                               'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
                                              'Ca' = 'mg/l',
-                                             'Mg' = 'mg/l',
-                                             'Na' = 'mg/l',
-                                             'K' = 'mg/l',
                                              'Cl' = 'mg/l',
                                              'NO3' = 'mg/l',
                                              'SO4' = 'mg/l',
@@ -592,14 +804,10 @@ process_1_3639 <- function(network, domain, prodname_ms, site_name, component) {
                                              'TPP' = 'mg/l',
                                              'DOP' = 'mg/l',
                                              'TIP' = 'mg/l',
-                                             'DOC' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
                                              'CHL' = 'mg/l',
-                                             'pheophy' = 'mg/l',
-                                             'Mn' = 'mg/l',
-                                             'Fe' = 'mg/l',
-                                             'Al' = 'mg/l'))
+                                             'pheophy' = 'mg/l'))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -781,8 +989,10 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_chemistry__7241',
-                                           'stream_chemistry__2785'))
+                     input_prodname_ms = c('stream_chemistry__2783',
+                                           'stream_chemistry__3064',
+                                           'stream_chemistry__3065',
+                                           'stream_chemistry__7241'))
 
     return()
 }
@@ -797,6 +1007,20 @@ process_2_ms005 <- function(network, domain, prodname_ms){
                      input_prodname_ms = c('discharge__2918',
                                            'discharge__2919',
                                            'cdnr_discharge__ms001'))
+
+    return()
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms){
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('precipitation__2435',
+                                           'precipitation__2888',
+                                           'precipitation__2889'))
 
     return()
 }

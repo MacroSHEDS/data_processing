@@ -165,6 +165,45 @@ numeric_any <- function(num_vec){
     return(as.numeric(any(as.logical(num_vec))))
 }
 
+numeric_any_v <- function(...){ #attack of the ellipses
+
+    #...: numeric vectors of equal length. should be just 0s and 1s, but
+    #   integers other than 1 are also considered TRUE by as.logical()
+
+    #the vectorized version of numeric_any. good for stuff like:
+    #    mutate(ms_status = numeric_any(c(ms_status_x, ms_status_flow)))
+
+    #returns a single vector of the same length as arguments
+
+    #this func could be useful in global situations
+    numeric_any_positional <- function(...) numeric_any(c(...))
+
+    numeric_any_elementwise <- function(...){
+        Map(function(...) numeric_any_positional(...), ...)
+    }
+
+    out <- do.call(numeric_any_elementwise,
+                   args = list(...)) %>%
+        unlist()
+
+    if(is.null(out)) out <- numeric()
+
+    return(out)
+}
+
+sd_or_0 <- function(x, na.rm = FALSE){
+
+    #Only used to bypass the tyranny of the errors package not letting
+    #me take the mean of an errors object of length 1 without setting the
+    #uncertainty to 0
+
+    x <- if(is.vector(x) || is.factor(x)) x else as.double(x)
+
+    if(length(x) == 1) return(0)
+
+    x <- sqrt(var(x, na.rm = na.rm))
+}
+
 gsub_v <- function(pattern, replacement_vec, x){
 
     #just like the first three arguments to gsub, except that
@@ -186,15 +225,16 @@ identify_sampling <- function(df,
                               date_col = 'datetime',
                               network,
                               domain,
-                              prodname_ms){
+                              prodname_ms,
+                              sampling_type){
 
     #TODO: for hbef, identify_sampling is writing sites names as 1 not w1
 
     #is_sensor: named logical vector. see documention for
-    #   ms_read_raw_csv, but note that an unnamed logical vector of length one
+    #   d_raw_csv, but note that an unnamed logical vector of length one
     #   cannot be used here. also note that the original variable/flag column names
     #   from the raw file are converted to canonical macrosheds names by
-    #   ms_read_raw_csv before it passes is_sensor to identify_sampling.
+    #   d_raw_csv before it passes is_sensor to identify_sampling.
 
     #checks
     if(any(! is.logical(is_sensor))){
@@ -352,6 +392,12 @@ identify_sampling <- function(df,
                 }
             }
 
+            if(! is.null(sampling_type)){
+
+                g_a <- g_a %>%
+                    mutate(type = sampling_type)
+            }
+
             var_name_base <- str_split(string = data_cols[p],
                                        pattern = '__\\|')[[1]][1]
 
@@ -406,9 +452,10 @@ identify_sampling_bypass <- function(df,
                               date_col = 'datetime',
                               network,
                               domain,
-                              prodname_ms){
+                              prodname_ms,
+                              sampling_type = NULL){
 
-    #This case is used (primarily for neon) when use of ms_read_raw and
+    #This case is used (primarily for neon) when use of d_raw and
     # ms_cast_flag are not used because of incaomptable data structures
 
     #checks
@@ -552,6 +599,12 @@ identify_sampling_bypass <- function(df,
 
             interval_changes <- rle2(g_a$interval)$starts
 
+            if(! is.null(sampling_type)){
+
+                g_a <- g_a %>%
+                    mutate(type = sampling_type)
+            }
+
             g_a <- g_a %>%
                 mutate(
                     type = paste0(type,
@@ -574,7 +627,10 @@ identify_sampling_bypass <- function(df,
     }
 
     correct_names <- all_vars %>%
-        select(site_name, new_var, var)
+        select(site_name, new_var, var) %>%
+        group_by(site_name, var) %>%
+        summarise(new_var = first(new_var)) %>%
+        ungroup()
 
     df <- left_join(df, correct_names, by = c("site_name", "var")) %>%
         select(datetime, site_name, var=new_var, val, ms_status)
@@ -602,7 +658,7 @@ ms_read_raw_csv <- function(filepath,
                             preprocessed_tibble,
                             datetime_cols,
                             datetime_tz,
-                            datetime_optional_chars = ':',
+                            optionalize_nontoken_characters = ':',
                             site_name_col,
                             alt_site_name,
                             data_cols,
@@ -612,7 +668,8 @@ ms_read_raw_csv <- function(filepath,
                             set_to_NA,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
-                            summary_flagcols){
+                            summary_flagcols,
+                            sampling_type = NULL){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -634,7 +691,7 @@ ms_read_raw_csv <- function(filepath,
     #filepath: string
     #preprocessed_tibble: a tibble with all character columns. Supply this
     #   argument if a dataset requires modification before it can be processed
-    #   by ms_read_raw_csv. This may be necessary if, e.g.
+    #   by d_raw_csv. This may be necessary if, e.g.
     #   time is stored in a format that can't be parsed by standard datetime
     #   format strings. Either filepath or preprocessed_tibble
     #   must be supplied, but not both.
@@ -644,7 +701,17 @@ ms_read_raw_csv <- function(filepath,
     #   columns.
     #datetime_tz: string specifying time zone. this specification must be
     #   among those provided by OlsonNames()
-    #datetime_optional_chars: see "optional" argument to dt_format_to_regex
+    #optionalize_nontoken_characters: character vector; used when there might be
+    #   variation in date/time formatting within a column. in regex speak,
+    #   optionalizing a token string means, "match this string if it exists,
+    #   but move on to the next token if it doesn't." All datetime parsing tokens
+    #   (like "%H") are optionalized automatically when this function converts
+    #   them to regex. But other tokens like ":" and "-" that might be used in
+    #   datetime strings are not. Concretely, if you wanted to read either "%H:%M:%S"
+    #   or "%H:%M" in the same column, you'd set optionalize_nontoken_characters = ':',
+    #   and then the parser wouldn't require there to be two colons in order to
+    #   match the string. Don't use this if you don't have to, because it reduces
+    #   specificity. See "optional" argument to dt_format_to_regex for more details.
     #site_name_col: name of column containing site name information
     #alt_site_name: optional list. Names of list elements are desired site_names
     #   within MacroSheds. List elements are character vectors of alternative
@@ -684,6 +751,9 @@ ms_read_raw_csv <- function(filepath,
     #   variable-specific flag columns
     #summary_flagcols: optional unnamed vector of column names for flag columns
     #   that pertain to all variables
+    #sampling_type: optional value to overwrite identify_sampling because in
+    #   some case this function is misidentifying sampling type. This must be a
+    #   single value of G or I and is applied to all variables in product
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flag/qaqc information,
@@ -696,7 +766,7 @@ ms_read_raw_csv <- function(filepath,
     #   (I = installed vs. G = grab; S = sensor vs N = non-sensor).
     #   Data and flag/qaqc columns are also given
     #   suffixes (__|flg and __|dat) that allow them to be cast into long format
-    #   by ms_cast_and_reflag. ms_read_raw_csv does not parse datetimes.
+    #   by ms_cast_and_reflag. d_raw_csv does not parse datetimes.
 
     #checks
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
@@ -737,6 +807,15 @@ ms_read_raw_csv <- function(filepath,
                 logerror(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
                         logger = logger_module)
             }
+        }
+    }
+
+    if(! is.null(sampling_type)){
+        if(! length(sampling_type) == 1){
+            stop('sampling_type must be a length of 1')
+        }
+        if(! sampling_type %in% c('G', 'I')){
+            stop('sampling_type must be either I or G')
         }
     }
 
@@ -808,8 +887,9 @@ ms_read_raw_csv <- function(filepath,
                               length(alt_datacols),
                               length(var_flagcols),
                               length(alt_varflagcols)))
+
+    suffixes <- suffixes[! na_inds]
     colnames_new <- paste0(colnames_all, suffixes)
-    colnames_new <- colnames_new[! na_inds]
 
     colnames_all <- c(datetime_colnames, colnames_all)
     names(colnames_all)[1:length(datetime_cols)] <- datetime_colnames
@@ -883,7 +963,6 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
-
     #Set correct class for each column
     colnames_d <- colnames(d)
 
@@ -916,10 +995,10 @@ ms_read_raw_csv <- function(filepath,
 
     #resolve datetime structure into POSIXct
     d  <- resolve_datetime(d = d,
-                          datetime_colnames = datetime_colnames,
-                          datetime_formats = datetime_formats,
-                          datetime_tz = datetime_tz,
-                          optional = datetime_optional_chars)
+                           datetime_colnames = datetime_colnames,
+                           datetime_formats = datetime_formats,
+                           datetime_tz = datetime_tz,
+                           optional = optionalize_nontoken_characters)
 
     #remove rows with NA in datetime or site_name
     d <- filter(d,
@@ -988,7 +1067,8 @@ ms_read_raw_csv <- function(filepath,
                               is_sensor = is_sensor,
                               domain = domain,
                               network = network,
-                              prodname_ms = prodname_ms))
+                              prodname_ms = prodname_ms,
+                              sampling_type = sampling_type))
 
     #Check if all sites are in site file
     if(!all(unique(d$site_name) %in% site_data$site_name)) {
@@ -1009,18 +1089,18 @@ resolve_datetime <- function(d,
                              datetime_colnames,
                              datetime_formats,
                              datetime_tz,
-                             optional) {
+                             optional){
 
-    #d is a data.frame or tibble with at least one date or time column
+    #d: a data.frame or tibble with at least one date or time column
     #   (all date and/or time columns must contain character strings,
-    #   not parsed date/time/datetime objects)
-    #datetime_colnames is a character vector of column names that contain
-    #   relevantdatetime information
-    #datetime_formats is a character vector of datetime parsing tokens
+    #   not parsed date/time/datetime objects).
+    #datetime_colnames: character vector; column names that contain
+    #   relevant datetime information.
+    #datetime_formats: character vector; datetime parsing tokens
     #   (like '%A, %Y-%m-%d %I:%M:%S %p' or '%j') corresponding to the
-    #   elements of datetime_colnames
-    #   datetime_tz is the time zone of the returned datetime column
-    #optional: see dt_format_to_regex
+    #   elements of datetime_colnames.
+    #datetime_tz: character; time zone of the returned datetime column.
+    #optional: character vector; see dt_format_to_regex.
 
     #return value: d, but with a "datetime" column containing POSIXct datetimes
     #   and without the input datetime columns
@@ -1062,6 +1142,22 @@ resolve_datetime <- function(d,
                                  colnames(dt_tb)),
                           datetime_formats_split)
 
+    if('H' %in% colnames(dt_tb)){
+        dt_tb$H[dt_tb$H == ''] <- '00'
+    }
+    if('M' %in% colnames(dt_tb)){
+        dt_tb$M[dt_tb$M == ''] <- '00'
+    }
+    if('S' %in% colnames(dt_tb)){
+        dt_tb$S[dt_tb$S == ''] <- '00'
+    }
+    if('I' %in% colnames(dt_tb)){
+        dt_tb$I[dt_tb$I == ''] <- '00'
+    }
+    if('P' %in% colnames(dt_tb)){
+        dt_tb$P[dt_tb$P == ''] <- 'AM'
+    }
+
     dt_tb <- dt_tb %>%
         tidyr::unite(col = 'datetime',
                      everything(),
@@ -1086,15 +1182,15 @@ dt_format_to_regex <- function(fmt, optional){
     #fmt is a character vector of datetime formatting strings, such as
     #   '%A, %Y-%m-%d %I:%M:%S %p' or '%j'. each element of fmt that is a
     #   datetime token is replaced with a regex string that matches
-    #   the what the token represents. For example, '%Y' matches a 4-digit
+    #   what the token represents. For example, '%Y' matches a 4-digit
     #   year and '[0-9]{4}' matches a 4-digit numeric sequence. non-token
     #   characters (anything not following a %) are not modified. Note that
     #   tokens B, b, h, A, and a are replaced by '[a-zA-Z]+', which matches
     #   any sequence of one or more alphabetic characters of either case,
     #   not just meaningful month/day names 'Weds' or 'january'. Also note
     #   that these tokens are not currently accepted: g, G, n, t, c, r, R, T.
-    #optional is a character vector of characters that should be made
-    #   optional in the exported regex (succeeded by a ?). This is useful if
+    #optional is a vector of characters that should be made
+    #   optional in the exported regex (followed by a '?'). This is useful if
     #   e.g. fmt is '%H:%M:%S' and elements to be matched may either appear in
     #   HH:MM:SS or HH:MM format. making the ":" character optional here
     #   (via optional = ':') allows the hour and minute data to be retained,
@@ -1118,10 +1214,10 @@ dt_format_to_regex <- function(fmt, optional){
                             W = '([0-9]{2})?',
                             V = '([0-9]{2})?',
                             C = '([0-9]{2})?',
-                            H = '([0-9]{2})?',
-                            I = '([0-9]{2})?',
-                            M = '([0-9]{2})?',
-                            S = '([0-9]{2})?',
+                            H = '([0-9]{1,2})?',
+                            I = '([0-9]{1,2})?',
+                            M = '([0-9]{1,2})?',
+                            S = '([0-9]{1,2})?',
                             p = '([AP]M)?',
                             z = '([+\\-][0-9]{4})?',
                             `F` = '([0-9]{4}-[0-9]{2}-[0-9]{2})')
@@ -1199,7 +1295,7 @@ ms_cast_and_reflag <- function(d,
     #   columns with grouping data, variable names, units, methods, etc.
     #   Data columns must be suffixed identically. Variable flag columns
     #   must be suffixed identically and differently from data columns.
-    #   If d was generated by ms_read_raw_csv, it will be good to go.
+    #   If d was generated by d_raw_csv, it will be good to go.
     #input_shape is the format ("wide"/"long") of d
     #   (currently only "wide" supported).
     #data_col_pattern: a string containing the wildcard "#V#",
@@ -1514,7 +1610,8 @@ ms_conversions <- function(d,
 
     vars <- drop_var_prefix(d$var)
 
-    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'NH4', 'NH3', 'NO3_NO2')
+    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                           'NO3_NO2')
 
     if(! missing(keep_molecular)){
         if(any(! keep_molecular %in% convert_molecules)){
@@ -1532,6 +1629,7 @@ ms_conversions <- function(d,
         NO3 = 'N',
         NH3 = 'N',
         SiO2 = 'Si',
+        SiO3 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
         NO3_NO2 = 'N')
@@ -1828,16 +1926,16 @@ email_err <- function(msgs, addrs, pw){
 
         for(a in addrs){
 
-            email = envelope() %>%
-                from('grdouser@gmail.com') %>%
-                to(a) %>%
-                subject('MacroSheds error') %>%
-                text(text_body)
+            email = emayili::envelope() %>%
+                envelope::from('grdouser@gmail.com') %>%
+                envelope::to(a) %>%
+                envelope::subject('MacroSheds error') %>%
+                envelope::text(text_body)
 
-            smtp = server(host='smtp.gmail.com',
-                          port=587, #or 465 for SMTPS
-                          username='grdouser@gmail.com',
-                          password=pw)
+            smtp = envelope::server(host='smtp.gmail.com',
+                                    port=587, #or 465 for SMTPS
+                                    username='grdouser@gmail.com',
+                                    password=pw)
 
             smtp(email, verbose=FALSE)
         }
@@ -1853,7 +1951,7 @@ email_err <- function(msgs, addrs, pw){
 
     if('err' %in% class(mailout)){
         msg = 'Something bogus happened in email_err'
-        logerr(msg, logger=logger_module)
+        logging::logerror(msg, logger=logger_module)
         return('email fail')
     } else {
         return('email success')
@@ -1946,16 +2044,36 @@ track_new_product <- function(tracker, prodname_ms){
 
 track_new_site_components <- function(tracker, prodname_ms, site_name, avail){
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker <- tracker[[prodname_ms]][[site_name]]$retrieve
 
-    retrieval_tracker = avail %>%
+    new_avail <- avail %>%
         filter(! component %in% retrieval_tracker$component) %>%
         select(component) %>%
-        mutate(mtime='1900-01-01', held_version='-1', status='pending') %>%
+        mutate(mtime = '1900-01-01',
+               held_version = '-1',
+               status = 'pending')
+
+    if(! all(retrieval_tracker$component %in% avail$component)){
+
+        obsolete_components <- retrieval_tracker %>%
+            filter(! component %in% avail$component) %>%
+            pull(component)
+
+        logwarn(msg = glue("Tracked component(s) {tc} no longer available. ",
+                           "Removing from tracker.",
+                           tc = paste(obsolete_components,
+                                      collapse = ', ')),
+                logger = logger_module)
+
+        retrieval_tracker <- filter(retrieval_tracker,
+                                    component %in% avail$component)
+    }
+
+    retrieval_tracker <- new_avail %>%
         bind_rows(retrieval_tracker) %>%
         arrange(component)
 
-    tracker[[prodname_ms]][[site_name]]$retrieve = retrieval_tracker
+    tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
 
     return(tracker)
 }
@@ -2116,111 +2234,112 @@ update_data_tracker_d <- function(network = domain,
 
     if(is.null(tracker)){
 
-        tracker = get_data_tracker(network=network, domain=domain)
+        tracker <- get_data_tracker(network = network,
+                                    domain = domain)
 
-        dt = tracker[[prodname_ms]][[site_name]]$derive
+        dt <- tracker[[prodname_ms]][[site_name]]$derive
 
         if(is.null(dt)){
-            msg <- 'Derived product not yet tracked; no action taken.'
+            msg <- 'Derived product not yet tracked; not updating derive tracker.'
             logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
+        dt$status <- new_status
+        dt$mtime <- as.character(Sys.time())
+        tracker[[prodname_ms]][[site_name]]$derive <- dt
 
-        tracker[[prodname_ms]][[site_name]]$derive = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
+        assign(x = tracker_name,
+               value = tracker,
+               pos = .GlobalEnv)
     }
 
-    trackerdir <- glue('data/{n}/{d}', n=network, d=domain)
+    trackerdir <- glue('data/{n}/{d}',
+                       n = network,
+                       d = domain)
+
     if(! dir.exists('trackerdir')){
-        dir.create(trackerdir, showWarnings = FALSE, recursive = TRUE)
+        dir.create(trackerdir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
     }
 
-    trackerfile = glue(trackerdir, '/data_tracker.json')
+    trackerfile <- glue(trackerdir, '/data_tracker.json')
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_g <- function(network = domain,
                                   domain,
-                                  tracker = NULL,
-                                  tracker_name = NULL,
-                                  prodname_ms = NULL,
-                                  site_name = NULL,
-                                  new_status = NULL){
+                                  tracker,
+                                  prodname_ms,
+                                  site_name,
+                                  new_status){
 
     #this updates the general section of a data tracker in memory and on disk.
-    #see update_data_tracker_r for the retrieval section and
-    #update_data_tracker_m for the munge section
 
-    #if tracker is supplied, it will be used to write/overwrite the one on disk.
-    #if it is omitted or set to NULL, the appropriate tracker will be loaded
-    #from disk, updated, and then written back to disk.
+    #see update_data_tracker_r for the retrieval section,
+    #update_data_tracker_m for the munge section, and
+    #update_data_tracker_d for the derive section
 
-    if(is.null(tracker) && (
-        is.null(tracker_name) || is.null(prodname_ms) ||
-        is.null(new_status) || is.null(site_name)
-    )){
-        msg = paste0('If tracker is not supplied, these args must be:',
-                     'tracker_name, prodname_ms, new_status, new_status.')
-        logerror(msg, logger=logger_module)
-        stop(msg)
+    dt <- tracker[[prodname_ms]][[site_name]]$general
+
+    if(is.null(dt)){
+        return(generate_ms_exception('Product not yet tracked; no action taken.'))
     }
 
-    if(is.null(tracker)){
+    dt$status <- new_status
+    dt$mtime <- as.character(Sys.time())
 
-        tracker = get_data_tracker(network=network, domain=domain)
+    tracker[[prodname_ms]][[site_name]]$general <- dt
 
-        dt = tracker[[prodname_ms]][[site_name]]$general
+    assign(x = 'held_data',
+           value = tracker,
+           pos = .GlobalEnv)
 
-        if(is.null(dt)){
-            return(generate_ms_exception('Product not yet tracked; no action taken.'))
-        }
+    trackerfile <- glue('data/{n}/{d}/data_tracker.json',
+                        n = network,
+                        d = domain)
 
-        dt$status = new_status
-        dt$mtime = as.character(Sys.time())
-
-        tracker[[prodname_ms]][[site_name]]$general = dt
-
-        assign(tracker_name, tracker, pos=.GlobalEnv)
-    }
-
-    trackerfile = glue('data/{n}/{d}/data_tracker.json', n=network, d=domain)
     readr::write_file(jsonlite::toJSON(tracker), trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
-backup_tracker <- function(path){
+backup_tracker <- function(path,
+                           force = FALSE){
 
-    mch = stringr::str_match(path,
-                             '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
+    #force: logical. if FALSE, new tracker backup will only be written once per
+    #   hour. If TRUE, it will be written regardless (up to once per second)
+
+    mch <- stringr::str_match(path,
+                              '(data/.+?/.+?)/(data_tracker.json)')[, 2:3]
 
     if(any(is.na(mch))){
         stop('Invalid tracker path or name')
     }
 
     dir.create(glue(mch[1], '/tracker_backups'),
-               recursive=TRUE, showWarnings=FALSE)
+               recursive = TRUE,
+               showWarnings = FALSE)
 
-    tstamp = Sys.time() %>%
-        with_tz(tzone='UTC') %>%
-        format('%Y%m%dT%HZ') #tstamp format: YYYYMMDDTHHZ
+    time_format <- ifelse(force, '%Y%m%dT%H%M%SZ', '%Y%m%dT%HZ')
 
-    newpath = glue('{p}/tracker_backups/{f}_{t}', p=mch[1], f=mch[2], t=tstamp)
-    file.copy(path, newpath, overwrite=FALSE) #write only one tracker per hour
+    tstamp <- Sys.time() %>%
+        with_tz(tzone = 'UTC') %>%
+        format(time_format)
+
+    newpath <- glue('{p}/tracker_backups/{f}_{t}',
+                    p = mch[1],
+                    f = mch[2],
+                    t = tstamp)
+
+    file.copy(from = path,
+              to = newpath,
+              overwrite = FALSE)
 
     #remove tracker backups older than 7 days
     system2('find', c(glue(mch[1], '/tracker_backups/*'),
                       '-mtime', '+7', '-exec', 'rm', '{}', '\\;'))
-
-    #return()
 }
 
 extract_retrieval_log <- function(tracker, prodname_ms, site_name,
@@ -2275,16 +2394,22 @@ get_product_info <- function(network,
 
     if(status_level == 'derive'){
 
+        custom_prods <- prods %>%
+            filter(grepl('^CUSTOM', prodname))
+
         atypicals_sorted <- prods %>%
-            filter(! prodname %in% !!typical_derprods) %>%
+            filter(! prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
 
         typicals_sorted <- prods %>%
-            filter(prodname %in% !!typical_derprods) %>%
+            filter(prodname %in% !!typical_derprods,
+                   ! grepl('^CUSTOM', prodname)) %>%
             arrange(order(match(prodname, !!typical_derprods)))
 
         prods <- bind_rows(atypicals_sorted,
-                           typicals_sorted)
+                           typicals_sorted,
+                           custom_prods)
     }
 
     return(prods)
@@ -2338,34 +2463,56 @@ prodname_from_prodname_ms <- function(prodname_ms){
 }
 
 ms_retrieve <- function(network = domain,
-                        domain){
+                        domain,
+                        prodname_filter = NULL){
 
     #execute main retrieval script for this network-domain
-    source(glue('src/{n}/{d}/retrieve.R',
-                n = network,
-                d = domain),
-           local = TRUE)
+    norm_retrieve <- file.exists(glue('src/{n}/{d}/retrieve.R',
+                                      n = network,
+                                      d = domain))
+
+    if(norm_retrieve){
+        source(glue('src/{n}/{d}/retrieve.R',
+                    n = network,
+                    d = domain),
+               local = TRUE)
+    }
+
 
     #if there's a script for retrieval of versionless products, execute it too
     versionless_product_script <- glue('src/{n}/{d}/retrieve_versionless.R',
                                        n = network,
                                        d = domain)
 
-    if(file.exists(versionless_product_script)){
+    versionless_retrieve <- file.exists(versionless_product_script)
+    if(versionless_retrieve){
 
         source(versionless_product_script,
                local = TRUE)
     }
+
+    if(! norm_retrieve && ! versionless_retrieve){
+        stop(glue('No retrieval script avalible for {n} {d}',
+                  n = network,
+                  d = domain))
+    }
 }
 
 ms_munge <- function(network = domain,
-                     domain){
+                     domain,
+                     prodname_filter = NULL){
 
     #execute main munge script for this network-domain
-    source(glue('src/{n}/{d}/munge.R',
-                n = network,
-                d = domain),
-           local = TRUE)
+    norm_munge <- file.exists(glue('src/{n}/{d}/munge.R',
+                                   n = network,
+                                   d = domain))
+
+    if(norm_munge){
+        source(glue('src/{n}/{d}/munge.R',
+                    n = network,
+                    d = domain),
+               local = TRUE)
+    }
 
     #if there's a script for munging of versionless products, execute it too
     versionless_product_script <- glue('src/{n}/{d}/munge_versionless.R',
@@ -2376,6 +2523,12 @@ ms_munge <- function(network = domain,
 
         source(versionless_product_script,
                local = TRUE)
+    }
+
+    if(! norm_munge && ! file.exists(versionless_product_script)){
+        stop(glue('No munge script avalible for {n} {d}',
+                  n = network,
+                  d = domain))
     }
 
     #calculate watershed areas for any provided watershed boundary files,
@@ -2490,7 +2643,8 @@ ms_delineate <- function(network,
                         n = network,
                         d = domain,
                         w = ws_boundary_dir),
-                   recursive = TRUE)
+                   recursive = TRUE,
+                   showWarnings = FALSE)
     } else {
         level <- 'munged'
     }
@@ -2536,7 +2690,15 @@ ms_delineate <- function(network,
 
             message('Delineating from stored specifications')
 
-            catch <- delineate_watershed_by_specification(
+            if(specs$flat_increment == 'null'){
+                flat_increment <- NULL
+            } else {
+                flat_increment <- as.numeric(specs$flat_increment)
+            }
+
+            # specs=list(buffer_radius_m=1000,snap_siatance_m=150,snap_method='standard',
+            #            dem_resolution=10,breach_method='lc',burn_streams=FALSE)
+            delineate_watershed_by_specification(
                 lat = site_locations$latitude[i],
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
@@ -2544,7 +2706,12 @@ ms_delineate <- function(network,
                 snap_dist = specs$snap_distance_m,
                 snap_method = specs$snap_method,
                 dem_resolution = specs$dem_resolution,
-                write_dir = site_dir)
+                flat_increment = flat_increment,
+                breach_method = specs$breach_method,
+                burn_streams = specs$burn_streams,
+                write_dir = site_dir,
+                verbose = verbose) %>%
+                invisible()
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -2566,110 +2733,34 @@ ms_delineate <- function(network,
                           s = site))
             }
 
-            inspection_dir <- delineate_watershed_apriori(
+            tmp <- tempdir()
+
+            selection <- delineate_watershed_apriori_recurse(
                 lat = site_locations$latitude[i],
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
-                dev_machine_status = dev_machine_status,
                 site_name = site,
+                dem_resolution = NULL,
+                flat_increment = NULL,
+                breach_method = 'basic',
+                burn_streams = FALSE,
+                scratch_dir = tmp,
+                write_dir = site_dir,
+                dev_machine_status = dev_machine_status,
                 verbose = verbose)
+
+            if(is.numeric(selection) && selection == 1) next
+            if(is.numeric(selection) && selection == 2) return(invisible(NULL))
 
         } else {
             stop('Multiple entries for same network/domain/site in site_data')
         }
 
-        files_to_inspect <- list.files(path = inspection_dir,
-                                       pattern = '.shp')
-
-        tmp <- tempdir()
-        tmp <- stringr::str_replace_all(tmp, '\\\\', '/')
-
-        tmep_point <- glue(tmp, '/', 'POINT')
-
-        site_locations[i,] %>%
-            sf::st_as_sf(coords = c('longitude', 'latitude'), crs = site_locations[i,]$CRS) %>%
-            sf::st_write(dsn = tmep_point,
-                         driver = 'ESRI Shapefile',
-                         delete_dsn = TRUE,
-                         silent = TRUE)
-
-        #if only one delineation, write it into macrosheds storage
-        if(length(files_to_inspect) == 1){
-
-            selection <- files_to_inspect[1]
-
-            move_shapefiles(shp_files = selection,
-                            from_dir = inspection_dir,
-                            to_dir = site_dir)
-
-            message(glue('Delineation successful. Shapefile written to ',
-                         site_dir))
-
-            #otherwise, technician must inspect all delineations and choose one
-        } else {
-
-            nshapes <- length(files_to_inspect)
-
-            wb_selections <- paste(paste0('[',
-                                          c(1:nshapes, 'S', 'A'),
-                                          ']'),
-                                   c(files_to_inspect, 'Skip this one', 'Abort delineation'),
-                                   sep = ': ',
-                                   collapse = '\n')
-
-            helper_code <- glue('mapview::mapview(sf::st_read("{wd}/{f}")) + mapview::mapview(sf::st_read("{pf}"))',
-                                wd = inspection_dir,
-                                f = files_to_inspect,
-                                pf = tmep_point) %>%
-                paste(collapse = '\n\n')
-
-            msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
-                        'in {td}, then enter the number corresponding to the ',
-                        'one that looks most legit. Here\'s some ',
-                        'helper code you can paste into an R instance running ',
-                        'in a shell (terminal):\n\n{hc}\n\nIf you aren\'t ',
-                        'sure which is correct, get a site manager to verify:\n',
-                        'request_site_manager_verification(type=\'wb delin\', ',
-                        'network, domain)\n\nChoices:\n{sel}\n\nEnter choice here > ',
-                        hc = helper_code,
-                        sel = wb_selections,
-                        td = inspection_dir)
-
-            resp <- get_response_1char(msg = msg,
-                                       possible_chars = c(1:nshapes, 'S', 'A'))
-
-            if(resp == 'S'){
-                unlink(site_dir,
-                       recursive = TRUE)
-                message(glue('Moving on. You haven\'t seen the last of {s}!',
-                              s = site))
-                next
-            }
-
-            if(resp == 'A'){
-                unlink(site_dir,
-                       recursive = TRUE)
-                message('Aborted. Completed delineations have been saved')
-                return()
-            }
-
-            selection <- files_to_inspect[as.numeric(resp)]
-
-            move_shapefiles(shp_files = selection,
-                            from_dir = inspection_dir,
-                            to_dir = site_dir,
-                            new_name_vec = site)
-
-            message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
-                         s = resp,
-                         sel = selection,
-                         sdr = site_dir))
-        }
-
         #write the specifications of the correctly delineated watershed
         rgx <- str_match(selection,
                          paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
-                                'DIST([0-9]+)RES([0-9]+)\\.shp$'))
+                                'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
+                                'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
 
         write_wb_delin_specs(network = network,
                              domain = domain,
@@ -2677,7 +2768,10 @@ ms_delineate <- function(network,
                              buffer_radius = as.numeric(rgx[, 2]),
                              snap_method = rgx[, 3],
                              snap_distance = as.numeric(rgx[, 4]),
-                             dem_resolution = as.numeric(rgx[, 5]))
+                             dem_resolution = as.numeric(rgx[, 5]),
+                             flat_increment = rgx[, 6],
+                             breach_method = rgx[, 7],
+                             burn_streams = rgx[, 8])
 
         #calculate watershed area and write it to site_data gsheet
         catch <- ms_calc_watershed_area(network = network,
@@ -2687,10 +2781,6 @@ ms_delineate <- function(network,
                                         update_site_file = TRUE)
     }
 
-    # message(glue('Delineation specifications were written to:\n\t',
-    #              'data/general/watershed_delineation_specs.csv\n',
-    #              'watershed areas were written to:\n\t',
-    #              'site_data gsheet'))
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -2704,8 +2794,6 @@ ms_delineate <- function(network,
                 grepl(pattern = '^ms[0-9]{3}$',
                       x = prodcode),
                 prodname == 'precip_pchem_pflux') %>%
-                # prodname %in% c('precipitation', 'precip_chemistry',
-                #                 'precip_flux_inst')) %>%
             mutate(prodname_ms = paste(prodname,
                                        prodcode,
                                        sep = '__')) %>%
@@ -2716,26 +2804,259 @@ ms_delineate <- function(network,
                               domain = domain,
                               prodname = 'ws_boundary',
                               prodcode = 'ms000',
-                              # type = 'derived', #"spatial", originally
                               precursor_of = wb_successor_string,
                               notes = 'automated entry')
     }
 
-    #ms_derive does the linking now. it also gives a new ms_prodcode
-    # create_derived_links(network = network,
-    #                      domain = domain,
-    #                      prodname_ms = 'ws_boundary__ms000',
-    #                      new_prodcode = 'ms000')
-
     loginfo(msg = 'Delineations complete',
             logger = logger_module)
 
-    #return()
 }
 
-delineate_watershed_apriori <- function(lat, long, crs,
-                                        dev_machine_status = 'n00b',
+choose_dem_resolution <- function(dev_machine_status, buffer_radius){
+
+    if(dev_machine_status == '1337'){
+        dem_resolution <- case_when(
+            buffer_radius <= 1e4 ~ 12,
+            buffer_radius == 1e5 ~ 11,
+            buffer_radius == 1e6 ~ 10,
+            buffer_radius == 1e7 ~ 8,
+            buffer_radius == 1e8 ~ 6,
+            buffer_radius == 1e9 ~ 4,
+            buffer_radius >= 1e10 ~ 2)
+    } else if(dev_machine_status == 'n00b'){
+        dem_resolution <- case_when(
+            buffer_radius <= 1e4 ~ 10,
+            buffer_radius == 1e5 ~ 8,
+            buffer_radius == 1e6 ~ 6,
+            buffer_radius == 1e7 ~ 4,
+            buffer_radius == 1e8 ~ 2,
+            buffer_radius >= 1e9 ~ 1)
+    } else {
+        stop('dev_machine_status must be either "1337" or "n00b"')
+    }
+
+    return(dem_resolution)
+}
+
+delineate_watershed_apriori_recurse <- function(lat,
+                                                long,
+                                                crs,
+                                                site_name,
+                                                dem_resolution = NULL,
+                                                flat_increment = NULL,
+                                                breach_method = 'lc',
+                                                burn_streams = FALSE,
+                                                buffer_radius = NULL,
+                                                scratch_dir = tempdir(),
+                                                write_dir,
+                                                dev_machine_status = 'n00b',
+                                                verbose = FALSE){
+
+    #This function calls delineate_watershed_apriori recursively, taking
+    #   user input after each call, until the user selects a delineation
+    #   or aborts. For parameter documentation, see delineate_watershed_apriori.
+
+    # tmp <- tempdir()
+    scratch_dir <- stringr::str_replace_all(scratch_dir, '\\\\', '/')
+
+    delin_out <- delineate_watershed_apriori(
+        lat = lat,
+        long = long,
+        crs = crs,
+        site_name = site_name,
+        dem_resolution = dem_resolution,
+        flat_increment = flat_increment,
+        breach_method = breach_method,
+        burn_streams = burn_streams,
+        buffer_radius = buffer_radius,
+        scratch_dir = scratch_dir,
+        dev_machine_status = dev_machine_status,
+        verbose = verbose)
+
+    inspection_dir <- delin_out$inspection_dir
+
+    files_to_inspect <- list.files(path = inspection_dir,
+                                   pattern = '.shp')
+
+    temp_point <- glue(scratch_dir, '/', 'POINT')
+
+    tibble(longitude = long, latitude = lat) %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'),
+                     crs = crs) %>%
+        sf::st_write(dsn = temp_point,
+                     driver = 'ESRI Shapefile',
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
+
+    # #if only one delineation, write it into macrosheds storage
+    # if(length(files_to_inspect) == 1){
+    #
+    #     selection <- files_to_inspect[1]
+    #
+    #     move_shapefiles(shp_files = selection,
+    #                     from_dir = inspection_dir,
+    #                     to_dir = write_dir)
+    #
+    #     message(glue('Delineation successful. Shapefile written to ',
+    #                  write_dir))
+    #
+    #     #otherwise, technician must inspect all delineations and choose one
+    # } else {
+
+    nshapes <- length(files_to_inspect)
+    numeric_selections <- paste('Accept delineation', 1:nshapes)
+
+    wb_selections <- paste(paste0('[',
+                                  c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                                  ']'),
+                           c(numeric_selections,
+                             'Burn streams into the DEM (may help delineator across road-stream intersections)',
+                             'Use more aggressive breaching method (temporary default, pending whitebox bugfix)',
+                             'Select DEM resolution',
+                             'Set flat_increment',
+                             'Next (skip this one for now)',
+                             'Abort delineation'),
+                           sep = ': ',
+                           collapse = '\n')
+
+    helper_code <- glue('{id}.\nmapview::mapviewOptions(fgb = FALSE);',
+                        'mapview::mapview(sf::st_read("{wd}/{f}")) + ',
+                        'mapview::mapview(sf::st_read("{pf}"))',
+                        id = 1:length(files_to_inspect),
+                        wd = inspection_dir,
+                        f = files_to_inspect,
+                        pf = temp_point) %>%
+        paste(collapse = '\n\n')
+
+    msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
+                'by pasting the mapview lines below into a separate instance of R.\n\n{hc}\n\n',
+                'Enter the number corresponding to the ',
+                'one that looks most legit, or select one or more tuning ',
+                'options (e.g. "SBRI" without quotes). You usually won\'t ',
+                'need to tune anything. If you aren\'t ',
+                'sure which delineation is correct, get a site manager to verify:\n',
+                'request_site_manager_verification(type=\'wb delin\', ',
+                'network, domain) [function not yet built]\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
+                hc = helper_code,
+                sel = wb_selections)
+                # td = inspection_dir)
+
+    resp <- get_response_mchar(
+        msg = msg,
+        possible_resps = paste(c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                               collapse = ''),
+        allow_alphanumeric_response = FALSE)
+
+    if('n' %in% resp){
+        unlink(write_dir,
+               recursive = TRUE)
+        print(glue('Moving on. You haven\'t seen the last of {s}!',
+                   s = site_name))
+        return(1)
+    }
+
+    if('a' %in% resp){
+        unlink(write_dir,
+               recursive = TRUE)
+        print(glue('Aborted. Any completed delineations have been saved.'))
+        return(2)
+    }
+
+    if('S' %in% resp){
+        burn_streams <- TRUE
+    } else {
+        burn_streams <- FALSE
+    }
+
+    if('B' %in% resp){
+        breach_method <- 'basic'
+    } else {
+        breach_method <- 'basic' #TODO: undo this when whitebox is fixed
+        # breach_method <- 'lc'
+    }
+
+    if('R' %in% resp){
+        dem_resolution <- get_response_mchar(
+            msg = paste0('Choose DEM resolution between 1 (low) and 14 (high)',
+                         ' to pass to elevatr::get_elev_raster. For tiny ',
+                         'watersheds, use 12-13. For giant ones, use 8-9.\n\n',
+                         'Enter choice here > '),
+            possible_resps = paste(1:14))
+        dem_resolution <- as.numeric(dem_resolution)
+    }
+
+    if('I' %in% resp){
+
+        bm <- ifelse(breach_method == 'basic',
+                     'whitebox::wbt_breach_depressions',
+                     'whitebox::wbt_breach_depressions_least_cost')
+
+        new_options <- paste(paste0('[',
+                                    c('S', 'M', 'L'),
+                                    ']'),
+                             c('0.001', '0.01', '0.1'),
+                             sep = ': ',
+                             collapse = '\n')
+
+        resp2 <- get_response_1char(
+            msg = glue('Pick the size of the elevation increment to pass to ',
+                       bm, '.\n\n', new_options, '\n\nEnter choice here > '),
+            possible_chars = c('S', 'M', 'L'))
+
+        flat_increment <- switch(resp2,
+                                 S = 0.001,
+                                 M = 0.01,
+                                 L = 0.1)
+    }
+
+    if(! grepl('[0-9]', resp)){
+
+        selection <- delineate_watershed_apriori_recurse(
+            lat = lat,
+            long = long,
+            crs = crs,
+            site_name = site_name,
+            dem_resolution = dem_resolution,
+            flat_increment = flat_increment,
+            breach_method = breach_method,
+            burn_streams = burn_streams,
+            buffer_radius = delin_out$buffer_radius,
+            scratch_dir = scratch_dir,
+            write_dir = write_dir,
+            dev_machine_status = dev_machine_status,
+            verbose = verbose)
+
+        return(selection)
+    }
+
+    selection <- files_to_inspect[as.numeric(resp)]
+
+    move_shapefiles(shp_files = selection,
+                    from_dir = inspection_dir,
+                    to_dir = write_dir,
+                    new_name_vec = site_name)
+
+    message(glue('Selection {s}:\n\t{sel}\nwas written to:\n\t{sdr}',
+                 s = resp,
+                 sel = selection,
+                 sdr = write_dir))
+
+    return(selection)
+}
+
+# site_row = site_data[1, ]; lat = site_row$latitude; long = site_row$longitude; crs=4326; site_name=site_row$site_name
+delineate_watershed_apriori <- function(lat,
+                                        long,
+                                        crs,
                                         site_name,
+                                        dem_resolution = NULL,
+                                        flat_increment = NULL,
+                                        breach_method = 'basic',
+                                        burn_streams = FALSE,
+                                        buffer_radius = NULL,
+                                        scratch_dir = tempdir(),
+                                        dev_machine_status = 'n00b',
                                         verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
@@ -2743,22 +3064,47 @@ delineate_watershed_apriori <- function(lat, long, crs,
     #long: numeric representing longitude in decimal degrees
     #   (negative indicates west of prime meridian)
     #crs: numeric representing the coordinate reference system (e.g. WSG84)
+    #dem_resolution: optional integer 1-14. the granularity of the DEM that is used for
+    #   delineation. this argument is passed directly to the z parameter of
+    #   elevatr::get_elev_raster. 1 is low resolution; 14 is high. If NULL,
+    #   this is determined automatically.
+    #flat_increment: float or NULL. Passed to
+    #   whitebox::wbt_breach_depressions_least_cost
+    #   or whitebox::wbt_breach_depressions, depending on the value
+    #   of breach_method (see next).
+    #breach_method: string. Either 'basic', which invokes whitebox::wbt_breach_depressions,
+    #   or 'lc', which invokes whitebox::wbt_breach_depressions_least_cost
+    #burn_streams: logical. if TRUE, both whitebox::wbt_burn_streams_at_roads
+    #   and whitebox::wbt_fill_burn are called on the DEM, using road and stream
+    #   layers from OpenStreetMap.
+    #scratch_dir: the directory where intermediate files will be dumped. This
+    #   is a randomly generated temporary directory if not specified.
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen accordingly
     #verbose: logical. determines the amount of informative messaging during run
 
     #returns the location of candidate watershed boundary files
 
-    tmp <- tempdir()
+    # tmp <- tempdir()
+    # tmp <- str_replace_all(tmp, '\\\\', '/')
 
-    tmp <- str_replace_all(tmp, '\\\\', '/')
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
 
-    inspection_dir <- glue(tmp, '/INSPECT_THESE')
-    point_dir <- glue(tmp, '/POINT')
-    dem_f <- glue(tmp, '/dem.tif')
-    point_f <- glue(tmp, '/point.shp')
-    d8_f <- glue(tmp, '/d8_pntr.tif')
-    flow_f <- glue(tmp, '/flow.tif')
+    inspection_dir <- glue(scratch_dir, '/INSPECT_THESE')
+    point_dir <- glue(scratch_dir, '/POINT')
+    dem_f <- glue(scratch_dir, '/dem.tif')
+    point_f <- glue(scratch_dir, '/point.shp')
+    streams_f <- glue(scratch_dir, '/streams.shp')
+    roads_f <- glue(scratch_dir, '/roads.shp')
+    d8_f <- glue(scratch_dir, '/d8_pntr.tif')
+    flow_f <- glue(scratch_dir, '/flow.tif')
 
     dir.create(path = inspection_dir,
                showWarnings = FALSE)
@@ -2767,10 +3113,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
     dir_clean <- list.files(inspection_dir)
 
     if(length(dir_clean) > 0) {
-
         file.remove(paste(inspection_dir, dir_clean, sep = '/'))
     }
-
 
     proj <- choose_projection(lat = lat,
                               long = long)
@@ -2783,7 +3127,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
     # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
 
     #prepare for delineation loops
-    buffer_radius <- 1000
+    if(is.null(buffer_radius)) buffer_radius <- 1000
     dem_coverage_insufficient <- FALSE
     while_loop_begin <- TRUE
 
@@ -2794,25 +3138,32 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
         while_loop_begin <- FALSE
 
-        if(dev_machine_status == '1337'){
-            dem_resolution <- case_when(
-                buffer_radius <= 1e4 ~ 12,
-                buffer_radius == 1e5 ~ 11,
-                buffer_radius == 1e6 ~ 10,
-                buffer_radius == 1e7 ~ 8,
-                buffer_radius == 1e8 ~ 6,
-                buffer_radius == 1e9 ~ 4,
-                buffer_radius >= 1e10 ~ 2)
-        } else if(dev_machine_status == 'n00b'){
-            dem_resolution <- case_when(
-                buffer_radius <= 1e4 ~ 10,
-                buffer_radius == 1e5 ~ 8,
-                buffer_radius == 1e6 ~ 6,
-                buffer_radius == 1e7 ~ 4,
-                buffer_radius == 1e8 ~ 2,
-                buffer_radius >= 1e9 ~ 1)
-        } else {
-            stop('dev_machine_status must be either "1337" or "n00b"')
+        if(is.null(dem_resolution)){
+            # dem_resolution <- choose_dem_resolution(
+            #     dev_machine_status = dev_machine_status,
+            #     buffer_radius = buffer_radius)
+            dem_resolution <- 10
+        }
+
+        if(verbose){
+
+            if(is.null(flat_increment)){
+                fi <- 'NULL (auto)'
+            } else {
+                fi <- as.character(flat_increment)
+            }
+
+            if(breach_method == 'lc') breach_method <- 'lc (jk, temporarily "basic")'
+            print(glue('Delineation specs for this attempt:\n',
+                       '\tsite_name: {st}; ',
+                       'dem_resolution: {dr}; flat_increment: {fi}\n',
+                       '\tbreach_method: {bm}; burn_streams: {bs}',
+                       st = site_name,
+                       dr = dem_resolution,
+                       fi = fi,
+                       bm = breach_method,
+                       bs = as.character(burn_streams),
+                       .trim = FALSE))
         }
 
         site_buf <- sf::st_buffer(x = site,
@@ -2822,49 +3173,86 @@ delineate_watershed_apriori <- function(lat, long, crs,
             expr = {
                 elevatr::get_elev_raster(locations = site_buf,
                                          z = dem_resolution,
-                                         verbose = verbose)
+                                         verbose = FALSE,
+                                         override_size_check = TRUE)
             },
-            max_attempts = 4
+            max_attempts = 5
         )
 
+        # terra::writeRaster(x = dem,
         raster::writeRaster(x = dem,
                             filename = dem_f,
                             overwrite = TRUE)
 
+        #loses projection?
         sf::st_write(obj = site,
                      dsn = point_f,
                      delete_layer = TRUE,
                      quiet = TRUE)
 
-        whitebox::wbt_fill_single_cell_pits(dem = dem_f,
-                                            output = dem_f)
+        if(burn_streams){
+            get_osm_roads(extent_raster = dem,
+                          outfile = roads_f)
+            get_osm_streams(extent_raster = dem,
+                            outfile = streams_f)
+        }
 
-        whitebox::wbt_breach_depressions(dem = dem_f,
-                                         output = dem_f,
-                                         flat_increment = 0.01)
+        whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                            output = dem_f) %>% invisible()
+
+        if(breach_method == 'basic'){
+
+            whitebox::wbt_breach_depressions(
+                dem = dem_f,
+                output = dem_f,
+                flat_increment = flat_increment) %>% invisible()
+
+        } else if(breach_method == 'lc'){
+
+            whitebox::wbt_breach_depressions_least_cost(
+                dem = dem_f,
+                output = dem_f,
+                dist = 10000, #maximum trench length
+                fill = TRUE,
+                flat_increment = flat_increment) %>% invisible()
+        }
+        #also see wbt_fill_depressions for when there are open pit mines
+
+        if(burn_streams){
+
+            #the secret is that BOTH of these burns can work in tandem!
+            whitebox::wbt_burn_streams_at_roads(dem = dem_f,
+                                                streams = streams_f,
+                                                roads = roads_f,
+                                                output = dem_f,
+                                                width = 50) %>% invisible()
+            whitebox::wbt_fill_burn(dem = dem_f,
+                                    streams = streams_f,
+                                    output = dem_f) %>% invisible()
+        }
 
         whitebox::wbt_d8_pointer(dem = dem_f,
-                                 output = d8_f)
+                                 output = d8_f) %>% invisible()
 
         whitebox::wbt_d8_flow_accumulation(input = dem_f,
                                            output = flow_f,
-                                           out_type = 'catchment area')
+                                           out_type = 'catchment area') %>% invisible()
 
-        snap1_f <- glue(tmp, '/snap1_jenson_dist150.shp')
+        snap1_f <- glue(scratch_dir, '/snap1_jenson_dist150.shp')
         whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
                                               streams = flow_f,
                                               output = snap1_f,
-                                              snap_dist = 150)
-        snap2_f <- glue(tmp, '/snap2_standard_dist50.shp')
+                                              snap_dist = 150) %>% invisible()
+        snap2_f <- glue(scratch_dir, '/snap2_standard_dist50.shp')
         whitebox::wbt_snap_pour_points(pour_pts = point_f,
                                        flow_accum = flow_f,
                                        output = snap2_f,
-                                       snap_dist = 50)
-        snap3_f <- glue(tmp, '/snap3_standard_dist150.shp')
+                                       snap_dist = 50) %>% invisible()
+        snap3_f <- glue(scratch_dir, '/snap3_standard_dist150.shp')
         whitebox::wbt_snap_pour_points(pour_pts = point_f,
                                        flow_accum = flow_f,
                                        output = snap3_f,
-                                       snap_dist = 150)
+                                       snap_dist = 150) %>% invisible()
 
         #the site has been snapped 3 different ways. identify unique snap locations.
         snap1 <- sf::st_read(snap1_f, quiet = TRUE)
@@ -2875,7 +3263,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
         if(! identical(snap1, snap3)) unique_snaps_f <- c(unique_snaps_f, snap3_f)
 
         #good for experimenting with snap specs:
-        # delineate_watershed_test2(tmp, point_f, flow_f,
+        # delineate_watershed_test2(scratch_dir, point_f, flow_f,
         #                           d8_f, 'standard', 1000)
 
         #delineate each unique location
@@ -2887,7 +3275,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
             snap_distance <- rgx[, 3]
 
             wb_f <- glue('{path}/wb{n}_buffer{b}_{typ}_dist{dst}.tif',
-                         path = tmp,
+                         path = scratch_dir,
                          n = i,
                          b = buffer_radius,
                          typ = snap_method,
@@ -2895,7 +3283,7 @@ delineate_watershed_apriori <- function(lat, long, crs,
 
             whitebox::wbt_watershed(d8_pntr = d8_f,
                                     pour_pts = unique_snaps_f[i],
-                                    output = wb_f)
+                                    output = wb_f) %>% invisible()
 
             wb <- raster::raster(wb_f)
 
@@ -2905,8 +3293,8 @@ delineate_watershed_apriori <- function(lat, long, crs,
                                                 dem = dem)
 
             if(verbose){
-                print(glue('buffer radius: {br}; snap: {sn}/{tot}; ',
-                           'n intersecting cells: {ni}; pct intersect: {pct}',
+                print(glue('site buffer radius: {br}; pour point snap: {sn}/{tot}; ',
+                           'n intersecting border cells: {ni}; pct intersect: {pct}',
                            br = buffer_radius,
                            sn = i,
                            tot = length(unique_snaps_f),
@@ -2915,9 +3303,14 @@ delineate_watershed_apriori <- function(lat, long, crs,
             }
 
             if(smry$pct_wb_cells_intersect > 0.1 || smry$n_intersections > 5){
+
                 buffer_radius_new <- buffer_radius * 10
                 dem_coverage_insufficient <- TRUE
+                print(glue('Hit DEM edge. Incrementing buffer.'))
+                break
+
             } else {
+
                 dem_coverage_insufficient <- FALSE
                 buffer_radius_new <- buffer_radius
 
@@ -2927,9 +3320,9 @@ delineate_watershed_apriori <- function(lat, long, crs,
                     sf::st_as_sf() %>%
                     sf::st_buffer(dist = 0.1) %>%
                     sf::st_union() %>%
-                    sf::st_as_sf()#again? ugh.
-
-                wb_sf <- sf::st_transform(wb_sf, 4326) #EPSG for WGS84
+                    sf::st_as_sf() %>%
+                    fill_sf_holes() %>%
+                    sf::st_transform(4326)
 
                 ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
 
@@ -2937,18 +3330,28 @@ delineate_watershed_apriori <- function(lat, long, crs,
                     mutate(site_name = !!site_name) %>%
                     mutate(area = !!ws_area_ha)
 
-                wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}.shp',
+                if(is.null(flat_increment)){
+                    flt_incrmt <- 'null'
+                } else {
+                    flt_incrmt <- as.character(flat_increment)
+                }
+
+                wb_sf_f <- glue('{path}/wb{n}_BUF{b}{typ}DIST{dst}RES{res}',
+                                'INC{inc}BREACH{brc}BURN{brn}.shp',
                                 path = inspection_dir,
                                 n = i,
-                                b = buffer_radius,
+                                b = sprintf('%d', buffer_radius),
                                 typ = snap_method,
                                 dst = snap_distance,
-                                res = dem_resolution)
+                                res = dem_resolution,
+                                inc = flt_incrmt,
+                                brc = breach_method,
+                                brn = as.character(burn_streams))
 
-                sf::st_write(obj = wb_sf,
-                             dsn = wb_sf_f,
-                             delete_dsn = TRUE,
-                             quiet = TRUE)
+                sw(sf::st_write(obj = wb_sf,
+                                dsn = wb_sf_f,
+                                delete_dsn = TRUE,
+                                quiet = TRUE))
             }
         }
 
@@ -2959,7 +3362,10 @@ delineate_watershed_apriori <- function(lat, long, crs,
         message(glue('Candidate delineations are in: ', inspection_dir))
     }
 
-    return(inspection_dir)
+    delin_out <- list(inspection_dir = inspection_dir,
+                      buffer_radius = buffer_radius)
+
+    return(delin_out)
 }
 
 delineate_watershed_by_specification <- function(lat,
@@ -2969,7 +3375,11 @@ delineate_watershed_by_specification <- function(lat,
                                                  snap_dist,
                                                  snap_method,
                                                  dem_resolution,
-                                                 write_dir){
+                                                 flat_increment,
+                                                 breach_method,
+                                                 burn_streams,
+                                                 write_dir,
+                                                 verbose = FALSE){
 
     #lat: numeric representing latitude in decimal degrees
     #   (negative indicates southern hemisphere)
@@ -2986,16 +3396,34 @@ delineate_watershed_by_specification <- function(lat,
     #dem_resolution: integer 1-14. the granularity of the DEM that is used for
     #   delineation. this argument is passed directly to the z parameter of
     #   elevatr::get_elev_raster. 1 is low resolution; 14 is high.
+    #flat_increment: float or NULL. Passed to wbt_breach_depressions_least_cost
+    #   or wbt_breach_depressions, depending on the value of breach_method (see next).
+    #breach_method: string. Either 'basic', which invokes whitebox::wbt_breach_depressions,
+    #   or 'lc', which invokes whitebox::wbt_breach_depressions_least_cost
+    #burn_streams: logical. if TRUE, both whitebox::wbt_burn_streams_at_roads
+    #   and whitebox::wbt_fill_burn are called on the DEM, using road and stream
+    #   layers from OpenStreetMap.
     #write_dir: character. the directory to write shapefile watershed boundary to
 
     #returns the location of candidate watershed boundary files
 
     require(whitebox) #can't do e.g. whitebox::func in do.call
 
+    if(! is.null(dem_resolution) && ! is.numeric(dem_resolution)){
+        stop('dem_resolution must be a numeric integer or NULL')
+    }
+    if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
+        stop('flat_increment must be numeric or NULL')
+    }
+    if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
+    if(! is.logical(burn_streams)) stop('burn_streams must be logical')
+
     tmp <- tempdir()
     inspection_dir <- glue(tmp, '/INSPECT_THESE')
     dem_f <- glue(tmp, '/dem.tif')
     point_f <- glue(tmp, '/point.shp')
+    streams_f <- glue(tmp, '/streams.shp')
+    roads_f <- glue(tmp, '/roads.shp')
     d8_f <- glue(tmp, '/d8_pntr.tif')
     flow_f <- glue(tmp, '/flow.tif')
     snap_f <- glue(tmp, '/snap.shp')
@@ -3021,33 +3449,92 @@ delineate_watershed_by_specification <- function(lat,
         expr = {
             elevatr::get_elev_raster(locations = site_buf,
                                      z = dem_resolution,
-                                     verbose = verbose)
+                                     verbose = FALSE,
+                                     override_size_check = TRUE)
         },
-        max_attempts = 4
+        max_attempts = 5
     )
 
     raster::writeRaster(x = dem,
                         filename = dem_f,
                         overwrite = TRUE)
+    # terra::rast(dem) %>%
+    #     terra::writeRaster(dem_f,
+    # overwrite = TRUE)
+# qq <- terra::rast(dem_f)
+# terra::plot(qq)
 
+# qq <- raster::raster(dem_f)
+# raster::plot(qq)
+        # raster::rasterToPolygons() %>%
+        # sf::st_as_sf() %>%
+        # sf::st_buffer(dist = 0.1) %>%
+        # sf::st_union() %>%
+        # sf::st_as_sf() %>% #again? ugh.
+        # sf::st_transform(4326) #EPSG for WGS84
+
+    #loses projection
     sf::st_write(obj = site,
                  dsn = point_f,
                  delete_layer = TRUE,
                  quiet = TRUE)
 
-    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
-                                        output = dem_f)
+    if(burn_streams){
+        get_osm_roads(extent_raster = dem,
+                      outfile = roads_f)
+        get_osm_streams(extent_raster = dem,
+                        outfile = streams_f)
+    }
 
-    whitebox::wbt_breach_depressions(dem = dem_f,
-                                     output = dem_f,
-                                     flat_increment = 0.01)
+    whitebox::wbt_fill_single_cell_pits(dem = dem_f,
+                                        output = dem_f) %>% invisible()
+
+    if(breach_method == 'basic'){
+
+        whitebox::wbt_breach_depressions(
+            dem = dem_f,
+            output = dem_f,
+            flat_increment = flat_increment) %>% invisible()
+
+    } else if(breach_method == 'lc'){
+
+        message('lc method temporarily disabled. generates inconsistent output. using basic instead.')
+        # whitebox::wbt_breach_depressions_least_cost(
+        #     dem = dem_f,
+        #     output = dem_f,
+        #     dist = 10000, #maximum trench length
+        #     fill = TRUE,
+        #     flat_increment = flat_increment) %>% invisible()
+        whitebox::wbt_breach_depressions(
+            dem = dem_f,
+            output = dem_f,
+            flat_increment = flat_increment) %>% invisible()
+    }
+    #also see wbt_fill_depressions for when there are open pit mines
+
+    # qq <- raster::raster(dem_f)
+    # yyy=c(raster::values(qq))
+    # xxx=c(raster::values(qq))
+
+    if(burn_streams){
+
+        #the secret is that BOTH of these burns can work in tandem!
+        whitebox::wbt_burn_streams_at_roads(dem = dem_f,
+                                            streams = streams_f,
+                                            roads = roads_f,
+                                            output = dem_f,
+                                            width = 50) %>% invisible()
+        whitebox::wbt_fill_burn(dem = dem_f,
+                                streams = streams_f,
+                                output = dem_f) %>% invisible()
+    }
 
     whitebox::wbt_d8_pointer(dem = dem_f,
-                             output = d8_f)
+                             output = d8_f) %>% invisible()
 
     whitebox::wbt_d8_flow_accumulation(input = dem_f,
                                        output = flow_f,
-                                       out_type = 'catchment area')
+                                       out_type = 'catchment area') %>% invisible()
 
     #call the appropriate snapping function from whitebox
     args <- list(pour_pts = point_f,
@@ -3069,15 +3556,16 @@ delineate_watershed_by_specification <- function(lat,
     #delineate
     whitebox::wbt_watershed(d8_pntr = d8_f,
                             pour_pts = snap_f,
-                            output = wb_f)
+                            output = wb_f) %>% invisible()
 
     wb_sf <- raster::raster(wb_f) %>%
         raster::rasterToPolygons() %>%
         sf::st_as_sf() %>%
         sf::st_buffer(dist = 0.1) %>%
         sf::st_union() %>%
-        sf::st_as_sf() %>% #again? ugh.
-        sf::st_transform(4326) #EPSG for WGS84
+        sf::st_as_sf() %>%
+        fill_sf_holes() %>%
+        sf::st_transform(crs = 4326)
 
     site_name <- str_match(write_dir, '.+?/([^/]+)$')[, 2]
 
@@ -3087,19 +3575,19 @@ delineate_watershed_by_specification <- function(lat,
         mutate(site_name = !!site_name) %>%
         mutate(area = !!ws_area_ha)
 
-    sf::st_write(obj = wb_sf,
-                 dsn = glue('{d}/{s}.shp',
-                            d = write_dir,
-                            s = site_name),
-                 delete_dsn = TRUE,
-                 quiet = TRUE)
+    dir.create(write_dir,
+               showWarnings = FALSE)
+
+    sw(sf::st_write(obj = wb_sf,
+                    dsn = glue('{d}/{s}.shp',
+                               d = write_dir,
+                               s = site_name),
+                    delete_dsn = TRUE,
+                    quiet = TRUE))
 
     message(glue('Watershed boundary written to ',
                  write_dir))
-
-    #return()
 }
-
 
 get_derive_ingredient <- function(network,
                                   domain,
@@ -3115,7 +3603,7 @@ get_derive_ingredient <- function(network,
     #   derived products take precedence over munged products.
     #ignore_derprod900: logical. if TRUE, don't consider any product with an
     #   ms9XX prodcode.
-    #accept_multi_ing: logical. should more than one ingredient be returned?
+    #accept_multiple: logical. should more than one ingredient be returned?
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
@@ -3183,7 +3671,9 @@ get_derive_ingredient <- function(network,
     return(prodname_ms)
 }
 
-ms_derive <- function(network = domain, domain){
+ms_derive <- function(network = domain,
+                      domain,
+                      prodname_filter = NULL){
 
     #categorize munged products. some are complete after munging, so they
     #   get hardlinked. some need to be compiled into canonical form (e.g.
@@ -3193,31 +3683,21 @@ ms_derive <- function(network = domain, domain){
     #   and pchem (note that both of these will usually be replaced by the
     #   new precip_pchem_pflux kernels)
 
+    if(! exists('held_data')){
+        held_data <<- get_data_tracker(network = network,
+                                       domain = domain)
+    }
+
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain)))
 
-    # #checks
-    # if(! all(prods$type %in% c('normal', 'derived', 'linked'))){
-    #     stop(glue('All entries in the type column must be one of "normal", ',
-    #               '"derived", "linked" (src/{n}/{d}/products.csv)',
-    #               n = network,
-    #               d = domain))
-    # }
-
-    #check for sitenames in prodnames?
-    # if(){
-    #
-    # }
-
-    #these are the prods that we pretty much (?) always want to derive
+    #determine various categories governing how products should be handled
     has_ms_prodcode <- grepl('^ms[0-9]{3}$',
                              prods$prodcode,
                              perl = TRUE)
 
     is_being_munged <- ! is.na(prods$munge_status) & prods$munge_status == 'ready'
-
-    # is_being_derived <- ! is.na(prods$derive_status) & prods$derive_status == 'ready'
 
     is_self_precursor <- mapply(function(x, y){
                                     precursors <- strsplit(as.character(y),
@@ -3230,30 +3710,43 @@ ms_derive <- function(network = domain, domain){
 
     is_a_link <- ! is.na(prods$derive_status) &
         prods$derive_status == 'linked'
+
     created_links <- prods$prodname[is_a_link]
+
     is_already_linked <- ! is_a_link &
-        prods$prodname %in% created_links
-    # is_a_link <- derstatus_linked &
-    #                  prods$prodname %in% created_links
+        prods$prodname %in% created_links &
+        prods$munge_status == 'ready'
+
+    is_automated_entry <- ! is.na(prods$notes) &
+        prods$notes == 'automated entry'
 
     #determine which active prods need to be linked (linkprods)
     is_linkprod <- (! is.na(prods$derive_status) &
                         prods$derive_status == 'linked') |
-        (prods$prodname %in% canonical_derprods &
-             ! has_ms_prodcode &
+        (prods$prodname %in% canonical_derprods |
+             grepl('CUSTOM', prods$prodname)) &
+             ( ! has_ms_prodcode &
              is_being_munged &
              ! is_self_precursor)
 
-    # #determine which active prods need to be compiled from constituents (compprods)
-    # is_compprod <- has_ms_prodcode &
-    #     ! prods$prodname %in% typical_derprods &
-    #     is_being_derived &
-    #     prods$type != 'spatial'
-    #
-    # #determine which prods are "true" active derived prods (derprods)
-    # is_derprod <- has_ms_prodcode &
-    #     is_being_derived &
-    #     prods$prodname %in% typical_derprods
+    #this patch catches the case of precip/stream gauges being generated
+    #by a derive kernel (which shouldn't be linked from munge)
+    precip_gauges_derived <- any(grepl('precip_gauge_locations', prods$prodname) &
+                                     has_ms_prodcode)
+    stream_gauges_derived <- any(grepl('stream_gauge_locations', prods$prodname) &
+                                     has_ms_prodcode)
+
+    if(precip_gauges_derived){
+       not_rly_linkprod <-  which(grepl('precip_gauge_locations',
+                    prods$prodname) & ! has_ms_prodcode)
+       is_linkprod[not_rly_linkprod] <- FALSE
+    }
+
+    if(stream_gauges_derived){
+       not_rly_linkprod <-  which(grepl('stream_gauge_locations',
+                    prods$prodname) & ! has_ms_prodcode)
+       is_linkprod[not_rly_linkprod] <- FALSE
+    }
 
     #re-link any already linked prods
     for(i in which(is_already_linked)){
@@ -3263,20 +3756,42 @@ ms_derive <- function(network = domain, domain){
                                                  prodname = prods$prodname[i]) %>%
                                prodcode_from_prodname_ms()
 
-        create_derived_links(network = network,
-                             domain = domain,
-                             prodname_ms = paste(prods$prodname[i],
-                                                 prods$prodcode[i],
-                                                 sep = '__'),
-                             new_prodcode = linked_prodcode)
+        tryCatch({
+            create_derived_links(network = network,
+                                 domain = domain,
+                                 prodname_ms = paste(prods$prodname[i],
+                                                     prods$prodcode[i],
+                                                     sep = '__'),
+                                 new_prodcode = linked_prodcode)
+        },
+        error = function(e){
+            logwarn(glue('Failed to link {p} to derive/',
+                         p = paste(prods$prodname[i],
+                                   prods$prodcode[i],
+                                   sep = '__')),
+                         logger = logger_module)
+            }
+        )
+
     }
 
     #link any new linkprods and create new product entries
     prodcodes_num <- as.numeric(substr(
-        prods$prodcode[grepl('^ms[0-9]{3}$',
+        prods$prodcode[grepl('^ms[0-7][0-9]{2}$',
                              prods$prodcode)],
         start = 3,
         stop = 5))
+
+    code_800_or_900s <- grep(pattern = '^ms[8-9][0-9]{2}$',
+                             x = prods$prodcode[has_ms_prodcode &
+                                                    ! is_automated_entry],
+                             value = TRUE)
+
+    if(length(code_800_or_900s)){
+        stop(glue('ms8XX and ms9XX are reserved prodcodes (generated ',
+                  'automatically). Please rename: ',
+                  paste(code_800_or_900s, collapse = ', ')))
+    }
 
     if(any(is_linkprod)){
 
@@ -3337,9 +3852,33 @@ ms_derive <- function(network = domain, domain){
         }
     }
 
+    waiting_retrv_kerns <- prods %>%
+        filter(! is.na(retrieve_status) & retrieve_status != 'ready') %>%
+        mutate(prodname_ms = paste(prodname, prodcode, sep='_')) %>%
+        pull(prodname_ms)
+
+    waiting_mng_kerns <- prods %>%
+        filter(! is.na(munge_status) & munge_status != 'ready') %>%
+        mutate(prodname_ms = paste(prodname, prodcode, sep='_')) %>%
+        pull(prodname_ms)
+
+    if(length(waiting_retrv_kerns)){
+        logwarn(msg = glue('Some retrieve kernels are not ready: {wr}',
+                           wr = paste(waiting_retrv_kerns,
+                                      collapse = ', ')),
+                logger = logger_module)
+    }
+
+    if(length(waiting_mng_kerns)){
+        logwarn(msg = glue('Some munge kernels are not ready: {wr}',
+                           wr = paste(waiting_mng_kerns,
+                                      collapse = ', ')),
+                logger = logger_module)
+    }
+
     #compile any compprods and derive derprods (run all code in derive.R).
     #note: get_product_info() knows it must arrange derive products with
-    #   non-canonicals first.
+    #   non-canonicals first and CUSTOM products last
     source(glue('src/{n}/{d}/derive.R',
                 n = network,
                 d = domain),
@@ -3407,7 +3946,8 @@ append_to_productfile <- function(network,
                      n = network,
                      d = domain)
 
-    prods <- sm(read_csv(prodfile))
+    prods <- sm(read_csv(prodfile)) %>%
+        mutate(prodcode = as.character(prodcode))
 
     new_row <- unlist(passed_args)
 
@@ -3505,10 +4045,14 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
     #return()
 }
 
-get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
+get_response_1char <- function(msg,
+                               possible_chars,
+                               subsequent_prompt = FALSE){
 
     #msg: character. a message that will be used to prompt the user
     #possible_chars: character vector of acceptable single-character responses
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
 
     if(subsequent_prompt){
         cat(paste('Please choose one of:',
@@ -3524,8 +4068,98 @@ get_response_1char <- function(msg, possible_chars, subsequent_prompt = FALSE){
     if(length(ch) == 1 && ch %in% possible_chars){
         return(ch)
     } else {
-        get_response_1char(msg, possible_chars, subsequent_prompt = TRUE)
+        get_response_1char(msg = msg,
+                           possible_chars = possible_chars,
+                           subsequent_prompt = TRUE)
     }
+}
+
+get_response_mchar <- function(msg,
+                               possible_resps,
+                               allow_alphanumeric_response = TRUE,
+                               subsequent_prompt = FALSE){
+
+    #msg: character. a message that will be used to prompt the user
+    #possible_resps: character vector. If length 1, each character in the response
+    #   will be required to match a character in possible_resps, and the return
+    #   value will be a character vector of each single-character tokens in the
+    #   response. If
+    #   length > 1, the response will be required to match an element of
+    #   possible_resps exactly, and the response will be returned as-is.
+    #allow_alphanumeric_response: logical. If FALSE, the response may not
+    #   include both numerals and letters. Only applies when possible_resps
+    #   has length 1.
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_mchar during recursion.
+
+    split_by_character <- ifelse(length(possible_resps) == 1, TRUE, FALSE)
+
+    if(subsequent_prompt){
+
+        if(split_by_character){
+            pr <- strsplit(possible_resps, split = '')[[1]]
+        } else {
+            pr <- possible_resps
+        }
+
+        cat(paste('Your options are:',
+                  paste(pr,
+                        collapse = ', '),
+                  '\n> '))
+    } else {
+        cat(msg)
+    }
+
+    chs <- as.character(readLines(con = stdin(), 1))
+
+    if(! allow_alphanumeric_response &&
+       split_by_character &&
+       grepl('[0-9]', chs) &&
+       grepl('[a-zA-Z]', chs)){
+
+        cat('Response may not include both letters and numbers.\n> ')
+        resp <- get_response_mchar(
+            msg = msg,
+            possible_resps = possible_resps,
+            allow_alphanumeric_response = allow_alphanumeric_response,
+            subsequent_prompt = FALSE)
+
+        return(resp)
+    }
+
+    if(length(chs)){
+        if(split_by_character){
+
+            if(length(possible_resps) != 1){
+                stop('possible_resps must be length 1 if split_by_character is TRUE')
+            }
+
+            chs <- strsplit(chs, split = '')[[1]]
+            possible_resps_split <- strsplit(possible_resps, split = '')[[1]]
+
+            if(all(chs %in% possible_resps_split)){
+                return(chs)
+            }
+
+        } else {
+
+            if(length(possible_resps) < 2){
+                stop('possible_resps must have length > 1 if split_by_character is FALSE')
+            }
+
+            if(any(possible_resps == chs)){
+                return(chs)
+            }
+        }
+    }
+
+    resp <- get_response_mchar(
+        msg = msg,
+        possible_resps = possible_resps,
+        allow_alphanumeric_response = allow_alphanumeric_response,
+        subsequent_prompt = TRUE)
+
+    return(resp)
 }
 
 ms_calc_watershed_area <- function(network,
@@ -3541,6 +4175,8 @@ ms_calc_watershed_area <- function(network,
     #   to the ws_area_ha column in site_data gsheet
 
     #returns area in hectares
+
+    print(glue('Computing watershed area'))
 
     ms_dir <- glue('data/{n}/{d}/{l}',
                    n = network,
@@ -3602,8 +4238,18 @@ ms_calc_watershed_area <- function(network,
     return(ws_area_ha)
 }
 
-write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
-                                 snap_method, snap_distance, dem_resolution){
+write_wb_delin_specs <- function(network,
+                                 domain,
+                                 site_name,
+                                 buffer_radius,
+                                 snap_method,
+                                 snap_distance,
+                                 dem_resolution,
+                                 flat_increment,
+                                 breach_method,
+                                 burn_streams){
+
+    print(glue('Saving delineation specs'))
 
     new_entry <- tibble(network = network,
                         domain = domain,
@@ -3611,7 +4257,10 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                         buffer_radius_m = buffer_radius,
                         snap_method = snap_method,
                         snap_distance_m = snap_distance,
-                        dem_resolution = dem_resolution)
+                        dem_resolution = dem_resolution,
+                        flat_increment = as.character(flat_increment),
+                        breach_method = as.character(breach_method),
+                        burn_streams = as.character(burn_streams))
 
     # ws_delin_specs <- bind_rows(ws_delin_specs, new_entry)
 
@@ -3619,8 +4268,6 @@ write_wb_delin_specs <- function(network, domain, site_name, buffer_radius,
                       which_dataset = 'ws_delin_specs',
                       to_where = ms_instance$config_data_storage,
                       overwrite = FALSE)
-
-    #return()
 }
 
 serialize_list_to_dir <- function(l, dest){
@@ -3998,8 +4645,7 @@ write_ms_file <- function(d,
 
     if(shapefile){
 
-        site_dir = glue('{wd}/data/{n}/{d}/{l}/{p}/{s}',
-                        wd = getwd(),
+        site_dir = glue('data/{n}/{d}/{l}/{p}/{s}',
                         n = network,
                         d = domain,
                         l = level,
@@ -4022,6 +4668,7 @@ write_ms_file <- function(d,
                         d = domain,
                         l = level,
                         p = prodname_ms)
+
         dir.create(prod_dir,
                    showWarnings = FALSE,
                    recursive = TRUE)
@@ -4354,9 +5001,10 @@ delineate_watershed_nhd <- function(lat, long) {
             expr = {
                 elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
                                          z = 12,
-                                         verbose = FALSE)
+                                         verbose = FALSE,
+                                         override_size_check = TRUE)
             },
-            max_attempts = 4
+            max_attempts = 5
         )
 
         temp_raster <- tempfile(fileext = ".tif")
@@ -4436,11 +5084,12 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
     #chemprod is the prodname_ms for stream or precip chemistry.
     #   it can be a munged or a derived product.
     #qprod is the prodname_ms for stream discharge or precip volume over time.
-    #   it can be a munged or derived product/
-    #calc_inst_flux is for apply_detection_limit_t, if FALSE (default) will use
-    #predisesors to ms input
+    #   it can be a munged or derived product.
+    #ignore_pred: logical; set to TRUE if detection limits should be retrieved
+    #   from the supplied chemprod directly, rather than its precursor. passed to
+    #   apply_detection_limit_t.
 
-    if(! prodname_from_prodname_ms(qprod) %in% c('precipitation', 'discharge')){
+    if(! grepl('(precipitation|discharge)', prodname_from_prodname_ms(qprod))){
         stop('Could not determine stream/precip')
     }
 
@@ -4456,15 +5105,11 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
 
     if(nrow(chem) == 0) return(NULL)
 
-    chem <- chem %>%
-        tidyr::pivot_wider(
-            names_from = 'var',
-            values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
-        select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
-
-    # if(ncol(chem) == 3){
-    #     return(NULL)
-    # }
+    # chem <- chem %>%
+    #     tidyr::pivot_wider(
+    #         names_from = 'var',
+    #         values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
+    #     select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
 
     daterange <- range(chem$datetime)
 
@@ -4474,62 +5119,115 @@ calc_inst_flux <- function(chemprod, qprod, site_name, ignore_pred = FALSE){
         filter(
             site_name == !!site_name,
             datetime >= !!daterange[1],
-            datetime <= !!daterange[2]) %>%
-        rename(flow = val) %>% #quick and dirty way to convert to wide
+            datetime <= !!daterange[2])# %>%
+        # rename(flow = val) %>% #quick and dirty way to convert to wide
         # rename(!!drop_var_prefix(.$var[1]) := val) %>%
-        select(-var, -site_name)
+        # select(-var, -site_name)
 
     if(nrow(flow) == 0) return(NULL)
+    flow_is_highres <- Mode(diff(as.numeric(flow$datetime))) <= 15 * 60
+    if(is.na(flow_is_highres)) flow_is_highres <- FALSE
 
-    #a few commented remnants from the old wide-format days have been left here,
-    #because they might be instructive in other endeavors
-    flux <- chem %>%
+    chem_split <- chem %>%
+        group_by(var) %>%
+        arrange(datetime) %>%
+        dplyr::group_split() %>%
+        as.list()
 
-        #if we ever have dependency issues with fuzzyjoin functions, we should
-        #   implement a data.table rolling join. We'll just have to pop off
-        #   the uncertainty in a separate tibble, do the join, noting which
-        #   datetime series is being modified, then rejoin the uncertainty.
-        fuzzyjoin::difference_inner_join(
-            flow,
-            by = 'datetime',
-            max_dist = as.difftime(tim = '14:59',
-                                   format = '%M:%S')
-        ) %>%
-        select(-datetime.y) %>%
-        rename(datetime = datetime.x) %>%
-        select_if(~(! all(is.na(.)))) %>%
+    #could do this in parallel (using furrr or foreach), but that might
+    #incur the same OOM issues as doing it all at once in wide-format. worth trying,
+    #but only use half of the available threads
+    for(i in 1:length(chem_split)){
 
-        # rowwise(datetime) %>%
-        # mutate(
-        #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
-        #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
-        # ungroup() %>%
-        # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-        # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
-        #           ~(. * flow)) %>%
-        # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
-        #              names_pattern = '(.*)',
-        #              names_to = 'var') %>%
-        # rename(val = value) %>%
+        chem_chunk <- chem_split[[i]]
 
-        mutate(
-            across(.cols = matches(match = '^ms_status.+',
-                                   perl = TRUE),
-                   .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
-            across(.cols = matches(match = '^ms_interp.+',
-                                   perl = TRUE),
-                   .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
-            across(.cols = starts_with(match = 'val_'),
-                   .fns = ~(.x * flow))) %>%
-        select(-ms_status, -ms_interp, -flow) %>%
-        pivot_longer(cols = ! datetime,
-                     names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
-                     names_to = c('.value', 'var')) %>%
+        chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+        if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
-        filter(! is.na(val)) %>%
-        mutate(site_name = !!site_name) %>%
-        arrange(site_name, var, datetime) %>%
-        select(datetime, site_name, var, val, ms_status, ms_interp)
+        #if both chem and flow data are low resolution (grab samples),
+        #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
+        #   gap should be 7.5 mins so that there isn't enormous duplication of
+        #   timestamps where multiple high-res values can be snapped to the
+        #   same low-res value
+        if(! chem_is_highres && ! flow_is_highres){
+            join_distance <- c('12:00:00')#, '%H:%M:%S')
+        } else {
+            join_distance <- c('7:30')#, '%M:%S')
+        }
+
+        chem_split[[i]] <- approxjoin_datetime(x = chem_chunk,
+                                               y = flow,
+                                               rollmax = join_distance,
+                                               keep_datetimes_from = 'x') %>%
+            mutate(site_name = site_name_x,
+                   var = var_x,
+                #  kg/d = mg/L *  L/s  * 86400 / 1e6
+                   val = val_x * val_y * 86400 / 1e6,
+                   ms_status = numeric_any_v(ms_status_x, ms_status_y),
+                   ms_interp = numeric_any_v(ms_interp_x, ms_interp_y)) %>%
+            select(-starts_with(c('site_name_', 'var_', 'val_',
+                                  'ms_status_', 'ms_interp_'))) %>%
+            filter(! is.na(val)) %>% #should be redundant
+            arrange(datetime)
+    }
+
+    # #a few commented remnants from the old wide-format days have been left here,
+    # #because they might be instructive in other endeavors
+    # flux <- chem %>%
+    #
+    #     #if we ever have dependency issues with fuzzyjoin functions, we should
+    #     #   implement a data.table rolling join. We'll just have to pop off
+    #     #   the uncertainty in a separate tibble, do the join, noting which
+    #     #   datetime series is being modified, then rejoin the uncertainty.
+    #     fuzzyjoin::difference_inner_join(
+    #         flow,
+    #         by = 'datetime',
+    #         max_dist = as.difftime(tim = '14:59',
+    #                                format = '%M:%S')
+    #     ) %>%
+    #     select(-datetime.y) %>%
+    #     rename(datetime = datetime.x) %>%
+    #     # group_by(datetime) %>%
+    #     # summarize(,
+    #     #           .groups = 'drop') %>%
+    #     select_if(~(! all(is.na(.)))) %>%
+    #
+    #     # rowwise(datetime) %>%
+    #     # mutate(
+    #     #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
+    #     #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
+    #     # ungroup() %>%
+    #     # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
+    #     # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
+    #     #           ~(. * flow)) %>%
+    #     # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
+    #     #              names_pattern = '(.*)',
+    #     #              names_to = 'var') %>%
+    #     # rename(val = value) %>%
+    #
+    #     mutate(
+    #         across(.cols = matches(match = '^ms_status.+',
+    #                                perl = TRUE),
+    #                .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
+    #         across(.cols = matches(match = '^ms_interp.+',
+    #                                perl = TRUE),
+    #                .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
+    #         across(.cols = starts_with(match = 'val_'),
+    #                .fns = ~(.x * flow))) %>%
+    #     select(-ms_status, -ms_interp, -flow) %>%
+    #     pivot_longer(cols = ! datetime,
+    #                  names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
+    #                  names_to = c('.value', 'var')) %>%
+    #
+    #     filter(! is.na(val)) %>%
+    #     mutate(site_name = !!site_name) %>%
+    #     arrange(site_name, var, datetime) %>%
+    #     select(datetime, site_name, var, val, ms_status, ms_interp)
+
+    flux <- chem_split %>%
+        purrr::reduce(bind_rows) %>%
+        arrange(site_name, var, datetime)
+        # select(datetime, site_name, var, val, ms_status, ms_interp)
 
     if(nrow(flux) == 0) return(NULL)
 
@@ -4645,18 +5343,41 @@ choose_projection <- function(lat = NULL,
 
     abslat <- abs(lat)
 
-    if(abslat < 23){ #tropical
-        PROJ4 = glue('+proj=laea +lon_0=', long)
-                 # ' +datum=WGS84 +units=m +no_defs')
-    } else { #temperate or polar
-        PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
-    }
-                     # ' +datum=WGS84 +units=m +no_defs')
+    # if(abslat < 23){ #tropical
+    #     PROJ4 = glue('+proj=laea +lon_0=', long)
+    #              # ' +datum=WGS84 +units=m +no_defs')
+    # } else { #temperate or polar
+    #     PROJ4 = glue('+proj=laea +lat_0=', lat, ' +lon_0=', long)
+    # }
 
+    #this is what the makers of https://projectionwizard.org/# use to choose
+    #a suitable projection: https://rdrr.io/cran/rCAT/man/simProjWiz.html
+    # THIS WORKS (PROJECTS STUFF), BUT CAN'T BE READ AUTOMATICALLY BY st_read
+    if(abslat < 70){ #tropical or temperate
+        PROJ4 <- glue('+proj=cea +lon_0={lng} +lat_ts=0 +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lng = long)
+    } else { #polar
+        PROJ4 <- glue('+proj=laea +lat_0={lt} +lon_0={lng} +x_0=0 +y_0=0 ',
+                      '+ellps=WGS84 +datum=WGS84 +units=m +no_defs',
+                      lt = lat,
+                      lng = long)
+    }
+
+    ## UTM/UPS would be nice for watersheds that don't fall on more than two zones
+    ## (incomplete)
+    # if(lat > 84 || lat < -80){ #polar; use Universal Polar Stereographic (UPS)
+    #     PROJ4 <- glue('+proj=ups +lon_0=', long)
+    #              # ' +datum=WGS84 +units=m +no_defs')
+    # } else { #not polar; use UTM
+    #     PROJ4 <- glue('+proj=utm +lat_0=', lat, ' +lon_0=', long)
+    # }
+
+    ## EXTRA CODE FOR CHOOSING PROJECTION BY LATITUDE ONLY
     # if(abslat < 23){ #tropical
     #     PROJ4 <- 9835 #Lambert cylindrical equal area (ellipsoidal; should spherical 9834 be used instead?)
     # } else if(abslat > 23 && abslat < 66){ # middle latitudes
-    #     PROJ4 <- 9822 #albers equal area conic
+    #     PROJ4 <- 5070 #albers equal area conic
     # } else { #polar (abslat >= 66)
     #     PROJ4 <- 9820 #lambert equal area azimuthal
     #     # PROJ4 <- 1027 #lambert equal area azimuthal (spherical)
@@ -4684,6 +5405,7 @@ shortcut_idw <- function(encompassing_dem,
                          wshd_bnd,
                          data_locations,
                          data_values,
+                         durations_between_samples = NULL,
                          stream_site_name,
                          output_varname,
                          save_precip_quickref = FALSE,
@@ -4698,6 +5420,16 @@ shortcut_idw <- function(encompassing_dem,
     #   the interpolation
     #data_values: data.frame with one column each for datetime and ms_status,
     #   and an additional named column of data values for each data location.
+    #durations_between_samples: numeric vector representing the time differences
+    #   between rows of data_values. Must be expressed in days. Only used if
+    #   output_varname == 'SPECIAL CASE PRECIP' and save_precip_quickref == TRUE,
+    #   so that quickref data can be expressed in mm/day, which is the unit
+    #   required to calculate precip flux.
+    #   NOTE: this could be calculated internally, but the duration of measurement
+    #   preceding the first value can't be known. Because shortcut_idw is
+    #   often run iteratively on chunks of a dataset, we require that
+    #   durations_between_samples be passed as an input, so as to minimize
+    #   the number of NAs generated.
     #output_varname: character; a prodname_ms, unless you're interpolating
     #   precipitation, in which case it must be "SPECIAL CASE PRECIP", because
     #   prefix information for precip is lost during the widen-by-site step
@@ -4711,12 +5443,23 @@ shortcut_idw <- function(encompassing_dem,
     #     logger = logger_module)
 
     if(output_varname != 'SPECIAL CASE PRECIP' && save_precip_quickref){
-        stop(paste('save_precip_quickref can only be TRUE when output_varname',
+        stop(paste('save_precip_quickref can only be TRUE if output_varname',
                    '== "SPECIAL CASE PRECIP"'))
     }
+    if(save_precip_quickref && is.null(durations_between_samples)){
+        stop(paste('save_precip_quickref can only be TRUE if',
+                    'durations_between_samples is supplied.'))
+    }
+    if(output_varname != 'SPECIAL CASE PRECIP' && ! is.null(durations_between_samples)){
+        logwarn(msg = paste('In shortcut_idw: ignoring durations_between_samples because',
+                            'output_varname != "SPECIAL CASE PRECIP".'),
+                logger = logger_module)
+    }
 
-    timestep_indices <- data_values$ind
-    data_values$ind <- NULL
+    if('ind' %in% colnames(data_values)){
+        timestep_indices <- data_values$ind
+        data_values$ind <- NULL
+    }
 
     #matrixify input data so we can use matrix operations
     d_status <- data_values$ms_status
@@ -4778,6 +5521,16 @@ shortcut_idw <- function(encompassing_dem,
         dk[is.na(dk)] <- 0 #allows matrix multiplication
         d_idw <- weightmat %*% dk
 
+        if(nrow(dk) == 0){
+            ws_mean[k] <- set_errors(NA_real_, NA)
+            if(save_precip_quickref){
+                precip_quickref[[k]] <- matrix(NA,
+                                               nrow = nrow(d_idw),
+                                               ncol = ncol(d_idw))
+            }
+            next
+        }
+
         #reapply uncertainty dropped by `%*%`
         errors(d_idw) <- weightmat %*% matrix(errors(dk),
                                               nrow = nrow(dk))
@@ -4825,6 +5578,13 @@ shortcut_idw <- function(encompassing_dem,
 
     if(save_precip_quickref){
 
+        #convert to mm/d
+        precip_quickref <- Map(function(millimeters, days){
+            return(millimeters/days)
+        },
+            millimeters = precip_quickref,
+            days = durations_between_samples)
+
         names(precip_quickref) <- as.character(timestep_indices)
         write_precip_quickref(precip_idw_list = precip_quickref,
                               network = network,
@@ -4862,6 +5622,7 @@ shortcut_idw <- function(encompassing_dem,
 
 shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                      wshd_bnd,
+                                     ws_area,
                                      data_locations,
                                      precip_values,
                                      chem_values,
@@ -4886,6 +5647,9 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #   recip_gauges
     #wshd_bnd: sf polygon with columns site_name and geometry.
     #   it represents a single watershed boundary.
+    #ws_area: numeric scalar representing watershed area in hectares. This is
+    #   passed so that it doesn't have to be calculated repeatedly (if
+    #   shortcut_idw_concflux_v2 is running iteratively).
     #data_locations: sf point(s) with columns site_name and geometry.
     #   represents all sites (e.g. rain gauges) that will be used in
     #   the interpolation.
@@ -4906,20 +5670,10 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #   or else time will be wasted rewriting the files.
     #   REMOVED; OBSOLETE
 
-    # if(write_idw_precip && is.null(precip_varnames)){
-    #     stop('If write_idw_precip is TRUE, precip_varnames must be supplied.')
-    # }
-    # if(interpolate_flux && ! interpolate_precip){
-    #     stop('if interpolate_flux is TRUE, interpolate_precip must also be')
-    # }
-    #
-    # if(return_precip && ! interpolate_precip){
-    #     stop('if return_precip is TRUE, interpolate_precip must also be')
-    # }
-
     precip_quickref <- read_precip_quickref(network = network,
                                             domain = domain,
                                             site_name = stream_site_name,
+                                            # dtrange = as.POSIXct(c('1968-01-01', '1976-06-01'), tz='UTC'))
                                             dtrange = range(chem_values$datetime))
 
     if(length(precip_quickref) == 1){
@@ -4933,34 +5687,50 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         }
     }
 
-    #shouldn't need a rolling join here, but maybe?
-    common_dts <- base::intersect(as.character(precip_values$datetime),
-                                  as.character(chem_values$datetime))
+    precip_is_highres <- Mode(diff(as.numeric(precip_values$datetime))) <= 15 * 60
+    if(is.na(precip_is_highres)) precip_is_highres <- FALSE
+    chem_is_highres <- Mode(diff(as.numeric(chem_values$datetime))) <= 15 * 60
+    if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
-    if(length(common_dts) == 0){
+    #if both chem and precip data are low resolution (grab samples),
+    #   let approxjoin_datetime match up samples with a 12-hour gap. otherwise the
+    #   gap should be 7.5 mins so that there isn't enormous duplication of
+    #   timestamps where multiple high-res values can be snapped to the
+    #   same low-res value
+    if(! chem_is_highres && ! precip_is_highres){
+        join_distance <- c('12:00:00')
+    } else {
+        join_distance <- c('7:30')
+    }
+
+    dt_match_inds <- approxjoin_datetime(x = chem_values,
+                                         y = precip_values,
+                                         rollmax = join_distance,
+                                         indices_only = TRUE)
+
+    chem_values <- chem_values[dt_match_inds$x, ]
+    common_datetimes <- chem_values$datetime
+
+    if(length(common_datetimes) == 0){
         pchem_range <- range(chem_values$datetime)
         test <- filter(precip_values,
                        datetime > pchem_range[1],
                        datetime < pchem_range[2])
         if(nrow(test) > 0){
-            logging::logerror('We need to determine common_dts with a rolling join!')
+            logging::logerror('something is wrong with approxjoin_datetime')
         }
         return(tibble())
     }
 
     precip_values <- precip_values %>%
         mutate(ind = 1:n()) %>%
-        filter(as.character(datetime) %in% common_dts)
+        slice(dt_match_inds$y) %>%
+        mutate(datetime = !!common_datetimes)
 
     quickref_inds <- precip_values$ind
     precip_values$ind <- NULL
 
-    chem_values <- filter(chem_values,
-                          as.character(datetime) %in% common_dts)
-
     #matrixify input data so we can use matrix operations
-    d_dt <- precip_values$datetime
-
     p_status <- precip_values$ms_status
     p_interp <- precip_values$ms_interp
     p_matrix <- select(precip_values,
@@ -4987,22 +5757,6 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
 
-    # #compute distances from all dem cells to all precip locations
-    # inv_distmat_p <- matrix(NA,
-    #                         nrow = length(dem_wb),
-    #                         ncol = ncol(p_matrix), #ngauges
-    #                         dimnames = list(NULL,
-    #                                         colnames(p_matrix)))
-    #
-    # for(k in 1:ncol(p_matrix)){
-    #     dk <- filter(data_locations,
-    #                  site_name == colnames(p_matrix)[k])
-    #     inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
-    #         terra::values(.)
-    #     inv_dist2[is.na(elevs)] <- NA #mask
-    #     inv_distmat_p[, k] <- inv_dist2
-    # }
-
     #compute distances from all dem cells to all chemistry locations
     inv_distmat_c <- matrix(NA,
                             nrow = length(dem_wb),
@@ -5021,85 +5775,10 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
     #calculate watershed mean concentration and flux at every timestep
     ptm <- proc.time()
-    # if(nrow(p_matrix) != nrow(c_matrix)) stop('P and C timesteps not equal')
     ntimesteps <- nrow(c_matrix)
-    # ws_mean_precip <- ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
     ws_mean_conc <- ws_mean_flux <- rep(NA, ntimesteps)
-    #REMOVE around here
-    # precip_quickref <- try_read_precip_quickref(network = network,
-    #                                             domain = domain,
-    #                                             site_name = stream_site_name,
-    #                                             timestep = 0)
-
-    # quickref_status <- attributes(precip_quickref)$status
 
     for(k in 1:ntimesteps){
-
-        # idw_log_timestep(verbose = verbose,
-        #                  site_name = stream_site_name,
-        #                  v = output_varname,
-        #                  k = k,
-        #                  ntimesteps = ntimesteps,
-        #                  time_elapsed = (proc.time() - ptm)[3] / 60)
-
-        # quickref_ind <- k %% 1000
-        #
-        # ## GET PRECIP FOR ALL CELLS IN TIMESTEP k
-        #
-        # if(quickref_status == 'reading'){
-        #
-        #     p_idw <- precip_quickref[[k]]
-        #
-        # } else { #'writing'
-        #
-        #     #assign cell weights as normalized inverse squared distances (p)
-        #     pk <- t(p_matrix[k, , drop = FALSE])
-        #     inv_distmat_p_sub <- inv_distmat_p[, ! is.na(pk), drop=FALSE]
-        #     pk <- pk[! is.na(pk), , drop=FALSE]
-        #     weightmat_p <- do.call(rbind, #avoids matrix transposition
-        #                            unlist(apply(inv_distmat_p_sub, #normalize by row
-        #                                         1,
-        #                                         function(x) list(x / sum(x))),
-        #                                   recursive = FALSE))
-        #
-        #     #determine data-elevation relationship for interp weighting (p only)
-        #     d_elev <- tibble(site_name = rownames(pk),
-        #                      precip = pk[,1]) %>%
-        #         left_join(data_locations,
-        #                   by = 'site_name')
-        #     mod <- lm(precip ~ elevation, data = d_elev)
-        #     ab <- as.list(mod$coefficients)
-        #
-        #     #perform vectorized idw (p)
-        #     pk[is.na(pk)] <- 0 #allows matrix multiplication
-        #     p_idw <- weightmat_p %*% pk
-        #
-        #     #reapply uncertainty dropped by `%*%`
-        #     errors(p_idw) <- weightmat_p %*% matrix(errors(pk),
-        #                                             nrow = nrow(pk))
-        #
-        #     if(nrow(pk) >= 3){
-        #
-        #         #estimate raster values from elevation alone (p only)
-        #         p_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
-        #
-        #         #average both approaches (p only; this should be weighted toward idw
-        #         #when close to any data location, and weighted half and half when far)
-        #         p_idw <- (p_idw + p_from_elev) / 2
-        #     }
-        #
-        #     if(! update_quickref){ #CHANGE TEST
-        #
-        #         precip_quickref <- try_read_precip_quickref(
-        #             network = network,
-        #             domain = domain,
-        #             site_name = stream_site_name,
-        #             timestep = k)
-        #
-        #         # quickref_status <- attributes(precip_quickref)$status DROP
-        #     }
-        # }
-
 
         ## GET CHEMISTRY FOR ALL CELLS IN TIMESTEP k
 
@@ -5123,43 +5802,30 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
 
         ## GET FLUX FOR ALL CELLS; THEN AVERAGE CELLS FOR PCHEM, PFLUX, PRECIP
 
-        #calculate flux for every cell
+        #calculate flux for every cell:
+        #   This is how we'd calcualate flux as kg/(ha * d):
+        #       mm/d * mg/L * m/1000mm * kg/1,000,000mg * 1000L/m^(2 + 1) * 10,000m^2/ha
+        #       therefore, kg/(ha * d) = mm * mg/L / d / 100 = (mm * mg) / (d * L * 100)
+        #   But stream_flux_inst is not scaled by area when it's derived (that
+        #   happens later), so we're going to derive precip_flux_inst
+        #   as unscaled here, and then both can be scaled the same way in
+        #   scale_flux_by_area. So we calculate flux in kg/(ha * d) as above,
+        #   then multiply by watershed area in hectares.
+
         quickref_ind <- as.character(quickref_inds[k])
-        flux_interp <- c_idw * precip_quickref[[quickref_ind]]
+        #              mg/L        mm/day                          ha
+        flux_interp <- c_idw * precip_quickref[[quickref_ind]] * ws_area / 100
 
         #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
         ws_mean_flux[k] <- mean(flux_interp, na.rm=TRUE)
         errors(ws_mean_conc)[k] <- mean(errors(c_idw), na.rm=TRUE)
         errors(ws_mean_flux)[k] <- mean(errors(flux_interp), na.rm=TRUE)
-
-        # if(dump_idw_precip){ MOVE/PARE
-        #
-        #     ws_mean_precip[k] <- mean(p_idw, na.rm=TRUE)
-        #     errors(ws_mean_precip)[k] <- mean(errors(p_idw), na.rm=TRUE)
-        #
-        #     ws_means_precip <- tibble(
-        #         datetime = d_dt,
-        #         site_name = stream_site_name,
-        #         val = ws_mean_precip,
-        #         ms_status = d_status,
-        #         ms_interp = d_interp)
-        #
-        #     ws_means_precip <- reconstruct_var_column(d = ws_means_precip,
-        #                                               network = network,
-        #                                               domain = domain,
-        #                                               prodname = 'precipitation')
-        #
-        #     dump_precip_idw_tempfile(ws_means = ws_means_precip,
-        #                              network = network,
-        #                              domain = domain,
-        #                              site_name = stream_site_name)
-        # }
     }
 
     # compare_interp_methods()
 
-    ws_means <- tibble(datetime = d_dt,
+    ws_means <- tibble(datetime = common_datetimes,
                        site_name = stream_site_name,
                        var = output_varname,
                        concentration = ws_mean_conc,
@@ -5306,9 +5972,15 @@ write_precip_quickref <- function(precip_idw_list,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    chunkfile <- paste(chunkdtrange[1],
-                       chunkdtrange[2],
+    chunkfile <- paste(strftime(chunkdtrange[1],
+                                format = '%Y-%m-%d %H:%M:%S',
+                                tz = 'UTC'),
+                       strftime(chunkdtrange[2],
+                                format = '%Y-%m-%d %H:%M:%S',
+                                tz = 'UTC'),
                        sep = '_')
+
+    chunkfile <- str_replace_all(chunkfile, ':', '-')
 
     saveRDS(object = precip_idw_list,
             file = glue('{qd}/{cf}', #omitting extension for easier parsing
@@ -5356,9 +6028,10 @@ read_precip_quickref <- function(network,
                                  # timestep){
 
     #allows precip values computed by shortcut_idw for each watershed
-    #   raster cell to be reused by shortcut_idw_concflux_v2
+    #   raster cell to be reused by shortcut_idw_concflux_v2. These values are
+    #   in mm/day
 
-    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref/',
+    quickref_dir <- glue('data/{n}/{d}/precip_idw_quickref',
                          n = network,
                          d = domain)
 
@@ -5372,10 +6045,10 @@ read_precip_quickref <- function(network,
         plyr::ldply(function(y){
             data.frame(startdt = y[1],
                        enddt = y[2])
-        })
+        }) %>%
+        mutate(ref_ind = 1:n())
 
-    refranges <- refranges %>%
-        # mutate(ref_ind = 1:n()) %>%
+    refranges_sel <- refranges %>%
         filter((startdt >= dtrange[1] & enddt <= dtrange[2]) |
                    (startdt < dtrange[1] & enddt >= dtrange[1]) |
                    (enddt > dtrange[2] & startdt <= dtrange[2]))
@@ -5383,16 +6056,37 @@ read_precip_quickref <- function(network,
                    # (startdt > dtrange[1] & startdt <= dtrange[2] & enddt > dtrange[2]) |
                    # (startdt < dtrange[1] & enddt < dtrange[2] & enddt >= dtrange[1]))
 
-    if(nrow(refranges) == 0){
+    if(nrow(refranges_sel) == 0){
         return(list('0' = 'NO QUICKREF AVAILABLE'))
     }
 
-    quickref <- list()
-    # quickref_inds <- character(length = nrow(refranges))
-    for(i in 1:nrow(refranges)){
+    #handle the case where an end of dtrange falls right between the start and
+    #end dates of a quickref file. this is possible because precip dates can
+    #be shifted (replaced with pchem dates) inside precip_pchem_pflux_idw2
+    ref_ind_range <- range(refranges_sel$ref_ind)
 
-        fn <- paste(refranges$startdt[i],
-                    refranges$enddt[i],
+    if(dtrange[1] < refranges_sel$startdt[1] && ref_ind_range[1] > 1){
+
+        refranges_sel <- bind_rows(refranges[ref_ind_range[1] - 1, ],
+                                   refranges_sel)
+    }
+
+    if(dtrange[2] > refranges_sel$enddt[nrow(refranges_sel)] &&
+       ref_ind_range[2] < nrow(refranges)){
+
+        refranges_sel <- bind_rows(refranges_sel,
+                                   refranges[ref_ind_range[2] + 1, ])
+    }
+
+    quickref <- list()
+    for(i in 1:nrow(refranges_sel)){
+
+        fn <- paste(strftime(refranges_sel$startdt[i],
+                             format = '%Y-%m-%d %H-%M-%S',
+                             tz = 'UTC'),
+                    strftime(refranges_sel$enddt[i],
+                             format = '%Y-%m-%d %H-%M-%S',
+                             tz = 'UTC'),
                     sep = '_')
 
         qf <- readRDS(glue('{qd}/{f}',
@@ -5400,73 +6094,41 @@ read_precip_quickref <- function(network,
                            f = fn))
 
         quickref <- append(quickref, qf)
-        # quickref_inds[i] <- names(qf)
-        # quickref[[i]] <- qf[[1]]
     }
 
-    #for some reason the first ref gets duplicated.
+    #for some reason the first ref sometimes gets duplicated?
     quickref <- quickref[! duplicated(names(quickref))]
 
     return(quickref)
-
-    #previous approach: when chunks have a size limit:
-
-    # #not to be confused with the precip idw tempfile (dumpfile),
-    # #the quickref file allows the same precip idw data to be used across all
-    # #chemistry variables when calculating flux. it's stored in 1000-timestep
-    # #chunks
-    #
-    # #set timestep to 0 to get the first chunk. for every thousand timepoints
-    # #thereafter, it will grab the next chunk
-    #
-    # chunk_number <- timestep / 1000 + 1
-    #
-    # if(! chunk_number %% 1 == 0){
-    #     stop('timestep must be a multiple of 1000')
-    # }
-    #
-    # chunkID <- stringr::str_pad(string = chunk_number,
-    #                             width = 3,
-    #                             side = 'left',
-    #                             pad = '0')
-    #
-    # quickref <- tryCatch(
-    #     {
-    #         o <- readRDS(precip_idw_list,
-    #                      glue('data/{n}/{d}/precip_idw_quickref/{s}/chunk{ch}.rds}',
-    #                           n = network,
-    #                           d = domain,
-    #                           s = site_name,
-    #                           ch = chunkID))
-    #         attr(o, 'status') <- 'read'
-    #         return(o)
-    #
-    #     },
-    #     error = function(e)
-    #         {
-    #             o <- list()
-    #             attr(o, 'status') <- 'write'
-    #             return(o)
-    #         })
-    #
-    # return(quickref)
 }
 
-populate_implicit_NAs <- function(d, interval){
+populate_implicit_NAs <- function(d,
+                                  interval,
+                                  val_fill = NA,
+                                  edges_only = FALSE){
 
-    #this would be more flexible if we could pass column names as
+    #TODO: this would be more flexible if we could pass column names as
     #   positional args and use them in group_by and mutate
 
     #d: a ms tibble with at minimum datetime, site_name, and var columns
     #interval: the interval along which to populate missing values. (must be
     #   either '15 min' or '1 day'.
+    #val_fill: character or NA. the token with which to populate missing
+    #   elements of the `val` column. All other columns will be populated
+    #   invariably with NA or 0. See details.
+    #edges_only: logical. if TRUE, only two filler rows will be inserted into each
+    #   gap, one just after the gap begins and the other just before the gap ends.
+    #   If FALSE (the default), the gap will be fully populated according to
+    #   the methods outlined in the details section.
 
     #this function makes implicit missing timeseries records explicit,
     #   by populating rows so that the datetime column is complete
     #   with respect to the sampling interval. In other words, if
     #   samples are taken every 15 minutes, but some samples are skipped
-    #   (rows not present), this will create those rows. if val, ms_status, or
-    #   other columns are present, their new records will be populated with NA
+    #   (rows not present), this will create those rows. If ms_status or
+    #   ms_interp columns are present, their new records will be populated
+    #   with 0s. The val column will be populated with whatever is passed to
+    #   val_fill. Any other columns will be populated with NAs.
 
     #returns d, complete with new rows, sorted by site_name, then var, then datetime
 
@@ -5475,20 +6137,56 @@ populate_implicit_NAs <- function(d, interval){
     }
 
     complete_d <- d %>%
+        mutate(fill_marker = 1) %>%
         group_by(site_name, var) %>%
         tidyr::complete(datetime = seq(min(datetime),
                                        max(datetime),
                                        by = interval)) %>%
-        mutate(site_name = .$site_name[1],
-               var = .$var[1]) %>%
+        # mutate(site_name = .$site_name[1],
+        #        var = .$var[1]) %>%
         ungroup() %>%
         arrange(site_name, var, datetime) %>%
         select(datetime, site_name, var, everything())
 
-    # complete_d <- right_join(d,
-    #                          fulldt,
-    #                          by = c('datetime', 'site_name', 'var')) %>%
-    #     arrange(datetime)
+    if(! any(is.na(complete_d$fill_marker))) return(d)
+
+    if(! is.na(val_fill)){
+        complete_d$val[is.na(complete_d$fill_marker)] <- val_fill
+    }
+
+    if('ms_status' %in% colnames(complete_d)){
+        complete_d$ms_status[is.na(complete_d$ms_status)] <- 0
+    }
+
+    if('ms_interp' %in% colnames(complete_d)){
+        complete_d$ms_interp[is.na(complete_d$ms_interp)] <- 0
+    }
+
+    if(edges_only){
+
+        midgap_rows <- rle2(is.na(complete_d$fill_marker)) %>%
+            filter(values == TRUE) %>%
+        # if(nrow(fill_runs) == 0) return(d)
+        # midgap_rows <- fill_runs %>%
+            select(starts, stops) %>%
+            {purrr::map2(.x = .$starts,
+                         .y = .$stops,
+                         ~seq(.x, .y))} %>%
+            purrr::map(~( if(length(.x) <= 2)
+                {
+                    return(NULL)
+                } else {
+                    return(.x[2:(length(.x) - 1)])
+                }
+            )) %>%
+            unlist()
+        if(! is.null(midgap_rows)){
+            complete_d <- slice(complete_d,
+                                -midgap_rows)
+        }
+    }
+
+    complete_d$fill_marker <- NULL
 
     return(complete_d)
 }
@@ -5526,27 +6224,29 @@ ms_linear_interpolate <- function(d, interval){
         stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
     }
 
-    impute_limit <- ifelse(interval == '1 day',
-                           3, #3 days if imputing daily samples
-                           48) #12 hours if imputing continuous (15 min) samples
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
+                                    yes = 3, #is Q-ish
+                                    no = 15) #is chemistry/etc
 
-    # ts_delta_t <- ifelse(interval == '1 day',
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    # ts_delta_t <- ifelse(interval == '1 day', #we might want this if we use na_seadec
     #                      1/365, #"sampling period" is 1 year; interval is 1/365 of that
     #                      1/96) #"sampling period" is 1 day; interval is 1/(24 * 4)
 
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
     d_interp <- d %>%
-        # group_by(site_name, var) %>%
-        arrange(datetime) %>%
         mutate(
 
-            #make binary column to track which points are interped
-            ms_interp = case_when(
-                is.na(ms_status) ~ 1,
-                TRUE ~ 0),
-
-            #carry status to interped rows
-            ms_status = imputeTS::na_locf(ms_status,
-                                          na_remaining = 'rev'),
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant now, but can't hurt)
+            ms_status <- imputeTS::na_locf(ms_status,
+                                           na_remaining = 'rev'),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -5555,20 +6255,18 @@ ms_linear_interpolate <- function(d, interval){
             #                                start = ,
             #                                end = ,
             #                                deltat = ts_delta_t)),
-            #                         maxgap = impute_limit)
+            #                         maxgap = max_samples_to_impute)
             #
             # } else if(sum(! is.na(val)) > 1){
             val = if(sum(! is.na(val)) > 1){
 
                 #linear interp NA vals
                 imputeTS::na_interpolation(val,
-                                           maxgap = impute_limit)
+                                           maxgap = max_samples_to_impute)
 
-            #unless not enough data in group; then do nothing
+                #unless not enough data in group; then do nothing
             } else val
         ) %>%
-
-        filter(! is.na(val)) %>%
         mutate(
             err = errors(val), #extract error from data vals
             err = case_when(
@@ -5582,9 +6280,13 @@ ms_linear_interpolate <- function(d, interval){
                 set_errors(val, #unless not enough error to interp
                            0)
             }) %>%
-        # ungroup() %>%
-        select(-err) %>%
+        select(any_of(c('datetime', 'site_name', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_name, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
 
     return(d_interp)
 }
@@ -5613,7 +6315,7 @@ synchronize_timestep <- function(d){
 
     #split dataset by site and variable. for each, determine whether we're
     #   dealing with ~daily data or ~15min data. set rounding_intervals
-    #   accordingly.
+    #   accordingly. This approach avoids OOM errors with giant groupings.
     d_split <- d %>%
         group_by(site_name, var) %>%
         arrange(datetime) %>%
@@ -5627,18 +6329,67 @@ synchronize_timestep <- function(d){
 
     rounding_intervals <- case_when(
         is.na(mode_intervals_m) | mode_intervals_m > 12 * 60 ~ '1 day',
-        is.na(mode_intervals_m) | mode_intervals_m <= 12 * 60 ~ '15 min')
+        mode_intervals_m <= 12 * 60 ~ '1 day') #TODO, TEMPORARY: switch this back
+        # mode_intervals_m <= 12 * 60 ~ '15 min')
 
     for(i in 1:length(d_split)){
 
         sitevar_chunk <- d_split[[i]]
 
+        dupes_present <- any(duplicated(sitevar_chunk$datetime) |
+                             duplicated(sitevar_chunk$datetime,
+                                        fromLast = TRUE))
+
+        #average values for duplicate timestamps
+        if(dupes_present){
+
+            logwarn(msg = glue('Duplicate datetimes found for site: {s}, var: {v}',
+                               s = sitevar_chunk$site_name[1],
+                               v = sitevar_chunk$var[1]),
+                    logger = logger_module)
+
+            sitevar_chunk_dt <- sitevar_chunk %>%
+                mutate(val_err = errors(val),
+                       val = errors::drop_errors(val)) %>%
+                as.data.table()
+
+            sitevar_chunk <- sitevar_chunk_dt[, .(
+                site_name = data.table::first(site_name),
+                var = data.table::first(var),
+             #data.table doesn't work with the errors package, but we're
+             #determining the uncertainty of the mean by the same method here:
+             #    max(SDM, mean(uncert)),
+             #    where SDM is the Standard Deviation of the Mean.
+             #The one difference is that we remove NAs when computing
+             #the standard deviation. Rationale: 1. This will only result in
+             #"incorrect" error values if there's an NA error coupled with a
+             #non-NA value (if the value is NA, the error must be too).
+             #I don't think this happens very often, if ever.
+             #2. an error of NA just looks like 0 error, which is more misleading
+             #than even a wild nonzero error.
+                val_err = max(sd_or_0(val, na.rm = TRUE) / sqrt(.N),
+                              mean(val_err, na.rm = TRUE)),
+                val = mean(val, na.rm = TRUE),
+                ms_status = numeric_any(ms_status)
+             ), keyby = datetime] %>%
+                as_tibble() %>%
+                mutate(val = set_errors(val, val_err)) %>%
+                select(-val_err)
+
+            # sitevar_chunk <- sitevar_chunk %>%
+            #     group_by(datetime) %>%
+            #     summarize(site_name = first(site_name),
+            #               var = first(var),
+            #               val = mean(val, na.rm = TRUE),
+            #               ms_status = numeric_any(ms_status)) %>%
+            #     ungroup()
+        }
+
         #round each site-variable tibble's datetime column to the desired interval.
-        #this method is clunky, but it avoids a lot of group_by overhead.
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::round_date(
-                                    datetime,
-                                    rounding_intervals[i]))
+                                    x = datetime,
+                                    unit = rounding_intervals[i]))
 
         #split chunk into subchunks. one has duplicate datetimes to summarize,
         #   and the other doesn't. both will be interpolated in a bit.
@@ -5651,28 +6402,54 @@ synchronize_timestep <- function(d){
 
         if(nrow(summary_and_interp_chunk)){
 
-            #summarize by max for Q, sum for P, and mean for chemistry
-            var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+            #summarize by sum for P, and mean for everything else
+            # var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
             var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
-            sitevar_chunk <- summary_and_interp_chunk %>%
-                group_by(datetime) %>%
-                    summarize(
-                        site_name = first(site_name),
-                        var = first(var),
-                        val = if(var_is_p)
-                            {
-                                sum(val, na.rm = TRUE)
-                            } else if(var_is_q){
-                                max_ind <- which.max(val) #max() removes uncert
-                                if(max_ind) val[max_ind] else NA_real_
-                            } else {
-                                mean(val, na.rm = TRUE)
-                            },
-                        ms_status = numeric_any(ms_status)) %>%
-                    ungroup() %>%
+            summary_and_interp_chunk_dt <- summary_and_interp_chunk %>%
+                mutate(val_err = errors(val),
+                       val = errors::drop_errors(val)) %>%
+                as.data.table()
+
+            sitevar_chunk <- summary_and_interp_chunk_dt[, .(
+                site_name = data.table::first(site_name),
+                var = data.table::first(var),
+                val_err = if(var_is_p)
+                    {
+                    #the errors package uses taylor series expansion here.
+                    #maybe implement some day.
+                        sum(val_err, na.rm = TRUE)
+                    } else {
+                        max(sd_or_0(val, na.rm = TRUE) / sqrt(.N),
+                            mean(val_err, na.rm = TRUE))
+                    },
+                val = if(var_is_p) sum(val, na.rm = TRUE) else mean(val, na.rm = TRUE),
+                ms_status = numeric_any(ms_status)
+            ), by = datetime] %>%
+                as_tibble() %>%
+                mutate(val = set_errors(val, val_err)) %>%
+                select(-val_err) %>%
                 bind_rows(interp_only_chunk) %>%
                 arrange(datetime)
+
+            # sitevar_chunk <- summary_and_interp_chunk %>%
+            #     group_by(datetime) %>%
+            #         summarize(
+            #             site_name = first(site_name),
+            #             var = first(var),
+            #             val = if(var_is_p)
+            #                 {
+            #                     sum(val, na.rm = TRUE)
+            #                 # } else if(var_is_q){
+            #                 #     max_ind <- which.max(val) #max() removes uncert
+            #                 #     if(max_ind) val[max_ind] else NA_real_
+            #                 } else {
+            #                     mean(val, na.rm = TRUE)
+            #                 },
+            #             ms_status = numeric_any(ms_status)) %>%
+            #         ungroup() %>%
+            #     bind_rows(interp_only_chunk) %>%
+            #     arrange(datetime)
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -5725,13 +6502,17 @@ ms_parallelize <- function(maxcores = Inf){
     #   free up the cores that were employed by R. Be sure to run
     #ms_unparallelize() after the parallel tasks are complete.
 
-    #be sure to call
-
     #we need to find a way to protect some cores for serving the portal
     #if we end up processing data and serving the portal on the same
     #machine/cluster. we can use taskset to assign the shiny process
     #to 1-3 cores and this process to any others.
 
+    #NOTE: this function has been updated to work with doFuture, which
+    #   supplants doParallel. doFuture allows us to dispatch jobs on a cluster
+    #   via Slurm. it might also allow us to dispatch multisession jobs on
+    #   Windows
+
+    #obsolete-ish notes:
     # #variables used inside the foreach loop on the master process will
     # #be written to the global environment, in some cases overwriting needed
     # #globals. we can set them aside in a separate environment and restore them later
@@ -5743,15 +6524,29 @@ ms_parallelize <- function(maxcores = Inf){
     #        envir = protected_environment)
 
     #then set up parallelization
+    # clst <- parallel::makeCluster(ncores)
+    clst <- NULL
     ncores <- min(parallel::detectCores(), maxcores)
 
-    if(.Platform$OS.type == 'windows'){
-        clst <- parallel::makeCluster(ncores, type = 'PSOCK')
+    if(ms_instance$which_machine == 'DCC'){
+        doFuture::registerDoFuture()
+        # future::plan(cluster, workers = clst) #might need this instead of Slurm one day
+        future::plan(future.batchtools::batchtools_slurm)
+    } else if(.Platform$OS.type == 'windows'){
+        #issues (found while testing on linux):
+        #1. inner precip logging waits till outer loop completes, then only prints to console.
+        #2. konza error that doesn't occur with FORK cluster:
+        #   task 1 failed - "task 2 failed - "unused argument (datetime_x = datetime)"
+        #3. not fully utilizing cores like FORK does
+        doFuture::registerDoFuture()
+        # clst <- parallel::makeCluster(ncores)
+        future::plan(multisession, workers = ncores)
+         #clst <- parallel::makeCluster(ncores, type = 'PSOCK')
     } else {
+        # future::plan(multicore) #can't be done from Rstudio
         clst <- parallel::makeCluster(ncores, type = 'FORK')
+        doParallel::registerDoParallel(clst)
     }
-
-    doParallel::registerDoParallel(clst)
 
     return(clst)
 }
@@ -5891,6 +6686,8 @@ get_detlim_precursors <- function(network,
         prodname <- 'precip_chemistry'
     } else if(prodname == 'precip_pchem_pflux'){
         prodname <- c('precip_chemistry', 'precipitation')
+    } else if(prodname == 'stream_flux_inst'){
+        prodname <- c('stream_chemistry', 'discharge')
     }
 
     precursors <- prods %>%
@@ -5901,6 +6698,72 @@ get_detlim_precursors <- function(network,
         pull(prodname_ms)
 
     return(precursors)
+}
+
+datetimes_to_durations <- function(datetime_vec,
+                                   variable_prefix_vec = NULL,
+                                   unit,
+                                   sensor_maxgap = Inf,
+                                   nonsensor_maxgap = Inf,
+                                   grab_maxgap = Inf,
+                                   installed_maxgap = Inf){
+
+    #datetime_vec: POSIXct. a vector of datetimes
+    #variable_prefix_vec: POSIXct. a vector of macrosheds variable prefixes,
+    #   e.g. 'IS'. This vector is generated by calling extract_var_prefix
+    #   on the var column of a macrosheds data.frame. Only required if you
+    #   supply one or more of the maxgap parameters.
+    #unit: string. The desired datetime unit. Must be expressed in a form
+    #   that's readable by base::difftime
+    #sensor_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to sensor data only (IS and GS).
+    #nonsensor_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to nonsensor data only (IN and GN).
+    #grab_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   to grab data only (GS and GN).
+    #installed_maxgap: numeric. the largest data gap that should return
+    #   a value. Durations longer than this gap will return NA. Expressed in
+    #   the same units as unit (see above). This applies
+    #   only to data from installed units (IS and IN).
+
+    #an NA is prepended to the output, so that its length is the same as
+    #   datetime_vec
+
+    if(! is.null(variable_prefix_vec) &&
+       ! all(variable_prefix_vec %in% c('GN', 'GS', 'IN', 'IS'))){
+        stop(paste('all elements of variable_prefix_vec must be one of "GN",',
+                   '"GS", "IN", "IS"'))
+    }
+
+    durs <- diff(datetime_vec)
+    units(durs) <- unit
+    durs <- c(NA_real_, as.numeric(durs))
+
+    if(! is.null(variable_prefix_vec)){
+        is_sensor_data <- grepl('^.S', variable_prefix_vec)
+        is_installed_data <- grepl('^I', variable_prefix_vec)
+    }
+
+    if(! is.infinite(sensor_maxgap)){
+        durs[is_sensor_data & durs > sensor_maxgap] <- NA_real_
+    }
+    if(! is.infinite(nonsensor_maxgap)){
+        durs[! is_sensor_data & durs > nonsensor_maxgap] <- NA_real_
+    }
+    if(! is.infinite(grab_maxgap)){
+        durs[! is_installed_data & durs > grab_maxgap] <- NA_real_
+    }
+    if(! is.infinite(installed_maxgap)){
+        durs[is_installed_data & durs > installed_maxgap] <- NA_real_
+    }
+
+    return(durs)
 }
 
 precip_pchem_pflux_idw <- function(pchem_prodname,
@@ -5926,15 +6789,24 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     }, silent = TRUE)
 
     precip_only <- FALSE
-    if('try-error' %in% class(pchem)){
+    if('try-error' %in% class(pchem) || nrow(pchem) == 0){
         precip_only <- TRUE
-        logging::logwarn('No pchem product. IDW-Interpolating precipitation only')
+        logging::logwarn('No (or empty) pchem product. IDW-Interpolating precipitation only')
     }
 
-    precip <- read_combine_feathers(network = network,
-                                    domain = domain,
-                                    prodname_ms = precip_prodname) %>%
-        filter(site_name %in% rg$site_name)
+    precip <- try({
+        read_combine_feathers(network = network,
+                              domain = domain,
+                              prodname_ms = precip_prodname) %>%
+            filter(site_name %in% rg$site_name)
+    }, silent = TRUE)
+
+    pchem_only <- FALSE
+    if('try-error' %in% class(precip) || nrow(precip) == 0){
+        pchem_only <- TRUE
+        if(precip_only) stop('Nothing to IDW interpolate. Is this kernel needed?')
+        logging::logwarn('No (or empty) precip product. IDW-Interpolating pchem only')
+    }
 
     #project based on average latlong of watershed boundaries
     bbox <- as.list(sf::st_bbox(wb))
@@ -5946,46 +6818,56 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
 
-
     dem <- expo_backoff(
         expr = {
             elevatr::get_elev_raster(locations = wb_rg_bbox,
                                      z = 8, #res should adjust with area?,
                                      clip = 'bbox',
                                      expand = 200,
-                                     verbose = FALSE)
+                                     verbose = FALSE,
+                                     override_size_check = TRUE)
         },
-        max_attempts = 4
+        max_attempts = 5
     )
 
     #add elev column to rain gauges
     rg$elevation <- terra::extract(dem, rg)
 
     #this avoids a lot of slow summarizing
-    status_cols <- precip %>%
-        select(datetime, ms_status, ms_interp) %>%
-        group_by(datetime) %>%
-        summarize(
-            ms_status = numeric_any(ms_status),
-            ms_interp = numeric_any(ms_interp))
+    if(! pchem_only){
 
-    #clean precip and arrange for matrixification
+        # if(length(unique(precip$var)) > 1){
+        #     logwarn(paste('Multiple precip prefixes encountered.'))
+        # }
 
-    # precip_varnames <- precip %>% #ugly result of changed plans and technical debt
-    #     select(-ms_status, -ms_interp, -val) %>%
-    #     tidyr::pivot_wider(names_from = site_name,
-    #                        values_from = var) %>%
-    #     arrange(datetime)
-    # precip_varnames <- select(precip,
-    #                           datetime, site_name, var)
+        status_cols <- precip %>%
+            select(datetime, ms_status, ms_interp) %>%
+            group_by(datetime) %>%
+            summarize(
+                ms_status = numeric_any(ms_status),
+                ms_interp = numeric_any(ms_interp))
 
-    precip <- precip %>%
-        select(-ms_status, -ms_interp, -var) %>%
-        tidyr::pivot_wider(names_from = site_name,
-                           values_from = val) %>%
-        left_join(status_cols, #they get lumped anyway
-                  by = 'datetime') %>%
-        arrange(datetime)
+        day_durations_byproduct <- datetimes_to_durations(
+            datetime_vec = precip$datetime,
+            variable_prefix_vec = extract_var_prefix(precip$var),
+            unit = 'days',
+            installed_maxgap = 2,
+            grab_maxgap = 30)
+
+        precip$val[is.na(day_durations_byproduct)] <- NA
+
+        precip <- precip %>%
+            select(-ms_status, -ms_interp, -var) %>%
+            tidyr::pivot_wider(names_from = site_name,
+                               values_from = val) %>%
+            left_join(status_cols, #they get lumped anyway
+                      by = 'datetime') %>%
+            arrange(datetime)
+
+        day_durations <- datetimes_to_durations(
+            datetime_vec = precip$datetime,
+            unit = 'days')
+    }
 
     if(! precip_only){
 
@@ -6073,6 +6955,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
         wbi <- slice(wb, i)
         site_name <- wbi$site_name
+        wbi_area_ha <- as.numeric(sf::st_area(wbi)) / 10000
 
         idw_log_wb(verbose = verbose,
                    site_name = site_name,
@@ -6083,191 +6966,337 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                                      domain = domain,
                                                      prodname_ms = prodname_ms)
 
-        if(! precip_only && nrow(precip) > 10000){
-            nchunks <- parallel::detectCores() %/% 2
-        # } else if(nrow(precip) > 17000){
-        #     #handle a case worse than bonanza here
-        } else {
-            nchunks <- parallel::detectCores()
-        }
+        nthreads <- parallel::detectCores()
 
         ## IDW INTERPOLATE PRECIP FOR ALL TIMESTEPS. STORE CELL VALUES
         ## SO THEY CAN BE USED FOR PFLUX INTERP
+        if(! pchem_only){
 
-        precip_chunklist <- chunk_df(d = precip,
-                                     nchunks = nchunks,
-                                     create_index_column = TRUE)
+            ntimesteps_precip <- nrow(precip)
+            nsuperchunks <- ceiling(ntimesteps_precip / 25000 * 2)
+            nchunks_precip <- nthreads * nsuperchunks
 
-        clst <- ms_parallelize()
+            precip_superchunklist <- chunk_df(d = precip,
+                                              nchunks = nsuperchunks,
+                                              create_index_column = TRUE)
 
-        ws_mean_precip <- foreach::foreach(
-            j = 1:min(nchunks, nrow(precip)),
-            .combine = idw_parallel_combine,
-            .init = 'first iter') %dopar% {
+            ws_mean_precip <- tibble()
+            for(s in 1:length(precip_superchunklist)){
+            # ws_mean_precip <- foreach::foreach(
+            #     s = 1:length(precip_superchunklist),
+            #     .combine = idw_parallel_combine,
+            #     .init = 'first iter') %:% {
 
-            idw_log_var(verbose = verbose,
-                        site_name = site_name,
-                        v = 'precipitation',
-                        j = paste('chunk', j),
-                        ntimesteps = nrow(precip_chunklist[[j]]),
-                        nvars = nchunks)
+                precip_superchunk <- precip_superchunklist[[s]]
 
-            foreach_return <- shortcut_idw(
-                encompassing_dem = dem,
-                wshd_bnd = wbi,
-                data_locations = rg,
-                data_values = precip_chunklist[[j]],
-                stream_site_name = site_name,
-                output_varname = 'SPECIAL CASE PRECIP',
-                save_precip_quickref = ! precip_only,
-                elev_agnostic = FALSE,
-                verbose = verbose)
+                precip_chunklist <- chunk_df(d = precip_superchunk,
+                                             nchunks = nthreads,
+                                             create_index_column = FALSE)
 
-            foreach_return
+                idw_log_var(verbose = verbose,
+                            site_name = site_name,
+                            v = 'precipitation',
+                            j = paste('chunk', s),
+                            ntimesteps = nrow(precip_superchunk),
+                            nvars = nsuperchunks)
+
+                clst <- ms_parallelize(maxcores = nthreads)
+                # doFuture::registerDoFuture()
+                # ncores <- min(parallel::detectCores(), maxcores)
+                # clst <- parallel::makeCluster(nthreads, type='FORK')
+                # future::plan(future::multicore, workers = 48)
+                # future::plan(future::multisession, workers = 48)
+
+                # parallel::stopCluster(clst)
+                # fe_junk <- foreach:::.foreachGlobals
+                # rm(list = ls(name = fe_junk),
+                #    pos = fe_junk)
+
+                ws_mean_precip_chunk <- foreach::foreach(
+                    j = 1:min(nthreads, nrow(precip_superchunk)),
+                    .combine = idw_parallel_combine,
+                    .init = 'first iter') %dopar% {
+
+                    pchunk <- precip_chunklist[[j]]
+
+                    # idw_log_var(verbose = verbose,
+                    #             site_name = site_name,
+                    #             v = 'precipitation',
+                    #             j = paste('chunk', j + (nthreads * (s - 1))),
+                    #             ntimesteps = nrow(pchunk),
+                    #             nvars = nchunks_precip)
+
+                    foreach_return <- shortcut_idw(
+                        encompassing_dem = dem,
+                        wshd_bnd = wbi,
+                        data_locations = rg,
+                        data_values = pchunk,
+                        durations_between_samples = day_durations[pchunk$ind],
+                        stream_site_name = site_name,
+                        output_varname = 'SPECIAL CASE PRECIP',
+                        save_precip_quickref = ! precip_only,
+                        elev_agnostic = FALSE,
+                        verbose = verbose)
+
+                    foreach_return
+                }
+
+                ms_unparallelize(clst)
+
+                rm(precip_chunklist); gc()
+
+                ws_mean_precip <- bind_rows(ws_mean_precip, ws_mean_precip_chunk)
             }
 
-        ms_unparallelize(clst)
+            rm(precip_superchunklist); gc()
 
-        rm(precip_chunklist); gc()
+            if(any(is.na(ws_mean_precip$datetime))){
+                stop('NA datetime found in ws_mean_precip')
+            }
 
-        if(any(is.na(ws_mean_precip$datetime))){
-            stop('NA datetime found in ws_mean_precip')
+            # #restore original varnames by site and dt
+            # ws_mean_precip <- ws_mean_precip %>%
+            #     arrange(datetime) %>%
+            #     select(-var) %>% #just a placeholder
+            #     left_join(precip_varnames,
+            #               by = c('datetime', 'site_name'))
+
+            ws_mean_precip <- ws_mean_precip %>%
+                dplyr::rename_all(dplyr::recode, concentration = 'val') %>%
+                # rename(val = concentration) %>%
+                arrange(datetime)
+
+            ws_mean_precip <- apply_detection_limit_t(
+                X = ws_mean_precip,
+                network = network,
+                domain = domain,
+                prodname_ms = precursor_prodnames[grepl('^precipitation',
+                                                        precursor_prodnames)])
+
+            write_ms_file(ws_mean_precip,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = 'precipitation__ms900',
+                          site_name = site_name,
+                          level = 'derived',
+                          shapefile = FALSE,
+                          link_to_portal = FALSE)
+
+            rm(ws_mean_precip); gc()
         }
-
-        # #restore original varnames by site and dt
-        # ws_mean_precip <- ws_mean_precip %>%
-        #     arrange(datetime) %>%
-        #     select(-var) %>% #just a placeholder
-        #     left_join(precip_varnames,
-        #               by = c('datetime', 'site_name'))
-
-        ws_mean_precip <- ws_mean_precip %>%
-            dplyr::rename_all(dplyr::recode, concentration = 'val') %>%
-            # rename(val = concentration) %>%
-            arrange(datetime)
-
-        ws_mean_precip <- apply_detection_limit_t(
-            X = ws_mean_precip,
-            network = network,
-            domain = domain,
-            prodname_ms = precursor_prodnames[grepl('precipitation',
-                                                    precursor_prodnames)])
-
-        write_ms_file(ws_mean_precip,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = 'precipitation__ms900',
-                      site_name = site_name,
-                      level = 'derived',
-                      shapefile = FALSE,
-                      link_to_portal = FALSE)
-
-        rm(ws_mean_precip); gc()
 
         ## NOW IDW INTERPOLATE PCHEM (IF PRECIP CHEMISTRY DATA EXIST)
         ## AND PFLUX (FOR VARIABLES THAT ARE FLUXABLE).
-
         if(! precip_only){
 
-            if(length(pchem_vars_fluxable)){
-                first_fluxvar_ind <- which(pchem_vars_fluxable[1] == pchem_vars)
-            }
-
-            clst <- ms_parallelize()
-
-            idw_out <- foreach::foreach(
-                j = 1:nvars,
-                # .verbose = TRUE,
-                .combine = idw_parallel_combine,
-                .init = 'first iter') %do% {
+            ws_mean_chemflux <- tibble()
+            for(j in 1:nvars){
 
                 v <- pchem_vars[j]
                 jd <- pchem_setlist[[j]]
-                ntimesteps <- nrow(jd)
+                ntimesteps_chemflux <- nrow(jd)
 
-                is_fluxable <- ifelse(v %in% pchem_vars_fluxable, TRUE, FALSE)
+                if(v %in% pchem_vars_fluxable && ! pchem_only){
+                    is_fluxable <- TRUE
+                } else {
+                    is_fluxable <- FALSE
+                }
 
                 idw_log_var(verbose = verbose,
                             site_name = site_name,
                             v = v,
-                            j = j,
+                            j = paste('var', j),
                             nvars = nvars,
-                            ntimesteps = ntimesteps,
+                            ntimesteps = ntimesteps_chemflux,
                             is_fluxable = is_fluxable)
 
-                if(ntimesteps> 5000){
-                    nchunks <- parallel::detectCores() %/% 2 #overkill?
-                } else {
-                    nchunks <- parallel::detectCores()
+                nsuperchunks <- ceiling(ntimesteps_chemflux / 5000 * 2)
+                nchunks_chemflux <- nthreads * nsuperchunks
+
+                chemflux_superchunklist <- chunk_df(d = jd,
+                                                    nchunks = nsuperchunks)
+                nsuperchunks <- length(chemflux_superchunklist)
+
+                ws_mean_chemflux_var <- tibble()
+                for(s in 1:nsuperchunks){
+
+                    chemflux_superchunk <- chemflux_superchunklist[[s]]
+
+                    chemflux_chunklist <- chunk_df(d = chemflux_superchunk,
+                                                   nchunks = nthreads)
+
+                    idw_log_var(verbose = verbose,
+                                site_name = site_name,
+                                v = v,
+                                j = paste('chunk', s),
+                                ntimesteps = nrow(chemflux_superchunk),
+                                nvars = nsuperchunks)
+
+                    clst <- ms_parallelize(maxcores = nthreads)
+
+                    foreach_out <- foreach::foreach(
+                        l = 1:length(chemflux_chunklist),
+                        # l = 1:min(nthreads, nrow(chemflux_superchunk)),
+                        .combine = idw_parallel_combine,
+                        .init = 'first iter') %dopar% {
+
+                            if(is_fluxable){
+
+                                foreach_chunk <- shortcut_idw_concflux_v2(
+                                    encompassing_dem = dem,
+                                    wshd_bnd = wbi,
+                                    ws_area = wbi_area_ha,
+                                    data_locations = rg,
+                                    precip_values = precip,
+                                    chem_values = chemflux_chunklist[[l]],
+                                    stream_site_name = site_name,
+                                    output_varname = v,
+                                    verbose = verbose)
+
+                            } else {
+
+                                foreach_chunk <- shortcut_idw(
+                                    encompassing_dem = dem,
+                                    wshd_bnd = wbi,
+                                    data_locations = rg,
+                                    data_values = chemflux_chunklist[[l]],
+                                    stream_site_name = site_name,
+                                    output_varname = v,
+                                    elev_agnostic = TRUE,
+                                    verbose = verbose)
+                            }
+
+                            foreach_chunk
+                        }
+
+                        ms_unparallelize(clst)
+
+
+                    rm(chemflux_chunklist); gc()
+
+                    ws_mean_chemflux_var <- bind_rows(ws_mean_chemflux_var,
+                                                      foreach_out)
                 }
 
-                chunklist <- chunk_df(d = jd,
-                                      nchunks = nchunks)
+                rm(chemflux_superchunklist); gc()
 
-                foreach_chunk_outer <- foreach::foreach(
-                    l = 1:min(nchunks, nrow(jd)),
-                    .combine = idw_parallel_combine,
-                    .init = 'first iter') %dopar% {
-
-                    if(is_fluxable){
-
-                        foreach_chunk_inner <- shortcut_idw_concflux_v2(
-                            encompassing_dem = dem,
-                            wshd_bnd = wbi,
-                            data_locations = rg,
-                            precip_values = precip,
-                            chem_values = chunklist[[l]],
-                            stream_site_name = site_name,
-                            output_varname = v,
-                            # dump_idw_precip = is_fluxable && j == first_fluxvar_ind,
-                            # precip_varnames = precip_varnames,
-                            verbose = verbose)
-
-                    } else {
-
-                        foreach_chunk_inner <- shortcut_idw(
-                            encompassing_dem = dem,
-                            wshd_bnd = wbi,
-                            data_locations = rg,
-                            data_values = chunklist[[l]],
-                            stream_site_name = site_name,
-                            output_varname = v,
-                            elev_agnostic = TRUE,
-                            verbose = verbose)
-                    }
-
-                    foreach_chunk_inner
-                }
-
-                foreach_chunk_outer
+                ws_mean_chemflux <- bind_rows(ws_mean_chemflux,
+                                              ws_mean_chemflux_var)
             }
 
-            rm(chunklist); gc()
 
-            ms_unparallelize(clst)
 
-            if(any(is.na(idw_out$datetime))){
-                stop('NA datetime found in idw_out')
+            # clst <- ms_parallelize()
+            #
+            # ws_mean_chemflux <- foreach::foreach(
+            #     j = 1:nvars,
+            #     # .verbose = TRUE,
+            #     .combine = idw_parallel_combine,
+            #     .init = 'first iter') %do% {
+            #
+            #     v <- pchem_vars[j]
+            #     jd <- pchem_setlist[[j]]
+            #     ntimesteps_chemflux <- nrow(jd)
+            #
+            #     if(v %in% pchem_vars_fluxable && ! pchem_only){
+            #         is_fluxable <- TRUE
+            #     } else {
+            #         is_fluxable <- FALSE
+            #     }
+            #
+            #     idw_log_var(verbose = verbose,
+            #                 site_name = site_name,
+            #                 v = v,
+            #                 j = j,
+            #                 nvars = nvars,
+            #                 ntimesteps = ntimesteps_chemflux,
+            #                 is_fluxable = is_fluxable)
+            #
+            #     if(ntimesteps_chemflux > 5000){
+            #        # (exists('ntimesteps_precip') && ntimesteps_precip > 2e5)){
+            #         nchunks <- nthreads %/% 2 #overkill?
+            #     } else {
+            #         nchunks <- nthreads
+            #     }
+            #
+            #     chunklist <- chunk_df(d = jd,
+            #                           nchunks = nchunks)
+            #
+            #     foreach_chunk_outer <- foreach::foreach(
+            #         l = 1:min(nchunks, nrow(jd)),
+            #         .combine = idw_parallel_combine,
+            #         .init = 'first iter') %dopar% {
+            #
+            #         if(is_fluxable){
+            #
+            #             foreach_chunk_inner <- shortcut_idw_concflux_v2(
+            #                 encompassing_dem = dem,
+            #                 wshd_bnd = wbi,
+            #                 ws_area = wbi_area_ha,
+            #                 data_locations = rg,
+            #                 precip_values = precip,
+            #                 chem_values = chunklist[[l]],
+            #                 stream_site_name = site_name,
+            #                 output_varname = v,
+            #                 verbose = verbose)
+            #
+            #         } else {
+            #
+            #             foreach_chunk_inner <- shortcut_idw(
+            #                 encompassing_dem = dem,
+            #                 wshd_bnd = wbi,
+            #                 data_locations = rg,
+            #                 data_values = chunklist[[l]],
+            #                 stream_site_name = site_name,
+            #                 output_varname = v,
+            #                 elev_agnostic = TRUE,
+            #                 verbose = verbose)
+            #         }
+            #
+            #         foreach_chunk_inner
+            #     }
+            #
+            #     foreach_chunk_outer
+            # }
+            #
+            # rm(chunklist); gc()
+            #
+            # ms_unparallelize(clst)
+
+            if(any(is.na(ws_mean_chemflux$datetime))){
+                stop('NA datetime found in ws_mean_chemflux')
             }
-
-            # logging::logwarn(paste(colnames(idw_out), collapse = ', '))
-            # zz <<- idw_out
-            ws_mean_pchem <- idw_out %>%
-                select(-flux) %>%
-                rename(val = concentration) %>%
-                arrange(var, datetime)
-
-            ws_mean_pflux <- idw_out %>%
-                select(-concentration) %>%
-                rename(val = flux) %>%
-                arrange(var, datetime)
 
             chemprod <- precursor_prodnames[grepl('chem', precursor_prodnames)]
 
-            ws_mean_pflux <- apply_detection_limit_t(ws_mean_pflux,
-                                                     network = network,
-                                                     domain = domain,
-                                                     prodname_ms = chemprod)
+            if(! pchem_only){
+
+                ws_mean_pflux <- ws_mean_chemflux %>%
+                    select(-concentration) %>%
+                    rename(val = flux) %>%
+                    arrange(var, datetime)
+
+                ws_mean_pflux <- apply_detection_limit_t(ws_mean_pflux,
+                                                         network = network,
+                                                         domain = domain,
+                                                         prodname_ms = chemprod)
+
+                write_ms_file(ws_mean_pflux,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = 'precip_flux_inst__ms902',
+                              site_name = site_name,
+                              level = 'derived',
+                              shapefile = FALSE,
+                              link_to_portal = FALSE)
+
+                rm(ws_mean_pflux)
+            }
+
+            ws_mean_pchem <- ws_mean_chemflux %>%
+                select(-any_of('flux')) %>%
+                rename(val = concentration) %>%
+                arrange(var, datetime)
 
             ws_mean_pchem <- apply_detection_limit_t(ws_mean_pchem,
                                                      network = network,
@@ -6283,24 +7312,17 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                           shapefile = FALSE,
                           link_to_portal = FALSE)
 
-            write_ms_file(ws_mean_pflux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = 'precip_flux_inst__ms902',
-                          site_name = site_name,
-                          level = 'derived',
-                          shapefile = FALSE,
-                          link_to_portal = FALSE)
-
-            rm(ws_mean_pflux, ws_mean_pchem); gc()
+            rm(ws_mean_pchem); gc()
         } #end conditional pchem+pflux block (2)
     }
 
-    append_to_productfile(network = network,
-                          domain = domain,
-                          prodcode = 'ms900',
-                          prodname = 'precipitation',
-                          notes = 'automated entry')
+    if(! pchem_only){
+        append_to_productfile(network = network,
+                              domain = domain,
+                              prodcode = 'ms900',
+                              prodname = 'precipitation',
+                              notes = 'automated entry')
+    }
 
     if(! precip_only){
         append_to_productfile(network = network,
@@ -6309,11 +7331,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                               prodname = 'precip_chemistry',
                               notes = 'automated entry')
 
-        append_to_productfile(network = network,
-                              domain = domain,
-                              prodcode = 'ms902',
-                              prodname = 'precip_flux_inst',
-                              notes = 'automated entry')
+        if(! pchem_only){
+            append_to_productfile(network = network,
+                                  domain = domain,
+                                  prodcode = 'ms902',
+                                  prodname = 'precip_flux_inst',
+                                  notes = 'automated entry')
+        }
     }
 
     unlink(glue('data/{n}/{d}/precip_idw_quickref',
@@ -6324,8 +7348,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
 ms_unparallelize <- function(cluster_object){
 
+    #if cluster_object is NULL, nothing will happen
+
     # tryCatch({print(site_name)},
     #         error=function(e) print('nope'))
+
+    if(is.null(cluster_object)){
+        future::plan(future::sequential)
+        return()
+    }
 
     parallel::stopCluster(cluster_object)
 
@@ -6369,13 +7400,22 @@ chunk_df <- function(d, nchunks, create_index_column = FALSE){
     nr <- nrow(d)
     chunksize <- nr/nchunks
 
-    # if(nr < chunksize) chunksize <- nr
-    if(create_index_column) d <- mutate(d, ind = 1:n())
+    if(nr > 0){
 
-    chunklist <- split(d,
-                       0:(nr - 1) %/% chunksize)
+        if(create_index_column) d <- mutate(d, ind = 1:n())
 
-    return(chunklist)
+        chunklist <- split(d,
+                           0:(nr - 1) %/% chunksize)
+
+        return(chunklist)
+
+    } else {
+
+        logwarn(msg = 'Trying to chunk an empty tibble. Something is probably wrong',
+                logger = logger_module)
+
+        return(d)
+    }
 }
 
 invalidate_derived_products <- function(successor_string){
@@ -6886,7 +7926,7 @@ knit_det_limits <- function(network, domain, prodname_ms){
         old_vars <- names(detlim)
         new_vars <- names(detlim_)
 
-        common_vars <- generics::intersect(old_vars, new_vars)
+        common_vars <- base::intersect(old_vars, new_vars)
 
         if(length(common_vars) > 0) {
 
@@ -6895,7 +7935,7 @@ knit_det_limits <- function(network, domain, prodname_ms){
                 old_sites <- names(detlim[[common_vars[p]]])
                 new_sites <- names(detlim_[[common_vars[p]]])
 
-                common_sites <- generics::intersect(old_sites, new_sites)
+                common_sites <- base::intersect(old_sites, new_sites)
 
                 if(!length(common_sites) == 0) {
                     new_sites <- new_sites[!new_sites %in% common_sites]
@@ -7256,21 +8296,40 @@ read_detection_limit <- function(network, domain, prodname_ms){
 
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
+    #NOTE: this function updated 2021-02-16, near the end of rebuilding
+    #   LTER (discovered issue with luquillo sites overwriting each other in
+    #   the detlim file). as such, it's not thoroughly tested. some stuff
+    #   that worked before might be broken now. tried to make it backward compatible though
+
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
                          n = network,
                          d = domain)
 
+    detlim_new <- detlim #better name; don't want to update every call though
+
     if(file.exists(detlims_file)){
-        x <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        x[[prodname_ms]] <- detlim
+
+        detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
+        if(prodname_ms %in% names(detlim_stored)){
+
+            for(v in names(detlim_new)){
+
+                site_detlims <- detlim_new[[v]]
+                for(s in names(site_detlims)){
+                    detlim_stored[[prodname_ms]][[v]][[s]] <- site_detlims[[s]]
+                }
+            }
+
+        } else {
+            detlim_stored[[prodname_ms]] <- detlim_new
+        }
+
     } else {
-        x <- list(placeholder = detlim)
-        names(x) <- prodname_ms
+        detlim_stored <- list(placeholder = detlim_new)
+        names(detlim_stored) <- prodname_ms
     }
 
-    readr::write_file(jsonlite::toJSON(x), detlims_file)
-
-    #return()
+    readr::write_file(jsonlite::toJSON(detlim_stored), detlims_file)
 }
 
 rle2 <- function(x){#, return_list = FALSE){
@@ -7322,58 +8381,103 @@ force_monotonic_locf <- function(v, ascending = TRUE){
     return(v)
 }
 
-get_gee_imgcol <- function(gee_id, band, prodname, start, end) {
+get_gee_imgcol <- function(gee_id, band, prodname, start, end, qaqc=FALSE,
+                           qa_band = NULL, bit_mask = NULL) {
 
     col_name <- paste0(prodname, 'X')
 
-    gee_imcol <- ee$ImageCollection(gee_id)$
-        filterDate(start, end)$
-        select(band)$
-        map(function(x){
-            date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-            x$set("RGEE_NAME", date)
-        })
-}
+    if(qaqc){
 
-clean_gee_tabel <- function(ee_ws_table, sheds, com_name) {
+        # Mask bad pixles functions
+        get_gee_QABits <- function(image) {
+            # Convert binary (character) to decimal (little endian)
+            qa <- sum(2^(which(rev(unlist(strsplit(as.character(bit_mask), "")) == 1))-1))
+            # Return a mask band image, giving the qa value.
+            image$bitwiseAnd(qa)$lt(1)
+        }
+        clean_gee_img <- function(img) {
+            # Extract the selected band
+            img_values <- img$select(band)
 
-    table_nrow <- sheds %>%
-        mutate(nrow = row_number()) %>%
-        as.data.frame() %>%
-        select(site_name, nrow)
+            # Extract the quality band
+            img_qa <- img$select(qa_band)
 
-    sm(table <- ee_ws_table %>%
-        mutate(nrow = row_number()) %>%
-        full_join(table_nrow) %>%
-        select(-nrow))
+            # Select pixels to mask
+            quality_mask <- get_gee_QABits(img_qa)
 
-    col_names <- colnames(table)
+            # Mask pixels with value zero.
+            img_values$updateMask(quality_mask)
 
-    leng <- length(col_names) -1
+            return(img_values)
 
-    table_time <- table %>%
-        pivot_longer(col_names[1:leng])
+        }
 
-    for(i in 1:nrow(table_time)) {
-        table_time[i,'date'] <- stringr::str_split_fixed(table_time[i,2],
-                                                         pattern = 'X', n = 2)[2]
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            filterDate(start, end)$
+            map(clean_gee_img)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                name <- ee$String$cat(col_name, date)
+                x$select(band)$rename(name)
+            })
+
+
+    } else{
+        gee_imcol <- ee$ImageCollection(gee_id)$
+            filterDate(start, end)$
+            select(band)$
+            map(function(x){
+                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+                name <- ee$String$cat(col_name, date)
+                x$select(band)$rename(name)
+            })
     }
 
-    table_fin <- table_time %>%
-        dplyr::select(-name) %>%
-        mutate(date = ymd(date)) %>%
-        mutate(var = !!com_name) %>%
-        rename(val = value)
+    return(gee_imcol)
+
+}
+
+clean_gee_table <- function(ee_ws_table,
+                            reducer) {
+
+    col_names <- colnames(ee_ws_table)
+    col_names <- col_names[!grepl('site_name', col_names)]
+
+    table_fin <- ee_ws_table %>%
+        pivot_longer(cols = !!col_names, values_to = 'val', names_to = 'var_date') %>%
+        mutate(var = str_split_fixed(var_date, 'X', n = Inf)[,1],
+               datetime = str_split_fixed(var_date, 'X', n = Inf)[,2]) %>%
+        mutate(var = glue('{v}_{r}',
+                          v = var,
+                          r = reducer)) %>%
+        select(site_name, datetime, var, val)
 
     return(table_fin)
 }
 
-get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
-                             ws_prodname, batch = FALSE) {
+get_gee_standard <- function(network,
+                             domain,
+                             gee_id,
+                             band,
+                             prodname,
+                             rez,
+                             site_boundary,
+                             batch = FALSE,
+                             qa_band = NULL,
+                             bit_mask = NULL){
 
-    area <- sf::st_area(ws_prodname)
+    qaqc <- FALSE
+    if(!is.null(qa_band) || !is.null(bit_mask)){
+        if(any(is.null(qa_band), is.null(bit_mask))){
+            stop('qa_band and bit_mask must be fined is one is provided')
+        } else{
+            qaqc <- TRUE
+        }
+    }
 
-    sheds <- ws_prodname %>%
+    area <- sf::st_area(site_boundary)
+
+    sheds <- site_boundary %>%
         as.data.frame() %>%
         sf::st_as_sf() %>%
         select(site_name) %>%
@@ -7384,24 +8488,55 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     if(as.numeric(area) > 10528200 || batch){
 
+        # Remove file if is in drive
+        googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
+
+        # Mask bad pixles functions
+        get_gee_QABits <- function(image) {
+            # Convert binary (character) to decimal (little endian)
+            qa <- sum(2^(which(rev(unlist(strsplit(as.character(bit_mask), "")) == 1))-1))
+            # Return a mask band image, giving the qa value.
+            image$bitwiseAnd(qa)$lt(1)
+        }
+        clean_gee_img <- function(img) {
+            # Extract the selected band
+            img_values <- img$select(band)
+
+            # Extract the quality band
+            img_qa <- img$select(qa_band)
+
+            # Select pixels to mask
+            quality_mask <- get_gee_QABits(img_qa)
+
+            # Mask pixels with value zero.
+            img_values$updateMask(quality_mask)
+
+        }
+
+
+        user_info <- rgee::ee_user_info(quiet = TRUE)
+        asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
+
         ee_shape <- sf_as_ee(sheds,
                              via = 'getInfo_to_asset',
-                             assetId = 'users/spencerrhea/data_aq_sheds',
+                             assetId = asset_path,
                              overwrite = TRUE,
                              quiet = TRUE)
 
-        imgcol <- ee$ImageCollection(gee_id)$select(band)
+        if(qaqc){
+            imgcol <- ee$ImageCollection(gee_id)$map(clean_gee_img)$select(band)
+        }else{
+            imgcol <- ee$ImageCollection(gee_id)$select(band)
+        }
 
         flat_img <- imgcol$map(function(image) {
-            image$select(band)$reduceRegions(
+            image$reduceRegions(
                 collection = ee_shape,
                 reducer = ee$Reducer$stdDev()$combine(
                     reducer2 = ee$Reducer$median(),
                     sharedInputs = TRUE),
                 scale = rez
-            )$map(function(f) {
-                f$set('imageId', image$id())
-            })
+            )
         })$flatten()
 
         gee <- flat_img$select(propertySelectors = c('site_name', 'imageId',
@@ -7414,38 +8549,45 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
                                 s = site,
                                 p = prodname)
 
-        task <- ee$batch$Export$table$toDrive(collection = gee,
+        ee_task <- ee$batch$Export$table$toDrive(collection = gee,
                                               description = ee_description,
                                               fileFormat = 'CSV',
                                               folder = 'GEE',
                                               fileNamePrefix = 'rgee')
 
-        task$start()
-        ee_monitoring(task)
+        ee_task$start()
+        ee_monitoring(ee_task, quiet = TRUE)
 
         temp_rgee <- tempfile(fileext = '.csv')
-        rgee::ee_drive_to_local(task, temp_rgee,
-                                overwrite = TRUE,
-                                quiet = TRUE)
+        googledrive::drive_download(file = 'GEE/rgee.csv',
+                                    temp_rgee,
+                                    verbose = FALSE)
+     # Seems to be broken
+        # rgee::ee_drive_to_local(task = ee_task,
+        #                         dsn = temp_rgee,
+        #                         overwrite = TRUE,
+        #                         quiet = TRUE)
 
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_median', c = prodname)
 
-        fin_table <- read_csv(temp_rgee)
+        fin_table <- read_csv(temp_rgee) %>%
+            mutate(imageId = substr(`system:index`, 1, 10))
 
-        googledrive::drive_rm('GEE/rgee.csv')
-        rgee::ee_manage_delete(path_asset = 'users/spencerrhea/data_aq_sheds',
+        googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
+        rgee::ee_manage_delete(path_asset = asset_path,
                                quiet = TRUE)
 
         if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
             return(NULL)
         }
+
         fin_table <- fin_table %>%
             select(site_name, stdDev, median, imageId) %>%
-            rename(date = imageId,
+            rename(datetime = imageId,
                    !!sd_name := stdDev,
                    !!median_name := median) %>%
-            pivot_longer(cols = c(sd_name, median_name),
+            pivot_longer(cols = all_of(c(sd_name, median_name)),
                          names_to = 'var',
                          values_to = 'val')
 
@@ -7454,9 +8596,14 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
 
     } else {
 
-        imgcol <- get_gee_imgcol(gee_id, band, prodname, '1957-10-04', '2040-01-01')
+        imgcol <- get_gee_imgcol(gee_id,
+                                 band,
+                                 prodname,
+                                 '1957-10-25',
+                                 '2040-01-01',
+                                 qaqc = qaqc)
 
-        median <- try(ee_extract(
+        ext_median <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -7464,14 +8611,14 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(median) <= 4 || class(median) == 'try-error') {
+        if(length(ext_median) <= 4 || class(ext_median) == 'try-error') {
             return(NULL)
         }
 
-        median_name <- glue('{c}_median', c = prodname)
-        median <- clean_gee_tabel(median, sheds, median_name)
+        ext_median <- clean_gee_table(ee_ws_table = ext_median,
+                                      reducer = 'median')
 
-        sd <- try(ee_extract(
+        ext_sd <- try(ee_extract(
             x = imgcol,
             y = sheds,
             scale = rez,
@@ -7479,21 +8626,19 @@ get_gee_standard <- function(network, domain, gee_id, band, prodname, rez,
             sf = FALSE
         ))
 
-        if(length(sd) <= 4 || class(sd) == 'try-error') {
-            sd <- tibble()
+        if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
+            ext_sd <- tibble()
         } else {
-            sd_name <- glue('{c}_sd', c = prodname)
-            sd <- clean_gee_tabel(sd, sheds, sd_name)
+            ext_sd <- clean_gee_table(ext_sd, reducer = 'sd')
         }
 
-        fin_table <- rbind(median, sd)
+        fin_table <- rbind(ext_median, ext_sd)
 
         fin <- list(table = fin_table,
                     type = 'ee_extract')
     }
 
     return(fin)
-
 }
 
 detection_limit_as_uncertainty <- function(detlim){
@@ -7508,6 +8653,10 @@ detection_limit_as_uncertainty <- function(detlim){
 }
 
 carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
+
+    # Filter out any rows where vals are outside realistic  range, defined
+    # in variables sheet
+    d <- ms_check_range(d)
 
     u <- identify_detection_limit_t(d,
                                     network = network,
@@ -7548,97 +8697,104 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, ws_prodname,
+get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                           site_name) {
 
-
-    geom_check <- sf::st_geometry_type(ws_prodname)
-
-    if(!geom_check == 'POLYGON'){
-        ws_prodname <- sf::st_cast(ws_prodname, 'POLYGON')
-    }
-
-    sheds <- ws_prodname %>%
-        as.data.frame() %>%
-        sf::st_as_sf() %>%
-        select(site_name) %>%
-        sf::st_transform(4326) %>%
-        sf::st_set_crs(4326)
-
-    sheds_point <- sheds[1,] %>%
+    sheds_point <- site_boundary %>%
         sf::st_centroid() %>%
         sf::st_bbox()
 
-    long <- as.numeric(sheds_point[2])
+    long <- as.numeric(sheds_point[1])
 
-    place <- ifelse(long > 97.5, 'west', 'east')
+    place <- ifelse(long > -97.5, 'east', 'west')
 
-    year_files <- list.files(glue('data/general_raw/phenology/{u}/{p}',
+    year_files <- list.files(glue('data/spatial/phenology/{u}/{p}',
                              p = place,
                              u = time))
+
+    site_boundary <- sf::st_transform(site_boundary,
+                                      '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
 
     years <- as.numeric(str_split_fixed(year_files, '[.]', n = 2)[,1])
 
     final <- tibble()
-        for(y in 1:length(years)) {
+    for(y in 1:length(years)) {
 
-            path <- glue('data/general_raw/phenology/{u}/{p}/{t}.tif',
-                         u = time, p = place, t = years[y])
+        path <- glue('data/spatial/phenology/{u}/{p}/{t}.tif',
+                     u = time, p = place, t = years[y])
 
-            phenology <- terra::rast(path)
+        phenology <- raster::raster(path)
 
-            terra::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+        raster::crs(phenology) <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
 
-            sheds_vect <- sheds %>%
-                terra::vect() %>%
-                terra::project('+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+        phenology_mask <- try(phenology %>%
+            raster::crop(site_boundary) %>%
+            raster::mask(site_boundary))
 
-            look <- terra::extract(phenology, sheds_vect) %>%
-                as.data.frame()
-
-            rm(phenology)
-
-            name <- names(look)[2]
-
-            col_name <- case_when(time == 'start_season' ~ 'sos',
-                                  time == 'end_season' ~ 'eos',
-                                  time == 'max_season' ~ 'mos',
-                                  time == 'length_season' ~ 'los')
-
-            mean_name <- glue('{n}_mean', n = col_name)
-            sd_name <- glue('{n}_sd', n = col_name)
-
-            look <- look %>%
-                group_by(ID) %>%
-                summarize(!!mean_name := round(mean(.data[[name]], na.rm = TRUE)),
-                          !!sd_name := sd(.data[[name]], na.rm = TRUE))
-
-            sheds_name <- sheds %>%
-                as_tibble() %>%
-                select(-geometry) %>%
-                mutate(ID = row_number()) %>%
-                mutate(year = !!years[y])
-
-            final_y <- full_join(look, sheds_name, by = 'ID') %>%
-                select(-ID)
-
-            final <- rbind(final, final_y)
+        if(class(phenology_mask) == 'try-error') {
+            return(generate_ms_exception(glue('No data was retrived for {s}',
+                                              s = site_name)))
         }
 
-    final <- pivot_longer(final, cols = c(mean_name, sd_name), names_to = 'var',
-                          values_to = 'val')
+        # weighted_results <- raster::extract(phenology, site_boundary,
+        #                                     weights = T,
+        #                                     normalizeWeights = F)
+        #
+        # vals_w <- weighted_results[[1]] %>%
+        #     as_tibble()
+        #
+        # ws_nas <- filter(vals_w, is.na(value))
+        #
+        # vals_w <- vals_w %>%
+        #     filter(!is.na(value)) %>%
+        #     mutate(new = value*weight)
+        # percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
+        # val <- sum(vals_w$new)/sum(vals_w$weight)
+        # val_sd <- sd(vals_w$new)
+        # rm(phenology)
+
+        phenology_values <- raster::values(phenology_mask)
+        val <- mean(phenology_values, na.rm = TRUE)
+        val_sd <- sd(phenology_values, na.rm = TRUE)
+        percent_na <- 0
+
+        col_name <- case_when(time == 'start_season' ~ 'sos',
+                              time == 'end_season' ~ 'eos',
+                              time == 'max_season' ~ 'mos',
+                              time == 'length_season' ~ 'los')
+
+        mean_name <- glue('{n}_mean', n = col_name)
+        sd_name <- glue('{n}_sd', n = col_name)
+
+        one_var <- tibble(!!mean_name := val,
+                          !!sd_name := val_sd,
+                          pctCellErr = percent_na,
+                          site_name = site_name,
+                          year = years[y])
+
+        final <- rbind(final, one_var)
+        }
+
+    final <- final %>%
+        mutate(!!mean_name := round(.data[[mean_name]])) %>%
+        pivot_longer(final,
+                     cols = all_of(c(mean_name, sd_name)),
+                     names_to = 'var',
+                     values_to = 'val') %>%
+        select(year, site_name, var, val, pctCellErr)
 
     dir <- glue('data/{n}/{d}/ws_traits/{p}/',
                 n = network, d = domain, p = time)
 
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 
-    final_path <- glue('data/{n}/{d}/ws_traits/{p}/{s}.feather',
+    final_path <- glue('data/{n}/{d}/ws_traits/{p}/sum_{s}.feather',
                        n = network,
                        d = domain,
                        p = time,
                        s = site_name)
 
+    final <- append_unprod_prefix(final, prodname_ms)
     write_feather(final, final_path)
 
     #return()
@@ -7675,17 +8831,26 @@ raster_intersection_summary <- function(wb, dem){
 
     summary_out <- list()
 
-    #convert wb to sf object
-    wb <- wb %>%
-        raster::rasterToPolygons() %>%
-        sf::st_as_sf()
+    #convert wb to sf object (there are several benign but seemingly uncatchable
+    #   garbage collection errors here)
+    wb <- sf::st_as_sf(raster::rasterToPolygons(wb))
 
     #get edge of DEM as sf object
-    dem_edge <- raster::boundaries(dem) %>%
-        raster::reclassify(matrix(c(0, NA),
-                                  ncol = 2)) %>%
+    dem_edge <- raster::focal(x = dem, #the terra version doesn't retain NA border
+                  fun = function(x, ...) return(0),
+                  w = matrix(1, nrow = 3, ncol = 3)) %>%
+        raster::reclassify(rcl = matrix(c(0, NA, #second, set inner cells to NA
+                                          NA, 1), #first, set outer cells to 1... yup.
+                                        ncol = 2)) %>%
         raster::rasterToPolygons() %>%
         sf::st_as_sf()
+    # dem_edge <- raster::boundaries(dem) %>%
+    #                                # classes = TRUE,
+    #                                # asNA = FALSE) %>%
+    #     raster::reclassify(rcl = matrix(c(0, NA), #set inner cells to NA
+    #                                     ncol = 2)) %>%
+    #     raster::rasterToPolygons() %>%
+    #     sf::st_as_sf()
 
     #tally raster cells
     summary_out$n_wb_cells <- length(wb$geometry)
@@ -7769,17 +8934,20 @@ load_config_datasets <- function(from_where){
         ms_vars <- sm(googlesheets4::read_sheet(
             conf$variables_gsheet,
             na = c('', 'NA'),
-            col_types = 'cccccccnncc'
+            col_types = 'cccccccnnccnn'
         ))
 
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnncc'
+            col_types = 'ccccccccnnnnnccc'
         ))
 
-        ws_delin_specs <- sm(googlesheets4::read_sheet(conf$delineation_gsheet,
-                                                       na = c('', 'NA')))
+        ws_delin_specs <- sm(googlesheets4::read_sheet(
+            conf$delineation_gsheet,
+            na = c('', 'NA'),
+            col_types = 'cccncnnccl'
+        ))
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
@@ -7798,7 +8966,10 @@ load_config_datasets <- function(from_where){
                                                               buffer_radius_m = 1,
                                                               snap_method = 'a',
                                                               snap_distance_m = 1,
-                                                              dem_resolution = 1)
+                                                              dem_resolution = 1,
+                                                              flat_increment = 1,
+                                                              breach_method = 'a',
+                                                              burn_streams = 'a')
 
                                        return(empty_tibble[-1, ])
                                    })
@@ -7827,7 +8998,8 @@ load_config_datasets <- function(from_where){
 write_portal_config_datasets <- function(){
 
     #so we don't have to read these from gdrive when running the app in
-    #production
+    #production. also, nice to report download sizes this way and avoid some
+    #real-time calculation.
 
     dir.create('../portal/data/general',
                showWarnings = FALSE,
@@ -7835,6 +9007,50 @@ write_portal_config_datasets <- function(){
 
     write_csv(ms_vars, '../portal/data/general/variables.csv')
     write_csv(site_data, '../portal/data/general/site_data.csv')
+}
+
+compute_download_filesizes <- function(){
+
+    #determines approximate sizes of downloadable zipfiles for each domain.
+    #doing it here saves computation time in the portal.
+
+    dir.create('../portal/data/general/download_sizes',
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    dmn_dirs <- list.files('../portal/data/')
+    dmn_dirs <- dmn_dirs[! dmn_dirs == c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
+
+    dmn_dl_size <- data.frame(domain = dmn_dirs,
+                              dl_size_MB = NA_character_)
+
+    for(i in seq_along(dmn_dirs)){
+
+        dmnfiles <- list.files(paste0('../portal/data/', dmn_dirs[i]),
+                               full.names = TRUE,
+                               recursive = TRUE,
+                               include.dirs = FALSE,
+                               pattern = '\\.feather$')
+
+        dmnfilesizes <- sapply(dmnfiles, file.size)
+
+        if(length(dmnfilesizes)){
+
+            total_MB <- dmnfilesizes %>%
+                sum() %>%
+                {. / 1e6 * 0.12} %>% # 0.12 is the approximate compression ratio after zipping
+                round(1) %>%
+                as.character()
+
+        } else {
+            total_MB <- 'pending'
+        }
+
+        dmn_dl_size$dl_size_MB[i] <- ifelse(total_MB == '0', '< 1', total_MB)
+    }
+
+    write_csv(x = dmn_dl_size,
+              file = '../portal/data/general/download_sizes/timeseries.csv')
 }
 
 ms_write_confdata <- function(x,
@@ -7869,6 +9085,16 @@ ms_write_confdata <- function(x,
                   kd = paste(known_datasets, collapse = '", "')))
     }
 
+    type_string <- case_when(
+        which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
+        which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
+        TRUE ~ 'placeholder')
+
+    if(which_dataset %in% c('univ_products', 'name_variants')){
+        type_string <- NULL
+    }
+
     if(to_where == 'remote'){
 
         write_loc <- case_when(
@@ -7879,17 +9105,40 @@ ms_write_confdata <- function(x,
             which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
 
         if(overwrite){
-            sm(googlesheets4::write_sheet(data = x,
-                                          ss = write_loc,
-                                          sheet = 1))
+
+            # sm(googlesheets4::write_sheet(data = x,
+            #                               ss = write_loc,
+            #                               sheet = 1))
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::write_sheet(data = x,
+                                                  ss = write_loc,
+                                                  sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         } else {
-            sm(googlesheets4::sheet_append(data = x,
-                                           ss = write_loc,
-                                           sheet = 1))
+
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::sheet_append(data = x,
+                                                   ss = write_loc,
+                                                   sheet = 1))
+                },
+                max_attempts = 4
+            )
+
         }
 
-        dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                             na = c('', 'NA')))
+        catch <- expo_backoff(
+            expr = {
+                dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                     na = c('', 'NA'),
+                                                     col_types = type_string))
+            },
+            max_attempts = 4
+        )
 
     } else if(to_where == 'local'){
 
@@ -7917,7 +9166,8 @@ ms_write_confdata <- function(x,
         }
 
         dset <- read_csv(path = paste0('data/general/',
-                                       write_loc))
+                                       write_loc),
+                         col_types = type_string)
 
     } else {
         stop('to_where must be either "local" or "remote"')
@@ -7964,7 +9214,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = disch_prodname_ms)
 
-    flux_sites <- generics::intersect(
+    flux_sites <- base::intersect(
         fname_from_fpath(qfiles, include_fext = FALSE),
         fname_from_fpath(chemfiles, include_fext = FALSE))
 
@@ -7974,7 +9224,7 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                                   qprod = disch_prodname_ms,
                                   site_name = s))
 
-        if(!is.null(flux)) {
+        if(!is.null(flux)){
 
             write_ms_file(d = flux,
                           network = network,
@@ -7983,8 +9233,8 @@ derive_stream_flux <- function(network, domain, prodname_ms){
                           site_name = s,
                           level = 'derived',
                           shapefile = FALSE)
-            }
         }
+    }
 
     return()
 }
@@ -8059,7 +9309,8 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
                                          p = path,
                                          s = site_name),
                      driver = 'ESRI Shapefile',
-                     delete_dsn = TRUE)
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
     }
 }
 
@@ -8096,7 +9347,8 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
                                          p = path,
                                          s = site_name),
                      driver = 'ESRI Shapefile',
-                     delete_dsn = TRUE)
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
     }
 }
 
@@ -8184,24 +9436,380 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     return()
 }
 
-generate_portal_extras <- function(site_data,
-                                   network_domain){
+log_with_indent <- function(msg, logger, level = 'info', indent = 1){
+
+    #level is one of "info", "warn", 'error".
+    #indent: the number of spaces to indent after the colon.
+
+    indent_str <- paste(rep('\U2800\U2800', indent),
+                        collapse = '')
+
+    if(level == 'info'){
+        loginfo(msg = paste0(enc2native(indent_str),
+                             msg),
+                logger = logger)
+    } else if(level == 'warn'){
+        logwarn(msg = paste0(enc2native(indent_str),
+                             msg),
+                logger = logger)
+    } else if(level == 'error'){
+        logerror(msg = paste0(enc2native(indent_str),
+                              msg),
+                logger = logger)
+    }
+}
+
+postprocess_entire_dataset <- function(site_data,
+                                       network_domain,
+                                       dataset_version,
+                                       thin_portal_data_to_interval = NA,
+                                       populate_implicit_missing_values,
+                                       generate_csv_for_each_product){
+
+    #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::round_date.
+    #   set to NA (the dafault) to prevent thinning.
 
     #for post-derive steps that save the portal some processing.
 
-    loginfo(msg = 'Generating portal extras',
+    loginfo(msg = 'Postprocessing all domains and products:',
             logger = logger_module)
 
-    calculate_flux_by_area(site_data = site_data)
+    log_with_indent('scaling flux by area', logger = logger_module)
+    scale_flux_by_area(network_domain = network_domain,
+                       site_data = site_data)
+
+    log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
-    catalogue_held_data(site_data = site_data,
-                        network_domain = network_domain)
+
+    log_with_indent('cataloging held data', logger = logger_module)
+    catalog_held_data(site_data = site_data,
+                      network_domain = network_domain)
+
+    log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
+
+    log_with_indent('determining which domains have Q', logger = logger_module)
+    list_domains_with_discharge(site_data = site_data)
+
+    if(! is.na(thin_portal_data_to_interval)){
+        log_with_indent('thinning portal datasets to 1 day',
+                        logger = logger_module)
+        thin_portal_data(network_domain = network_domain,
+                         thin_interval = thin_portal_data_to_interval)
+    } else {
+        log_with_indent('NOT thinning portal datasets',
+                        logger = logger_module)
+    }
+
+    if(populate_implicit_missing_values){
+        log_with_indent('Completing cases (populating implicit missing rows)',
+                        logger = logger_module)
+        ms_complete_all_cases(site_data = site_data)
+    } else {
+        log_with_indent('NOT completing cases',
+                        logger = logger_module)
+    }
+
+    log_with_indent('Inserting gap-border NAs in portal dataset (so plots show gaps)',
+                    logger = logger_module)
+    insert_gap_border_NAs(site_data = site_data)
+
+    if(generate_csv_for_each_product){
+        log_with_indent('Generating an analysis-ready CSV for each product',
+                        logger = logger_module)
+        generate_product_csvs(site_data = site_data)
+    } else {
+        log_with_indent('NOT generating analysis-ready CSVs',
+                        logger = logger_module)
+    }
+
+    log_with_indent(glue('Generating output dataset v',
+                         dataset_version),
+                    logger = logger_module)
+    generate_output_dataset(vsn = dataset_version)
+
+    # log_with_indent(glue('Removing unneeded files from portal dataset.',
+    #                 logger = logger_module)
+    # clean_portal_dataset()
+
+    log_with_indent('Calculating sizes of downloadable files',
+                    logger = logger_module)
+    compute_download_filesizes()
 }
 
-calculate_flux_by_area <- function(site_data){
+clean_portal_dataset <- function(){
 
-    setwd('../portal/data/')
+    #not needed yet, but soon we'll go over the 6000 file limit and need to
+    #trim down. we can then host static files somewhere else for download,
+    #and the portal can just hold files needed for viz. still might become a
+    #problem.
+
+    #at that time we can remove ws_boundary files and unscaled flux (will need
+    #to update biplot to receive precip_flux_scaled)
+
+    find_dirs_within_portaldata <- function(keyword){
+
+        files <- dir(path = '../portal/data',
+                     pattern = paste0(keyword, '*'),
+                     recursive = TRUE,
+                     full.names = TRUE,
+                     include.dirs = TRUE)
+
+        return(files)
+    }
+
+    dirs_to_delete <- c()
+
+    #watershed boundaries are
+    for(k in c('ws_boundary')){
+
+        dirs_to_delete <- c(dirs_to_delete,
+                            find_dirs_within_portaldata(keyword = k))
+    }
+
+    #drop em all from the final dataset
+    for(dr in dirs_to_delete){
+        unlink(x = dr,
+               recursive = TRUE)
+    }
+}
+
+generate_output_dataset <- function(vsn){
+
+    tryCatch({
+        system(paste0('find data -path "*derived/*.feather" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    }, error = function(e){
+        stop(glue('generate_output_dataset can only run on a unix-like machine ',
+                  'with `find` and `rsync` installed'),
+             call. = FALSE)
+    })
+
+    # system2('find', c('data', '-path', '"*derived/*.feather"', '-printf',
+    #                   '%P\\\\0\\\\n', '|', 'rsync', '-av', '--files-from=-',
+    #                   'data', paste0('macrosheds_dataset_v', vsn)))
+
+    find_dirs_within_outputdata <- function(keyword, vsn){
+
+        files <- dir(path = paste0('macrosheds_dataset_v', vsn),
+                     pattern = paste0(keyword, '*'),
+                     recursive = TRUE,
+                     full.names = TRUE,
+                     include.dirs = TRUE)
+
+        return(files)
+    }
+
+    dirs_to_delete <- c()
+
+    #collect compprod dirs (intermediate products) that shouldn't be in the
+    #final dataset
+    for(k in c('cdnr_discharge__', 'usgs_discharge__')){
+
+        dirs_to_delete <- c(dirs_to_delete,
+          find_dirs_within_outputdata(keyword = k, vsn = vsn))
+    }
+
+    #collect pre-idw precip dirs (also intermediate products)
+    #that shouldn't be in the final dataset
+    pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
+                                           vsn = vsn)
+
+    ppaths <- str_match(string = pfpaths,
+                        pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
+        sort()
+
+    pfac <- factor(ppaths)
+    dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
+
+    for(dr in dirs_with_p_compprods){
+
+        precip_dirs <- list.files(path = dr,
+                                  pattern = '^precipitation__')
+
+        if(length(precip_dirs) != 2){
+            stop('there should only be two precip dirs in consideration here')
+        }
+
+        dir_to_delete_ind <- str_match(string = precip_dirs,
+                                       pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
+           as.numeric() %>%
+           which.min()
+
+        dirs_to_delete <- c(dirs_to_delete,
+                            paste0(dr, precip_dirs[dir_to_delete_ind]))
+    }
+
+    #drop em all from the final dataset
+    for(dr in dirs_to_delete){
+        unlink(x = dr,
+               recursive = TRUE)
+    }
+
+    #put convenience functions in there
+    file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
+              to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
+
+    #add notes
+    warning("Don't forget to add notes! (and eventually generate changelog automatically)")
+
+    #zip it up
+    #...
+}
+
+thin_portal_data <- function(network_domain, thin_interval){
+
+    #thin_interval: passed to the "unit" parameter of lubridate::round_date
+
+    domains <- network_domain$domain
+
+    n_domains <- length(domains)
+    for(i in 1:n_domains){
+
+        dmn <- domains[i]
+
+        log_with_indent(msg = glue('{d}: ({ii}/{n})',
+                                   d = dmn,
+                                   ii = i,
+                                   n = n_domains),
+                        logger = logger_module,
+                        indent = 2)
+
+        prod_dirs <- try(
+            {
+                list.files(path = glue('../portal/data/{d}/',
+                                       d = dmn),
+                           full.names = FALSE,
+                           recursive = FALSE)
+            },
+            silent = TRUE
+        )
+
+        if(length(prod_dirs)){
+
+            #filter products that never need to be thinned. keep the ones that might
+            rgx <- paste0('(^precipitation|^precip_chemistry|^discharge',
+                          '|^precip_flux|^stream_chemistry|^stream_flux)')
+            prod_dirs <- grep(pattern = rgx,
+                              x = prod_dirs,
+                              value = TRUE)
+        }
+
+        for(prd in prod_dirs){
+
+            site_files <- list.files(path = glue('../portal/data/{d}/{p}',
+                                                 d = dmn,
+                                                 p = prd),
+                                     full.names = TRUE,
+                                     recursive = FALSE)
+
+            if(prd == 'precipitation'){
+                agg_call <- quote(sum(val, na.rm = TRUE))
+            } else {
+                agg_call <- quote(mean(val, na.rm = TRUE))
+            }
+
+            for(stf in site_files){
+
+                #check whether this file needs to be thinned
+                dtcol <- read_feather(stf, columns = 'datetime')
+                interval_min <- Mode(diff(as.numeric(dtcol$datetime)) / 60)
+                needs_thin <- ! is.na(interval_min) && interval_min <= 24 * 60
+
+                if(needs_thin){
+
+                    d <- read_feather(stf) %>%
+                        mutate(
+                            datetime = lubridate::round_date(
+                                x = datetime,
+                                unit = thin_interval),
+                            val = errors::set_errors(val, val_err)) %>%
+                        select(-val_err)
+
+                    if(length(unique(d$site_name)) > 1){
+                        stop(paste('Multiple site_names in', stf))
+                    }
+
+                    d %>%
+                        group_by(datetime, var) %>%
+                        summarize(
+                            site_name = first(site_name),
+                            val = eval(agg_call),
+                            ms_status = numeric_any(ms_status),
+                            ms_interp = numeric_any(ms_interp)) %>%
+                        ungroup() %>%
+                        mutate(val_err = errors(val),
+                               val_err = ifelse(is.na(val_err), 0, val_err),
+                               val = errors::drop_errors(val)) %>%
+                        select(datetime, site_name, var, val, ms_status, ms_interp,
+                               val_err) %>%
+                        write_feather(stf)
+                }
+            }
+        }
+    }
+}
+
+list_domains_with_discharge <- function(site_data){
+
+    #this identifies which sites have Q and which don't, so that the latter
+    #   can be filtered from the sitelist in portal/global.R. that way,
+    #   sites without discharge won't be selectable on the timeseries tab.
+
+    Q_or_noQ <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(network, domain, site_name) %>%
+        distinct() %>%
+        arrange(network, domain, site_name) %>%
+        mutate(has_Q = NA)
+
+    for(i in 1:nrow(Q_or_noQ)){
+
+        ntw <- Q_or_noQ$network[i]
+        dmn <- Q_or_noQ$domain[i]
+        sit <- Q_or_noQ$site_name[i]
+
+        clg <- sm(try(read_csv(glue('../portal/data/general/catalog_files/indiv_sites/',
+                                    '{n}_{d}_{s}.csv',
+                                    n = ntw,
+                                    d = dmn,
+                                    s = sit)),
+                      silent = TRUE))
+
+        if(! inherits(clg, 'try-error') && 'discharge' %in% clg$VariableCode){
+            Q_or_noQ$has_Q[i] <- TRUE
+        } else {
+            Q_or_noQ$has_Q[i] <- FALSE
+        }
+
+    }
+
+    if(any(is.na(Q_or_noQ$has_Q))){
+        stop('NA detected in has_Q column. fix list_domains_with_discharge')
+    }
+
+    Q_or_noQ %>%
+        filter(has_Q) %>%
+        select(-has_Q) %>%
+        write_csv(file = '../portal/data/general/sites_with_discharge.csv')
+}
+
+scale_flux_by_area <- function(network_domain, site_data){
+
+    #this reads all flux data in data_acquisition/data and in portal/data,
+    #   and scales it by watershed area. Originally this was only done for portal
+    #   data, and originally each source file (*_flux_inst.feather) was retained
+    #   after it was used to generate a *_flux_inst_scaled.feather. Now, the source
+    #   file is removed after the scaled file is created. Thus, all our
+    #   flux data is converted to kg/ha/d, and every flux file and
+    #   directory gets a name change, after this function runs.
+
+    #It would of course be more efficient to do this scaling within flux derive
+    #   kernels, but this solution works fine and doesn't require major
+    #   modification or rebuilding of the dataset.
+
+    #TODO: scale flux within derive kernels eventually. it'll make for clearer
+    #   documentation
 
     ws_areas <- site_data %>%
         filter(as.logical(in_workflow)) %>%
@@ -8211,16 +9819,16 @@ calculate_flux_by_area <- function(site_data){
 
     domains <- names(ws_areas)
 
-    engine <- function(flux_var, domains, ws_areas){
+    #the original engine of this function, which still only converts portal data
+    engine_for_portal <- function(flux_var, domains, ws_areas){
 
         for(dmn in domains){
 
             files <- try(
                 {
-                    list.files(path = glue('{d}/{v}',
+                    list.files(path = glue('../portal/data/{d}/{v}',
                                            d = dmn,
                                            v = flux_var),
-                               # pattern = '(?!documentation
                                full.names = FALSE,
                                recursive = FALSE)
                 },
@@ -8229,7 +9837,7 @@ calculate_flux_by_area <- function(site_data){
 
             if('try-error' %in% class(files) || length(files) == 0) next
 
-            dir.create(path = glue('{d}/{v}_scaled',
+            dir.create(path = glue('../portal/data/{d}/{v}_scaled',
                                    d = dmn,
                                    v = flux_var),
                        recursive = TRUE,
@@ -8237,7 +9845,7 @@ calculate_flux_by_area <- function(site_data){
 
             for(fil in files){
 
-                d <- read_feather(glue('{d}/{v}/{f}',
+                d <- read_feather(glue('../portal/data/{d}/{v}/{f}',
                                        d = dmn,
                                        v = flux_var,
                                        f = fil))
@@ -8255,7 +9863,7 @@ calculate_flux_by_area <- function(site_data){
                 d$val <- errors::drop_errors(d$val)
 
                 write_feather(x = d,
-                              path = glue('{d}/{v}_scaled/{f}',
+                              path = glue('../portal/data/{d}/{v}_scaled/{f}',
                                           d = dmn,
                                           v = flux_var,
                                           f = fil))
@@ -8263,28 +9871,342 @@ calculate_flux_by_area <- function(site_data){
         }
     }
 
-    engine(flux_var = 'stream_flux_inst',
-           domains = domains,
-           ws_areas = ws_areas)
+    engine_for_portal(flux_var = 'stream_flux_inst',
+                      domains = domains,
+                      ws_areas = ws_areas)
 
-    engine(flux_var = 'precip_flux_inst',
-           domains = domains,
-           ws_areas = ws_areas)
+    engine_for_portal(flux_var = 'precip_flux_inst',
+                      domains = domains,
+                      ws_areas = ws_areas)
 
-    setwd('../../data_acquisition/')
+    unscaled_portal_flux_dirs <- dir(path = '../portal/data',
+                                     pattern = '*_flux_inst',
+                                     include.dirs = TRUE,
+                                     full.names = TRUE,
+                                     recursive = TRUE)
+
+    unscaled_portal_flux_dirs <-
+        unscaled_portal_flux_dirs[! grepl(pattern = '(/documentation/|inst_scaled)',
+                                          x = unscaled_portal_flux_dirs)]
+
+    lapply(X = unscaled_portal_flux_dirs,
+           FUN = unlink,
+           recursive = TRUE)
+
+    #the new engine, for scaling flux data within data_acquisition/data
+    engine_for_data_acquis <- function(flux_var, network_domain, ws_areas){
+
+        for(i in 1:nrow(network_domain)){
+
+            ntw <- network_domain$network[i]
+            dmn <- network_domain$domain[i]
+
+            flux_var_dir <- try(
+                {
+                    ff <- list.files(path = glue('data/{n}/{d}/derived',
+                                                 n = ntw,
+                                                 d = dmn),
+                                                 # v = flux_var),
+                                     pattern = flux_var,
+                                     full.names = FALSE,
+                                     recursive = FALSE)
+
+                    ff <- ff[! grepl(pattern = 'inst_scaled',
+                                     x = ff)]
+                },
+                silent = TRUE
+            )
+
+            if('try-error' %in% class(flux_var_dir) || length(flux_var_dir) == 0) next
+
+            prodcode <- prodcode_from_prodname_ms(flux_var_dir)
+
+            dir.create(path = glue('data/{n}/{d}/derived/{v}_scaled__{pc}',
+                                   n = ntw,
+                                   d = dmn,
+                                   v = flux_var,
+                                   pc = prodcode),
+                       recursive = TRUE,
+                       showWarnings = FALSE)
+
+            files <- list.files(path = glue('data/{n}/{d}/derived/{fvd}',
+                                            n = ntw,
+                                            d = dmn,
+                                            fvd = flux_var_dir),
+                                pattern = '*.feather',
+                                full.names = TRUE,
+                                recursive = TRUE)
+
+            for(f in files){
+
+                d <- read_feather(f)
+
+                d <- d %>%
+                    mutate(val = errors::set_errors(val, val_err)) %>%
+                    select(-val_err) %>%
+                    arrange(site_name, var, datetime) %>%
+                    left_join(ws_areas[[dmn]],
+                              by = 'site_name') %>%
+                    mutate(val = sw(val / ws_area_ha)) %>%
+                    select(-ws_area_ha)
+
+                d$val_err <- errors(d$val)
+                d$val <- errors::drop_errors(d$val)
+
+                f_scaled <- sub(pattern = 'inst__',
+                                replacement = 'inst_scaled__',
+                                x = f)
+
+                write_feather(x = d,
+                              path = f_scaled)
+            }
+        }
+    }
+
+    engine_for_data_acquis(flux_var = 'stream_flux_inst',
+                           network_domain = network_domain,
+                           ws_areas = ws_areas)
+
+    engine_for_data_acquis(flux_var = 'precip_flux_inst',
+                           network_domain = network_domain,
+                           ws_areas = ws_areas)
+
+    unscaled_acquisition_flux_dirs <- dir(path = 'data',
+                                          pattern = '*_flux_inst',
+                                          include.dirs = TRUE,
+                                          full.names = TRUE,
+                                          recursive = TRUE)
+
+    unscaled_acquisition_flux_dirs <-
+        unscaled_acquisition_flux_dirs[! grepl(pattern = '(/documentation/|_scaled)',
+                                               x = unscaled_acquisition_flux_dirs)]
+
+    unscaled_acquisition_flux_dirs <-
+        unscaled_acquisition_flux_dirs[grepl(pattern = '/derived/',
+                                               x = unscaled_acquisition_flux_dirs)]
+
+    lapply(X = unscaled_acquisition_flux_dirs,
+           FUN = unlink,
+           recursive = TRUE)
+
+    return(invisible())
+}
+
+approxjoin_datetime <- function(x,
+                                y,
+                                rollmax = '7:30',
+                                keep_datetimes_from = 'x',
+                                indices_only = FALSE){
+                                #direction = 'forward'){
+
+    #x and y: macrosheds standard tibbles with only one site_name,
+    #   which must be the same in x and y. Nonstandard tibbles may also work,
+    #   so long as they have datetime columns, but the only case where we need
+    #   this for other tibbles is inside precip_pchem_pflux_idw, in which case
+    #   indices_only == TRUE, so it's not really set up for general-purpose joining
+    #rollmax: the maximum snap time for matching elements of x and y.
+    #   either '7:30' for continuous data or '12:00:00' for grab data
+    #direction [REMOVED]: either 'forward', meaning elements of x will be rolled forward
+    #   in time to match the next y, or 'backward', meaning elements of
+    #   x will be rolled back in time to reach the previous y
+    #keep_datetimes_from: string. either 'x' or 'y'. the datetime column from
+    #   the corresponding tibble will be kept, and the other will be dropped
+    #indices_only: logical. if TRUE, a join is not performed. rather,
+    #   the matching indices from each tibble are returned as a named list of vectors..
+
+    #good datasets for testing this function:
+    # x <- tribble(
+    #     ~datetime, ~site_name, ~var, ~val, ~ms_status, ~ms_interp,
+    #     '1968-10-09 04:42:00', 'GSWS10', 'GN_alk', set_errors(27.75, 1), 0, 0,
+    #     '1968-10-09 04:44:00', 'GSWS10', 'GN_alk', set_errors(21.29, 1), 0, 0,
+    #     '1968-10-09 04:47:00', 'GSWS10', 'GN_alk', set_errors(21.29, 1), 0, 0,
+    #     '1968-10-09 04:59:59', 'GSWS10', 'GN_alk', set_errors(16.04, 1), 0, 0,
+    #     '1968-10-09 05:15:01', 'GSWS10', 'GN_alk', set_errors(17.21, 1), 1, 0,
+    #     '1968-10-09 05:30:59', 'GSWS10', 'GN_alk', set_errors(16.50, 1), 0, 0) %>%
+        # mutate(datetime = as.POSIXct(datetime, tz = 'UTC'))
+    # y <- tribble(
+    #     ~datetime, ~site_name, ~var, ~val, ~ms_status, ~ms_interp,
+    #     '1968-10-09 04:00:00', 'GSWS10', 'GN_alk', set_errors(1.009, 1), 1, 0,
+    #     '1968-10-09 04:15:00', 'GSWS10', 'GN_alk', set_errors(2.009, 1), 1, 1,
+    #     '1968-10-09 04:30:00', 'GSWS10', 'GN_alk', set_errors(3.009, 1), 1, 1,
+    #     '1968-10-09 04:45:00', 'GSWS10', 'GN_alk', set_errors(4.009, 1), 1, 1,
+    #     '1968-10-09 05:00:00', 'GSWS10', 'GN_alk', set_errors(5.009, 1), 1, 1,
+    #     '1968-10-09 05:15:00', 'GSWS10', 'GN_alk', set_errors(6.009, 1), 1, 1) %>%
+    #     mutate(datetime = as.POSIXct(datetime, tz = 'UTC'))
+
+    #tests
+    if('site_name' %in% colnames(x) && length(unique(x$site_name)) > 1){
+        stop('Only one site_name allowed in x at the moment')
+    }
+    if('var' %in% colnames(x) && length(unique(drop_var_prefix(x$var))) > 1){
+        stop('Only one var allowed in x at the moment (not including prefix)')
+    }
+    if('site_name' %in% colnames(y) && length(unique(y$site_name)) > 1){
+        stop('Only one site_name allowed in y at the moment')
+    }
+    if('var' %in% colnames(y) && length(unique(drop_var_prefix(y$var))) > 1){
+        stop('Only one var allowed in y at the moment (not including prefix)')
+    }
+    if('site_name' %in% colnames(x) &&
+       'site_name' %in% colnames(y) &&
+       x$site_name[1] != y$site_name[1]) stop('x and y site_name must be the same')
+    if(! rollmax %in% c('7:30', '12:00:00')) stop('rollmax must be "7:30" or "12:00:00"')
+    # if(! direction %in% c('forward', 'backward')) stop('direction must be "forward" or "backward"')
+    if(! keep_datetimes_from %in% c('x', 'y')) stop('keep_datetimes_from must be "x" or "y"')
+    if(! 'datetime' %in% colnames(x) || ! 'datetime' %in% colnames(y)){
+        stop('both x and y must have "datetime" columns containing POSIXct values')
+    }
+    if(! is.logical(indices_only)) stop('indices_only must be a logical')
+
+    #deal with the case of x or y being a specialized "flow" tibble
+    # x_is_flowtibble <- y_is_flowtibble <- FALSE
+    # if('flow' %in% colnames(x)) x_is_flowtibble <- TRUE
+    # if('flow' %in% colnames(y)) y_is_flowtibble <- TRUE
+    # if(x_is_flowtibble && ! y_is_flowtibble){
+    #     varname <- y$var[1]
+    #     y$var = NULL
+    # } else if(y_is_flowtibble && ! x_is_flowtibble){
+    #     varname <- x$var[1]
+    #     x$var = NULL
+    # } else if(! x_is_flowtibble && ! y_is_flowtibble){
+    #     varname <- x$var[1]
+    #     x$var = NULL
+    #     y$var = NULL
+    # } else {
+    #     stop('x and y are both "flow" tibbles. There should be no need for this')
+    # }
+    # if(x_is_flowtibble) x <- rename(x, val = flow)
+    # if(y_is_flowtibble) y <- rename(y, val = flow)
+
+    #data.table doesn't work with the errors package, so error needs
+    #to be separated into its own column. also give same-name columns suffixes
+
+    if('val' %in% colnames(x)){ #crude catch for nonstandard ms tibbles (fine for now)
+        x <- x %>%
+            mutate(err = errors(val),
+                   val = errors::drop_errors(val)) %>%
+            rename_with(.fn = ~paste0(., '_x'),
+                        .cols = everything()) %>%
+                        # .cols = any_of(c('site_name', 'var', 'val',
+                        #                  'ms_status', 'ms_interp'))) %>%
+            as.data.table()
+
+        y <- y %>%
+            mutate(err = errors(val),
+                   val = errors::drop_errors(val)) %>%
+            rename_with(.fn = ~paste0(., '_y'),
+                        .cols = everything()) %>%
+            as.data.table()
+    } else {
+        x <- dplyr::rename(x, datetime_x = datetime) %>% as.data.table()
+        y <- dplyr::rename(y, datetime_y = datetime) %>% as.data.table()
+    }
+
+    #alternative implementation of the "on" argument in data.table joins...
+    #probably more flexible, so leaving it here in case we need to do something crazy
+    # data.table::setkeyv(x, 'datetime')
+    # data.table::setkeyv(y, 'datetime')
+
+    #convert the desired maximum roll distance from string to integer seconds
+    rollmax <- ifelse(test = rollmax == '7:30',
+                      yes = 7 * 60 + 30,
+                      no = 12 * 60 * 60)
+
+    #leaving this here in case the nearest neighbor join implemented below is too
+    #slow. then we can fall back to a basic rolling join with a maximum distance
+    # rollmax <- ifelse(test = direction == 'forward',
+    #                   yes = -rollmax,
+    #                   no = rollmax)
+    #rollends will move the first/last value of x in the opposite `direction` if necessary
+    # joined <- y[x, on = 'datetime', roll = rollmax, rollends = c(TRUE, TRUE)]
+
+    #create columns in x that represent the snapping window around each datetime
+    x[, `:=` (datetime_min = datetime_x - rollmax,
+              datetime_max = datetime_x + rollmax)]
+    y[, `:=` (datetime_y_orig = datetime_y)] #datetime col will be dropped from y
+
+    # if(indices_only){
+    #     y_indices <- y[x,
+    #                    on = .(datetime_y <= datetime_max,
+    #                           datetime_y >= datetime_min),
+    #                    which = TRUE]
+    #     return(y_indices)
+    # }
+
+    #join x rows to y if y's datetime falls within the x range
+    joined <- y[x, on = .(datetime_y <= datetime_max,
+                          datetime_y >= datetime_min)]
+    joined <- na.omit(joined, cols = 'datetime_y_orig') #drop rows without matches
+
+    #for any datetimes in x or y that were matched more than once, keep only
+    #the nearest match
+    joined[, `:=` (datetime_match_diff = abs(datetime_x - datetime_y_orig))]
+    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_x]
+    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_y_orig]
+
+    if(indices_only){
+        y_indices <- which(y$datetime_y %in% joined$datetime_y_orig)
+        x_indices <- which(x$datetime_x %in% joined$datetime_x)
+        return(list(x = x_indices, y = y_indices))
+    }
+
+    #drop and rename columns (data.table makes weird name modifications)
+    if(keep_datetimes_from == 'x'){
+        joined[, c('datetime_y', 'datetime_y.1', 'datetime_y_orig', 'datetime_match_diff') := NULL]
+        setnames(joined, 'datetime_x', 'datetime')
+    } else {
+        joined[, c('datetime_x', 'datetime_y.1', 'datetime_y', 'datetime_match_diff') := NULL]
+        setnames(joined, 'datetime_y_orig', 'datetime')
+    }
+
+    #restore error objects, var column, original column names (with suffixes).
+    #original column order
+    joined <- as_tibble(joined) %>%
+        mutate(val_x = errors::set_errors(val_x, err_x),
+               val_y = errors::set_errors(val_y, err_y)) %>%
+        select(-err_x, -err_y)
+        # mutate(var = !!varname)
+
+    # if(x_is_flowtibble) joined <- rename(joined,
+    #                                      flow = val_x,
+    #                                      ms_status_flow = ms_status_x,
+    #                                      ms_interp_flow = ms_interp_x)
+    # if(y_is_flowtibble) joined <- rename(joined,
+    #                                      flow = val_y,
+    #                                      ms_status_flow = ms_status_y,
+    #                                      ms_interp_flow = ms_interp_y)
+
+    # if(! sum(grepl('^val_[xy]$', colnames(joined))) > 1){
+    #     joined <- rename(joined, val = matches('^val_[xy]$'))
+    # }
+
+    joined <- select(joined,
+                     datetime,
+                     # matches('^val_?[xy]?$'),
+                     # any_of('flow'),
+                     starts_with('site_name'),
+                     any_of(c(starts_with('var_'), matches('^var$'))),
+                     any_of(c(starts_with('val_'), matches('^val$'))),
+                     starts_with('ms_status_'),
+                     starts_with('ms_interp_'))
+
+    return(joined)
 }
 
 retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_name,
-                                         tracker){
+                                         tracker,
+                                         orcid_login,
+                                         orcid_pass){
 
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
 
     rt <- tracker[[prodname_ms]][[site_name]]$retrieve
-
+    
+#i = 1
     for(i in 1:nrow(rt)){
 
         held_dt <- as.POSIXct(rt$held_version[i],
@@ -8348,7 +10270,7 @@ munge_versionless_product <- function(network,
     }
 }
 
-catalogue_held_data <- function(network_domain, site_data){
+catalog_held_data <- function(network_domain, site_data){
 
     #tabulates:
     # + total nonspatial observations for the portal landing page
@@ -8377,16 +10299,17 @@ catalogue_held_data <- function(network_domain, site_data){
                                     n = network_domain$network[i],
                                     d = network_domain$domain[i]),
                                full.names = TRUE)
+        site_prods <- site_prods[! grepl('derived$', site_prods)]
 
         if(length(site_prods) == 0) next
 
-        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary|derived$)',
+        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary)',
                                   x = site_prods)
 
         spatial_prods <- site_prods[spatial_prod_inds]
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
-        for(j in 1:length(nonspatial_prods)){
+        for(j in seq_along(nonspatial_prods)){
 
             if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
                 logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
@@ -8399,7 +10322,7 @@ catalogue_held_data <- function(network_domain, site_data){
                                     full.names = TRUE,
                                     recursive = TRUE) %>%
                 purrr::map(~ feather::feather_metadata(.x)$dim[1]) %>%
-                purrr:::reduce(sum)
+                purrr::reduce(sum)
 
             nobs_nonspatial <- nobs_nonspatial + prod_nobs
 
@@ -8515,11 +10438,14 @@ catalogue_held_data <- function(network_domain, site_data){
         }
     }
 
-    # setwd('../portal/data/')
+    readr::write_file(x = as.character(nobs_nonspatial),
+                      file = '../portal/data/general/total_nonspatial_observations.txt')
+
     dir.create('../portal/data/general/catalog_files',
                showWarnings = FALSE)
 
     #generate and write file describing all variables
+
     all_variable_display <- all_variable_breakdown %>%
         group_by(VariableCode) %>%
         summarize(
@@ -8594,6 +10520,7 @@ catalogue_held_data <- function(network_domain, site_data){
     #generate and write file describing all sites
     #TODO: make sure to include a note about datum on display page
     #   also, incude url column somehow
+
     all_site_display <- all_variable_breakdown %>%
         group_by(network, domain, site_name) %>%
         summarize(
@@ -8629,6 +10556,7 @@ catalogue_held_data <- function(network_domain, site_data){
                      file = '../portal/data/general/catalog_files/all_sites.csv')
 
     #generate and write individual file for each site, describing it by variable
+
     dir.create('../portal/data/general/catalog_files/indiv_sites',
                showWarnings = FALSE)
 
@@ -8672,7 +10600,6 @@ catalogue_held_data <- function(network_domain, site_data){
                                      d = dmn,
                                      s = sit))
     }
-
 
     #in case somebody asks for this stuff again:
 
@@ -8720,32 +10647,344 @@ catalogue_held_data <- function(network_domain, site_data){
     #     {sum(.$n_unique_streams)}
 }
 
+greatest_common_divisor <- function(a, b){
+
+    stopifnot(is.numeric(a), is.numeric(b))
+
+    if(length(a) == 1){
+        a <- rep(a, times = length(b))
+    } else if(length(b) == 1){
+        b <- rep(b, times = length(a))
+    }
+
+    n <- length(a)
+    e <- d <- g <- numeric(n)
+
+    for(k in 1:n){
+
+        u <- c(1, 0, abs(a[k]))
+        v <- c(0, 1, abs(b[k]))
+
+        while(v[3] != 0){
+
+            q <- floor(u[3]/v[3])
+            t <- u - v * q
+            u <- v
+            v <- t
+        }
+
+        e[k] <- u[1] * sign(a[k])
+        d[k] <- u[2] * sign(a[k])
+        g[k] <- u[3]
+    }
+
+    return(g)
+}
+
+least_common_multiple <- function(a, b){
+
+    stopifnot(is.numeric(a), is.numeric(b))
+
+    if(length(a) == 1){
+        a <- rep(a, times = length(b))
+    } else if(length(b) == 1){
+        b <- rep(b, times = length(a))
+    }
+
+    g <- greatest_common_divisor(a, b)
+
+    return(a/g * b)
+}
+
+ms_determine_data_interval <- function(d, per_column = FALSE){
+
+    #calculates the mode interval in each column, then returns the
+    #   greatest common divisor of those modes as the interval, in minutes.
+
+    vars <- unique(d$var)
+
+    interval_modes <- c()
+    for(v in vars){
+        time_diffs <- diff(d$datetime[d$var == v])
+        units(time_diffs) = 'mins'
+        interval_modes <- c(interval_modes, Mode(time_diffs))
+    }
+
+    if(per_column){
+        names(interval_modes) <- vars
+        return(interval_modes)
+    }
+
+    interval_modes <- interval_modes[! is.na(interval_modes)]
+
+    if(! length(interval_modes)) return(NA_real_)
+
+    data_interval <- Reduce(greatest_common_divisor, interval_modes)
+
+    return(data_interval)
+}
+
+ms_complete_all_cases <- function(network_domain, site_data){
+
+    #populates implicit NAs in all feather files across all product directories.
+    #   Note: this only operates on files within data_acquisition/data, NOT within
+    #   portal/data (those files should stay as small as possible. see
+    #   insert_gap_border_NAs).
+
+    #also note: when we switch back to high-res mode, we'll need to see how much
+    #   more space our dataset takes up after this operation. it might be
+    #   several gigs, which could be a problem.
+
+    #For special cases (currently only McMurdo), winter data gaps in discharge
+    #   timeseries will be populated with 0 instead of NA. McMurdo's winter is
+    #   identified as any series of NAs longer than 180 days occurring between
+    #   jan 2 and dec 30.
+
+    paths <- list.files(path = 'data',
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- paths[grepl(pattern = 'derived', x = paths)]
+
+    for(p in paths){
+
+        d <- read_feather(p)
+        sites <- unique(d$site_name)
+        vars <- unique(d$var)
+
+        dupes_present <- FALSE
+        for(s in sites){
+            for(v in vars){
+
+                dt_diff <- d %>%
+                    filter(site_name == !!s,
+                           var == !!v) %>%
+                    arrange(datetime) %>%
+                    pull(datetime) %>%
+                    as.numeric() %>%
+                    diff()
+
+                if(length(dt_diff)){
+
+                    if(any(dt_diff == 0)){
+                        warning(glue('Duplicate datetime found in {pp} ({ss}-{vv} slice).',
+                                     'This will be removed, but we should find out what the deal is.',
+                                      pp = p,
+                                      ss = s,
+                                      vv = v))
+
+                        dupes_present <- TRUE
+                    }
+
+                    if(any(dt_diff <= 15 * 60 & dt_diff != 0)){
+                        stop(glue("We need to make sure it's okay to make NAs ",
+                                  "explicit, now that we're in high-res mode. ",
+                                  "Copy the data directory, comment this error, ",
+                                  "run this function, then compare data directory ",
+                                  "sizes. If completing ",
+                                  "cases doesn't make it absurdly huge, then ",
+                                  "remove this error and carry on."))
+                    }
+                }
+            }
+        }
+
+        if(dupes_present){
+            d <- d %>%
+                distinct(site_name, var, datetime,
+                         .keep_all = TRUE) %>%
+                arrange(site_name, var, datetime)
+        }
+
+        interv_mins <- ms_determine_data_interval(d = d)
+
+        if(is.na(interv_mins)){ #only one value, so no interval
+            next
+        } else if(interv_mins %% 1440 == 0){
+            data_interval <- '1 day'
+        } else if(interv_mins %% 15 == 0){
+            data_interval <- '15 mins'
+        } else {
+            stop(glue('data interval should be either 1 day or 15 minutes. If ',
+                      'this has changed, update the conditional above this error ',
+                      'and check for needed updates elsewhere'))
+        }
+
+        d <- populate_implicit_NAs(d = d,
+                                   interval = data_interval)
+
+        if(grepl('/mcmurdo/', p) && grepl('/discharge__', p)){
+
+            #for sites/products with more than one variable prefix, something more
+            #sophisticated will be needed. for mcmurdo, all discharge is IS_discharge
+            d <- d %>%
+                group_split(site_name, var,
+                            year = lubridate::year(datetime)) %>%
+                purrr::map_dfr(function(x){
+
+                    na_runlengths <- rle(is.na(x$val))
+                    na_len <- na_runlengths$lengths
+                    is_na <- na_runlengths$values
+
+                    if(any(is_na[c(1, length(is_na))])) return(x)
+
+                    winter_run <- which(is_na & na_len > 180)
+
+                    if(length(winter_run)){
+
+                        csums <- cumsum(na_len[1:winter_run])
+                        winter_inds <- (csums[length(csums) - 1] + 1) :
+                            csums[length(csums)]
+                        x$val[winter_inds] <- 0
+                        x$ms_interp[winter_inds] <- 1
+                    }
+
+                    return(x)
+                }) %>%
+                arrange(site_name, var, datetime)
+        }
+
+        write_feather(x = d,
+                      path = p)
+    }
+}
+
+insert_gap_border_NAs <- function(network_domain, site_data){
+
+    #populates rows bordering missing data segments with NA data, so that
+    #   gaps are properly plotted by dygraphs, etc.
+    #   Note: this only operates on files within portal/data, NOT within
+    #   data_acquisition/data (see ms_complete_all_cases)
+
+    #TODO: make the following documentation true. for now, nothing is done
+    #   differently for mcmurdo, meaning the portal shows gaps for mcmurdo's
+    #   winter where the public export data has 0s.
+    #For special cases (currently only McMurdo), rows bordering winter data gaps
+    #   in discharge timeseries will be populated with 0 instead of NA.
+    #   McMurdo's winter is identified as any series of NAs longer than 180 days
+    #   occurring between jan 2 and dec 30.
+
+    #notice: running this function multiple times without rebuilding the portal
+    #   dataset will keep adding NA rows to the beginning and end of each data
+    #   gap. Basically, if you run this n times you'll fill data gaps of up
+    #   to length n/2. This isn't a problem.
+
+    paths <- list.files(path = '../portal/data',
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- paths[! grepl(pattern = '/general/', x = paths)]
+
+    for(p in paths){
+
+        d <- read_feather(p)
+
+        interv_mins <- ms_determine_data_interval(d = d)
+
+        if(is.na(interv_mins)){
+            next
+        } else if(interv_mins %% 1440 == 0){
+            data_interval <- '1 day'
+        } else if(interv_mins %% 15 == 0){
+            data_interval <- '15 mins'
+        } else {
+            stop(glue('data interval should be either 1 day or 15 minutes. If ',
+                      'this has changed, updates the conditional above this error ',
+                      'and check for needed updates elsewhere'))
+        }
+
+        d <- populate_implicit_NAs(d = d,
+                                   interval = data_interval,
+                                   edges_only = TRUE)
+
+        write_feather(x = d,
+                      path = p)
+    }
+}
+
+generate_product_csvs <- function(network_domain, site_data){
+
+    #in addition to the data/network/domain/product/site.feather format,
+    #   we can provide analysis-ready CSVs.
+
+    dir.create(path = 'output/all_chemQPflux_csv_wide',
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    readr::write_file(x = paste('In casting these product sets from long to',
+                                'wide format, ms_status (indicating data flags)',
+                                'and ms_interp (indicating points interpolated',
+                                'by MacroSheds) columns have been dropped. We',
+                                'Can include this information in wide format,',
+                                'but note that it will nearly double the size',
+                                'of each CSV herein.'),
+                      file = 'output/all_chemQPflux_csv_wide/README.txt')
+
+    products <- c('stream_chemistry', 'stream_flux_inst_scaled', 'discharge',
+                  'precip_chemistry', 'precip_flux_inst_scaled', 'precipitation')
+
+
+    for(p in products){
+
+        d <- load_entire_product(prodname = p,
+                                 .sort = FALSE)
+
+        if(nrow(d) != nrow(distinct(d, datetime, site_name, var))){
+            print(paste('there are still duplicates in', p))
+        }
+        # zz = d %>%
+        #     select(-ms_status, -ms_interp) %>%
+        #     mutate(val = errors::drop_errors(val)) %>%
+        #     tidyr::pivot_wider(names_from = var,
+        #                        values_from = val,
+        #                        values_fn = length)
+        # zzz = apply(zz[,5:ncol(zz)], 1, function(x)any(! is.na(x) & x > 1))
+        # filter(d, datetime == as.POSIXct('2003-08-20 00:00:00', tz='UTC'), site_name=='JBHH', var=='GN_PO4_P')
+
+        d %>%
+            select(-ms_status, -ms_interp) %>%
+            mutate(val = errors::drop_errors(val)) %>%
+            tidyr::pivot_wider(names_from = var,
+                               values_from = val,
+                               values_fn = mean) %>%
+            arrange(network, domain, site_name, datetime) %>%
+            readr::write_csv(file = glue('output/all_chemQPflux_csv_wide/{pp}.csv',
+                                         pp = p))
+    }
+}
+
 expo_backoff <- function(expr,
                          max_attempts = 10,
-                         verbose = FALSE){
+                         verbose = TRUE){
 
     for(attempt_i in seq_len(max_attempts)){
 
         results <- try(expr = expr,
                        silent = TRUE)
 
-        if('try-error' %in% class(results)){
+        if(inherits(results, 'try-error')){
+
+            if(attempt_i == max_attempts){
+                stop(attr(results, 'condition'))
+            }
 
             backoff <- runif(n = 1,
                              min = 0,
                              max = 2^attempt_i - 1)
 
             if(verbose){
-                message("Backing off for ", backoff, " seconds.")
+                print(glue("Backing off for ", round(backoff, 1), " seconds."))
             }
 
             Sys.sleep(backoff)
 
         } else {
 
-            if(verbose){
-                message("Succeeded after ", attempt_i, " attempts.")
-            }
+            # if(verbose){
+            #     print(paste0("Request succeeded after ", attempt_i, " attempt(s)."))
+            # }
 
             break
         }
@@ -8820,7 +11059,573 @@ combine_ws_boundaries <- function(){
                  layer = 'shed_boundary.shp',
                  driver = 'ESRI Shapefile',
                  delete_layer = TRUE,
-                 silent = TRUE)
+                 quiet = TRUE)
 
-    setwd('../../data_acquisition/')
+    if(ms_instance$op_system == 'windows'){
+        setwd('../../')
+        setwd('data_processing/')
+    } else{
+        setwd('../../data_acquisition/')
+    }
+
+}
+
+get_osm_roads <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   roads will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    message('Downloading roads layer from OpenStreetMap')
+
+    extent_raster <- terra::rast(extent_raster)
+    # rast_crs <- as.character(extent_raster@crs)
+    rast_crs <- terra::crs(extent_raster,
+                           proj4 = TRUE)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    highway_types <- c('motorway', 'trunk', 'primary', 'secondary', 'tertiary')
+    highway_types <- c(highway_types,
+                       paste(highway_types, 'link', sep = '_'))
+
+    roads_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'highway',
+                                 value = highway_types)
+
+    roads <- osmdata::osmdata_sf(roads_query)
+    roads <- roads$osm_lines$geometry
+
+    # plot(roads$osm_lines, max.plot = 1)
+
+    roads_proj <- roads %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(roads_proj,
+                     dsn = outfile,
+                     layer = 'roads',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     quiet = TRUE)
+
+        message(paste('OSM roads layer written to', outfile))
+
+    } else {
+        return(roads_proj)
+    }
+}
+
+get_osm_streams <- function(extent_raster, outfile = NULL){
+
+    #extent_raster: either a terra spatRaster or a rasterLayer. The output
+    #   streams will have the same crs, and roughly the same extent, as this raster.
+    #outfile: string. If supplied, output shapefile will be written to this
+    #   location. If not supplied, the output will be returned.
+
+    message('Downloading streams layer from OpenStreetMap')
+
+    extent_raster <- terra::rast(extent_raster)
+    # rast_crs <- as.character(extent_raster@crs)
+    rast_crs <- terra::crs(extent_raster,
+                           proj4 = TRUE)
+
+    extent_raster_wgs84 <- terra::project(extent_raster,
+                                          y = 'epsg:4326')
+
+    dem_bounds <- terra::ext(extent_raster_wgs84)[c(1, 3, 2, 4)]
+
+    streams_query <- osmdata::opq(dem_bounds) %>%
+        osmdata::add_osm_feature(key = 'waterway',
+                                 value = c('river', 'stream'))
+
+    streams <- osmdata::osmdata_sf(streams_query)
+    streams <- streams$osm_lines$geometry
+
+    streams_proj <- streams %>%
+        sf::st_transform(crs = rast_crs) %>%
+        sf::st_union() %>%
+        # sf::st_transform(crs = WGS84) %>%
+        sf::st_as_sf() %>%
+        rename(geometry = x) %>%
+        mutate(FID = 0:(n() - 1)) %>%
+        dplyr::select(FID, geometry)
+
+    if(! is.null(outfile)){
+
+        sf::st_write(streams_proj,
+                     dsn = outfile,
+                     layer = 'streams',
+                     driver = 'ESRI Shapefile',
+                     delete_layer = TRUE,
+                     quiet = TRUE)
+
+        message(paste('OSM streams layer written to', outfile))
+
+    } else {
+        return(streams_proj)
+    }
+}
+
+fill_sf_holes <- function(x){
+
+    #x: an sf object (probably needs to be projected)
+
+    #if there are spaces in a shapefile polygon that are not filled in,
+    #   this fills them.
+
+    #if the first element of an sf geometry (which is a list) contains multiple
+    #   elements, every element after the first is a hole. the first element
+    #   is the outer geometry. so replace the geometry with a new polygon that
+    #   is only the outer geometry
+
+    wb_geom <- sf::st_geometry(x)
+    # wb_geom_crs <- sf::st_crs(wb_geom)
+
+    n_polygons <- length(wb_geom[[1]])
+    if(n_polygons > 1){
+        wb_geom[[1]] <- sf::st_polygon(wb_geom[[1]][1])
+    }
+
+    # if(length(wb_geom) != 1){
+    #     wb_geom <- sf::st_combine(wb_geom)
+    # }
+
+    sf::st_geometry(x) <- wb_geom
+
+    return(x)
+}
+
+get_nrcs_soils <- function(network,
+                           domain,
+                           nrcs_var_name,
+                           site,
+                           ws_boundaries){
+
+    # Use soilDB to download  soil map unit key (mukey) calssification raster
+    site_boundary <- ws_boundaries %>%
+        filter(site_name == site)
+
+    bb <- sf::st_bbox(site_boundary)
+
+    soil <- try(sw(soilDB::mukey.wcs(aoi = bb,
+                                 db = 'gssurgo',
+                                 quiet = TRUE)))
+
+    # should build a chunking method for this
+    if(class(soil) == 'try-error'){
+
+        this_var_tib <- tibble(site_name = site,
+                               year = NA,
+                               var =  names(nrcs_var_name),
+                               val = NA)
+
+        return(generate_ms_exception(glue('{s} is too large',
+                                          s = site)))
+    }
+
+    mukey_values <- unique(soil@data@values)
+
+    #### Grab soil vars
+
+    # Query Soil Data Acess (SDA) to get the component key (cokey) in each mukey.
+    #### each map unit made up of componets but components do not have
+    #### spatial informaiton associted with them, but they do include information
+    #### on the percentage of each mukey that is made up of each component.
+    #### This informaiton on compositon is held in the component table in the
+    #### comppct_r column, givin in a percent
+
+    mukey_sql <- soilDB::format_SQL_in_statement(mukey_values)
+    component_sql <- sprintf("SELECT cokey, mukey, compname, comppct_r, majcompflag FROM component WHERE mukey IN %s", mukey_sql)
+    component <- sm(soilDB::SDA_query(component_sql))
+
+    # Check is soil data is available
+    if(length(unique(component$compname)) == 1 &&
+       unique(component$compname) == 'NOTCOM'){
+
+        this_var_tib <- tibble(site_name = site,
+                               year = NA,
+                               var =  names(nrcs_var_name),
+                               val = NA)
+
+        return(generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = site)))
+    }
+
+    cokey <- unique(component[,1])
+    cokey <- data.frame(ID=cokey)
+
+
+    # Query SDA for the componets to get infromation on their horizons from the
+    #### chorizon table. Each componet is made up of soil horizons (layer of soil
+    #### vertically) identified by a chkey.
+    #### Informaiton about the depth of each horizon is needed to calculate weighted
+    #### averges of any parameter for the whole soil column
+    #### hzdept_r = depth to top of horizon
+    #### hzdepb_r = depth to bottom of horizon
+    #### om_r = percent organic matter
+    cokey_sql <- soilDB::format_SQL_in_statement(cokey$ID)
+    chorizon_sql <- sprintf(paste0('SELECT cokey, chkey, hzname, desgnmaster, hzdept_r, hzdepb_r, ',
+                                         paste(nrcs_var_name, collapse = ', '),
+                                         ' FROM chorizon WHERE cokey IN %s'), cokey_sql)
+
+    full_soil_data <- sm(soilDB::SDA_query(chorizon_sql))
+
+    # Calculate weighted average for the entire soil column. This involves 3 steps.
+    #### First the component's weighted average of all horizones. Second, the
+    #### weighted avergae of each component in a map unit. And third, the weighted
+    #### average of all mukeys in the watershed (weighted by their area)
+
+    # cokey weighted average of all horizones
+    soil_data_joined <- full_join(full_soil_data, component, by = c("cokey"))
+
+    all_soil_vars <- tibble()
+    for(s in 1:length(nrcs_var_name)){
+
+        this_var <- unname(nrcs_var_name[s])
+
+        soil_data_one_var <- soil_data_joined %>%
+            select(cokey, chkey, hzname, desgnmaster, hzdept_r, hzdepb_r,
+                   !!this_var, mukey, compname, comppct_r, majcompflag)
+
+        cokey_size <- soil_data_one_var %>%
+            filter(!is.na(.data[[this_var]])) %>%
+            mutate(layer_size = hzdepb_r-hzdept_r) %>%
+            group_by(cokey) %>%
+            summarise(cokey_size = sum(layer_size)) %>%
+            ungroup()
+
+        cokey_weighted_av <- soil_data_one_var %>%
+            filter(!is.na(.data[[this_var]])) %>%
+            mutate(layer_size = hzdepb_r-hzdept_r) %>%
+            left_join(., cokey_size, by = 'cokey') %>%
+            mutate(layer_prop = layer_size/cokey_size) %>%
+            mutate(value_mat_weith = .data[[this_var]] * layer_prop)  %>%
+            group_by(mukey, cokey) %>%
+            summarise(value_comp = sum(value_mat_weith),
+                      comppct_r = unique(comppct_r)) %>%
+            ungroup()
+
+        # mukey weighted average of all compenets
+        mukey_weighted_av <- cokey_weighted_av %>%
+            group_by(mukey) %>%
+            mutate(comppct_r_sum = sum(comppct_r)) %>%
+            summarise(value_mukey = sum(value_comp*(comppct_r/comppct_r_sum)))
+
+        # Watershed weighted average
+        site_boundary_p <- sf::st_transform(site_boundary, crs = sf::st_crs(soil))
+
+        soil_masked <- sw(raster::mask(soil, site_boundary_p))
+
+        watershed_mukey_values <- soil_masked@data@values %>%
+            as_tibble() %>%
+            filter(!is.na(value)) %>%
+            group_by(value) %>%
+            summarise(n = n()) %>%
+            rename(mukey = value) %>%
+            left_join(mukey_weighted_av, by = 'mukey')
+
+
+        # Info on soil data
+        # query SDA's Mapunit Aggregated Attribute table (muaggatt) by mukey.
+        # table information found here: https://sdmdataaccess.sc.egov.usda.gov/documents/TableColumnDescriptionsReport.pdf
+        # https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/survey/geo/?cid=nrcs142p2_053631
+        # how the tables relate using mukey, cokey, and chkey is here: https://www.nrcs.usda.gov/Internet/FSE_DOCUMENTS/nrcs142p2_050900.pdf
+
+        if(all(is.na(watershed_mukey_values$value_mukey))){
+
+            watershed_value <- NA
+        } else{
+
+            total_cells <- sum(watershed_mukey_values$n)
+            na_cells <- watershed_mukey_values %>%
+                filter(is.na(value_mukey))
+            na_cells <- sum(na_cells$n)
+
+            watershed_mukey_values_weighted <- watershed_mukey_values %>%
+                filter(!is.na(value_mukey)) %>%
+                mutate(sum = sum(n, na.rm = TRUE)) %>%
+                mutate(prop = n/sum)
+
+            watershed_mukey_values_weighted <- watershed_mukey_values_weighted %>%
+                mutate(weighted_av = prop*value_mukey)
+
+            watershed_value <- sum(watershed_mukey_values_weighted$weighted_av,
+                                   na.rm = TRUE)
+
+            watershed_value <- round(watershed_value, 2)
+            na_prop <- round((100*(na_cells/total_cells)), 2)
+        }
+
+        this_var_tib <- tibble(year = NA,
+                               site_name = site,
+                               var =  names(nrcs_var_name[s]),
+                               val = watershed_value,
+                               pctCellErr = na_prop)
+
+        all_soil_vars <- rbind(all_soil_vars, this_var_tib)
+    }
+
+    return(all_soil_vars)
+
+    # #Used to visualize raster
+    # for(i in 1:nrow(watershed_mukey_values_weighted)){
+    #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
+    # }
+    # soil_masked@data@isfactor <- FALSE
+    #
+    # mapview::mapview(soil_masked)
+    # raster::plot(soil_masked)
+
+    # Other table in SDA system
+    # # component table
+    # compnent_sql <- soilDB::format_SQL_in_statement(cokey$ID)
+    # component_sql <- sprintf("SELECT cokey, runoff, compname, compkind, comppct_r, majcompflag, otherph, localphase, slope_r, hydricrating, taxorder, taxsuborder, taxsubgrp, taxpartsize FROM component WHERE cokey IN %s", compnent_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+    #
+    # chtext
+    # compnent_sql <- soilDB::format_SQL_in_statement(full_soil_data$chkey)
+    # component_sql <- sprintf("SELECT texture, stratextsflag, rvindicator, texdesc, chtgkey FROM chtexturegrp WHERE chkey IN %s", compnent_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+
+    # component_sql <- sprintf("SELECT musym, brockdepmin, wtdepannmin, wtdepaprjunmin, niccdcd FROM muaggatt WHERE mukey IN %s", mukey_sql)
+    # component_return <- soilDB::SDA_query(component_sql)
+    #
+    # # corestrictions table
+    # corestrictions_sql <- sprintf("SELECT cokey, reskind, resdept_r, resdepb_r, resthk_r FROM corestrictions WHERE cokey IN %s", compnent_sql)
+    # corestrictions_return <- soilDB::SDA_query(corestrictions_sql)
+    #
+    # # cosoilmoist table
+    # cosoilmoist_sql <- sprintf("SELECT cokey,  FROM cosoilmoist WHERE cokey IN %s", compnent_sql)
+    # corestrictions_return <- soilDB::SDA_query(corestrictions_sql)
+    #
+    # # pores
+    # chkey_sql <- soilDB::format_SQL_in_statement(unique(full_soil_data$chkey))
+    # cokey_to_chkey_sql_pores <- sprintf(paste0('SELECT chkey, poresize FROM chpores WHERE chkey IN %s'), chkey_sql)
+    #
+    # soil_pores <- soilDB::SDA_query(cokey_to_chkey_sql_pores)
+
+}
+
+load_spatial_data <- function(){
+
+    spatial_files <- googledrive::drive_ls(googledrive::as_id('1EaEjkCb_U4zvLCXrULRTU-4yPC95jS__'))
+
+    drive_files <- str_split_fixed(spatial_files$name, '\\.', n = Inf)[,1]
+
+    dir.create('data/spatial', showWarnings = F)
+    held_files <- list.files('data/spatial/')
+
+    needed_files <- drive_files[!drive_files %in% held_files]
+
+    print(paste0(paste(needed_files, collapse = ' '), ' are needed'))
+
+    needed_files <- paste0(needed_files, '.zip')
+
+    needed_sets <- spatial_files %>%
+        filter(name %in% needed_files)
+
+    if(nrow(needed_sets) == 0){
+        return('all files loaded onto local machine')
+    }
+
+    for(i in 1:nrow(needed_sets)){
+
+        zip_path <- glue('data/spatial/{n}', n = needed_sets$name[i])
+
+        print(paste0('Downloading ', needed_sets$name[i]))
+        googledrive::drive_download(file = googledrive::as_id(needed_sets$id[i]),
+                                    path = zip_path)
+
+        print(paste0('Unzipping ', needed_sets$name[i]))
+        unzip(zipfile = zip_path,
+              exdir = 'data/spatial')
+
+        file_check <- list.files('data/spatial')
+
+        if('__MACOSX' %in% file_check){
+            unlink('data/spatial/__MACOSX', recursive = T)
+        }
+
+        file.remove(zip_path)
+
+    }
+}
+
+extract_ws_mean <- function(site_boundary, raster_path){
+
+    rast_file <- terra::rast(raster_path)
+    rast_crs <- terra::crs(rast_file)
+
+    site_boundary_buf <- sw(sm(site_boundary %>%
+                                   sf::st_buffer(., 0.01) %>%
+                                   sf::st_transform(., rast_crs)))
+
+    site_boundary <- site_boundary %>%
+        sf::st_transform(., rast_crs)
+
+    site_boundary_buf <- as(site_boundary_buf, "Spatial") %>%
+        terra::vect()
+
+    rast_masked <- rast_file %>%
+        terra::crop(site_boundary_buf)
+
+    weighted_results <- raster::extract(as(rast_masked, 'Raster'), site_boundary,
+                                        weights = T, normalizeWeights = F)
+
+    vals_w <- weighted_results[[1]] %>%
+        as_tibble()
+
+    ws_nas <- filter(vals_w, is.na(value))
+
+    vals_w <- vals_w %>%
+        filter(!is.na(value)) %>%
+        mutate(new = value*weight)
+
+    sd <- sd(vals_w$value)
+
+    percent_na <- round((nrow(ws_nas)/(nrow(vals_w)+nrow(ws_nas)))*100, 2)
+
+    val <- sum(vals_w$new)/sum(vals_w$weight)
+
+    fin <- c(mean = val,
+             sd = sd,
+             pctCellErr = percent_na)
+
+    return(fin)
+
+}
+
+ms_check_range <- function(d){
+
+    d_vars <- unique(d$var)
+
+    for(c in 1:length(d_vars)){
+
+        var_p_frop <- drop_var_prefix(d_vars[c])
+
+        min_val <- ms_vars %>%
+            filter(variable_code == !!var_p_frop) %>%
+            pull(val_min)
+
+        if(!is.na(min_val)){
+            d <- d %>%
+                mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) < !!min_val, NA, val))
+        }
+
+        max_val <- ms_vars %>%
+            filter(variable_code == !!var_p_frop) %>%
+            pull(val_max)
+
+        if(!is.na(max_val)){
+            d <- d %>%
+                mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) > !!max_val, NA, val))
+        }
+    }
+
+    d <- d %>%
+        filter(!is.na(val))
+}
+
+download_from_googledrive <- function(set_details, network, domain){
+
+    prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitename_NA',
+                          n = network,
+                          d = domain,
+                          p = set_details$prodname_ms)
+
+    id <- googledrive::as_id('178OOGxx1xM3C7m-Tdx6j5Dk_kxfWLJvw')
+    gd_files <- googledrive::drive_ls(id, recursive = TRUE)
+
+    network_id <- gd_files %>%
+        filter(name == !!network)
+
+    network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+
+    domain_id <- network_files %>%
+        filter(name == !!domain)
+
+    domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+
+    raw_files <- domain_files %>%
+        filter(name == 'raw')
+
+    raw_files <- googledrive::drive_ls(googledrive::as_id(raw_files$id))
+
+    prod_folder <- raw_files %>%
+        filter(name == !! set_details$prodname_ms)
+
+    prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    held_files <- list.files(raw_data_dest)
+
+    drive_files <- prod_files$name
+
+    if(any(! drive_files %in% held_files)) {
+
+        loginfo(glue('Retrieving {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+
+        needed_files <- drive_files[! drive_files %in% held_files]
+
+        prod_files_neeed <- prod_files %>%
+            filter(name %in% needed_files)
+
+        for(i in 1:nrow(prod_files_neeed)){
+
+            raw_file_path <- glue('{rd}/{n}',
+                                  rd = raw_data_dest,
+                                  n = prod_files_neeed$name[i])
+
+
+            status <- googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
+                                        path = raw_file_path,
+                                        overwrite = TRUE)
+        }
+    } else{
+        loginfo(glue('Nothing to do for {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+    }
+
+    return()
+}
+
+append_unprod_prefix <- function(d, prodname_ms){
+    
+    prodname_ms <- str_split_fixed(prodname_ms, '__', n = 2)[1,]
+    prodname <- prodname_ms[1]
+    prodcode <- prodname_ms[2]
+    
+    this_product <- univ_products %>%
+        filter(prodname == !!prodname & prodcode == !!prodcode) 
+    
+    data_class <- this_product %>%
+        pull(data_class_code)
+    
+    data_source <- this_product %>%
+        pull(data_source_code)
+    
+    d <- d %>%
+        mutate(var = paste0(data_class, data_source, '_', var))
+    
+    
+    return(d)
 }

@@ -96,10 +96,93 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
             needed = avail_version - held_version > 0)
 
     if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logerror(msg, logger=logger_module)
-        stop(msg)
+
+        #we used to raise an error for this, but now I'm just going to trust that
+        #we'll always run track_new_site_components before this function, so that
+        #we can use the same conditional to perform an important error correction:
+        #the case where a new version of a file shows up as a new file, as in the case
+        #of lter>arctic>stream_chemistry__10303>1978-2017_LTER_Streams_Chemistry_v6_csv,
+        #which became 2019_LTER_Streams_Chemistry_v9_csv and broke the system.
+
+        # msg = paste0('Must run `track_new_site_components` before ',
+        #     'running `populate_set_details`')
+        # logerror(msg = msg,
+        #          logger = logger_module)
+        # stop(msg)
+
+        prodfile <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                                     n = network,
+                                     d = domain)))
+
+        #if there's a components column, check to see if it already specifies a
+        #component. if so, replace the old component with the new one.
+        if('components' %in% colnames(prodfile)){
+
+            old_bool <- is.na(retrieval_tracker$needed)
+            oldprod <- retrieval_tracker$component[old_bool]
+            newprod <- retrieval_tracker$component[! old_bool]
+
+            prodrow <- which(prodfile$prodcode == prodcode &
+                 prodfile$prodname == prodname_from_prodname_ms(prodname_ms))
+
+            if(! is.na(prodfile[prodrow, 'components'])){
+                prodfile[prodrow, 'components'] <- newprod
+            }
+
+            logwarn(msg = glue('Found a component that was updated with a new ',
+                               'filename as well as a new version. Updating held_data ',
+                               'and {n}/{d}/products.csv ({p1} -> {p2})',
+                               n = network,
+                               d = domain,
+                               p1 = oldprod,
+                               p2 = newprod))
+
+            write_csv(x = prodfile,
+                      file = glue('src/{n}/{d}/products.csv',
+                                  n = network,
+                                  d = domain))
+        }
+
+        retrieval_tracker <- retrieval_tracker[! old_bool, ]
+
+        tracker[[prodname_ms]][[site_name]]$retrieve <- retrieval_tracker
+        held_data <<- tracker
+    }
+
+
+    if(any(retrieval_tracker$needed)) {
+
+        email_update <- retrieval_tracker %>%
+            filter(held_version != -1) %>%
+            filter(avail_version !=  held_version)
+
+        if(!nrow(email_update) == 0) {
+
+            sites <- unique(email_update$site_name)
+            sites <- paste(sites, collapse = ', ')
+
+            components <- unique(email_update$component)
+            components <- paste(components, collapse = ', ')
+
+            logwarn(msg = glue('The domain had updated product: {p}',
+                               p = prodname_ms))
+
+            update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
+                               'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
+                               ' Check meta data to ensure munge and retrival code is ',
+                               'still acceptable for this version of the product ',
+                               '(units have not changed, there are no new variables, ',
+                               'variables names have not changed, etc.).',
+                               n = network,
+                               d = domain,
+                               p = prodname_ms,
+                               s = sites,
+                               c = components)
+
+            email_err(msgs = update_msg,
+                      addrs = conf$report_emails,
+                      pw = conf$gmail_pw)
+        }
     }
 
     return(retrieval_tracker)
@@ -116,7 +199,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {st}, {p}, {c}',
+        msg = glue('Retrieving {st}, {p}, {c}',
             st=s$site_name, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
