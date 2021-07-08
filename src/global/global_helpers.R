@@ -2519,7 +2519,6 @@ ms_retrieve <- function(network = domain,
                local = TRUE)
     }
 
-
     #if there's a script for retrieval of versionless products, execute it too
     versionless_product_script <- glue('src/{n}/{d}/retrieve_versionless.R',
                                        n = network,
@@ -10534,12 +10533,12 @@ retrieve_versionless_product <- function(network,
 
         new_status <- evaluate_result_status(result)
 
-        if(any(! is.na(result$access_time))){
+        if('access_time' %in% names(result) && any(! is.na(result$access_time))){
             deets$last_mod_dt <- result$access_time[! is.na(result$access_time)][1]
+        } else if(is.POSIXct(result)){
+            stop('update kernel to return a list with url(s) and access_time(s)')
+            # deets$last_mod_dt <- as.character(result)
         }
-        # if(is.POSIXct(result)){
-        #     deets$last_mod_dt <- as.character(result)
-        # }
 
         update_data_tracker_r(network = network,
                               domain = domain,
@@ -10547,28 +10546,39 @@ retrieve_versionless_product <- function(network,
                               set_details = deets,
                               new_status = new_status)
 
-        #record URLs indicating data provenance, or messages explaining why none
-        gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
-        uses_gdrive_func <- grepl(gd_search_string, deparse(processing_func)[3])
+        source_urls <- get_source_urls(result_obj = result,
+                                       processing_func = processing_func)
 
-        if(uses_gdrive_func){
-
-            source_url <- 'MacroSheds drive; not yet public'
-
-        } else if('url' %in% names(result)){
-
-            source_url <- paste(result$url,
-                                collapse = '\n')
-
-        } else {
-            stop('investigate this. do we need to scrape the URL from products.csv?')
-        }
-
-        write_metadata_r(murl = source_url,
+        write_metadata_r(murl = source_urls,
                          network = network,
                          domain = domain,
                          prodname_ms = prodname_ms)
     }
+}
+
+get_source_urls <- function(result_obj, processing_func){
+
+    #identify URL(s) indicating data provenance, or return a
+    #message explaining why there isn't one
+
+    #find out if the processing func is an alias for download_from_googledrive()
+    gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
+    uses_gdrive_func <- grepl(gd_search_string, deparse(processing_func)[3])
+
+    if(uses_gdrive_func){
+
+        source_urls <- 'MacroSheds drive; not yet public'
+
+    } else if('url' %in% names(result_obj)){
+
+        source_urls <- paste(result_obj$url,
+                             collapse = '\n')
+
+    } else {
+        stop('investigate this. do we need to scrape the URL from products.csv?')
+    }
+
+    return(source_urls)
 }
 
 munge_versionless_product <- function(network,
@@ -11425,7 +11435,7 @@ get_osm_roads <- function(extent_raster, outfile = NULL){
     extent_raster <- terra::rast(extent_raster)
     # rast_crs <- as.character(extent_raster@crs)
     rast_crs <- terra::crs(extent_raster,
-                           proj4 = TRUE)
+                           proj = TRUE)
 
     extent_raster_wgs84 <- terra::project(extent_raster,
                                           y = 'epsg:4326')
@@ -11482,7 +11492,7 @@ get_osm_streams <- function(extent_raster, outfile = NULL){
     extent_raster <- terra::rast(extent_raster)
     # rast_crs <- as.character(extent_raster@crs)
     rast_crs <- terra::crs(extent_raster,
-                           proj4 = TRUE)
+                           proj = TRUE)
 
     extent_raster_wgs84 <- terra::project(extent_raster,
                                           y = 'epsg:4326')
