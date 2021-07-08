@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
     # # library(gstat) #must load before raster package (not needed)
     # library(raster)
     # # library(stars) #not needed (yet)
-    # library(sf)
+    library(sf) #must load here in order to look for sf::sf_use_s2 (below)
     # library(sp)
     # library(mapview)
     # library(elevatr)
@@ -56,6 +56,16 @@ vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
+
+if(exists('sf_use_s2',
+          where = 'package:sf',
+          mode = 'function')){
+
+    #sf v1.0+ uses s2 geometry by default, which breaks some of our code.
+    #We may want to deal with that someday, but for now let's just keep using
+    #GEOS, which is still perfectly fine for our purposes.
+    sf::sf_use_s2(FALSE)
+}
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -173,7 +183,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = T,
+ms_instance <- ms_init(use_ms_error_handling = F,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -220,7 +230,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=5
+dmnrow=4
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -237,7 +247,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
 
     # owrite_tracker(network, domain)
 
@@ -255,17 +265,17 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
+                # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             #prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              # prodname_filter = c('ws_boundary'),
               domain = domain)
     ms_general(network = network,
                domain = domain)

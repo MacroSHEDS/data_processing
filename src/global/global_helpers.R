@@ -2581,12 +2581,12 @@ ms_munge <- function(network = domain,
     if(dir.exists(munged_dir)){
         munged_subdirs <- list.dirs(munged_dir,
                                     recursive = FALSE)
+
+        boundary_ind <- grepl(pattern = 'ws_boundary',
+                              x = munged_subdirs)
     }
 
-    boundary_ind <- grepl(pattern = 'ws_boundary',
-                          x = munged_subdirs)
-
-    if(any(boundary_ind)){
+    if(exists('boundary_ind') && any(boundary_ind)){
 
         boundary_dir <- munged_subdirs[boundary_ind]
 
@@ -3648,7 +3648,10 @@ get_derive_ingredient <- function(network,
 
      prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
-                              d = domain)))
+                              d = domain))) %>%
+         filter( (! is.na(munge_status) & munge_status == 'ready') |
+                     (! is.na(derive_status) & derive_status %in% c('ready', 'linked')) |
+                     (prodname == 'ws_boundary' & ! is.na(notes) & notes == 'automated entry') )
 
     if(ignore_derprod){
 
@@ -4922,13 +4925,15 @@ create_portal_links <- function(network, domain){
                                      full.names = TRUE)
 
     # ** here's the second and final section referenced in the docstring above ---
-    files_to_link_from <- files_to_link_from[! grepl(
-        pattern = paste0('(?:',
-                         paste(paste0('^',
-                               dirs_to_ignore),
-                         collapse = '|'),
-                         ')'),
-        x = files_to_link_from)]
+    if(length(dirs_to_ignore)){
+        files_to_link_from <- files_to_link_from[! grepl(
+            pattern = paste0('(?:',
+                             paste(paste0('^',
+                                   dirs_to_ignore),
+                             collapse = '|'),
+                             ')'),
+            x = files_to_link_from)]
+    }
     # ---
 
     files_to_link_to <- convert_derive_path_to_portal_path(
@@ -6438,14 +6443,15 @@ synchronize_timestep <- function(d){
 
         sitevar_chunk <- d_split[[i]]
 
-        dupes_present <- any(duplicated(sitevar_chunk$datetime) |
-                             duplicated(sitevar_chunk$datetime,
-                                        fromLast = TRUE))
+        n_dupes <- sum(duplicated(sitevar_chunk$datetime) |
+                       duplicated(sitevar_chunk$datetime,
+                                  fromLast = TRUE))
 
         #average values for duplicate timestamps
-        if(dupes_present){
+        if(n_dupes > 0){
 
-            logwarn(msg = glue('Duplicate datetimes found for site: {s}, var: {v}',
+            logwarn(msg = glue('{n} duplicate datetimes found for site: {s}, var: {v}',
+                               n = n_dupes,
                                s = sitevar_chunk$site_code[1],
                                v = sitevar_chunk$var[1]),
                     logger = logger_module)
@@ -6455,6 +6461,7 @@ synchronize_timestep <- function(d){
                        val = errors::drop_errors(val)) %>%
                 as.data.table()
 
+            #take the mean value for any duplicate timestamps
             sitevar_chunk <- sitevar_chunk_dt[, .(
                 site_code = data.table::first(site_code),
                 var = data.table::first(var),
@@ -7673,10 +7680,10 @@ document_kernel_code <- function(network, domain, prodname_ms, level){
         stop('level must be numeric 0, 1, or 2')
     }
 
-    # if(grepl('ws_boundary__ms000', prodname_ms)){
-    #     return(paste0('See ms_delineate(), which can be found in\n',
-    #                   'https://github.com/MacroSHEDS/data_processing/blob/master/src/global_helpers.R'))
-    # }
+    if(prodname_ms == 'ws_boundary__ms000'){
+        return(paste0('For ms000, see ms_delineate, defined in\n',
+                      'https://github.com/MacroSHEDS/data_processing/blob/master/src/global_helpers.R'))
+    }
 
     kernel_file <- glue('src/{n}/{d}/processing_kernels.R',
                         n = network,
@@ -7715,8 +7722,11 @@ write_metadata_m <- function(network, domain, prodname_ms, tracker){
     sitelist <- names(tracker[[prodname_ms]])
     complist <- lapply(sitelist,
                        function(x){
-                           tracker[[prodname_ms]][[x]]$retrieve$component
+                           comp <- tracker[[prodname_ms]][[x]]$retrieve$component
+                           if(is.null(comp)) comp <- 'NULL'
+                           return(comp)
                        })
+
     compsbysite <- mapply(function(s, c){
         glue('\tfor site: {s}\n\t\tcomp(s): {c}',
              s = s,
@@ -7810,7 +7820,7 @@ write_metadata_d <- function(network,
         if(grepl('(^cdnr_|^usgs_)', prodname_ms)){
             return()
         } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms)){
-            stop(glue('do we need to catch {p}?', p = prodname_ms))
+            stop(glue('really no precursors for {p}? might need to update products.csv', p = prodname_ms))
         }
     }
 
@@ -7871,6 +7881,9 @@ write_metadata_d <- function(network,
              flux_note = ifelse(grepl('flux', prodname_ms),
                                 read_file('src/templates/flux_note.txt'),
                                 ''),
+             vsnless_note = ifelse(any(grepl('VERSIONLESS', precursors)),
+                                   read_file('src/templates/VERSIONLESS_note.txt'),
+                                   ''),
              dk = paste(code_d,
                         collapse = '\n\n'),
              da = paste(names(display_args),
@@ -7964,6 +7977,9 @@ write_metadata_d_linkprod <- function(network,
              flux_note = ifelse(grepl('flux', prodname_ms_d),
                                 read_file('src/templates/flux_note.txt'),
                                 ''),
+             vsnless_note = ifelse(grepl('VERSIONLESS', prodname_ms_mr),
+                                   read_file('src/templates/VERSIONLESS_note.txt'),
+                                   ''),
              mb = doc_m,
              ws_bounds_note = ws_bounds_note)
 
@@ -9790,15 +9806,44 @@ postprocess_entire_dataset <- function(site_data,
 
     log_with_indent('Generating biplot dataset',
                     logger = logger_module)
-    compute_yearly_summary(network_domain_default_sites,
-                           filter_ms_interp = FALSE,
+    compute_yearly_summary(filter_ms_interp = FALSE,
                            filter_ms_status = FALSE)
-    compute_yearly_summary_ws(network_domain_default_sites)
+    compute_yearly_summary_ws()
 
     log_with_indent('Calculating sizes of downloadable files',
                     logger = logger_module)
     compute_download_filesizes()
 }
+
+detrmin_mean_record_length <- function(df){
+
+    test <- df %>%
+        filter(Year != year(Sys.Date())) %>%
+        group_by(Year, Month, Day) %>%
+        summarise(max = max(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        filter(!(Month == 2 & Day == 29)) %>%
+        group_by(Month, Day) %>%
+        summarise(n = n())
+
+    if(mean(test$n, na.rm = TRUE) < 3){
+        return(nrow(test))
+    }
+
+    if(nrow(test) < 365) {
+
+        quart_val <- quantile(test$n, .2)
+
+        q_check <- test %>%
+            filter(n >= quart_val)
+
+        days_in_rec <- nrow(q_check)
+    } else{
+        days_in_rec <- 365
+    }
+    return(days_in_rec)
+}
+
 
 clean_portal_dataset <- function(){
 
@@ -10464,6 +10509,9 @@ retrieve_versionless_product <- function(network,
                                          orcid_login,
                                          orcid_pass){
 
+    #retrieves products that are served as static files.
+    #IN PROGRESS: records source URIs as local metadata files
+
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
 
@@ -10495,6 +10543,24 @@ retrieve_versionless_product <- function(network,
                               tracker_name = 'held_data',
                               set_details = deets,
                               new_status = new_status)
+
+        #record URLs indicating data provenance, or messages explaining why none
+        gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
+        uses_gdrive_func <- grepl(gd_search_string, deparse(processing_func)[3])
+
+        if(uses_gdrive_func){
+            source_url <- 'MacroSheds drive; not yet public'
+        } else if(! is.null(deets$component)){
+            source_url <- deets$component
+        } else {
+            browser()
+            #source_url <- get from products.csv?
+        }
+
+        write_metadata_r(murl = source_url,
+                         network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms)
     }
 }
 
@@ -10503,6 +10569,9 @@ munge_versionless_product <- function(network,
                                       prodname_ms,
                                       site_code,
                                       tracker){
+
+    #munges products that are served as static files.
+    #IN PROGRESS: records source URIs as local metadata files
 
     processing_func <- get(paste0('process_1_',
                                   prodcode_from_prodname_ms(prodname_ms)))
@@ -10529,6 +10598,11 @@ munge_versionless_product <- function(network,
                               prodname_ms = prodname_ms,
                               site_code = site_code,
                               new_status = new_status)
+
+        write_metadata_m(network = network,
+                         domain = domain,
+                         prodname_ms = prodname_ms,
+                         tracker = held_data)
     }
 }
 
@@ -11684,23 +11758,35 @@ load_spatial_data <- function(){
 
     spatial_files <- googledrive::drive_ls(googledrive::as_id('1EaEjkCb_U4zvLCXrULRTU-4yPC95jS__'))
 
-    drive_files <- str_split_fixed(spatial_files$name, '\\.', n = Inf)[,1]
+    drive_files <- str_split_fixed(spatial_files$name, '\\.', n = Inf)[, 1]
 
-    dir.create('data/spatial', showWarnings = F)
+    dir.create('data/spatial',
+               showWarnings = FALSE)
+
     held_files <- list.files('data/spatial/')
+    held_files[held_files == 'bfi.tif'] <- 'bfi'
 
-    needed_files <- drive_files[!drive_files %in% held_files]
+    needed_files <- drive_files[! drive_files %in% held_files]
 
-    print(paste0(paste(needed_files, collapse = ' '), ' are needed'))
+    if(length(needed_files)){
+
+        loginfo(glue('Spatial files {sfs} needed from GDrive',
+                     sfs = paste(needed_files,
+                                 collapse = ', ')),
+                logger = logger_module)
+
+    } else {
+
+        loginfo('All spatial files from GDrive are already held locally.',
+                logger = logger_module)
+
+        return(invisible())
+    }
 
     needed_files <- paste0(needed_files, '.zip')
 
     needed_sets <- spatial_files %>%
         filter(name %in% needed_files)
-
-    if(nrow(needed_sets) == 0){
-        return('all files loaded onto local machine')
-    }
 
     for(i in 1:nrow(needed_sets)){
 
@@ -11721,7 +11807,6 @@ load_spatial_data <- function(){
         }
 
         file.remove(zip_path)
-
     }
 }
 
@@ -11802,6 +11887,11 @@ ms_check_range <- function(d){
 
 download_from_googledrive <- function(set_details, network, domain){
 
+    #WARNING: any modification of the following line,
+    #or insertion of code lines before it, will break
+    #retrieve_versionless_product()
+    download_from_googledrive_function_indicator <- TRUE
+
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitename_NA',
                           n = network,
@@ -11866,8 +11956,6 @@ download_from_googledrive <- function(set_details, network, domain){
                      p = set_details$prodname_ms),
                 logger = logger_module)
     }
-
-    return()
 }
 
 generate_watershed_summaries <- function(){
@@ -11881,206 +11969,246 @@ generate_watershed_summaries <- function(){
         select(network, domain, site_code, ws_area_ha)
 
     # Prism precip
-    precip_files <- fils[grepl('cc_precip', fils)]
-    precip_files <- precip_files[grepl('sum', precip_files)]
+    try({
+        precip_files <- fils[grepl('cc_precip', fils)]
+        precip_files <- precip_files[grepl('sum', precip_files)]
 
-    precip <- map_dfr(precip_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'cc_cumulative_precip') %>%
-        group_by(site_code) %>%
-        summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(cc_mean_annual_precip))
+        precip <- map_dfr(precip_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'cc_cumulative_precip') %>%
+            group_by(site_code) %>%
+            summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(cc_mean_annual_precip))
+    }, silent = TRUE)
 
     # Prism temp
-    temp_files <- fils[grepl('cc_temp', fils)]
-    temp_files <- temp_files[grepl('sum', temp_files)]
+    try({
+        temp_files <- fils[grepl('cc_temp', fils)]
+        temp_files <- temp_files[grepl('sum', temp_files)]
 
-    temp <- map_dfr(temp_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'cc_temp_mean') %>%
-        group_by(site_code) %>%
-        summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(cc_mean_annual_temp))
+        temp <- map_dfr(temp_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'cc_temp_mean') %>%
+            group_by(site_code) %>%
+            summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(cc_mean_annual_temp))
+    }, silent = TRUE)
 
     # start of season
-    sos_files <- fils[grepl('start_season', fils)]
+    try({
+        sos_files <- fils[grepl('start_season', fils)]
 
-    sos <- map_dfr(sos_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'vd_sos_mean') %>%
-        group_by(site_code) %>%
-        summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(vd_mean_sos))
-
-    # end of season
-    eos_files <- fils[grepl('end_season', fils)]
-
-    eos <- map_dfr(eos_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'vd_eos_mean') %>%
-        group_by(site_code) %>%
-        summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(vd_mean_eos))
+        sos <- map_dfr(sos_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'vd_sos_mean') %>%
+            group_by(site_code) %>%
+            summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(vd_mean_sos))
+    }, silent = TRUE)
 
     # end of season
-    los_files <- fils[grepl('length_season', fils)]
+    try({
+        eos_files <- fils[grepl('end_season', fils)]
 
-    los <- map_dfr(los_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'vd_los_mean') %>%
-        group_by(site_code) %>%
-        summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(vd_mean_los))
+        eos <- map_dfr(eos_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'vd_eos_mean') %>%
+            group_by(site_code) %>%
+            summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(vd_mean_eos))
+    }, silent = TRUE)
+
+    # length of season
+    try({
+        los_files <- fils[grepl('length_season', fils)]
+
+        los <- map_dfr(los_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'vd_los_mean') %>%
+            group_by(site_code) %>%
+            summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(vd_mean_los))
+    }, silent = TRUE)
 
     # gpp
-    gpp_files <- fils[grepl('gpp', fils)]
-    gpp_files <- gpp_files[grepl('sum', gpp_files)]
+    try({
+        gpp_files <- fils[grepl('gpp', fils)]
+        gpp_files <- gpp_files[grepl('sum', gpp_files)]
 
-    gpp <- map_dfr(gpp_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'va_gpp_sum') %>%
-        group_by(site_code) %>%
-        summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(va_mean_annual_gpp))
+        gpp <- map_dfr(gpp_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'va_gpp_sum') %>%
+            group_by(site_code) %>%
+            summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(va_mean_annual_gpp))
+    }, silent = TRUE)
 
     # npp
-    npp_files <- fils[grepl('npp', fils)]
+    try({
+        npp_files <- fils[grepl('npp', fils)]
 
-    npp <- map_dfr(npp_files, read_feather) %>%
-        filter(year != substr(Sys.Date(), 0, 4),
-               var == 'va_npp_median') %>%
-        group_by(site_code) %>%
-        summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(va_mean_annual_npp))
+        npp <- map_dfr(npp_files, read_feather) %>%
+            filter(year != substr(Sys.Date(), 0, 4),
+                   var == 'va_npp_median') %>%
+            group_by(site_code) %>%
+            summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
+            filter(!is.na(va_mean_annual_npp))
+    }, silent = TRUE)
 
     # terrain
-    terrain_fils <- fils[grepl('terrain', fils)]
+    try({
+        terrain_fils <- fils[grepl('terrain', fils)]
 
-    terrain <- map_dfr(terrain_fils, read_feather) %>%
-        filter(var %in% c('te_elev_mean',
-                          'te_elev_min',
-                          'te_elev_max',
-                          'te_aspect_mean',
-                          'te_slope_mean')) %>%
-        select(-year) %>%
-        pivot_wider(names_from = 'var', values_from = 'val')
+        terrain <- map_dfr(terrain_fils, read_feather) %>%
+            filter(var %in% c('te_elev_mean',
+                              'te_elev_min',
+                              'te_elev_max',
+                              'te_aspect_mean',
+                              'te_slope_mean')) %>%
+            select(-year) %>%
+            pivot_wider(names_from = 'var', values_from = 'val')
+    }, silent = TRUE)
 
     # bfi
-    bfi_fils <- fils[grepl('bfi', fils)]
+    try({
+        bfi_fils <- fils[grepl('bfi', fils)]
 
-    bfi <- map_dfr(bfi_fils, read_feather) %>%
-        filter(var %in% c('hd_bfi_mean')) %>%
-        filter(pctCellErr <= 15) %>%
-        select(-year, -pctCellErr) %>%
-        pivot_wider(names_from = 'var', values_from = 'val')
+        bfi <- map_dfr(bfi_fils, read_feather) %>%
+            filter(var %in% c('hd_bfi_mean')) %>%
+            filter(pctCellErr <= 15) %>%
+            select(-year, -pctCellErr) %>%
+            pivot_wider(names_from = 'var', values_from = 'val')
+    }, silent = TRUE)
 
     # nlcd
-    nlcd_fils <- fils[grepl('nlcd', fils)]
+    try({
+        nlcd_fils <- fils[grepl('nlcd', fils)]
 
-    nlcd <- map_dfr(nlcd_fils, read_feather) %>%
-        filter(var %in% c('lg_nlcd_barren',
-                          'lg_nlcd_crop',
-                          'lg_nlcd_dev_hi',
-                          'lg_nlcd_dev_low',
-                          'lg_nlcd_dev_med',
-                          'lg_nlcd_dev_open',
-                          'lg_nlcd_forest_dec',
-                          'lg_nlcd_forest_evr',
-                          'lg_nlcd_forest_mix',
-                          'lg_nlcd_grass',
-                          'lg_nlcd_ice_snow',
-                          'lg_nlcd_pasture',
-                          'lg_nlcd_shrub',
-                          'lg_nlcd_water',
-                          'lg_nlcd_wetland_herb',
-                          'lg_nlcd_wetland_wood',
-                          'lg_nlcd_shrub_dwr',
-                          'lg_nlcd_sedge',
-                          'lg_lncd_lichens',
-                          'lg_nlcd_moss')) %>%
-        group_by(site_code) %>%
-        mutate(max_year = max(year)) %>%
-        filter(year == max_year) %>%
-        select(-year, -max_year) %>%
-        pivot_wider(names_from = 'var', values_from = 'val')
+        nlcd <- map_dfr(nlcd_fils, read_feather) %>%
+            filter(var %in% c('lg_nlcd_barren',
+                              'lg_nlcd_crop',
+                              'lg_nlcd_dev_hi',
+                              'lg_nlcd_dev_low',
+                              'lg_nlcd_dev_med',
+                              'lg_nlcd_dev_open',
+                              'lg_nlcd_forest_dec',
+                              'lg_nlcd_forest_evr',
+                              'lg_nlcd_forest_mix',
+                              'lg_nlcd_grass',
+                              'lg_nlcd_ice_snow',
+                              'lg_nlcd_pasture',
+                              'lg_nlcd_shrub',
+                              'lg_nlcd_water',
+                              'lg_nlcd_wetland_herb',
+                              'lg_nlcd_wetland_wood',
+                              'lg_nlcd_shrub_dwr',
+                              'lg_nlcd_sedge',
+                              'lg_lncd_lichens',
+                              'lg_nlcd_moss')) %>%
+            group_by(site_code) %>%
+            mutate(max_year = max(year)) %>%
+            filter(year == max_year) %>%
+            select(-year, -max_year) %>%
+            pivot_wider(names_from = 'var', values_from = 'val')
+    }, silent = TRUE)
 
     # soil
-    soil_fils <- fils[grepl('soil', fils)]
+    try({
+        soil_fils <- fils[grepl('soil', fils)]
 
-    soil <- map_dfr(soil_fils, read_feather) %>%
-        filter(var %in% c('pf_soil_org',
-                          'pf_soil_sand',
-                          'pf_soil_silt',
-                          'pf_soil_clay',
-                          'pf_soil_ph')) %>%
-        filter(pctCellErr <= 15) %>%
-        select(-year, -pctCellErr) %>%
-        pivot_wider(names_from = 'var', values_from = 'val')
+        soil <- map_dfr(soil_fils, read_feather) %>%
+            filter(var %in% c('pf_soil_org',
+                              'pf_soil_sand',
+                              'pf_soil_silt',
+                              'pf_soil_clay',
+                              'pf_soil_ph')) %>%
+            filter(pctCellErr <= 15) %>%
+            select(-year, -pctCellErr) %>%
+            pivot_wider(names_from = 'var', values_from = 'val')
+    }, silent = TRUE)
 
     # soil thickness
-    soil_thickness_fils <- fils[grepl('pelletier_soil_thickness', fils)]
+    try({
+        soil_thickness_fils <- fils[grepl('pelletier_soil_thickness', fils)]
 
-    soil_thickness <- map_dfr(soil_thickness_fils, read_feather) %>%
-        filter(var %in% c('pi_soil_thickness')) %>%
-        filter(pctCellErr <= 15) %>%
-        select(-year, -pctCellErr) %>%
-        pivot_wider(names_from = 'var', values_from = 'val') %>%
-        mutate(pi_soil_thickness = round(pi_soil_thickness, 2))
+        soil_thickness <- map_dfr(soil_thickness_fils, read_feather) %>%
+            filter(var %in% c('pi_soil_thickness')) %>%
+            filter(pctCellErr <= 15) %>%
+            select(-year, -pctCellErr) %>%
+            pivot_wider(names_from = 'var', values_from = 'val') %>%
+            mutate(pi_soil_thickness = round(pi_soil_thickness, 2))
+    }, silent = TRUE)
 
     # et_ref
-    et_ref_fils <- fils[grepl('et_ref', fils)]
-    et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
+    try({
+        et_ref_fils <- fils[grepl('et_ref', fils)]
+        et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
 
-    et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
-        filter(var %in% c('ck_et_grass_ref_mean'),
-               !is.na(val)) %>%
-        select(-year) %>%
-        group_by(site_code) %>%
-        summarise(ci_mean_annual_et = mean(val))
+        et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
+            filter(var %in% c('ck_et_grass_ref_mean'),
+                   !is.na(val)) %>%
+            select(-year) %>%
+            group_by(site_code) %>%
+            summarise(ci_mean_annual_et = mean(val))
+    }, silent = TRUE)
 
     # geological chem
-    geochem_fils <- fils[grepl('geochemical', fils)]
+    try({
+        geochem_fils <- fils[grepl('geochemical', fils)]
 
-    geochem <- map_dfr(geochem_fils, read_feather) %>%
-        filter(var %in% c('pd_geo_Al2O3_mean',
-                          'pd_geo_CaO_mean',
-                          'pd_geo_CompressStrength_mean',
-                          'pd_geo_Fe2O3_mean',
-                          'pd_geo_HydaulicCond_mean',
-                          'pd_geo_K2O_mean',
-                          'pd_geo_MgO_mean',
-                          'pd_geo_N_mean',
-                          'pd_geo_Na2O_mean',
-                          'pd_geo_P2O5_mean',
-                          'pd_geo_S_mean',
-                          'pd_geo_SiO2_mean'),
-               !is.na(val)) %>%
-        select(-year) %>%
-        group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
-        pivot_wider(names_from = 'var', values_from = 'mean_val')
+        geochem <- map_dfr(geochem_fils, read_feather) %>%
+            filter(var %in% c('pd_geo_Al2O3_mean',
+                              'pd_geo_CaO_mean',
+                              'pd_geo_CompressStrength_mean',
+                              'pd_geo_Fe2O3_mean',
+                              'pd_geo_HydaulicCond_mean',
+                              'pd_geo_K2O_mean',
+                              'pd_geo_MgO_mean',
+                              'pd_geo_N_mean',
+                              'pd_geo_Na2O_mean',
+                              'pd_geo_P2O5_mean',
+                              'pd_geo_S_mean',
+                              'pd_geo_SiO2_mean'),
+                   !is.na(val)) %>%
+            select(-year) %>%
+            group_by(site_code, var) %>%
+            summarise(mean_val = mean(val)) %>%
+            pivot_wider(names_from = 'var', values_from = 'mean_val')
+    }, silent = TRUE)
 
+    join_if_exists <- function(x, d){
 
-    watershed_summaries <- full_join(wide_spat_data, precip, by = 'site_code') %>%
-        full_join(temp, by = 'site_code') %>%
-        full_join(sos, by = 'site_code') %>%
-        full_join(eos, by = 'site_code') %>%
-        full_join(los, by = 'site_code') %>%
-        full_join(gpp, by = 'site_code') %>%
-        full_join(npp, by = 'site_code') %>%
-        full_join(terrain, by = 'site_code') %>%
-        full_join(bfi, by = 'site_code') %>%
-        full_join(nlcd, by = 'site_code') %>%
-        full_join(soil, by = 'site_code') %>%
-        full_join(soil_thickness, by = 'site_code') %>%
-        full_join(et_ref_thickness, by = 'site_code') %>%
-        full_join(geochem, by = 'site_code')
+        if(exists(x,
+                  where = parent.frame(),
+                  inherits = FALSE)){
+
+            d <- full_join(d, get(x),
+                           by = 'site_code')
+        }
+
+        return(d)
+    }
+
+    wide_spat_data <- join_if_exists('precip', wide_spat_data)
+    wide_spat_data <- join_if_exists('temp', wide_spat_data)
+    wide_spat_data <- join_if_exists('sos', wide_spat_data)
+    wide_spat_data <- join_if_exists('eos', wide_spat_data)
+    wide_spat_data <- join_if_exists('los', wide_spat_data)
+    wide_spat_data <- join_if_exists('gpp', wide_spat_data)
+    wide_spat_data <- join_if_exists('npp', wide_spat_data)
+    wide_spat_data <- join_if_exists('terrain', wide_spat_data)
+    wide_spat_data <- join_if_exists('bfi', wide_spat_data)
+    wide_spat_data <- join_if_exists('nlcd', wide_spat_data)
+    wide_spat_data <- join_if_exists('soil', wide_spat_data)
+    wide_spat_data <- join_if_exists('soil_thickness', wide_spat_data)
+    wide_spat_data <- join_if_exists('et_ref_thickness', wide_spat_data)
+    wide_spat_data <- join_if_exists('geochem', wide_spat_data)
 
     dir.create('../portal/data/general/spatial_downloadables',
                recursive = TRUE,
                showWarnings = FALSE)
 
-    write_csv(watershed_summaries,
+    write_csv(wide_spat_data,
               '../portal/data/general/spatial_downloadables/watershed_summaries.csv')
 }
 
@@ -12172,8 +12300,8 @@ generate_watershed_raw_spatial_dataset <- function(){
         distinct() %>%
         arrange(data_source_code)
 
-    write_fst(raw_spatial_dat,
-              '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
+    fst::write_fst(raw_spatial_dat,
+                   '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
     write_csv(category_codes,
               '../portal/data/general/spatial_downloadables/variable_category_codes.csv')
     write_csv(datasource_codes,
@@ -12557,23 +12685,23 @@ compute_yearly_summary_ws <- function() {
     for(i in 1:nrow(df)) {
 
         dom <- df$domain[i]
-
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/ws_traits', d = dom)
+        dom_path <- glue('../portal/data/{d}/ws_traits',
+                         d = dom)
 
-        prod_files <- list.files(dom_path, full.names = T, recursive = T)
+        prod_files <- list.files(dom_path,
+                                 full.names = T,
+                                 recursive = T)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
 
         all_prods <- tibble()
-
-        if(!length(prod_files) == 0){
+        if(! length(prod_files) == 0){
 
             for(p in 1:length(prod_files)) {
 
                 prod_tib <- read_feather(prod_files[p])
-
                 prod_names <- names(prod_tib)
 
                 if(! 'pctCellErr' %in% prod_names){
@@ -12582,13 +12710,12 @@ compute_yearly_summary_ws <- function() {
                 }
 
                 all_prods <- rbind(all_prods, prod_tib)
-
             }
 
-            all_prods <- all_prods %>%
+            all_prods <- sw(all_prods %>%
                 mutate(Date = ymd(paste0(year, '-01', '-01'))) %>%
                 mutate(domain = dom) %>%
-                rename(Year = year)
+                rename(Year = year))
 
             all_domain <- rbind(all_domain, all_prods)
         }
