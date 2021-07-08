@@ -129,8 +129,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     relevant_file <- grep('Data/Tenderfoot_15min_streamflow_data.csv', fils, value = T)
 
-    rel_file_path <- paste0(temp_dir, '\\', relevant_file)%>%
-                        gsub("/", "\\", ., fixed=TRUE)
+    # rel_file_path <- paste0(temp_dir, '\\', relevant_file)%>%
+    #                     gsub("/", "\\", ., fixed=TRUE)
+    rel_file_path <- file.path(temp_dir, relevant_file)
 
     all_q <- read.csv(rel_file_path) %>%
                 tibble() %>%
@@ -141,8 +142,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                        site_flag = str_extract(site_flag, "[^_]+")) %>%
                 filter(site_code == site_flag) %>%
                 select(-c(site_flag, DATE, TIME))
-
-
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_q,
@@ -219,7 +218,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     pivot_wider(names_from = 'Variable',
                                 values_from = 'val')
 
-
     d <- ms_read_raw_csv(preprocessed_tibble = all_chem,
                          datetime_cols = list('date' = 'X%m.%d.%Y'),
                          datetime_tz = 'US/Mountain',
@@ -262,7 +260,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                               ),
                          set_to_NA = '-9999',
                          is_sensor = FALSE)
-
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
