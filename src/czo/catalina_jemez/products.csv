@@ -17,12 +17,15 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 5492,precip_chemistry,ready,ready,NA,precip_chemistry__ms004,Jemez River Basin,38c0e61607e74c329ac798c8001bfa95,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url|metadata))
 2415,precipitation,ready,ready,NA,precipitation__ms003,Flux Tower -- Mixed Conifer,5ca1378090884e72a8dcb796d882bb07,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv|gapfilled))
 2425,precipitation,ready,ready,NA,precipitation__ms003,Flux Tower -- Ponderosa Pine,1db7abcf0eb64ef49000c46a6133949d,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv|gapfilled))
-ms001,discharge,,,ready,stream_flux_inst__ms007,,,
-ms002,stream_chemistry,,,ready,stream_flux_inst__ms007,,,
-ms003,precipitation,,,ready,precip_pchem_pflux__ms008,,,
-ms004,precip_chemistry,,,ready,precip_pchem_pflux__ms008,,,
-ms005,precip_gauge_locations,,,ready,,,,
-ms006,stream_gauge_locations,,,ready,,,,
-ms007,stream_flux_inst,,,ready,,,,
-ms008,precip_pchem_pflux,,,ready,,,,
-ms000,ws_boundary,NA,NA,NA,,automated entry,NA,NA
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
+ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
+ms003,precipitation,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
+ms004,precip_chemistry,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
+ms005,precip_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms006,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms007,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms008,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA,NA

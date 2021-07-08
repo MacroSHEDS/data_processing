@@ -5,7 +5,7 @@ product codes of the format "msXXX", where X is an integer, are reserved for
 "derived" products. These products are at the final stage of processing, whereas
 "retrieved"/"raw" and "munged" products are precursors to derived products and (where possible)
 retain product codes as assigned by their original data providers.
-{flux_note}
+{flux_note}{vsnless_note}
 This MacroSheds data product ({p}) was generated from the following munged MacroSheds product(s):
 
 {mp}
@@ -15,7 +15,7 @@ Source data were retrieved from the following web page(s) or web-API endpoint(s)
 {ru}
 
 Using these notes, our code on GitHub, and assuming you have a good bit of R programming experience,
-you ideally be able to piece together exactly how {p} was generated and regenerate it yourself.
+you will ideally be able to piece together exactly how {p} was generated and regenerate it yourself.
 That said, automated documentation like this is bound to have some errors and missing details until
 we get all the kinks worked out, and in any case assembling all the code below into a usable script
 won't be an easy task. Please contact us at help@macrosheds.org if you're having trouble
