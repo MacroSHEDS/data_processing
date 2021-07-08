@@ -85,7 +85,6 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
             logger = logger_module)
 
     return()
-
 }
 
 #precip_chemistry: STATUS=READY

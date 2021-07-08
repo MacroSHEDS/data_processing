@@ -140,7 +140,6 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
             logger = logger_module)
 
     return()
-
 }
 
 #precip_chemistry: STATUS=READY
@@ -184,7 +183,6 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
             logger = logger_module)
 
     return()
-
 }
 
 #munge kernels ####
