@@ -1,0 +1,11 @@
+
+Special note for versionless products:
+Some of the datasets we retrieve are hosted as static files by their original data providers,
+rather than as formally versioned and archived data entities. These products are given product
+codes of the form "VERSIONLESSXXX", where X is an integer. This changes the way we check for
+newly uploaded editions of those datasets, but it doesn't change much for you. Just note that
+in some cases it may make the original provenance of the dataset a bit less clear. In a few
+cases, we have received datasets from providers through personal correspondence, in which case they
+are housed on a remote MacroSheds drive. Raw/retrieved datasets of this type will be made public
+in a future MacroSheds data release.
+
