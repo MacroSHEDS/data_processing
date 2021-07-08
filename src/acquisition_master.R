@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
     # # library(gstat) #must load before raster package (not needed)
     # library(raster)
     # # library(stars) #not needed (yet)
-    # library(sf)
+    library(sf) #must load here in order to look for sf::sf_use_s2 (below)
     # library(sp)
     # library(mapview)
     # library(elevatr)
@@ -52,10 +52,20 @@ suppressPackageStartupMessages({
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
 #(or after each run that results in a change)
-vsn <- 0.4
+vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
+
+if(exists('sf_use_s2',
+          where = 'package:sf',
+          mode = 'function')){
+
+    #sf v1.0+ uses s2 geometry by default, which breaks some of our code.
+    #We may want to deal with that someday, but for now let's just keep using
+    #GEOS, which is still perfectly fine for our purposes.
+    sf::sf_use_s2(FALSE)
+}
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -182,7 +192,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = T,
+ms_instance <- ms_init(use_ms_error_handling = F,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -229,21 +239,26 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=11
+# dmnrow=7
+# print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
+    # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
     # held_data = get_data_tracker(network, domain)
+
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -260,21 +275,18 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                # domain = domain,
-                # prodname_filter = c('stream_chemistry'))
+                # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             # domain = domain,
-             # prodname_filter = c('stream_chemistry'))
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # domain = domain,
-              # prodname_filter = c('discharge'))
-               domain = domain)
+              # prodname_filter = c('ws_boundary'),
+              domain = domain)
     ms_general(network = network,
                domain = domain)
 
