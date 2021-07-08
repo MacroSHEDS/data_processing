@@ -21,7 +21,6 @@ process_0_VERSIONLESS004 <- download_from_googledrive
 #. handle_errors
 process_0_VERSIONLESS005 <- download_from_googledrive
 
-
 #munge kernels ####
 
 #precipitation: STATUS=READY
@@ -530,7 +529,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=PENDING
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
     
