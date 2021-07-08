@@ -1,11 +1,12 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
-VERSIONLESS001,precipitation,ready,ready,NA,precip_flux_inst__ms003,NA,santee_precip
-VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,santee_discharge
-VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,santee_chemistry
+VERSIONLESS001,precipitation,ready,ready,NA,precip_flux_inst__ms003,NA,precip
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,discharge
+VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,stream_chem
+VERSIONLESS004,precip_chemistry,ready,ready,NA,precip_flux_inst__ms003,NA,precip_chem
+VERSIONLESS005,ws_boundary,ready,ready,NA,precip_flux_inst__ms003,NA,NA
 ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
 ms002,precip_gauge_locations,NA,NA,ready,NA,NA,NA
 ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
-ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms003,automated entry,NA
 ms004,discharge,NA,NA,linked,NA,automated entry,NA
 ms005,stream_chemistry,NA,NA,linked,NA,automated entry,NA
-ms900,precipitation,NA,NA,NA,NA,automated entry,NA
+ms006,ws_boundary,NA,NA,linked,NA,automated entry,NA
