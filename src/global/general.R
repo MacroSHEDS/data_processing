@@ -4,12 +4,16 @@ loginfo('Beginning general',
 source('src/global/general_kernels.R',
        local = TRUE)
 
+if(ms_instance$use_ms_error_handling){
+    source_decoratees('src/global/general_kernels.R')
+}
+
 unprod <- univ_products %>%
-  filter(status == 'ready')
+    filter(status == 'ready')
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-# load_spatial_data()
+load_spatial_data()
 
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
@@ -29,6 +33,7 @@ site_codes <- unique(boundaries$site_code)
 
 # i=10
 for(i in 1:nrow(unprod)){
+
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
@@ -59,7 +64,6 @@ for(i in 1:nrow(unprod)){
                                              prodname_ms = prodname_ms,
                                              site_code = site_code)
 
-        # general_status <- 'pending'
         if(general_status %in% c('ok', 'no_data_avail')){
 
             loginfo(glue('Nothing to do for product: {p}, site: {s}',
