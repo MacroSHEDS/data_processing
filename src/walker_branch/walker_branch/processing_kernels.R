@@ -16,15 +16,20 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    for(p in 1:length(components)){
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
+
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                          rd = raw_data_dest,
                          c = components[p])
 
         url <- glue('https://tes-sfa.ornl.gov/sites/default/files/{c}',
-                                c = components[p])
+                    c = components[p])
 
         res1 <- httr::HEAD(url)
 
@@ -39,6 +44,11 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           cacheOK = FALSE,
                           method = 'curl')
 
+            deets_out$url[p] <- url
+            deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
+                                                             tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
+
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
 
@@ -49,14 +59,15 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                      p = set_details$prodname_ms,
                      c = components[p]),
                 logger = logger_module)
-
     }
-    return()
+
+    return(deets_out)
 }
 
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
+
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
@@ -68,8 +79,13 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    for(p in 1:length(components)){
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
+
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                         rd = raw_data_dest,
@@ -91,6 +107,11 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           cacheOK = FALSE,
                           method = 'curl')
 
+            deets_out$url[p] <- url
+            deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
+                                                             tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
+
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
 
@@ -101,14 +122,15 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                      p = set_details$prodname_ms,
                      c = components[p]),
                 logger = logger_module)
-
     }
-    return()
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS003 <- function(set_details, network, domain) {
+
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
@@ -120,8 +142,13 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    for(p in 1:length(components)){
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
+
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                         rd = raw_data_dest,
@@ -143,6 +170,11 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                           cacheOK = FALSE,
                           method = 'curl')
 
+            deets_out$url[p] <- url
+            deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
+                                                             tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
+
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
 
@@ -153,9 +185,9 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                      p = set_details$prodname_ms,
                      c = components[p]),
                 logger = logger_module)
-
     }
-    return()
+
+    return(deets_out)
 }
 
 #munge kernels ####

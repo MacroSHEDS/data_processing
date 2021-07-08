@@ -11,3 +11,4 @@ ms005,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms005,automated entry,NA,NA
 ms006,discharge,NA,NA,linked,NA,automated entry,NA,NA
 ms007,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
