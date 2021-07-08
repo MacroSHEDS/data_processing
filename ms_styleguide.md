@@ -54,18 +54,25 @@
     thinged_stuff <- do_thing(specific_stuff)
     ```
 
-+ `return` must be used in all functions. even if it's just `return()`. our error handling scheme requires this.
++ `return` must be used in all kernel and engine functions. even if it's just `return()`. our error handling scheme requires this.
 
 + no space needed before the curly brace that sets off a function definition:
 
     `myfunc <- function(){`
 
++ use spaces around most operators, including !, ==, %in%, +, <-, =, >=, etc.
+
+    spaces are not needed around indexing/subsetting/referencing operators like [, [[, $, and ::
+
++ use single quotes rather than double quotes to denote strings. Only use double quotes if your string includes literal "'"
+
++ for loops over indices, use i as your loop counter. for nested loops, use j, then k, etc.
+    
+    + for loops over values, either use a single letter (other than i, j, k, l) that relates to the values being looped over, or use a short and descriptive word.
+
++ set Rstudio to "Strip trailing horizontal whitespace when saving" in tools > global options > saving
+
 #unprocessed stuff
-    ', not "
     multiarg lines in shiny and when repetitive
-    spaces around arithmetic and boolean operators
     test all hbef products with get_avail_lter_product_sets
-    looping through integers, use i, j, k
-    looping through vaues, use something more descriptive
-    one_line pipers: filter(DF, operation)
 
