@@ -10534,9 +10534,12 @@ retrieve_versionless_product <- function(network,
 
         new_status <- evaluate_result_status(result)
 
-        if(is.POSIXct(result)){
-            deets$last_mod_dt <- as.character(result)
+        if(any(! is.na(result$access_time))){
+            deets$last_mod_dt <- result$access_time[! is.na(result$access_time)][1]
         }
+        # if(is.POSIXct(result)){
+        #     deets$last_mod_dt <- as.character(result)
+        # }
 
         update_data_tracker_r(network = network,
                               domain = domain,
@@ -10549,12 +10552,16 @@ retrieve_versionless_product <- function(network,
         uses_gdrive_func <- grepl(gd_search_string, deparse(processing_func)[3])
 
         if(uses_gdrive_func){
+
             source_url <- 'MacroSheds drive; not yet public'
-        } else if(! is.null(deets$component)){
-            source_url <- deets$component
+
+        } else if('url' %in% names(result)){
+
+            source_url <- paste(result$url,
+                                collapse = '\n')
+
         } else {
-            browser()
-            #source_url <- get from products.csv?
+            stop('investigate this. do we need to scrape the URL from products.csv?')
         }
 
         write_metadata_r(murl = source_url,
