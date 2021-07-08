@@ -16,11 +16,13 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    deets_out <- list(url = rep(NA_character_, length(components)),
-                      access_time = rep(NA_character_, length(components)))
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
 
-    for(p in 1:length(components)){
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                          rd = raw_data_dest,
@@ -45,6 +47,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
             deets_out$url[p] <- url
             deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
                                                              tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
 
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
@@ -76,11 +79,13 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    deets_out <- list(url = rep(NA_character_, length(components)),
-                      access_time = rep(NA_character_, length(components)))
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
 
-    for(p in 1:length(components)){
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                         rd = raw_data_dest,
@@ -105,6 +110,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
             deets_out$url[p] <- url
             deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
                                                              tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
 
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
@@ -136,11 +142,13 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     components <- str_split_fixed(set_details$component, '__[|]', n = Inf)[1,]
+    ncomps = length(components)
 
-    deets_out <- list(url = rep(NA_character_, length(components)),
-                      access_time = rep(NA_character_, length(components)))
+    deets_out <- list(url = rep(NA_character_, ncomps),
+                      access_time = rep(NA_character_, ncomps),
+                      last_mod_dt = rep(NA_character_, ncomps))
 
-    for(p in 1:length(components)){
+    for(p in seq_len(ncomps)){
 
         rawfile <- glue('{rd}/{c}',
                         rd = raw_data_dest,
@@ -165,6 +173,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
             deets_out$url[p] <- url
             deets_out$access_time[p] <- as.character(with_tz(Sys.time(),
                                                              tzone = 'UTC'))
+            deets_out$last_mod_dt[p] <- last_mod_dt
 
             loginfo(msg = paste('Updated', components[p]),
                     logger = logger_module)
