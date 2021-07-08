@@ -6,8 +6,8 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 3110,precipitation,ready,ready,NA,precip_pchem_pflux__ms001,NA
 ms013,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms001,NA
 ms014,stream_gauge_locations,NA,NA,ready,NA,NA
-ms012,stream_chemistry,NA,NA,ready,stream_flux_inst_ms003,NA
-ms011,discharge,NA,NA,ready,stream_flux_inst_ms003,NA
+ms012,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA
+ms011,discharge,NA,NA,ready,stream_flux_inst__ms003,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA
 ms001,precip_pchem_pflux,NA,NA,ready,NA,NA
 ms015,ws_boundary,NA,NA,linked,NA,automated entry

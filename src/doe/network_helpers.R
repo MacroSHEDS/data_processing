@@ -12,7 +12,6 @@ retrieve_doe_product <- function(network,
 
     rt <- tracker[[prodname_ms]][[site_code]]$retrieve
 
-
     held_dt <- as.POSIXct(rt$held_version,
                           tz = 'UTC')
 
@@ -31,8 +30,8 @@ retrieve_doe_product <- function(network,
 
     new_status <- evaluate_result_status(result)
 
-    if(is.POSIXct(result)){
-        deets$last_mod_dt <- as.character(result)
+    if('access_time' %in% names(result) && any(! is.na(result$access_time))){
+        deets$last_mod_dt <- result$access_time[! is.na(result$access_time)][1]
     }
 
     update_data_tracker_r(network = network,
@@ -40,4 +39,12 @@ retrieve_doe_product <- function(network,
                           tracker_name = 'held_data',
                           set_details = deets,
                           new_status = new_status)
+
+    source_urls <- get_source_urls(result_obj = result,
+                                   processing_func = processing_func)
+
+    write_metadata_r(murl = source_urls,
+                     network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms)
 }

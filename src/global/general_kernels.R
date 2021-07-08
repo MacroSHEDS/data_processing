@@ -49,9 +49,9 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code,
     path <- glue('{d}sum_{s}.feather',
                  d = dir,
                  s = site_code)
-    
+
     npp <- append_unprod_prefix(npp, prodname_ms)
-    
+
     write_feather(npp, path)
 
     return()
@@ -142,10 +142,10 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code,
     raw_path <- glue('{d}raw_{s}.feather',
                      d = dir,
                      s = site_code)
-    
+
     gpp_final <- append_unprod_prefix(gpp_final, prodname_ms)
     write_feather(gpp_final, sum_path)
-    
+
     gpp_raw <- append_unprod_prefix(gpp_raw, prodname_ms)
     write_feather(gpp_raw, raw_path)
 
@@ -236,7 +236,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
 
     lai_final <- append_unprod_prefix(lai_final, prodname_ms)
     write_feather(lai_final, sum_path)
-    
+
     lai_raw <- append_unprod_prefix(lai_raw, prodname_ms)
     write_feather(lai_raw, raw_path)
   }
@@ -318,7 +318,7 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
 
     fpar_final <- append_unprod_prefix(fpar_final, prodname_ms)
     write_feather(fpar_final, sum_path)
-    
+
     fpar_raw <- append_unprod_prefix(fpar_raw, prodname_ms)
     write_feather(fpar_raw, raw_path)
   }
@@ -521,7 +521,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
 
   final <- append_unprod_prefix(final, prodname_ms)
   write_feather(final, path_raw)
-  
+
   final_sum <- append_unprod_prefix(final_sum, prodname_ms)
   write_feather(final_sum, path_sum)
 
@@ -1124,82 +1124,82 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
 process_3_ms817 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
 
-  site_boundary <- boundaries %>%
-    filter(site_code == !!site_code)
+    site_boundary <- boundaries %>%
+        filter(site_code == !!site_code)
 
-  ndvi <- try(get_gee_standard(network = network,
-                               domain = domain,
-                               gee_id = 'MODIS/006/MOD13Q1',
-                               band = 'NDVI',
-                               prodname = 'ndvi',
-                               rez = 250,
-                               site_boundary = site_boundary,
-                               qa_band = 'SummaryQA',
-                               bit_mask = '11',
-                               batch = TRUE))
+    ndvi <- try(get_gee_standard(network = network,
+                                 domain = domain,
+                                 gee_id = 'MODIS/006/MOD13Q1',
+                                 band = 'NDVI',
+                                 prodname = 'ndvi',
+                                 rez = 250,
+                                 site_boundary = site_boundary,
+                                 qa_band = 'SummaryQA',
+                                 bit_mask = '11',
+                                 batch = TRUE))
 
-  if(is.null(ndvi)) {
-    return(generate_ms_exception(glue('No data was retrived for {s}',
-                                      s = site_code)))
-  }
+    if(is.null(ndvi)) {
+        return(generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = site_code)))
+    }
 
-  if(class(ndvi) == 'try-error'){
-    return(generate_ms_err(glue('error in retrieving {s}',
-                                s = site_code)))
-  }
+    if(class(ndvi) == 'try-error'){
+        return(generate_ms_err(glue('error in retrieving {s}',
+                                    s = site_code)))
+    }
 
-  # if(ndvi$type == 'ee_extract'){
-  #   ndvi$table <- ndvi$table %>%
-  #     mutate(var = substr(var, 7, nchar(var)))
-  #
-  # }
+    # if(ndvi$type == 'ee_extract'){
+    #   ndvi$table <- ndvi$table %>%
+    #     mutate(var = substr(var, 7, nchar(var)))
+    #
+    # }
 
-  ndvi <- ndvi$table %>%
-    mutate(datetime = ymd(datetime)) %>%
-    select(site_code, datetime, var, val) %>%
-    mutate(year = year(datetime)) %>%
-    mutate(val = val/100)
+    ndvi <- ndvi$table %>%
+        mutate(datetime = ymd(datetime)) %>%
+        select(site_code, datetime, var, val) %>%
+        mutate(year = year(datetime)) %>%
+        mutate(val = val/100)
 
-  ndvi_means <- ndvi %>%
-    filter(var == 'ndvi_median') %>%
-    group_by(site_code, year) %>%
-    summarise(vb_ndvi_max = max(val, na.rm = TRUE),
-              vb_ndvi_min = min(val, na.rm = TRUE),
-              vb_ndvi_mean = mean(val, na.rm = TRUE),
-              vb_ndvi_sd_year = sd(val, na.rm = TRUE)) %>%
-    pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
-                 names_to = 'var',
-                 values_to = 'val')
+    ndvi_means <- ndvi %>%
+        filter(var == 'ndvi_median') %>%
+        group_by(site_code, year) %>%
+        summarise(ndvi_max = max(val, na.rm = TRUE),
+                  ndvi_min = min(val, na.rm = TRUE),
+                  ndvi_mean = mean(val, na.rm = TRUE),
+                  ndvi_sd_year = sd(val, na.rm = TRUE)) %>%
+        pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
+                     names_to = 'var',
+                     values_to = 'val')
 
-  ndvi_sd <- ndvi %>%
-    filter(var == 'ndvi_sd') %>%
-    group_by(site_code, year) %>%
-    summarise(val = mean(val, na.rm = TRUE)) %>%
-    mutate(var = 'ndvi_sd_space')
+    ndvi_sd <- ndvi %>%
+        filter(var == 'ndvi_sd') %>%
+        group_by(site_code, year) %>%
+        summarise(val = mean(val, na.rm = TRUE)) %>%
+        mutate(var = 'ndvi_sd_space')
 
-  ndvi_final <- rbind(ndvi_means, ndvi_sd) %>%
-    select(year, site_code, var, val)
+    ndvi_final <- rbind(ndvi_means, ndvi_sd) %>%
+        select(year, site_code, var, val)
 
-  ndvi_raw <- ndvi %>%
-    select(datetime, site_code, var, val)
+    ndvi_raw <- ndvi %>%
+        select(datetime, site_code, var, val)
 
-  dir <- glue('data/{n}/{d}/ws_traits/ndvi/',
-              n = network, d = domain)
+    dir <- glue('data/{n}/{d}/ws_traits/ndvi/',
+                n = network, d = domain)
 
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
 
-  sum_path <- glue('{d}sum_{s}.feather',
-                   d = dir, s = site_code)
-  raw_path <- glue('{d}raw_{s}.feather',
-                   d = dir, s = site_code)
+    sum_path <- glue('{d}sum_{s}.feather',
+                     d = dir, s = site_code)
+    raw_path <- glue('{d}raw_{s}.feather',
+                     d = dir, s = site_code)
 
-  ndvi_final <- append_unprod_prefix(ndvi_final, prodname_ms)
-  write_feather(ndvi_final, sum_path)
-  
-  ndvi_raw <- append_unprod_prefix(ndvi_raw, prodname_ms)
-  write_feather(ndvi_raw, raw_path)
+    ndvi_final <- append_unprod_prefix(ndvi_final, prodname_ms)
+    write_feather(ndvi_final, sum_path)
 
-  return()
+    ndvi_raw <- append_unprod_prefix(ndvi_raw, prodname_ms)
+    write_feather(ndvi_raw, raw_path)
+
+    return()
 }
 
 #bfi: STATUS=READY
@@ -1288,10 +1288,10 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
   tcw_means <- tcw %>%
     filter(var == 'tcw_median') %>%
     group_by(site_code, year) %>%
-    summarise(vh_tcw_max = max(val, na.rm = TRUE),
-              vh_tcw_min = min(val, na.rm = TRUE),
-              vh_tcw_mean = mean(val, na.rm = TRUE),
-              vh_tcw_sd_year = sd(val, na.rm = TRUE)) %>%
+    summarise(tcw_max = max(val, na.rm = TRUE),
+              tcw_min = min(val, na.rm = TRUE),
+              tcw_mean = mean(val, na.rm = TRUE),
+              tcw_sd_year = sd(val, na.rm = TRUE)) %>%
     pivot_longer(cols = c('tcw_max', 'tcw_min', 'tcw_mean', 'tcw_sd_year'),
                  names_to = 'var',
                  values_to = 'val')
@@ -1324,7 +1324,7 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
 
   tcw <- append_unprod_prefix(tcw, prodname_ms)
   write_feather(tcw, raw_path)
-  
+
   tcw_final <- append_unprod_prefix(tcw_final, prodname_ms)
   write_feather(tcw_final, sum_path)
 
@@ -1403,7 +1403,7 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
 
   final <- append_unprod_prefix(final, prodname_ms)
   write_feather(final, path_raw)
-  
+
   final_sum <- append_unprod_prefix(final_sum, prodname_ms)
   write_feather(final_sum, path_sum)
 

@@ -72,6 +72,9 @@
 
 4. note which kernels refer to columns called "site_name" in raw data files
 
+    <UPDATE> jk, these instances don't involve data files with "site_name" columns, but rather pre-processed
+        data.frames with "site_name" columns, so they don't need to be manually put back as they were. also see \*\*\*
+
      #note any variations in how site_name_col arg is passed
      `grep -r --include='*.R' site_name_col`
      #totally uniform. cool. these files and lines will need revisiting:
@@ -112,7 +115,7 @@
    #couldn't read two files with spaces in their names, but manual investigation of those files shows nothing to be done
    `cd ~/git/macrosheds/data_acquisition; find . ! -path './data/*/raw/*' -regextype posix-extended -regex '.*\.(R|txt|csv|md|Rmd|sql)' | xargs sed -e 's/site_name/site_code/g' -i`
    
-6. go back and manually replace "site_name" in the lines from section 4
+6. go back and manually replace "site_name" in the lines from section 4 (\*\*\* jk. this isn't needed. keeping these sections here so we remember to think about this in the event of a similar global search and replace)
 7. modify binary files (see `data_acquisition/src/dev/update_header_names_globally.R`)
 8. modify remote config files
 9. change "description" column for site_code in watershed_summaries_metadata.csv so that it reads "short name of the site"
