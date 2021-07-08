@@ -326,25 +326,36 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
     rawfile <- glue(raw_data_dest,
                     '/NEONAquaticWatershed.zip')
 
-    res <- httr::HEAD('https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip')
+    url <- 'https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip'
+
+    res <- httr::HEAD(url)
     last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
         as.POSIXct() %>%
         with_tz('UTC')
 
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+
     if(last_mod_dt > set_details$last_mod_dt){
 
-        download.file(url = 'https://www.neonscience.org/sites/default/files/NEONAquaticWatershed.zip',
+        download.file(url = url,
                       destfile = rawfile,
                       cacheOK = FALSE,
                       method = 'curl')
 
+        deets_out$url <- url
+        deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                      tzone = 'UTC'))
+        deets_out$last_mod_dt = last_mod_dt
+
         loginfo(msg = paste('Updated', set_details$component),
                 logger = logger_module)
 
-        return(last_mod_dt)
+        return(deets_out)
     }
 
-    return()
+    return(deets_out)
 }
 
 #munge kernels ####
