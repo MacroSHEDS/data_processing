@@ -19,29 +19,40 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip')
+    url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip'
+
+    res <- httr::HEAD(url)
     last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
         as.POSIXct() %>%
         with_tz('UTC')
 
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+
     if(last_mod_dt > set_details$last_mod_dt){
 
-        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip',
+        download.file(url = url,
                       destfile = rawfile,
                       cacheOK = FALSE,
                       method = 'curl')
 
+        deets_out$url <- url
+        deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                      tzone = 'UTC'))
+        deets_out$last_mod_dt = last_mod_dt
+
         loginfo(msg = paste('Updated', set_details$component),
                 logger = logger_module)
 
-        return(last_mod_dt)
+        return(deets_out)
     }
 
     loginfo(glue('Nothing to do for {p}',
             p = set_details$prodname_ms),
             logger = logger_module)
 
-    return()
+    return(deets_out)
 }
 
 #discharge: STATUS=READY
@@ -62,29 +73,40 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip')
+    url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip'
+
+    res <- httr::HEAD(url)
     last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
         as.POSIXct() %>%
         with_tz('UTC')
 
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+
     if(last_mod_dt > set_details$last_mod_dt){
 
-        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip',
+        download.file(url = url,
                       destfile = rawfile,
                       cacheOK = FALSE,
                       method = 'curl')
 
+        deets_out$url <- url
+        deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                      tzone = 'UTC'))
+        deets_out$last_mod_dt = last_mod_dt
+
         loginfo(msg = paste('Updated', set_details$component),
                 logger = logger_module)
 
-        return(last_mod_dt)
+        return(deets_out)
     }
 
     loginfo(glue('Nothing to do for {p}',
                  p = set_details$prodname_ms),
             logger = logger_module)
 
-    return()
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -105,29 +127,40 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    res <- httr::HEAD('https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip')
+    url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip'
+
+    res <- httr::HEAD(url)
     last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
         as.POSIXct() %>%
         with_tz('UTC')
 
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+
     if(last_mod_dt > set_details$last_mod_dt){
 
-        download.file(url = 'https://www.fs.usda.gov/rds/archive/products/RDS-2019-0033/RDS-2019-0033.zip',
+        download.file(url = url,
                       destfile = rawfile,
                       cacheOK = FALSE,
                       method = 'curl')
 
+        deets_out$url <- url
+        deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                      tzone = 'UTC'))
+        deets_out$last_mod_dt = last_mod_dt
+
         loginfo(msg = paste('Updated', set_details$component),
                 logger = logger_module)
 
-        return(last_mod_dt)
+        return(deets_out)
     }
 
     loginfo(glue('Nothing to do for {p}',
                  p = set_details$prodname_ms),
             logger = logger_module)
 
-    return()
+    return(deets_out)
 }
 
 #munge kernels ####
