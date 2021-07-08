@@ -1,4 +1,4 @@
-#this is for unorganized versioness data (e.g. a single zip file for all
+#this is for unorganized versionless data (e.g. a single zip file for all
 #sites). we could turn this into a function, and make a separate function for
 #versionless data that's separated into several files.
 
@@ -79,7 +79,6 @@ for(i in seq_len(nrow(prod_info))){
                               site_code = site_code,
                               new_status = 'pending')
     }
-    # }
 
     gc()
 }

@@ -40,7 +40,19 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                   quiet = TRUE,
                   cacheOK = FALSE)
 
-    return()
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #discharge: STATUS=READY
@@ -74,6 +86,20 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -107,6 +133,20 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -140,6 +180,20 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -173,6 +227,20 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -206,6 +274,20 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -239,6 +321,20 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #ws_boundary: STATUS=READY
@@ -272,6 +368,20 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
+
+    res <- httr::HEAD(url_with_auth)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
 }
 
 #munge kernels ####
