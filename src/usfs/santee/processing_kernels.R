@@ -529,7 +529,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=PENDING
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
     
