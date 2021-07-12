@@ -13,7 +13,7 @@ unprod <- univ_products %>%
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-load_spatial_data()
+# load_spatial_data()
 
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
@@ -32,7 +32,8 @@ if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
 site_codes <- unique(boundaries$site_code)
 
 # i=10
-for(i in 1:nrow(unprod)){
+# for(i in 1:nrow(unprod)){
+for(i in 14:14){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
