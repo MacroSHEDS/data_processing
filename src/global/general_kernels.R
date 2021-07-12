@@ -870,6 +870,9 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
                                              region = wb_ee$geometry(),
                                              maxPixels=NULL)
 
+    try(googledrive::drive_rm('GEE/nlcd.tif'),
+        silent = TRUE) #in case previous drive_rm failed
+
     start_mess <- try(ee_task$start())
     if(class(start_mess) == 'try-error'){
       return(generate_ms_err(glue('error in retrieving {s}',
@@ -878,8 +881,14 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
     ee_monitoring(ee_task)
 
     temp_rgee <- tempfile(fileext = '.tif')
-    googledrive::drive_download(file = 'GEE/nlcd.tif',
-                                temp_rgee)
+
+    expo_backoff(
+        expr = {
+            googledrive::drive_download(file = 'GEE/nlcd.tif',
+                                        temp_rgee)
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     nlcd_rast <- raster::raster(temp_rgee)
 
