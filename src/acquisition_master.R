@@ -143,7 +143,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- 'n00b'
         op_system <- 'mac'
     }
-    
+
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -241,7 +241,7 @@ dir.create('logs', showWarnings = FALSE)
 
 # dmnrow=20
 # print(network_domain, n=50)
-for(dmnrow in 24:nrow(network_domain)){
+for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
