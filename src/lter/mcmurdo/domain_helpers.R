@@ -19,7 +19,8 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    if(site_code %in% c('BOHNER', 'HUEY', 'SANTAFE', 'PRISCU', 'LAWSON', 'HOUSE')) {
+    # if(site_code %in% c('BOHNER', 'HUEY', 'SANTAFE', 'PRISCU', 'LAWSON', 'HOUSE')) {
+    if(site_code %in% c('SANTAFE', 'PRISCU', 'HOUSE')) {
 
         d <- read.csv(rawfile, colClasses = 'character', skip = 36)
     } else {

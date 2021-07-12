@@ -116,6 +116,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
+    browser()
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -160,7 +161,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                             summary_flags_dirty = list(flag = c("2")),
                             summary_flags_to_drop = list(flag = c("1")))
 
-    d <- d$val*28.316846592 # converting to lps
+    d$val <- d$val * 28.316846592 # converting to lps
 
     d <- carry_uncertainty(d,
                            network = network,

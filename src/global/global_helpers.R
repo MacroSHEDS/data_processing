@@ -2617,11 +2617,15 @@ ms_general <- function(network=domain, domain){
 ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
+                         sites_from_gdrive,
                          verbose = FALSE){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
     #   accordingly. passed to delineate_watershed_apriori
+    #sites_from_gdrive: a list. names are domains and values are vectors of
+    #   site_codes. corresponding watershed boundaries will be downloaded from
+    #   google drive.
     #verbose: logical. determines the amount of informative messaging during run
 
     loginfo(msg = 'Beginning watershed delineation',
@@ -2719,6 +2723,21 @@ ms_delineate <- function(network,
 
         dir.create(site_dir,
                    showWarnings = FALSE)
+
+        if(site %in% sites_from_gdrive[[domain]]){
+
+            download_from_gdrive_arbitrary(network = network,
+                                           domain = domain,
+                                           site_code = site,
+                                           prodname_ms = ws_boundary_dir,
+                                           level = level)
+
+            loginfo(glue('Retrieved {s} boundary from gdrive',
+                         s = site),
+                    logger = logger_module)
+
+            next
+        }
 
         specs <- ws_delin_specs %>%
             filter(
@@ -7647,7 +7666,9 @@ get_precursors <- function(network, domain, prodname_ms){
     prodfile <- glue('src/{n}/{d}/products.csv',
                      n = network,
                      d = domain)
-    allprods <- sm(read_csv(prodfile))
+    allprods <- sm(read_csv(prodfile)) %>%
+        filter( (! is.na(munge_status) & munge_status == 'ready') |
+                    (! is.na(derive_status) & derive_status == 'ready'))
 
     prodnames_ms <- paste(allprods$prodname,
                           allprods$prodcode,
@@ -8845,9 +8866,16 @@ get_gee_standard <- function(network,
         ee_monitoring(ee_task, quiet = TRUE)
 
         temp_rgee <- tempfile(fileext = '.csv')
-        googledrive::drive_download(file = 'GEE/rgee.csv',
-                                    temp_rgee,
-                                    verbose = FALSE)
+
+        expo_backoff(
+            expr = {
+                googledrive::drive_download(file = 'GEE/rgee.csv',
+                                            temp_rgee,
+                                            verbose = FALSE)
+            },
+            max_attempts = 5
+        ) %>% invisible()
+
      # Seems to be broken
         # rgee::ee_drive_to_local(task = ee_task,
         #                         dsn = temp_rgee,
@@ -10563,7 +10591,12 @@ get_source_urls <- function(result_obj, processing_func){
 
     #find out if the processing func is an alias for download_from_googledrive()
     gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
-    uses_gdrive_func <- grepl(gd_search_string, deparse(processing_func)[3])
+    processing_func_text <- deparse(processing_func)
+    uses_gdrive_func <- grepl(gd_search_string, processing_func_text[3])
+    is_passive_kernel <- any(grepl(pattern = 'Nothing to do',
+                                   x = processing_func_text,
+                                   ignore.case = TRUE)) &&
+        length(processing_func_text) < 12
 
     if(uses_gdrive_func){
 
@@ -10573,6 +10606,13 @@ get_source_urls <- function(result_obj, processing_func){
 
         source_urls <- paste(result_obj$url,
                              collapse = '\n')
+
+    } else if(is.null(result_obj) && is_passive_kernel){
+
+        logwarn(msg = 'Update return val to explain where this product comes from.',
+                logger = logger_module)
+
+        return('NA')
 
     } else {
         stop('investigate this. do we need to scrape the URL from products.csv?')
@@ -11810,8 +11850,13 @@ load_spatial_data <- function(){
         zip_path <- glue('data/spatial/{n}', n = needed_sets$name[i])
 
         print(paste0('Downloading ', needed_sets$name[i]))
-        googledrive::drive_download(file = googledrive::as_id(needed_sets$id[i]),
-                                    path = zip_path)
+        expo_backoff(
+            expr = {
+                googledrive::drive_download(file = googledrive::as_id(needed_sets$id[i]),
+                                            path = zip_path)
+            },
+            max_attempts = 5
+        ) %>% invisible()
 
         print(paste0('Unzipping ', needed_sets$name[i]))
         unzip(zipfile = zip_path,
@@ -11963,15 +12008,87 @@ download_from_googledrive <- function(set_details, network, domain){
                                   rd = raw_data_dest,
                                   n = prod_files_neeed$name[i])
 
+            status <- expo_backoff(
+                expr = {
+                    googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
+                                                path = raw_file_path,
+                                                overwrite = TRUE)
+                },
+                max_attempts = 5
+            )
 
-            status <- googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
-                                        path = raw_file_path,
-                                        overwrite = TRUE)
         }
     } else{
         loginfo(glue('Nothing to do for {p}',
                      p = set_details$prodname_ms),
                 logger = logger_module)
+    }
+}
+
+download_from_gdrive_arbitrary <- function(network,
+                                           domain,
+                                           site_code,
+                                           prodname_ms,
+                                           level){
+
+    #for getting any old file(s) from gdrive
+
+    #There has to be a better way to do this, but drive_ls(recursive = T)
+    #doesn't seem to work
+
+    if(! level %in% c('raw', 'munged', 'derived')){
+        stop('level must be one of "raw", "munged", "derived"')
+    }
+
+    loginfo(msg = glue('Downloading {n}-{d}-{s}-{p} from gdrive',
+                       n = network,
+                       d = domain,
+                       s = site_code,
+                       p = prodname_ms),
+            logger = logger_module)
+
+    ms_gdrive_url <- 'https://drive.google.com/drive/folders/178OOGxx1xM3C7m-Tdx6j5Dk_kxfWLJvw'
+
+    tryCatch(
+        {
+            gdata <- googledrive::drive_ls(ms_gdrive_url)
+            gdata_ntw_id <- pull(gdata[gdata$name == network, 'id'])
+            gdata <- googledrive::drive_ls(googledrive::as_id(gdata_ntw_id))
+            gdata_dmn_id <- pull(gdata[gdata$name == domain, 'id'])
+            gdata <- googledrive::drive_ls(googledrive::as_id(gdata_dmn_id))
+            gdata_der_id <- pull(gdata[gdata$name == 'derived', 'id'])
+            gdata <- googledrive::drive_ls(googledrive::as_id(gdata_der_id))
+            gdata_wsb_id <- pull(gdata[gdata$name == prodname_ms, 'id'])
+            gdata <- googledrive::drive_ls(googledrive::as_id(gdata_wsb_id))
+            gdata_sit_id <- pull(gdata[gdata$name == site_code, 'id'])
+            gdata <- googledrive::drive_ls(googledrive::as_id(gdata_sit_id))
+        },
+        error = function(e){
+            logerror(msg = 'Gdrive resource may not exist. Check arguments and visually inspect Gdrive',
+                     logger = logger_module)
+            stop()
+        }
+    )
+
+    for(j in seq_len(nrow(gdata))){
+
+        gdata_res_name <- pull(gdata[j, 'name'])
+        gdata_res_id <- pull(gdata[j, 'id'])
+
+        expo_backoff(
+            expr = {
+                googledrive::drive_download(
+                    file = googledrive::as_id(gdata_res_id),
+                    path = glue('data/{n}/{d}/derived/{wsb}/{s}/{f}',
+                                n = network,
+                                d = domain,
+                                wsb = prodname_ms,
+                                s = site_code,
+                                f = gdata_res_name),
+                    overwrite = TRUE)
+            },
+            max_attempts = 5
+        ) %>% invisible()
     }
 }
 
