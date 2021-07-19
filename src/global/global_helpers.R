@@ -2617,15 +2617,11 @@ ms_general <- function(network=domain, domain){
 ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
-                         sites_from_gdrive,
                          verbose = FALSE){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
     #   accordingly. passed to delineate_watershed_apriori
-    #sites_from_gdrive: a list. names are domains and values are vectors of
-    #   site_codes. corresponding watershed boundaries will be downloaded from
-    #   google drive.
     #verbose: logical. determines the amount of informative messaging during run
 
     loginfo(msg = 'Beginning watershed delineation',
@@ -2723,21 +2719,6 @@ ms_delineate <- function(network,
 
         dir.create(site_dir,
                    showWarnings = FALSE)
-
-        if(site %in% sites_from_gdrive[[domain]]){
-
-            download_from_gdrive_arbitrary(network = network,
-                                           domain = domain,
-                                           site_code = site,
-                                           prodname_ms = ws_boundary_dir,
-                                           level = level)
-
-            loginfo(glue('Retrieved {s} boundary from gdrive',
-                         s = site),
-                    logger = logger_module)
-
-            next
-        }
 
         specs <- ws_delin_specs %>%
             filter(
@@ -11999,18 +11980,18 @@ download_from_googledrive <- function(set_details, network, domain){
 
         needed_files <- drive_files[! drive_files %in% held_files]
 
-        prod_files_neeed <- prod_files %>%
+        prod_files_need <- prod_files %>%
             filter(name %in% needed_files)
 
-        for(i in 1:nrow(prod_files_neeed)){
+        for(i in 1:nrow(prod_files_need)){
 
             raw_file_path <- glue('{rd}/{n}',
                                   rd = raw_data_dest,
-                                  n = prod_files_neeed$name[i])
+                                  n = prod_files_need$name[i])
 
             status <- expo_backoff(
                 expr = {
-                    googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
+                    googledrive::drive_download(file = googledrive::as_id(prod_files_need$id[i]),
                                                 path = raw_file_path,
                                                 overwrite = TRUE)
                 },
