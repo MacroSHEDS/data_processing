@@ -239,7 +239,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=20
+# dmnrow = 19
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -283,6 +283,7 @@ for(dmnrow in 1:nrow(network_domain)){
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
+                    sites_from_gdrive = NULL,
                     verbose = TRUE))
     ms_derive(network = network,
               prodname_filter = c('ws_boundary'),
