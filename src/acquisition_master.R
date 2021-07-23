@@ -239,7 +239,7 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=26
+# dmnrow = 19
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
