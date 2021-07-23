@@ -120,7 +120,6 @@ for(i in seq_len(nrow(prod_info))){
                               site_code = site_code,
                               new_status = 'pending')
     }
-    # }
 
     gc()
 }
