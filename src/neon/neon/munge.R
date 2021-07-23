@@ -65,6 +65,11 @@ for(i in seq_len(nrow(prod_info))){
         }
     }
 
+    write_metadata_m(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     tracker = held_data)
+
     gc()
 }
 
