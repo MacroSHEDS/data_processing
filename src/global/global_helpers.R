@@ -8769,10 +8769,23 @@ get_gee_standard <- function(network,
                              prodname,
                              rez,
                              site_boundary,
-                             batch = FALSE,
+                             batch = TRUE,
                              qa_band = NULL,
-                             bit_mask = NULL){
-
+                             bit_mask = NULL, 
+                             contiguous_us = FALSE) {
+    
+    if(contiguous_us){
+        usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
+                                      ymax = 49.384), crs = 4326) %>%
+            sf::st_as_sfc(., crs = 4326)
+        
+        is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
+        
+        if(! is_usa){
+            return(NULL)
+        }
+        
+    }
     qaqc <- FALSE
     if(!is.null(qa_band) || !is.null(bit_mask)){
         if(any(is.null(qa_band), is.null(bit_mask))){
@@ -8782,18 +8795,19 @@ get_gee_standard <- function(network,
         }
     }
 
-    area <- sf::st_area(site_boundary)
+    # area <- sf::st_area(site_boundary)
+    # 
+    # sheds <- site_boundary %>%
+    #     as.data.frame() %>%
+    #     sf::st_as_sf() %>%
+    #     select(site_code) %>%
+    #     sf::st_transform(4326) %>%
+    #     sf::st_set_crs(4326)
+    # 
+    # site <- unique(sheds$site_code)
 
-    sheds <- site_boundary %>%
-        as.data.frame() %>%
-        sf::st_as_sf() %>%
-        select(site_code) %>%
-        sf::st_transform(4326) %>%
-        sf::st_set_crs(4326)
-
-    site <- unique(sheds$site_code)
-
-    if(as.numeric(area) > 10528200 || batch){
+    #if(as.numeric(area) > 10528200 || batch){
+    if(batch){
 
         # Remove file if is in drive
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
@@ -8822,13 +8836,28 @@ get_gee_standard <- function(network,
 
 
         user_info <- rgee::ee_user_info(quiet = TRUE)
-        asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
+        # asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
+        asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
+                             a = user_info$asset_home,
+                             d = domain)
 
-        ee_shape <- sf_as_ee(sheds,
-                             via = 'getInfo_to_asset',
-                             assetId = asset_path,
-                             overwrite = TRUE,
-                             quiet = TRUE)
+        asset_path <- rgee::ee_manage_assetlist(asset_folder)
+
+        if(nrow(asset_path) > 1){
+            for(i in 1:nrow(asset_path)){
+
+                if(i == 1){
+                    ws_boundary_asset <- ee$FeatureCollection(asset_path$ID[i])
+                }
+                if(i > 1){
+                    one_ws <- ee$FeatureCollection(asset_path$ID[i])
+                    
+                    ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
+                }
+            }
+        } else{
+            ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
+        }
 
         if(qaqc){
             imgcol <- ee$ImageCollection(gee_id)$map(clean_gee_img)$select(band)
@@ -8838,7 +8867,7 @@ get_gee_standard <- function(network,
 
         flat_img <- imgcol$map(function(image) {
             image$reduceRegions(
-                collection = ee_shape,
+                collection = ws_boundary_asset,
                 reducer = ee$Reducer$stdDev()$combine(
                     reducer2 = ee$Reducer$median(),
                     sharedInputs = TRUE),
@@ -8850,10 +8879,9 @@ get_gee_standard <- function(network,
                                                      'stdDev', 'median'),
                                retainGeometry = FALSE)
 
-        ee_description <-  glue('{n}_{d}_{s}_{p}',
+        ee_description <-  glue('{n}_{d}_{p}',
                                 d = domain,
                                 n = network,
-                                s = site,
                                 p = prodname)
 
         ee_task <- ee$batch$Export$table$toDrive(collection = gee,
@@ -8876,12 +8904,6 @@ get_gee_standard <- function(network,
             max_attempts = 5
         ) %>% invisible()
 
-     # Seems to be broken
-        # rgee::ee_drive_to_local(task = ee_task,
-        #                         dsn = temp_rgee,
-        #                         overwrite = TRUE,
-        #                         quiet = TRUE)
-
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_median', c = prodname)
 
@@ -8889,8 +8911,6 @@ get_gee_standard <- function(network,
             mutate(imageId = substr(`system:index`, 1, 10))
 
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
-        rgee::ee_manage_delete(path_asset = asset_path,
-                               quiet = TRUE)
 
         if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
             return(NULL)
@@ -9024,7 +9044,11 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
 
     year_files <- list.files(glue('data/spatial/phenology/{u}/{p}',
                              p = place,
-                             u = time))
+                             u = time)) 
+    
+    if(length(year_files) == 0) {
+        return(NULL)
+    }
 
     site_boundary <- sf::st_transform(site_boundary,
                                       '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
@@ -12924,4 +12948,33 @@ append_unprod_prefix <- function(d, prodname_ms){
 
 
     return(d)
+}
+
+save_general_files <- function(final_file, raw_file, domain_dir){
+    
+    dir.create(domain_dir, recursive = TRUE, showWarnings = FALSE)
+    
+    raw_exists <- ! missing(raw_file)
+    sites <- unique(final_file$site_code)
+    for(s in 1:length(sites)){
+        
+        final_file_site <- filter(final_file, site_code == !!sites[s])
+
+        sum_path <- glue('{d}sum_{s}.feather',
+                         d = domain_dir,
+                         s = sites[s])
+
+        write_feather(final_file_site, sum_path)
+        
+        if(raw_exists){
+            raw_file_site <- filter(raw_file, site_code == !!sites[s])
+
+            raw_path <- glue('{d}raw_{s}.feather',
+                             d = domain_dir,
+                             s = sites[s])
+
+            write_feather(raw_file_site, raw_path)
+            
+        }
+    }
 }
