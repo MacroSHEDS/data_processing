@@ -239,9 +239,9 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=21
+# dmnrow = 19
 # print(network_domain, n=50)
-for(dmnrow in 3:nrow(network_domain)){
+for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
@@ -274,20 +274,20 @@ for(dmnrow in 3:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    # ms_retrieve(network = network,
-    #             # prodname_filter = c('ws_boundary'),
-    #             domain = domain)
-    # ms_munge(network = network,
-    #          # prodname_filter = c('ws_boundary'),
-    #          domain = domain)
-    # sw(ms_delineate(network = network,
-    #                 domain = domain,
-    #                 dev_machine_status = ms_instance$machine_status,
-    #                 sites_from_gdrive = list(plum = c('cart_creek')),
-    #                 verbose = TRUE))
-    # ms_derive(network = network,
-    #           # prodname_filter = c('ws_boundary'),
-    #           domain = domain)
+    ms_retrieve(network = network,
+                prodname_filter = c('ws_boundary'),
+                domain = domain)
+    ms_munge(network = network,
+             prodname_filter = c('ws_boundary'),
+             domain = domain)
+    sw(ms_delineate(network = network,
+                    domain = domain,
+                    dev_machine_status = ms_instance$machine_status,
+                    sites_from_gdrive = NULL,
+                    verbose = TRUE))
+    ms_derive(network = network,
+              prodname_filter = c('ws_boundary'),
+              domain = domain)
     ms_general(network = network,
                domain = domain)
 
