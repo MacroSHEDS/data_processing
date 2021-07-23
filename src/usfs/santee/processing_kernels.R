@@ -551,33 +551,52 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     name <- str_split_fixed(wb_paths[1], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
     
-    d <- st_read(temp_dir) %>%
+    ws1 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_transform(proj)
     
-    unlink(temp_dir)
-
-    for(s in 2:length(wb_paths)){
-        unzip(wb_paths[s], exdir = temp_dir)
-        
-        name <- str_split_fixed(wb_paths[s], 'WS', n = Inf)[1,2]
-        name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
-        
-        one_bound <- st_read(temp_dir) %>%
-            mutate(site_code = !!name) %>%
-            select(site_code) %>%
-            sf::st_cast(., 'POLYGON') %>%
-            sf::st_transform(., proj)
-        
-        d <- rbind(one_bound, d)
-        
-        unlink(temp_dir)
-    }
+    unlink(temp_dir, recursive = T)
     
-    # ws80 is not right
-    d <- d %>% 
-        filter(site_code != 'WS80')
+    unzip(wb_paths[2], exdir = temp_dir)
+    
+    name <- str_split_fixed(wb_paths[2], 'WS', n = Inf)[1,2]
+    name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
+    
+    ws2 <- st_read(temp_dir) %>%
+        mutate(site_code = !!name) %>%
+        select(site_code) %>%
+        sf::st_cast(., to = 'POLYGON') %>%
+        sf::st_transform(proj)
+    
+    unlink(temp_dir, recursive = T)
+    
+    unzip(wb_paths[3], exdir = temp_dir)
+    
+    name <- str_split_fixed(wb_paths[3], 'WS', n = Inf)[1,2]
+    name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
+    
+    ws3 <- st_read(temp_dir) %>%
+        mutate(site_code = !!name) %>%
+        select(site_code) %>%
+        sf::st_transform(proj)
+    
+    
+    unlink(temp_dir, recursive = T)
+    
+    unzip(wb_paths[4], exdir = temp_dir)
+    
+    name <- str_split_fixed(wb_paths[4], 'WS', n = Inf)[1,2]
+    name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
+    
+    ws4 <- st_read(temp_dir) %>%
+        mutate(site_code = !!name) %>%
+        select(site_code) %>%
+        sf::st_transform(proj)
+    
+    unlink(temp_dir, recursive = T)
+    
+    d <- rbind(ws1, ws2, ws3, ws4)
 
     sites <- unique(d$site_code)
     
