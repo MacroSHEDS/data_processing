@@ -1,6 +1,6 @@
 #functions without the "#. handle_errors" decorator have special error handling
 
-handle_errors = function(f){
+handle_errors <- function(f){
 
     #decorator function. takes any function as argument and executes it.
     #if error occurs within passed function, combines error message and
@@ -1763,40 +1763,50 @@ get_all_local_helpers <- function(network, domain){
     #because it can only read them into the current environment, all files
     #sourced by this function are exported locally, then exported globally
 
-    location1 = glue('src/{n}/network_helpers.R', n=network)
+    location1 <- glue('src/{n}/network_helpers.R',
+                      n = network)
+
     if(file.exists(location1)){
 
-        sw(source(location1, local=TRUE))
+        sw(source(location1, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location1))
         }
     }
 
-    location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
+    location2 <- glue('src/{n}/{d}/domain_helpers.R',
+                      n = network,
+                      d = domain)
+
     if(file.exists(location2)){
 
-        sw(source(location2, local=TRUE))
+        sw(source(location2, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location2))
         }
     }
 
-    location3 = glue('src/{n}/processing_kernels.R', n=network)
+    location3 <- glue('src/{n}/processing_kernels.R',
+                      n = network)
+
     if(file.exists(location3)){
 
-        sw(source(location3, local=TRUE))
+        sw(source(location3, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location3))
         }
     }
 
-    location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
+    location4 <- glue('src/{n}/{d}/processing_kernels.R',
+                      n = network,
+                      d = domain)
+
     if(file.exists(location4)){
 
-        sw(source(location4, local=TRUE))
+        sw(source(location4, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location4))
@@ -1805,10 +1815,8 @@ get_all_local_helpers <- function(network, domain){
 
     rm(location1, location2, location3, location4)
 
-    export_to_global(from_env=environment(),
-                     exclude=c('network', 'domain', 'thisenv'))
-
-    #return()
+    export_to_global(from_env = environment(),
+                     exclude = c('network', 'domain', 'thisenv'))
 }
 
 set_up_logger <- function(network = domain, domain){
@@ -9291,7 +9299,7 @@ compute_download_filesizes <- function(){
                recursive = TRUE)
 
     dmn_dirs <- list.files('../portal/data/')
-    dmn_dirs <- dmn_dirs[! dmn_dirs == c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
+    dmn_dirs <- dmn_dirs[! dmn_dirs %in% c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
 
     dmn_dl_size <- data.frame(domain = dmn_dirs,
                               dl_size_MB = NA_character_)
@@ -10555,6 +10563,25 @@ retrieve_versionless_product <- function(network,
                               set_details = deets,
                               new_status = new_status)
 
+        if(ms_instance$use_ms_error_handling){
+
+            kernel_funcs <- glue('src/{n}/processing_kernels.R',
+                                 n = network)
+
+            if(! file.exists(kernel_funcs)){
+
+                kernel_funcs <- glue('src/{n}/{d}/processing_kernels.R',
+                                     n = network,
+                                     d = domain)
+            }
+
+            source(kernel_funcs,
+                   local = TRUE)
+
+            processing_func <- get(paste0('process_0_',
+                                   prodcode_from_prodname_ms(prodname_ms)))
+        }
+
         source_urls <- get_source_urls(result_obj = result,
                                        processing_func = processing_func)
 
@@ -10652,6 +10679,25 @@ catalog_held_data <- function(network_domain, site_data){
     # + informational catalog for all sites
     # + informational catalog for each individual variable
     # + informational catalog for each individual site
+
+    #TODO write full catalog for download using this code:
+    #
+    # var_files <- dir('../portal/data/general/catalog_files/indiv_variables/')
+    #
+    # d_list <- list()
+    # for(i in seq_along(var_files)){
+    #
+    #     f <- var_files[i]
+    #     var_name <- str_match(f, '^(.+)?\\.csv$')[, 2]
+    #
+    #     d_list[[i]] <- read_csv(f) %>%
+    #         mutate(Variable = !!var_name) %>%
+    #         select(Variable, everything())
+    # }
+    #
+    # d <- Reduce(bind_rows, d_list)
+    #
+    # write_csv(d, '/tmp/macrosheds_variable-by-site_summary.csv')
 
     nobs_nonspatial <- 0
     # site_display <- tibble()
@@ -11250,6 +11296,7 @@ insert_gap_border_NAs <- function(network_domain, site_data){
                         full.names = TRUE)
 
     paths <- paths[! grepl(pattern = '/general/', x = paths)]
+    paths <- paths[! grepl(pattern = '/ws_traits/', x = paths)]
 
     for(p in paths){
 
