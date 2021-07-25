@@ -1,6 +1,6 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 DP1.20093,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA
-DP1.20288,stream_quality,ready,paused,NA,stream_chemistry__ms001,NA
+DP1.20288,stream_quality,paused,paused,NA,stream_chemistry__ms001,NA
 DP?.20267,gageht,paused,pending,NA,NA,verify DP#
 DP?.00133,zqcurve,paused,pending,NA,NA,verify DP#
 DP4.00130,discharge,ready,ready,NA,stream_flux_inst__ms004,NA
