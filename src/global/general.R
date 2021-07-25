@@ -10,7 +10,7 @@ if(ms_instance$use_ms_error_handling){
 
 unprod <- univ_products %>%
     filter(status == 'ready') %>%
-    filter(! grepl('prism', prodname))
+    filter(grepl('prism', prodname))
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
@@ -24,8 +24,8 @@ files <- list.files(glue('data/{n}/{d}/derived/',
 ws_prodname <- grep('ws_boundary', files, value = TRUE)
 
 boundaries <- try(read_combine_shapefiles(network = network,
-                                     domain = domain,
-                                     prodname_ms = ws_prodname))
+                                          domain = domain,
+                                          prodname_ms = ws_prodname))
 
 if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
     stop('Watershed boundaries are required for general products')
@@ -40,6 +40,7 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
 if(class(gee_file_exist) == 'try-error' || nrow(gee_file_exist) == 0){
+
   loginfo('Uploading ws_boundaries to GEE',
           logger = logger_module)
 
