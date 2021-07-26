@@ -1,6 +1,3 @@
-#this is for unorganized versioness data (e.g. a single zip file for all
-#sites). we could turn this into a function, and make a separate function for
-#versionless data that's separated into several files.
 
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)
@@ -28,9 +25,6 @@ for(i in seq_len(nrow(prod_info))){
                            '__',
                            prodcode)
 
-    # prod_specs <- get_neon_product_specs(prodcode)
-    # if(is_ms_err(prod_specs)) next
-
     held_data <<- get_data_tracker(network = network,
                                    domain = domain)
 
@@ -41,17 +35,6 @@ for(i in seq_len(nrow(prod_info))){
                                         prodname_ms = prodname_ms)
     }
 
-    # avail_sets <- sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
-    # if(is_ms_err(avail_sets)) next
-
-    #retrieve data; log acquisitions and revision datetimes
-    # avail_sites <- unique(avail_sets$site_code)
-    # for(j in 1:length(avail_sites)){
-
-    # site_code <- avail_sites[j]
-    # avail_site_sets <- avail_sets[avail_sets$site_code == site_code, ,
-    #     drop=FALSE]
-
     if(! site_is_tracked(tracker = held_data,
                          prodname_ms = prodname_ms,
                          site_code = site_code)){
@@ -60,37 +43,10 @@ for(i in seq_len(nrow(prod_info))){
             tracker = held_data,
             prodname_ms = prodname_ms,
             site_code = site_code,
-            site_components = 'component001',
+            site_components = prod_info$components[i],
             versionless = TRUE
         )
     }
-
-    # held_data <<- track_new_site_components(tracker = held_data,
-    #                                         prodname_ms = prodname_ms,
-    #                                         site_code = site_code,
-    #                                         avail = avail_site_sets)
-    # if(is_ms_err(held_data)) next
-
-    # retrieval_details <- populate_set_details(tracker = held_data,
-    #                                           prodname_ms = prodname_ms,
-    #                                           site_code = site_code,
-    #                                           avail = avail_site_sets)
-    # if(is_ms_err(retrieval_details)) next
-
-    # new_sets <- filter_unneeded_sets(tracker_with_details = retrieval_details)
-
-    # if(nrow(new_sets) == 0){
-    #     loginfo(glue('Nothing to do for {s} {p}',
-    #                  s = site_code,
-    #                  p = prodname_ms),
-    #             logger = logger_module)
-    #     next
-    # } else {
-    #     loginfo(glue('Retrieving {s} {p}',
-    #                  s = site_code,
-    #                  p = prodname_ms),
-    #             logger = logger_module)
-    # }
 
     update_data_tracker_r(network = network,
                           domain = domain,
