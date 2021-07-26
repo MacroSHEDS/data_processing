@@ -1,11 +1,19 @@
+
+loginfo('Beginning munge (versionless products)',
+        logger = logger_module)
+
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'munge',
-                              get_statuses = 'ready')
+                              get_statuses = 'ready') %>%
+    filter(grepl(pattern = '^VERSIONLESS',
+                 x = prodcode))
 
 if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
+
+if(nrow(prod_info) == 0) return()
 
 for(i in seq_len(nrow(prod_info))){
 
@@ -47,10 +55,12 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
-        munge_rtn <- munge_neon_site(domain = domain,
-                                     site_code = sites[j],
-                                     prodname_ms = prodname_ms,
-                                     tracker = held_data)
+        munge_rtn <- munge_versionless_product(
+            network = network,
+            domain = domain,
+            prodname_ms = prodname_ms,
+            site_code = sites[j],
+            tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network = network,
@@ -65,14 +75,8 @@ for(i in seq_len(nrow(prod_info))){
         }
     }
 
-    write_metadata_m(network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     tracker = held_data)
-
     gc()
 }
 
-loginfo('Munging complete for all sites and products',
+loginfo('Munge complete for all versionless products',
         logger = logger_module)
-
