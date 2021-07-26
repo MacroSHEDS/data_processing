@@ -239,8 +239,9 @@ ms_globals <- c(ls(all.names=TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 19
+# dmnrow = 3
 # print(network_domain, n=50)
+# for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -275,10 +276,10 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                prodname_filter = c('ws_boundary'),
+                # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
@@ -286,7 +287,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     sites_from_gdrive = NULL,
                     verbose = TRUE))
     ms_derive(network = network,
-              prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('ws_boundary'),
               domain = domain)
     ms_general(network = network,
                domain = domain)
