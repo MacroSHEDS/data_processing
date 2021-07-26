@@ -333,7 +333,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
         as.POSIXct() %>%
         with_tz('UTC')
 
-    deets_out <- list(url = NA_character_,
+    deets_out <- list(url = url,
                       access_time = NA_character_,
                       last_mod_dt = NA_character_)
 
