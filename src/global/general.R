@@ -23,8 +23,8 @@ files <- list.files(glue('data/{n}/{d}/derived/',
 ws_prodname <- grep('ws_boundary', files, value = TRUE)
 
 boundaries <- try(read_combine_shapefiles(network = network,
-                                     domain = domain,
-                                     prodname_ms = ws_prodname))
+                                          domain = domain,
+                                          prodname_ms = ws_prodname))
 
 if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
     stop('Watershed boundaries are required for general products')
@@ -70,7 +70,7 @@ if(class(gee_file_exist) == 'try-error' || nrow(gee_file_exist) == 0){
           logger = logger_module)
 }
 
-# i=18
+# i=19
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
@@ -100,7 +100,6 @@ for(i in 1:nrow(unprod)){
     general_status <- get_general_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
-    
 
     if(general_status %in% c('ok', 'no_data_avail')){
 
