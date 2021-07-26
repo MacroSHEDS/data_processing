@@ -11066,8 +11066,8 @@ catalog_held_data <- function(network_domain, site_data){
                ExternalLink = 'feature not yet built',
                Availability = paste0("<button type='button' id='",
                                      network, '_', domain, '_', site_code,
-                                     "'>view</button>"),
-               GeodeticDatum = 'WGS 84') %>%
+                                     "'>view</button>")) %>%
+               # GeodeticDatum = 'WGS 84') %>%
         left_join(all_site_breakdown,
                   by = c('network', 'domain', 'site_code')) %>%
         select(Availability,
@@ -11078,7 +11078,7 @@ catalog_held_data <- function(network_domain, site_data){
                StreamName = stream,
                Latitude = latitude,
                Longitude = longitude,
-               GeodeticDatum,
+               # GeodeticDatum,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
@@ -12606,13 +12606,10 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     for(i in 1:nrow(df)) {
 
         dom <- df$domain[i]
-
         net <- df$network[i]
 
         dom_path <- glue('../portal/data/{d}/stream_chemistry/', d = dom)
-
         site_files <- list.files(dom_path)
-
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
         stream_sites <- site_data %>%
@@ -12622,12 +12619,9 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
             pull(site_code)
 
         all_sites <- tibble()
+        if(length(stream_sites) > 0){
 
-        if(length(stream_sites) == 0) {
-
-        } else{
-
-            for(p in 1:length(stream_sites)) {
+            for(p in 1:length(stream_sites)){
 
                 path_chem <- glue("../portal/data/{d}/stream_chemistry/{s}.feather",
                                   d = dom,
@@ -12653,8 +12647,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                                          d = dom,
                                          s = stream_sites[p])
 
-                #Stream discharge ####
-                if(!file.exists(path_q)) {
+                #Stream discharge
+                if(! file.exists(path_q)){
                     site_q <- tibble()
                     q_record_length <- 365
                 } else {
@@ -12703,7 +12697,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_q)
 
-                #Stream chemistry concentration ####
+                #Stream chemistry concentration
                 if(!file.exists(path_chem)) {
                     site_chem <- tibble()
                 } else {
@@ -12748,7 +12742,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_chem)
 
-                #Stream chemistry flux ####
+                #Stream chemistry flux
                 if(!file.exists(path_flux)) {
                     site_flux <- tibble()
                 } else {
@@ -12792,7 +12786,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_flux)
 
-                #Precipitation ####
+                #Precipitation
                 if(!file.exists(path_precip)) {
                     site_precip <- tibble()
                 } else {
@@ -12831,7 +12825,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_precip)
 
-                #Precipitation chemistry concentration ####
+                #Precipitation chemistry concentration
                 if(!file.exists(path_precip_chem)) {
                     site_precip_chem <- tibble()
                 } else {
@@ -12873,7 +12867,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_precip_chem)
 
-                #Precipitation chemistry flux ####
+                #Precipitation chemistry flux
                 if(!file.exists(path_precip_flux)) {
                     site_precip_flux <- tibble()
                 } else {
@@ -12947,9 +12941,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     }
 }
 
-compute_yearly_summary_ws <- function() {
+compute_yearly_summary_ws <- function(){
 
-    #df = default sites for each domain
     df <- site_data %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
@@ -12969,13 +12962,13 @@ compute_yearly_summary_ws <- function() {
                          d = dom)
 
         prod_files <- list.files(dom_path,
-                                 full.names = T,
-                                 recursive = T)
+                                 full.names = TRUE,
+                                 recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
 
         all_prods <- tibble()
-        if(! length(prod_files) == 0){
+        if(length(prod_files) > 0){
 
             for(p in 1:length(prod_files)) {
 
@@ -13007,8 +13000,10 @@ compute_yearly_summary_ws <- function() {
     all_domain <- all_domain %>%
         filter(var %in% !!ws_vars_keep)
 
-    summary_file_paths <- grep('year', list.files('../portal/data/general/biplot',
-                                                  full.names = TRUE), value = T)
+    summary_file_paths <- grep('year',
+                               list.files('../portal/data/general/biplot',
+                                          full.names = TRUE),
+                               value = TRUE)
 
     for(s in 1:length(summary_file_paths)){
 
