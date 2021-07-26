@@ -9,13 +9,14 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products %>%
-    filter(status == 'ready')
+    filter(status == 'ready') %>%
+    filter(grepl('prism', prodname))
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-# load_spatial_data()
+load_spatial_data()
 
-# Load in watershed Boundaries 
+# Load in watershed Boundaries
 files <- list.files(glue('data/{n}/{d}/derived/',
                          n = network,
                          d = domain))
@@ -23,8 +24,8 @@ files <- list.files(glue('data/{n}/{d}/derived/',
 ws_prodname <- grep('ws_boundary', files, value = TRUE)
 
 boundaries <- try(read_combine_shapefiles(network = network,
-                                     domain = domain,
-                                     prodname_ms = ws_prodname))
+                                          domain = domain,
+                                          prodname_ms = ws_prodname))
 
 if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
     stop('Watershed boundaries are required for general products')
@@ -39,9 +40,10 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
 if(class(gee_file_exist) == 'try-error' || nrow(gee_file_exist) == 0){
+
   loginfo('Uploading ws_boundaries to GEE',
           logger = logger_module)
-  
+
   sm(rgee::ee_manage_create(asset_folder))
 
   asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
@@ -52,7 +54,7 @@ if(class(gee_file_exist) == 'try-error' || nrow(gee_file_exist) == 0){
                            overwrite = TRUE,
                            quiet = TRUE),
                   silent = TRUE)
-  
+
   if('try-error' %in% class(ee_shape)){
 
     for(i in 1:nrow(boundaries)){
@@ -87,7 +89,7 @@ for(i in 1:nrow(unprod)){
     loginfo(glue('Acquiring product: {p}',
                  p = prodname_ms),
             logger = logger_module)
-  
+
     site_code <- 'all_sites'
 
     if(! site_is_tracked(held_data, prodname_ms, site_code)){
@@ -100,7 +102,7 @@ for(i in 1:nrow(unprod)){
     general_status <- get_general_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
-    
+
 
     if(general_status %in% c('ok', 'no_data_avail')){
 

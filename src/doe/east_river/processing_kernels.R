@@ -387,47 +387,47 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS009 <- function(set_details, network, domain) {
-    
+
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
                           p = prodname_ms,
                           s = set_details$site_code)
-    
+
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-    
+
     rawfile <- glue('{rd}/{c}.zip',
                     rd = raw_data_dest,
                     c = set_details$component)
-    
+
     login_escape <- sub(pattern = '@',
                         replacement = '%40',
                         x = set_details$orcid_login)
-    
+
     url_with_auth <- sub(pattern = '://',
                          replacement = paste0('://', login_escape, ':',
                                               set_details$orcid_pass, '@'),
                          x = set_details$url)
-    
+
     download.file(url = url_with_auth,
                   destfile = rawfile,
                   quiet = TRUE,
                   cacheOK = FALSE)
-    
+
     res <- httr::HEAD(url_with_auth)
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                        start = 1,
                                        stop = 19),
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
-    
+
     deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
-    
+
     return(deets_out)
 }
 
@@ -1469,27 +1469,27 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
-    
+
     dir.create(temp_dir,
                showWarnings = FALSE,
                recursive = TRUE)
-    
+
     unlink(paste0(temp_dir, '/*'),
            recursive = TRUE,
            force = TRUE)
-    
+
     unzip(rawfile,
           exdir = temp_dir)
-    
+
     temp_dir_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
     rel_file <- grep('streamflow|Streamflow', temp_dir_files, value = TRUE)
 
@@ -1498,22 +1498,21 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
 
     all_sites <- tibble()
     for(i in 1:length(rel_file)){
-        
-        site_code <- str_split_fixed(rel_file[i], '/', n = Inf)[1,12]
-        site_code <- str_split_fixed(site_code, '_', n = Inf)[1,1]
-        
-        if(site_code == 'Pumphouse') {site_code <- 'PH'}
-        
+
+        site_code <- str_match(rel_file[i], '.+/(.+)_[sS]treamflow.+\\.xlsx$')[, 2]
+
+        if(site_code == 'Pumphouse') site_code <- 'PH'
+
         sheets <- readxl::excel_sheets(rel_file[i])
-        
+
         if('corrected' %in% sheets){
             one_site <- readxl::read_xlsx(rel_file[i], sheet = 'corrected')
         } else{
             one_site <- readxl::read_xlsx(rel_file[i], sheet = 'flow')
         }
-        
+
         sheet_names <- names(one_site)
-        
+
         if('Streamflow (m3/s)' %in% sheet_names | 'Q cms' %in% sheet_names){
             if(site_code == 'PH'){
                 date_col <- grep('Time', sheet_names, value = TRUE)
@@ -1527,54 +1526,54 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
                 mutate(site_code = !!site_code) %>%
                 select(date = `Date & Mountain Standard Time`,
                         q = `Streamflow (m3/s)`,
-                        site_code)                
+                        site_code)
             }
 
         } else{
             one_site <- readxl::read_xlsx(rel_file[i], sheet = 'mean daily') %>%
-                mutate(site_code = !!site_code) %>% 
-                select(date, 
+                mutate(site_code = !!site_code) %>%
+                select(date,
                        q = `mean daily Q (m3/s)`,
                        site_code)
         }
 
-        
+
         all_sites <- rbind(all_sites, one_site)
     }
-    
+
     all_sites <- all_sites %>%
         rename(datetime = date,
                val = q) %>%
         mutate(var = 'discharge',
                ms_status = 0)
-    
-    d <- identify_sampling_bypass(all_sites, 
+
+    d <- identify_sampling_bypass(all_sites,
                                   is_sensor = T,
                                   sampling_type = 'I',
                                   network = network,
                                   domain = domain,
                                   prodname_ms = prodname_ms)
-    
+
     # Discharge is in m^3/s, converting to L/s
     d <- d %>%
         mutate(val = val*1000)
-    
+
     d <- carry_uncertainty(d,
                            network = network,
                            domain = domain,
                            prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
+
     d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    
+
     sites <- unique(d$site_code)
-    
+
     for(s in 1:length(sites)){
-        
+
         d_site <- d %>%
             filter(site_code == !!sites[s])
-        
+
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
@@ -1583,7 +1582,7 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-    
+
     return()
 }
 
@@ -1607,7 +1606,7 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
-    
+
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,

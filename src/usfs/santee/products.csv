@@ -3,7 +3,7 @@ VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms003,NA,precip
 VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,discharge
 VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,stream_chem
 VERSIONLESS004,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms003,NA,precip_chem
-VERSIONLESS005,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms003,NA,NA
+VERSIONLESS005,ws_boundary,ready,pending,NA,precip_pchem_pflux__ms003,NA,NA
 ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
 ms002,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms003,NA,NA
 ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA

@@ -418,6 +418,10 @@ process_0_496 <- retrieve_plum
 #. handle_errors
 process_0_542 <- retrieve_plum
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS001 <- download_from_googledrive
+
 #munge kernels ####
 
 #stream_chemistry: STATUS=READY
@@ -1124,6 +1128,31 @@ process_1_496 <- munge_precip_alt
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_542 <- munge_precip_alt
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/ws_boundary__VERSIONLESS001/sitename_NA/cart_creek.zip',
+                    n = network,
+                    d = domain)
+
+    mungedir <- glue('data/{n}/{d}/munged/ws_boundary__VERSIONLESS001/',
+                     n = network,
+                     d = domain)
+
+    unzip(rawfile,
+          exdir = mungedir)
+
+    sf::st_read(dsn = file.path(mungedir, 'cart_creek')) %>%
+        sf::st_transform(4326) %>%
+        rename(site_code = site_name) %>%
+        sf::st_write(dsn = file.path(mungedir, 'cart_creek'),
+                     driver = 'ESRI shapefile',
+                     delete_dsn = TRUE)
+
+    return()
+}
 
 #derive kernels ####
 

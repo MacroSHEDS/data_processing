@@ -192,7 +192,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = F,
+ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -275,18 +275,17 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                prodname_filter = c('ws_boundary'),
+                # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
-                    sites_from_gdrive = NULL,
                     verbose = TRUE))
     ms_derive(network = network,
-              prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('ws_boundary'),
               domain = domain)
     ms_general(network = network,
                domain = domain)
