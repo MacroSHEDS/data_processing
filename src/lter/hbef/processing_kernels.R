@@ -272,7 +272,8 @@ process_1_94 <- function(network, domain, prodname_ms, site_code,
     wb <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                       quiet = TRUE) %>%
         # mutate(WSHEDS0_ID = ifelse(is.na(WSHEDS0_ID), 0, WSHEDS0_ID)) %>%
-        filter(!is.na(WS)) %>% #ignore encompassing, non-experimental watershed
+        filter(! is.na(WS), #ignore encompassing, non-experimental watershed
+               site_code != 'w101') %>% #and ungauged w101
         select(site_code = WSHEDS0_ID,
                area = AREA,
                perimeter = PERIMETER,
