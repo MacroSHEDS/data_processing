@@ -1,6 +1,6 @@
 #functions without the "#. handle_errors" decorator have special error handling
 
-handle_errors = function(f){
+handle_errors <- function(f){
 
     #decorator function. takes any function as argument and executes it.
     #if error occurs within passed function, combines error message and
@@ -1763,40 +1763,50 @@ get_all_local_helpers <- function(network, domain){
     #because it can only read them into the current environment, all files
     #sourced by this function are exported locally, then exported globally
 
-    location1 = glue('src/{n}/network_helpers.R', n=network)
+    location1 <- glue('src/{n}/network_helpers.R',
+                      n = network)
+
     if(file.exists(location1)){
 
-        sw(source(location1, local=TRUE))
+        sw(source(location1, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location1))
         }
     }
 
-    location2 = glue('src/{n}/{d}/domain_helpers.R', n=network, d=domain)
+    location2 <- glue('src/{n}/{d}/domain_helpers.R',
+                      n = network,
+                      d = domain)
+
     if(file.exists(location2)){
 
-        sw(source(location2, local=TRUE))
+        sw(source(location2, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location2))
         }
     }
 
-    location3 = glue('src/{n}/processing_kernels.R', n=network)
+    location3 <- glue('src/{n}/processing_kernels.R',
+                      n = network)
+
     if(file.exists(location3)){
 
-        sw(source(location3, local=TRUE))
+        sw(source(location3, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location3))
         }
     }
 
-    location4 = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
+    location4 <- glue('src/{n}/{d}/processing_kernels.R',
+                      n = network,
+                      d = domain)
+
     if(file.exists(location4)){
 
-        sw(source(location4, local=TRUE))
+        sw(source(location4, local = TRUE))
 
         if(ms_instance$use_ms_error_handling){
             sw(source_decoratees(location4))
@@ -1805,10 +1815,8 @@ get_all_local_helpers <- function(network, domain){
 
     rm(location1, location2, location3, location4)
 
-    export_to_global(from_env=environment(),
-                     exclude=c('network', 'domain', 'thisenv'))
-
-    #return()
+    export_to_global(from_env = environment(),
+                     exclude = c('network', 'domain', 'thisenv'))
 }
 
 set_up_logger <- function(network = domain, domain){
@@ -2609,23 +2617,21 @@ ms_munge <- function(network = domain,
     }
 }
 
-ms_general <- function(network=domain, domain){
-    source(glue('src/global/general.R', n=network, d=domain))
-    #return()
+ms_general <- function(network = domain, domain){
+
+    source(glue('src/global/general.R',
+                n = network,
+                d = domain))
 }
 
 ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
-                         sites_from_gdrive,
                          verbose = FALSE){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
     #   accordingly. passed to delineate_watershed_apriori
-    #sites_from_gdrive: a list. names are domains and values are vectors of
-    #   site_codes. corresponding watershed boundaries will be downloaded from
-    #   google drive.
     #verbose: logical. determines the amount of informative messaging during run
 
     loginfo(msg = 'Beginning watershed delineation',
@@ -2723,21 +2729,6 @@ ms_delineate <- function(network,
 
         dir.create(site_dir,
                    showWarnings = FALSE)
-
-        if(site %in% sites_from_gdrive[[domain]]){
-
-            download_from_gdrive_arbitrary(network = network,
-                                           domain = domain,
-                                           site_code = site,
-                                           prodname_ms = ws_boundary_dir,
-                                           level = level)
-
-            loginfo(glue('Retrieved {s} boundary from gdrive',
-                         s = site),
-                    logger = logger_module)
-
-            next
-        }
 
         specs <- ws_delin_specs %>%
             filter(
@@ -8771,20 +8762,20 @@ get_gee_standard <- function(network,
                              site_boundary,
                              batch = TRUE,
                              qa_band = NULL,
-                             bit_mask = NULL, 
+                             bit_mask = NULL,
                              contiguous_us = FALSE) {
-    
+
     if(contiguous_us){
         usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                       ymax = 49.384), crs = 4326) %>%
             sf::st_as_sfc(., crs = 4326)
-        
+
         is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
-        
+
         if(! is_usa){
             return(NULL)
         }
-        
+
     }
     qaqc <- FALSE
     if(!is.null(qa_band) || !is.null(bit_mask)){
@@ -8796,14 +8787,14 @@ get_gee_standard <- function(network,
     }
 
     # area <- sf::st_area(site_boundary)
-    # 
+    #
     # sheds <- site_boundary %>%
     #     as.data.frame() %>%
     #     sf::st_as_sf() %>%
     #     select(site_code) %>%
     #     sf::st_transform(4326) %>%
     #     sf::st_set_crs(4326)
-    # 
+    #
     # site <- unique(sheds$site_code)
 
     #if(as.numeric(area) > 10528200 || batch){
@@ -8851,7 +8842,7 @@ get_gee_standard <- function(network,
                 }
                 if(i > 1){
                     one_ws <- ee$FeatureCollection(asset_path$ID[i])
-                    
+
                     ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
                 }
             }
@@ -9044,8 +9035,8 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
 
     year_files <- list.files(glue('data/spatial/phenology/{u}/{p}',
                              p = place,
-                             u = time)) 
-    
+                             u = time))
+
     if(length(year_files) == 0) {
         return(NULL)
     }
@@ -9334,7 +9325,7 @@ compute_download_filesizes <- function(){
                recursive = TRUE)
 
     dmn_dirs <- list.files('../portal/data/')
-    dmn_dirs <- dmn_dirs[! dmn_dirs == c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
+    dmn_dirs <- dmn_dirs[! dmn_dirs %in% c('general', 'all_ws_bounds', 'all_ws_bounds.zip')]
 
     dmn_dl_size <- data.frame(domain = dmn_dirs,
                               dl_size_MB = NA_character_)
@@ -9796,10 +9787,6 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets()
 
-    log_with_indent('cataloging held data', logger = logger_module)
-    catalog_held_data(site_data = site_data,
-                      network_domain = network_domain)
-
     log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
 
@@ -9842,6 +9829,10 @@ postprocess_entire_dataset <- function(site_data,
                          dataset_version),
                     logger = logger_module)
     generate_output_dataset(vsn = dataset_version)
+
+    log_with_indent('cataloging held data', logger = logger_module)
+    catalog_held_data(site_data = site_data,
+                      network_domain = network_domain)
 
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
@@ -9936,8 +9927,30 @@ clean_portal_dataset <- function(){
 generate_output_dataset <- function(vsn){
 
     tryCatch({
+
+        # #find doesn't accept OR in globs. there is a way to do this though
+        # system(paste0('find data -path *derived/{*.feather,*.shx,*.shp,',
+        #           '*.prj,*.dbf} -printf %P\\\\0\\\\n | ',
+        #           'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+
+        #copy feathers to output dir
         system(paste0('find data -path "*derived/*.feather" -printf %P\\\\0\\\\n | ',
                   'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+
+        #copy shapefiles to output dir
+        system(paste0('find data -path "*derived/*.shp" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+        system(paste0('find data -path "*derived/*.shx" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+        system(paste0('find data -path "*derived/*.prj" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+        system(paste0('find data -path "*derived/*.dbf" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+
+        #copy documentation to output dir
+        system(paste0('find data -path "*derived/documentation*.txt" -printf %P\\\\0\\\\n | ',
+                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+
     }, error = function(e){
         stop(glue('generate_output_dataset can only run on a unix-like machine ',
                   'with `find` and `rsync` installed'),
@@ -9969,34 +9982,43 @@ generate_output_dataset <- function(vsn){
           find_dirs_within_outputdata(keyword = k, vsn = vsn))
     }
 
-    #collect pre-idw precip dirs (also intermediate products)
-    #that shouldn't be in the final dataset
-    pfpaths <- find_dirs_within_outputdata(keyword = 'precipitation__',
-                                           vsn = vsn)
+    #remove intermediate products that shouldn't be in the final dataset
+    for(k in c('precipitation', 'stream_chemistry', 'discharge')){
 
-    ppaths <- str_match(string = pfpaths,
-                        pattern = '(.*)?precipitation__ms[0-9]{3}$')[, 2] %>%
-        sort()
+        kfpaths <- find_dirs_within_outputdata(keyword = paste0(k, '__'),
+                                               vsn = vsn)
 
-    pfac <- factor(ppaths)
-    dirs_with_p_compprods <- as.character(pfac[duplicated(pfac)])
+        kpaths <- str_match(string = kfpaths,
+                            pattern = paste0('(.*)?/',
+                                             k))[, 2] %>%
+                                             # '__ms[0-9]{3}$'))[, 2] %>%
+            sort()
 
-    for(dr in dirs_with_p_compprods){
+        kfac <- factor(kpaths)
+        dirs_with_k_compprods <- as.character(kfac[duplicated(kfac)])
 
-        precip_dirs <- list.files(path = dr,
-                                  pattern = '^precipitation__')
+        for(dr in dirs_with_k_compprods){
 
-        if(length(precip_dirs) != 2){
-            stop('there should only be two precip dirs in consideration here')
+            k_dirs <- list.files(path = dr,
+                                 pattern = paste0('^', k, '__'))
+
+            if(length(k_dirs) != 2){
+                stop('there should only be two dirs in consideration here')
+            }
+
+            prodname_numeric <- str_match(string = k_dirs,
+                                          pattern = paste0(k, '__ms([0-9]{3})'))[, 2] %>%
+               as.numeric()
+
+            if(any(is.na(prodname_numeric))){
+                dir_to_delete_ind <- which(is.na(prodname_numeric))
+            } else {
+                dir_to_delete_ind <- which.min(prodname_numeric)
+            }
+
+            dirs_to_delete <- c(dirs_to_delete,
+                                file.path(dr, k_dirs[dir_to_delete_ind]))
         }
-
-        dir_to_delete_ind <- str_match(string = precip_dirs,
-                                       pattern = 'precipitation__ms([0-9]{3})')[, 2] %>%
-           as.numeric() %>%
-           which.min()
-
-        dirs_to_delete <- c(dirs_to_delete,
-                            paste0(dr, precip_dirs[dir_to_delete_ind]))
     }
 
     #drop em all from the final dataset
@@ -10598,6 +10620,25 @@ retrieve_versionless_product <- function(network,
                               set_details = deets,
                               new_status = new_status)
 
+        if(ms_instance$use_ms_error_handling){
+
+            kernel_funcs <- glue('src/{n}/processing_kernels.R',
+                                 n = network)
+
+            if(! file.exists(kernel_funcs)){
+
+                kernel_funcs <- glue('src/{n}/{d}/processing_kernels.R',
+                                     n = network,
+                                     d = domain)
+            }
+
+            source(kernel_funcs,
+                   local = TRUE)
+
+            processing_func <- get(paste0('process_0_',
+                                   prodcode_from_prodname_ms(prodname_ms)))
+        }
+
         source_urls <- get_source_urls(result_obj = result,
                                        processing_func = processing_func)
 
@@ -10696,31 +10737,62 @@ catalog_held_data <- function(network_domain, site_data){
     # + informational catalog for each individual variable
     # + informational catalog for each individual site
 
+    #TODO write full catalog for download using this code:
+    #
+    # var_files <- dir('../portal/data/general/catalog_files/indiv_variables',
+    #                  full.names = TRUE)
+    #
+    # d_list <- list()
+    # for(i in seq_along(var_files)){
+    #
+    #     f <- var_files[i]
+    #     var_name <- str_match(f, '/([^/]+)?\\.csv$')[, 2]
+    #
+    #     d_list[[i]] <- read_csv(f,
+    #                             col_types = cols()) %>%
+    #         mutate(Variable = !!var_name) %>%
+    #         select(Variable, everything())
+    # }
+    #
+    # d <- Reduce(bind_rows, d_list)
+    #
+    # write_csv(d, '/tmp/macrosheds_variable-by-site_summary.csv')
+
     nobs_nonspatial <- 0
-    # site_display <- tibble()
-    # site_vars <- tibble(network = character(),
-    #                     domain = character(),
-    #                     site = character(),
-    #                     stream = character(),
-    #                     lat = numeric(),
-    #                     long)
+
+    output_dataset <- paste0('macrosheds_dataset_v', vsn)
+    if(! dir.exists(output_dataset)){
+        stop('output dataset not yet generated')
+    }
 
     all_site_breakdown <- site_data %>%
-        filter(as.logical(in_workflow)) %>%
+        filter(as.logical(in_workflow),
+               ! site_type == 'rain_gauge') %>%
         select(-in_workflow, -notes, -CRS, -local_time_zone)
+
+    dup_inds_bool <- duplicated(site_data[, c('site_code', 'site_type')])
+    if(any(dup_inds_bool)){
+        dup_sites <- pull(site_data[dup_inds_bool, ], site_code)
+        stop(glue('Duplicate records in site_data: {dups}',
+                  dups = paste(dup_sites, collapse = ', ')))
+        #GSMACK, N01B, N02B have dupe site_codes, but for different site_types
+    }
 
     all_variable_breakdown <- tibble()
     for(i in 1:nrow(network_domain)){
 
-        site_prods <- list.dirs(glue('data/{n}/{d}/derived',
+        # site_prods <- list.dirs(glue('data/{n}/{d}/derived',
+        site_prods <- list.dirs(glue('{od}/{n}/{d}/derived',
+                                    od = output_dataset,
                                     n = network_domain$network[i],
                                     d = network_domain$domain[i]),
                                full.names = TRUE)
         site_prods <- site_prods[! grepl('derived$', site_prods)]
+        site_prods <- site_prods[! grepl('/documentation', site_prods)]
 
         if(length(site_prods) == 0) next
 
-        spatial_prod_inds <- grep(pattern = '(documentation|gauge|boundary)',
+        spatial_prod_inds <- grep(pattern = '(gauge|boundary)',
                                   x = site_prods)
 
         spatial_prods <- site_prods[spatial_prod_inds]
@@ -10729,7 +10801,7 @@ catalog_held_data <- function(network_domain, site_data){
         for(j in seq_along(nonspatial_prods)){
 
             if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
-                logwarn(msg = 'why is there a precip_pchem_pflux directory?? fix this',
+                logwarn(msg = 'why is there a precip_pchem_pflux directory? fix this',
                         logger = logger_module)
                 nonspatial_prods <- nonspatial_prods[! grepl('precip_pchem_pflux', nonspatial_prods)]
             }
@@ -10778,11 +10850,25 @@ catalog_held_data <- function(network_domain, site_data){
                         prop_imputed = sum(ms_interp) / n_observations) %>%
                     ungroup() %>%
                     bind_rows(product_breakdown)
+
+                chem_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
+                is_chemvar <- product_breakdown$var %in% chem_vars
+
+                product_breakdown$chem_class <- 'NA'
+                if(grepl('stream_flux_inst_scaled', f)){
+                    product_breakdown$chem_class[is_chemvar] <- 'stream_flux'
+                } else if(grepl('precip_flux_inst_scaled', f)){
+                    product_breakdown$chem_class[is_chemvar] <- 'precip_flux'
+                } else if(grepl('precip_chemistry', f)){
+                    product_breakdown$chem_class[is_chemvar] <- 'precip_conc'
+                } else if(grepl('stream_chemistry', f)){
+                    product_breakdown$chem_class[is_chemvar] <- 'stream_conc'
+                }
             }
 
             #summarize and enhance goodies
             product_breakdown <- product_breakdown %>%
-                group_by(var, sample_regimen, site_code) %>%
+                group_by(var, sample_regimen, site_code, chem_class) %>%
                 summarize(
                     n_flagged = sum(prop_flagged * n_observations,
                                     na.rm = TRUE),
@@ -10807,11 +10893,11 @@ catalog_held_data <- function(network_domain, site_data){
                     sample_regimen == 'IN' ~ 'installed-nonsensor')) %>%
                 select(site_code, var, sample_regimen, n_observations,
                        first_record_UTC, last_record_UTC, pct_flagged,
-                       pct_imputed)
+                       pct_imputed, chem_class)
 
             #if multiple sample regimens for a site-variable, aggregate and append them as sample_regimen "all"
             product_breakdown <- product_breakdown %>%
-                group_by(site_code, var) %>%
+                group_by(site_code, var, chem_class) %>%
                 summarize(
                     n_observations = if(n() > 1) sum(n_observations, na.rm = TRUE) else first(n_observations),
                     pct_flagged = if(n() > 1) round(sum(pct_flagged, na.rm = TRUE), digits = 2) else first(pct_flagged),
@@ -10831,6 +10917,10 @@ catalog_held_data <- function(network_domain, site_data){
                 left_join(select(ms_vars,
                                  variable_code, variable_name, unit), #, method
                           by = c('var' = 'variable_code')) %>%
+                mutate(unit = ifelse(grepl('flux$',
+                                           chem_class),
+                                     'kg/ha/d',
+                                     unit)) %>%
                 left_join(select(all_site_breakdown,
                                  network, domain, site_code),
                           by = 'site_code') %>%
@@ -10839,6 +10929,7 @@ catalog_held_data <- function(network_domain, site_data){
                        site_code,
                        VariableCode = var,
                        VariableName = variable_name,
+                       ChemCategory = chem_class,
                        SampleRegimen = sample_regimen,
                        Unit = unit,
                        Observations = n_observations,
@@ -10846,7 +10937,8 @@ catalog_held_data <- function(network_domain, site_data){
                        LastRecordUTC = last_record_UTC,
                        PercentFlagged = pct_flagged,
                        PercentImputed = pct_imputed) %>%
-                arrange(network, domain, site_code, VariableCode, SampleRegimen) %>%
+                arrange(network, domain, site_code, VariableCode, ChemCategory,
+                        SampleRegimen) %>%
                 filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
 
             #combine with other product summaries
@@ -10861,10 +10953,27 @@ catalog_held_data <- function(network_domain, site_data){
     dir.create('../portal/data/general/catalog_files',
                showWarnings = FALSE)
 
-    #generate and write file describing all variables
+    ## generate and write file describing all variables
+
+    #chem and flux stuff is broken out by category, so summarize the vars that,
+    #aren't. otherwise they'd be duplicated (because they exist in multiple files),
+    #e.g. pH, spCond, d18O
+    all_variable_breakdown <- all_variable_breakdown %>%
+        group_by(network, domain, site_code, VariableCode, ChemCategory,
+                 SampleRegimen) %>%
+        summarize(VariableName = first(VariableName),
+                  Unit = first(Unit),
+                  FirstRecordUTC = min(FirstRecordUTC),
+                  LastRecordUTC = max(LastRecordUTC),
+                  PercentFlagged = sum(Observations * (PercentFlagged / 100)) /
+                      sum(Observations) * 100,
+                  PercentImputed = sum(Observations * (PercentImputed / 100)) /
+                      sum(Observations) * 100,
+                  Observations = sum(Observations),
+                  .groups = 'drop')
 
     all_variable_display <- all_variable_breakdown %>%
-        group_by(VariableCode) %>%
+        group_by(VariableCode, ChemCategory) %>%
         summarize(
             Observations = sum(Observations,
                                na.rm = TRUE),
@@ -10879,25 +10988,25 @@ catalog_held_data <- function(network_domain, site_data){
         mutate(MeanObsPerSite = round(Observations / Sites, 0),
                Availability = paste0("<button type='button' id='", VariableCode, "'>view</button>")) %>%
                # Availability = paste0("<a href='?", VariableCode, "'>view</a>")) %>%
-        select(Availability, VariableName, VariableCode, Unit, Observations, Sites,
-               MeanObsPerSite, FirstRecordUTC, LastRecordUTC)
+        select(Availability, VariableName, VariableCode, ChemCategory, Unit,
+               Observations, Sites, MeanObsPerSite, FirstRecordUTC,
+               LastRecordUTC)
 
     readr::write_csv(x = all_variable_display,
                      file = '../portal/data/general/catalog_files/all_variables.csv')
 
 
-    #generate and write individual file for each variable, describing it by site
+    ## generate and write individual file for each variable, describing it by site
 
     dir.create('../portal/data/general/catalog_files/indiv_variables',
                showWarnings = FALSE)
 
     vars <- unique(all_variable_display$VariableCode)
-
     for(v in vars){
 
         indiv_variable_display <- all_variable_breakdown %>%
             filter(VariableCode == !!v) %>%
-            group_by(network, domain, site_code) %>%
+            group_by(network, domain, site_code, ChemCategory) %>%
             summarize(
                 Observations = sum(Observations,
                                    na.rm = TRUE),
@@ -10926,17 +11035,21 @@ catalog_held_data <- function(network_domain, site_data){
             select(Network = pretty_network,
                    Domain = pretty_domain,
                    SiteCode = site_code,
-                   Unit, Observations, FirstRecordUTC, LastRecordUTC,
-                   MeanObsPerDay)
+                   ChemCategory, Unit, Observations, FirstRecordUTC,
+                   LastRecordUTC, MeanObsPerDay) %>%
+            arrange(Network, Domain, SiteCode, ChemCategory)
+
+        if(any(duplicated(indiv_variable_display[c('SiteCode', 'ChemCategory')]))){
+            stop("duplicated sites in indiv_variable_display. what's the deal?")
+        }
 
         readr::write_csv(x = indiv_variable_display,
                          file = glue('../portal/data/general/catalog_files/indiv_variables/',
                                      v, '.csv'))
     }
 
-    #generate and write file describing all sites
-    #TODO: make sure to include a note about datum on display page
-    #   also, incude url column somehow
+    ## generate and write file describing all sites
+    #TODO: ExternalLink column
 
     all_site_display <- all_variable_breakdown %>%
         group_by(network, domain, site_code) %>%
@@ -10954,6 +11067,7 @@ catalog_held_data <- function(network_domain, site_data){
                Availability = paste0("<button type='button' id='",
                                      network, '_', domain, '_', site_code,
                                      "'>view</button>")) %>%
+               # GeodeticDatum = 'WGS 84') %>%
         left_join(all_site_breakdown,
                   by = c('network', 'domain', 'site_code')) %>%
         select(Availability,
@@ -10964,6 +11078,7 @@ catalog_held_data <- function(network_domain, site_data){
                StreamName = stream,
                Latitude = latitude,
                Longitude = longitude,
+               # GeodeticDatum,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
@@ -10972,7 +11087,7 @@ catalog_held_data <- function(network_domain, site_data){
     readr::write_csv(x = all_site_display,
                      file = '../portal/data/general/catalog_files/all_sites.csv')
 
-    #generate and write individual file for each site, describing it by variable
+    ## generate and write individual file for each site, describing it by variable
 
     dir.create('../portal/data/general/catalog_files/indiv_sites',
                showWarnings = FALSE)
@@ -11006,9 +11121,13 @@ catalog_held_data <- function(network_domain, site_data){
             #                  domain, pretty_domain, network, pretty_network,
             #                  site_code),
             #           by = c('network', 'domain', 'site_code')) %>%
-            select(VariableCode, VariableName, SampleRegimen, Unit,
+            select(VariableCode, VariableName, ChemCategory, SampleRegimen, Unit,
                    Observations, FirstRecordUTC, LastRecordUTC,
                    MeanObsPerDay, PercentFlagged, PercentImputed)
+
+        if(any(duplicated(indiv_site_display[c('VariableCode', 'ChemCategory', 'SampleRegimen')]))){
+            stop("duplicated vars in indiv_site_display. what's the deal?")
+        }
 
         readr::write_csv(x = indiv_site_display,
                          file = glue('../portal/data/general/catalog_files/indiv_sites/',
@@ -11293,6 +11412,7 @@ insert_gap_border_NAs <- function(network_domain, site_data){
                         full.names = TRUE)
 
     paths <- paths[! grepl(pattern = '/general/', x = paths)]
+    paths <- paths[! grepl(pattern = '/ws_traits/', x = paths)]
 
     for(p in paths){
 
@@ -12023,18 +12143,18 @@ download_from_googledrive <- function(set_details, network, domain){
 
         needed_files <- drive_files[! drive_files %in% held_files]
 
-        prod_files_neeed <- prod_files %>%
+        prod_files_need <- prod_files %>%
             filter(name %in% needed_files)
 
-        for(i in 1:nrow(prod_files_neeed)){
+        for(i in 1:nrow(prod_files_need)){
 
             raw_file_path <- glue('{rd}/{n}',
                                   rd = raw_data_dest,
-                                  n = prod_files_neeed$name[i])
+                                  n = prod_files_need$name[i])
 
             status <- expo_backoff(
                 expr = {
-                    googledrive::drive_download(file = googledrive::as_id(prod_files_neeed$id[i]),
+                    googledrive::drive_download(file = googledrive::as_id(prod_files_need$id[i]),
                                                 path = raw_file_path,
                                                 overwrite = TRUE)
                 },
@@ -12486,13 +12606,10 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     for(i in 1:nrow(df)) {
 
         dom <- df$domain[i]
-
         net <- df$network[i]
 
         dom_path <- glue('../portal/data/{d}/stream_chemistry/', d = dom)
-
         site_files <- list.files(dom_path)
-
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
         stream_sites <- site_data %>%
@@ -12502,12 +12619,9 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
             pull(site_code)
 
         all_sites <- tibble()
+        if(length(stream_sites) > 0){
 
-        if(length(stream_sites) == 0) {
-
-        } else{
-
-            for(p in 1:length(stream_sites)) {
+            for(p in 1:length(stream_sites)){
 
                 path_chem <- glue("../portal/data/{d}/stream_chemistry/{s}.feather",
                                   d = dom,
@@ -12533,8 +12647,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                                          d = dom,
                                          s = stream_sites[p])
 
-                #Stream discharge ####
-                if(!file.exists(path_q)) {
+                #Stream discharge
+                if(! file.exists(path_q)){
                     site_q <- tibble()
                     q_record_length <- 365
                 } else {
@@ -12583,7 +12697,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_q)
 
-                #Stream chemistry concentration ####
+                #Stream chemistry concentration
                 if(!file.exists(path_chem)) {
                     site_chem <- tibble()
                 } else {
@@ -12628,7 +12742,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_chem)
 
-                #Stream chemistry flux ####
+                #Stream chemistry flux
                 if(!file.exists(path_flux)) {
                     site_flux <- tibble()
                 } else {
@@ -12672,7 +12786,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_flux)
 
-                #Precipitation ####
+                #Precipitation
                 if(!file.exists(path_precip)) {
                     site_precip <- tibble()
                 } else {
@@ -12711,7 +12825,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_precip)
 
-                #Precipitation chemistry concentration ####
+                #Precipitation chemistry concentration
                 if(!file.exists(path_precip_chem)) {
                     site_precip_chem <- tibble()
                 } else {
@@ -12753,7 +12867,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
                 all_sites <- rbind(all_sites, site_precip_chem)
 
-                #Precipitation chemistry flux ####
+                #Precipitation chemistry flux
                 if(!file.exists(path_precip_flux)) {
                     site_precip_flux <- tibble()
                 } else {
@@ -12827,9 +12941,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     }
 }
 
-compute_yearly_summary_ws <- function() {
+compute_yearly_summary_ws <- function(){
 
-    #df = default sites for each domain
     df <- site_data %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
@@ -12849,13 +12962,13 @@ compute_yearly_summary_ws <- function() {
                          d = dom)
 
         prod_files <- list.files(dom_path,
-                                 full.names = T,
-                                 recursive = T)
+                                 full.names = TRUE,
+                                 recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
 
         all_prods <- tibble()
-        if(! length(prod_files) == 0){
+        if(length(prod_files) > 0){
 
             for(p in 1:length(prod_files)) {
 
@@ -12887,8 +13000,10 @@ compute_yearly_summary_ws <- function() {
     all_domain <- all_domain %>%
         filter(var %in% !!ws_vars_keep)
 
-    summary_file_paths <- grep('year', list.files('../portal/data/general/biplot',
-                                                  full.names = TRUE), value = T)
+    summary_file_paths <- grep('year',
+                               list.files('../portal/data/general/biplot',
+                                          full.names = TRUE),
+                               value = TRUE)
 
     for(s in 1:length(summary_file_paths)){
 
@@ -12951,13 +13066,13 @@ append_unprod_prefix <- function(d, prodname_ms){
 }
 
 save_general_files <- function(final_file, raw_file, domain_dir){
-    
+
     dir.create(domain_dir, recursive = TRUE, showWarnings = FALSE)
-    
+
     raw_exists <- ! missing(raw_file)
     sites <- unique(final_file$site_code)
     for(s in 1:length(sites)){
-        
+
         final_file_site <- filter(final_file, site_code == !!sites[s])
 
         sum_path <- glue('{d}sum_{s}.feather',
@@ -12965,7 +13080,7 @@ save_general_files <- function(final_file, raw_file, domain_dir){
                          s = sites[s])
 
         write_feather(final_file_site, sum_path)
-        
+
         if(raw_exists){
             raw_file_site <- filter(raw_file, site_code == !!sites[s])
 
@@ -12974,7 +13089,7 @@ save_general_files <- function(final_file, raw_file, domain_dir){
                              s = sites[s])
 
             write_feather(raw_file_site, raw_path)
-            
+
         }
     }
 }
