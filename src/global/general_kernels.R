@@ -189,8 +189,12 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
     dir <- glue('data/{n}/{d}/ws_traits/lai/',
                 n = network, d = domain)
 
-    save_general_files(final_file = lai_final,
-                       raw_file = lai_raw,
+    lai_final <- append_unprod_prefix(lai_final, prodname_ms)
+    
+    lai_raw <- append_unprod_prefix(lai_raw, prodname_ms)
+    
+    save_general_files(final_file = lai_final, 
+                       raw_file = lai_raw, 
                        domain_dir = dir)
 
   }
@@ -971,7 +975,8 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
   nadp_files <- list.files('data/spatial/ndap', recursive = TRUE, full.names = TRUE)
 
   sites <- boundaries$site_code
-  for(s in 8:length(sites)){
+
+  for(s in 1:length(sites)){
 
     site_boundary <- boundaries %>%
       filter(site_code == !!sites[s])
@@ -1032,7 +1037,7 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
                              var == 'totalN' ~ 'annual_N_flux')) %>%
       mutate(var = paste0(var, '_', type)) %>%
       mutate(year = as.numeric(year)) %>%
-      select(year, site_code, var, val)
+      select(year, site_code, var, val, pctCellErr)
 
     if(all(is.na(fin_nadp$val))){
       msg <- generate_ms_exception(glue('No data was retrived for {s}',
@@ -1149,7 +1154,7 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
       mutate(site_code = !!sites[s],
              year = NA,
              var = paste0('geo_', var)) %>%
-      select(year, site_code, var, val)
+      select(year, site_code, var, val, pctCellErr)
 
     all_vars <- append_unprod_prefix(all_vars, prodname_ms)
     write_feather(all_vars, glue('{d}/{s}.feather',
