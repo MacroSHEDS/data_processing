@@ -1573,7 +1573,7 @@ ms_conversions <- function(d,
                            convert_units_from,
                            convert_units_to){
 
-    #d: a macrosheds tibble that has aready been through ms_cast_and_reflag
+    #d: a macrosheds tibble that has already been through ms_cast_and_reflag
     #keep_molecular: a character vector of molecular formulae to be
     #   left alone. Otherwise these formulae: NO3, SO4, PO4, SiO2, NH4, NH3, NO3_NO2
     #   will be converted according to the atomic masses of their main
@@ -2602,7 +2602,7 @@ ms_munge <- function(network = domain,
                            recursive = FALSE)
 
         loginfo(logger = logger_module,
-                msg = '(Re)calculating watershed areas for site_data')
+                msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
 
     } else {
         sites <- character()
@@ -2645,7 +2645,7 @@ ms_delineate <- function(network,
             # ! is.na(latitude),
             # ! is.na(longitude),
             site_type == 'stream_gauge') %>%
-        select(site_code, latitude, longitude, CRS, ws_area_ha)
+        select(site_code, latitude, longitude, CRS)
 
     #checks
     if(any(is.na(site_locations$latitude) | is.na(site_locations$longitude))){
@@ -2790,6 +2790,9 @@ ms_delineate <- function(network,
                 long = site_locations$longitude[i],
                 crs = site_locations$CRS[i],
                 site_code = site,
+                buffer_radius = NULL,
+                snap_dist = NULL,
+                snap_method = NULL,
                 dem_resolution = NULL,
                 flat_increment = NULL,
                 breach_method = 'basic',
@@ -2860,7 +2863,6 @@ ms_delineate <- function(network,
 
     loginfo(msg = 'Delineations complete',
             logger = logger_module)
-
 }
 
 choose_dem_resolution <- function(dev_machine_status, buffer_radius){
@@ -2893,11 +2895,13 @@ delineate_watershed_apriori_recurse <- function(lat,
                                                 long,
                                                 crs,
                                                 site_code,
+                                                buffer_radius = NULL,
+                                                snap_dist = NULL,
+                                                snap_method = NULL,
                                                 dem_resolution = NULL,
                                                 flat_increment = NULL,
                                                 breach_method = 'lc',
                                                 burn_streams = FALSE,
-                                                buffer_radius = NULL,
                                                 scratch_dir = tempdir(),
                                                 write_dir,
                                                 dev_machine_status = 'n00b',
@@ -2915,6 +2919,8 @@ delineate_watershed_apriori_recurse <- function(lat,
         long = long,
         crs = crs,
         site_code = site_code,
+        snap_dist = snap_dist,
+        snap_method = snap_method,
         dem_resolution = dem_resolution,
         flat_increment = flat_increment,
         breach_method = breach_method,
@@ -2958,11 +2964,14 @@ delineate_watershed_apriori_recurse <- function(lat,
     numeric_selections <- paste('Accept delineation', 1:nshapes)
 
     wb_selections <- paste(paste0('[',
-                                  c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+                                  c(1:nshapes, 'M', 'D', 'S', 'B', 'U', 'R', 'I', 'n', 'a'),
                                   ']'),
                            c(numeric_selections,
+                             'Select pourpoint snapping method',
+                             'Set pourpoint snapping maximum distance (meters)',
                              'Burn streams into the DEM (may help delineator across road-stream intersections)',
                              'Use more aggressive breaching method (temporary default, pending whitebox bugfix)',
+                             'Set buffer radius (distance from pourpoint to include in DEM download; meters)',
                              'Select DEM resolution',
                              'Set flat_increment',
                              'Next (skip this one for now)',
@@ -2994,7 +3003,7 @@ delineate_watershed_apriori_recurse <- function(lat,
 
     resp <- get_response_mchar(
         msg = msg,
-        possible_resps = paste(c(1:nshapes, 'S', 'B', 'R', 'I', 'n', 'a'),
+        possible_resps = paste(c(1:nshapes, 'M', 'D', 'S', 'B', 'U', 'R', 'I', 'n', 'a'),
                                collapse = ''),
         allow_alphanumeric_response = FALSE)
 
@@ -3013,6 +3022,24 @@ delineate_watershed_apriori_recurse <- function(lat,
         return(2)
     }
 
+    if('M' %in% resp){
+        snap_method <- get_response_1char(
+            msg = paste0('Standard snapping moves the pourpoint to the cell with ',
+                         'the highest flow accumulation within snap_dist. Jenson ',
+                         'method tries to snap to the nearest stream cell.\n\n',
+                         '1. Jenson\n2. Standard\n\n',
+                         'Enter choice here > '),
+            possible_chars = paste(1:2))
+        snap_method <- ifelse(snap_method == '1', 'jenson', 'standard')
+    }
+
+    if('D' %in% resp){
+        snap_dist <- get_response_int(
+            msg = paste0('Enter a snap distance between 0 and 200 (meters) > '),
+            min_val = 0,
+            max_val = 200)
+    }
+
     if('S' %in% resp){
         burn_streams <- TRUE
     } else {
@@ -3024,6 +3051,13 @@ delineate_watershed_apriori_recurse <- function(lat,
     } else {
         breach_method <- 'basic' #TODO: undo this when whitebox is fixed
         # breach_method <- 'lc'
+    }
+
+    if('U' %in% resp){
+        buffer_radius <- get_response_int(
+            msg = paste0('Enter a buffer radius between 1000 and 100000 (meters) > '),
+            min_val = 0,
+            max_val = 100000)
     }
 
     if('R' %in% resp){
@@ -3062,16 +3096,24 @@ delineate_watershed_apriori_recurse <- function(lat,
 
     if(! grepl('[0-9]', resp)){
 
+        if(is.null(buffer_radius)){
+            buffer_radius_ <- delin_out$buffer_radius
+        } else {
+            buffer_radius_ <- buffer_radius
+        }
+
         selection <- delineate_watershed_apriori_recurse(
             lat = lat,
             long = long,
             crs = crs,
             site_code = site_code,
+            snap_dist = snap_dist,
+            snap_method = snap_method,
             dem_resolution = dem_resolution,
             flat_increment = flat_increment,
             breach_method = breach_method,
             burn_streams = burn_streams,
-            buffer_radius = delin_out$buffer_radius,
+            buffer_radius = buffer_radius_,
             scratch_dir = scratch_dir,
             write_dir = write_dir,
             dev_machine_status = dev_machine_status,
@@ -3100,6 +3142,8 @@ delineate_watershed_apriori <- function(lat,
                                         long,
                                         crs,
                                         site_code,
+                                        snap_dist = NULL,
+                                        snap_method = NULL,
                                         dem_resolution = NULL,
                                         flat_increment = NULL,
                                         breach_method = 'basic',
@@ -3114,6 +3158,13 @@ delineate_watershed_apriori <- function(lat,
     #long: numeric representing longitude in decimal degrees
     #   (negative indicates west of prime meridian)
     #crs: numeric representing the coordinate reference system (e.g. WSG84)
+    #buffer_radius: integer. the width (m) of the buffer around the site location.
+    #   a DEM will be acquired that covers at least the full area of the buffer.
+    #snap_dist: integer. the distance (m) around the recorded site location
+    #   to search for a flow path.
+    #snap_method: character. either "standard", which snaps the site location
+    #   to the cell within snap_dist that has the highest flow value, or
+    #   "jenson", which snaps to the nearest flow path, regardless of flow.
     #dem_resolution: optional integer 1-14. the granularity of the DEM that is used for
     #   delineation. this argument is passed directly to the z parameter of
     #   elevatr::get_elev_raster. 1 is low resolution; 14 is high. If NULL,
@@ -3143,6 +3194,15 @@ delineate_watershed_apriori <- function(lat,
     }
     if(! is.null(flat_increment) && ! is.numeric(flat_increment)){
         stop('flat_increment must be numeric or NULL')
+    }
+    if(! is.null(snap_dist) && ! is.numeric(snap_dist)){
+        stop('snap_dist must be numeric or NULL')
+    }
+    if(! is.null(buffer_radius) && ! is.numeric(buffer_radius)){
+        stop('buffer_radius must be numeric or NULL')
+    }
+    if(! is.null(snap_method) && ! snap_method %in% c('jenson', 'standard')){
+        stop('snap_dist must be "jenson", "standard", or NULL')
     }
     if(! breach_method %in% c('lc', 'basic')) stop('breach_method must be "basic" or "lc"')
     if(! is.logical(burn_streams)) stop('burn_streams must be logical')
@@ -3198,7 +3258,7 @@ delineate_watershed_apriori <- function(lat,
         if(verbose){
 
             if(is.null(flat_increment)){
-                fi <- 'NULL (auto)'
+                fi <- 'auto'
             } else {
                 fi <- as.character(flat_increment)
             }
@@ -3207,12 +3267,21 @@ delineate_watershed_apriori <- function(lat,
             print(glue('Delineation specs for this attempt:\n',
                        '\tsite_code: {st}; ',
                        'dem_resolution: {dr}; flat_increment: {fi}\n',
-                       '\tbreach_method: {bm}; burn_streams: {bs}',
+                       '\tbreach_method: {bm}; burn_streams: {bs}\n',
+                       '\tbuffer_radius: {br}; snap_method: {smt}\n',
+                       '\tsnap_dist: {sdt}',
                        st = site_code,
                        dr = dem_resolution,
                        fi = fi,
                        bm = breach_method,
                        bs = as.character(burn_streams),
+                       br = buffer_radius,
+                       smt = ifelse(is.null(snap_method),
+                                    'auto',
+                                    as.character(snap_method)),
+                       sdt = ifelse(is.null(snap_dist),
+                                    'auto',
+                                    as.character(snap_dist)),
                        .trim = FALSE))
         }
 
@@ -3288,29 +3357,132 @@ delineate_watershed_apriori <- function(lat,
                                            output = flow_f,
                                            out_type = 'catchment area') %>% invisible()
 
-        snap1_f <- glue(scratch_dir, '/snap1_jenson_dist150.shp')
-        whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
-                                              streams = flow_f,
-                                              output = snap1_f,
-                                              snap_dist = 150) %>% invisible()
-        snap2_f <- glue(scratch_dir, '/snap2_standard_dist50.shp')
-        whitebox::wbt_snap_pour_points(pour_pts = point_f,
-                                       flow_accum = flow_f,
-                                       output = snap2_f,
-                                       snap_dist = 50) %>% invisible()
-        snap3_f <- glue(scratch_dir, '/snap3_standard_dist150.shp')
-        whitebox::wbt_snap_pour_points(pour_pts = point_f,
-                                       flow_accum = flow_f,
-                                       output = snap3_f,
-                                       snap_dist = 150) %>% invisible()
+        if(! is.null(snap_method)){
+            snap_method_func <- ifelse(snap_method == 'standard',
+                                       whitebox::wbt_snap_pour_points,
+                                       whitebox::wbt_jenson_snap_pour_points)
+        }
 
-        #the site has been snapped 3 different ways. identify unique snap locations.
-        snap1 <- sf::st_read(snap1_f, quiet = TRUE)
-        snap2 <- sf::st_read(snap2_f, quiet = TRUE)
-        snap3 <- sf::st_read(snap3_f, quiet = TRUE)
-        unique_snaps_f <- snap1_f
-        if(! identical(snap1, snap2)) unique_snaps_f <- c(unique_snaps_f, snap2_f)
-        if(! identical(snap1, snap3)) unique_snaps_f <- c(unique_snaps_f, snap3_f)
+        if(is.null(snap_dist) && is.null(snap_method)){
+
+            snap1_f <- glue(scratch_dir, '/snap1_jenson_dist150.shp')
+            whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                                  streams = flow_f,
+                                                  output = snap1_f,
+                                                  snap_dist = 150) %>% invisible()
+            snap2_f <- glue(scratch_dir, '/snap2_standard_dist50.shp')
+            whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                           flow_accum = flow_f,
+                                           output = snap2_f,
+                                           snap_dist = 50) %>% invisible()
+            snap3_f <- glue(scratch_dir, '/snap3_standard_dist150.shp')
+            whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                           flow_accum = flow_f,
+                                           output = snap3_f,
+                                           snap_dist = 150) %>% invisible()
+
+            #the site has been snapped 3 different ways. identify unique snap locations.
+            snap1 <- sf::st_read(snap1_f, quiet = TRUE)
+            snap2 <- sf::st_read(snap2_f, quiet = TRUE)
+            snap3 <- sf::st_read(snap3_f, quiet = TRUE)
+            unique_snaps_f <- snap1_f
+            if(! identical(snap1, snap2)) unique_snaps_f <- c(unique_snaps_f, snap2_f)
+            if(! identical(snap1, snap3)) unique_snaps_f <- c(unique_snaps_f, snap3_f)
+
+        } else if(is.null(snap_dist)){
+
+            stop('replace the do.call lines below with literal function calls')
+
+            snap1_f <- glue('{scrd}/snap1_{smet}_dist150.shp',
+                            scrd = scratch_dir,
+                            smet = snap_method)
+
+            snap_arglist <- list(pour_pts = point_f,
+                                 output = snap1_f,
+                                 snap_dist = 150)
+
+            if(snap_method == 'standard'){
+                snap_arglist$flow_accum = flow_f
+            } else {
+                snap_arglist$streams = flow_f
+            }
+
+            do.call(snap_method_func,
+                    args = snap_arglist) %>% invisible()
+
+            snap2_f <- glue('{scrd}/snap2_{smet}_dist50.shp',
+                            scrd = scratch_dir,
+                            smet = snap_method)
+
+            snap_arglist$output <- snap2_f
+            snap_arglist$snap_dist <- 50
+
+            do.call(snap_method_func,
+                    args = snap_arglist) %>% invisible()
+
+            #the site has been snapped 2 different ways. identify unique snap locations.
+            snap1 <- sf::st_read(snap1_f, quiet = TRUE)
+            snap2 <- sf::st_read(snap2_f, quiet = TRUE)
+            unique_snaps_f <- snap1_f
+            if(! identical(snap1, snap2)) unique_snaps_f <- c(unique_snaps_f, snap2_f)
+
+        } else if(is.null(snap_method)){
+
+            snap1_f <- glue('{scrd}/snap1_jenson_dist{sdst}.shp',
+                            scrd = scratch_dir,
+                            sdst = snap_dist)
+
+            whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                                  streams = flow_f,
+                                                  output = snap1_f,
+                                                  snap_dist = snap_dist) %>% invisible()
+
+            snap2_f <- glue('{scrd}/snap2_standard_dist{sdst}.shp',
+                            scrd = scratch_dir,
+                            sdst = snap_dist)
+
+            whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                           flow_accum = flow_f,
+                                           output = snap2_f,
+                                           snap_dist = snap_dist) %>% invisible()
+
+            #the site has been snapped 2 different ways. identify unique snap locations.
+            snap1 <- sf::st_read(snap1_f, quiet = TRUE)
+            snap2 <- sf::st_read(snap2_f, quiet = TRUE)
+            unique_snaps_f <- snap1_f
+            if(! identical(snap1, snap2)) unique_snaps_f <- c(unique_snaps_f, snap2_f)
+
+        } else {
+
+            snap1_f <- glue('{scrd}/snap1_{smet}_dist{sdst}.shp',
+                            scrd = scratch_dir,
+                            smet = snap_method,
+                            sdst = snap_dist)
+
+            snap_arglist <- list(pour_pts = point_f,
+                                 output = snap1_f,
+                                 snap_dist = snap_dist)
+
+            if(snap_method == 'standard'){
+                whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                               flow_accum = flow_f,
+                                               output = snap1_f,
+                                               snap_dist = snap_dist)
+                # snap_arglist$flow_accum = flow_f
+            } else {
+                whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                                      streams = flow_f,
+                                                      output = snap1_f,
+                                                      snap_dist = snap_dist)
+                # snap_arglist$streams = flow_f
+            }
+
+            # do.call(wbt_snap_pour_points,
+            #         args = snap_arglist) %>% invisible()
+
+            #the site has been snapped only one way
+            unique_snaps_f <- c(snap1_f)
+        }
 
         #good for experimenting with snap specs:
         # delineate_watershed_test2(scratch_dir, point_f, flow_f,
@@ -3416,6 +3588,16 @@ delineate_watershed_apriori <- function(lat,
                       buffer_radius = buffer_radius)
 
     return(delin_out)
+}
+
+getfun <- function(x){
+
+    if(length(grep('::', x)) > 0) {
+        parts <- strsplit(x, '::')[[1]]
+        getExportedValue(parts[1], parts[2])
+    } else {
+        x
+    }
 }
 
 delineate_watershed_by_specification <- function(lat,
@@ -4155,6 +4337,37 @@ get_response_1char <- function(msg,
     }
 }
 
+get_response_int <- function(msg,
+                             min_val,
+                             max_val,
+                             subsequent_prompt = FALSE){
+
+    #msg: character. a message that will be used to prompt the user
+    #min_val: int. minimum allowable value, inclusive
+    #max_val: int. maximum allowable value, inclusive
+    #subsequent prompt: not to be set directly. This is handled by
+    #   get_response_free during recursion.
+
+    if(subsequent_prompt){
+        cat(glue('Please choose an integer in the range [{minv}, {maxv}].',
+                  minv = min_val,
+                  maxv = max_val))
+    } else {
+        cat(msg)
+    }
+
+    nm <- as.numeric(as.character(readLines(con = stdin(), 1)))
+
+    if(nm %% 1 == 0 && nm >= min_val && nm <= max_val){
+        return(nm)
+    } else {
+        get_response_int(msg = msg,
+                         min_val = min_val,
+                         max_val = max_val,
+                         subsequent_prompt = TRUE)
+    }
+}
+
 get_response_mchar <- function(msg,
                                possible_resps,
                                allow_alphanumeric_response = TRUE,
@@ -4257,7 +4470,11 @@ ms_calc_watershed_area <- function(network,
 
     #returns area in hectares
 
-    print(glue('Computing watershed area'))
+    print(glue('Computing watershed area for {n} - {d} - {l} - {s}',
+               n = network,
+               d = domain,
+               l = level,
+               s = site_code))
 
     ms_dir <- glue('data/{n}/{d}/{l}',
                    n = network,
@@ -4275,6 +4492,8 @@ ms_calc_watershed_area <- function(network,
     if(! length(ws_boundary_dir)){
         stop(glue('No ws_boundary directory found in ', munge_dir))
     }
+
+    ws_boundary_dir <- rev(ws_boundary_dir)[1]
 
     site_dir <- glue('data/{n}/{d}/{l}/{w}/{s}',
                      n = network,
@@ -7238,6 +7457,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 ws_mean_chemflux_var <- tibble()
                 for(s in 1:nsuperchunks){
 
+
+                    browser()
                     chemflux_superchunk <- chemflux_superchunklist[[s]]
 
                     chemflux_chunklist <- chunk_df(d = chemflux_superchunk,
@@ -10188,6 +10409,8 @@ scale_flux_by_area <- function(network_domain, site_data){
     #It would of course be more efficient to do this scaling within flux derive
     #   kernels, but this solution works fine and doesn't require major
     #   modification or rebuilding of the dataset.
+
+    #see also undo_scale_flux_by_area in dev_helpers.R
 
     #TODO: scale flux within derive kernels eventually. it'll make for clearer
     #   documentation

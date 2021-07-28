@@ -9,8 +9,9 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products %>%
-    filter(status == 'ready') %>%
-    filter(grepl('prism', prodname))
+    filter(status == 'ready')
+    # filter(grepl('prism', prodname))
+    # filter(grepl('bfi', prodname))
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
