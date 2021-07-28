@@ -756,19 +756,19 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
     site_boundary <- boundaries %>%
       filter(site_code == sites[s])
 
-    ak_bb <- sf::st_bbox(obj	= c(xmin = -173, ymin = 51.22, xmax = -129,
+    ak_bb <- sf::st_bbox(obj = c(xmin = -173, ymin = 51.22, xmax = -129,
                                  ymax = 71.35), crs = 4326) %>%
       sf::st_as_sfc(., crs = 4326)
 
-    pr_bb <- sf::st_bbox(obj	= c(xmin = -67.95, ymin = 17.91, xmax = -65.22,
+    pr_bb <- sf::st_bbox(obj = c(xmin = -67.95, ymin = 17.91, xmax = -65.22,
                                  ymax = 18.51), crs = 4326) %>%
       sf::st_as_sfc(., crs = 4326)
 
-    hi_bb <- sf::st_bbox(obj	= c(xmin = -160.24, ymin = 18.91, xmax = -154.81,
+    hi_bb <- sf::st_bbox(obj = c(xmin = -160.24, ymin = 18.91, xmax = -154.81,
                                  ymax = 22.23), crs = 4326) %>%
       sf::st_as_sfc(., crs = 4326)
 
-    usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
+    usa_bb <- sf::st_bbox(obj = c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                   ymax = 49.384), crs = 4326) %>%
       sf::st_as_sfc(., crs = 4326)
 
