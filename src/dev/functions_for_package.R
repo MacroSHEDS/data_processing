@@ -235,7 +235,7 @@ ms_conversions <- function(d,
                            convert_units_from,
                            convert_units_to){
     
-    #d: a macrosheds tibble that has aready been through ms_cast_and_reflag
+    #d: a macrosheds tibble that has already been through ms_cast_and_reflag
     #keep_molecular: a character vector of molecular formulae to be
     #   left alone. Otherwise these formulae: NO3, SO4, PO4, SiO2, NH4, NH3, NO3_NO2
     #   will be converted according to the atomic masses of their main
@@ -370,7 +370,7 @@ scale_flux_by_area <- function(network_domain, site_data){
     #   after it was used to generate a *_flux_inst_scaled.feather. Now, the source
     #   file is removed after the scaled file is created. Thus, all our
     #   flux data is converted to kg/ha/d, and every flux file and
-    #   directory gets a name change, after this function runs.
+    #   directory gets a name change when this function runs.
     
     #It would of course be more efficient to do this scaling within flux derive
     #   kernels, but this solution works fine and doesn't require major
