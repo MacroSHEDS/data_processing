@@ -5810,16 +5810,26 @@ shortcut_idw <- function(encompassing_dem,
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
+    elevs_masked <- elevs[! is.na(elevs)]
 
     #compute distances from all dem cells to all data locations
-    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = ncol(data_matrix),
-                          dimnames = list(NULL, colnames(data_matrix)))
+    inv_distmat <- matrix(NA,
+                          nrow = length(elevs_masked),
+                          ncol = ncol(data_matrix),
+                          dimnames = list(NULL,
+                                          colnames(data_matrix)))
+
     for(k in 1:ncol(data_matrix)){
-        dk <- filter(data_locations, site_code == colnames(data_matrix)[k])
-        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+
+        dk <- filter(data_locations,
+                     site_code == colnames(data_matrix)[k])
+
+        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
             terra::values(.)
-        inv_dist2[is.na(elevs)] <- NA #mask
-        inv_distmat[, k] <- inv_dist2
+
+        # inv_dists_site[is.na(elevs)] <- NA #mask
+        inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
+        inv_distmat[, k] <- inv_dists_site
     }
 
     # if(output_varname == 'SPECIAL CASE PRECIP'){ REMOVE
@@ -5880,7 +5890,7 @@ shortcut_idw <- function(encompassing_dem,
             ab <- as.list(mod$coefficients)
 
             #estimate raster values from elevation alone
-            d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+            d_from_elev <- ab$elevation * elevs_masked + ab$`(Intercept)`
 
             #average both approaches (this should be weighted toward idw
             #when close to any data location, and weighted half and half when far)
@@ -5914,9 +5924,10 @@ shortcut_idw <- function(encompassing_dem,
     if(save_precip_quickref){
 
         #convert to mm/d
-        precip_quickref <- Map(function(millimeters, days){
-            return(millimeters/days)
-        },
+        precip_quickref <- base::Map(
+            f = function(millimeters, days){
+                return(millimeters/days)
+            },
             millimeters = precip_quickref,
             days = durations_between_samples)
 
@@ -5930,7 +5941,6 @@ shortcut_idw <- function(encompassing_dem,
     # compare_interp_methods()
 
     if(output_varname == 'SPECIAL CASE PRECIP'){
-
 
         ws_mean <- tibble(datetime = d_dt,
                           site_code = stream_site_code,
@@ -6091,10 +6101,11 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
+    elevs_masked <- elevs[! is.na(elevs)]
 
     #compute distances from all dem cells to all chemistry locations
     inv_distmat_c <- matrix(NA,
-                            nrow = length(dem_wb),
+                            nrow = length(elevs_masked),
                             ncol = ncol(c_matrix), #ngauges
                             dimnames = list(NULL,
                                             colnames(c_matrix)))
@@ -6102,10 +6113,10 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
             terra::values(.)
-        inv_dist2[is.na(elevs)] <- NA
-        inv_distmat_c[, k] <- inv_dist2
+        inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
+        inv_distmat_c[, k] <- inv_dists_site
     }
 
     #calculate watershed mean concentration and flux at every timestep
@@ -6126,6 +6137,12 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                             1,
                                             function(x) list(x / sum(x))),
                                       recursive = FALSE))
+
+        if(ncol(weightmat_c) == 0){
+            ws_mean_conc[k] <- NA_real_ %>% set_errors(NA)
+            ws_mean_flux[k] <- NA_real_ %>% set_errors(NA)
+            next
+        }
 
         #perform vectorized idw (c)
         ck[is.na(ck)] <- 0
@@ -7155,10 +7172,12 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
 
+    dem_res <- ifelse(any(wb$area < 5), 9, 8)
+
     dem <- expo_backoff(
         expr = {
             elevatr::get_elev_raster(locations = wb_rg_bbox,
-                                     z = 8, #res should adjust with area?,
+                                     z = dem_res,
                                      clip = 'bbox',
                                      expand = 200,
                                      verbose = FALSE,
@@ -7457,8 +7476,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 ws_mean_chemflux_var <- tibble()
                 for(s in 1:nsuperchunks){
 
-
-                    browser()
                     chemflux_superchunk <- chemflux_superchunklist[[s]]
 
                     chemflux_chunklist <- chunk_df(d = chemflux_superchunk,
