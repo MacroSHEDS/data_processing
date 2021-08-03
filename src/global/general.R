@@ -15,7 +15,7 @@ unprod <- univ_products %>%
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-load_spatial_data()
+# load_spatial_data()
 
 # Load in watershed Boundaries
 files <- list.files(glue('data/{n}/{d}/derived/',
@@ -75,6 +75,7 @@ if(class(gee_file_exist) == 'try-error' || nrow(gee_file_exist) == 0){
 
 # i=19
 for(i in 1:nrow(unprod)){
+# for(i in 3:3){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
