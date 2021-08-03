@@ -2591,30 +2591,30 @@ ms_munge <- function(network = domain,
     # munged_dir <- glue('data/{n}/{d}/munged',
     #                    n = network,
     #                    d = domain)
-    # 
+    #
     # if(dir.exists(munged_dir)){
     #     munged_subdirs <- list.dirs(munged_dir,
     #                                 recursive = FALSE)
-    # 
+    #
     #     boundary_ind <- grepl(pattern = 'ws_boundary',
     #                           x = munged_subdirs)
     # }
-    # 
+    #
     # if(exists('boundary_ind') && any(boundary_ind)){
-    # 
+    #
     #     boundary_dir <- munged_subdirs[boundary_ind]
-    # 
+    #
     #     sites <- list.dirs(boundary_dir,
     #                        full.names = FALSE,
     #                        recursive = FALSE)
-    # 
+    #
     #     loginfo(logger = logger_module,
     #             msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
-    # 
+    #
     # } else {
     #     sites <- character()
     # }
-    # 
+    #
     # for(s in sites){
     #     catch <- ms_calc_watershed_area(network = network,
     #                                     domain = domain,
@@ -2731,14 +2731,14 @@ ms_delineate <- function(network,
             message(glue('{s} already delineated ({d})',
                          s = site,
                          d = site_dir))
-            
+
             #calculate watershed area and write it to site_data gsheet
             catch <- ms_calc_watershed_area(network = network,
                                             domain = domain,
                                             site_code = site,
                                             level = level,
                                             update_site_file = TRUE)
-            
+
             next
         }
 
@@ -2777,7 +2777,7 @@ ms_delineate <- function(network,
                 write_dir = site_dir,
                 verbose = verbose) %>%
                 invisible()
-            
+
             catch <- ms_calc_watershed_area(network = network,
                                             domain = domain,
                                             site_code = site,
@@ -5107,8 +5107,6 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
         invisible(sw(file.link(to = files_to_link_to[i],
                                from = files_to_link_from[i])))
     }
-
-    #return()
 }
 
 create_portal_links <- function(network, domain){
@@ -12516,7 +12514,10 @@ download_from_gdrive_arbitrary <- function(network,
 
 generate_watershed_summaries <- function(){
 
-    fils <- list.files('../portal/data', recursive = T, full.names = T)
+    fils <- list.files('data',
+                       recursive = TRUE,
+                       full.names = TRUE)
+
     fils <- fils[grepl('ws_traits', fils)]
 
     wide_spat_data <- site_data %>%
@@ -12770,15 +12771,22 @@ generate_watershed_summaries <- function(){
 
 generate_watershed_raw_spatial_dataset <- function(){
 
-    domains <- list.files('../portal/data/')
-    domains <- domains[!grepl('general', domains)]
+    domains <- list.files('data/')
+    domains <- domains[! grepl('general|spatial', domains)]
 
-    ws_trait_folders <- unique(list.files(glue('../portal/data/{d}/ws_traits',
-                                               d = domains)))
+    ws_trait_folders  <- list.files('data',
+                                    pattern = 'ws_traits',
+                                    include.dirs = TRUE,
+                                    recursive = TRUE)
 
-    all_files <- list.files('../portal/data',
+    ws_trait_folders <- purrr::map(file.path('data', ws_trait_folders),
+                                   ~list.files(.x)) %>%
+        purrr::reduce(~unique(.x))
+
+    all_files <- list.files('data',
                             recursive = TRUE,
                             full.names = TRUE)
+    all_files <- all_files[! grepl('general/|spatial/', all_files)]
 
     raw_spatial_dat <- tibble()
     for(i in 1:length(ws_trait_folders)){
@@ -12787,11 +12795,12 @@ generate_watershed_raw_spatial_dataset <- function(){
 
         if(! length(trait_files)) next
 
-        extention <- str_split_fixed(trait_files, '/', n = Inf)[,5]
+        extention <- str_split_fixed(trait_files, '/', n = Inf)[,6]
         check_sum_raw <- str_split_fixed(extention, '_', n = Inf)[,1]
         sum_raw_prez <- unique(check_sum_raw)
 
-        if(sum_raw_prez == 'sum' || ! all(c('raw', 'sum') %in% sum_raw_prez)){
+        if((length(sum_raw_prez) == 1 && sum_raw_prez == 'sum') ||
+           ! all(c('raw', 'sum') %in% sum_raw_prez)){
 
             all_trait <- map_dfr(trait_files, read_feather)
 
@@ -12818,7 +12827,7 @@ generate_watershed_raw_spatial_dataset <- function(){
             all_trait <- map_dfr(trait_files, read_feather)
         }
 
-        raw_spatial_dat <- rbind.fill(raw_spatial_dat, all_trait)
+        raw_spatial_dat <- plyr::rbind.fill(raw_spatial_dat, all_trait)
     }
 
     site_doms <- site_data %>%
@@ -12826,9 +12835,11 @@ generate_watershed_raw_spatial_dataset <- function(){
 
     raw_spatial_dat <- raw_spatial_dat %>%
         filter(!is.na(val)) %>%
-        left_join(site_doms, by = 'site_code') %>%
+        left_join(site_doms,
+                  by = 'site_code') %>%
         mutate(date = as.Date(datetime)) %>%
-        select(network, domain, site_code, var, date, val, pctCellErr)
+        select(network, domain, site_code, var, date, val,
+               any_of('pctCellErr'))
 
     spat_variable <- unique(raw_spatial_dat$var)
 
@@ -12844,6 +12855,22 @@ generate_watershed_raw_spatial_dataset <- function(){
     #            data_source_code = substr(variable_code, 2, 2)) %>%
     #     left_join(universal_products_meta, by = c('data_class_code', 'data_source_code')) %>%
     #     select(-data_class_code, -data_source_code)
+
+    wonky_varname_inds <- str_detect(string = spat_variable,
+                                     pattern = '_$|__|_dian|^vb_n$')
+    if(any(wonky_varname_inds)){
+
+        wonky_varnames <- spat_variable[wonky_varname_inds]
+
+        logwarn(glue('Wonky variable names still showing up in year.feather. ',
+                     'These will be removed:\n\t{wvn}',
+                     wvn = paste(wonky_varnames,
+                                 collapse = ', '),
+                     .trim = FALSE))
+
+        raw_spatial_dat <- filter(raw_spatial_dat,
+                                  ! var %in% wonky_varnames)
+    }
 
     category_codes <- univ_products %>%
         select(variable_category_code = data_class_code,
