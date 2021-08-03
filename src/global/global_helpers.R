@@ -2588,40 +2588,40 @@ ms_munge <- function(network = domain,
 
     #calculate watershed areas for any provided watershed boundary files,
     #and put them in the site_data file
-    munged_dir <- glue('data/{n}/{d}/munged',
-                       n = network,
-                       d = domain)
-
-    if(dir.exists(munged_dir)){
-        munged_subdirs <- list.dirs(munged_dir,
-                                    recursive = FALSE)
-
-        boundary_ind <- grepl(pattern = 'ws_boundary',
-                              x = munged_subdirs)
-    }
-
-    if(exists('boundary_ind') && any(boundary_ind)){
-
-        boundary_dir <- munged_subdirs[boundary_ind]
-
-        sites <- list.dirs(boundary_dir,
-                           full.names = FALSE,
-                           recursive = FALSE)
-
-        loginfo(logger = logger_module,
-                msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
-
-    } else {
-        sites <- character()
-    }
-
-    for(s in sites){
-        catch <- ms_calc_watershed_area(network = network,
-                                        domain = domain,
-                                        site_code = s,
-                                        level = 'munged',
-                                        update_site_file = TRUE)
-    }
+    # munged_dir <- glue('data/{n}/{d}/munged',
+    #                    n = network,
+    #                    d = domain)
+    # 
+    # if(dir.exists(munged_dir)){
+    #     munged_subdirs <- list.dirs(munged_dir,
+    #                                 recursive = FALSE)
+    # 
+    #     boundary_ind <- grepl(pattern = 'ws_boundary',
+    #                           x = munged_subdirs)
+    # }
+    # 
+    # if(exists('boundary_ind') && any(boundary_ind)){
+    # 
+    #     boundary_dir <- munged_subdirs[boundary_ind]
+    # 
+    #     sites <- list.dirs(boundary_dir,
+    #                        full.names = FALSE,
+    #                        recursive = FALSE)
+    # 
+    #     loginfo(logger = logger_module,
+    #             msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
+    # 
+    # } else {
+    #     sites <- character()
+    # }
+    # 
+    # for(s in sites){
+    #     catch <- ms_calc_watershed_area(network = network,
+    #                                     domain = domain,
+    #                                     site_code = s,
+    #                                     level = 'munged',
+    #                                     update_site_file = TRUE)
+    # }
 }
 
 ms_general <- function(network = domain, domain){
@@ -2731,6 +2731,14 @@ ms_delineate <- function(network,
             message(glue('{s} already delineated ({d})',
                          s = site,
                          d = site_dir))
+            
+            #calculate watershed area and write it to site_data gsheet
+            catch <- ms_calc_watershed_area(network = network,
+                                            domain = domain,
+                                            site_code = site,
+                                            level = level,
+                                            update_site_file = TRUE)
+            
             next
         }
 
@@ -2769,6 +2777,12 @@ ms_delineate <- function(network,
                 write_dir = site_dir,
                 verbose = verbose) %>%
                 invisible()
+            
+            catch <- ms_calc_watershed_area(network = network,
+                                            domain = domain,
+                                            site_code = site,
+                                            level = level,
+                                            update_site_file = TRUE)
 
             loginfo(msg = glue('Delineation complete: {n}-{d}-{s}',
                                n = network,
@@ -10121,6 +10135,7 @@ postprocess_entire_dataset <- function(site_data,
 detrmin_mean_record_length <- function(df){
 
     test <- df %>%
+        filter(!is.na(val)) %>%
         filter(Year != year(Sys.Date())) %>%
         group_by(Year, Month, Day) %>%
         summarise(max = max(val, na.rm = TRUE)) %>%
