@@ -529,7 +529,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#ws_boundary: STATUS=PENDING
+#ws_boundary: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
     
@@ -539,64 +539,92 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code)
     
+    # WS79 AND WS80 are miss labeled. Check this if the product is updated
     wb_paths <- list.files(rawfile, full.names = T)
+    # wb_paths <- grep('WS79|WS80', wb_paths, value = TRUE)
     temp_dir <- tempdir()
     
     proj <- choose_projection(unprojected = TRUE)
     
     unlink(temp_dir, recursive = T)
+    temp_dir <- tempdir()
     
     unzip(wb_paths[1], exdir = temp_dir)
     
     name <- str_split_fixed(wb_paths[1], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
     
+    name <- case_when(name == 'WS79' ~ 'WS80',
+                      name == 'WS80' ~ 'WS79',
+                      TRUE ~ name)
+    
     ws1 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_transform(proj)
     
-    unlink(temp_dir, recursive = T)
+    unlink(temp_dir, recursive = TRUE)
+    
+    temp_dir <- tempdir()
     
     unzip(wb_paths[2], exdir = temp_dir)
     
     name <- str_split_fixed(wb_paths[2], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
     
+    name <- case_when(name == 'WS79' ~ 'WS80',
+                      name == 'WS80' ~ 'WS79',
+                      TRUE ~ name)
+    
     ws2 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
-        sf::st_transform(proj)
+        sf::st_transform(proj) %>%
+        mutate(area = sf::st_area(geometry)) %>%
+        filter(as.numeric(area) > 100) %>%
+        select(-area)
     
-    unlink(temp_dir, recursive = T)
+    unlink(temp_dir, recursive = TRUE)
+    
+    temp_dir <- tempdir()
     
     unzip(wb_paths[3], exdir = temp_dir)
     
     name <- str_split_fixed(wb_paths[3], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
     
+    name <- case_when(name == 'WS79' ~ 'WS80',
+                      name == 'WS80' ~ 'WS79',
+                      TRUE ~ name)
+    
     ws3 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
+        sf::st_cast(., to = 'POLYGON') %>%
         sf::st_transform(proj)
     
+    unlink(temp_dir, recursive = TRUE)
     
-    unlink(temp_dir, recursive = T)
+    temp_dir <- tempdir()
     
     unzip(wb_paths[4], exdir = temp_dir)
     
     name <- str_split_fixed(wb_paths[4], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
     
+    name <- case_when(name == 'WS79' ~ 'WS80',
+                      name == 'WS80' ~ 'WS79',
+                      TRUE ~ name)
+    
     ws4 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
+        sf::st_cast(., to = 'POLYGON') %>%
         sf::st_transform(proj)
-    
-    unlink(temp_dir, recursive = T)
-    
-    d <- rbind(ws1, ws2, ws3, ws4)
+
+    d <- rbind(ws1, ws2, ws3, ws4) %>%
+        mutate(area = as.numeric(sf::st_area(geometry)/10000))
 
     sites <- unique(d$site_code)
     
