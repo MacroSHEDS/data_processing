@@ -2137,7 +2137,16 @@ update_data_tracker_r <- function(network = domain,
 
         rt <- tracker[[set_details$prodname_ms]][[set_details$site_code]]$retrieve
 
-        set_ind <- which(rt$component == set_details$component)
+        if('component' %in% names(rt)){
+            set_ind <- which(rt$component == set_details$component)
+        } else {
+
+            if(nrow(rt) > 1){
+                stop('we need a way to distinguish rows when "component" column is missing')
+            }
+
+            set_ind <- 1
+        }
 
         if(new_status %in% c('pending', 'ok')){
 
@@ -2175,8 +2184,6 @@ update_data_tracker_r <- function(network = domain,
     readr::write_file(x = jsonlite::toJSON(tracker),
                       file = trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_m <- function(network = domain,
@@ -5809,6 +5816,22 @@ shortcut_idw <- function(encompassing_dem,
     #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
+
+    wb_is_linear <- terra::nrow(dem_wb) == 1 || terra::ncol(dem_wb) == 1
+    wb_all_na <- all(is.na(terra::values(dem_wb)))
+
+    if(wb_all_na){
+
+        if(wb_is_linear){
+
+            #masking will cause trouble here (only known for niwot-MARTINELLI)
+            dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+
+        } else {
+            stop('some kind of crop/mask issue with small watersheds?')
+        }
+    }
+
     elevs <- terra::values(dem_wb)
     elevs_masked <- elevs[! is.na(elevs)]
 
