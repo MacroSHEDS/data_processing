@@ -10,10 +10,10 @@
 #            val = errors::drop_errors(val),
 #            val = scale(val))
 
-q_interp_limit = 1#240
+q_interp_limit = 1 #240
 p_interp_limit = 1
 # chem_interp_limit = 1 #not yet in use
-flux_interp_limit = 1#240
+flux_interp_limit = 1 #240
 
 #setup ####
 
@@ -25,24 +25,31 @@ ws_areas <- site_data %>%
     select(network, domain, site_code, ws_area_ha)
 
 pals = c('Blues', 'Greens', 'Greys', 'Reds', 'Purples',
-         'PuRd')# 'YlOrBr', 'OrRd', 'RdPu', 'Oranges', 'YlGnBu', 'PuRd')
+         'PuRd', 'YlOrBr', 'OrRd', 'Oranges', 'YlGnBu')
 palettes = RColorBrewer::brewer.pal.info %>%
     mutate(name = row.names(.)) %>%
     filter(name %in% pals)
     # filter(category == 'seq') %>%
-palettes = palettes[order(order(pals)), ]
+palettes = palettes[order(pals), ]
 palettes = bind_rows(palettes, palettes, palettes)
 rownames(palettes) = 1:nrow(palettes)
-palettes$lty = c(1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3)
+nlty = ceiling(nrow(palettes) / 6)
+palettes$lty = rep(1:nlty, each = 6, length.out = nrow(palettes))
 
 domains = unique(site_data$domain[site_data$in_workflow == 1])
-dmncolors = c(RColorBrewer::brewer.pal(12, 'Paired'),
-              # RColorBrewer::brewer.pal(8, 'Accent')[6], #redund
-              RColorBrewer::brewer.pal(8, 'Dark2')[c(4, 8)],
-              RColorBrewer::brewer.pal(9, 'Pastel1')[7],
-              # RColorBrewer::brewer.pal(8, 'Pastel2')[-c(1:6)],
-              RColorBrewer::brewer.pal(8, 'Spectral')[7],
-              RColorBrewer::brewer.pal(8, 'Greens')[8])
+# dmncolors = c(RColorBrewer::brewer.pal(12, 'Paired'),
+#               # RColorBrewer::brewer.pal(8, 'Accent')[6], #redund
+#               RColorBrewer::brewer.pal(8, 'Dark2')[c(4, 8)],
+#               RColorBrewer::brewer.pal(9, 'Pastel1')[7],
+#               # RColorBrewer::brewer.pal(8, 'Pastel2')[-c(1:6)],
+#               RColorBrewer::brewer.pal(8, 'Spectral')[7],
+#               RColorBrewer::brewer.pal(8, 'Greens')[8])
+dmncolors = c('brown4', 'brown1', 'blueviolet', 'blue4', 'dodgerblue3', 'blanchedalmond',
+              'bisque4', 'khaki1', 'gray70', 'gray25', 'aquamarine4',
+              'darkorange2', 'darkolivegreen4', 'darkolivegreen1', 'darkmagenta',
+              'darkgoldenrod1', 'cyan3', 'deeppink',
+              'darkred', 'green1', 'palevioletred4', 'peru', 'yellow', 'springgreen2',
+              'mediumorchid3', 'white', 'skyblue', 'burlywood4', 'cornflowerblue')
 # dmncolors = viridis::(n = length(domains))
 # plot(1:15, 1:15, col=dmncolors, cex=5, pch=20) #test color distinctiveness
 dmncolors = dmncolors[1:length(domains)]
@@ -249,6 +256,7 @@ for(i in 1:length(q_dirs)){
                # domain = stringr::str_split(ntw_dmn_sit, ' > ')[[1]][2],
                yearval = paste(year, round(val, 1), sep=': ')) %>%
         filter(val > 2000)
+
     if(nrow(hi_q)){
         sitechunks = split(hi_q, hi_q$site)
         for(sc in sitechunks){
@@ -422,7 +430,7 @@ dev.off()
 fluxvars = c('Ca', 'Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
 # ylim_maxes = log(c(1500, 300, 3000, 11000, 800, 4000, 700))
 ylim_maxes = log(rep(11000, 6))
-ylim_mins = log(rep(0.00009, 6))
+ylim_mins = log(rep(0.000001, 6))
 xlim_maxes = log(rep(10000, 6))
 # xlim_mins = log(c(10, 10, 10, 10, 10, 0.1, 10))
 xlim_mins = log(rep(1, 6))
@@ -430,7 +438,7 @@ xlim_mins = log(rep(1, 6))
 # ylim_mins = log(rep(0.1, length(fluxvars)))
 # legend_position = c('topleft', 'topright', 'topright', 'topright', 'topleft', 'topright', 'topleft')
 legend_position = rep('topleft', length(fluxvars))
-log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000)
+log_ticks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000)
 
 pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/Qinterp', q_interp_limit,
@@ -448,8 +456,8 @@ for(k in 1:length(fluxvars)){
     plot(1, 1, xlim=c(xlim_mins[k], xlim_maxes[k]), ylim=c(ylim_mins[k], ylim_maxes[k]), type='n', yaxs='i',
          xaxs = 'i', ylab='Annual Flux (kg/ha)', xlab='Annual Runoff (mm)',
          main=paste0('Annual Q vs. Flux (', fluxvar, ')'), xaxt='n', yaxt='n')
-    axis(1, at=log(log_ticks), labels = log_ticks)
-    axis(2, at=log(log_ticks), labels = log_ticks)
+    axis(1, at=log(log_ticks), labels = log_ticks, cex.axis=0.8)
+    axis(2, at=log(log_ticks), labels = log_ticks, cex.axis=0.8)
     corners = par("usr")
     rect(corners[1], corners[3], corners[2], corners[4], col = 'black')
 
@@ -720,19 +728,22 @@ for(k in 1:length(fluxvars)){
     graphics::text(x=median(yr_seq), y=quantile(c(0, ylim_maxes[k]), 0.9),
                    labels=paste0('sites: ', plotted_site_tally), adj=0.5)
 
-    lgnd_lty = ifelse(palettes$lty == 2, 3, 1)
     defpar = par(lend=1)
     for(j in 3:9){
         if(j == 3){
             legend(x=1949, y=quantile(c(0, ylim_maxes[k]), 0.95),
                    legend=legend_map$domain, bty = 'n',
                    col = sapply(legend_map$colors, function(x) x[j]),
-                   lty=lgnd_lty, seg.len=1, lwd=5, x.intersp=6.5)
+                   lty=1, seg.len=1, lwd=5, x.intersp=6.5)
+            legend(x=1947, y=quantile(c(0, ylim_maxes[k]), 0.95),
+                   legend=rep('', nrow(legend_map)), bty = 'n',
+                   col = 'black',
+                   lty=palettes$lty, seg.len=2, lwd=1, x.intersp=6.5)
         } else {
             legend(x=1946 + j, y=quantile(c(0, ylim_maxes[k]), 0.95),
                    legend=rep('', nrow(legend_map)), bty = 'n',
                    col = sapply(legend_map$colors, function(x) x[j]),
-                   lty=lgnd_lty, seg.len=1, lwd=5)
+                   lty=1, seg.len=1, lwd=5)
         }
     }
     par(defpar)
