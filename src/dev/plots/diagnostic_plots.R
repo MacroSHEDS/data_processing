@@ -52,7 +52,8 @@ dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
 
 # [OBSOLETE] all Q (line plot with log Y) ####
 
-# q_dirs <- list_all_product_dirs('discharge')
+# q_dirs <- list_all_product_dirs('discharge',
+#                                 location = 'data_acquisition')
 # log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
 #
 # png(width=11, height=9, units='in', type='cairo', res=300,
@@ -168,7 +169,8 @@ dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
 
 # Q by domain (line plots stitched, log Y) ####
 
-q_dirs <- list_all_product_dirs('discharge')
+q_dirs <- list_all_product_dirs('discharge',
+                                location = 'data_acquisition')
 log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
 
 pdf(width=11, height=9, onefile=TRUE,
@@ -435,7 +437,8 @@ pdf(width=11, height=9, onefile=TRUE,
                 '_vs_FLUXinterp', flux_interp_limit, '.pdf'))
 par(mar=c(14, 4, 4, 1))
 
-q_dirs <- list_all_product_dirs('discharge')
+q_dirs <- list_all_product_dirs('discharge',
+                                location = 'data_acquisition')
 
 flux_ranges = q_ranges = tibble()
 for(k in 1:length(fluxvars)){
@@ -608,7 +611,8 @@ pdf(width=11, height=9, onefile=TRUE,
                 flux_interp_limit, '.pdf'))
 par(mar=c(14, 4, 4, 1))
 
-q_dirs <- list_all_product_dirs('discharge')
+q_dirs <- list_all_product_dirs('discharge',
+                                location = 'data_acquisition')
 
 yr_seq = 1948:2021
 log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
@@ -745,7 +749,8 @@ dev.off()
 
 # all Q (box plot with log Y, dark) ####
 
-q_dirs <- list_all_product_dirs('discharge')
+q_dirs <- list_all_product_dirs('discharge',
+                                location = 'data_acquisition')
 
 plotted_site_tally = 0
 d_by_max = d_boxplot = tibble()

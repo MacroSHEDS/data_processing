@@ -1,14 +1,14 @@
 library(feather)
 library(tidyverse)
 
-#remove wonky varnames in year.feather
+#remove wonky varnames in year.feather ####
 setwd('~/git/macrosheds/portal/')
 zz = read_feather('data/general/biplot/year.feather')
 unique(grep('__', zz$var, value=T))
 zz = filter(zz, ! var %in% c('vb_', 'va__median', 'vb_n', 'pd_geo__mean'))
 write_feather(zz, '/data/general/biplot/year.feather')
 
-#don't recall why this was needed or if it might be again
+#don't recall why this was needed or if it might be again ####
 setwd('data/general/catalog_files/indiv_variables/')
 var_files = dir()
 d_list = list()
@@ -22,7 +22,7 @@ for(i in seq_along(var_files)){
         select(Variable, everything())
 }
 
-#check out all arctic sheds (commented ones need work)
+#check out all arctic sheds (commented ones need work) ####
 setwd('~/git/macrosheds/data_acquisition/')
 mv=mapview::mapview
 mv(sf::st_read('data/lter/arctic/derived/ws_boundary__ms000/Kuparuk_River_-0.1/Kuparuk_River_-0.1.shp'))
@@ -44,3 +44,11 @@ mv(sf::st_read('data/lter/arctic/derived/ws_boundary__ms000/Kuparuk_River_2.5/Ku
 mv(sf::st_read('data/lter/arctic/derived/ws_boundary__ms000/Kuparuk_River_4/Kuparuk_River_4.shp'))
 mv(sf::st_read('data/lter/arctic/derived/ws_boundary__ms000/Kuparuk_River_4.1/Kuparuk_River_4.1.shp'))
 
+#look for and remove dupes in spatial timeseries ####
+zz = fst::read_fst('../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
+xx = duplicated(zz[,1:5])
+# z2 = zz[xx,]
+# as.data.frame(unique(z2[, c('domain', 'var')]))
+
+zz = zz[! xx, ]
+fst::write_fst(zz, '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')

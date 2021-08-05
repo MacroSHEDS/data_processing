@@ -1071,12 +1071,13 @@ ms_read_raw_csv <- function(filepath,
                               sampling_type = sampling_type))
 
     #Check if all sites are in site file
-    if(!all(unique(d$site_code) %in% site_data$site_code)) {
+    unq_sites <- unique(d$site_code)
+    if(! all(unq_sites %in% site_data$site_code)){
 
-        for(i in 1:length(unique(d$site_code))) {
-            if(!unique(d$site_code)[i] %in% site_data$site_code) {
-                logwarn(msg = paste(unname(unique(d$site_code)[i]),
-                                    'is not in site_data file; add'),
+        for(i in seq_along(unq_sites)) {
+            if(! unq_sites[i] %in% site_data$site_code){
+                logwarn(msg = paste(unname(unq_sites[i]),
+                                    'is not in site_data file; add?'),
                         logger = logger_module)
             }
         }
@@ -2646,7 +2647,6 @@ ms_delineate <- function(network,
 
     site_locations <- site_data %>%
         filter(
-            as.logical(in_workflow),
             network == !!network,
             domain == !!domain,
             # ! is.na(latitude),
@@ -4548,7 +4548,8 @@ ms_calc_watershed_area <- function(network,
 
         site_data$ws_area_ha[site_data$domain == domain &
                                  site_data$network == network &
-                                 site_data$site_code == site_code] <- ws_area_ha
+                                 site_data$site_code == site_code &
+                                 site_data$site_type != 'rain_gauge'] <- ws_area_ha
 
         ms_write_confdata(site_data,
                           which_dataset = 'site_data',
@@ -9802,7 +9803,6 @@ derive_stream_flux <- function(network, domain, prodname_ms){
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
                                   site_code = s))
-
         if(!is.null(flux)){
 
             write_ms_file(d = flux,
@@ -10412,7 +10412,6 @@ list_domains_with_discharge <- function(site_data){
     #   sites without discharge won't be selectable on the timeseries tab.
 
     Q_or_noQ <- site_data %>%
-        filter(as.logical(in_workflow)) %>%
         select(network, domain, site_code) %>%
         distinct() %>%
         arrange(network, domain, site_code) %>%
@@ -10469,7 +10468,7 @@ scale_flux_by_area <- function(network_domain, site_data){
     #   documentation
 
     ws_areas <- site_data %>%
-        filter(as.logical(in_workflow)) %>%
+        filter(site_type == 'stream_gauge') %>%
         select(domain, site_code, ws_area_ha) %>%
         plyr::dlply(.variables = 'domain',
                     .fun = function(x) select(x, -domain))
@@ -11042,17 +11041,8 @@ catalog_held_data <- function(network_domain, site_data){
     }
 
     all_site_breakdown <- site_data %>%
-        filter(as.logical(in_workflow),
-               ! site_type == 'rain_gauge') %>%
+        filter(! site_type == 'rain_gauge') %>%
         select(-in_workflow, -notes, -CRS, -local_time_zone)
-
-    dup_inds_bool <- duplicated(site_data[, c('site_code', 'site_type')])
-    if(any(dup_inds_bool)){
-        dup_sites <- pull(site_data[dup_inds_bool, ], site_code)
-        stop(glue('Duplicate records in site_data: {dups}',
-                  dups = paste(dup_sites, collapse = ', ')))
-        #GSMACK, N01B, N02B have dupe site_codes, but for different site_types
-    }
 
     all_variable_breakdown <- tibble()
     for(i in 1:nrow(network_domain)){
@@ -11536,7 +11526,7 @@ ms_determine_data_interval <- function(d, per_column = FALSE){
     return(data_interval)
 }
 
-ms_complete_all_cases <- function(network_domain, site_data){
+ms_complete_all_cases <- function(network_domain){
 
     #populates implicit NAs in all feather files across all product directories.
     #   Note: this only operates on files within data_acquisition/data, NOT within
@@ -11662,7 +11652,7 @@ ms_complete_all_cases <- function(network_domain, site_data){
     }
 }
 
-insert_gap_border_NAs <- function(network_domain, site_data){
+insert_gap_border_NAs <- function(network_domain){
 
     #populates rows bordering missing data segments with NA data, so that
     #   gaps are properly plotted by dygraphs, etc.
@@ -11717,7 +11707,7 @@ insert_gap_border_NAs <- function(network_domain, site_data){
     }
 }
 
-generate_product_csvs <- function(network_domain, site_data){
+generate_product_csvs <- function(network_domain){
 
     #in addition to the data/network/domain/product/site.feather format,
     #   we can provide analysis-ready CSVs.
@@ -12521,8 +12511,7 @@ generate_watershed_summaries <- function(){
     fils <- fils[grepl('ws_traits', fils)]
 
     wide_spat_data <- site_data %>%
-        filter(in_workflow == 1,
-               site_type == 'stream_gauge') %>%
+        filter(site_type == 'stream_gauge') %>%
         select(network, domain, site_code, ws_area_ha)
 
     # Prism precip
@@ -12831,6 +12820,7 @@ generate_watershed_raw_spatial_dataset <- function(){
     }
 
     site_doms <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         select(network, domain, site_code)
 
     raw_spatial_dat <- raw_spatial_dat %>%
@@ -12899,6 +12889,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
     #df = default sites for each domain
     df <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -12913,7 +12904,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/stream_chemistry/', d = dom)
+        dom_path <- glue('../portal/data/{d}/stream_chemistry/',
+                         d = dom)
         site_files <- list.files(dom_path)
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
@@ -13219,7 +13211,6 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         }
 
         all_domain <-  rbind.fill(all_domain, all_sites)
-
     }
 
     all_domain <- all_domain %>%
@@ -13227,7 +13218,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         mutate(missing = as.numeric(substr(missing, 1, 2))) %>%
         mutate(val = round(val, 4))
 
-    dir.create('../portal/data/general/biplot')
+    dir.create('../portal/data/general/biplot',
+               showWarnings = FALSE)
 
     if(filter_ms_interp && filter_ms_status){
         write_feather(all_domain, '../portal/data/general/biplot/year_interp0_status0.feather')
@@ -13249,6 +13241,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 compute_yearly_summary_ws <- function(){
 
     df <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -13263,7 +13256,8 @@ compute_yearly_summary_ws <- function(){
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/ws_traits',
+        dom_path <- glue('data/{n}/{d}/ws_traits',
+                         n = net,
                          d = dom)
 
         prod_files <- list.files(dom_path,
@@ -13398,3 +13392,32 @@ save_general_files <- function(final_file, raw_file, domain_dir){
         }
     }
 }
+
+run_checks <- function(){
+
+    #dump routines here for checking integrity of config files, etc. Basically,
+    #this should identify common issues (like duplicated variables in ms_vars)
+    #that should be corrected before any processing happens.
+    #this runs before the main loop in acquisition_master.R.
+
+    dupe_siterows <- site_data %>%
+        select(network, domain, site_code, site_type) %>%
+        filter(duplicated(.))
+
+    if(any(dupe_siterows)){
+        stop(glue('duplicated site(s) in site_data:\n{ds}',
+                  ds = paste(dupe_siterows$site_code,
+                             collapse = ', ')))
+        #GSMACK, N01B, N02B have dupe site_codes, but for different site_types
+    }
+
+    dupe_vars <- ms_vars %>%
+        filter(duplicated(.$variable_code))
+
+    if(any(dupe_vars)){
+        stop(glue('duplicated variable(s) in ms_vars:\n{dv}',
+                  dv = paste(dupe_vars$variable_code,
+                             collapse = ', ')))
+    }
+}
+
