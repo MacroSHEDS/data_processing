@@ -778,7 +778,8 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     #   multiple variables, this filters to just the ones specified (ignores
     #   variable prefixes)
 
-    prodname_dirs <- list_all_product_dirs(prodname = prodname)
+    prodname_dirs <- list_all_product_dirs(prodname = prodname,
+                                           location = 'data_acquisition')
 
     d <- tibble()
     for(pd in prodname_dirs){
