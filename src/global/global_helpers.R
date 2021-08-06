@@ -1071,12 +1071,13 @@ ms_read_raw_csv <- function(filepath,
                               sampling_type = sampling_type))
 
     #Check if all sites are in site file
-    if(!all(unique(d$site_code) %in% site_data$site_code)) {
+    unq_sites <- unique(d$site_code)
+    if(! all(unq_sites %in% site_data$site_code)){
 
-        for(i in 1:length(unique(d$site_code))) {
-            if(!unique(d$site_code)[i] %in% site_data$site_code) {
-                logwarn(msg = paste(unname(unique(d$site_code)[i]),
-                                    'is not in site_data file; add'),
+        for(i in seq_along(unq_sites)) {
+            if(! unq_sites[i] %in% site_data$site_code){
+                logwarn(msg = paste(unname(unq_sites[i]),
+                                    'is not in site_data file; add?'),
                         logger = logger_module)
             }
         }
@@ -2137,7 +2138,16 @@ update_data_tracker_r <- function(network = domain,
 
         rt <- tracker[[set_details$prodname_ms]][[set_details$site_code]]$retrieve
 
-        set_ind <- which(rt$component == set_details$component)
+        if('component' %in% names(rt)){
+            set_ind <- which(rt$component == set_details$component)
+        } else {
+
+            if(nrow(rt) > 1){
+                stop('we need a way to distinguish rows when "component" column is missing')
+            }
+
+            set_ind <- 1
+        }
 
         if(new_status %in% c('pending', 'ok')){
 
@@ -2175,8 +2185,6 @@ update_data_tracker_r <- function(network = domain,
     readr::write_file(x = jsonlite::toJSON(tracker),
                       file = trackerfile)
     backup_tracker(trackerfile)
-
-    #return()
 }
 
 update_data_tracker_m <- function(network = domain,
@@ -2584,30 +2592,30 @@ ms_munge <- function(network = domain,
     # munged_dir <- glue('data/{n}/{d}/munged',
     #                    n = network,
     #                    d = domain)
-    # 
+    #
     # if(dir.exists(munged_dir)){
     #     munged_subdirs <- list.dirs(munged_dir,
     #                                 recursive = FALSE)
-    # 
+    #
     #     boundary_ind <- grepl(pattern = 'ws_boundary',
     #                           x = munged_subdirs)
     # }
-    # 
+    #
     # if(exists('boundary_ind') && any(boundary_ind)){
-    # 
+    #
     #     boundary_dir <- munged_subdirs[boundary_ind]
-    # 
+    #
     #     sites <- list.dirs(boundary_dir,
     #                        full.names = FALSE,
     #                        recursive = FALSE)
-    # 
+    #
     #     loginfo(logger = logger_module,
     #             msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
-    # 
+    #
     # } else {
     #     sites <- character()
     # }
-    # 
+    #
     # for(s in sites){
     #     catch <- ms_calc_watershed_area(network = network,
     #                                     domain = domain,
@@ -2639,7 +2647,6 @@ ms_delineate <- function(network,
 
     site_locations <- site_data %>%
         filter(
-            as.logical(in_workflow),
             network == !!network,
             domain == !!domain,
             # ! is.na(latitude),
@@ -2724,14 +2731,14 @@ ms_delineate <- function(network,
             message(glue('{s} already delineated ({d})',
                          s = site,
                          d = site_dir))
-            
+
             #calculate watershed area and write it to site_data gsheet
             catch <- ms_calc_watershed_area(network = network,
                                             domain = domain,
                                             site_code = site,
                                             level = level,
                                             update_site_file = TRUE)
-            
+
             next
         }
 
@@ -2770,7 +2777,7 @@ ms_delineate <- function(network,
                 write_dir = site_dir,
                 verbose = verbose) %>%
                 invisible()
-            
+
             catch <- ms_calc_watershed_area(network = network,
                                             domain = domain,
                                             site_code = site,
@@ -4541,7 +4548,8 @@ ms_calc_watershed_area <- function(network,
 
         site_data$ws_area_ha[site_data$domain == domain &
                                  site_data$network == network &
-                                 site_data$site_code == site_code] <- ws_area_ha
+                                 site_data$site_code == site_code &
+                                 site_data$site_type != 'rain_gauge'] <- ws_area_ha
 
         ms_write_confdata(site_data,
                           which_dataset = 'site_data',
@@ -5100,8 +5108,6 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
         invisible(sw(file.link(to = files_to_link_to[i],
                                from = files_to_link_from[i])))
     }
-
-    #return()
 }
 
 create_portal_links <- function(network, domain){
@@ -5823,17 +5829,43 @@ shortcut_idw <- function(encompassing_dem,
     #clean dem and get elevation values
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
+
+    wb_is_linear <- terra::nrow(dem_wb) == 1 || terra::ncol(dem_wb) == 1
+    wb_all_na <- all(is.na(terra::values(dem_wb)))
+
+    if(wb_all_na){
+
+        if(wb_is_linear){
+
+            #masking will cause trouble here (only known for niwot-MARTINELLI)
+            dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
+
+        } else {
+            stop('some kind of crop/mask issue with small watersheds?')
+        }
+    }
+
     elevs <- terra::values(dem_wb)
+    elevs_masked <- elevs[! is.na(elevs)]
 
     #compute distances from all dem cells to all data locations
-    inv_distmat <- matrix(NA, nrow = length(dem_wb), ncol = ncol(data_matrix),
-                          dimnames = list(NULL, colnames(data_matrix)))
+    inv_distmat <- matrix(NA,
+                          nrow = length(elevs_masked),
+                          ncol = ncol(data_matrix),
+                          dimnames = list(NULL,
+                                          colnames(data_matrix)))
+
     for(k in 1:ncol(data_matrix)){
-        dk <- filter(data_locations, site_code == colnames(data_matrix)[k])
-        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+
+        dk <- filter(data_locations,
+                     site_code == colnames(data_matrix)[k])
+
+        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
             terra::values(.)
-        inv_dist2[is.na(elevs)] <- NA #mask
-        inv_distmat[, k] <- inv_dist2
+
+        # inv_dists_site[is.na(elevs)] <- NA #mask
+        inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
+        inv_distmat[, k] <- inv_dists_site
     }
 
     # if(output_varname == 'SPECIAL CASE PRECIP'){ REMOVE
@@ -5894,7 +5926,7 @@ shortcut_idw <- function(encompassing_dem,
             ab <- as.list(mod$coefficients)
 
             #estimate raster values from elevation alone
-            d_from_elev <- ab$elevation * elevs + ab$`(Intercept)`
+            d_from_elev <- ab$elevation * elevs_masked + ab$`(Intercept)`
 
             #average both approaches (this should be weighted toward idw
             #when close to any data location, and weighted half and half when far)
@@ -5928,9 +5960,10 @@ shortcut_idw <- function(encompassing_dem,
     if(save_precip_quickref){
 
         #convert to mm/d
-        precip_quickref <- Map(function(millimeters, days){
-            return(millimeters/days)
-        },
+        precip_quickref <- base::Map(
+            f = function(millimeters, days){
+                return(millimeters/days)
+            },
             millimeters = precip_quickref,
             days = durations_between_samples)
 
@@ -5944,7 +5977,6 @@ shortcut_idw <- function(encompassing_dem,
     # compare_interp_methods()
 
     if(output_varname == 'SPECIAL CASE PRECIP'){
-
 
         ws_mean <- tibble(datetime = d_dt,
                           site_code = stream_site_code,
@@ -6105,10 +6137,11 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
+    elevs_masked <- elevs[! is.na(elevs)]
 
     #compute distances from all dem cells to all chemistry locations
     inv_distmat_c <- matrix(NA,
-                            nrow = length(dem_wb),
+                            nrow = length(elevs_masked),
                             ncol = ncol(c_matrix), #ngauges
                             dimnames = list(NULL,
                                             colnames(c_matrix)))
@@ -6116,10 +6149,10 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        inv_dist2 <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
             terra::values(.)
-        inv_dist2[is.na(elevs)] <- NA
-        inv_distmat_c[, k] <- inv_dist2
+        inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
+        inv_distmat_c[, k] <- inv_dists_site
     }
 
     #calculate watershed mean concentration and flux at every timestep
@@ -6140,6 +6173,12 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                                             1,
                                             function(x) list(x / sum(x))),
                                       recursive = FALSE))
+
+        if(ncol(weightmat_c) == 0){
+            ws_mean_conc[k] <- NA_real_ %>% set_errors(NA)
+            ws_mean_flux[k] <- NA_real_ %>% set_errors(NA)
+            next
+        }
 
         #perform vectorized idw (c)
         ck[is.na(ck)] <- 0
@@ -7169,10 +7208,12 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
 
+    dem_res <- ifelse(any(wb$area < 5), 9, 8)
+
     dem <- expo_backoff(
         expr = {
             elevatr::get_elev_raster(locations = wb_rg_bbox,
-                                     z = 8, #res should adjust with area?,
+                                     z = dem_res,
                                      clip = 'bbox',
                                      expand = 200,
                                      verbose = FALSE,
@@ -7471,8 +7512,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 ws_mean_chemflux_var <- tibble()
                 for(s in 1:nsuperchunks){
 
-
-                    browser()
                     chemflux_superchunk <- chemflux_superchunklist[[s]]
 
                     chemflux_chunklist <- chunk_df(d = chemflux_superchunk,
@@ -9764,7 +9803,6 @@ derive_stream_flux <- function(network, domain, prodname_ms){
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
                                   site_code = s))
-
         if(!is.null(flux)){
 
             write_ms_file(d = flux,
@@ -10374,7 +10412,6 @@ list_domains_with_discharge <- function(site_data){
     #   sites without discharge won't be selectable on the timeseries tab.
 
     Q_or_noQ <- site_data %>%
-        filter(as.logical(in_workflow)) %>%
         select(network, domain, site_code) %>%
         distinct() %>%
         arrange(network, domain, site_code) %>%
@@ -10431,7 +10468,7 @@ scale_flux_by_area <- function(network_domain, site_data){
     #   documentation
 
     ws_areas <- site_data %>%
-        filter(as.logical(in_workflow)) %>%
+        filter(site_type == 'stream_gauge') %>%
         select(domain, site_code, ws_area_ha) %>%
         plyr::dlply(.variables = 'domain',
                     .fun = function(x) select(x, -domain))
@@ -11004,17 +11041,8 @@ catalog_held_data <- function(network_domain, site_data){
     }
 
     all_site_breakdown <- site_data %>%
-        filter(as.logical(in_workflow),
-               ! site_type == 'rain_gauge') %>%
+        filter(! site_type == 'rain_gauge') %>%
         select(-in_workflow, -notes, -CRS, -local_time_zone)
-
-    dup_inds_bool <- duplicated(site_data[, c('site_code', 'site_type')])
-    if(any(dup_inds_bool)){
-        dup_sites <- pull(site_data[dup_inds_bool, ], site_code)
-        stop(glue('Duplicate records in site_data: {dups}',
-                  dups = paste(dup_sites, collapse = ', ')))
-        #GSMACK, N01B, N02B have dupe site_codes, but for different site_types
-    }
 
     all_variable_breakdown <- tibble()
     for(i in 1:nrow(network_domain)){
@@ -11498,7 +11526,7 @@ ms_determine_data_interval <- function(d, per_column = FALSE){
     return(data_interval)
 }
 
-ms_complete_all_cases <- function(network_domain, site_data){
+ms_complete_all_cases <- function(network_domain){
 
     #populates implicit NAs in all feather files across all product directories.
     #   Note: this only operates on files within data_acquisition/data, NOT within
@@ -11624,7 +11652,7 @@ ms_complete_all_cases <- function(network_domain, site_data){
     }
 }
 
-insert_gap_border_NAs <- function(network_domain, site_data){
+insert_gap_border_NAs <- function(network_domain){
 
     #populates rows bordering missing data segments with NA data, so that
     #   gaps are properly plotted by dygraphs, etc.
@@ -11679,7 +11707,7 @@ insert_gap_border_NAs <- function(network_domain, site_data){
     }
 }
 
-generate_product_csvs <- function(network_domain, site_data){
+generate_product_csvs <- function(network_domain){
 
     #in addition to the data/network/domain/product/site.feather format,
     #   we can provide analysis-ready CSVs.
@@ -12476,12 +12504,14 @@ download_from_gdrive_arbitrary <- function(network,
 
 generate_watershed_summaries <- function(){
 
-    fils <- list.files('../portal/data', recursive = T, full.names = T)
+    fils <- list.files('data',
+                       recursive = TRUE,
+                       full.names = TRUE)
+
     fils <- fils[grepl('ws_traits', fils)]
 
     wide_spat_data <- site_data %>%
-        filter(in_workflow == 1,
-               site_type == 'stream_gauge') %>%
+        filter(site_type == 'stream_gauge') %>%
         select(network, domain, site_code, ws_area_ha)
 
     # Prism precip
@@ -12730,15 +12760,22 @@ generate_watershed_summaries <- function(){
 
 generate_watershed_raw_spatial_dataset <- function(){
 
-    domains <- list.files('../portal/data/')
-    domains <- domains[!grepl('general', domains)]
+    domains <- list.files('data/')
+    domains <- domains[! grepl('general|spatial', domains)]
 
-    ws_trait_folders <- unique(list.files(glue('../portal/data/{d}/ws_traits',
-                                               d = domains)))
+    ws_trait_folders  <- list.files('data',
+                                    pattern = 'ws_traits',
+                                    include.dirs = TRUE,
+                                    recursive = TRUE)
 
-    all_files <- list.files('../portal/data',
+    ws_trait_folders <- purrr::map(file.path('data', ws_trait_folders),
+                                   ~list.files(.x)) %>%
+        purrr::reduce(~unique(.x))
+
+    all_files <- list.files('data',
                             recursive = TRUE,
                             full.names = TRUE)
+    all_files <- all_files[! grepl('general/|spatial/', all_files)]
 
     raw_spatial_dat <- tibble()
     for(i in 1:length(ws_trait_folders)){
@@ -12747,11 +12784,12 @@ generate_watershed_raw_spatial_dataset <- function(){
 
         if(! length(trait_files)) next
 
-        extention <- str_split_fixed(trait_files, '/', n = Inf)[,5]
+        extention <- str_split_fixed(trait_files, '/', n = Inf)[,6]
         check_sum_raw <- str_split_fixed(extention, '_', n = Inf)[,1]
         sum_raw_prez <- unique(check_sum_raw)
 
-        if(sum_raw_prez == 'sum' || ! all(c('raw', 'sum') %in% sum_raw_prez)){
+        if((length(sum_raw_prez) == 1 && sum_raw_prez == 'sum') ||
+           ! all(c('raw', 'sum') %in% sum_raw_prez)){
 
             all_trait <- map_dfr(trait_files, read_feather)
 
@@ -12778,17 +12816,20 @@ generate_watershed_raw_spatial_dataset <- function(){
             all_trait <- map_dfr(trait_files, read_feather)
         }
 
-        raw_spatial_dat <- rbind.fill(raw_spatial_dat, all_trait)
+        raw_spatial_dat <- plyr::rbind.fill(raw_spatial_dat, all_trait)
     }
 
     site_doms <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         select(network, domain, site_code)
 
     raw_spatial_dat <- raw_spatial_dat %>%
         filter(!is.na(val)) %>%
-        left_join(site_doms, by = 'site_code') %>%
+        left_join(site_doms,
+                  by = 'site_code') %>%
         mutate(date = as.Date(datetime)) %>%
-        select(network, domain, site_code, var, date, val, pctCellErr)
+        select(network, domain, site_code, var, date, val,
+               any_of('pctCellErr'))
 
     spat_variable <- unique(raw_spatial_dat$var)
 
@@ -12804,6 +12845,22 @@ generate_watershed_raw_spatial_dataset <- function(){
     #            data_source_code = substr(variable_code, 2, 2)) %>%
     #     left_join(universal_products_meta, by = c('data_class_code', 'data_source_code')) %>%
     #     select(-data_class_code, -data_source_code)
+
+    wonky_varname_inds <- str_detect(string = spat_variable,
+                                     pattern = '_$|__|_dian|^vb_n$')
+    if(any(wonky_varname_inds)){
+
+        wonky_varnames <- spat_variable[wonky_varname_inds]
+
+        logwarn(glue('Wonky variable names still showing up in year.feather. ',
+                     'These will be removed:\n\t{wvn}',
+                     wvn = paste(wonky_varnames,
+                                 collapse = ', '),
+                     .trim = FALSE))
+
+        raw_spatial_dat <- filter(raw_spatial_dat,
+                                  ! var %in% wonky_varnames)
+    }
 
     category_codes <- univ_products %>%
         select(variable_category_code = data_class_code,
@@ -12832,6 +12889,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
     #df = default sites for each domain
     df <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -12846,7 +12904,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/stream_chemistry/', d = dom)
+        dom_path <- glue('../portal/data/{d}/stream_chemistry/',
+                         d = dom)
         site_files <- list.files(dom_path)
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
@@ -13152,7 +13211,6 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         }
 
         all_domain <-  rbind.fill(all_domain, all_sites)
-
     }
 
     all_domain <- all_domain %>%
@@ -13160,7 +13218,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         mutate(missing = as.numeric(substr(missing, 1, 2))) %>%
         mutate(val = round(val, 4))
 
-    dir.create('../portal/data/general/biplot')
+    dir.create('../portal/data/general/biplot',
+               showWarnings = FALSE)
 
     if(filter_ms_interp && filter_ms_status){
         write_feather(all_domain, '../portal/data/general/biplot/year_interp0_status0.feather')
@@ -13182,6 +13241,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 compute_yearly_summary_ws <- function(){
 
     df <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -13196,7 +13256,8 @@ compute_yearly_summary_ws <- function(){
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/ws_traits',
+        dom_path <- glue('data/{n}/{d}/ws_traits',
+                         n = net,
                          d = dom)
 
         prod_files <- list.files(dom_path,
@@ -13331,3 +13392,32 @@ save_general_files <- function(final_file, raw_file, domain_dir){
         }
     }
 }
+
+run_checks <- function(){
+
+    #dump routines here for checking integrity of config files, etc. Basically,
+    #this should identify common issues (like duplicated variables in ms_vars)
+    #that should be corrected before any processing happens.
+    #this runs before the main loop in acquisition_master.R.
+
+    dupe_siterows <- site_data %>%
+        select(network, domain, site_code, site_type) %>%
+        filter(duplicated(.))
+
+    if(any(dupe_siterows)){
+        stop(glue('duplicated site(s) in site_data:\n{ds}',
+                  ds = paste(dupe_siterows$site_code,
+                             collapse = ', ')))
+        #GSMACK, N01B, N02B have dupe site_codes, but for different site_types
+    }
+
+    dupe_vars <- ms_vars %>%
+        filter(duplicated(.$variable_code))
+
+    if(any(dupe_vars)){
+        stop(glue('duplicated variable(s) in ms_vars:\n{dv}',
+                  dv = paste(dupe_vars$variable_code,
+                             collapse = ', ')))
+    }
+}
+
