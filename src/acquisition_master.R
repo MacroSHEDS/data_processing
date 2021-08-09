@@ -283,14 +283,14 @@ for(dmnrow in 1:nrow(network_domain)){
                 # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             # prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('stream_chemistry'),
               domain = domain)
     ms_general(network = network,
                domain = domain)

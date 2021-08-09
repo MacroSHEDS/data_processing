@@ -99,10 +99,8 @@ process_1_700 <- function(network, domain, prodname_ms, site_code,
 
     # Turbidity is in NTU the ms_vars is in FNU, not sure these are comparable
     d <- ms_conversions(d,
-                        convert_units_from = c(PO4_P = 'ug/l',
-                                               SO4 = 'ug/l'),
-                        convert_units_to = c(PO4_P = 'mg/l',
-                                             SO4 = 'mg/l'))
+                        convert_units_from = c(PO4_P = 'ug/l'),
+                        convert_units_to = c(PO4_P = 'mg/l'))
 
     return(d)
 }
@@ -162,11 +160,9 @@ process_1_800 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_conversions(d,
                         convert_units_from = c(PO4_P = 'ug/l',
-                                               TP = 'ug/l',
-                                               SO4 = 'ug/l'),
+                                               TP = 'ug/l'),
                         convert_units_to = c(PO4_P = 'mg/l',
-                                             TP = 'mg/l',
-                                             SO4 = 'mg/l'))
+                                             TP = 'mg/l'))
 
       return(d)
 }
