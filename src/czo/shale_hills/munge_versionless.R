@@ -62,7 +62,7 @@ for(i in seq_len(nrow(prod_info))){
             network = network,
             domain = domain,
             prodname_ms = prodname_ms,
-            site_code = sites[j],
+            site_code = site_code,
             tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
@@ -70,7 +70,7 @@ for(i in seq_len(nrow(prod_info))){
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   prodname_ms = prodname_ms,
-                                  site_code = sites[j],
+                                  site_code = site_code,
                                   new_status = 'error')
 
         } else {

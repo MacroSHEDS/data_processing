@@ -14,20 +14,21 @@ ms_pasta_domain_refmap = list(
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
-    vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
+    vsn_endpoint <- 'https://pasta.lternet.edu/package/eml/'
 
-    domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
+    domain_ref <- ms_pasta_domain_refmap[[domain]]
+    prodcode <- prodcode_from_prodname_ms(prodname_ms = prodname_ms)
 
-    vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
+    vsn_request <- glue(vsn_endpoint, domain_ref, '/', prodcode)
 
     if(ms_instance$op_system == 'windows'){
         newest_vsn <- xml2::xml_text(xml2::read_html(vsn_request))
     } else{
-        newest_vsn <- RCurl::getURLContent(vsn_request, timeout=10)
+        newest_vsn <- RCurl::getURLContent(vsn_request,
+                                           timeout = 10)
     }
 
-    newest_vsn = as.numeric(stringr::str_match(newest_vsn,
+    newest_vsn <- as.numeric(stringr::str_match(newest_vsn,
         '[0-9]+$')[1])
 
     return(newest_vsn)

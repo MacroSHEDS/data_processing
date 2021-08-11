@@ -7,7 +7,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 5357,sc_temp,paused,pending,pending,NA,NA
 5482,precipitation,ready,ready,pending,precip_pchem_pflux__ms002,NA
 5482,precip_gauge_locations,ready,ready,pending,precip_pchem_pflux__ms002,NA
-4341,discharge,ready,ready,pending,stream_flux_inst__ms003,NA
+4341,discharge,ready,ready,pending,stream_flux_inst__ms001,NA
 4022,precip_chemistry,ready,ready,pending,precip_pchem_pflux__ms002,NA
 4022,precip_flux_inst,ready,ready,pending,NA,NA
 3239,ws_boundary,ready,ready,pending,precip_pchem_pflux__ms002,NA
@@ -15,5 +15,11 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 4020,stream_chemistry,ready,ready,NA,stream_chemistry__ms003,NA
 ms001,stream_flux_inst,NA,NA,ready,NA,NA
 ms002,precip_pchem_pflux,NA,NA,ready,NA,NA
-ms003,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA
+ms003,stream_chemistry,NA,NA,ready,stream_flux_inst__ms001,NA
 ms006,ws_boundary,NA,NA,linked,NA,automated entry
+ms007,precip_gauge_locations,NA,NA,linked,NA,automated entry
+ms008,discharge,NA,NA,linked,NA,automated entry
+ms009,stream_gauge_locations,NA,NA,linked,NA,automated entry
+ms900,precipitation,NA,NA,NA,NA,automated entry
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry
