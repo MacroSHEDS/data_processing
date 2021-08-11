@@ -1,6 +1,3 @@
-#this is for unorganized versioness data (e.g. a single zip file for all
-#sites). we could turn this into a function, and make a separate function for
-#versionless data that's separated into several files.
 
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)

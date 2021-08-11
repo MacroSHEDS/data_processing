@@ -6,9 +6,9 @@ product codes of the format "msXXX", where X is an integer, are reserved for
 "retrieved"/"raw" and "munged" products are precursors to derived products and (where possible)
 retain product codes as assigned by their original data providers.
 {flux_note}{vsnless_note}
-This MacroSheds data product ({p}) was generated from the following munged MacroSheds product(s):
-
-{mp}
+This MacroSheds data product ({p}) is a "linked product", meaning it was complete after munging and
+did not require additional "derived-level" processing. As such, the munged product
+was simply linked to our derived product directory and given a standard MacroSheds derived product code.
 
 Source data were retrieved from the following web page(s), static file(s), or web-API endpoint(s):
 
@@ -21,24 +21,9 @@ we get all the kinks worked out, and in any case assembling all the code below i
 won't be an easy task. Please contact us at mail@macrosheds.org if you're having trouble
 navigating our docs.
 
-Below you will find the "derive kernel" function(s) by which {p} was generated.
-Note that MacroSheds products may have precursors that are themselves derived products. In some
-cases, these derived precursors are named above and have their own separate documentation. In other
-cases, derived precursors are generated from stand-alone derive kernels whose entire definition and
-history can be displayed here. A stand-alone kernel might, for example, pull supplemental data
-from a source other than its own network/domain. Here is the code for {p}'s derive kernel function,
-and for any stand-alone precursor derive kernel function(s):
-
-{dk}
-
-These were the arguments to that/those function(s):
-
-{da}
-
-Zero or more function definitions follow, depending on the number of munged products that
-are precursors to {p}:
-
 {mb}
+
+{ws_bounds_note}
 
 ---
 

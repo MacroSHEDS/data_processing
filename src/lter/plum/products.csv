@@ -1,4 +1,4 @@
-prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,X8
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
 109,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,fish brook 2001,"stage, temp, cond, DO, pH"
 110,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,fish brook 2002,"stage, temp, cond, DO, pH"
 111,discharge,ready,ready,NA,discharge__ms001,Cart cr 2001,"stage, temp, cond, DO, pH"
@@ -131,12 +131,14 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 423,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2017,NA
 496,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2018,NA
 542,precipitation,ready,ready,NA,precipitation__ms003,MBL Marshview 2019,NA
-ms004,precip_gauge_locations,NA,NA,ready,NA,NA,NA
+VERSIONLESS001,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms008,NA,NA
+ms004,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA
 ms006,stream_gauge_locations,NA,NA,ready,NA,NA,NA
-ms001,discharge,NA,NA,ready,NA,NA,NA
-ms002,stream_chemistry,NA,NA,ready,NA,NA,NA
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms005,NA,NA
+ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms005,NA,NA
 ms003,precipitation,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA
 ms005,stream_flux_inst,NA,NA,ready,NA,NA,NA
 ms008,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms008,automated entry,NA
 ms900,precipitation,NA,NA,NA,NA,automated entry,NA
+ms009,ws_boundary,NA,NA,linked,NA,automated entry,NA

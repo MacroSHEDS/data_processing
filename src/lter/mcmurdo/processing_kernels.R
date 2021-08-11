@@ -591,7 +591,6 @@ process_1_9021 <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
 process_1_9027 <- munge_mcmurdo_discharge
@@ -612,8 +611,7 @@ process_1_9029 <- function(network, domain, prodname_ms, site_code,
                    s = site_code,
                    c = component)
 
-    d <- read.csv(rawfile, colClasses = 'character', skip = 36)
-
+    d <- read.csv(rawfile, colClasses = 'character')
 
     d <- d %>%
         mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],

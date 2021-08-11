@@ -172,13 +172,13 @@ invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
             return(tracker)
         }
 
-        message(glue('TEN SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+        message(glue('FIVE SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
                      'tracker(s) for {n}-{d}:\n{prds}\n',
                      n = network,
                      d = domain,
                      lvl = toupper(level),
                      prds = paste(prodnames_ms, collapse = '\n')))
-        Sys.sleep(10)
+        Sys.sleep(5)
 
         for(i in seq_along(prodnames_ms)){
 
@@ -196,6 +196,13 @@ invalidate_tracked_data <- function(network, domain, level, prodname = NULL){
         return(tracker)
 
     } else {
+
+        message(glue('FIVE SECONDS TO ABORT (Esc)...\ninvalidating {lvl} ',
+                     'tracker(s) for {n}-{d}:\nALL PRODUCTS\n',
+                     n = network,
+                     d = domain,
+                     lvl = toupper(level)))
+        Sys.sleep(5)
 
         tracker <- recursive_tracker_update(l = tracker,
                                             elem_name = level,
@@ -639,7 +646,11 @@ invalidate_all = function(){
 drop_automated_entries <- function(path = '.'){
 
     #this drops rows with "automated entry" from all products.csv files
-    #found below the specified path
+    #found below the specified path. Only works on unix-like machines.
+
+    if(.Platform$OS.type == 'windows'){
+        stop("this could be made to work on windows, but it doesn't yet")
+    }
 
     system(glue("find {p} -name 'products.csv' | ",
                 "xargs sed -e '/automated entry/d' -i.TMPBAK",
@@ -726,9 +737,21 @@ dy_examine <- function(d, shape = 'long', site, ...){
             # fillGraph = TRUE,
 }
 
-list_all_product_dirs <- function(prodname){
+list_all_product_dirs <- function(prodname, location){
 
-    prodname_dirs <- list.dirs(path = 'data',
+    #location is one of 'data_acquisition, 'portal', or 'macrosheds_dataset'.
+    #if 'macrosheds_dataset', the version number will be automatically appended.
+
+    if(! location %in% c('data_acquisition', 'portal', 'macrosheds_dataset')){
+        stop("location must be one of 'data_acquisition', 'portal', 'macrosheds_dataset'")
+    }
+
+    loc_path <- case_when(location == 'data_acquisition' ~ 'data',
+                          location == 'portal' ~ '../portal/data',
+                          location == 'macrosheds_dataset' ~ paste0('macrosheds_dataset_v',
+                                                                    vsn))
+
+    prodname_dirs <- list.dirs(path = loc_path,
                                full.names = TRUE,
                                recursive = TRUE)
 
@@ -755,7 +778,8 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     #   multiple variables, this filters to just the ones specified (ignores
     #   variable prefixes)
 
-    prodname_dirs <- list_all_product_dirs(prodname = prodname)
+    prodname_dirs <- list_all_product_dirs(prodname = prodname,
+                                           location = 'data_acquisition')
 
     d <- tibble()
     for(pd in prodname_dirs){
@@ -790,7 +814,7 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
 }
 
 generate_diagnostic_plots <- function(network, domain, product){
-    
+
     if(grepl('__ms', product)){
         path <- glue('data/{n}/{d}/derived/{p}/',
                      n = network,
@@ -805,15 +829,15 @@ generate_diagnostic_plots <- function(network, domain, product){
 
     all_files <- list.files(path, full.names = TRUE)
     dataset <- map_dfr(all_files, read_feather)
-    
+
     high_values <- dataset %>%
         group_by(var) %>%
-        summarise(confidence_in = quantile(val, .99)) 
-    
+        summarise(confidence_in = quantile(val, .99))
+
     dataset_check <- dataset %>%
         left_join(., high_values, by = 'var') %>%
         filter(ms_interp == 0) %>%
-        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0))) 
+        mutate(suspect = as.character(ifelse(val > confidence_in, 1, 0)))
 
     vars <- unique(dataset$var)
     sites <- unique(dataset_check$site_code)
@@ -823,12 +847,12 @@ generate_diagnostic_plots <- function(network, domain, product){
                in_workflow == 1) %>%
         pull(site_code)
     sites <- sites[sites %in% sites_in_workflow]
-    
+
     output_path <- glue('plots/{n}/{d}/plots',
                         n = network,
                         d = domain)
     dir.create(output_path, recursive = T)
-    
+
     all_plot_list = list()
     for(i in 1:length(vars)) {
         plot_list = list()
@@ -847,7 +871,7 @@ generate_diagnostic_plots <- function(network, domain, product){
         }
         all_plot_list <- c(all_plot_list, plot_list)
     }
-    
+
     for(i in 1:length(all_plot_list)) {
         name_plot <- names(all_plot_list)[i]
         file_name = paste(glue('plots/{n}/{d}/plots/',
@@ -859,13 +883,328 @@ generate_diagnostic_plots <- function(network, domain, product){
     }
 
 
-    pdftools::pdf_combine(list.files(output_path, full.names = TRUE), 
+    pdftools::pdf_combine(list.files(output_path, full.names = TRUE),
                 output = glue('plots/{n}/{d}/{p}_dignostic.pdf',
                               n = network,
                               d = domain,
                               p = product))
-    
+
     unlink(output_path, recursive = TRUE)
 
 }
 
+undo_scale_flux_by_area <- function(network_domain, site_data){
+
+    #this reads all flux data in data_acquisition/data and in portal/data,
+    #   and unscales it (multiplies by watershed area). all folders renamed to
+    #   *_flux_inst_scaled by scale_flux_by_area are set back to their original
+    #   names, i.e. *_flux_inst.
+
+    ws_areas <- site_data %>%
+        filter(as.logical(in_workflow)) %>%
+        select(domain, site_code, ws_area_ha) %>%
+        plyr::dlply(.variables = 'domain',
+                    .fun = function(x) select(x, -domain))
+
+    domains <- names(ws_areas)
+
+    engine_for_portal <- function(flux_var, domains, ws_areas){
+
+        flux_var_unscaled <- stringr::str_match(flux_var,
+                                                '(.+)?_scaled$')[, 2]
+
+        for(dmn in domains){
+
+            files <- try(
+                {
+                    list.files(path = glue('../portal/data/{d}/{v}',
+                                           d = dmn,
+                                           v = flux_var),
+                               full.names = FALSE,
+                               recursive = FALSE)
+                },
+                silent = TRUE
+            )
+
+            if('try-error' %in% class(files) || length(files) == 0) next
+
+            dir.create(path = glue('../portal/data/{d}/{v}',
+                                   d = dmn,
+                                   v = flux_var_unscaled),
+                       recursive = TRUE,
+                       showWarnings = FALSE)
+
+            for(fil in files){
+
+                d <- read_feather(glue('../portal/data/{d}/{v}/{f}',
+                                       d = dmn,
+                                       v = flux_var,
+                                       f = fil))
+
+                d <- d %>%
+                    mutate(val = errors::set_errors(val, val_err)) %>%
+                    select(-val_err) %>%
+                    arrange(site_code, var, datetime) %>%
+                    left_join(ws_areas[[dmn]],
+                              by = 'site_code') %>%
+                    mutate(val = sw(val * ws_area_ha)) %>%
+                    select(-ws_area_ha)
+
+                d$val_err <- errors(d$val)
+                d$val <- errors::drop_errors(d$val)
+
+                write_feather(x = d,
+                              path = glue('../portal/data/{d}/{v}/{f}',
+                                          d = dmn,
+                                          v = flux_var_unscaled,
+                                          f = fil))
+            }
+        }
+    }
+
+    engine_for_portal(flux_var = 'stream_flux_inst_scaled',
+                      domains = domains,
+                      ws_areas = ws_areas)
+
+    engine_for_portal(flux_var = 'precip_flux_inst_scaled',
+                      domains = domains,
+                      ws_areas = ws_areas)
+
+    scaled_portal_flux_dirs <- dir(path = '../portal/data',
+                                   pattern = '*_flux_inst_scaled',
+                                   include.dirs = TRUE,
+                                   full.names = TRUE,
+                                   recursive = TRUE)
+
+    scaled_portal_flux_dirs <-
+        scaled_portal_flux_dirs[! grepl(pattern = '/documentation/',
+                                        x = scaled_portal_flux_dirs)]
+    scaled_portal_flux_dirs <-
+        scaled_portal_flux_dirs[grepl(pattern = 'inst_scaled',
+                                      x = scaled_portal_flux_dirs)]
+
+    lapply(X = scaled_portal_flux_dirs,
+           FUN = unlink,
+           recursive = TRUE)
+
+    #the new engine, for scaling flux data within data_acquisition/data
+    engine_for_data_acquis <- function(flux_var, network_domain, ws_areas){
+
+        flux_var_unscaled <- stringr::str_match(flux_var,
+                                                '(.+)?_scaled$')[, 2]
+
+        for(i in 1:nrow(network_domain)){
+
+            ntw <- network_domain$network[i]
+            dmn <- network_domain$domain[i]
+
+            flux_var_dir <- try(
+                {
+                    ff <- list.files(path = glue('data/{n}/{d}/derived',
+                                                 n = ntw,
+                                                 d = dmn),
+                                     pattern = flux_var,
+                                     full.names = FALSE,
+                                     recursive = FALSE)
+                },
+                silent = TRUE
+            )
+
+            if('try-error' %in% class(flux_var_dir) || length(flux_var_dir) == 0) next
+
+            prodcode <- prodcode_from_prodname_ms(flux_var_dir)
+
+            dir.create(path = glue('data/{n}/{d}/derived/{v}__{pc}',
+                                   n = ntw,
+                                   d = dmn,
+                                   v = flux_var_unscaled,
+                                   pc = prodcode),
+                       recursive = TRUE,
+                       showWarnings = FALSE)
+
+            files <- list.files(path = glue('data/{n}/{d}/derived/{fvd}',
+                                            n = ntw,
+                                            d = dmn,
+                                            fvd = flux_var_dir),
+                                pattern = '*.feather',
+                                full.names = TRUE,
+                                recursive = TRUE)
+
+            for(f in files){
+
+                d <- read_feather(f)
+
+                d <- d %>%
+                    mutate(val = errors::set_errors(val, val_err)) %>%
+                    select(-val_err) %>%
+                    arrange(site_code, var, datetime) %>%
+                    left_join(ws_areas[[dmn]],
+                              by = 'site_code') %>%
+                    mutate(val = sw(val * ws_area_ha)) %>%
+                    select(-ws_area_ha)
+
+                d$val_err <- errors(d$val)
+                d$val <- errors::drop_errors(d$val)
+
+                f_scaled <- sub(pattern = 'inst_scaled__',
+                                replacement = 'inst__',
+                                x = f)
+
+                write_feather(x = d,
+                              path = f_scaled)
+            }
+        }
+    }
+
+    engine_for_data_acquis(flux_var = 'stream_flux_inst_scaled',
+                           network_domain = network_domain,
+                           ws_areas = ws_areas)
+
+    engine_for_data_acquis(flux_var = 'precip_flux_inst_scaled',
+                           network_domain = network_domain,
+                           ws_areas = ws_areas)
+
+    scaled_acquisition_flux_dirs <- dir(path = 'data',
+                                        pattern = '*_flux_inst_scaled',
+                                        include.dirs = TRUE,
+                                        full.names = TRUE,
+                                        recursive = TRUE)
+
+    scaled_acquisition_flux_dirs <-
+        scaled_acquisition_flux_dirs[! grepl(pattern = '/documentation/',
+                                             x = scaled_acquisition_flux_dirs)]
+    scaled_acquisition_flux_dirs <-
+        scaled_acquisition_flux_dirs[grepl(pattern = 'inst_scaled',
+                                           x = scaled_acquisition_flux_dirs)]
+
+    scaled_acquisition_flux_dirs <-
+        scaled_acquisition_flux_dirs[grepl(pattern = '/derived/',
+                                           x = scaled_acquisition_flux_dirs)]
+
+    lapply(X = scaled_acquisition_flux_dirs,
+           FUN = unlink,
+           recursive = TRUE)
+
+    return(invisible())
+}
+
+sync_shapefile_and_sitedata_areas <- function(){
+
+    engine <- function(location, sync_sitedata){
+
+        insert_str <- ifelse(sync_sitedata, ' and site_data', '')
+
+        loginfo(glue('syncing shapefiles{ins} within {loc}/',
+                     ins = insert_str,
+                     loc = location),
+                logger = logger_module)
+
+        bounddirs <- list_all_product_dirs('ws_boundary',
+                                           location = location)
+
+        bounddirs <- Filter(function(x) length(strsplit(x, '/')[[1]]) == 5,
+                            bounddirs)
+
+        for(b in bounddirs){
+
+            dmn <- strsplit(b, '/')[[1]][3]
+            boundsites <- list.files(b, full.names = TRUE)
+            for(bb in boundsites){
+
+                x <- sf::st_read(bb, quiet = TRUE)
+
+                sw(rm(area_from_sf))
+                site <- x$site_code
+
+                area_from_sitedata <- site_data %>%
+                    filter(
+                        domain == !!dmn,
+                        site_code == !!site,
+                        site_type == 'stream_gauge') %>%
+                    pull(ws_area_ha)
+
+                if(length(area_from_sitedata) > 1){
+                    stop(paste('more than 1 entry in site_data for', site))
+                }
+
+                if(! length(area_from_sitedata)){
+                    warning(paste(site, "is not in site_data. this ws_bound shouldn't exist"))
+                    next
+                }
+
+                area_from_calc <- as.numeric(sf::st_area(x)) / 10000
+
+                if(is.na(area_from_calc)){
+                    stop(paste('area cannot be calculated for', site))
+                }
+
+                site_data_needs_update <- is.na(area_from_sitedata)
+                shapefile_needs_update <- ! 'area' %in% colnames(x) || is.na(x$area)
+
+                if(! shapefile_needs_update) area_from_sf <- x$area
+
+                a1 <- round(area_from_calc, 4)
+                a2 <- ifelse(exists('area_from_sf'),
+                             round(area_from_sf, 4),
+                             'NA')
+                a3 <- round(area_from_sitedata, 4)
+
+                if(a1 != a2 || a1 != a3 || a2 != a3){
+                    message(glue('{d} - {s}:\n\tcalculated_area: {ac}\n\t',
+                                 'area from shapefile column: {asf}\n\t',
+                                 'area from site_data: {ad}',
+                                 d = dmn,
+                                 s = site,
+                                 ac = a1,
+                                 asf = a2,
+                                 ad = a3,
+                                 .trim = FALSE))
+                }
+
+                if(a1 != a3){
+
+                    site_data$ws_area_ha[site_data$domain == dmn &
+                                             site_data$site_code == site] <- area_from_calc
+                }
+
+                if(a1 != a2){
+
+                    x$area <- area_from_calc
+                    sf::st_write(obj = x,
+                                 dsn = bb,
+                                 driver = 'ESRI Shapefile',
+                                 delete_dsn = TRUE,
+                                 quiet = TRUE)
+                }
+            }
+        }
+
+        if(sync_sitedata){
+            ms_write_confdata(site_data,
+                              which_dataset = 'site_data',
+                              to_where = ms_instance$config_data_storage,
+                              overwrite = TRUE)
+        }
+    }
+
+    engine(location = 'data_acquisition',
+           sync_sitedata = TRUE)
+
+    engine(location = 'portal',
+           sync_sitedata = FALSE)
+
+    engine(location = 'macrosheds_dataset',
+           sync_sitedata = FALSE)
+}
+
+create_all_portal_links <- function(network_domain){
+
+    for(i in 1:nrow(network_domain)){
+
+        network <- pull(network_domain[i, 'network'])
+        domain <- pull(network_domain[i, 'domain'])
+
+        create_portal_links(network = network,
+                            domain = domain)
+    }
+}

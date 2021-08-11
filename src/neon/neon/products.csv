@@ -15,9 +15,9 @@ DP1.20097,stream_gases,paused,paused,NA,stream_chemistry__ms001,NA
 DP1.20016,surface_elevation,paused,paused,NA,NA,NA
 DP1.20053,stream_temperature,paused,paused,NA,stream_chemistry__ms001,NA
 DP1.20042,stream_PAR,paused,paused,NA,NA,NA
-DP1.00006,precipitation,ready,ready,NA,precip_pchem_pflux__ms002,NA
-DP1.00013,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,NA
-VERSIONLESS001,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms002,NA
+DP1.00006,precipitation,ready,ready,NA,precipitation__ms002,NA
+DP1.00013,precip_chemistry,ready,ready,NA,precip_flux_inst__ms003,NA
+VERSIONLESS001,ws_boundary,ready,ready,NA,precip_flux_inst__ms003,NA
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms004,NA
 ms002,precipitation,NA,NA,ready,precip_flux_inst__ms003,NA
 ms003,precip_flux_inst,NA,NA,ready,NA,NA
