@@ -1,0 +1,7 @@
+
+Special note for flux products:
+Our instantaneous stream flux product is called "stream_flux_inst" during standard kernel 
+processing, but its name changes to "stream_flux_inst_scaled" during postprocessing, when each value
+is scaled by watershed area. Consider both of these variant names to refer to the same product wherever
+you encounter them in our documentation. The same goes for "precip_flux_inst" and "precip_flux_inst_scaled".
+More information about postprocessing code is included below.

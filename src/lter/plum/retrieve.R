@@ -1,9 +1,10 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                              domain = domain,
-                             status_level = 'retrieve', 
-                             get_statuses = 'ready')
+                             status_level = 'retrieve',
+                             get_statuses = 'ready') %>%
+    filter(! grepl('^VERSIONLESS', prodcode))
 
 if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
@@ -28,7 +29,7 @@ for(i in seq_len(nrow(prod_info))){
         version=latest_vsn, domain=domain, data_tracker=held_data)
 
     if(is_ms_err(avail_sets)) next
-    
+
     avail_sets <- avail_sets %>%
         filter(!grepl('xlx|xls', component))
 
