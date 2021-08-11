@@ -1,0 +1,9 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,NA,chem
+VERSIONLESS002,precipitation,ready,ready,,precip_pchem_pflux_ms004,,precip
+VERSIONLESS003,precip_chemistry,ready,ready,,precip_pchem_pflux_ms004,,precip_chem
+VERSIONLESS004,ws_boundary,ready,ready,,precip_pchem_pflux_ms004,,
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms002,NA,NA
+ms002,stream_flux_inst,,,ready,NA,,NA
+ms003,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux_ms004,,NA
+ms004,precip_pchem_pflux,NA,NA,ready,,,NA
