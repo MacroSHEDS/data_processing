@@ -3320,7 +3320,7 @@ delineate_watershed_apriori <- function(lat,
         )
 
         # terra::writeRaster(x = dem,
-        raster::writeRaster(x = dem,
+        terra::writeRaster(x = dem,
                             filename = dem_f,
                             overwrite = TRUE)
 
@@ -3528,7 +3528,7 @@ delineate_watershed_apriori <- function(lat,
                                     pour_pts = unique_snaps_f[i],
                                     output = wb_f) %>% invisible()
 
-            wb <- raster::raster(wb_f)
+            wb <- terra::rast(wb_f)
 
             #check how many wb cells coincide with the edge of the DEM.
             #If > 0.1% or > 5, broader DEM needed
@@ -3559,7 +3559,8 @@ delineate_watershed_apriori <- function(lat,
 
                 #write and record temp files for the technician to visually inspect
                 wb_sf <- wb %>%
-                    raster::rasterToPolygons() %>%
+                    terra::rast() %>%
+                    terra::as.polygons() %>%
                     sf::st_as_sf() %>%
                     sf::st_buffer(dist = 0.1) %>%
                     sf::st_union() %>%
@@ -3708,7 +3709,7 @@ delineate_watershed_by_specification <- function(lat,
         max_attempts = 5
     )
 
-    raster::writeRaster(x = dem,
+    terra::writeRaster(x = dem,
                         filename = dem_f,
                         overwrite = TRUE)
     # terra::rast(dem) %>%
@@ -3811,8 +3812,8 @@ delineate_watershed_by_specification <- function(lat,
                             pour_pts = snap_f,
                             output = wb_f) %>% invisible()
 
-    wb_sf <- raster::raster(wb_f) %>%
-        raster::rasterToPolygons() %>%
+    wb_sf <- terra::rast(wb_f) %>%
+        terra::as.polygons() %>%
         sf::st_as_sf() %>%
         sf::st_buffer(dist = 0.1) %>%
         sf::st_union() %>%
@@ -5290,150 +5291,6 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
     return(fnames)
 }
 
-#still in progress
-delineate_watershed_nhd <- function(lat, long) {
-
-    #this function delineates a watershed from a point first using NHD tools.
-    #if that fails, it falls back on a more general whitebox method, which is
-    #implemented in delineate_watershed. the NHD method, if implemented, should
-    #correct for reach proportional distance of each site location. see
-    # https://github.com/vlahm/watershed_tools/blob/master/2_batch_summary_nhd.R
-    #also at that link, there's a function for retrieving COMID by lat/long, which
-    #could replace discover_nhdplus_id below (which doesn't always seem to work?)
-
-    #there's also this streamstats approach (fully packaged),
-    #   but that's incomplete even for CONUS
-    # x = streamstats::delineateWatershed(xlocation = long,
-    #                                     ylocation = lat,
-    #                                     crs = crs)
-    # streamstats::leafletWatershed(x)
-
-    site <- tibble(x = lat,
-                   y = long) %>%
-        sf::st_as_sf(coords = c("y", "x"), crs = 4269) %>%
-        sf::st_transform(102008)
-
-    start_comid <- nhdplusTools::discover_nhdplus_id(sf::st_sfc(
-        sf::st_point(c(long, lat)), crs = 4269))
-
-    flowline <- nhdplusTools::navigate_nldi(list(featureSource = "comid",
-                                                 featureID = start_comid),
-                                            mode = "upstreamTributaries",
-                                            data_source = "")
-
-    subset_file <- tempfile(fileext = ".gpkg")
-
-    subset <- nhdplusTools::subset_nhdplus(comids = flowline$nhdplus_comid,
-                                           output_file = subset_file,
-                                           nhdplus_data = "download",
-                                           return_data = TRUE)
-
-    flowlines <- subset$NHDFlowline_Network %>%
-        sf::st_transform(102008)
-
-    catchments <- subset$CatchmentSP %>%
-        sf::st_transform(102008)
-
-    upstream <- nhdplusTools::get_UT(flowlines, start_comid)
-
-    watershed <- catchments %>%
-        filter(featureid %in% upstream) %>%
-        sf::st_buffer(0.01) %>%
-        sf::st_union() %>%
-        sf::st_as_sf()
-
-    if(as.numeric(sf::st_area(watershed)) >= 60000000) {
-        return(watershed)
-    }
-    else {
-
-        outline = sf::st_as_sfc(sf::st_bbox(flowlines))
-
-        outline_buff <- outline %>%
-            sf::st_buffer(5000)
-
-        dem <- expo_backoff(
-            expr = {
-                elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
-                                         z = 12,
-                                         verbose = FALSE,
-                                         override_size_check = TRUE)
-            },
-            max_attempts = 5
-        )
-
-        temp_raster <- tempfile(fileext = ".tif")
-
-        raster::writeRaster(dem, temp_raster, overwrite = T)
-
-        temp_point <- tempfile(fileext = ".shp")
-
-        sf::st_write(sf::st_zm(site), temp_point, delete_layer=TRUE)
-
-        temp_breash2 <- tempfile(fileext = ".tif")
-        whitebox::wbt_fill_single_cell_pits(temp_raster, temp_breash2)
-
-        temp_breached <- tempfile(fileext = ".tif")
-        whitebox::wbt_breach_depressions(temp_breash2,temp_breached,flat_increment=.01)
-
-        temp_d8_pntr <- tempfile(fileext = ".tif")
-        whitebox::wbt_d8_pointer(temp_breached,temp_d8_pntr)
-
-        temp_shed <- tempfile(fileext = ".tif")
-        whitebox::wbt_unnest_basins(temp_d8_pntr, temp_point, temp_shed)
-
-        # No idea why but wbt_unnest_basins() aves whatever file path with a _1 after the name so must add
-        file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
-
-        file_shed <- paste0(file_new[1], "_1.", file_new[2])
-
-        check <- raster::raster(file_shed)
-        values <- raster::getValues(check)
-        values[is.na(values)] <- 0
-
-
-        if(sum(values, na.rm = TRUE) < 100) {
-
-            flow <- tempfile(fileext = ".tif")
-            whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
-
-            snap <- tempfile(fileext = ".shp")
-            whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
-
-            temp_shed <- tempfile(fileext = ".tif")
-            whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
-
-            file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
-
-            file_shed <- paste0(file_new[1], "_1.", file_new[2])
-
-            check <- raster::raster(file_shed)
-            values <- raster::getValues(check)
-            values[is.na(values)] <- 0
-        }
-        watershed_raster <- raster::rasterToPolygons(raster::raster(file_shed))
-
-        #Convert shapefile to sf
-        watershed_df <- sf::st_as_sf(watershed_raster)
-
-        #buffer to join all pixles into one shape
-        watershed <- sf::st_buffer(watershed_df, 0.1) %>%
-            sf::st_union() %>%
-            sf::st_as_sf()
-
-        if(sum(values, na.rm = T) < 100) {
-            watershed <- watershed %>%
-                mutate(flag = "check")
-        }
-
-        #sf::st_write(watershed_union, dsn =
-        #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
-        #                    n = sites$network, d = sites$domain, s = sites$site_code))
-        return(watershed)
-
-    }
-}
-
 calc_inst_flux <- function(chemprod, qprod, site_code, ignore_pred = FALSE){
 
     #chemprod is the prodname_ms for stream or precip chemistry.
@@ -5749,9 +5606,9 @@ reconstitute_raster <- function(x, template){
                nrow=nrow(template),
                ncol=ncol(template),
                byrow=TRUE)
-    r <- raster(m,
-                crs=raster::projection(template))
-    extent(r) <- raster::extent(template)
+    r <- terra::rast(m,
+                crs=terra::crs(template))
+    terra::ext(r) <- terra::ext(template)
 
     return(r)
 }
@@ -5860,7 +5717,7 @@ shortcut_idw <- function(encompassing_dem,
         dk <- filter(data_locations,
                      site_code == colnames(data_matrix)[k])
 
-        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        inv_dists_site <- 1 / terra::distance(dem_wb, dk)^2 %>%
             terra::values(.)
 
         # inv_dists_site[is.na(elevs)] <- NA #mask
@@ -6149,7 +6006,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        inv_dists_site <- 1 / terra::distance(dem_wb, dk)^2 %>%
             terra::values(.)
         inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
         inv_distmat_c[, k] <- inv_dists_site
@@ -9413,16 +9270,18 @@ raster_intersection_summary <- function(wb, dem){
 
     #convert wb to sf object (there are several benign but seemingly uncatchable
     #   garbage collection errors here)
-    wb <- sf::st_as_sf(raster::rasterToPolygons(wb))
+    wb <- sf::st_as_sf(terra::as.polygons(wb))
 
     #get edge of DEM as sf object
-    dem_edge <- raster::focal(x = dem, #the terra version doesn't retain NA border
-                  fun = function(x, ...) return(0),
+    dem_edge <- dem %>%
+        terra::rast() %>%
+        terra::focal(., #the terra version doesn't retain NA border
+                     fun=function(x, na.rm = F) return(0), na.rm=FALSE,
                   w = matrix(1, nrow = 3, ncol = 3)) %>%
-        raster::reclassify(rcl = matrix(c(0, NA, #second, set inner cells to NA
-                                          NA, 1), #first, set outer cells to 1... yup.
-                                        ncol = 2)) %>%
-        raster::rasterToPolygons() %>%
+        terra::classify(rcl = matrix(c(0, -2, 100000000000, #second, set inner cells to NA
+                                          0, NA, 0), #first, set outer cells to 1... yup.
+                                        nrow = 2)) %>%
+        terra::as.polygons() %>%
         sf::st_as_sf()
     # dem_edge <- raster::boundaries(dem) %>%
     #                                # classes = TRUE,
@@ -12069,7 +11928,6 @@ get_nrcs_soils <- function(network,
     cokey <- unique(component[,1])
     cokey <- data.frame(ID=cokey)
 
-
     # Query SDA for the componets to get infromation on their horizons from the
     #### chorizon table. Each componet is made up of soil horizons (layer of soil
     #### vertically) identified by a chkey.
@@ -12129,7 +11987,7 @@ get_nrcs_soils <- function(network,
         # Watershed weighted average
         site_boundary_p <- sf::st_transform(site_boundary, crs = sf::st_crs(soil))
 
-        soil_masked <- sw(raster::mask(soil, site_boundary_p))
+        soil_masked <- sw(terra::mask(soil, site_boundary_p))
 
         watershed_mukey_values <- soil_masked@data@values %>%
             as_tibble() %>%
@@ -12294,17 +12152,19 @@ extract_ws_mean <- function(site_boundary, raster_path){
     site_boundary <- site_boundary %>%
         sf::st_transform(., rast_crs)
 
-    site_boundary_buf <- as(site_boundary_buf, "Spatial") %>%
-        terra::vect()
+    site_boundary_buf <- terra::vect(site_boundary_buf)
+    site_boundary <- terra::vect(site_boundary)
 
     rast_masked <- rast_file %>%
         terra::crop(site_boundary_buf)
 
-    weighted_results <- raster::extract(as(rast_masked, 'Raster'), site_boundary,
-                                        weights = T, normalizeWeights = F)
+    weighted_results  <- terra::extract(rast_masked, 
+                                        site_boundary, 
+                                        weights = TRUE)
 
-    vals_w <- weighted_results[[1]] %>%
-        as_tibble()
+    vals_w <- weighted_results %>%
+        select(-ID) %>%
+        rename(value = 1)
 
     ws_nas <- filter(vals_w, is.na(value))
 
