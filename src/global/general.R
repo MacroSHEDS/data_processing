@@ -74,7 +74,7 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i=19
+# i=15
 for(i in 1:nrow(unprod)){
 # for(i in 3:3){
 

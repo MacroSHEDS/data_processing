@@ -524,7 +524,7 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_code,
       terra::mask(., site_boundary)
 
     # Elevation
-    elev_values <- raster::values(dem)
+    elev_values <- terra::values(dem)
     elev_values <- elev_values[elev_values >= 0]
     elev_mean <- mean(elev_values, na.rm = TRUE)
     elev_sd <- sd(elev_values, na.rm = TRUE)
@@ -533,16 +533,16 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_code,
 
     # Slope
     dem_path <- tempfile(fileext = '.tif')
-    raster::writeRaster(dem, dem_path)
+    terra::writeRaster(dem, dem_path)
     slope_path <- tempfile(fileext = '.tif')
 
     whitebox::wbt_slope(dem_path, slope_path)
 
-    slope <- raster::raster(slope_path) %>%
-      terra::crop(., site_boundary) %>%
-      terra::mask(., site_boundary)
+    slope <- terra::rast(slope_path) %>%
+      terra::crop(., terra::vect(site_boundary)) %>%
+      terra::mask(., terra::vect(site_boundary))
 
-    slope_values <- raster::values(slope)
+    slope_values <- terra::values(slope)
     slope_mean <- mean(slope_values, na.rm = TRUE)
     slope_sd <- sd(slope_values, na.rm = TRUE)
 
@@ -550,11 +550,11 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_code,
     aspect_path <- tempfile(fileext = '.tif')
     whitebox::wbt_aspect(dem_path, aspect_path)
 
-    aspect <- raster::raster(aspect_path) %>%
-      terra::crop(., site_boundary) %>%
-      terra::mask(., site_boundary)
+    aspect <- terra::rast(aspect_path) %>%
+      terra::crop(., terra::vect(site_boundary)) %>%
+      terra::mask(., terra::vect(site_boundary))
 
-    aspect_values <- raster::values(aspect)
+    aspect_values <- terra::values(aspect)
     aspect_mean <- mean(aspect_values, na.rm = TRUE)
     aspect_sd <- sd(aspect_values, na.rm = TRUE)
 
