@@ -1208,3 +1208,22 @@ create_all_portal_links <- function(network_domain){
                             domain = domain)
     }
 }
+
+generate_turbo_variable_summary <- function(outfile = '~/macrosheds_variable-by-site_summary.csv'){
+
+    xx = dir('~/git/macrosheds/portal/data/general/catalog_files/indiv_variables/')
+
+    qq = tibble()
+    for(i in seq_along(xx)){
+        varname = str_match(xx[i], '(.+)\\.csv$')[, 2]
+        qq = read_csv(xx[i], col_types = 'cccccnTTn') %>%
+            mutate(Variable = varname) %>%
+            select(Variable, everything()) %>%
+            bind_rows(qq)
+    }
+
+    qq = arrange(qq,
+                 Variable, Network, Domain, SiteCode)
+
+    write_csv(qq, outfile)
+}
