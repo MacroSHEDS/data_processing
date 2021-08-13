@@ -12873,8 +12873,53 @@ generate_watershed_raw_spatial_dataset <- function(){
         distinct() %>%
         arrange(data_source_code)
 
-    fst::write_fst(raw_spatial_dat,
-                   '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
+    # fst::write_fst(raw_spatial_dat,
+    #                '../portal/data/general/spatial_downloadables/watershed_raw_spatial_timeseries.fst')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 'c') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 'h') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 'p') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 't') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 'l') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
+    raw_spatial_dat %>%
+        filter(substr(var, 1, 1) == 'v') %>%
+        write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
+
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
+        flags = '-9Xjq')
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
+        flags = '-9Xjq')
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
+        flags = '-9Xjq')
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
+        flags = '-9Xjq')
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
+        flags = '-9Xjq')
+    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv.zip',
+        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
+        flags = '-9Xjq')
+
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
+    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
+
     write_csv(category_codes,
               '../portal/data/general/spatial_downloadables/variable_category_codes.csv')
     write_csv(datasource_codes,
