@@ -5711,12 +5711,18 @@ shortcut_idw <- function(encompassing_dem,
                           dimnames = list(NULL,
                                           colnames(data_matrix)))
 
+    dem_wb_all_na <- dem_wb 
+    terra::values(dem_wb_all_na) <- NA
+    dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(data_matrix)){
 
         dk <- filter(data_locations,
                      site_code == colnames(data_matrix)[k])
 
-        inv_dists_site <- 1 / terra::distance(terra::rast(dem_wb), terra::vect(dk))^2 %>%
+        # inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        #     terra::values(.)
+
+        inv_dists_site <- 1 / terra::distance(terra::rast(dem_wb_all_na), terra::vect(dk))^2 %>%
             terra::values(.)
 
         # inv_dists_site[is.na(elevs)] <- NA #mask
@@ -6002,10 +6008,14 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                             dimnames = list(NULL,
                                             colnames(c_matrix)))
 
+    dem_wb_all_na <- dem_wb 
+    terra::values(dem_wb_all_na) <- NA
+    dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        inv_dists_site <- 1 / terra::distance(dem_wb, dk)^2 %>%
+        
+        inv_dists_site <- 1 / terra::distance(dem_wb_all_na, terra::vect(dk))^2 %>%
             terra::values(.)
         inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
         inv_distmat_c[, k] <- inv_dists_site
