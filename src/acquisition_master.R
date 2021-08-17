@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
     library(imputeTS)
     library(errors)
-    # library(foreach) #loaded by doFuture
+    library(foreach) #loaded by doFuture
     library(doParallel) #replaced by doFuture, but still needed on BM1
     library(doFuture)
     library(googlesheets4)
@@ -208,8 +208,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(email = gee_login,
-                        drive = TRUE))
+try(rgee::ee_Initialize(drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
 
@@ -243,7 +242,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 1
+# dmnrow = 5
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
