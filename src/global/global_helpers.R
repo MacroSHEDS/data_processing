@@ -3559,7 +3559,6 @@ delineate_watershed_apriori <- function(lat,
 
                 #write and record temp files for the technician to visually inspect
                 wb_sf <- wb %>%
-                    terra::rast() %>%
                     terra::as.polygons() %>%
                     sf::st_as_sf() %>%
                     sf::st_buffer(dist = 0.1) %>%
@@ -5712,12 +5711,18 @@ shortcut_idw <- function(encompassing_dem,
                           dimnames = list(NULL,
                                           colnames(data_matrix)))
 
+    dem_wb_all_na <- dem_wb 
+    terra::values(dem_wb_all_na) <- NA
+    dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(data_matrix)){
 
         dk <- filter(data_locations,
                      site_code == colnames(data_matrix)[k])
 
-        inv_dists_site <- 1 / terra::distance(dem_wb, dk)^2 %>%
+        # inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
+        #     terra::values(.)
+
+        inv_dists_site <- 1 / terra::distance(terra::rast(dem_wb_all_na), terra::vect(dk))^2 %>%
             terra::values(.)
 
         # inv_dists_site[is.na(elevs)] <- NA #mask
@@ -6003,10 +6008,14 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                             dimnames = list(NULL,
                                             colnames(c_matrix)))
 
+    dem_wb_all_na <- dem_wb 
+    terra::values(dem_wb_all_na) <- NA
+    dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        inv_dists_site <- 1 / terra::distance(dem_wb, dk)^2 %>%
+        
+        inv_dists_site <- 1 / terra::distance(dem_wb_all_na, terra::vect(dk))^2 %>%
             terra::values(.)
         inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
         inv_distmat_c[, k] <- inv_dists_site
@@ -9273,23 +9282,38 @@ raster_intersection_summary <- function(wb, dem){
     wb <- sf::st_as_sf(terra::as.polygons(wb))
 
     #get edge of DEM as sf object
-    dem_edge <- dem %>%
-        terra::rast() %>%
-        terra::focal(., #the terra version doesn't retain NA border
-                     fun=function(x, na.rm = F) return(0), na.rm=FALSE,
-                  w = matrix(1, nrow = 3, ncol = 3)) %>%
-        terra::classify(rcl = matrix(c(0, -2, 100000000000, #second, set inner cells to NA
-                                          0, NA, 0), #first, set outer cells to 1... yup.
-                                        nrow = 2)) %>%
-        terra::as.polygons() %>%
-        sf::st_as_sf()
-    # dem_edge <- raster::boundaries(dem) %>%
-    #                                # classes = TRUE,
-    #                                # asNA = FALSE) %>%
-    #     raster::reclassify(rcl = matrix(c(0, NA), #set inner cells to NA
+    # dem_edge <- dem %>%
+    #     terra::rast() %>%
+    #     terra::boundaries() %>%
+    #     terra::as.polygons() %>%
+    #     sf::st_as_sf() %>%
+    #     sf::st_boundary()
+
+    # dem_edge <- dem %>%
+    #     raster::focal(., #the terra version doesn't retain NA border
+    #                  fun=function(x) return(0), na.rm=F,
+    #                  w = matrix(1, nrow = 3, ncol = 3)) %>%
+    #     raster::reclassify(rcl = matrix(c(0, NA,
+    #                                       NA, 0), #set inner cells to NA
     #                                     ncol = 2)) %>%
     #     raster::rasterToPolygons() %>%
     #     sf::st_as_sf()
+    
+    get_out_cells <- function(x) {
+        w <- sum(x, na.rm = FALSE)
+        if(is.na(w)){
+            return(0)
+        } else{
+            return(NA)
+        }
+    }
+    
+    dem_edge <- dem %>%
+        terra::rast() %>%
+        terra::focal(., fun=get_out_cells,
+                      w = matrix(1, nrow = 3, ncol = 3)) %>%
+        terra::as.polygons(dissolve = FALSE) %>%
+        sf::st_as_sf()
 
     #tally raster cells
     summary_out$n_wb_cells <- length(wb$geometry)
