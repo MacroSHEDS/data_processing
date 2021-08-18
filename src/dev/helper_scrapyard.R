@@ -1920,3 +1920,148 @@ chunk_bb <- function(bb){
 
     return(bb_all)
 }
+
+
+#still in progress
+delineate_watershed_nhd <- function(lat, long) {
+    
+    #this function delineates a watershed from a point first using NHD tools.
+    #if that fails, it falls back on a more general whitebox method, which is
+    #implemented in delineate_watershed. the NHD method, if implemented, should
+    #correct for reach proportional distance of each site location. see
+    # https://github.com/vlahm/watershed_tools/blob/master/2_batch_summary_nhd.R
+    #also at that link, there's a function for retrieving COMID by lat/long, which
+    #could replace discover_nhdplus_id below (which doesn't always seem to work?)
+    
+    #there's also this streamstats approach (fully packaged),
+    #   but that's incomplete even for CONUS
+    # x = streamstats::delineateWatershed(xlocation = long,
+    #                                     ylocation = lat,
+    #                                     crs = crs)
+    # streamstats::leafletWatershed(x)
+    
+    site <- tibble(x = lat,
+                   y = long) %>%
+        sf::st_as_sf(coords = c("y", "x"), crs = 4269) %>%
+        sf::st_transform(102008)
+    
+    start_comid <- nhdplusTools::discover_nhdplus_id(sf::st_sfc(
+        sf::st_point(c(long, lat)), crs = 4269))
+    
+    flowline <- nhdplusTools::navigate_nldi(list(featureSource = "comid",
+                                                 featureID = start_comid),
+                                            mode = "upstreamTributaries",
+                                            data_source = "")
+    
+    subset_file <- tempfile(fileext = ".gpkg")
+    
+    subset <- nhdplusTools::subset_nhdplus(comids = flowline$nhdplus_comid,
+                                           output_file = subset_file,
+                                           nhdplus_data = "download",
+                                           return_data = TRUE)
+    
+    flowlines <- subset$NHDFlowline_Network %>%
+        sf::st_transform(102008)
+    
+    catchments <- subset$CatchmentSP %>%
+        sf::st_transform(102008)
+    
+    upstream <- nhdplusTools::get_UT(flowlines, start_comid)
+    
+    watershed <- catchments %>%
+        filter(featureid %in% upstream) %>%
+        sf::st_buffer(0.01) %>%
+        sf::st_union() %>%
+        sf::st_as_sf()
+    
+    if(as.numeric(sf::st_area(watershed)) >= 60000000) {
+        return(watershed)
+    }
+    else {
+        
+        outline = sf::st_as_sfc(sf::st_bbox(flowlines))
+        
+        outline_buff <- outline %>%
+            sf::st_buffer(5000)
+        
+        dem <- expo_backoff(
+            expr = {
+                elevatr::get_elev_raster(locations = as(outline_buff, 'Spatial'),
+                                         z = 12,
+                                         verbose = FALSE,
+                                         override_size_check = TRUE)
+            },
+            max_attempts = 5
+        )
+        
+        temp_raster <- tempfile(fileext = ".tif")
+        
+        terra::writeRaster(dem, temp_raster, overwrite = T)
+        
+        temp_point <- tempfile(fileext = ".shp")
+        
+        sf::st_write(sf::st_zm(site), temp_point, delete_layer=TRUE)
+        
+        temp_breash2 <- tempfile(fileext = ".tif")
+        whitebox::wbt_fill_single_cell_pits(temp_raster, temp_breash2)
+        
+        temp_breached <- tempfile(fileext = ".tif")
+        whitebox::wbt_breach_depressions(temp_breash2,temp_breached,flat_increment=.01)
+        
+        temp_d8_pntr <- tempfile(fileext = ".tif")
+        whitebox::wbt_d8_pointer(temp_breached,temp_d8_pntr)
+        
+        temp_shed <- tempfile(fileext = ".tif")
+        whitebox::wbt_unnest_basins(temp_d8_pntr, temp_point, temp_shed)
+        
+        # No idea why but wbt_unnest_basins() aves whatever file path with a _1 after the name so must add
+        file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
+        
+        file_shed <- paste0(file_new[1], "_1.", file_new[2])
+        
+        check <- terra::rast(file_shed)
+        values <- terra::values(check)
+        values[is.na(values)] <- 0
+        
+        
+        if(sum(values, na.rm = TRUE) < 100) {
+            
+            flow <- tempfile(fileext = ".tif")
+            whitebox::wbt_d8_flow_accumulation(temp_breached,flow,out_type='catchment area')
+            
+            snap <- tempfile(fileext = ".shp")
+            whitebox::wbt_snap_pour_points(temp_point, flow, snap, 50)
+            
+            temp_shed <- tempfile(fileext = ".tif")
+            whitebox::wbt_unnest_basins(temp_d8_pntr, snap, temp_shed)
+            
+            file_new <- str_split_fixed(temp_shed, "[.]", n = 2)
+            
+            file_shed <- paste0(file_new[1], "_1.", file_new[2])
+            
+            check <- terra::rast(file_shed)
+            values <- terra::values(check)
+            values[is.na(values)] <- 0
+        }
+        watershed_raster <- raster::rasterToPolygons(terra::rast(file_shed))
+        
+        #Convert shapefile to sf
+        watershed_df <- sf::st_as_sf(watershed_raster)
+        
+        #buffer to join all pixles into one shape
+        watershed <- sf::st_buffer(watershed_df, 0.1) %>%
+            sf::st_union() %>%
+            sf::st_as_sf()
+        
+        if(sum(values, na.rm = T) < 100) {
+            watershed <- watershed %>%
+                mutate(flag = "check")
+        }
+        
+        #sf::st_write(watershed_union, dsn =
+        #                glue("data/{n}/{d}/geospatial/ws_boundaries/{s}.shp",
+        #                    n = sites$network, d = sites$domain, s = sites$site_code))
+        return(watershed)
+        
+    }
+}

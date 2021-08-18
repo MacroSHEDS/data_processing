@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
     library(imputeTS)
     library(errors)
-    # library(foreach) #loaded by doFuture
+    library(foreach) #loaded by doFuture
     library(doParallel) #replaced by doFuture, but still needed on BM1
     library(doFuture)
     library(googlesheets4)
@@ -209,8 +209,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(email = gee_login,
-                        drive = TRUE))
+try(rgee::ee_Initialize(drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
 
@@ -244,8 +243,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-
 # dmnrow=9
+
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -283,14 +282,14 @@ for(dmnrow in 1:nrow(network_domain)){
                 # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             # prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('stream_chemistry'),
               domain = domain)
     ms_general(network = network,
                domain = domain)
