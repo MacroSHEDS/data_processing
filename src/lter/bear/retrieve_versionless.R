@@ -17,7 +17,7 @@ if(nrow(prod_info) == 0) return()
 
 site_code <- 'sitecode_NA'
 
-i = 4
+i = 1
 for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
