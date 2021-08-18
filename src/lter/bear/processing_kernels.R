@@ -18,11 +18,39 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
-
-    download.file(url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.621.1&entityid=1dbe749e1863c3e1ec63d10dfbce6e65',
-                      destfile = rawfile,
-                      cacheOK = FALSE,
-                      method = 'curl')
+    
+    url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.621.1&entityid=1dbe749e1863c3e1ec63d10dfbce6e65'
+    
+    last_mod_dt <- ymd_hms('1999-09-09 09:09:09') %>% # using fake date to force retrieve. last modified date not available in url. 
+      with_tz('UTC')
+    
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+    
+    if(last_mod_dt > set_details$last_mod_dt){
+      
+      download.file(url = url,
+                    destfile = rawfile,
+                    cacheOK = FALSE,
+                    method = 'curl')
+      
+      deets_out$url <- url
+      deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                    tzone = 'UTC'))
+      deets_out$last_mod_dt = last_mod_dt
+      
+      loginfo(msg = paste('Updated', set_details$component),
+              logger = logger_module)
+      
+      return(deets_out)
+    }
+    
+    loginfo(glue('Nothing to do for {p}',
+                 p = set_details$prodname_ms),
+            logger = logger_module)
+    
+    return(deets_out)
 
 }
 
@@ -43,13 +71,40 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
-    
-        download.file(url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.618.1&entityid=cb6494ed6f404616a97de8f80edd883d',
-                      destfile = rawfile,
-                      cacheOK = FALSE,
-                      method = 'curl')
 
-    return()
+    url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.618.1&entityid=cb6494ed6f404616a97de8f80edd883d'
+                      
+   last_mod_dt <- ymd_hms('1999-09-09 09:09:09') %>% # using fake date to force retrieve. last modified date not available in url. 
+     with_tz('UTC')
+   
+   deets_out <- list(url = NA_character_,
+                     access_time = NA_character_,
+                     last_mod_dt = NA_character_)
+   
+   if(last_mod_dt > set_details$last_mod_dt){
+     
+     download.file(url = url,
+                   destfile = rawfile,
+                   cacheOK = FALSE,
+                   method = 'curl')
+     
+     deets_out$url <- url
+     deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                   tzone = 'UTC'))
+     deets_out$last_mod_dt = last_mod_dt
+     
+     loginfo(msg = paste('Updated', set_details$component),
+             logger = logger_module)
+     
+     return(deets_out)
+   }
+   
+   loginfo(glue('Nothing to do for {p}',
+                p = set_details$prodname_ms),
+           logger = logger_module)
+   
+   return(deets_out)                      
+  
     
 }
 
@@ -71,11 +126,39 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
         
-    download.file(url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.618.1&entityid=cb6494ed6f404616a97de8f80edd883d',
-                      destfile = rawfile,
-                      cacheOK = FALSE,
-                      method = 'curl')
-  return()      
+    url = 'https://portal.edirepository.org/nis/dataviewer?packageid=edi.618.1&entityid=cb6494ed6f404616a97de8f80edd883d'
+                      
+    last_mod_dt <- ymd_hms('1999-09-09 09:09:09') %>% # using fake date to force retrieve. last modified date not available in url. 
+      with_tz('UTC')
+    
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+    
+    if(last_mod_dt > set_details$last_mod_dt){
+      
+      download.file(url = url,
+                    destfile = rawfile,
+                    cacheOK = FALSE,
+                    method = 'curl')
+      
+      deets_out$url <- url
+      deets_out$access_time <- as.character(with_tz(Sys.time(),
+                                                    tzone = 'UTC'))
+      deets_out$last_mod_dt = last_mod_dt
+      
+      loginfo(msg = paste('Updated', set_details$component),
+              logger = logger_module)
+      
+      return(deets_out)
+    }
+    
+    loginfo(glue('Nothing to do for {p}',
+                 p = set_details$prodname_ms),
+            logger = logger_module)
+    
+    return(deets_out)
+    
 }
 
 #ws_boundary: STATUS=READY
