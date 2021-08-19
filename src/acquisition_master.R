@@ -57,16 +57,6 @@ vsn <- 1.0
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
 
-if(exists('sf_use_s2',
-          where = 'package:sf',
-          mode = 'function')){
-
-    #sf v1.0+ uses s2 geometry by default, which breaks some of our code.
-    #We may want to deal with that someday, but for now let's just keep using
-    #GEOS, which is still perfectly fine for our purposes.
-    sf::sf_use_s2(FALSE)
-}
-
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
                     use_ms_error_handling = TRUE,
@@ -206,9 +196,11 @@ conf <- jsonlite::fromJSON('config.json')
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(drive = TRUE))
+try(rgee::ee_Initialize(user = gee_login,
+                        drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
 
@@ -242,9 +234,9 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 5
-# print(network_domain, n=50)
-# for(dmnrow in 1:nrow(network_domain)){
+
+# dmnrow=9
+
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!

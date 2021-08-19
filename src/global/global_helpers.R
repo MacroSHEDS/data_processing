@@ -4541,6 +4541,10 @@ ms_calc_watershed_area <- function(network,
 
     wb <- sf::st_read(wd_path,
                       quiet = TRUE)
+    
+    if(! sf::st_is_valid(wb)){
+        stop('Watershed is not s2 valid, was this boundary produced under an older version of the system?')
+    }
 
     ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
 
@@ -4978,6 +4982,10 @@ write_ms_file <- function(d,
         dir.create(site_dir,
                    showWarnings = FALSE,
                    recursive = TRUE)
+
+        if(any(! sf::st_is_valid(d))) {
+            d <- sf::st_make_valid(d)
+        }
 
         sw(sf::st_write(obj = d,
                         dsn = glue(site_dir, '/', site_code, '.shp'),
@@ -12249,7 +12257,7 @@ download_from_googledrive <- function(set_details, network, domain){
     download_from_googledrive_function_indicator <- TRUE
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitename_NA',
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitecode_NA',
                           n = network,
                           d = domain,
                           p = set_details$prodname_ms)
