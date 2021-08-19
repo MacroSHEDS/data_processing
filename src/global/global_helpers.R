@@ -12257,7 +12257,7 @@ download_from_googledrive <- function(set_details, network, domain){
     download_from_googledrive_function_indicator <- TRUE
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitename_NA',
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitecode_NA',
                           n = network,
                           d = domain,
                           p = set_details$prodname_ms)
