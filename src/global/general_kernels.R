@@ -1419,3 +1419,144 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
 
   return()
 }
+
+#nsidc: STATUS=READY
+#. handle_errors
+process_3_ms821 <- function(network, domain, prodname_ms, site_code,
+                            boundaries) {
+  
+  
+  snow_dir <- glue('data/{n}/{d}/ws_traits/nsidc',
+                   n = network,
+                   d = domain)
+
+  dir.create(snow_dir, recursive = TRUE, showWarnings = FALSE)
+
+  snow_files <- list.files('data/spatial/nsidc/', recursive = TRUE, full.names = TRUE)
+
+  sites <- boundaries$site_code
+  for(s in 1:length(sites)){
+
+    files <- list.files(glue('data/{n}/{d}/derived/',
+                             n = network,
+                             d = domain))
+
+    ws_prodname <- grep('ws_boundary', files, value = TRUE)
+
+    ws_path <- glue('data/{n}/{d}/derived/{p}/{s}',
+                    n = network,
+                    d = domain,
+                    p = ws_prodname,
+                    s = sites[s])
+    
+
+    nthreads <- parallel::detectCores()
+    clst <- ms_parallelize(maxcores = nthreads)
+
+    all_years <- tibble()
+    all_years <- foreach::foreach(
+      p = 1:length(snow_files),
+      .combine = rbind,
+      .init = all_years) %dopar% {
+
+        snow_year <- str_split_fixed(snow_files[p], '/', n = Inf)[1,4]
+        snow_year <- str_split_fixed(snow_year, '[.]', n = Inf)[1,1]
+        snow_year <- str_split_fixed(snow_year, '_', n = Inf)[1,4]
+        snow_year <- substr(snow_year, 3, 6) 
+        snow_year <- as.numeric(snow_year)-1
+
+        snow_file <- terra::rast(snow_files[p])
+
+        site_boundary <- sf::st_read(ws_path) %>%
+          terra::vect(.)
+
+        swe_tib = terra::extract(snow_file, site_boundary, weights = TRUE)
+
+        final <- swe_tib %>%
+          pivot_longer(cols = starts_with(c('SWE', 'DEPTH'))) %>%
+          mutate(weighted_value = value*weight) %>%
+          group_by(name) %>%
+          summarise(val = sum(weighted_value, na.rm = TRUE),
+                    weights = sum(weight, na.rm = TRUE),
+                    n = n(),
+                    sd = sd(value, na.rm = TRUE),
+                    na = sum(is.na(value))) %>%
+          mutate(mean = val/weights,
+                 pctCellErr = (na/n)*100) %>%
+          mutate(var = str_split_fixed(name, '_', n = Inf)[,1],
+                 day = str_split_fixed(name, '_', n = Inf)[,2]) %>%
+          mutate(datetime = as_date(as.numeric(day), origin = paste0(snow_year, '-09-30'))) %>%
+          select(datetime, mean, sd, var, pctCellErr) %>%
+          mutate(var = case_when(var == 'DEPTH' ~ 'snow_depth',
+                                 var == 'SWE' ~ 'swe')) %>%
+          pivot_longer(cols = c('mean', 'sd')) %>%
+          mutate(var = paste(var, name, sep = '_')) %>%
+          select(datetime, var, val = value, pctCellErr)
+
+        final
+
+      }
+
+    ms_unparallelize(clst)
+
+    all_years <- all_years %>%
+      mutate(site_code = !!sites[s]) %>%
+      select(datetime, site_code, var, val, pctCellErr)
+
+    snow_d_means <- all_years %>%
+      mutate(year = year(datetime)) %>%
+      filter(var == 'snow_depth_mean') %>%
+      group_by(site_code, year) %>%
+      summarise(snow_depth_ann_max = max(val, na.rm = TRUE),
+                snow_depth_ann_min = min(val, na.rm = TRUE),
+                snow_depth_ann_mean = mean(val, na.rm = TRUE),
+                snow_depth_sd_year = sd(val, na.rm = TRUE)) %>%
+      pivot_longer(cols = c('snow_depth_ann_max', 'snow_depth_ann_min', 
+                            'snow_depth_ann_mean', 'snow_depth_sd_year'),
+                   names_to = 'var',
+                   values_to = 'val')
+    
+    snow_d_sd <- all_years %>%
+      mutate(year = year(datetime)) %>%
+      filter(var == 'snow_depth_sd') %>%
+      group_by(site_code, year) %>%
+      summarise(val = mean(val, na.rm = TRUE)) %>%
+      mutate(var = 'snow_depth_sd_space')
+    
+    swe_means <- all_years %>%
+      mutate(year = year(datetime)) %>%
+      filter(var == 'swe_mean') %>%
+      group_by(site_code, year) %>%
+      summarise(swe_ann_max = max(val, na.rm = TRUE),
+                swe_ann_min = min(val, na.rm = TRUE),
+                swe_ann_mean = mean(val, na.rm = TRUE),
+                swe_sd_year = sd(val, na.rm = TRUE)) %>%
+      pivot_longer(cols = c('swe_ann_max', 'swe_ann_min', 'swe_ann_mean', 
+                            'swe_sd_year'),
+                   names_to = 'var',
+                   values_to = 'val')
+    
+    swe_sd <- all_years %>%
+      mutate(year = year(datetime)) %>%
+      filter(var == 'swe_sd') %>%
+      group_by(site_code, year) %>%
+      summarise(val = mean(val, na.rm = TRUE)) %>%
+      mutate(var = 'swe_sd_space')
+    
+    snow_final <- rbind(snow_d_means, snow_d_sd, swe_means, swe_sd) %>%
+      select(year, site_code, var, val)
+    
+    
+    dir <- glue('data/{n}/{d}/ws_traits/nsidc/',
+                n = network,
+                d = domain)
+    
+    all_years <- append_unprod_prefix(all_years, prodname_ms)
+    snow_final <- append_unprod_prefix(snow_final, prodname_ms)
+    
+    save_general_files(final_file = snow_final,
+                       raw_file = all_years,
+                       domain_dir = dir)
+    
+  }
+}
