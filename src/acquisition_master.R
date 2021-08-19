@@ -196,6 +196,7 @@ conf <- jsonlite::fromJSON('config.json')
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
 try(rgee::ee_Initialize(user = gee_login,
@@ -233,9 +234,9 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 1
-# print(network_domain, n=50)
-# for(dmnrow in 1:nrow(network_domain)){
+
+# dmnrow=9
+
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
