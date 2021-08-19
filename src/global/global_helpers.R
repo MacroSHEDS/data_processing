@@ -5711,7 +5711,7 @@ shortcut_idw <- function(encompassing_dem,
                           dimnames = list(NULL,
                                           colnames(data_matrix)))
 
-    dem_wb_all_na <- dem_wb 
+    dem_wb_all_na <- dem_wb
     terra::values(dem_wb_all_na) <- NA
     dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(data_matrix)){
@@ -6008,13 +6008,13 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                             dimnames = list(NULL,
                                             colnames(c_matrix)))
 
-    dem_wb_all_na <- dem_wb 
+    dem_wb_all_na <- dem_wb
     terra::values(dem_wb_all_na) <- NA
     dem_wb_all_na <- terra::rast(dem_wb_all_na)
     for(k in 1:ncol(c_matrix)){
         dk <- filter(data_locations,
                      site_code == colnames(c_matrix)[k])
-        
+
         inv_dists_site <- 1 / terra::distance(dem_wb_all_na, terra::vect(dk))^2 %>%
             terra::values(.)
         inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
@@ -9298,7 +9298,7 @@ raster_intersection_summary <- function(wb, dem){
     #                                     ncol = 2)) %>%
     #     raster::rasterToPolygons() %>%
     #     sf::st_as_sf()
-    
+
     get_out_cells <- function(x) {
         w <- sum(x, na.rm = FALSE)
         if(is.na(w)){
@@ -9307,7 +9307,7 @@ raster_intersection_summary <- function(wb, dem){
             return(NA)
         }
     }
-    
+
     dem_edge <- dem %>%
         terra::rast() %>%
         terra::focal(., fun=get_out_cells,
@@ -9962,7 +9962,7 @@ postprocess_entire_dataset <- function(site_data,
     if(populate_implicit_missing_values){
         log_with_indent('Completing cases (populating implicit missing rows)',
                         logger = logger_module)
-        ms_complete_all_cases(site_data = site_data)
+        ms_complete_all_cases(network_domain = network_domain)
     } else {
         log_with_indent('NOT completing cases',
                         logger = logger_module)
@@ -9970,12 +9970,12 @@ postprocess_entire_dataset <- function(site_data,
 
     log_with_indent('Inserting gap-border NAs in portal dataset (so plots show gaps)',
                     logger = logger_module)
-    insert_gap_border_NAs(site_data = site_data)
+    insert_gap_border_NAs(network_domain = network_domain)
 
     if(generate_csv_for_each_product){
         log_with_indent('Generating an analysis-ready CSV for each product',
                         logger = logger_module)
-        generate_product_csvs(site_data = site_data)
+        generate_product_csvs(network_domain = network_domain)
     } else {
         log_with_indent('NOT generating analysis-ready CSVs',
                         logger = logger_module)
@@ -12182,8 +12182,8 @@ extract_ws_mean <- function(site_boundary, raster_path){
     rast_masked <- rast_file %>%
         terra::crop(site_boundary_buf)
 
-    weighted_results  <- terra::extract(rast_masked, 
-                                        site_boundary, 
+    weighted_results  <- terra::extract(rast_masked,
+                                        site_boundary,
                                         weights = TRUE)
 
     vals_w <- weighted_results %>%
