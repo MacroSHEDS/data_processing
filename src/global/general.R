@@ -74,9 +74,9 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i=24
+# i=15
 for(i in 1:nrow(unprod)){
-# for(i in 3:3){
+# for(i in 25:26){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
@@ -105,6 +105,8 @@ for(i in 1:nrow(unprod)){
     general_status <- get_general_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
+    
+    # general_status <- 'pending'
 
     if(general_status %in% c('ok', 'no_data_avail')){
 
