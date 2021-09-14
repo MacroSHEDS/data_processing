@@ -234,9 +234,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-
-# dmnrow=9
-
+# dmnrow=19
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -281,7 +279,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              prodname_filter = c('ws_boundary'),
               domain = domain)
     ms_general(network = network,
                domain = domain)
