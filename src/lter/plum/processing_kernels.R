@@ -1133,11 +1133,11 @@ process_1_542 <- munge_precip_alt
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/ws_boundary__VERSIONLESS001/sitename_NA/cart_creek.zip',
+    rawfile <- glue('data/{n}/{d}/raw/ws_boundary__VERSIONLESS001/sitecode_NA/cart_creek.zip',
                     n = network,
                     d = domain)
 
-    mungedir <- glue('data/{n}/{d}/munged/ws_boundary__VERSIONLESS001/',
+    mungedir <- glue('data/{n}/{d}/munged/ws_boundary__VERSIONLESS001',
                      n = network,
                      d = domain)
 
