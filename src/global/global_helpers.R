@@ -4541,7 +4541,7 @@ ms_calc_watershed_area <- function(network,
 
     wb <- sf::st_read(wd_path,
                       quiet = TRUE)
-    
+
     if(! sf::st_is_valid(wb)){
         stop('Watershed is not s2 valid, was this boundary produced under an older version of the system?')
     }
@@ -10016,10 +10016,252 @@ postprocess_entire_dataset <- function(site_data,
                            filter_ms_status = FALSE)
     compute_yearly_summary_ws()
 
-    log_with_indent('Calculating sizes of downloadable files',
+    # log_with_indent('Calculating sizes of downloadable files',
+    #                 logger = logger_module)
+    # compute_download_filesizes()
+
+    log_with_indent(glue('Preparing dataset v{vv} for Figshare',
+                         vv = dataset_version),
                     logger = logger_module)
-    compute_download_filesizes()
+    prepare_dataset_for_figshare(dataset_version = dataset_version)
+
+
+    log_with_indent(glue('Uploading dataset v{vv} to Figshare',
+                         vv = dataset_version),
+                    logger = logger_module)
+    upload_dataset_to_figshare(dataset_version = dataset_version)
 }
+
+prepare_dataset_for_figshare <- function(dataset_version){
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" call below probably will not work on windows.',
+                   'investigate and update that call if necessary'))
+    }
+
+    dir.create(glue('macrosheds_figshare_v', dataset_version),
+               showWarnings = FALSE)
+
+    file.copy(from = glue('macrosheds_dataset_v', dataset_version),
+              to = glue('macrosheds_figshare_v', dataset_version),
+              recursive = TRUE)
+
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
+                vv = dataset_version)
+
+    unlink(file.path(tld, 'load_entire_product.R'))
+
+    all_dirs <- list.dirs(tld)
+
+    junk_dirs <- grep(pattern = 'derived$',
+                      x = all_dirs,
+                      value = TRUE)
+
+    for(jd in junk_dirs){
+
+        # fs <- list.files(jd,
+        #                  full.names = TRUE,
+        #                  recursive = TRUE)
+        #
+        # fs_new <- sub(pattern = '/derived',
+        #               replacement = '',
+        #               x = fs)
+
+        to_folder <- sub(pattern = '/derived$',
+                         replacement = '',
+                         x = jd)
+
+        system(glue('mv {j}/* {t}',
+                    j = jd,
+                    t = to_folder))
+
+        file.remove(jd)
+
+        dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
+
+        parent_folder <- sub(pattern = glue('/', dmn),
+                             replacement = '',
+                             x = to_folder)
+
+        setwd(parent_folder)
+        zip(zipfile = glue(dmn, '.zip'),
+            files = dmn,
+            flags = '-r9Xq')
+        setwd('../../..')
+
+        unlink(to_folder, recursive = TRUE)
+    }
+}
+
+figshare_create_article <- function(title,
+                                    description,
+                                    type = c("dataset", "figure",  "media", "poster", "paper", "fileset"),
+                                    keywords,
+                                    category_ids,
+                                    token,
+                                    debug = FALSE){
+
+    if(is.character(keywords)) keywords <- as.list(keywords)
+    if(is.numeric(category_ids)) category_ids <- as.list(category_ids)
+
+    header <- c(Authorization = sprintf("token %s", token))
+    type <- match.arg(type)
+    base <- "https://api.figshare.com/v2"
+    method <- "account/articles"
+    request <- paste(base, method, sep = "/")
+
+    meta <- jsonlite::toJSON(list(title = title,
+                                  description = description,
+                                  defined_type = type,
+                                  keywords = keywords,
+                                  categories = category_ids),
+                             auto_unbox = TRUE)
+
+    post <- httr::POST(request,
+                       config = httr::add_headers(header),
+                       body = meta,
+                       httr::verbose())
+
+    if(debug | post$status_code > 201){
+        httr::stop_for_status(post)
+    } else {
+
+        p <- jsonlite::fromJSON(httr::content(x = post,
+                                              as = 'text',
+                                              encoding = 'UTF-8'))
+
+        article_id <- as.numeric(regmatches(p$location, regexpr('[0-9]+$', p$location)))
+        message(paste("Your article has been created! Your id number is",
+                      article_id))
+
+        return(article_id)
+    }
+}
+
+upload_dataset_to_figshare <- function(dataset_version){
+
+    require(rfigshare)
+
+    ## add figshare PAT to R env
+    # usethis::edit_r_environ()
+
+    ## get category IDs from category names
+    # qqq <- content(rfigshare::fs_category_list(debug = TRUE))[[1]]
+    # all_categories <- sapply(qqq, function(x) { xx = x$name; names(xx) = x$id ; return(xx)})
+    # categories <- c('Earth Sciences not elsewhere classified',
+    #                 'Environmental Monitoring',
+    #                 'Geochemistry not elsewhere classified',
+    #                 'Hydrology',
+    #                 'Landscape Ecology',
+    #                 'Freshwater Ecology')
+    # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
+    cat_ids <- c(80, 214, 251, 255, 261, 673)
+
+    # rfigshare::fs_add_categories(fs_id, cat_ids)
+    # fs_api$operations$private_article_categories_add(cat_ids)
+
+    # rfigshare::fs_delete(fs_id, file_id = fs_id)
+
+    # require(rapiclient)
+    #
+    # fs_api <- get_api("https://docs.figshare.com/swagger.json")
+    # header <- c(Authorization = sprintf("token %s", Sys.getenv("RFIGSHARE_PAT")))
+    # fs_api <- list(operations = get_operations(fs_api, header),
+    #                schemas = get_schemas(fs_api))
+    # reply <- fs_api$article_files(fs_id)
+    # attr(fs_api$operations$private_article_categories_add,
+    #      'definition')$path = glue('/account/articles/{aid}/categories',
+    #                                aid = fs_id)
+    # fs_api$operations$private_article_categories_add(as.list(cat_ids))
+    # # attr(fs_api$operations$private_article_upload_initiate, "definition")$path = 'a'
+    # # class(fs_api$operations$private_article_upload_initiate)
+    # attributes(fs_api$operations$private_article_categories_add)
+    # zzz = fs_api$operations$private_article_categories_add
+    # zzz(categories = 1)
+    # attr(zzz, 'definition')
+
+
+    # my_articles <- fs_api$operations$private_articles_list()
+    # content(my_articles)
+
+    # grep('article', names(fs_api$operations), value=T)
+    # grep('upload', names(fs_api$operations), value=T)
+    # grep('create', names(fs_api$operations), value=T)
+    # grep('categor', names(fs_api$operations), value=T)
+
+    r <- httr::GET('https://api.figshare.com/v2/account/articles',
+                   httr::add_headers(header))
+
+    json <- httr::content(r,
+                          as = "text",
+                          encoding = "UTF-8")
+
+    d <- try(jsonlite::fromJSON(json),
+             silent = TRUE)
+
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
+                vv = dataset_version)
+
+    ntws <- list.files(tld)
+
+    for(i in seq_along(ntws)){
+        ntw <- ntws[i]
+        dmns <- list.files(file.path(tld, ntw))
+        for(j in seq_along(dmns)){
+            dmn = sub('.zip', '', dmns[j])
+            # if(paste0(dmn, '.zip') %in% d$title){
+            #     delete
+            # }
+
+            # #create figshare "article", which in this case is a dataset
+            # fs_id <- rfigshare::fs_create(
+            #     title = dmn,
+            #     description = glue('MacroSheds timeseries data, shapefiles, ',
+            #                        'and metadata for domain: {dmn}',
+            #                        dmn = dmn),
+            #     type = 'dataset')
+            #create figshare "article", which in this case is a dataset
+            fs_id <- figshare_create_article(
+                title = dmn,
+                description = glue('MacroSheds timeseries data, shapefiles, ',
+                                   'and metadata for domain: {d}, network: {n}',
+                                   d = dmn,
+                                   n = ntw),
+                keywords = list('czo'),
+                category_ids = cat_ids,
+                type = 'dataset',
+                token = Sys.getenv("RFIGSHARE_PAT"))
+
+            #upload domain zip to that article
+            rfigshare::fs_upload(
+                fs_id,
+                file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
+                            n = ntw,
+                            d = dmn))
+
+            # #deck it out with all the goodies necessary for publication
+            # msfs_add_categories(article_id = fs_id,
+            #                     category_ids = cat_ids,
+            #                     token = Sys.getenv("RFIGSHARE_PAT"))
+
+            publish
+            add to collection
+        }
+    }
+
+
+    # fs_api$operations$private_article_upload_initiate('data/czo/boulder/derived/documentation/documentation_discharge__ms005.txt')
+}
+
+# list_articles <- function(){
+#     r <- httr::GET('https://api.figshare.com/v2/account/articles',
+#                    httr::add_headers(header))
+#     json <- httr::content(r, as="text", encoding="UTF-8")
+#     d <- try(jsonlite::fromJSON(json), silent=TRUE)
+#     for(i in seq_len(nrow(d))){
+#         print(paste(d$url[i], d$title[i]))
+#     }
+# }
 
 detrmin_mean_record_length <- function(df){
 
