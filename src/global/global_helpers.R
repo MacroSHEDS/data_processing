@@ -10119,8 +10119,8 @@ figshare_create_article <- function(title,
 
     post <- httr::POST(request,
                        config = httr::add_headers(header),
-                       body = meta,
-                       httr::verbose())
+                       body = meta)
+                       # httr::verbose())
 
     if(debug | post$status_code > 201){
         httr::stop_for_status(post)
@@ -10136,6 +10136,52 @@ figshare_create_article <- function(title,
 
         return(article_id)
     }
+}
+
+figshare_delete_article <- function(article_id,
+                                    file_id = NULL,
+                                    token,
+                                    debug = FALSE){
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/articles", article_id, sep = "/")
+    if (!is.null(file_id)) {
+        method <- paste(method, "files", file_id, sep = "/")
+    }
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+    r <- httr::DELETE(request, config = httr::add_headers(header))
+    if (debug | r$status_code > 201)  return('err')
+}
+
+figshare_add_articles_to_collection <- function(collection_id,
+                                                article_ids,
+                                                token,
+                                                debug = FALSE){
+
+    if(is.numeric(article_ids)) article_ids <- as.list(article_ids)
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/collections", collection_id, 'articles', sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+    meta <- jsonlite::toJSON(list(articles = article_ids),
+                             auto_unbox = TRUE)
+
+    r <- httr::POST(request,
+                    body = meta,
+                    config = httr::add_headers(header))
+
+    if(debug | r$status_code > 201) return('err')
+}
+
+figshare_list_collections <- function(token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+    r <- httr::GET('https://api.figshare.com/v2/account/collections',
+                   httr::add_headers(header))
+
+    return(content(r))
 }
 
 upload_dataset_to_figshare <- function(dataset_version){
@@ -10155,6 +10201,7 @@ upload_dataset_to_figshare <- function(dataset_version){
     #                 'Landscape Ecology',
     #                 'Freshwater Ecology')
     # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
+    token <- Sys.getenv("RFIGSHARE_PAT")
     cat_ids <- c(80, 214, 251, 255, 261, 673)
 
     # rfigshare::fs_add_categories(fs_id, cat_ids)
@@ -10222,15 +10269,16 @@ upload_dataset_to_figshare <- function(dataset_version){
             #     type = 'dataset')
             #create figshare "article", which in this case is a dataset
             fs_id <- figshare_create_article(
-                title = dmn,
+                title = glue('Network: ', ntw, ', Domain: ', dmn),
                 description = glue('MacroSheds timeseries data, shapefiles, ',
-                                   'and metadata for domain: {d}, network: {n}',
+                                   'and metadata for domain: {d}, within network: {n}',
                                    d = dmn,
                                    n = ntw),
                 keywords = list('czo'),
                 category_ids = cat_ids,
                 type = 'dataset',
-                token = Sys.getenv("RFIGSHARE_PAT"))
+                token = token)
+            Sys.sleep(1)
 
             #upload domain zip to that article
             rfigshare::fs_upload(
@@ -10238,19 +10286,21 @@ upload_dataset_to_figshare <- function(dataset_version){
                 file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
                             n = ntw,
                             d = dmn))
+            Sys.sleep(1)
 
-            # #deck it out with all the goodies necessary for publication
-            # msfs_add_categories(article_id = fs_id,
-            #                     category_ids = cat_ids,
-            #                     token = Sys.getenv("RFIGSHARE_PAT"))
+            figshare_add_articles_to_collection(collection_id = 5621740,
+                                                article_ids = fs_id,
+                                                token = token)
+            Sys.sleep(1)
 
-            publish
-            add to collection
+            WHY DOESN'T ADD-TO-COLLECTION WORK IN LOOP!
+            # publish collection
+            # update articles (if they remain in My Data) (there's an APi endpoint for this)
+            # replace articles in collection (there's an API endpoint for this)
         }
     }
 
-
-    # fs_api$operations$private_article_upload_initiate('data/czo/boulder/derived/documentation/documentation_discharge__ms005.txt')
+    DONT FORGET TO UPLOAD SPATIAL SUMMARY STUFF
 }
 
 # list_articles <- function(){
