@@ -10154,6 +10154,18 @@ figshare_delete_article <- function(article_id,
     if (debug | r$status_code > 201)  return('err')
 }
 
+figshare_publish_article <- function(article_id,
+                                     token,
+                                     debug = FALSE){
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/articles", article_id, 'publish', sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+    r <- httr::POST(request, config = httr::add_headers(header))
+    if (debug | r$status_code > 201)  return('err')
+}
+
 figshare_add_articles_to_collection <- function(collection_id,
                                                 article_ids,
                                                 token,
@@ -10268,50 +10280,54 @@ upload_dataset_to_figshare <- function(dataset_version){
             #                        dmn = dmn),
             #     type = 'dataset')
             #create figshare "article", which in this case is a dataset
-            fs_id <- figshare_create_article(
-                title = glue('Network: ', ntw, ', Domain: ', dmn),
-                description = glue('MacroSheds timeseries data, shapefiles, ',
-                                   'and metadata for domain: {d}, within network: {n}',
-                                   d = dmn,
-                                   n = ntw),
-                keywords = list('czo'),
-                category_ids = cat_ids,
-                type = 'dataset',
-                token = token)
-            Sys.sleep(1)
+            expo_backoff(
+                expr = {
+                    fs_id <- figshare_create_article(
+                        title = glue('Network: ', ntw, ', Domain: ', dmn),
+                        description = glue('MacroSheds timeseries data, shapefiles, ',
+                                           'and metadata for domain: {d}, within network: {n}',
+                                           d = dmn,
+                                           n = ntw),
+                        keywords = list('czo'),
+                        category_ids = cat_ids,
+                        type = 'dataset',
+                        token = token)
+                },
+                max_attempts = 6
+            ) %>% invisible()
 
             #upload domain zip to that article
-            rfigshare::fs_upload(
-                fs_id,
-                file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
-                            n = ntw,
-                            d = dmn))
-            Sys.sleep(1)
+            expo_backoff(
+                expr = {
+                    rfigshare::fs_upload(
+                        fs_id,
+                        file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
+                                    n = ntw,
+                                    d = dmn))
+                },
+                max_attempts = 6
+            ) %>% invisible()
 
-            figshare_add_articles_to_collection(collection_id = 5621740,
-                                                article_ids = fs_id,
-                                                token = token)
-            Sys.sleep(1)
+            expo_backoff(
+                expr = {
+                    figshare_add_articles_to_collection(collection_id = 5621740,
+                                                        article_ids = fs_id,
+                                                        token = token)
+               },
+                max_attempts = 6
+            ) %>% invisible()
 
-            WHY DOESN'T ADD-TO-COLLECTION WORK IN LOOP!
-            # publish collection
-            # update articles (if they remain in My Data) (there's an APi endpoint for this)
-            # replace articles in collection (there's an API endpoint for this)
+            # WHY DOESN'T ADD-TO-COLLECTION WORK IN LOOP!
+            # # publish collection
+            # # update articles (if they remain in My Data) (there's an APi endpoint for this)
+            # # replace articles in collection (there's an API endpoint for this)
         }
     }
 
-    DONT FORGET TO UPLOAD SPATIAL SUMMARY STUFF
-}
+    figshare_publish_article()
 
-# list_articles <- function(){
-#     r <- httr::GET('https://api.figshare.com/v2/account/articles',
-#                    httr::add_headers(header))
-#     json <- httr::content(r, as="text", encoding="UTF-8")
-#     d <- try(jsonlite::fromJSON(json), silent=TRUE)
-#     for(i in seq_len(nrow(d))){
-#         print(paste(d$url[i], d$title[i]))
-#     }
-# }
+    # DONT FORGET TO UPLOAD SPATIAL SUMMARY STUFF
+}
 
 detrmin_mean_record_length <- function(df){
 
