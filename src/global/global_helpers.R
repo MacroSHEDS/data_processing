@@ -10131,8 +10131,9 @@ figshare_create_article <- function(title,
                                               encoding = 'UTF-8'))
 
         article_id <- as.numeric(regmatches(p$location, regexpr('[0-9]+$', p$location)))
-        message(paste("Your article has been created! Your id number is",
-                      article_id))
+        message(glue('Created article {t} ({id}).',
+                     t = title,
+                     id = article_id))
 
         return(article_id)
     }
@@ -10196,9 +10197,75 @@ figshare_list_collections <- function(token){
     return(content(r))
 }
 
+figshare_upload_article <- function(article_id,
+                                    file,
+                                    token,
+                                    ...){
+
+    require(digest)
+
+    base <- 'https://api.figshare.com/v2'
+
+    #initialize upload (post MD5, size, name)
+    request <- paste0(base, sprintf('/account/articles/%s/files',
+                                    article_id))
+
+    body <- list(md5 = digest::digest(file, algo = 'md5'),
+                 name = basename(file),
+                 size = file.info(file)$size)
+    auth_header <- c(Authorization = sprintf("token %s", token))
+
+    out <- httr::POST(request,
+                      config = httr::add_headers(auth_header),
+                      body = body,
+                      encode = 'json',
+                      httr::accept_json(),
+                      ...)
+
+    #upload file by parts
+    upload_deets <-  httr::GET(httr::content(out)$location,
+                               config = httr::add_headers(auth_header)) %>%
+        httr::content()
+
+    part_deets <- httr::content(httr::GET(upload_deets$upload_url))
+
+    for(part in part_deets$parts){
+
+        url <- glue('{ul}/{p}',
+                    ul = upload_deets$upload_url,
+                    p = part$partNo)
+
+        con <- base::file(file, 'rb')
+        seek(con, part$startOffset)
+        datachunk <- readBin(con, 'raw', n = part$endOffset - part$startOffset + 1)
+        close(con)
+
+        o <- httr::PUT(url,
+                       config = httr::add_headers(auth_header,
+                                                  `Content-Type` = 'multipart/form-data'),
+                       body = datachunk)
+
+        if(o$status_code != 200) stop(pate('error uploading chunk', part$partNo))
+    }
+
+    #complete upload
+    request <- jsonlite::fromJSON(httr::content(out,
+                                                "text",
+                                                encoding = "UTF-8"))$location
+
+    final_out <- httr::POST(request,
+                            config = httr::add_headers(auth_header))
+
+    if(final_out$status_code > 202){
+        stop(paste('error uploading', article_id))
+    } else {
+        message(paste('Uploaded', article_id))
+    }
+}
+
 upload_dataset_to_figshare <- function(dataset_version){
 
-    require(rfigshare)
+    # require(rfigshare)
 
     ## add figshare PAT to R env
     # usethis::edit_r_environ()
@@ -10213,50 +10280,21 @@ upload_dataset_to_figshare <- function(dataset_version){
     #                 'Landscape Ecology',
     #                 'Freshwater Ecology')
     # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
+
     token <- Sys.getenv("RFIGSHARE_PAT")
+    auth_header <- c(Authorization = sprintf("token %s", token))
     cat_ids <- c(80, 214, 251, 255, 261, 673)
 
-    # rfigshare::fs_add_categories(fs_id, cat_ids)
-    # fs_api$operations$private_article_categories_add(cat_ids)
-
-    # rfigshare::fs_delete(fs_id, file_id = fs_id)
-
-    # require(rapiclient)
+    #check for already-uploaded datasets (NOT YET IMPLEMENTED)
+    # r <- httr::GET('https://api.figshare.com/v2/account/articles',
+    #                httr::add_headers(auth_header))
     #
-    # fs_api <- get_api("https://docs.figshare.com/swagger.json")
-    # header <- c(Authorization = sprintf("token %s", Sys.getenv("RFIGSHARE_PAT")))
-    # fs_api <- list(operations = get_operations(fs_api, header),
-    #                schemas = get_schemas(fs_api))
-    # reply <- fs_api$article_files(fs_id)
-    # attr(fs_api$operations$private_article_categories_add,
-    #      'definition')$path = glue('/account/articles/{aid}/categories',
-    #                                aid = fs_id)
-    # fs_api$operations$private_article_categories_add(as.list(cat_ids))
-    # # attr(fs_api$operations$private_article_upload_initiate, "definition")$path = 'a'
-    # # class(fs_api$operations$private_article_upload_initiate)
-    # attributes(fs_api$operations$private_article_categories_add)
-    # zzz = fs_api$operations$private_article_categories_add
-    # zzz(categories = 1)
-    # attr(zzz, 'definition')
-
-
-    # my_articles <- fs_api$operations$private_articles_list()
-    # content(my_articles)
-
-    # grep('article', names(fs_api$operations), value=T)
-    # grep('upload', names(fs_api$operations), value=T)
-    # grep('create', names(fs_api$operations), value=T)
-    # grep('categor', names(fs_api$operations), value=T)
-
-    r <- httr::GET('https://api.figshare.com/v2/account/articles',
-                   httr::add_headers(header))
-
-    json <- httr::content(r,
-                          as = "text",
-                          encoding = "UTF-8")
-
-    d <- try(jsonlite::fromJSON(json),
-             silent = TRUE)
+    # json <- httr::content(r,
+    #                       as = "text",
+    #                       encoding = "UTF-8")
+    #
+    # d <- try(jsonlite::fromJSON(json),
+    #          silent = TRUE)
 
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
                 vv = dataset_version)
@@ -10264,25 +10302,18 @@ upload_dataset_to_figshare <- function(dataset_version){
     ntws <- list.files(tld)
 
     for(i in seq_along(ntws)){
+
         ntw <- ntws[i]
         dmns <- list.files(file.path(tld, ntw))
-        for(j in seq_along(dmns)){
-            dmn = sub('.zip', '', dmns[j])
-            # if(paste0(dmn, '.zip') %in% d$title){
-            #     delete
-            # }
 
-            # #create figshare "article", which in this case is a dataset
-            # fs_id <- rfigshare::fs_create(
-            #     title = dmn,
-            #     description = glue('MacroSheds timeseries data, shapefiles, ',
-            #                        'and metadata for domain: {dmn}',
-            #                        dmn = dmn),
-            #     type = 'dataset')
+        for(j in seq_along(dmns)){
+
+            dmn <- sub('.zip', '', dmns[j])
+
             #create figshare "article", which in this case is a dataset
-            expo_backoff(
+            fs_id <- expo_backoff(
                 expr = {
-                    fs_id <- figshare_create_article(
+                    figshare_create_article(
                         title = glue('Network: ', ntw, ', Domain: ', dmn),
                         description = glue('MacroSheds timeseries data, shapefiles, ',
                                            'and metadata for domain: {d}, within network: {n}',
@@ -10299,11 +10330,16 @@ upload_dataset_to_figshare <- function(dataset_version){
             #upload domain zip to that article
             expo_backoff(
                 expr = {
-                    rfigshare::fs_upload(
-                        fs_id,
-                        file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
-                                    n = ntw,
-                                    d = dmn))
+                    # rfigshare::fs_upload(
+                    #     fs_id,
+                    #     file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
+                    #                 n = ntw,
+                    #                 d = dmn))
+                    figshare_upload_article(fs_id,
+                                            file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
+                                                        n = ntw,
+                                                        d = dmn),
+                                            token = token)
                 },
                 max_attempts = 6
             ) %>% invisible()
@@ -10314,18 +10350,21 @@ upload_dataset_to_figshare <- function(dataset_version){
                                                         article_ids = fs_id,
                                                         token = token)
                },
-                max_attempts = 6
+               max_attempts = 6
             ) %>% invisible()
 
-            # WHY DOESN'T ADD-TO-COLLECTION WORK IN LOOP!
-            # # publish collection
-            # # update articles (if they remain in My Data) (there's an APi endpoint for this)
-            # # replace articles in collection (there's an API endpoint for this)
+            expo_backoff(
+                expr = {
+                    figshare_publish_article(article_id = fs_id,
+                                             token = token)
+               },
+               max_attempts = 6
+            ) %>% invisible()
         }
     }
 
-    figshare_publish_article()
-
+    # update articles (if they remain in My Data) (there's an API endpoint for this)
+    # replace articles in collection (there's an API endpoint for this)
     # DONT FORGET TO UPLOAD SPATIAL SUMMARY STUFF
 }
 
