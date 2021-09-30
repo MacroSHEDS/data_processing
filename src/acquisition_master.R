@@ -190,7 +190,8 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
-conf <- jsonlite::fromJSON('config.json')
+conf <- jsonlite::fromJSON('config.json',
+                           simplifyDataFrame = FALSE)
 
 #connect rgee to earth engine and python
 gee_login <- case_when(
