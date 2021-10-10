@@ -10225,7 +10225,7 @@ figshare_upload_article <- function(article_id,
                                     token,
                                     ...){
 
-    require(digest)
+    require(tools)
 
     base <- 'https://api.figshare.com/v2'
 
@@ -10233,7 +10233,7 @@ figshare_upload_article <- function(article_id,
     request <- paste0(base, sprintf('/account/articles/%s/files',
                                     article_id))
 
-    body <- list(md5 = digest::digest(file, algo = 'md5'),
+    body <- list(md5 = unname(tools::md5sum(file)),
                  name = basename(file),
                  size = file.info(file)$size)
     auth_header <- c(Authorization = sprintf("token %s", token))
@@ -10313,8 +10313,8 @@ upload_dataset_to_figshare <- function(dataset_version){
     ### EVERY-TIME PREP
 
     collection_id <- 5621740 #see comments above
-    token <- Sys.getenv("RFIGSHARE_PAT") #see comments above to set
-    auth_header <- c(Authorization = sprintf("token %s", token))
+    token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
+    auth_header <- c(Authorization = sprintf('token %s', token))
     cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
                 vv = dataset_version)
@@ -10365,6 +10365,7 @@ upload_dataset_to_figshare <- function(dataset_version){
                         keywords = list('czo'),
                         category_ids = cat_ids,
                         type = 'dataset',
+                        authors = conf$figshare_author_list,
                         token = token)
                 },
                 max_attempts = 6
