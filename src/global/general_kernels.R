@@ -1794,7 +1794,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
   final <- fin_table %>%
     select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
   
-  if(all(is.na(final$val)) || all(final$val == 0)){
+  if(nrow(final) == 0){
     return(generate_ms_exception(glue('No data was retrived for {s}',
                                       s = site_code)))
   }

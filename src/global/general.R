@@ -9,7 +9,10 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products %>%
-    filter(status == 'ready')
+  filter(prodname %in% c('glhymps', 'lithology', 'daymet', 'modis_idbp',
+                         'pelletier_soil_thickness', 'terrain', 'nrcs_soils',
+                         'nlcd'))
+    # filter(status == 'ready')
     # filter(grepl('prism', prodname))
     # filter(grepl('bfi', prodname))
 
@@ -74,7 +77,7 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i=15
+# i=2
 for(i in 1:nrow(unprod)){
 # for(i in 25:26){
 
