@@ -740,11 +740,14 @@ dy_examine <- function(d, shape = 'long', site, ...){
 list_all_product_dirs <- function(prodname, location){
 
     #location is one of 'data_acquisition, 'portal', or 'macrosheds_dataset'.
-    #if 'macrosheds_dataset', the version number will be automatically appended.
+    #if 'macrosheds_dataset', the desired macrosheds dataset version number is
+    #   expected to be defined in the global environment.
 
     if(! location %in% c('data_acquisition', 'portal', 'macrosheds_dataset')){
         stop("location must be one of 'data_acquisition', 'portal', 'macrosheds_dataset'")
     }
+
+    if(! exists('vsn')) vsn <- NULL
 
     loc_path <- case_when(location == 'data_acquisition' ~ 'data',
                           location == 'portal' ~ '../portal/data',
@@ -762,7 +765,12 @@ list_all_product_dirs <- function(prodname, location){
     return(prodname_dirs)
 }
 
-load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
+load_product <- function(prodname,
+                         location,
+                         filter_domains = NULL,
+                         filter_site_codes = NULL,
+                         filter_vars = NULL,
+                         sort_output = FALSE){
 
     #WARNING: this could easily eat up 20 GB RAM for a product like discharge.
     #As the dataset grows, that number will increase.
@@ -771,26 +779,52 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
     #   (e.g. 'discharge' or 'stream_chemistry') across all networks and
     #   domains. Run the setup portion of acquisition_master
     #   (the part before the main loop) to load necessary packages and helper
-    #   functions
-    #.sort: logical. If TRUE, output will be sorted by site_code, var, datetime.
-    #   this takes a few minutes.
+    #   functions.
+    #prodname: string. A MacroSheds product name. One of: 'discharge', 'stream_chemistry',
+    #   'stream_flux_inst_scaled', 'precipitation', 'precip_chemistry',
+    #   'precip_flux_inst_scaled'.
+    #filter_domains: character vector. One or more MacroSheds domains (see site summary
+    #   table at macrosheds.org) by which to filter the results.
+    #filter_site_codes: character vector. One or more MacroSheds site_codes (see
+    #   site summary table at macrosheds.org) by which to filter the results.
+    #   Each element of filter_site_codes must also be identified by domain,
+    #   so the lengths of filter_site_codes and filter_domains must match.
     #filter_vars: character vector. for products like stream_chemistry that include
     #   multiple variables, this filters to just the ones specified (ignores
     #   variable prefixes)
+    #sort_output: logical. If TRUE, output will be sorted by site_code, var, datetime.
+    #   this takes a few minutes.
+
+    if(! is.null(filter_domains) && ! is.null(filter_site_codes)){
+        if(length(filter_domains) != length(filter_site_codes)){
+            stop('Lengths of filter_domains and filter_site_codes must match')
+        }
+    }
 
     prodname_dirs <- list_all_product_dirs(prodname = prodname,
-                                           location = 'data_acquisition')
+                                           location = location)
 
     d <- tibble()
     for(pd in prodname_dirs){
 
         network_domain <- str_match(string = pd,
-                                    pattern = '^data/(.+?)/(.+?)/.+$')[, 2:3]
+                                    pattern = '[a-zA-Z0-9_]+/(.+?)/(.+?)/.+$')[, 2:3]
 
         d0 <- list.files(pd, full.names = TRUE) %>%
             purrr::map_dfr(read_feather)
 
-        if(! missing(filter_vars)){
+        if(! is.null(filter_domains)){
+            if(! is.null(filter_site_codes)){
+                d0 <- filter(d0,
+                             domain %in% filter_domains,
+                             site_code %in% filter_site_codes)
+            } else {
+                d0 <- filter(d0,
+                             domain %in% filter_domains)
+            }
+        }
+
+        if(! is.null(filter_vars)){
             d0 <- filter(d0,
                         drop_var_prefix(var) %in% filter_vars)
         }
@@ -805,7 +839,7 @@ load_entire_product <- function(prodname, .sort = FALSE, filter_vars){
             bind_rows(d)
     }
 
-    if(.sort){
+    if(sort_output){
         d <- arrange(d,
                      site_code, var, datetime)
     }
@@ -1207,4 +1241,23 @@ create_all_portal_links <- function(network_domain){
         create_portal_links(network = network,
                             domain = domain)
     }
+}
+
+generate_turbo_variable_summary <- function(outfile = '~/macrosheds_variable-by-site_summary.csv'){
+
+    xx = dir('~/git/macrosheds/portal/data/general/catalog_files/indiv_variables/')
+
+    qq = tibble()
+    for(i in seq_along(xx)){
+        varname = str_match(xx[i], '(.+)\\.csv$')[, 2]
+        qq = read_csv(xx[i], col_types = 'cccccnTTn') %>%
+            mutate(Variable = varname) %>%
+            select(Variable, everything()) %>%
+            bind_rows(qq)
+    }
+
+    qq = arrange(qq,
+                 Variable, Network, Domain, SiteCode)
+
+    write_csv(qq, outfile)
 }
