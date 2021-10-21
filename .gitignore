@@ -22,3 +22,5 @@ all_*/
 data.bak
 macrosheds_dataset_v*
 data_hbef_highres
+data/general/nhd_hr
+output/
