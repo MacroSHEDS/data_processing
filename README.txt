@@ -15,8 +15,3 @@ all users must read domain metadata in entirety. DOI and citation are included
 for ease of use and citation. license information and data status is important 
 legal and logistical information- including that some sites REQUIRE direct 
 contact and individual permission for reuse. 
-
-
-
-
-
