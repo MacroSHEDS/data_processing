@@ -581,6 +581,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
         sf::st_transform(proj) %>%
+        sf::st_make_valid() %>%
         mutate(area = sf::st_area(geometry)) %>%
         filter(as.numeric(area) > 100) %>%
         select(-area)
@@ -624,6 +625,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         sf::st_transform(proj)
 
     d <- rbind(ws1, ws2, ws3, ws4) %>%
+        sf::st_make_valid() %>%
         mutate(area = as.numeric(sf::st_area(geometry)/10000))
 
     sites <- unique(d$site_code)

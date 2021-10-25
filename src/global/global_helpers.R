@@ -8911,7 +8911,12 @@ get_gee_standard <- function(network,
                              batch = TRUE,
                              qa_band = NULL,
                              bit_mask = NULL,
-                             contiguous_us = FALSE) {
+                             contiguous_us = FALSE,
+                             summary_stat = 'median') {
+    
+    if(! summary_stat %in% c('median', 'mean')){
+        stop('summary_stat must be median or mean')
+    }
 
     if(contiguous_us){
         usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
@@ -9004,19 +9009,38 @@ get_gee_standard <- function(network,
             imgcol <- ee$ImageCollection(gee_id)$select(band)
         }
 
-        flat_img <- imgcol$map(function(image) {
-            image$reduceRegions(
-                collection = ws_boundary_asset,
-                reducer = ee$Reducer$stdDev()$combine(
-                    reducer2 = ee$Reducer$median(),
-                    sharedInputs = TRUE),
-                scale = rez
-            )
-        })$flatten()
+        if(summary_stat == 'median'){
 
-        gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
-                                                     'stdDev', 'median'),
-                               retainGeometry = FALSE)
+            flat_img <- imgcol$map(function(image) {
+                image$reduceRegions(
+                    collection = ws_boundary_asset,
+                    reducer = ee$Reducer$stdDev()$combine(
+                        reducer2 = ee$Reducer$median(),
+                        sharedInputs = TRUE),
+                    scale = rez
+                )
+            })$flatten()
+            
+            gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
+                                                         'stdDev', 'median'),
+                                   retainGeometry = FALSE)
+        } else{
+            
+            flat_img <- imgcol$map(function(image) {
+                image$reduceRegions(
+                    collection = ws_boundary_asset,
+                    reducer = ee$Reducer$stdDev()$combine(
+                        reducer2 = ee$Reducer$mean(),
+                        sharedInputs = TRUE),
+                    scale = rez
+                )
+            })$flatten()
+            
+            gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
+                                                         'stdDev', 'mean'),
+                                   retainGeometry = FALSE)
+        }
+
 
         ee_description <-  glue('{n}_{d}_{p}',
                                 d = domain,
@@ -9044,22 +9068,22 @@ get_gee_standard <- function(network,
         ) %>% invisible()
 
         sd_name <- glue('{c}_sd', c = prodname)
-        median_name <- glue('{c}_median', c = prodname)
+        median_name <- glue('{c}_{s}', c = prodname, s = summary_stat)
 
         fin_table <- read_csv(temp_rgee) %>%
             mutate(imageId = substr(`system:index`, 1, 10))
 
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-        if(!'median' %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
+        if(!summary_stat %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
             return(NULL)
         }
 
         fin_table <- fin_table %>%
-            select(site_code, stdDev, median, imageId) %>%
+            select(site_code, stdDev, !!summary_stat, imageId) %>%
             rename(datetime = imageId,
                    !!sd_name := stdDev,
-                   !!median_name := median) %>%
+                   !!median_name := !!summary_stat) %>%
             pivot_longer(cols = all_of(c(sd_name, median_name)),
                          names_to = 'var',
                          values_to = 'val')
@@ -12539,11 +12563,11 @@ get_nrcs_soils <- function(network,
     return(all_soil_vars)
 
     # #Used to visualize raster
-    # for(i in 1:nrow(watershed_mukey_values_weighted)){
-    #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values_weighted[i,1])] <- pull(watershed_mukey_values_weighted[i,3])
+    # for(i in 1:nrow(watershed_mukey_values)){
+    #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values[i,1])] <- pull(watershed_mukey_values[i,3])
     # }
     # soil_masked@data@isfactor <- FALSE
-    #
+    # 
     # mapview::mapview(soil_masked)
     # raster::plot(soil_masked)
 
