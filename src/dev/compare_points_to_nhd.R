@@ -234,6 +234,15 @@ write_csv(tibble(usgs_gage_id = camels_basins),
 filt <- sites %>%
     select(domain, site_code, NHD_COMID) %>%
     filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only'))
+sites %>%
+    select(domain, site_code, NHD_COMID) %>%
+    filter(NHD_COMID %in% c('HR only'))
+sites %>%
+    select(domain, site_code, NHD_COMID) %>%
+    filter(NHD_COMID %in% c('nonCONUS'))
+sites %>%
+    select(domain, site_code, NHD_COMID) %>%
+    filter(NHD_COMID %in% c('too small'))
 
 priority1 <- filt %>%
     filter(domain == 'neon') %>%
