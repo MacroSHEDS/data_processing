@@ -5,11 +5,12 @@
 #    If you do, the world applauds you.
 # Units for each variable can be found in the variable catalog on macrosheds.org.
 
-chloride_data <- load_entire_product(
-    macrosheds_root = '~/schnitzel/macrosheds_dataset_v0.3/',
-    prodname = 'stream_chemistry',
-    sort_result = TRUE,
-    filter_vars = 'Cl')
+# example use:
+#   chloride_data <- load_entire_product(
+#       macrosheds_root = '~/schnitzel/macrosheds_dataset_v0.3/',
+#       prodname = 'stream_chemistry',
+#       sort_result = TRUE,
+#       filter_vars = 'Cl')
 
 load_entire_product <- function(macrosheds_root,
                                 prodname,

@@ -199,7 +199,8 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
-conf <- jsonlite::fromJSON('config.json')
+conf <- jsonlite::fromJSON('config.json',
+                           simplifyDataFrame = FALSE)
 
 #connect rgee to earth engine and python
 gee_login <- case_when(
@@ -243,7 +244,9 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=19
+# dmnrow = 8
+# print(network_domain, n=50)
+# for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -260,8 +263,8 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
-
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
