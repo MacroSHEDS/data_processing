@@ -15,3 +15,4 @@ will need to set up credentials for:
     gdrive
     gee
     figshare
+    
