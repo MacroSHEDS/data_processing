@@ -230,26 +230,18 @@ for(i in 1:total_len){
 # load NHM GDB and filter sites ####
 
 #where are the sites with COMIDs?
-comid_sites <- sites %>%
-    filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only')) %>%
+sites <- sites %>%
+    # filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only')) %>%
     st_as_sf(coords = c('longitude', 'latitude')) %>%
     st_set_crs(4326)
 
-mv(comid_sites)
+mv(sites)
 
 #NHDV1 regions: 01, 02, 03, 04, 05, 06, 07, 08, 10U, 10L, 11, 14-15, 17, 18
 
 # v1_flowlines <- st_read('NHDPlus01/Hydrography/nhdflowline.shp') %>%
 #     st_set_crs(4326)
 # mv(st_zm(v1_flowlines)) + mv(comid_sites[1, ])
-
-library(rgdal)
-
-# subset(ogrDrivers(), grepl('GDB', name))
-fgdb <- '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.gdb'
-fc_list <- ogrListLayers(fgdb)
-print(fc_list)
-fc <- readOGR(dsn = fgdb, layer = 'nsegmentNationalIdentifier')
 
 nhm <- st_read(dsn = '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.gdb',
                layer = 'nsegmentNationalIdentifier') %>%
@@ -259,10 +251,10 @@ nhm <- st_read(dsn = '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.
 # loop 2 ####
 
 #for NHM seg_ids. skips sites that weren't identified as coinciding with
-#the NHDPlusV2 above
+#the NHDPlusV2 above. completed NHM_SEGID vector commented below
 
 sites$NHM_SEGID <- 'non-NHDPlus'
-for(i in 1:total_len){
+for(i in 60:total_len){
 
     if(sites$NHD_COMID[i] %in% c('nonCONUS', 'too small', 'HR only')) next
 
@@ -290,12 +282,12 @@ for(i in 1:total_len){
     print(paste('map saved to', mapview_save_path))
     print(xx)
 
-    system('spd-say "strudel"')
+    # system('spd-say "strudel"')
     x <- readline(cat('This point is: [A] on an NHMV1 flowline, or [B] not >\n'))
 
     if(x == 'A'){
         sites[i, 'NHM_SEGID'] <- as.character(segid)
-        print(sites, n = i)
+        print(sites[, c('domain', 'site_code', 'NHD_COMID', 'NHM_SEGID')], n = i)
         print(segid)
     } else if(x == 'B'){
         sites[i, 'NHM_SEGID'] <- 'too small'
@@ -304,7 +296,42 @@ for(i in 1:total_len){
     }
 }
 
-# get list of COMIDs and USGS gage numbers to send to Parker Norton ####
+paste(sites$NHM_SEGID, collapse = "', '")
+# sites$NHM_SEGID <- c('non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small',
+# 'non-NHDPlus', 'non-NHDPlus', 'too small', 'non-NHDPlus', 'non-NHDPlus', '50262',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'too small', '5021', '8815', '8998', 'too small', 'too small',
+# 'too small', '34201', 'too small', '1097', 'too small', '55986', 'non-NHDPlus', '45211',
+# 'too small', 'too small', '38288', 'too small', 'non-NHDPlus', 'non-NHDPlus', '26516',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', '27753', 'too small', 'non-NHDPlus', 'too small',
+# 'too small', 'non-NHDPlus', '27754', 'non-NHDPlus', '3847', '3825', '3825', '3842', 'non-NHDPlus',
+# '3846', '3820', 'non-NHDPlus', 'too small', 'too small', 'too small', 'too small', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', '56455', '55409', 'too small', 'too small', '55400', 'too small',
+# '55410', '55410', 'too small', 'too small', 'too small', '55411', 'too small', 'too small',
+# 'too small', '55417', 'too small', 'too small', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small',
+# 'too small', 'too small', '606', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small',
+# 'too small', '24503', '24510', 'non-NHDPlus', 'too small', 'too small', 'too small', 'too small', 'too small',
+# 'too small', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', '42949', '42949', 'too small', '42949', '42949', 'non-NHDPlus',
+# 'non-NHDPlus', 'too small', 'too small', 'too small', '42949', 'non-NHDPlus', 'too small', 'too small', 'too small',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'too small',
+# 'too small', 'too small', 'too small', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', '6647', 'too small', '6647',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus', 'non-NHDPlus',
+# 'too small', 'non-NHDPlus', 'too small', '2073', '2073', 'non-NHDPlus', 'too small', 'too small')
+
+# save results; get list of COMIDs/SEGIDs and USGS gage numbers to send to Parker Norton ####
+
+write_csv(sites, '~/git/macrosheds/qa_experimentation/data/site_id_lists/sites_COMIDS_SEGIDS.csv')
 
 camqd <- '/home/mike/git/macrosheds/qa_experimentation/data/CAMELS/basin_dataset_public_v1p2/usgs_streamflow'
 
@@ -314,6 +341,7 @@ camels_basins <- str_match(qf, '^[0-9]+/([0-9]+)_streamflow_qc.txt$')[, 2]
 write_csv(tibble(usgs_gage_id = camels_basins),
           '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority3_gageIDs.csv')
 
+#first cut. this assumed NHMv1 could reference NHDPlusV2 COMIDS
 filt <- sites %>%
     select(domain, site_code, NHD_COMID) %>%
     filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only'))
@@ -340,3 +368,20 @@ write_csv(priority1,
 
 write_csv(priority2,
           '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority2_COMIDs.csv')
+
+#second cut. uses seg_id_nat from the actual NHM flowlines
+filt <- sites %>%
+    select(domain, site_code, NHM_SEGID) %>%
+    filter(! NHM_SEGID %in% c('non-NHDPlus', 'too small'))
+sites %>%
+    select(domain, site_code, NHM_SEGID) %>%
+    filter(NHM_SEGID %in% c('non-NHDPlus')) %>%
+    nrow() #138
+sites %>%
+    select(domain, site_code, NHM_SEGID) %>%
+    filter(NHM_SEGID %in% c('too small')) %>%
+    nrow() #58
+nrow(filt) #37
+
+write_csv(data.frame(NHM_SEGID = filt$NHM_SEGID),
+          '~/git/macrosheds/qa_experimentation/data/site_id_lists/seg_id_nats.csv')
