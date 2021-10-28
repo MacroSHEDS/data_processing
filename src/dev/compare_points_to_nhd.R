@@ -10,6 +10,9 @@ options(timeout = 5000)
 
 nhd_hr_dir <- '~/git/macrosheds/data_acquisition/data/general/nhd_hr'
 mapview_save_dir <- '~/git/macrosheds/data_acquisition/output/sites_vs_NHD'
+mapview_save_dir2 <- '~/git/macrosheds/data_acquisition/output/sites_vs_NHM'
+
+#setup ####
 
 buf <- function(site, buf_dist){
 
@@ -114,8 +117,12 @@ sites$NHD_COMID[manual_input] <- c('HR only', 'too small', 'HR only', '6729679',
                                    '2679458')
 # for(i in seq_len(nrow(sites))){
 
+#loop 1 ####
+
+#this loop is for identifying whether a point is on the NHDPlusV2 or the NHD-HR,
+#   or neither. for NHM seg_ids, see the next loop
 prev_huc4 <- 'none'
-for(i in c(205:total_len)){
+for(i in 1:total_len){
 
     print('---')
     print(i)
@@ -220,6 +227,82 @@ for(i in c(205:total_len)){
 
 #TODO save back to googlesheets
 
+# load NHM GDB and filter sites ####
+
+#where are the sites with COMIDs?
+comid_sites <- sites %>%
+    filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only')) %>%
+    st_as_sf(coords = c('longitude', 'latitude')) %>%
+    st_set_crs(4326)
+
+mv(comid_sites)
+
+#NHDV1 regions: 01, 02, 03, 04, 05, 06, 07, 08, 10U, 10L, 11, 14-15, 17, 18
+
+# v1_flowlines <- st_read('NHDPlus01/Hydrography/nhdflowline.shp') %>%
+#     st_set_crs(4326)
+# mv(st_zm(v1_flowlines)) + mv(comid_sites[1, ])
+
+library(rgdal)
+
+# subset(ogrDrivers(), grepl('GDB', name))
+fgdb <- '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.gdb'
+fc_list <- ogrListLayers(fgdb)
+print(fc_list)
+fc <- readOGR(dsn = fgdb, layer = 'nsegmentNationalIdentifier')
+
+nhm <- st_read(dsn = '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.gdb',
+               layer = 'nsegmentNationalIdentifier') %>%
+    st_transform(4326)
+
+
+# loop 2 ####
+
+#for NHM seg_ids. skips sites that weren't identified as coinciding with
+#the NHDPlusV2 above
+
+sites$NHM_SEGID <- 'non-NHDPlus'
+for(i in 1:total_len){
+
+    if(sites$NHD_COMID[i] %in% c('nonCONUS', 'too small', 'HR only')) next
+
+    print('---')
+    print(i)
+    site <- sites[i, ]
+    dmn <- site$domain
+    site_code <- site$site_code
+    print(paste(dmn, site_code))
+
+    site_buf <- sf::st_buffer(x = site,
+                              dist = 10000)
+    site_box <- st_bbox(site_buf)
+
+    nhm_crop <- suppressWarnings(sf::st_crop(nhm, site_box))
+
+    closest_ind <- which.min(st_distance(nhm_crop, site))
+    segid <- nhm_crop[closest_ind, ]$seg_id_nat
+
+    xx <- mv(nhm_crop) + mv(sites[i, ])
+    mapview_save_path <- file.path(mapview_save_dir2,
+                                   paste0(dmn, '_', site_code, '.html'))
+    mapview::mapshot(xx,
+                     url = mapview_save_path)
+    print(paste('map saved to', mapview_save_path))
+    print(xx)
+
+    system('spd-say "strudel"')
+    x <- readline(cat('This point is: [A] on an NHMV1 flowline, or [B] not >\n'))
+
+    if(x == 'A'){
+        sites[i, 'NHM_SEGID'] <- as.character(segid)
+        print(sites, n = i)
+        print(segid)
+    } else if(x == 'B'){
+        sites[i, 'NHM_SEGID'] <- 'too small'
+    } else {
+        stop(paste("'A', 'B', or 'C'"))
+    }
+}
 
 # get list of COMIDs and USGS gage numbers to send to Parker Norton ####
 
