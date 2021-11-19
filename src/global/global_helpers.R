@@ -8913,7 +8913,7 @@ get_gee_standard <- function(network,
                              bit_mask = NULL,
                              contiguous_us = FALSE,
                              summary_stat = 'median') {
-    
+
     if(! summary_stat %in% c('median', 'mean')){
         stop('summary_stat must be median or mean')
     }
@@ -9020,12 +9020,12 @@ get_gee_standard <- function(network,
                     scale = rez
                 )
             })$flatten()
-            
+
             gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
                                                          'stdDev', 'median'),
                                    retainGeometry = FALSE)
         } else{
-            
+
             flat_img <- imgcol$map(function(image) {
                 image$reduceRegions(
                     collection = ws_boundary_asset,
@@ -9035,7 +9035,7 @@ get_gee_standard <- function(network,
                     scale = rez
                 )
             })$flatten()
-            
+
             gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
                                                          'stdDev', 'mean'),
                                    retainGeometry = FALSE)
@@ -12567,7 +12567,7 @@ get_nrcs_soils <- function(network,
     #   soil_masked@data@values[soil_masked@data@values == pull(watershed_mukey_values[i,1])] <- pull(watershed_mukey_values[i,3])
     # }
     # soil_masked@data@isfactor <- FALSE
-    # 
+    #
     # mapview::mapview(soil_masked)
     # raster::plot(soil_masked)
 
@@ -13848,3 +13848,62 @@ run_checks <- function(){
     }
 }
 
+# metadata and citation information function
+metadata_scrape <- function() {
+    # retrieve metadata
+    meta_info <- sm(googlesheets4::read_sheet(
+           conf$site_doi,
+           na = c('', 'NA'),
+           col_types = 'cccccccc'
+       ))
+
+    meta_urls <- sm(googlesheets4::read_sheet(
+        conf$domain_urls,
+        na = c('', 'NA'),
+        col_types = 'cc'
+    ))
+
+    # meta_info <- read.csv("metadata/site_doi_license.csv")
+    # meta_urls <- read.csv("metadata/domain_urls.csv")
+
+    # locate domain directory
+    network_dir <- paste0(getwd(),"/","macrosheds_dataset_v1/")
+    network_paths <- list.files(network_dir, all.files=T, full.names=T)
+
+
+    readme <- readLines("README.txt")
+
+    # loop domains, and print data .csv and guide .txt
+    for (domain_name in unique(meta_info$domain)) {
+        # subset all the domain metadata
+        domain_info <- unique(meta_info[which(meta_info$domain == domain_name),])
+        domain_info <- domain_info[, !(names(domain_info) %in% c("prodcode"))]
+
+        # subset the domain URLs
+        domain_url <- meta_urls[which(meta_urls$domain == domain_name),]
+        str_url <- toString(unique(domain_url$url))
+
+        # merge to a single data frame
+        domain_all <- merge(domain_info, domain_url, 'domain')
+
+        for (network in network_paths) {
+            for (domain in list.files(network, all.files=T, full.names=T)) {
+                # write to CSV
+                if (basename(domain) == domain_name) {
+                    file_name <- paste0(network_dir, basename(network),"/",
+                                        basename(domain), "/", basename(domain), ".csv")
+                    readme_domain <- paste0(network_dir, basename(network),"/",
+                                            basename(domain), "/", "Citation Instructions.txt")
+
+                    reader <- file(readme_domain)
+                    headerline <- paste0("Domain: ", basename(domain))
+                    subline <- paste0("Data Source URL: ", str_url, "\n")
+                    writeLines(c(headerline, subline, readme), reader)
+                    close(reader)
+
+                    write.csv(domain_all, file_name, row.names = F)
+                }
+            }
+        }
+    }
+}
