@@ -1524,7 +1524,8 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = temp_dir)
 
-    path <- paste(list.files(temp_dir, full.names = TRUE), 'data', sep = '/')
+    path <- paste(grep('ess_dive', list.files(temp_dir, full.names = TRUE), value = TRUE), 
+                  'data', sep = '/')
 
     sheds <- sf::st_read(path)
 

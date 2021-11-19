@@ -704,7 +704,8 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_code,
                                   ws_boundaries = boundaries))
 
     if(is_ms_exception(soil_tib)) {
-      return(soil_tib)
+      sw(loginfo(soil_tib, logger_module))
+        next
     } else{
       soil_tib <- append_unprod_prefix(soil_tib, prodname_ms)
       write_feather(soil_tib, glue('data/{n}/{d}/ws_traits/nrcs_soils/{s}.feather',
@@ -1006,7 +1007,7 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
                                        raster_path = nadp_files[p]),
                        silent = TRUE)
 
-      if(class(ws_values) == 'try-error') { next }
+      if(inherits(ws_values, 'try-error')) { next }
 
 
       val_mean <- round(unname(ws_values['mean']), 3)
@@ -1041,7 +1042,7 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
 
     if(all(is.na(fin_nadp$val))){
       msg <- generate_ms_exception(glue('No data was retrived for {s}',
-                                        s = site_code))
+                                        s = sites[s]))
 
       loginfo(msg = msg,
               logger = logger_module)
@@ -1081,10 +1082,14 @@ process_3_ms815 <- function(network, domain, prodname_ms, site_code,
                                      raster_path = thinkness_files))
 
 
-    if(class(ws_values) == 'try-error'){
+    if(inherits(ws_values, 'try-error')){
 
-      return(generate_ms_exception(glue('No data was retrived for {s}',
-                                        s = site_code)))
+        msg <- generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = sites[s]))
+
+        loginfo(msg = msg,
+                logger = logger_module)
+        next
     }
 
     thinkness_tib <- tibble(year = NA,
@@ -1134,10 +1139,7 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
                                        raster_path = geomchem_files[p]),
                        silent = TRUE)
 
-      if(class(ws_values) == 'try-error') {
-        return(generate_ms_exception(glue('No data was retrived for {s}',
-                                          s = site_code)))
-      }
+      if(inherits(ws_values, 'try-error')) next
 
       val_mean <- round(unname(ws_values['mean']), 2)
       val_sd <- round(unname(ws_values['sd']), 2)
@@ -1148,6 +1150,15 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
                         pctCellErr = percent_na)
 
       all_vars <- rbind(all_vars, one_var)
+    }
+
+    if(nrow(all_vars) == 0){
+        
+        msg <- generate_ms_exception(glue('No data available for: ', sites[s]))
+        loginfo(msg = msg,
+                logger = logger_module)
+        
+        next
     }
 
     all_vars <- all_vars %>%
@@ -1260,8 +1271,13 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_code,
                          silent = TRUE)
 
         if(inherits(ws_values, 'try-error')){
-            return(generate_ms_exception(glue('No data was retrived for {s}',
-                                              s = site_code)))
+            msg <- generate_ms_exception(glue('No data was retrived for {s}',
+                                              s = sites[s]))
+            
+            loginfo(msg = msg,
+                    logger = logger_module)
+            
+            next
         }
 
         val_mean <- round(unname(ws_values['mean']), 2)
@@ -1445,6 +1461,16 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                              d = domain))
 
     ws_prodname <- grep('ws_boundary', files, value = TRUE)
+    
+    # If there are multiple ws boundary folders, get largest prod code 
+    if(length(ws_prodname) > 1){
+
+        prod_codes <- str_match(ws_prodname, 'ms([0-9]{3})$')[,2]
+        
+        max_code <- max(prod_codes)
+        
+        ws_prodname <- ws_prodname[grep(max_code, prod_codes)]
+    }
 
     ws_path <- glue('data/{n}/{d}/derived/{p}/{s}',
                     n = network,
@@ -1475,16 +1501,11 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
       .combine = rbind,
       .init = all_years) %dopar% {
 
-        snow_year <- str_split_fixed(snow_files[p], '/', n = Inf)[1,4]
-        snow_year <- str_split_fixed(snow_year, '[.]', n = Inf)[1,1]
-        snow_year <- str_split_fixed(snow_year, '_', n = Inf)[1,4]
-        snow_year <- substr(snow_year, 3, 6) 
-        snow_year <- as.numeric(snow_year)-1
-
-        snow_file <- terra::rast(snow_files[p])
-        
+        snow_year <- str_match(snow_files[p], 'WY([0-9]{4})_v01\\.nc$')[1,2]
         site_boundary <- sf::st_read(ws_path, quiet  = TRUE) %>%
           terra::vect(.)
+        
+        snow_file <- terra::rast(snow_files[p])
 
         swe_tib = terra::extract(snow_file, site_boundary, weights = TRUE)
 
@@ -1593,7 +1614,8 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
 
     site_boundary <- boundaries %>%
       filter(site_code == !!sites[s]) %>%
-      sf::st_transform(sf::st_crs(glhymps))
+      sf::st_transform(sf::st_crs(glhymps)) %>%
+        sf::st_make_valid()
     
     site_area <- site_data %>%
       filter(network == !!network,
@@ -1794,7 +1816,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
   final <- fin_table %>%
     select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
   
-  if(all(is.na(final$val)) || all(final$val == 0)){
+  if(nrow(final) == 0){
     return(generate_ms_exception(glue('No data was retrived for {s}',
                                       s = site_code)))
   }
