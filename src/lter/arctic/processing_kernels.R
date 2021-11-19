@@ -139,7 +139,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
-                             alt_site_code = list('Oksrukuyik_Creek' = c('Oksrukuyik Creek',
+                             alt_site_code = list('Oksrukuyik_Creek_2.7' = c('Oksrukuyik Creek',
                                                                          'Oksrukuyik Creek ')),
                              data_cols = c('Discharge..m3.sec.' = 'discharge'),
                              is_sensor = TRUE,
@@ -158,7 +158,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
-                             alt_site_code = list('Oksrukuyik_Creek' = c('Oksrukuyik Creek',
+                             alt_site_code = list('Oksrukuyik_Creek_2.7' = c('Oksrukuyik Creek',
                                                                          'Oksrukuyik Creek ')),
                              data_cols = c('Temperature..degree.C.' = 'temp'),
                              is_sensor = TRUE,
@@ -186,7 +186,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
                   c = component)
 
   d <- read.csv(rawfile, colClasses = 'character') %>%
-      mutate(River = 'Kuparuk_River')
+      mutate(River = 'Kuparuk_River_0.74')
 
   d <- d[4:nrow(d),]
 
@@ -852,32 +852,6 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                                            'discharge__1644', 'discharge__1645',
                                            'discharge__1646', 'discharge__20118',
                                            'discharge__20120'))
-
-    # Becasue arctic lter only records Q at one location on two streams but
-    # samples 5 km up and down stream of where Q is measured, we are associated
-    # Q at that one site with all smapling points within 5km up and down stream
-    q_assoc_sites <- site_data %>%
-        filter(domain == 'arctic') %>%
-        filter(stream %in% c('Oksrukuyik Creek', 'Kuparuk River')) %>%
-        pull(site_code)
-
-    for(s in 1:length(q_assoc_sites)){
-
-        site_code <- q_assoc_sites[s]
-
-        q_stream <- paste(str_split_fixed(site_code, '_', n = Inf)[1,1:2], collapse = '_')
-
-        dir <- 'data/lter/arctic/derived/discharge__ms001'
-        og_file_name <- paste0(dir, '/', q_stream, '.feather')
-        new_file_name <- paste0(dir, '/', site_code, '.feather')
-
-        site_q_file <- read_feather(og_file_name) %>%
-            mutate(site_code = !!q_assoc_sites[s])
-
-        write_feather(site_q_file, new_file_name)
-    }
-
-  return()
 }
 
 #stream_chemistry: STATUS=READY
@@ -919,8 +893,8 @@ process_2_ms005 <- derive_stream_flux
 #. handle_errors
 process_2_ms006 <- function(network, domain, prodname_ms) {
 
-    #Temporary, arctic only has 1 precip gauge. Eventuly will
-    #leverage other data to interploate but for now directly linking gauge to
+    #Temporary, arctic only has 1 precip gauge. Eventually will
+    #leverage other data to interpolate but for now directly linking gauge to
     #watersheds (similar to neon)
 
     new_dir <- 'data/lter/arctic/derived/precipitation__ms006/'
