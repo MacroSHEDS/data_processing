@@ -8923,7 +8923,7 @@ get_gee_standard <- function(network,
                                       ymax = 49.384), crs = 4326) %>%
             sf::st_as_sfc(., crs = 4326)
 
-        is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
+        is_usa <- ! length(sm(sf::st_intersects(usa_bb, sf::st_make_valid(site_boundary)))[[1]]) == 0
 
         if(! is_usa){
             return(NULL)
@@ -9228,9 +9228,17 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                                          raster_path = path),
                          silent = TRUE)
 
-        if(class(ws_values) == 'try-error') {
-            return(generate_ms_exception(glue('No data was retrived for {s}',
-                                              s = site_code)))
+        if(inherits(ws_values, 'try-error')) {
+            
+            msg <- generate_ms_exception(glue('No data was retrived for {s}, {y}',
+                                       s = site_code,
+                                       y = years[y]))
+            
+            loginfo(msg = msg,
+                    logger = logger_module)
+            
+            next
+            
         }
 
         val <- ws_values['mean']
@@ -9345,7 +9353,9 @@ raster_intersection_summary <- function(wb, dem){
         terra::focal(., fun=get_out_cells,
                       w = matrix(1, nrow = 3, ncol = 3)) %>%
         terra::as.polygons(dissolve = FALSE) %>%
-        sf::st_as_sf()
+        sf::st_as_sf() %>%
+        # dem_edge was lossing it's crs or it was changing
+        sf::st_transform(sf::st_crs(wb))
 
     #tally raster cells
     summary_out$n_wb_cells <- length(wb$geometry)
@@ -12668,7 +12678,7 @@ extract_ws_mean <- function(site_boundary, raster_path){
     rast_crs <- terra::crs(rast_file)
 
     site_boundary_buf <- sw(sm(site_boundary %>%
-                                   sf::st_buffer(., 0.01) %>%
+                                   sf::st_buffer(., 1000) %>%
                                    sf::st_transform(., rast_crs)))
 
     site_boundary <- site_boundary %>%
@@ -12678,11 +12688,27 @@ extract_ws_mean <- function(site_boundary, raster_path){
     site_boundary <- terra::vect(site_boundary)
 
     rast_masked <- rast_file %>%
-        terra::crop(site_boundary_buf)
+        terra::crop(site_boundary_buf) 
+    
+    # For very small basins, cropping the raster can cause raster to be all NAs 
+    if(all(is.na(terra::values(rast_masked)[,1]))){
+        rast_masked <- rast_file
+    }
 
-    weighted_results  <- terra::extract(rast_masked,
-                                        site_boundary,
-                                        weights = TRUE)
+    # For every small basins that only intersect one raster cell, the extract 
+    # Funciton can report NAs 
+    if(length(terra::values(rast_masked)[,1]) == 1 && !is.na(terra::values(rast_masked)[,1])){
+
+        weighted_results <- tibble(ID = 1, 
+                                   var = unname(terra::values(rast_masked)[,1]),
+                                   weight = 1)
+
+        names(weighted_results)[2] <-  names(terra::values(rast_masked)[,1])
+    } else {
+        weighted_results  <- terra::extract(rast_masked,
+                                            site_boundary,
+                                            weights = TRUE)
+    }
 
     vals_w <- weighted_results %>%
         select(-ID) %>%
@@ -13037,6 +13063,7 @@ generate_watershed_summaries <- function(){
             mutate(max_year = max(year)) %>%
             filter(year == max_year) %>%
             select(-year, -max_year) %>%
+            distinct(site_code, var, .keep_all = T) %>%
             pivot_wider(names_from = 'var', values_from = 'val')
     }, silent = TRUE)
 
@@ -13073,7 +13100,7 @@ generate_watershed_summaries <- function(){
         et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
 
         et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
-            filter(var %in% c('ck_et_grass_ref_mean'),
+            filter(var %in% c('ck_et_ref_mean'),
                    !is.na(val)) %>%
             select(-year) %>%
             group_by(site_code) %>%

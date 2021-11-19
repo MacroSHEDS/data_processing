@@ -7,12 +7,12 @@ loginfo('Beginning retrieve (versionless products)',
 
 orcid_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$orcid_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$orcid_login_spencer,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$orcid_login_spencer,
     TRUE ~ 'ADD')
 
 orcid_pass <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$orcid_pass_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$orcid_pass_spencer,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$orcid_pass_spencer,
     TRUE ~ 'ADD')
 
 if(orcid_login == 'ADD' || orcid_pass == 'ADD'){
