@@ -3412,7 +3412,7 @@ delineate_watershed_apriori <- function(lat,
 
         } else if(is.null(snap_dist)){
 
-            # stop('replace the do.call lines below with literal function calls')
+            stop('replace the do.call lines below with literal function calls')
 
             snap1_f <- glue('{scrd}/snap1_{smet}_dist150.shp',
                             scrd = scratch_dir,
@@ -4029,12 +4029,12 @@ ms_derive <- function(network = domain,
             }
         )
 
-        # write_metadata_d_linkprod(network = network,
-        #                           domain = domain,
-        #                           prodname_ms_mr = prodname_ms_source,
-        #                           prodname_ms_d = paste0(prods$prodname[i],
-        #                                                  '__',
-        #                                                  linked_prodcode))
+        write_metadata_d_linkprod(network = network,
+                                  domain = domain,
+                                  prodname_ms_mr = prodname_ms_source,
+                                  prodname_ms_d = paste0(prods$prodname[i],
+                                                         '__',
+                                                         linked_prodcode))
     }
 
     #link any new linkprods and create new product entries
