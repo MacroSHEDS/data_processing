@@ -1246,6 +1246,185 @@ for(dmn in dmns){
 
 dev.off()
 
+#annual stream conc coverage by domain, site, var ####
+
+ignore_vars <- c('NO3_NO2_N', 'NH4_NH3_N', 'PON', 'POC', 'TIP', 'TIN',
+                 'DOP', 'CO3', 'NO2_N', 'Ta', 'Pt', 'Te', 'W', 'Sm', 'Sc',
+                 'Rh', 'Re', 'Pd', 'Nd', 'UTP', 'UTN', 'suspSed', 'Sn', 'Th',
+                 'Ti', 'Zr', 'Se', 'Rb', 'Ni', 'Li', 'Ge', 'Cs', 'Tl', 'Cd',
+                 'Yb', 'Y', 'V', 'U', 'Tm', 'Ti49', 'Tb', 'Sn118', 'Sm147',
+                 'Se78', 'Sb', 'Pr', 'Pb', 'Ni60', 'Nd14', 'Mo', 'Lu', 'La',
+                 'Ho', 'Gd157', 'Eu', 'Er', 'Dy', 'Cr', 'Co', 'Ce', 'Be', 'Ba',
+                 'B', 'As', 'Ag', 'Tc', 'NO2', 'H', 'Hf', 'Ga', 'Nb', 'Bi',
+                 'Au', 'Nd145', 'NH3_N', 'TC', 'Gd', 'Hg', 'I', 'S', 'Al_ICP',
+                 'OMAl', 'TMAl', 'TIC', 'SRP')
+
+load_entire_product <- function(macrosheds_root,
+                                prodname,
+                                sort_result = FALSE,
+                                filter_vars){
+
+    require(tidyverse)
+    require(feather)
+    require(errors)
+
+    #WARNING: this could easily eat up 20 GB RAM for a product like discharge.
+    #As the dataset grows, that number will increase. This warning only applies
+    #if the dataset version has full temporal granularity (not daily).
+
+    # macrosheds_root: character. The path to the macrosheds dataset's parent
+    #    directory, e.g. '~/stuff/macrosheds_dataset_v0.3'
+    # prodname: character. read and combine all files associated with this prodname
+    #    across all networks and domains. Available prodnames are:
+    #    discharge, stream_chemistry, stream_flux_inst, precipitation,
+    #    precip_chemistry, precip_flux_inst.
+    # sort_result: logical. If TRUE, output will be sorted by site_code, var,
+    #    datetime. this may take a few additional minutes for some products in
+    #    the full 15m dataset.
+    # filter_vars: character vector. for products like stream_chemistry that include
+    #    multiple variables, this filters to just the ones specified (ignores
+    #    variable prefixes). To see a catalog of variables, visit macrosheds.org
+
+    list_all_product_dirs <- function(macrosheds_root, prodname){
+
+        prodname_dirs <- list.dirs(path = macrosheds_root,
+                                   full.names = TRUE,
+                                   recursive = TRUE)
+
+        prodname_dirs <- grep(pattern = paste0('derived/', prodname, '__'),
+                              x = prodname_dirs,
+                              value = TRUE)
+
+        return(prodname_dirs)
+    }
+
+    drop_var_prefix <- function(x){
+
+        unprefixed <- substr(x, 4, nchar(x))
+
+        return(unprefixed)
+    }
+
+    avail_prodnames <- c('discharge', 'stream_chemistry', 'stream_flux_inst_scaled',
+                         'precipitation', 'precip_chemistry', 'precip_flux_inst_scaled')
+
+    if(! prodname %in% avail_prodnames){
+        stop(paste0('prodname must be one of: ',
+                    paste(avail_prodnames,
+                          collapse = ', ')))
+    }
+
+    prodname_dirs <- list_all_product_dirs(macrosheds_root = macrosheds_root,
+                                           prodname = prodname)
+
+    d <- tibble()
+    for(pd in prodname_dirs){
+
+        rgx <- '/([a-zA-Z0-9\\-\\_]+)/([a-zA-Z0-9\\-\\_]+)/derived.+'
+        network_domain <- str_match(string = pd,
+                                    pattern = rgx)[, 2:3]
+
+        d0 <- list.files(pd, full.names = TRUE) %>%
+            purrr::map_dfr(read_feather)
+
+        if(! missing(filter_vars)){
+            d0 <- filter(d0,
+                         drop_var_prefix(var) %in% filter_vars)
+        }
+
+        d <- d0 %>%
+            mutate(val = errors::set_errors(val, val_err),
+                   network = network_domain[1],
+                   domain = network_domain[2]) %>%
+            select(-val_err) %>%
+            select(datetime, network, domain, site_code, var, val, ms_status,
+                   ms_interp) %>%
+            bind_rows(d)
+    }
+
+    if(nrow(d) == 0){
+
+        if(missing(filter_vars)){
+            stop('No results. Make sure macrosheds_root is correct.')
+        } else {
+            stop(paste('No results. Make sure macrosheds_root is correct and',
+                       'filter_vars includes variable codes from the catalog',
+                       'on macrosheds.org'))
+        }
+    }
+
+    if(sort_result){
+        d <- arrange(d,
+                     site_code, var, datetime)
+    }
+
+    return(d)
+}
+
+f = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1/',
+                        prodname = 'stream_chemistry')
+
+pdf(width=11, height=9, onefile=TRUE,
+    file=paste0('plots/diagnostic_plots_',  vsn, '/stream_chemistry_coverage.pdf'))
+
+dmns = unique(f$domain)
+current_year = lubridate::year(Sys.Date())
+
+for(dmn in dmns){
+
+    earliest_year = lubridate::year(min(f$datetime[f$domain == dmn]))
+    nyears = current_year - earliest_year
+    yrcols = viridis(n = nyears)
+
+    sites = unique(f$site_code[f$domain == dmn])
+    if(dmn == 'arctic') sites = sites[! grepl('[0-9]', sites)]
+
+    plotrc = ceiling(sqrt(length(sites)))
+    # plotc = floor(sqrt(length(sites)))
+    doyseq = seq(1, 366, 30)
+    par(mfrow=c(plotrc, plotrc), mar=c(1,2,0,0), oma=c(0,0,2,0))
+
+    for(s in sites){
+
+        vars <- unique(filter(f, domain == dmn, site_code == s)$var)
+        vars <- grep('^I[SN]_', vars, invert = TRUE, value = TRUE)
+        print(s)
+        print(vars)
+        if(any(extract_var_prefix(vars) != 'GN')) stop('oi')
+        # vars <- drop_var_prefix(vars)
+        vars <- sort(vars[! drop_var_prefix(vars) %in% ignore_vars])
+
+        for(v in vars){
+
+            plot(NA, NA, xlim=c(1, 366), ylim=c(0, nyears), xaxs='i', yaxs='i',
+                 ylab = '', xlab = '', yaxt='n', cex.axis=0.6, xaxt='n', xpd=NA)
+            axis(1, doyseq, doyseq, tick=FALSE, line = -2, cex.axis=0.8)
+            axis(2, 1:nyears, earliest_year:(current_year - 1), las=2, cex.axis=0.6,
+                 hadj=0.7)
+
+            psub = f %>%
+                filter(domain == dmn, site_code == s, var == !!v) %>%
+                mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
+                       yr_offset = lubridate::year(datetime) - earliest_year)
+
+            lubridate::year(psub$datetime) <- 1972
+            yrs = unique(psub$yr_offset)
+
+            for(i in 1:length(yrs)){
+                pss = psub %>%
+                    filter(yr_offset == yrs[i]) %>%
+                    arrange(doy)
+                lines(pss$doy, c(scale(drop_errors(pss$val))) + pss$yr_offset, col=yrcols[i])
+            }
+
+            mtext(paste(s, v, sep='; '), 3, outer=FALSE, line=-2)
+        }
+        mtext(paste0(dmn, ' (DOY vs. Year)'), 3, outer=TRUE)
+    }
+}
+
+dev.off()
+
 #annual NO3-N concentration coverage by domain and site ####
 
 #for this to work properly, reload the version of load_entire_product that's in

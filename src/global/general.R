@@ -34,7 +34,7 @@ if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
 
 # Upload watersheds to GEE
 user_info <- rgee::ee_user_info(quiet = TRUE)
-asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
+asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}',
                      a = user_info$asset_home,
                      d = domain)
 
@@ -105,7 +105,7 @@ for(i in 1:nrow(unprod)){
     general_status <- get_general_status(tracker = held_data,
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
-    
+
     # general_status <- 'pending'
 
     if(general_status %in% c('ok', 'no_data_avail')){
