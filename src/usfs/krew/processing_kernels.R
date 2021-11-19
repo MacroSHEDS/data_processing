@@ -30,7 +30,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                       access_time = NA_character_,
                       last_mod_dt = NA_character_)
 
-    if(last_mod_dt > set_details$last_mod_dt){
+    if(last_mod_dt > set_details$last_mod_dt || length(last_mod_dt) == 0){
 
         download.file(url = url,
                       destfile = rawfile,
@@ -84,7 +84,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                       access_time = NA_character_,
                       last_mod_dt = NA_character_)
 
-    if(last_mod_dt > set_details$last_mod_dt){
+    if(last_mod_dt > set_details$last_mod_dt || length(last_mod_dt) == 0){
 
         download.file(url = url,
                       destfile = rawfile,
@@ -138,7 +138,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                       access_time = NA_character_,
                       last_mod_dt = NA_character_)
 
-    if(last_mod_dt > set_details$last_mod_dt){
+    if(last_mod_dt > set_details$last_mod_dt || length(last_mod_dt) == 0){
 
         download.file(url = url,
                       destfile = rawfile,
