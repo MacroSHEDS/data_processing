@@ -10,8 +10,9 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=4
+# i=3
 for(i in seq_len(nrow(prod_info))){
+#for(i in 2:4){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
