@@ -152,6 +152,15 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'linux'
     }
 
+    res <- try(setwd('C:/Users/ws184/Documents/Projects/MacroSheds/data_aquisition'), silent=TRUE) #WesBm0
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM0'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
+
     # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
     # if(! 'try-error' %in% class(res)){
     #     which_machine <- 'Matt'
@@ -313,6 +322,9 @@ if(length(email_err_msgs)){
               addrs = conf$report_emails,
               pw = conf$gmail_pw)
 }
+
+# write csv + readme domain metadata
+metadata_scrape()
 
 loginfo(msg = 'Run complete',
         logger = logger_module)
