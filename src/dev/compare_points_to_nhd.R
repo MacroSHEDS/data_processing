@@ -117,7 +117,7 @@ sites$NHD_COMID[manual_input] <- c('HR only', 'too small', 'HR only', '6729679',
                                    '2679458')
 # for(i in seq_len(nrow(sites))){
 
-#loop 1 ####
+# loop 1: NHDPlusV2 or NHD-HR (kinda obsolete) ####
 
 #this loop is for identifying whether a point is on the NHDPlusV2 or the NHD-HR,
 #   or neither. for NHM seg_ids, see the next loop
@@ -248,7 +248,7 @@ nhm <- st_read(dsn = '~/git/macrosheds/qa_experimentation/data/NHMv1/GF_nat_reg.
     st_transform(4326)
 
 
-# loop 2 ####
+# loop 2: NHM v1 ####
 
 #for NHM seg_ids. skips sites that weren't identified as coinciding with
 #the NHDPlusV2 above. completed NHM_SEGID vector commented below
@@ -331,7 +331,8 @@ paste(sites$NHM_SEGID, collapse = "', '")
 
 # save results; get list of COMIDs/SEGIDs and USGS gage numbers to send to Parker Norton ####
 
-write_csv(sites, '~/git/macrosheds/qa_experimentation/data/site_id_lists/sites_COMIDS_SEGIDS.csv')
+# write_csv(sites, '~/git/macrosheds/qa_experimentation/data/site_id_lists/sites_COMIDS_SEGIDS.csv')
+sites <- read_csv('~/git/macrosheds/qa_experimentation/data/site_id_lists/sites_COMIDS_SEGIDS.csv')
 
 camqd <- '/home/mike/git/macrosheds/qa_experimentation/data/CAMELS/basin_dataset_public_v1p2/usgs_streamflow'
 
@@ -340,34 +341,34 @@ camels_basins <- str_match(qf, '^[0-9]+/([0-9]+)_streamflow_qc.txt$')[, 2]
 
 write_csv(tibble(usgs_gage_id = camels_basins),
           '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority3_gageIDs.csv')
-
-#first cut. this assumed NHMv1 could reference NHDPlusV2 COMIDS
-filt <- sites %>%
-    select(domain, site_code, NHD_COMID) %>%
-    filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only'))
-sites %>%
-    select(domain, site_code, NHD_COMID) %>%
-    filter(NHD_COMID %in% c('HR only'))
-sites %>%
-    select(domain, site_code, NHD_COMID) %>%
-    filter(NHD_COMID %in% c('nonCONUS'))
-sites %>%
-    select(domain, site_code, NHD_COMID) %>%
-    filter(NHD_COMID %in% c('too small'))
-
-priority1 <- filt %>%
-    filter(domain == 'neon') %>%
-    select(NHD_COMID)
-
-priority2 <- filt %>%
-    filter(domain != 'neon') %>%
-    select(NHD_COMID)
-
-write_csv(priority1,
-          '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority1_COMIDs.csv')
-
-write_csv(priority2,
-          '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority2_COMIDs.csv')
+#
+# #OBSOLETE first cut. this assumed NHMv1 could reference NHDPlusV2 COMIDS
+# filt <- sites %>%
+#     select(domain, site_code, NHD_COMID) %>%
+#     filter(! NHD_COMID %in% c('nonCONUS', 'too small', 'HR only'))
+# sites %>%
+#     select(domain, site_code, NHD_COMID) %>%
+#     filter(NHD_COMID %in% c('HR only'))
+# sites %>%
+#     select(domain, site_code, NHD_COMID) %>%
+#     filter(NHD_COMID %in% c('nonCONUS'))
+# sites %>%
+#     select(domain, site_code, NHD_COMID) %>%
+#     filter(NHD_COMID %in% c('too small'))
+#
+# priority1 <- filt %>%
+#     filter(domain == 'neon') %>%
+#     select(NHD_COMID)
+#
+# priority2 <- filt %>%
+#     filter(domain != 'neon') %>%
+#     select(NHD_COMID)
+#
+# write_csv(priority1,
+#           '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority1_COMIDs.csv')
+#
+# write_csv(priority2,
+#           '~/git/macrosheds/qa_experimentation/data/site_id_lists/priority2_COMIDs.csv')
 
 #second cut. uses seg_id_nat from the actual NHM flowlines
 filt <- sites %>%
@@ -385,3 +386,7 @@ nrow(filt) #37
 
 write_csv(data.frame(NHM_SEGID = filt$NHM_SEGID),
           '~/git/macrosheds/qa_experimentation/data/site_id_lists/seg_id_nats.csv')
+
+#map MS sites to NHMv1 segids
+
+left_join(filt, site_csv)
