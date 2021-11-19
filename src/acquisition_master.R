@@ -142,6 +142,15 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
+    
+    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM2'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
 
     res <- try(setwd('C:/Users/ws184/Documents/Projects/MacroSheds/data_aquisition'), silent=TRUE) #WesBm0
     if(! 'try-error' %in% class(res)){
@@ -205,7 +214,7 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
@@ -244,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 8
+# dmnrow = 7
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -281,17 +290,17 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     ms_retrieve(network = network,
-                prodname_filter = c('ws_boundary'),
+                # prodname_filter = c('ws_boundary'),
                 domain = domain)
     ms_munge(network = network,
-             prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
     sw(ms_delineate(network = network,
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('ws_boundary'),
               domain = domain)
     ms_general(network = network,
                domain = domain)
