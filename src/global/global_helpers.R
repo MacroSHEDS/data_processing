@@ -9229,16 +9229,16 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
                          silent = TRUE)
 
         if(inherits(ws_values, 'try-error')) {
-            
+
             msg <- generate_ms_exception(glue('No data was retrived for {s}, {y}',
                                        s = site_code,
                                        y = years[y]))
-            
+
             loginfo(msg = msg,
                     logger = logger_module)
-            
+
             next
-            
+
         }
 
         val <- ws_values['mean']
@@ -12688,18 +12688,18 @@ extract_ws_mean <- function(site_boundary, raster_path){
     site_boundary <- terra::vect(site_boundary)
 
     rast_masked <- rast_file %>%
-        terra::crop(site_boundary_buf) 
-    
-    # For very small basins, cropping the raster can cause raster to be all NAs 
+        terra::crop(site_boundary_buf)
+
+    # For very small basins, cropping the raster can cause raster to be all NAs
     if(all(is.na(terra::values(rast_masked)[,1]))){
         rast_masked <- rast_file
     }
 
-    # For every small basins that only intersect one raster cell, the extract 
-    # Funciton can report NAs 
+    # For every small basins that only intersect one raster cell, the extract
+    # Funciton can report NAs
     if(length(terra::values(rast_masked)[,1]) == 1 && !is.na(terra::values(rast_masked)[,1])){
 
-        weighted_results <- tibble(ID = 1, 
+        weighted_results <- tibble(ID = 1,
                                    var = unname(terra::values(rast_masked)[,1]),
                                    weight = 1)
 

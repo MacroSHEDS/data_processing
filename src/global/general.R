@@ -9,7 +9,7 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products  %>%
-    filter(status == 'ready') 
+    filter(status == 'ready')
 
 
 # Load spatial files from Drive if not already held on local machine
@@ -79,6 +79,7 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
 }
 
 # i= 17
+unprod = filter(unprod, prodname != 'nsidc') #TEMP
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
@@ -172,35 +173,34 @@ for(i in 1:nrow(unprod)){
             logger = logger_module)
 
     gc()
-
 }
 
-# Used to link ws_traits to portal but no longer needed with post possessing functions 
+# Used to link ws_traits to portal but no longer needed with post possessing functions
 
 # Link ws_traits to portal
 # derive_dir <- glue('data/{n}/{d}/ws_traits',
 #                    n = network,
 #                    d = domain)
-# 
+#
 # portal_dir <- glue('../portal/data/{d}',
 #                    d = domain)
-# 
+#
 # dir.create(portal_dir,
 #            showWarnings = FALSE,
 #            recursive = TRUE)
-# 
+#
 # dirs_to_build <- list.dirs(derive_dir,
 #                            recursive = TRUE)
 # dirs_to_build <- dirs_to_build[dirs_to_build != derive_dir]
-# 
+#
 # dirs_to_build <- convert_derive_path_to_portal_path(paths = dirs_to_build)
-# 
+#
 # for(dr in dirs_to_build){
 #   dir.create(dr,
 #              showWarnings = FALSE,
 #              recursive = TRUE)
 # }
-# 
+#
 # #"from" and "to" may seem counterintuitive here. keep in mind that files
 # #as represented by the OS are actually all hardlinks to inodes in the kernel.
 # #so when you make a new hardlink, you're linking *from* a new location
@@ -210,15 +210,15 @@ for(i in 1:nrow(unprod)){
 # files_to_link_from <- list.files(path = derive_dir,
 #                                  recursive = TRUE,
 #                                  full.names = TRUE)
-# 
+#
 # files_to_link_to <- convert_derive_path_to_portal_path(
 #   paths = files_to_link_from)
-# 
+#
 # for(i in 1:length(files_to_link_from)){
 #   unlink(files_to_link_to[i])
 #   invisible(sw(file.link(to = files_to_link_to[i],
 #                          from = files_to_link_from[i])))
 # }
-# 
+#
 # loginfo(msg = 'General acquisition complete for all products',
 #         logger = logger_module)
