@@ -389,4 +389,5 @@ write_csv(data.frame(NHM_SEGID = filt$NHM_SEGID),
 
 #map MS sites to NHMv1 segids
 
-left_join(filt, site_csv)
+left_join(filt, site_csv) %>% print(n=50)
+left_join(filt, site_csv) %>% select(domain, site_code, NHM_SEGID, ws_area_ha) %>% write_csv('../data/NHMv1/sites_with_segids.csv')
