@@ -253,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 14
+# dmnrow = 2
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 20:nrow(network_domain)){
@@ -290,7 +290,7 @@ for(dmnrow in 20:nrow(network_domain)){
                          domain = domain)
 
     ms_retrieve(network = network,
-                prodname_filter = c('discharge'),
+                #prodname_filter = c('discharge'),
                 domain = domain)
     ms_munge(network = network,
              prodname_filter = c('ws_boundary'),
