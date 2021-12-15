@@ -9262,6 +9262,10 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
         final <- rbind(final, one_var)
         }
 
+    if(nrow(final) == 0){
+        return()
+    }
+    
     final <- final %>%
         mutate(!!mean_name := round(.data[[mean_name]])) %>%
         pivot_longer(cols = all_of(c(mean_name, sd_name)),
@@ -13719,6 +13723,8 @@ compute_yearly_summary_ws <- function(){
                                  recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
+        # REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
+        prod_files <- prod_files[! grepl('daymet', prod_files)]
 
         all_prods <- tibble()
         if(length(prod_files) > 0){

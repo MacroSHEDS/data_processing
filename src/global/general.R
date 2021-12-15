@@ -9,7 +9,8 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products  %>%
-    filter(status == 'ready') 
+    # filter(status == 'ready')
+    filter(prodname %in% c('glhymps', 'lithology', 'modis_idbp'))
 
 
 # Load spatial files from Drive if not already held on local machine
@@ -78,7 +79,7 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i= 17
+# i = 1
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])

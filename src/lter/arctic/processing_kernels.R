@@ -186,7 +186,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
                   c = component)
 
   d <- read.csv(rawfile, colClasses = 'character') %>%
-      mutate(River = 'Kuparuk_River_0.74')
+      mutate(River = 'Kuparuk_River_0.56')
 
   d <- d[4:nrow(d),]
 

@@ -179,9 +179,9 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('QUAL_FLAG' = '1',
                                                          'MAINTENANCE_FLAG' = '1',
                                                          'INCOMPLETE_FLAG' = '1'),
-                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
-                                                       'MAINTENANCE_FLAG' = c('0', '.'),
-                                                       'INCOMPLETE_FLAG' = c('0', '.')))
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', NA),
+                                                       'MAINTENANCE_FLAG' = c('0', NA),
+                                                       'INCOMPLETE_FLAG' = c('0', NA)))
 
     # Convert from cm/s to liters/s
     d <- d %>%
@@ -229,9 +229,9 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('QUAL_FLAG' = '1',
                                                          'MAINTENANCE_FLAG' = '1',
                                                          'INCOMPLETE_FLAG' = '1'),
-                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
-                                                       'MAINTENANCE_FLAG' = c('0', '.'),
-                                                       'INCOMPLETE_FLAG' = c('0', '.')))
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', NA),
+                                                       'MAINTENANCE_FLAG' = c('0', NA),
+                                                       'INCOMPLETE_FLAG' = c('0', NA)))
 
     # Convert from cm/s to liters/s
     d <- d %>%
@@ -279,9 +279,9 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('QUAL_FLAG' = '1',
                                                          'MAINTENANCE_FLAG' = '1',
                                                          'INCOMPLETE_FLAG' = '1'),
-                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
-                                                       'MAINTENANCE_FLAG' = c('0', '.'),
-                                                       'INCOMPLETE_FLAG' = c('0', '.')))
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', NA),
+                                                       'MAINTENANCE_FLAG' = c('0', NA),
+                                                       'INCOMPLETE_FLAG' = c('0', NA)))
 
     # Convert from cm/s to liters/s
     d <- d %>%
@@ -329,9 +329,9 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('QUAL_FLAG' = '1',
                                                          'MAINTENANCE_FLAG' = '1',
                                                          'INCOMPLETE_FLAG' = '1'),
-                            summary_flags_clean = list('QUAL_FLAG' = c('0', '.'),
-                                                       'MAINTENANCE_FLAG' = c('0', '.'),
-                                                       'INCOMPLETE_FLAG' = c('0', '.')))
+                            summary_flags_clean = list('QUAL_FLAG' = c('0', NA),
+                                                       'MAINTENANCE_FLAG' = c('0', NA),
+                                                       'INCOMPLETE_FLAG' = c('0', NA)))
 
     # Convert from cm/s to liters/s
     d <- d %>%
