@@ -871,7 +871,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
 
         rel_file <- needed_files[i]
 
-        string <- str_split_fixed(rel_file, '[.]', n = Inf)[1,1]
+        string <- str_remove(rel_file, '\\.tif')
         string <- str_split_fixed(string, 'X_X', n = Inf)
 
         year <- string[1,2]
@@ -1625,6 +1625,7 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
 
     site_area <- site_area * 10000
 
+    # glhymps is maybe an invalid geometry, need to fix
     sub_surface <- sf::st_intersection(glhymps, site_boundary) %>%
       mutate(intersect_area = as.numeric(sf::st_area(Shape))) %>%
       mutate(prop_basin = intersect_area/!!site_area) %>%
