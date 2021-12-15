@@ -234,7 +234,7 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
             rename(val = value,
                    datetime = measDate) %>%
             mutate(var = 'discharge',
-                   ms_status = ifelse(!flagA %in% c('P', 'p', 'A', 'a') | !is.na(flagB), 1, 0),
+                   ms_status = ifelse(!flagA %in% c('P', 'p', 'A', 'a', 'O', 'o') | !is.na(flagB), 1, 0),
                    site_code = !!names(sites)[s],
                    val = val * 28.31685) %>%
             select(site_code, datetime, var, val, ms_status) %>%
