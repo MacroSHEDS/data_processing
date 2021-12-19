@@ -1261,3 +1261,37 @@ generate_turbo_variable_summary <- function(outfile = '~/macrosheds_variable-by-
 
     write_csv(qq, outfile)
 }
+
+correct_all_geometries <- function(path, dir_pattern = 'ws_boundary'){
+
+    require(tidyverse)
+    require(sf)
+
+    geo_dirs <- list.files(path = path,
+                           pattern = dir_pattern,
+                           recursive = TRUE,
+                           full.names = TRUE,
+                           include.dirs = TRUE)
+
+    geo_dirs <- grep('(?<!(?:\\.zip|\\.txt))$',
+                     x = geo_dirs,
+                     perl = TRUE,
+                     value = TRUE)
+
+    shapefiles <- list.files(geo_dirs,
+                             recursive = TRUE,
+                             pattern = '\\.shp$',
+                             full.names = TRUE)
+
+    for(f in shapefiles){
+
+        sf::st_read(f, quiet = TRUE) %>%
+            sf::st_make_valid() %>%
+            sf::st_write(f, delete_layer = TRUE, quiet = TRUE)
+    }
+}
+
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/data')
+# correct_all_geometries(path = '~/git/macrosheds/portal/data')
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1')
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_figshare_v1')
