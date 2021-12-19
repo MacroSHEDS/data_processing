@@ -142,7 +142,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-    
+
     res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -218,7 +218,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(user = gee_login,
+try(rgee::ee_Initialize(email = gee_login,
                         drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
