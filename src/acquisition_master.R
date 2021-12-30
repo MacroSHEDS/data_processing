@@ -142,7 +142,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-    
+
     res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -253,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 12
+# dmnrow = 23
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -300,7 +300,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              prodname_filter = c('stream_chemistry'),
+              # prodname_filter = c('stream_chemistry'),
               domain = domain)
     ms_general(network = network,
                domain = domain)

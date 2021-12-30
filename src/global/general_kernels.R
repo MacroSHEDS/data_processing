@@ -190,11 +190,11 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
                 n = network, d = domain)
 
     lai_final <- append_unprod_prefix(lai_final, prodname_ms)
-    
+
     lai_raw <- append_unprod_prefix(lai_raw, prodname_ms)
-    
-    save_general_files(final_file = lai_final, 
-                       raw_file = lai_raw, 
+
+    save_general_files(final_file = lai_final,
+                       raw_file = lai_raw,
                        domain_dir = dir)
 
   }
@@ -755,7 +755,8 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
   for(s in 1:length(sites)){
     # Get site boundary and check if the watershed is in Puerto Rico, Alaska, or Hawaii
     site_boundary <- boundaries %>%
-      filter(site_code == sites[s])
+      filter(site_code == sites[s]) %>%
+        st_make_valid()
 
     ak_bb <- sf::st_bbox(obj = c(xmin = -173, ymin = 51.22, xmax = -129,
                                  ymax = 71.35), crs = 4326) %>%
@@ -871,11 +872,15 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
 
         rel_file <- needed_files[i]
 
+<<<<<<< HEAD
         string <- str_remove(rel_file, '\\.tif')
         string <- str_split_fixed(string, 'X_X', n = Inf)
+=======
+>>>>>>> 48c869d0d500f707412c7c85f376889f9fd6bdd4
 
-        year <- string[1,2]
-        site <- string[1,3]
+        string <- str_match(rel_file, '(.+?)X_X(.+?)X_X(.+?)\\.tif')[2:4]
+        year <- string[2]
+        site <- string[3]
 
         file_there <- googledrive::drive_get(paste0('GEE/', rel_file))
 
@@ -1440,11 +1445,11 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
-  
+
   usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                 ymax = 49.384), crs = 4326) %>%
     sf::st_as_sfc(., crs = 4326)
-  
+
   snow_dir <- glue('data/{n}/{d}/ws_traits/nsidc',
                    n = network,
                    d = domain)
@@ -1478,19 +1483,19 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                     p = ws_prodname,
                     s = sites[s])
 
-    site_boundary <- sf::st_read(ws_path, quiet  = TRUE) 
+    site_boundary <- sf::st_read(ws_path, quiet  = TRUE)
 
     is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
 
     if(!is_usa){
       msg <- generate_ms_exception(glue('No data available for {s}',
                                         s = sites[s]))
-      
+
       loginfo(msg = msg,
               logger = logger_module)
       next
     }
-    
+
 
     nthreads <- parallel::detectCores()
     clst <- ms_parallelize(maxcores = nthreads)
@@ -1548,18 +1553,18 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                 snow_depth_ann_min = min(val, na.rm = TRUE),
                 snow_depth_ann_mean = mean(val, na.rm = TRUE),
                 snow_depth_sd_year = sd(val, na.rm = TRUE)) %>%
-      pivot_longer(cols = c('snow_depth_ann_max', 'snow_depth_ann_min', 
+      pivot_longer(cols = c('snow_depth_ann_max', 'snow_depth_ann_min',
                             'snow_depth_ann_mean', 'snow_depth_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
-    
+
     snow_d_sd <- all_years %>%
       mutate(year = year(datetime)) %>%
       filter(var == 'snow_depth_sd') %>%
       group_by(site_code, year) %>%
       summarise(val = mean(val, na.rm = TRUE)) %>%
       mutate(var = 'snow_depth_sd_space')
-    
+
     swe_means <- all_years %>%
       mutate(year = year(datetime)) %>%
       filter(var == 'swe_mean') %>%
@@ -1568,33 +1573,33 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                 swe_ann_min = min(val, na.rm = TRUE),
                 swe_ann_mean = mean(val, na.rm = TRUE),
                 swe_sd_year = sd(val, na.rm = TRUE)) %>%
-      pivot_longer(cols = c('swe_ann_max', 'swe_ann_min', 'swe_ann_mean', 
+      pivot_longer(cols = c('swe_ann_max', 'swe_ann_min', 'swe_ann_mean',
                             'swe_sd_year'),
                    names_to = 'var',
                    values_to = 'val')
-    
+
     swe_sd <- all_years %>%
       mutate(year = year(datetime)) %>%
       filter(var == 'swe_sd') %>%
       group_by(site_code, year) %>%
       summarise(val = mean(val, na.rm = TRUE)) %>%
       mutate(var = 'swe_sd_space')
-    
+
     snow_final <- rbind(snow_d_means, snow_d_sd, swe_means, swe_sd) %>%
       select(year, site_code, var, val)
-    
-    
+
+
     dir <- glue('data/{n}/{d}/ws_traits/nsidc/',
                 n = network,
                 d = domain)
-    
+
     all_years <- append_unprod_prefix(all_years, prodname_ms)
     snow_final <- append_unprod_prefix(snow_final, prodname_ms)
-    
+
     save_general_files(final_file = snow_final,
                        raw_file = all_years,
                        domain_dir = dir)
-    
+
   }
 }
 
@@ -1602,13 +1607,13 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_3_ms822 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
-  
+
   dir.create(glue('data/{n}/{d}/ws_traits/glhymps/',
                   n = network,
                   d = domain), recursive = TRUE)
-  
+
   glhymps <- st_read('data/spatial/GLHYMPS/GLHYMPS.gdb')
-  
+
   sites <- boundaries$site_code
   for(s in 1:length(sites)){
 
@@ -1632,9 +1637,9 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
       mutate(Porosity_weight = Porosity*prop_basin,
              Permeability_no_permafrost_weight = Permeability_no_permafrost*prop_basin,
              Permeability_permafrost_weight = Permeability_permafrost*prop_basin,
-             Permeability_standard_deviation_weight = Permeability_standard_deviation*prop_basin) 
+             Permeability_standard_deviation_weight = Permeability_standard_deviation*prop_basin)
 
-    area_sub_dif <- sum(sub_surface$intersect_area)/site_area 
+    area_sub_dif <- sum(sub_surface$intersect_area)/site_area
     area_sub_dif <- abs(1-area_sub_dif)
 
     if(area_sub_dif < 0.05){
@@ -1671,38 +1676,38 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_3_ms823 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
-  
+
   dir.create(glue('data/{n}/{d}/ws_traits/lithology/',
                   n = network,
                   d = domain), recursive = TRUE)
-  
+
   glim <- st_read('data/spatial/LiMW/LiMW_GIS 2015.gdb')
-  
+
   geol_codes <- c('ND', 'SU', 'SS', 'SM', 'SC', 'PY', 'EV', 'MT', 'PA', 'PI',
                   'PB', 'VA', 'VI', 'VB', 'IG', 'WB')
-  
+
   sites <- boundaries$site_code
   for(s in 1:length(sites)){
-    
+
     site_boundary <- boundaries %>%
       filter(site_code == !!sites[s]) %>%
       sf::st_transform(sf::st_crs(glim))
-    
+
     # site_area <- site_data %>%
     #   filter(network == !!network,
     #          domain == !!domain,
     #          site_code == !!sites[s]) %>%
     #   pull(ws_area_ha)
-    # 
+    #
     # site_area <- site_area * 10000
-    
+
     lithology  <- sf::st_intersection(glim, site_boundary) %>%
       mutate(intersect_area = as.numeric(sf::st_area(Shape))) %>%
       group_by(xx) %>%
-      summarise(intersect_area = sum(intersect_area)) 
-    
+      summarise(intersect_area = sum(intersect_area))
+
     total_area <- sum(lithology$intersect_area, na.rm = T)
-      
+
     lithology <- lithology %>%
       mutate(prop = intersect_area/!!total_area) %>%
       mutate(prop_basin = intersect_area/!!total_area) %>%
@@ -1712,8 +1717,8 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
              site_code = !!sites[s],
              year = NA) %>%
       rename(val = prop_basin) %>%
-      select(site_code, var, val, year) 
-    
+      select(site_code, var, val, year)
+
     vars_prez <- unique(lithology$var)
 
     geol_tib <- tibble(site_code =  sites[s],
@@ -1721,16 +1726,16 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
                        val = 0,
                        year = NA) %>%
       filter(! var %in% !!vars_prez)
-    
+
     lithology <- rbind(lithology, geol_tib)
 
     lithology <- append_unprod_prefix(lithology, prodname_ms)
-    
+
     write_feather(lithology, glue('data/{n}/{d}/ws_traits/lithology/{s}.feather',
                                     n = network,
                                     d = domain,
                                     s = sites[s]))
-    
+
   }
 }
 
@@ -1750,13 +1755,13 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
 
   if(nrow(asset_path) > 1){
     for(i in 1:nrow(asset_path)){
-      
+
       if(i == 1){
         ws_boundary_asset <- ee$FeatureCollection(asset_path$ID[i])
       }
       if(i > 1){
         one_ws <- ee$FeatureCollection(asset_path$ID[i])
-        
+
         ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
       }
     }
@@ -1779,7 +1784,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
     })
   })$flatten()
 
-  gee <- results$select(propertySelectors = c('site_code', 'date', 'dayl', 
+  gee <- results$select(propertySelectors = c('site_code', 'date', 'dayl',
                                               'prcp', 'srad', 'swe', 'tmax',
                                               'tmin', 'vp'),
                         retainGeometry = FALSE)
@@ -1794,12 +1799,12 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
                                            fileFormat = 'CSV',
                                            folder = 'GEE',
                                            fileNamePrefix = 'rgee')
-  
+
   ee_task$start()
   ee_monitoring(ee_task, quiet = TRUE)
-  
+
   temp_rgee <- tempfile(fileext = '.csv')
-  
+
   expo_backoff(
     expr = {
       googledrive::drive_download(file = 'GEE/rgee.csv',
@@ -1809,8 +1814,8 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
     max_attempts = 5
   ) %>% invisible()
 
-  fin_table <- read_csv(temp_rgee) 
-  
+  fin_table <- read_csv(temp_rgee)
+
   googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
 
@@ -1829,21 +1834,21 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
   file_path <- glue('data/{n}/{d}/ws_traits/daymet/domain_climate.feather',
                     n = network,
                     d = domain)
-  
+
   write_feather(final, file_path)
 
   # type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
-  # 
+  #
   # dir <- glue('data/{n}/{d}/ws_traits/{v}/',
   #             n = network, d = domain, v = type)
-  # 
+  #
   # final <- append_unprod_prefix(final, prodname_ms)
   # final_sum <- append_unprod_prefix(final_sum, prodname_ms)
-  # 
+  #
   # save_general_files(final_file = final_sum,
   #                    raw_file = final,
   #                    domain_dir = dir)
-  
+
   return()
 }
 
@@ -1854,15 +1859,15 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
   igbp_dir <- glue('data/{n}/{d}/ws_traits/modis_igbp/',
                    n = network,
                    d = domain)
-  
+
   dir.create(igbp_dir,
              recursive = TRUE,
              showWarnings = FALSE)
-  
-  
+
+
   # Load landcover defs
   color_key = read_csv('data/spatial/modis_igbp/modis_land_cover.csv')
-  
+
   igbp_summary = color_key %>%
     as_tibble() %>%
     select(1, 3) %>%
@@ -1878,19 +1883,19 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
     site_boundary <- boundaries %>%
       filter(site_code == sites[s])
 
-    igbp_epochs = as.character(c('2001_01_01', '2002_01_01', '2003_01_01', '2004_01_01', 
+    igbp_epochs = as.character(c('2001_01_01', '2002_01_01', '2003_01_01', '2004_01_01',
                                  '2005_01_01', '2006_01_01', '2007_01_01', '2008_01_01',
                                  '2009_01_01', '2010_01_01', '2011_01_01', '2012_01_01',
                                  '2013_01_01', '2014_01_01', '2015_01_01', '2016_01_01',
                                  '2017_01_01', '2018_01_01', '2019_01_01'))
-    
+
     user_info <- rgee::ee_user_info(quiet = TRUE)
     asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
                          a = user_info$asset_home,
                          d = domain)
-    
+
     asset_path <- rgee::ee_manage_assetlist(asset_folder)
-    
+
     if(nrow(asset_path) == 1){
       ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
       filter_ee <- ee$Filter$inList('site_code', c(sites[s], sites[s]))
@@ -1898,27 +1903,27 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
     } else {
       ws_boundary_asset <- str_split_fixed(asset_path$ID, '/', n = Inf)
       ws_boundary_asset <- ws_boundary_asset[,ncol(ws_boundary_asset)]
-      
+
       this_asset <- asset_path[grep(sites[s], ws_boundary_asset),]
       site_ws_asset <- ee$FeatureCollection(this_asset$ID)
     }
-    
+
     for(e in igbp_epochs){
-      
+
       #subset_id = paste0('NLCD', as.character(e))
       img = ee$ImageCollection('MODIS/006/MCD12Q1')$
         select('LC_Type1')$
         filter(ee$Filter$eq('system:index', e))$
         first()$
         clip(site_ws_asset)
-      
+
       ee_description <-  glue('{n}_{d}_{s}_{p}_{e}',
                               d = domain,
                               n = network,
                               s = sites[s],
                               p = str_split_fixed(prodname_ms, '__', n = Inf)[1,1],
                               e = e)
-      
+
       file_name <- paste0('igbpX_X', e, 'X_X', sites[s])
       ee_task <- ee$batch$Export$image$toDrive(image = img,
                                                description = ee_description,
@@ -1926,13 +1931,13 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
                                                region = site_ws_asset$geometry(),
                                                fileNamePrefix = file_name,
                                                maxPixels=NULL)
-      
+
       needed_files <- c(needed_files, file_name)
       all_ee_task <- c(all_ee_task, ee_description)
-      
+
       try(googledrive::drive_rm(paste0('GEE/', file_name, '.tif')),
           silent = TRUE) #in case previous drive_rm failed
-      
+
       start_mess <- try(ee_task$start())
       if(class(start_mess) == 'try-error'){
         return(generate_ms_err(glue('error in retrieving {s}',
@@ -1940,36 +1945,34 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
       }
     }
   }
-  
+
   needed_files <- paste0(needed_files, '.tif')
-  
+
   talsk_running <- rgee::ee_manage_task()
-  
+
   talsk_running <- talsk_running %>%
     filter(DestinationPath %in% all_ee_task)
-  
+
   while(any(talsk_running$State %in% c('RUNNING', 'READY'))) {
     talsk_running <- rgee::ee_manage_task()
-    
+
     talsk_running <- talsk_running %>%
       filter(DestinationPath %in% all_ee_task)
-    
+
     Sys.sleep(5)
   }
   temp_rgee <- tempfile(fileext = '.tif')
-  
+
   for(i in 1:length(needed_files)){
-    
+
     rel_file <- needed_files[i]
-    
-    string <- str_split_fixed(rel_file, '[.]', n = Inf)[1,1]
-    string <- str_split_fixed(string, 'X_X', n = Inf)
-    
-    year <- string[1,2]
-    site <- string[1,3]
-    
+
+    string <- str_match(rel_file, '(.+?)X_X(.+?)X_X(.+?)\\.tif')[2:4]
+    year <- string[2]
+    site <- string[3]
+
     file_there <- googledrive::drive_get(paste0('GEE/', rel_file))
-    
+
     if(nrow(file_there) == 0){ next }
     expo_backoff(
       expr = {
@@ -1979,13 +1982,13 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
       },
       max_attempts = 5
     ) %>% invisible()
-    
+
     igbp_rast <- terra::rast(temp_rgee)
-    
+
     igbp_rast[as.vector(terra::values(igbp_rast)) == 0] <- NA
-    
+
     googledrive::drive_rm(rel_file)
-    
+
     tabulated_values = terra::values(igbp_rast) %>%
       table() %>%
       as_tibble() %>%
@@ -1995,26 +1998,25 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code,
     igbp_e = full_join(igbp_summary,
                          tabulated_values,
                          by = 'id')
-      
+
     igbp_e <- igbp_e %>%
         mutate(percent = round((CellTally*100)/sum(CellTally, na.rm = TRUE), 3)) %>%
         mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
         select(var = macrosheds_code, val = percent) %>%
         mutate(year = !!year) %>%
         mutate(site_code = !!site)
-    
+
     igbp_all = rbind(igbp_all, igbp_e)
   }
-
 
   igbp_final <- igbp_all %>%
     mutate(year = as.numeric(str_split_fixed(year, '_', n = Inf)[,1])) %>%
     select(year, site_code, var, val)
-  
+
   igbp_final <- append_unprod_prefix(igbp_final, prodname_ms)
-  
+
   save_general_files(final_file = igbp_final,
                      domain_dir = igbp_dir)
-  
+
 }
 
