@@ -699,7 +699,7 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                          data_cols =  c('ppt' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
-                         sampling_type = 'I',
+                         # sampling_type = 'I',
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
