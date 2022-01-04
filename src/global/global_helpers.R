@@ -7932,7 +7932,9 @@ write_metadata_d <- function(network,
 
         if(grepl('(^cdnr_|^usgs_)', prodname_ms)){
             return()
-        } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms)){
+        } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms) &&
+                  # For the case where all discharge is pulled from USGS
+                  !(grepl('discharge', prodname_ms) && sum(as.numeric(grepl('discharge', prod_info$prodname))) == 1)){
             stop(glue('really no precursors for {p}? might need to update products.csv', p = prodname_ms))
         }
     }
@@ -10961,6 +10963,11 @@ scale_flux_by_area <- function(network_domain, site_data){
                 f_scaled <- sub(pattern = 'inst__',
                                 replacement = 'inst_scaled__',
                                 x = f)
+                
+                dir_fin <- gsub('(ms[0-9]{3}/).*', '\\1', f_scaled)
+                if(! dir.exists(dir_fin)){
+                    dir.create(dir_fin)
+                }
 
                 write_feather(x = d,
                               path = f_scaled)
@@ -12217,7 +12224,11 @@ combine_ws_boundaries <- function(){
         setwd('../../')
         setwd('data_processing/')
     } else{
-        setwd('../../data_acquisition/')
+        success <- try(setwd('../../data_acquisition/'), silent = TRUE)
+        
+        if(inherits(success, 'try-error')){
+            setwd('../../data_processing/')
+        }
     }
 
 }
