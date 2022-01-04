@@ -9,12 +9,7 @@ if(ms_instance$use_ms_error_handling){
 }
 
 unprod <- univ_products  %>%
-<<<<<<< HEAD
-    # filter(status == 'ready')
-    filter(prodname %in% c('glhymps', 'lithology', 'modis_idbp'))
-=======
     filter(status == 'ready')
->>>>>>> 48c869d0d500f707412c7c85f376889f9fd6bdd4
 
 
 # Load spatial files from Drive if not already held on local machine
@@ -83,12 +78,8 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-<<<<<<< HEAD
-# i = 1
-=======
 # i= 17
-unprod = filter(unprod, prodname != 'nsidc') #TEMP
->>>>>>> 48c869d0d500f707412c7c85f376889f9fd6bdd4
+
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
@@ -119,7 +110,7 @@ for(i in 1:nrow(unprod)){
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
 
-    # general_status <- 'pending'
+    general_status <- 'pending'
 
     if(general_status %in% c('ok', 'no_data_avail')){
 

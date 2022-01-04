@@ -872,12 +872,6 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code,
 
         rel_file <- needed_files[i]
 
-<<<<<<< HEAD
-        string <- str_remove(rel_file, '\\.tif')
-        string <- str_split_fixed(string, 'X_X', n = Inf)
-=======
->>>>>>> 48c869d0d500f707412c7c85f376889f9fd6bdd4
-
         string <- str_match(rel_file, '(.+?)X_X(.+?)X_X(.+?)\\.tif')[2:4]
         year <- string[2]
         site <- string[3]
