@@ -10,10 +10,10 @@
 #            val = errors::drop_errors(val),
 #            val = scale(val))
 
-q_interp_limit = 1 #240
-p_interp_limit = 1
+q_interp_limit = 5 #240
+p_interp_limit = 5
 # chem_interp_limit = 1 #not yet in use
-flux_interp_limit = 1 #240
+flux_interp_limit = 14 #240
 
 #setup ####
 
@@ -248,7 +248,7 @@ for(i in 1:length(q_dirs)){
         d <- d %>%
             filter(n > 60)
     }
-    if(ntw_dmn_prd[2] %in% seasonal_Q && ntw_dmn_prd[2] != 'mcmurdo'){
+    if((!ntw_dmn_prd[2] %in% seasonal_Q) && ntw_dmn_prd[2] != 'mcmurdo'){
         d <- d %>%
             filter(n > 330)
     }
@@ -340,9 +340,9 @@ stream_gauges <- site_data %>%
     filter(in_workflow == 1,
            site_type == 'stream_gauge') %>%
     pull(site_code)
-chemvars = c('Ca', 'Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
+chemvars = c('Ca', 'Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S', 'Na', 'PO4_P')
 # chemvars = c('Ca', 'Si', 'SiO2_Si', 'Cl', 'NO3_N', 'DOC', 'SO4_S')
-ylim_maxes = log(c(10000, 10000, 100000, 10000, 10000, 10000))
+ylim_maxes = log(c(10000, 10000, 100000, 10000, 10000, 10000, 10000, 10))
 # ylim_maxes = log(c(455, 25, 25, 600, 20, 85, 600))
 ylim_mins = log(rep(0.001, length(ylim_maxes)))
 # ylim_mins = c(-10, -0.5, -0.5, -10, -0.5, -1, -10)
@@ -367,22 +367,26 @@ for(i in 1:length(chemvars)){
         d = load_product('stream_chemistry', filter_vars=chemvar)
     }
     
-    d <- d %>%
-        filter(site_code %in% !!stream_gauges)
+    # d <- d %>%
+    #     filter(site_code %in% !!stream_gauges)
 
     d_by_max = d %>%
         filter(!is.na(val)) %>%
         group_by(network, domain, site_code) %>%
         summarize(maxval = max(val, na.rm = T),
-                  meanval = mean(val, na.rm = T),
+                  medianval = median(val, na.rm = T),
                   n = n(),
                   .groups = 'drop') %>%
         mutate(ntw_dmn_sit = paste(network, domain, site_code,
-                                   sep = ' > '))
+                                   sep = ' > ')) %>%
+        filter(n > 30)
 
-    site_order = d_by_max$ntw_dmn_sit[order(d_by_max$meanval)]
+    site_order = d_by_max$ntw_dmn_sit[order(d_by_max$medianval)]
+    
+    sites_with_data <- d_by_max$site_code
 
     d_boxplot = d %>%
+        filter(site_code %in% !!sites_with_data) %>%
         mutate(val = errors::drop_errors(val)) %>%
         group_by(network, domain, site_code) %>%
         summarize(box_stats = list(boxplot.stats(val)),
@@ -660,15 +664,14 @@ for(k in 1:length(fluxvars)){
     axis(1, seq(1950, 2020, 5))
 
     if(fluxvar == 'Si'){
-        d1 = load_entire_product('stream_flux_inst_scaled', .sort=FALSE, filter_vars=fluxvar)
-        d2 = load_entire_product('stream_flux_inst_scaled', .sort=FALSE, filter_vars='SiO2_Si')
+        d1 = load_product('stream_flux_inst_scaled', filter_vars=fluxvar)
+        d2 = load_product('stream_flux_inst_scaled', filter_vars='SiO2_Si')
         sio2_dmns = unique(d2$domain)
         sio2_dmns = sio2_dmns[! sio2_dmns == 'arctic'] #arctic doesn't really have SiO2
         d2$var = sub('SiO2_Si', 'Si', d2$var)
         dflux = bind_rows(d1, d2)
     } else {
-        dflux = load_entire_product('stream_flux_inst_scaled', .sort=FALSE,
-                                    filter_vars=fluxvar)
+        dflux = load_product('stream_flux_inst_scaled', filter_vars=fluxvar)
     }
 
     axis(2, at=log(log_ticks), labels = log_ticks)
@@ -920,7 +923,7 @@ dev.off()
 pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/Q_coverage.pdf'))
 
-q = load_entire_product('discharge')
+q = load_product('discharge')
 dmns = unique(q$domain)
 current_year = lubridate::year(Sys.Date())
 
@@ -975,8 +978,7 @@ dev.off()
 #   the public export dataset. it can start from any root (and you'll need to
 #   start from the public export root to avoid reading raw precip gauge data)
 
-p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v0.4/',
-                        prodname = 'precipitation')
+p = load_product(prodname = 'precipitation')
 
 pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/P_coverage.pdf'))
@@ -1040,8 +1042,7 @@ dev.off()
 #   the public export dataset. it can start from any root (and you'll need to
 #   start from the public export root to avoid reading raw precip gauge data)
 
-p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v0.4/',
-                        prodname = 'precip_flux_inst_scaled',
+p = load_product(prodname = 'precip_flux_inst_scaled',
                         filter_vars = 'Ca')
 
 pdf(width=11, height=9, onefile=TRUE,
@@ -1210,7 +1211,7 @@ load_entire_product <- function(macrosheds_root,
     return(d)
 }
 
-f = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1/',
+f = load_entire_product(macrosheds_root = '~/git/macrosheds/data_processing/macrosheds_dataset_v1/',
                         prodname = 'stream_flux_inst_scaled')
 
 pdf(width=11, height=9, onefile=TRUE,
@@ -1236,7 +1237,7 @@ for(dmn in dmns){
     for(s in sites){
 
         vars <- unique(filter(f, domain == dmn, site_code == s)$var)
-        if(any(extract_var_prefix(vars) != 'GN')) stop('oi')
+        if(any(extract_var_prefix(vars) %in% c('GS', 'IS'))) stop('oi')
         # vars <- drop_var_prefix(vars)
         vars <- sort(vars[! drop_var_prefix(vars) %in% ignore_vars])
 
@@ -1386,7 +1387,7 @@ load_entire_product <- function(macrosheds_root,
     return(d)
 }
 
-f = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1/',
+f = load_entire_product(macrosheds_root = '~/git/macrosheds/data_processing/macrosheds_dataset_v1/',
                         prodname = 'stream_chemistry')
 
 pdf(width=11, height=9, onefile=TRUE,
@@ -1415,7 +1416,7 @@ for(dmn in dmns){
         vars <- grep('^I[SN]_', vars, invert = TRUE, value = TRUE)
         print(s)
         print(vars)
-        if(any(extract_var_prefix(vars) != 'GN')) stop('oi')
+        if(any(extract_var_prefix(vars) %in% c('GS', 'IS'))) stop('oi')
         # vars <- drop_var_prefix(vars)
         vars <- sort(vars[! drop_var_prefix(vars) %in% ignore_vars])
 
@@ -1456,7 +1457,7 @@ dev.off()
 #   the public export dataset. it can start from any root (and you'll need to
 #   start from the public export root to avoid reading raw precip gauge data)
 
-p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v0.4/',
+p = load_entire_product(macrosheds_root = '~/git/macrosheds/data_processing/macrosheds_dataset_v0.4/',
                         prodname = 'stream_chemistry',
                         filter_vars = 'NO3_N')
 
