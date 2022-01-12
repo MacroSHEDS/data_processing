@@ -190,10 +190,12 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
 
             if(is_spatial){
 
-                out <- data.table::rbindlist(list(out, out_comp),
-                                             use.names = TRUE,
-                                             fill = TRUE) %>%
-                    as_tibble()
+                # out <- data.table::rbindlist(list(out, out_comp),
+                    #                          use.names = TRUE,
+                    #                          fill = TRUE) %>%
+                    # as_tibble()
+                
+                out <- rbind(out, out_comp)
 
             } else {
 

@@ -79,7 +79,7 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
 }
 
 # i= 17
-unprod = filter(unprod, prodname != 'nsidc') #TEMP
+
 for(i in 1:nrow(unprod)){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
@@ -110,7 +110,7 @@ for(i in 1:nrow(unprod)){
                                          prodname_ms = prodname_ms,
                                          site_code = site_code)
 
-    # general_status <- 'pending'
+    general_status <- 'pending'
 
     if(general_status %in% c('ok', 'no_data_avail')){
 
