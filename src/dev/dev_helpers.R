@@ -766,7 +766,7 @@ list_all_product_dirs <- function(prodname, location){
 }
 
 load_product <- function(prodname,
-                         location,
+                         location = 'macrosheds_dataset',
                          filter_domains = NULL,
                          filter_site_codes = NULL,
                          filter_vars = NULL,

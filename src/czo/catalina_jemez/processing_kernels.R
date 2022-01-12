@@ -201,6 +201,10 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
     #CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2504/
     #Hydroshare: https://www.hydroshare.org/resource/c0e5094d1de54547a304d4dec3a7b3ff/
+    
+    if(component %in% c('Jemez_Methods.csv', 'Jemez_Sites.csv')) {
+        return(NULL)
+    }
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -679,6 +683,10 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2532/
     #https://www.hydroshare.org/resource/f5ae15fbdcc9425e847060f89da61557/
 
+    if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
+        return(NULL)
+    }
+    
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -764,6 +772,10 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
 
     #https://www.hydroshare.org/resource/1dc7b0975ae2469a96e3458075d3b75c/
 
+    if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
+        return(NULL)
+    }
+    
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -807,6 +819,10 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+    
+    if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
+        return(NULL)
+    }
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
         pivot_longer(cols = c('OR_Rain1', 'OR_Rain2', 'OR_Rain3'), names_to = 'sites', values_to = 'precip') %>%
@@ -855,6 +871,10 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+    
+    if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
+        return(NULL)
+    }
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
         mutate(site = 'MCZOB_met') %>%

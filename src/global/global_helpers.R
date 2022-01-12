@@ -301,99 +301,56 @@ identify_sampling <- function(df,
             dif <- diff(dates)
             unit <- attr(dif, 'units')
 
-            conver <- case_when(
+            conver_mins <- case_when(
                 unit %in% c('seconds', 'secs') ~ 0.01666667,
                 unit %in% c('minutes', 'mins') ~ 1,
                 unit == 'hours' ~ 60,
                 unit == 'days' ~ 1440,
                 TRUE ~ NA_real_)
 
-            if(is.na(conver)) stop('Weird time unit encountered. address this.')
+            if(is.na(conver_mins)) stop('Weird time unit encountered. address this.')
 
-            dif_minutes <- as.numeric(dif) * conver
+            dif_mins <- as.numeric(dif) * conver_mins
+            dif_mins <- round(dif_mins)
 
-            # table <- rle2(dif_minutes) %>% #table is a commonly used function
-            run_table <- rle2(dif_minutes) %>%
-                mutate(
-                    site_code = !!site_codes[i],
-                    starts := dates[starts],
-                    stops := dates[stops],
-                    # sum = sum(lengths, na.rm = TRUE), #superfluous
-                    porportion = lengths / sum(lengths, na.rm = TRUE),
-                    time = difftime(stops, starts, units = 'days'))
-
-            # Sites with no record
-            if(nrow(run_table) == 0){
-
+            mode_mins <- Mode(dif_mins)
+            mean_mins <- mean(dif_mins, na.rm = T)
+            prop_mode_min <- length(dif_mins[dif_mins == mode_mins])/length(dif_mins)
+            
+            # remove gaps larger than 90 days (for seasonal sampling)
+            dif_mins <- dif_mins[dif_mins < 129600]
+            
+            if(length(dif_mins) == 0){
+                # This is grab
                 g_a <- tibble('site_code' = site_codes[i],
                               'type' = 'G',
-                              'starts' = lubridate::NA_POSIXct_,
-                              'interval' = NA_real_)
-
-            } else {
-
-                test <- filter(run_table,
-                               time > 60,
-                               lengths > 60)
-
-                #Sites where there are not at least 60 consecutive records, record
-                #for at least 60 consecutive days, and have an average interval of
-                #more than 1 day are assumed to be grab samples
-                if(nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) > 1440){
-
+                              'starts' = min(dates, na.rm = TRUE),
+                              'interval' = mode_mins)
+            } else{
+                if(prop_mode_min >= 0.5 && mode_mins <= 1440){
+                        # This is installed
                     g_a <- tibble('site_code' = site_codes[i],
-                                  'type' = 'G',
-                                  'starts' = min(run_table$starts,
-                                                 na.rm = TRUE),
-                                  'interval' = round(Mode(run_table$values,
-                                                          na.rm = TRUE)))
+                                  'type' = 'I',
+                                  'starts' = min(dates, na.rm = TRUE),
+                                  'interval' = mode_mins)
+                    } else{
+                        if(mean_mins <= 1440){
+                            # This is installed (non standard interval like HBEF)
+                            g_a <- tibble('site_code' = site_codes[i],
+                                          'type' = 'I',
+                                          'starts' = min(dates, na.rm = TRUE),
+                                          'interval' = mean_mins)
+                        } else{
+                            # This is grab
+                            g_a <- tibble('site_code' = site_codes[i],
+                                          'type' = 'G',
+                                          'starts' = min(dates, na.rm = TRUE),
+                                          'interval' = mean_mins)
+                        }
+                    }
                 }
-
-                #Sites with consecutive samples are have a consistent interval
-                if(nrow(test) != 0 && nrow(run_table) <= 20){
-
-                    g_a <- test %>%
-                        select(site_code, starts, interval = values) %>%
-                        group_by(site_code, interval) %>%
-                        summarise(starts = min(starts,
-                                               na.rm = TRUE)) %>%
-                        mutate(type = 'I') %>%
-                        arrange(starts)
-
-                }
-
-                #Sites where they do not have a consistent recording interval but
-                #the average interval is less than one day are assumed to be automatic
-                # (such as HBEF discharge that is automatic but lacks a consistent
-                #recording interval)
-                if(
-                    (nrow(test) == 0 && mean(run_table$values, na.rm = TRUE) <= 1440) ||
-                    (nrow(test) != 0 && nrow(run_table) > 20)
-                ){ #could this be handed with else?
-
-                    table_ <- run_table %>%
-                        filter(porportion >= 0.05) %>%
-                        mutate(type = 'I') %>%
-                        select(starts, site_code, type, interval = values) %>%
-                        mutate(interval = as.character(round(interval)))
-
-                    table_var <- run_table %>%
-                        filter(porportion <= 0.05)  %>%
-                        group_by(site_code) %>%
-                        summarise(starts = min(starts,
-                                               na.rm = TRUE)) %>%
-                        mutate(
-                            type = 'I',
-                            interval = 'variable') %>%
-                        select(starts, site_code, type, interval)
-
-                    g_a <- rbind(table_, table_var) %>%
-                        arrange(starts)
-                }
-            }
 
             if(! is.null(sampling_type)){
-
                 g_a <- g_a %>%
                     mutate(type = sampling_type)
             }
@@ -401,16 +358,13 @@ identify_sampling <- function(df,
             var_name_base <- str_split(string = data_cols[p],
                                        pattern = '__\\|')[[1]][1]
 
-            interval_changes <- rle2(g_a$interval)$starts
-
             g_a <- g_a %>%
                 mutate(
                     type = paste0(type,
                                   !!is_sensor[var_name_base]),
                     var = as.character(glue('{ty}_{vb}',
                                             ty = type,
-                                            vb = var_name_base))) %>%
-                slice(interval_changes)
+                                            vb = var_name_base)))
 
             master[[prodname_ms]][[var_name_base]][[site_codes[i]]] <-
                 list('startdt' = g_a$starts,
@@ -7978,7 +7932,9 @@ write_metadata_d <- function(network,
 
         if(grepl('(^cdnr_|^usgs_)', prodname_ms)){
             return()
-        } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms)){
+        } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms) &&
+                  # For the case where all discharge is pulled from USGS
+                  !(grepl('discharge', prodname_ms) && sum(as.numeric(grepl('discharge', prod_info$prodname))) == 1)){
             stop(glue('really no precursors for {p}? might need to update products.csv', p = prodname_ms))
         }
     }
@@ -9262,6 +9218,10 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
         final <- rbind(final, one_var)
         }
 
+    if(nrow(final) == 0){
+        return()
+    }
+    
     final <- final %>%
         mutate(!!mean_name := round(.data[[mean_name]])) %>%
         pivot_longer(cols = all_of(c(mean_name, sd_name)),
@@ -11003,6 +10963,11 @@ scale_flux_by_area <- function(network_domain, site_data){
                 f_scaled <- sub(pattern = 'inst__',
                                 replacement = 'inst_scaled__',
                                 x = f)
+                
+                dir_fin <- gsub('(ms[0-9]{3}/).*', '\\1', f_scaled)
+                if(! dir.exists(dir_fin)){
+                    dir.create(dir_fin)
+                }
 
                 write_feather(x = d,
                               path = f_scaled)
@@ -12259,7 +12224,11 @@ combine_ws_boundaries <- function(){
         setwd('../../')
         setwd('data_processing/')
     } else{
-        setwd('../../data_acquisition/')
+        success <- try(setwd('../../data_acquisition/'), silent = TRUE)
+        
+        if(inherits(success, 'try-error')){
+            setwd('../../data_processing/')
+        }
     }
 
 }
@@ -13719,6 +13688,8 @@ compute_yearly_summary_ws <- function(){
                                  recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
+        # REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
+        prod_files <- prod_files[! grepl('daymet', prod_files)]
 
         all_prods <- tibble()
         if(length(prod_files) > 0){
