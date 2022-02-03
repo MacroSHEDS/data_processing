@@ -8,6 +8,10 @@ prod_info <- get_product_info(network = network,
     filter(! grepl(pattern = '^VERSIONLESS',
                    x = prodcode))
 
+if(! is.null(prodname_filter)){
+    prod_info <- filter(prod_info, prodname %in% prodname_filter)
+}
+
 neon_streams <- site_data %>%
     filter(domain == 'neon',
            site_type == 'stream_gauge',
