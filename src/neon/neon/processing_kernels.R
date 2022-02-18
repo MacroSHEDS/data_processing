@@ -262,10 +262,17 @@ process_0_DP1.00006 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP4.00130 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_code, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE),
-                     silent = TRUE)
+    data_pile <- try(
+        {
+            neonUtilities::loadByProduct(
+                set_details$prodcode_full,
+                site = set_details$site_code,
+                startdate = set_details$component,
+                enddate = set_details$component,
+                package = 'basic',
+                check.size = FALSE)
+        },
+        silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
       return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
@@ -275,8 +282,12 @@ process_0_DP4.00130 <- function(set_details, network, domain){
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_code, c=set_details$component)
+                         wd = getwd(),
+                         n = network,
+                         d = domain,
+                         p = set_details$prodname_ms,
+                         s = set_details$site_code,
+                         c = set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
