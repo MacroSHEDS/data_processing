@@ -301,7 +301,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              prodname_filter = c('precip_pchem_pflux'),
+              # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
     ms_general(network = network,
                domain = domain)

@@ -3366,7 +3366,7 @@ delineate_watershed_apriori <- function(lat,
 
         } else if(is.null(snap_dist)){
 
-            # stop('replace the do.call lines below with literal function calls')
+            stop('replace the do.call lines below with literal function calls')
 
             snap1_f <- glue('{scrd}/snap1_{smet}_dist150.shp',
                             scrd = scratch_dir,
