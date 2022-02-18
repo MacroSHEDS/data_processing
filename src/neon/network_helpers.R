@@ -236,7 +236,7 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail){
     retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
 
     rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
-    rgx_capt = str_match(avail$url, rgx)[, -1]
+    rgx_capt = str_match(avail$url, rgx)[, -1, drop = FALSE]
 
     retrieval_tracker = avail %>%
         mutate(
