@@ -253,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 14
+# dmnrow = 23
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -264,6 +264,7 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
+    
     # held_data = get_data_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge')
@@ -273,7 +274,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -300,7 +301,7 @@ for(dmnrow in 1:nrow(network_domain)){
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
     ms_general(network = network,
                domain = domain)

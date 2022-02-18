@@ -1,5 +1,5 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
-VERSIONLESS001,precipitation,ready,pending,NA,precip_pchem_pflux__ms003,NA,suef_precip
+VERSIONLESS001,precipitation,pending,pending,NA,precip_pchem_pflux__ms003,NA,suef_precip
 VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,suef_discharge
 VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,suef_precip_chemistry
 VERSIONLESS004,ws_boundary,pending,pending,NA,precip_pchem_pflux__ms003,NA,suef_ws_boundary
