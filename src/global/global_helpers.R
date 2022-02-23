@@ -5752,6 +5752,9 @@ shortcut_idw <- function(encompassing_dem,
 
             #estimate raster values from elevation alone
             d_from_elev <- ab$elevation * elevs_masked + ab$`(Intercept)`
+            
+            # Set all negative values to 0
+            d_from_elev[d_from_elev < 0] <- 0
 
             #average both approaches (this should be weighted toward idw
             #when close to any data location, and weighted half and half when far)
@@ -12752,7 +12755,7 @@ download_from_googledrive <- function(set_details, network, domain){
                           d = domain,
                           p = set_details$prodname_ms)
 
-    id <- googledrive::as_id('178OOGxx1xM3C7m-Tdx6j5Dk_kxfWLJvw')
+    id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
 
     network_id <- gd_files %>%
