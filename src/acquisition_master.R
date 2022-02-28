@@ -218,7 +218,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(user = gee_login,
+try(rgee::ee_Initialize(email = gee_login,
                         drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
