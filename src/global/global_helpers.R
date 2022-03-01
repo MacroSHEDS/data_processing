@@ -316,10 +316,10 @@ identify_sampling <- function(df,
             mode_mins <- Mode(dif_mins)
             mean_mins <- mean(dif_mins, na.rm = T)
             prop_mode_min <- length(dif_mins[dif_mins == mode_mins])/length(dif_mins)
-            
+
             # remove gaps larger than 90 days (for seasonal sampling)
             dif_mins <- dif_mins[dif_mins < 129600]
-            
+
             if(length(dif_mins) == 0){
                 # This is grab
                 g_a <- tibble('site_code' = site_codes[i],
@@ -3366,34 +3366,35 @@ delineate_watershed_apriori <- function(lat,
 
         } else if(is.null(snap_dist)){
 
-            stop('replace the do.call lines below with literal function calls')
-
             snap1_f <- glue('{scrd}/snap1_{smet}_dist150.shp',
                             scrd = scratch_dir,
                             smet = snap_method)
-
-            snap_arglist <- list(pour_pts = point_f,
-                                 output = snap1_f,
-                                 snap_dist = 150)
-
-            if(snap_method == 'standard'){
-                snap_arglist$flow_accum = flow_f
-            } else {
-                snap_arglist$streams = flow_f
-            }
-
-            do.call(snap_method_func,
-                    args = snap_arglist) %>% invisible()
 
             snap2_f <- glue('{scrd}/snap2_{smet}_dist50.shp',
                             scrd = scratch_dir,
                             smet = snap_method)
 
-            snap_arglist$output <- snap2_f
-            snap_arglist$snap_dist <- 50
+            if(snap_method == 'standard'){
 
-            do.call(snap_method_func,
-                    args = snap_arglist) %>% invisible()
+                whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                               flow_accum = flow_f,
+                                               output = snap1_f,
+                                               snap_dist = 150)
+                whitebox::wbt_snap_pour_points(pour_pts = point_f,
+                                               flow_accum = flow_f,
+                                               output = snap2_f,
+                                               snap_dist = 50)
+            } else {
+
+                whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                                      streams = flow_f,
+                                                      output = snap1_f,
+                                                      snap_dist = 150)
+                whitebox::wbt_jenson_snap_pour_points(pour_pts = point_f,
+                                                      streams = flow_f,
+                                                      output = snap1_f,
+                                                      snap_dist = 50)
+            }
 
             #the site has been snapped 2 different ways. identify unique snap locations.
             snap1 <- sf::st_read(snap1_f, quiet = TRUE)
@@ -3468,15 +3469,15 @@ delineate_watershed_apriori <- function(lat,
 
             rgx <- str_match(unique_snaps_f[i],
                              '.*?_(standard|jenson)_dist([0-9]+)\\.shp$')
-            snap_method <- rgx[, 2]
-            snap_distance <- rgx[, 3]
+            snap_method_ <- rgx[, 2]
+            snap_dist_ <- rgx[, 3]
 
             wb_f <- glue('{path}/wb{n}_buffer{b}_{typ}_dist{dst}.tif',
                          path = scratch_dir,
                          n = i,
                          b = buffer_radius,
-                         typ = snap_method,
-                         dst = snap_distance)
+                         typ = snap_method_,
+                         dst = snap_dist_)
 
             whitebox::wbt_watershed(d8_pntr = d8_f,
                                     pour_pts = unique_snaps_f[i],
@@ -3538,8 +3539,8 @@ delineate_watershed_apriori <- function(lat,
                                 path = inspection_dir,
                                 n = i,
                                 b = sprintf('%d', buffer_radius),
-                                typ = snap_method,
-                                dst = snap_distance,
+                                typ = snap_method_,
+                                dst = snap_dist_,
                                 res = dem_resolution,
                                 inc = flt_incrmt,
                                 brc = breach_method,
@@ -4290,7 +4291,7 @@ get_response_1char <- function(msg,
     #msg: character. a message that will be used to prompt the user
     #possible_chars: character vector of acceptable single-character responses
     #subsequent prompt: not to be set directly. This is handled by
-    #   get_response_mchar during recursion.
+    #   get_response_1char during recursion.
 
     if(subsequent_prompt){
         cat(paste('Please choose one of:',
@@ -9224,7 +9225,7 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
     if(nrow(final) == 0){
         return()
     }
-    
+
     final <- final %>%
         mutate(!!mean_name := round(.data[[mean_name]])) %>%
         pivot_longer(cols = all_of(c(mean_name, sd_name)),
@@ -10966,7 +10967,7 @@ scale_flux_by_area <- function(network_domain, site_data){
                 f_scaled <- sub(pattern = 'inst__',
                                 replacement = 'inst_scaled__',
                                 x = f)
-                
+
                 dir_fin <- gsub('(ms[0-9]{3}/).*', '\\1', f_scaled)
                 if(! dir.exists(dir_fin)){
                     dir.create(dir_fin)
@@ -12228,7 +12229,7 @@ combine_ws_boundaries <- function(){
         setwd('data_processing/')
     } else{
         success <- try(setwd('../../data_acquisition/'), silent = TRUE)
-        
+
         if(inherits(success, 'try-error')){
             setwd('../../data_processing/')
         }
@@ -12262,6 +12263,8 @@ get_osm_roads <- function(extent_raster, outfile = NULL){
     roads_query <- osmdata::opq(dem_bounds) %>%
         osmdata::add_osm_feature(key = 'highway',
                                  value = highway_types)
+
+    roads_query$prefix <- sub('timeout:25', 'timeout:180', roads_query$prefix)
 
     roads <- osmdata::osmdata_sf(roads_query)
     roads <- roads$osm_lines$geometry
@@ -12315,6 +12318,8 @@ get_osm_streams <- function(extent_raster, outfile = NULL){
     streams_query <- osmdata::opq(dem_bounds) %>%
         osmdata::add_osm_feature(key = 'waterway',
                                  value = c('river', 'stream'))
+
+    streams_query$prefix <- sub('timeout:25', 'timeout:180', streams_query$prefix)
 
     streams <- osmdata::osmdata_sf(streams_query)
     streams <- streams$osm_lines$geometry
