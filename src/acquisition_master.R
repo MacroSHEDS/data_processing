@@ -311,6 +311,9 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms.module'
 
+# write csv + readme domain metadata
+metadata_scrape()
+
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
@@ -323,9 +326,6 @@ if(length(email_err_msgs)){
               addrs = conf$report_emails,
               pw = conf$gmail_pw)
 }
-
-# write csv + readme domain metadata
-metadata_scrape()
 
 loginfo(msg = 'Run complete',
         logger = logger_module)
