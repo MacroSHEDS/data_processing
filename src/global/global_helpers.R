@@ -4322,7 +4322,7 @@ get_response_int <- function(msg,
     #min_val: int. minimum allowable value, inclusive
     #max_val: int. maximum allowable value, inclusive
     #subsequent prompt: not to be set directly. This is handled by
-    #   get_response_free during recursion.
+    #   get_response_int during recursion.
 
     if(subsequent_prompt){
         cat(glue('Please choose an integer in the range [{minv}, {maxv}].',
@@ -5752,7 +5752,7 @@ shortcut_idw <- function(encompassing_dem,
 
             #estimate raster values from elevation alone
             d_from_elev <- ab$elevation * elevs_masked + ab$`(Intercept)`
-            
+
             # Set all negative values to 0
             d_from_elev[d_from_elev < 0] <- 0
 
@@ -9409,7 +9409,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnnccc'
+            col_types = 'ccccccccnnnnncccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -9556,7 +9556,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
