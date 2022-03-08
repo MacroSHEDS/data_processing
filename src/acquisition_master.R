@@ -218,7 +218,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(email = gee_login,
+try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
@@ -253,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 23
+# dmnrow = 17
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -300,9 +300,9 @@ for(dmnrow in 1:nrow(network_domain)){
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
-    ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
-              domain = domain)
+    # ms_derive(network = network,
+    #           prodname_filter = c('precip_pchem_pflux'),
+    #           domain = domain)
     ms_general(network = network,
                domain = domain)
 
