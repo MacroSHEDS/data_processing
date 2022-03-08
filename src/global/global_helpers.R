@@ -620,6 +620,7 @@ ms_read_raw_csv <- function(filepath,
                             alt_datacol_pattern,
                             is_sensor,
                             set_to_NA,
+                            set_to_0,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols,
@@ -695,6 +696,7 @@ ms_read_raw_csv <- function(filepath,
     #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
     #set_to_NA: For values such as 9999 that are proxies for NA values.
+    #set_to_0: For values that we want to set to zero. This can be used to set
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -785,6 +787,10 @@ ms_read_raw_csv <- function(filepath,
 
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
+    }
+    
+    if(missing(set_to_0)) {
+        set_to_0 <- NULL
     }
 
     if(missing(alt_site_code)) {
@@ -914,6 +920,13 @@ ms_read_raw_csv <- function(filepath,
     if(! is.null(set_to_NA)){
         for(i in 1:length(set_to_NA)){
             d[d == set_to_NA[i]] <- NA
+        }
+    }
+    
+    # Set values to 0 if used as a flag for below detection limit
+    if(! is.null(set_to_0)){
+        for(i in 1:length(set_to_0)){
+            d[d == set_to_0[i]] <- '0'
         }
     }
 
@@ -1890,15 +1903,15 @@ email_err <- function(msgs, addrs, pw){
         for(a in addrs){
 
             email = emayili::envelope() %>%
-                envelope::from('grdouser@gmail.com') %>%
-                envelope::to(a) %>%
-                envelope::subject('MacroSheds error') %>%
-                envelope::text(text_body)
+                emayili::from('grdouser@gmail.com') %>%
+                emayili::to(a) %>%
+                emayili::subject('MacroSheds error') %>%
+                emayili::text(text_body)
 
-            smtp = envelope::server(host='smtp.gmail.com',
-                                    port=587, #or 465 for SMTPS
-                                    username='grdouser@gmail.com',
-                                    password=pw)
+            smtp = emayili::server(host='smtp.gmail.com',
+                                   port=587, #or 465 for SMTPS
+                                   username='grdouser@gmail.com',
+                                   password=pw)
 
             smtp(email, verbose=FALSE)
         }
@@ -6325,6 +6338,7 @@ read_precip_quickref <- function(network,
 populate_implicit_NAs <- function(d,
                                   interval,
                                   val_fill = NA,
+                                  ms_status_fill = 0,
                                   edges_only = FALSE){
 
     #TODO: this would be more flexible if we could pass column names as
@@ -6375,7 +6389,7 @@ populate_implicit_NAs <- function(d,
     }
 
     if('ms_status' %in% colnames(complete_d)){
-        complete_d$ms_status[is.na(complete_d$ms_status)] <- 0
+        complete_d$ms_status[is.na(complete_d$ms_status)] <- ms_status_fill
     }
 
     if('ms_interp' %in% colnames(complete_d)){
@@ -6465,7 +6479,7 @@ ms_linear_interpolate <- function(d, interval){
 
             #carry ms_status to any rows that have just been populated (probably
             #redundant now, but can't hurt)
-            ms_status <- imputeTS::na_locf(ms_status,
+            ms_status = imputeTS::na_locf(ms_status,
                                            na_remaining = 'rev'),
 
             # val = if(sum(! is.na(val)) > 2){
@@ -6609,7 +6623,7 @@ synchronize_timestep <- function(d){
 
         #round each site-variable tibble's datetime column to the desired interval.
         sitevar_chunk <- mutate(sitevar_chunk,
-                                datetime = lubridate::round_date(
+                                datetime = lubridate::floor_date(
                                     x = datetime,
                                     unit = rounding_intervals[i]))
 
@@ -6676,6 +6690,7 @@ synchronize_timestep <- function(d){
 
         sitevar_chunk <- populate_implicit_NAs(
             d = sitevar_chunk,
+            ms_status_fill = NA,
             interval = rounding_intervals[i])
 
         d_split[[i]] <- ms_linear_interpolate(
@@ -9409,7 +9424,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnnccc'
+            col_types = 'ccccccccnnnnncccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -9556,7 +9571,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnnccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
@@ -9934,7 +9949,7 @@ postprocess_entire_dataset <- function(site_data,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product){
 
-    #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::round_date.
+    #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
 
     #for post-derive steps that save the portal some processing.
@@ -10669,7 +10684,7 @@ generate_output_dataset <- function(vsn){
 
 thin_portal_data <- function(network_domain, thin_interval){
 
-    #thin_interval: passed to the "unit" parameter of lubridate::round_date
+    #thin_interval: passed to the "unit" parameter of lubridate::floor_date
 
     domains <- network_domain$domain
 
@@ -10730,7 +10745,7 @@ thin_portal_data <- function(network_domain, thin_interval){
 
                     d <- read_feather(stf) %>%
                         mutate(
-                            datetime = lubridate::round_date(
+                            datetime = lubridate::floor_date(
                                 x = datetime,
                                 unit = thin_interval),
                             val = errors::set_errors(val, val_err)) %>%
