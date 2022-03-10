@@ -1890,12 +1890,12 @@ email_err <- function(msgs, addrs, pw){
         for(a in addrs){
 
             email = emayili::envelope() %>%
-                envelope::from('grdouser@gmail.com') %>%
-                envelope::to(a) %>%
-                envelope::subject('MacroSheds error') %>%
-                envelope::text(text_body)
+                emayili::from('grdouser@gmail.com') %>%
+                emayili::to(a) %>%
+                emayili::subject('MacroSheds error') %>%
+                emayili::text(text_body)
 
-            smtp = envelope::server(host='smtp.gmail.com',
+            smtp = emayili::server(host='smtp.gmail.com',
                                     port=587, #or 465 for SMTPS
                                     username='grdouser@gmail.com',
                                     password=pw)
@@ -10021,6 +10021,8 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent(glue('Preparing dataset v{vv} for Figshare',
                          vv = dataset_version),
                     logger = logger_module)
+    dir.create('data/general/figshare_extras', showWarnings = FALSE)
+    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/04a_site_metadata.csv')
     prepare_dataset_for_figshare(dataset_version = dataset_version)
 
 
@@ -10030,13 +10032,66 @@ postprocess_entire_dataset <- function(site_data,
     upload_dataset_to_figshare(dataset_version = dataset_version)
 }
 
+prepare_site_metadata_for_figshare <- function(outfile){
+
+    figd <- select(site_data,
+                   network, pretty_network, domain, pretty_domain, site_code,
+                   epsg_code = CRS,
+                   timezone_olson = local_time_zone) %>%
+        right_join(read_csv('../portal/data/general/catalog_files/all_sites.csv',
+                            col_types = cols()),
+                   by = c(pretty_network = 'Network',
+                          pretty_domain = 'Domain',
+                          site_code = 'SiteCode')) %>%
+        select(network,
+               network_fullname = pretty_network,
+               domain,
+               domain_fullname = pretty_domain,
+               site_code,
+               site_fullname = SiteName,
+               stream_name = StreamName,
+               site_type = SiteType,
+               ws_status = WatershedStatus,
+               latitude = Latitude,
+               longitude = Longitude,
+               epsg_code,
+               ws_area_ha = AreaHectares,
+               n_observations = Observations,
+               n_variables = Variables,
+               first_record_utc = FirstRecordUTC,
+               last_record_utc = LastRecordUTC,
+               timezone_olson)
+
+    write_csv(figd, outfile)
+}
+
+prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
+
+    #fs_format: either "old" for the original (37 zips) figshare format,
+    #or "new" for the more condensed and user-friendly, but less package-friendly format.
+    #in old-mode, just one variable metadata file is written. in new format, it's split into
+    #timeseries and ws attrs
+
+    # figd <-
+
+    if(fs_format == 'new'){
+
+
+    } else if(fs_format == 'old'){
+
+        write_csv(figd, outfile)
+    }
+}
+
 prepare_dataset_for_figshare <- function(dataset_version){
 
     if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" call below probably will not work on windows.',
+        stop(paste('The "system" calls below probably will not work on windows.',
                    'investigate and update that call if necessary'))
     }
 
+    ## make new figshare version dir and copy over all files from the output dataset
+    ## clean up some stuff
     dir.create(glue('macrosheds_figshare_v', dataset_version),
                showWarnings = FALSE)
 
@@ -10051,20 +10106,16 @@ prepare_dataset_for_figshare <- function(dataset_version){
 
     all_dirs <- list.dirs(tld)
 
-    junk_dirs <- grep(pattern = 'derived$',
-                      x = all_dirs,
-                      value = TRUE)
+    dmn_dirs <- grep(pattern = 'derived$',
+                     x = all_dirs,
+                     value = TRUE)
 
-    for(jd in junk_dirs){
+    warning('temporarily removing NEON')
+    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
 
-        # fs <- list.files(jd,
-        #                  full.names = TRUE,
-        #                  recursive = TRUE)
-        #
-        # fs_new <- sub(pattern = '/derived',
-        #               replacement = '',
-        #               x = fs)
+    for(jd in dmn_dirs){
 
+        ## incise the now-superfluous "derived" directory from the path
         to_folder <- sub(pattern = '/derived$',
                          replacement = '',
                          x = jd)
@@ -10072,7 +10123,6 @@ prepare_dataset_for_figshare <- function(dataset_version){
         system(glue('mv {j}/* {t}',
                     j = jd,
                     t = to_folder))
-
         file.remove(jd)
 
         dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
@@ -10081,10 +10131,35 @@ prepare_dataset_for_figshare <- function(dataset_version){
                              replacement = '',
                              x = to_folder)
 
+        #dip into network dir for convenience. this is not ideal
         setwd(parent_folder)
+
+        ## TEMP
+        warning('temporarily removing all flux data from figshare dataset')
+        flux_dirs_to_rm <- grep(pattern = 'flux',
+                                x = list.files(dmn,
+                                               full.names = TRUE),
+                                value = TRUE)
+        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
+
+
+        ## remove the prodcode extensions from dirnames
+        rslt <- character()
+        rslt <- system(paste0("rename 's/(.+)__ms[0-9]{3}/$1/' ", dmn, "/* 2>&1"),
+                       intern = TRUE)
+        if(! is_empty(rslt)){
+            setwd('../../..')
+            stop('precursor files still present')
+        }
+
+        ## add a readme to each domain dir
+        file.copy(from = '../../../src/templates/ts_docs_readme.txt',
+                  to = file.path(dmn, 'documentation', 'README.txt'))
+
         zip(zipfile = glue(dmn, '.zip'),
             files = dmn,
             flags = '-r9Xq')
+
         setwd('../../..')
 
         unlink(to_folder, recursive = TRUE)
@@ -10406,7 +10481,7 @@ upload_dataset_to_figshare <- function(dataset_version){
     }
 
 
-    ### CREATE, UPLOAD, PUBLISH SPATIAL DATA AND DOCUMENTATION
+    ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
                                  full.names = TRUE)
     names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
@@ -10426,11 +10501,18 @@ upload_dataset_to_figshare <- function(dataset_version){
     names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
-    other_uploadsD <- c(documentation = '../portal/static/documentation/README.txt')
-    titlesD <- 'README'
+    other_uploadsD <- c(documentation = '../portal/static/documentation/README.txt',
+                        policy = 'data/general/figshare_extras/06a_ws_attr_LEGAL.csv',
+                        policy = 'data/general/figshare_extras/05a_timeseries_LEGAL.csv',
+                        policy = 'data/general/figshare_extras/01_data_use_policy.txt')
+    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
-    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD)
-    titles <- c(titlesA, titlesB, titlesC, titlesD)
+    other_uploadsE <- c(metadata = 'data/general/figshare_extras/04a_site_metadata.csv',
+                        metadata = 'data/general/figshare_extras/variable_metadata.csv')
+    titlesE <- c('site_metadata', 'variable_metadata')
+
+    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
+    titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
 
     for(i in seq_along(other_uploads)){
 
@@ -10612,7 +10694,8 @@ generate_output_dataset <- function(vsn){
     }
 
     #remove intermediate products that shouldn't be in the final dataset
-    for(k in c('precipitation', 'stream_chemistry', 'discharge')){
+    for(k in c('precipitation', 'stream_chemistry', 'discharge', 'precip_chemistry',
+               'precip_gauge_locations', 'stream_gauge_locations')){
 
         kfpaths <- find_dirs_within_outputdata(keyword = paste0(k, '__'),
                                                vsn = vsn)
@@ -11702,13 +11785,17 @@ catalog_held_data <- function(network_domain, site_data){
                SiteCode = site_code,
                SiteName = full_name,
                StreamName = stream,
+               WatershedStatus = ws_status,
                Latitude = latitude,
                Longitude = longitude,
                # GeodeticDatum,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
-               ExternalLink)
+               ExternalLink) %>%
+        mutate(WatershedStatus = case_when(WatershedStatus == 'exp' ~ 'experimental',
+                                           WatershedStatus == 'non_exp' ~ 'non-experimental',
+                                           TRUE ~ WatershedStatus))
 
     readr::write_csv(x = all_site_display,
                      file = '../portal/data/general/catalog_files/all_sites.csv')
