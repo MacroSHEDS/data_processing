@@ -1,0 +1,239 @@
+variable_code,variable_name,unit,range_check_minimum,range_check_maximum
+abs250,UV Absorbance at 250nm,unitless,NA,NA
+abs254,UV Absorbance at 254nm,unitless,NA,NA
+abs280,UV Absorbance at 280nm,unitless,NA,NA
+acidity,Acidity,ueq/L,0,1000000
+Ag,Silver,mg/L,0,1000000
+Al,Aluminum,mg/L,0,10
+Al_ICP,Aluminum ICP,mg/L,0,10
+alk,Alkalinity,mg/L,0,100000
+ANC,Acid Neutralizing Capacity,eq/L,NA,NA
+ANC960,Acid Neutralizing Capacity 960,ueq/L,NA,NA
+AnCaR,Anion-Cation Ratio,unitless,NA,NA
+ANCMet,Acid Neutralizing Capacity Met,ueq/L,NA,NA
+anionCharge,TOTAL Anion Charge,ueq/L,NA,NA
+As,Arsenic,mg/L,0,1000000
+Au,Gold,mg/L,0,1000000
+B,Boron,mg/L,0,1000000
+Ba,Barium,mg/L,0,1000000
+Be,Beryllium,mg/L,0,1000000
+Bi,Bismuth,mg/L,0,1000000
+BPC,Benthic Particulate Carbon,mg/cm2,0,NA
+BPN,Benthic Particulate Nitrogen,mg/cm2,0,NA
+BPP,Benthic Particulate Phosphorus,mg/cm2,0,NA
+Br,Bromide,mg/L,0,1000000
+Ca,Calcium,mg/L,0,1000
+cationCharge,TOTAL Cation Charge,ueq/L,NA,NA
+Cd,Cadmium,mg/L,0,1000000
+Cd111,Cadmium-111,mg/L,0,1000000
+Ce,Cerium,mg/L,0,1000000
+CH4,Methane,ppm,0,10000
+CH4_C,Methane-C,mg/L,NA,NA
+CHL,Chlorophyll,mg/L,0,NA
+Cl,Chloride,mg/L,0,10000
+Co,Cobalt,mg/L,0,1000000
+CO2,Carbon Dioxide,ppm,0,100000
+CO2_C,Carbon Dioxide-C,mg/L,NA,NA
+CO3,Carbonate,mg/L,0,1000000
+Cr,Chromium,mg/L,0,1000000
+Cs,Caesium,mg/L,0,1000000
+Cu,Copper,mg/L,0,1000000
+CUSTOMprecipitation,Basin Precipitation (determined by source),mm,0,NA
+d18O,Delta 18 Oxygen,ppt,NA,NA
+deuterium,Deuterium,unitless,NA,NA
+DIC,Dissolved Inorganic Carbon,mg/L,0,100000
+DIN,Dissolved Inorganic Nitrogen,mg/L,NA,2000
+discharge,Discharge,L/s,0,250000000
+DO,Dissolved Oxygen,mg/L,-0.5,40
+DO_sat,Dissolved Oxygen Percent Saturation,%,0,200
+DOC,Dissolved Organic Carbon,mg/L,0,1000
+DON,Dissolved Organic Nitrogen,mg/L,0,1000
+DOP,Dissolved Organic Phosphorus,mg/L,0,1000000
+Dy,Dysprosium,mg/L,0,1000000
+E_pheophy,Epilithic Phaeophytin,mg/cm2,0,NA
+ECHL_A,Epilithic Chlorophyll a,mg/cm2,0,NA
+Ecoli,Escherichia coli,#/mL,0,NA
+Er,Erbium,mg/L,0,1000000
+Eu,Europium,mg/L,0,1000000
+F,Fluorine,mg/L,0,100
+FDOM,Fluorescent Dissolved Organic Matter,QSU,0,NA
+Fe,Iron,mg/L,0,100
+Ga,Gallium,mg/L,0,1000000
+Gd,Gadolinium,mg/L,0,1000000
+Gd157,Gadolinium-157,mg/L,0,1000000
+Ge,Germanium,mg/L,0,1000000
+H,Hydrogen,mg/L,0,1000000
+HCO3,Bicarbonate,mg/L,0,1000000
+Hf,Hafnium,mg/L,0,1000000
+Hg,Mercury,mg/L,0,1000000
+Ho,Holmium,mg/L,0,1000000
+I,Iodine,mg/L,0,1000000
+ionBalance,Ion Balance,ueq/L,NA,NA
+ionError,Ion Error,%,NA,NA
+Ir,Iridium,mg/L,0,1000000
+K,Potassium,mg/L,0,1000
+La,Lanthanum,mg/L,0,1000000
+Li,Lithium,mg/L,0,1000000
+Lu,Lutetium,mg/L,0,1000000
+MF_C,Moss: Fontinalis: Carbon,%,0,NA
+MF_N,Moss: Fontinalis: Nitrogen,%,0,NA
+MF_P,Moss: Fontinalis: Phosphorus,%,0,NA
+Mg,Magnesium,mg/L,0,10000
+MH_Al,Moss: Hygrohypnum: Aluminum,%,0,NA
+MH_B,Moss: Hygrohypnum: Boron,%,0,NA
+MH_C,Moss: Hygrohypnum: Carbon,%,0,NA
+MH_Ca,Moss: Hygrohypnum: Calcium,%,0,NA
+MH_Cu,Moss: Hygrohypnum: Copper,%,0,NA
+MH_Fe,Moss: Hygrohypnum: Iron,%,0,NA
+MH_K,Moss: Hygrohypnum: Potassium,%,0,NA
+MH_Mg,Moss: Hygrohypnum: Magnesium,%,0,NA
+MH_Mn,Moss: Hygrohypnum: Manganese,%,0,NA
+MH_N,Moss: Hygrohypnum: Nitrogen,%,0,NA
+MH_Na,Moss: Hygrohypnum: Sodium,%,0,NA
+MH_P,Moss: Hygrohypnum: Phosphorus,%,0,NA
+MH_S,Moss: Hygrohypnum: Sulfur,%,0,NA
+MH_Zn,Moss: Hygrohypnum: Zinc,%,0,NA
+ML_Al,Moss: Lemanea: Aluminum,%,0,NA
+ML_B,Moss: Lemanea: Boron,%,0,NA
+ML_C,Moss: Lemanea: Carbon,%,0,NA
+ML_Ca,Moss: Lemanea: Calcium,%,0,NA
+ML_Cu,Moss: Lemanea: Copper,%,0,NA
+ML_Fe,Moss: Lemanea: Iron,%,0,NA
+ML_K,Moss: Lemanea: Potassium,%,0,NA
+ML_Mg,Moss: Lemanea: Magnesium,%,0,NA
+ML_Mn,Moss: Lemanea: Manganese,%,0,NA
+ML_N,Moss: Lemanea: Nitrogen,%,0,NA
+ML_Na,Moss: Lemanea: Sodium,%,0,NA
+ML_P,Moss: Lemanea: Phosphorus,%,0,NA
+ML_S,Moss: Lemanea: Sulfur,%,0,NA
+ML_Zn,Moss: Lemanea: Zinc,%,0,NA
+MLW_Al,Moss: Liverwort: Aluminum,%,0,NA
+MLW_B,Moss: Liverwort: Boron,%,0,NA
+MLW_C,Moss: Liverwort: Carbon,%,0,NA
+MLW_Ca,Moss: Liverwort: Calcium,%,0,NA
+MLW_Cu,Moss: Liverwort: Copper,%,0,NA
+MLW_Fe,Moss: Liverwort: Iron,%,0,NA
+MLW_K,Moss: Liverwort: Potassium,%,0,NA
+MLW_Mg,Moss: Liverwort: Magnesium,%,0,NA
+MLW_Mn,Moss: Liverwort: Manganese,%,0,NA
+MLW_N,Moss: Liverwort: Nitrogen,%,0,NA
+MLW_Na,Moss: Liverwort: Sodium,%,0,NA
+MLW_P,Moss: Liverwort: Phosphorus,%,0,NA
+MLW_S,Moss: Liverwort: Sulfur,%,0,NA
+MLW_Zn,Moss: Liverwort: Zinc,%,0,NA
+Mn,Manganese,mg/L,0,100
+Mo,Molybdenum,mg/L,0,1000000
+MS_Al,Moss: Schistidium: Aluminum,%,0,NA
+MS_B,Moss: Schistidium: Boron,%,0,NA
+MS_C,Moss: Schistidium: Carbon,%,0,NA
+MS_Ca,Moss: Schistidium: Calcium,%,0,NA
+MS_Cu,Moss: Schistidium: Copper,%,0,NA
+MS_Fe,Moss: Schistidium: Iron,%,0,NA
+MS_K,Moss: Schistidium: Potassium,%,0,NA
+MS_Mg,Moss: Schistidium: Magnesium,%,0,NA
+MS_Mn,Moss: Schistidium: Manganese,%,0,NA
+MS_N,Moss: Schistidium: Nitrogen,%,0,NA
+MS_Na,Moss: Schistidium: Sodium,%,0,NA
+MS_P,Moss: Schistidium: Phosphorus,%,0,NA
+MS_S,Moss: Schistidium: Sulfur,%,0,NA
+MS_Zn,Moss: Schistidium: Zinc,%,0,NA
+N2O,Nitrous Oxide,ppm,0,NA
+Na,Sodium,mg/L,0,10000
+Nb,Niobium,mg/L,0,1000000
+Nd,Neodymium,mg/L,0,1000000
+Nd145,Neodymium-145,mg/L,0,1000000
+NH3_N,Ammonia-N,mg/L,0,100
+NH4,Ammonium,mg/L,0,100
+NH4_N,Ammonium-N,mg/L,0,100
+NH4_NH3_N,Ammonia-N and Ammonium-N,mg/L,0,100
+Ni,Nickel,mg/L,0,1000000
+Ni60,Nickel-60,mg/L,0,1000000
+NO2,Nitrite,mg/L,0,1000000
+NO2_N,Nitrite-N,mg/L,0,1000000
+NO3,Nitrate,mg/L,0,100
+NO3_N,Nitrate-N,mg/L,0,100
+NO3_NO2,Nitrate and nitrite,mg/L,0,1000000
+NO3_NO2_N,Nitrate-N and nitrite-N,mg/L,0,1000000
+OMAl,Aluminum OM,mg/L,0,10
+Os,Osmium,mg/L,0,1000000
+P,Phosphorus,mg/L,0,100
+PAR,Photosynthetically Active Radiation,uM/m^2/s,0,NA
+Pb,Lead,mg/L,0,1000000
+Pd,Palladium,mg/L,0,1000000
+perimeter,Perimeter,m,0,NA
+pH,pH,unitless,0,14
+phaeopig,Phaeopigment,mg/L,0,1000000
+pheophy,Sestonic Phaeophytin,mg/L,0,1000000
+pHmetrohm,pH Metrohm,unitless,0,NA
+PO4,Phosphate,mg/L,0,100
+PO4_P,Phosphate-P,mg/L,0,100
+POC,Particulate Organic Carbon,mg/L,0,1000000
+PON,Particulate Organic Nitrogen,mg/L,0,1000000
+Pr,Praseodymium,mg/L,0,1000000
+precipitation,Precipitation at gauge,mm,0,NA
+Pt,Platinum,mg/L,0,1000000
+Rb,Rubidium,mg/L,0,1000000
+Re,Rhenium,mg/L,0,1000000
+Rh,Rhodium,mg/L,0,1000000
+Ru,Ruthenium,mg/L,0,1000000
+S,Sulfer,mg/L,0,1000000
+salinity,Salinity,ppt,0,1000000
+Sb,Antimony,mg/L,0,1000000
+Sc,Scandium,mg/L,0,1000000
+Se,Selenium,mg/L,0,1000000
+Se78,Selenium-78,mg/L,0,1000000
+Si,Silicon,mg/L,0,1000000
+SiO2,Silica,mg/L,0,1000
+SiO2_Si,Silica-Si,mg/L,0,1000
+SiO3,Silicate,mg/L,0,1000
+SiO3_Si,Silicate-Si,mg/L,0,1000
+Sm,Samarium,mg/L,0,1000000
+Sm147,Samarium-147,mg/L,0,1000000
+Sn,Tin,mg/L,0,1000000
+Sn118,Tin-118,mg/L,0,1000000
+SO4,Sulfate,mg/L,0,10000
+SO4_S,Sulfate-S,mg/L,0,10000
+spCond,Specific Conductivity,uS/cm,0,20000
+Sr,Strontium,mg/L,0,1000000
+SRP,Soluble Reactive Phosphorus,mg/L,0,1000000
+suspSed,Suspended Sediment,mg/L,0,100000
+T_ECHL,Epilithic Total Chlorophyll,mg/cm2,0,NA
+Ta,Tantalum,mg/L,0,1000000
+Tb,Terbium,mg/L,0,1000000
+TC,Total Carbon,mg/L,0,1000000
+TCHL,Sestonic Total Chlorophyll,mg/L,0,1000000
+TDN,Total Dissolved Nitrogen,mg/L,0,3000
+TDP,Total Dissolved Phosphorus,mg/L,0,100
+TDS,Total Dissolved Solids,mg/L,0,1000000
+Te,Tellurium,mg/L,0,1000000
+temp,Water Temperature,degrees C,-100,100
+Th,Thorium,mg/L,0,1000000
+theoryCond,Theoretical Conductivity,uS/cm,0,NA
+Ti,Titanium,mg/L,0,1000000
+Ti49,Titanium-49,mg/L,0,1000000
+TIC,Total Inorganic Carbon,mg/L,0,1000000
+TIN,Total Inorganic Nitrogen,mg/L,0,1000000
+TIP,Total Inorganic Phosphorus,mg/L,0,1000000
+TKN,Total Kjeldahl Nitrogen,mg/L,0,2000
+Tl,Thallium,mg/L,0,1000000
+Tm,Thulium,mg/L,0,1000000
+TMAl,Aluminum TM,mg/L,0,10
+TN,Total Nitrogen,mg/L,0,1000000
+TOC,Total Organic Carbon,mg/L,0,1000000
+TP,Total Phosphorus,mg/L,0,1000000
+TPC,Total Particulate Carbon,mg/L,0,1000000
+TPN,Total Particulate Nitrogen,mg/L,0,1000000
+TPP,Total Particulate Phosphorus,mg/L,0,1000000
+TSS,Total Suspended Solids,mg/L,0,1000000
+turbid,Turbidity,FNU,0,NA
+U,Uranium,mg/L,0,1000000
+UTKN,Unfilt. Total Kjeldahl Nitrogen,mg/L,0,2000
+UTN,Unfiltered Total Nitrogen,mg/L,0,5000
+UTP,Unfiltered Total Phosphorus,mg/L,0,10000
+V,Vanadium,mg/L,0,1000000
+VSS,Volatile Suspended Sediment,mg/L,0,1000000
+W,Tungsten,mg/L,0,1000000
+Y,Yttrium,mg/L,0,1000000
+Yb,Ytterbium,mg/L,0,1000000
+Zn,Zinc,mg/L,0,1000000
+Zr,Zirconium,mg/L,0,1000000
