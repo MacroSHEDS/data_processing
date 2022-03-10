@@ -1,0 +1,3 @@
+MacroSheds dataset version 1
+
+See the rest of this documentation to get a full picture of the state of things. Changes from the current condition will be reported with version 2.
