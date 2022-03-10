@@ -1,26 +1,26 @@
 network,network_fullname,domain,domain_fullname,site_code,site_fullname,stream_name,site_type,ws_status,latitude,longitude,epsg_code,ws_area_ha,n_observations,n_variables,first_record_utc,last_record_utc,timezone_olson
-lter,LTER,hbef,Hubbard Brook,w1,Watershed 1,Stream 1,stream_gauge,experimental,43.952034,-71.726501,4326,14.0618677334717,1270254,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w2,Watershed 2,Stream 2,stream_gauge,experimental,43.953358,-71.724174,4326,17.8911433030314,1324388,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w3,Watershed 3,Stream 3,stream_gauge,non-experimental,43.954875,-71.722816,4326,40.1653224937898,1285886,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w4,Watershed 4,Stream 4,stream_gauge,experimental,43.950176,-71.725792,4326,38.7510000052115,1317252,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w5,Watershed 5,Stream 5,stream_gauge,experimental,43.948845,-71.731918,4326,20.7415065882178,1276937,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w6,Watershed 6,Stream 6,stream_gauge,non-experimental,43.94994,-71.735641,4326,14.9349246393909,1323356,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w7,Watershed 7,Stream 7,stream_gauge,non-experimental,43.927509,-71.767075,4326,76.4470035386992,1228288,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w8,Watershed 8,Stream 8,stream_gauge,non-experimental,43.929436,-71.759521,4326,60.9231306446846,1204894,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
-lter,LTER,hbef,Hubbard Brook,w9,Watershed 9,Stream 9,stream_gauge,non-experimental,43.926014,-71.747195,4326,70.1246453502661,1028139,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w1,Watershed 1,Stream 1,stream_gauge,experimental,43.952034,-71.726501,4326,14.0618677334717,1159281,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w2,Watershed 2,Stream 2,stream_gauge,experimental,43.953358,-71.724174,4326,17.8911433030314,1213415,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w3,Watershed 3,Stream 3,stream_gauge,non-experimental,43.954875,-71.722816,4326,40.1653224937898,1174913,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w4,Watershed 4,Stream 4,stream_gauge,experimental,43.950176,-71.725792,4326,38.7510000052115,1206279,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w5,Watershed 5,Stream 5,stream_gauge,experimental,43.948845,-71.731918,4326,20.7415065882178,1165964,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w6,Watershed 6,Stream 6,stream_gauge,non-experimental,43.94994,-71.735641,4326,14.9349246393909,1212383,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w7,Watershed 7,Stream 7,stream_gauge,non-experimental,43.927509,-71.767075,4326,76.4470035386992,1117315,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w8,Watershed 8,Stream 8,stream_gauge,non-experimental,43.929436,-71.759521,4326,60.9231306446846,1093921,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
+lter,LTER,hbef,Hubbard Brook,w9,Watershed 9,Stream 9,stream_gauge,non-experimental,43.926014,-71.747195,4326,70.1246453502661,917166,32,1956-01-01T00:00:00Z,2021-04-15T00:00:00Z,America/New_York
 lter,LTER,hbef,Hubbard Brook,HBK,Hubbard Brook Mainstem,Hubbard Brook,stream_sampling_point,NA,43.939763,-71.703585,4326,NA,340052,30,1973-07-01T00:00:00Z,2020-05-27T00:00:00Z,America/New_York
 lter,LTER,hbef,Hubbard Brook,ML70,Mirror Lake Outlet,NA,stream_sampling_point,NA,43.940567,-71.690937,4326,NA,68299,28,2013-06-04T00:00:00Z,2020-05-26T00:00:00Z,America/New_York
-lter,LTER,hjandrews,H. J. Andrews,GSLOOK,?,Lookout Creek,stream_gauge,experimental,44.2101255022,-122.257145776,4326,6219.83099164524,491786,28,1949-10-01T00:00:00Z,2019-09-30T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS01,?,Stream 1,stream_gauge,experimental,44.2073394042,-122.258027394,4326,97.9781162178358,496013,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS02,?,Stream 2,stream_gauge,non-experimental,44.2120146041,-122.244875675,4326,59.0546739936156,573619,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS03,?,Stream 3,stream_gauge,experimental,44.2194395724,-122.24300003,4326,92.8206513556025,438843,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS06,?,Stream 6,stream_gauge,experimental,44.2615081253,-122.180706523,4326,11.9913392723808,542509,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS07,?,Stream 7,stream_gauge,experimental,44.2646368258,-122.175264862,4326,12.4032537866438,545740,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS08,?,Stream 8,stream_gauge,non-experimental,44.266294258,-122.170792538,4326,16.010075273231,601116,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS09,?,Stream 9,stream_gauge,non-experimental,44.2011898244,-122.258801374,4326,7.15350029388499,618260,27,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSWS10,?,stream 10,stream_gauge,experimental,44.2170569856,-122.261055512,4326,11.4320111485764,625293,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSMACK,Mack Creek,Mack Creek,stream_gauge,experimental,44.21944,-122.1674,4326,577.869580548776,569788,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,hjandrews,H. J. Andrews,GSMACK,Mack Creek,Mack Creek,stream_gauge,experimental,44.21944,-122.1674,4326,577.869580548776,569788,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSLOOK,NA,Lookout Creek,stream_gauge,experimental,44.2101255022,-122.257145776,4326,6219.83099164524,454244,28,1949-10-01T00:00:00Z,2019-09-30T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS01,NA,Stream 1,stream_gauge,experimental,44.2073394042,-122.258027394,4326,97.9781162178358,458471,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS02,NA,Stream 2,stream_gauge,non-experimental,44.2120146041,-122.244875675,4326,59.0546739936156,536077,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS03,NA,Stream 3,stream_gauge,experimental,44.2194395724,-122.24300003,4326,92.8206513556025,401301,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS06,NA,Stream 6,stream_gauge,experimental,44.2615081253,-122.180706523,4326,11.9913392723808,504967,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS07,NA,Stream 7,stream_gauge,experimental,44.2646368258,-122.175264862,4326,12.4032537866438,508198,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS08,NA,Stream 8,stream_gauge,non-experimental,44.266294258,-122.170792538,4326,16.010075273231,563574,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS09,NA,Stream 9,stream_gauge,non-experimental,44.2011898244,-122.258801374,4326,7.15350029388499,580718,27,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSWS10,NA,stream 10,stream_gauge,experimental,44.2170569856,-122.261055512,4326,11.4320111485764,587751,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSMACK,Mack Creek,Mack Creek,stream_gauge,experimental,44.21944,-122.1674,4326,577.869580548776,532246,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
+lter,LTER,hjandrews,H. J. Andrews,GSMACK,Mack Creek,Mack Creek,stream_gauge,experimental,44.21944,-122.1674,4326,577.869580548776,532246,28,1951-11-21T00:00:00Z,2019-10-01T00:00:00Z,America/Los_Angeles
 lter,LTER,hjandrews,H. J. Andrews,TSLOOK,Lookout Creek upper thermograph site,Lookout Creek,stream_sampling_point,NA,44.22478329,-122.1216289,4326,483.018193077372,14572,1,1977-01-05T00:00:00Z,2017-05-25T00:00:00Z,America/Los_Angeles
 lter,LTER,hjandrews,H. J. Andrews,TSMACK,Mack Creek old-growth thermograph site,Mack Creek,stream_sampling_point,NA,44.21664907,-122.16547369,4326,512.953552778539,6233,1,1976-08-13T00:00:00Z,1994-03-06T00:00:00Z,America/Los_Angeles
 lter,LTER,hjandrews,H. J. Andrews,TSMCRA,McRae Creek upper thermograph site,McRae Creek,stream_sampling_point,NA,44.25638612,-122.16757303,4326,598.034328577294,14129,1,1976-08-12T00:00:00Z,2015-11-11T00:00:00Z,America/Los_Angeles
@@ -54,18 +54,18 @@ neon,NEON,neon,NEON,KING,Kings Creek,Kings Creek,stream_gauge,non-experimental,3
 neon,NEON,neon,NEON,MAYF,Mayfield Creek,Mayfield Creek,stream_gauge,non-experimental,32.95966,-87.40813,4326,1436.9561888525,75213,29,2014-10-22T00:00:00Z,2021-05-12T00:00:00Z,America/Chicago
 neon,NEON,neon,NEON,WALK,Walker Branch,Walker Branch,stream_gauge,non-experimental,35.95947,-84.28041,4326,108.980604477199,76205,29,2015-04-14T00:00:00Z,2021-05-11T00:00:00Z,America/New_York
 neon,NEON,neon,NEON,LECO,LeConte Creek,LeConte Creek,stream_gauge,non-experimental,35.69043,-83.50379,4326,912.029179850036,64463,29,2015-08-11T00:00:00Z,2021-05-12T00:00:00Z,America/New_York
-lter,LTER,konza,Konza,N04D,?,N04D,stream_gauge,experimental,39.0874,-96.5844,4326,121.446251268589,251444,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
-lter,LTER,konza,Konza,N20B,?,N20B,stream_gauge,experimental,39.08858,-96.57654,4326,74.6273377082089,232185,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
-lter,LTER,konza,Konza,N01B,?,N01B,stream_gauge,experimental,39.08668,-96.577,4326,119.062385177314,546178,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
-lter,LTER,konza,Konza,N02B,?,N02B,stream_gauge,experimental,39.0898,-96.5886,4326,85.7342583924206,550694,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N04D,NA,N04D,stream_gauge,experimental,39.0874,-96.5844,4326,121.446251268589,240150,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N20B,NA,N20B,stream_gauge,experimental,39.08858,-96.57654,4326,74.6273377082089,220891,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N01B,NA,N01B,stream_gauge,experimental,39.08668,-96.577,4326,119.062385177314,501002,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N02B,NA,N02B,stream_gauge,experimental,39.0898,-96.5886,4326,85.7342583924206,505518,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,HOKN,Hokanson,HOKN,stream_sampling_point,NA,39.10376,-96.59542,4326,NA,42158,6,1991-04-27T00:00:00Z,2019-01-01T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,NFKC,North Fork Kings Creek,NFKC,stream_sampling_point,NA,39.10155,-96.59239,4326,NA,35958,6,1991-04-19T00:00:00Z,2019-01-01T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,SFKC,South Fork Kings Creek,SFKC,stream_sampling_point,NA,39.10128,-96.59239,4326,NA,38414,6,1991-04-28T00:00:00Z,2019-01-01T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,KZFL,Konza Falls,KZFL,stream_sampling_point,NA,39.08763,-96.58482,4326,NA,3187,6,1998-03-03T00:00:00Z,1999-08-19T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,SHAN,Shane,SHAN,stream_sampling_point,NA,39.11439,-96.55757,4326,NA,20070,6,2009-05-02T00:00:00Z,2020-07-14T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,TUBE,Four Tubes,TUBE,stream_sampling_point,NA,39.09873,-96.58944,4326,NA,17236,6,1996-10-08T00:00:00Z,2006-09-14T00:00:00Z,America/Chicago
-lter,LTER,konza,Konza,N02B,?,N02B,stream_gauge,experimental,39.0898,-96.5886,4326,85.7342583924206,550694,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
-lter,LTER,konza,Konza,N01B,?,N01B,stream_gauge,experimental,39.08668,-96.577,4326,119.062385177314,546178,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N02B,NA,N02B,stream_gauge,experimental,39.0898,-96.5886,4326,85.7342583924206,505518,13,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
+lter,LTER,konza,Konza,N01B,NA,N01B,stream_gauge,experimental,39.08668,-96.577,4326,119.062385177314,501002,11,1982-06-14T00:00:00Z,2020-12-31T00:00:00Z,America/Chicago
 lter,LTER,konza,Konza,HIKX,Hiking Trail,Kings Creek,stream_sampling_point,NA,39.107,-96.6068,4326,NA,42459,6,1991-04-28T00:00:00Z,2019-01-01T00:00:00Z,America/Chicago
 lter,LTER,baltimore,Baltimore,GFCP,Gwynns Falls at Carroll Park,Gwynns Falls,stream_gauge,non-experimental,39.2715,-76.649,4326,16302.5955278081,120440,14,1998-10-16T00:00:00Z,2021-07-08T00:00:00Z,America/New_York
 lter,LTER,baltimore,Baltimore,GFGB,Gwynns Falls at Gwynnbrook Avenue,Gwynns Falls,stream_gauge,non-experimental,39.443,-76.783,4326,1051.84074681028,130477,19,1998-10-01T00:00:00Z,2021-07-08T00:00:00Z,America/New_York
@@ -118,10 +118,10 @@ lter,LTER,santa_barbara,Santa Barbara,CP00,"Carpinteria Creek, 8th St Foot Bridg
 lter,LTER,santa_barbara,Santa Barbara,TO02,"Tecolote Creek, at Vereda Galeria, Goleta",Tecolote Creek,stream_sampling_point,NA,34.440614,-119.917915,4326,NA,7290,6,2004-10-14T00:00:00Z,2008-02-10T00:00:00Z,America/Los_Angeles
 lter,LTER,santa_barbara,Santa Barbara,SM01,"Santa Monica Creek, Via Real",Santa Monica Creek,stream_gauge,non-experimental,34.40479765,-119.52869,4326,959.922348458924,7663,2,2000-10-01T00:00:00Z,2017-10-01T00:00:00Z,America/Los_Angeles
 lter,LTER,santa_barbara,Santa Barbara,RN01,"Rincon Creek, Hwy 101 Culvert, North",Rincon Creek,stream_gauge,non-experimental,34.3773,-119.47794,4326,3812.79420276479,7672,2,2000-10-01T00:00:00Z,2017-10-01T00:00:00Z,America/Los_Angeles
-lter,LTER,bonanza,Bonanza Creek,C2,NA,NA,stream_gauge,non-experimental,65.159188,-147.607454,4326,357.882979712389,282862,22,1969-06-17T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
-lter,LTER,bonanza,Bonanza Creek,C3,NA,NA,stream_gauge,non-experimental,65.144853,-147.574368,4326,480.604124855774,284022,22,1969-05-20T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
+lter,LTER,bonanza,Bonanza Creek,C2,NA,NA,stream_gauge,non-experimental,65.159188,-147.607454,4326,357.882979712389,271016,22,1969-06-17T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
+lter,LTER,bonanza,Bonanza Creek,C3,NA,NA,stream_gauge,non-experimental,65.144853,-147.574368,4326,480.604124855774,272176,22,1969-05-20T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
 lter,LTER,bonanza,Bonanza Creek,CB,NA,NA,stream_sampling_point,NA,65.15,-147.56,4326,NA,94853,17,2002-05-21T00:00:00Z,2018-06-19T00:00:00Z,America/Anchorage
-lter,LTER,bonanza,Bonanza Creek,C4,Little Poker Creek,NA,stream_gauge,non-experimental,65.162726,-147.50057,4326,929.930179454794,280724,22,1980-05-22T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
+lter,LTER,bonanza,Bonanza Creek,C4,Little Poker Creek,NA,stream_gauge,non-experimental,65.162726,-147.50057,4326,929.930179454794,268878,22,1980-05-22T00:00:00Z,2018-08-22T00:00:00Z,America/Anchorage
 lter,LTER,bonanza,Bonanza Creek,P6,NA,NA,stream_sampling_point,NA,65.184791,-147.388939,4326,NA,101169,17,1994-08-11T00:00:00Z,2018-08-14T00:00:00Z,America/Anchorage
 lter,LTER,bonanza,Bonanza Creek,PJ,NA,Poker Creek,stream_sampling_point,NA,65.15154566,-147.4841681,4326,NA,96036,17,2002-05-14T00:00:00Z,2018-08-28T00:00:00Z,America/Anchorage
 lter,LTER,bonanza,Bonanza Creek,CJ,NA,Caribou Creek,stream_sampling_point,NA,65.15147902,-147.4856181,4326,NA,96036,17,2002-05-14T00:00:00Z,2018-08-28T00:00:00Z,America/Anchorage
@@ -228,32 +228,32 @@ lter,LTER,arctic,Arctic,Toolik_River_TK_Mid,Toolik River TK Mid: Toolik River TK
 lter,LTER,arctic,Arctic,Trevor_Creek_Main,"Trevor Creek Main: Trevor Creek, Brooks Range, Alaska, upstream of Dalton Highway crossing",Trevor Creek,stream_gauge,NA,68.2824995,-149.3700461,4326,4280.21886690807,52286,16,1988-06-01T00:00:00Z,2019-09-30T00:00:00Z,America/Anchorage
 lter,LTER,arctic,Arctic,VTK_IMP_Main,"VTK IMP Main: Impacted Valley of the Thermokarst, North Slope of Alaska, Anaktuvuk River Fire and Thermokarst Impacted Site",NA,stream_sampling_point,NA,68.961,-150.701,4326,NA,35759,30,2010-06-22T00:00:00Z,2015-07-13T00:00:00Z,America/Anchorage
 lter,LTER,arctic,Arctic,VTK_REF_Main,"VTK REF Main: Impacted Valley of the Thermokarst, North Slope of Alaska, Anaktuvuk River Fire and Thermokarst Impacted Site",NA,stream_sampling_point,NA,68.9354,-150.678,4326,NA,35412,31,2010-06-22T00:00:00Z,2015-07-13T00:00:00Z,America/Anchorage
-czo,CZO,boulder,Boulder Creek,GGL,Gordon Gulch: Lower,Gordon Gulch,stream_gauge,non-experimental,40.012989,-105.4585063,4326,272.41325444758,198484,30,2008-05-24T00:00:00Z,2020-10-01T00:00:00Z,America/Denver
-czo,CZO,boulder,Boulder Creek,GGU,Gordon Gulch: Upper,Gordon Gulch,stream_gauge,non-experimental,40.0174256,-105.4751912,4326,91.3666666146492,166632,30,2008-10-17T00:00:00Z,2020-10-01T00:00:00Z,America/Denver
+czo,CZO,boulder,Boulder Creek,GGL,Gordon Gulch: Lower,Gordon Gulch,stream_gauge,non-experimental,40.012989,-105.4585063,4326,272.41325444758,193564,30,2008-05-24T00:00:00Z,2020-10-01T00:00:00Z,America/Denver
+czo,CZO,boulder,Boulder Creek,GGU,Gordon Gulch: Upper,Gordon Gulch,stream_gauge,non-experimental,40.0174256,-105.4751912,4326,91.3666666146492,161712,30,2008-10-17T00:00:00Z,2020-10-01T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_6,Sugarloaf,Boulder Creek,stream_sampling_point,NA,40.014639,-105.322861,4326,NA,8586,18,2009-05-15T00:00:00Z,2010-09-29T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_2,Creek Path,Boulder Creek,stream_sampling_point,NA,40.003806,-105.358397,4326,NA,56351,26,2009-05-15T00:00:00Z,2019-08-22T00:00:00Z,America/Denver
-czo,CZO,boulder,Boulder Creek,BC_SW_4,Orodell,Boulder Creek,stream_gauge,non-experimental,40.006425,-105.330453,4326,26397.2665453404,207814,30,1996-01-02T00:00:00Z,2021-07-06T00:00:00Z,America/Denver
+czo,CZO,boulder,Boulder Creek,BC_SW_4,Orodell,Boulder Creek,stream_gauge,non-experimental,40.006425,-105.330453,4326,26397.2665453404,202894,30,1996-01-02T00:00:00Z,2021-07-06T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_12,Magnolia,Boulder Creek,stream_sampling_point,NA,39.990144,-105.422908,4326,NA,60554,26,2008-05-31T00:00:00Z,2019-12-11T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_14,Rockyknob,Boulder Creek,stream_sampling_point,NA,39.98245,-105.445781,4326,NA,17545,23,2008-05-31T00:00:00Z,2011-05-11T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_17,Ridge Road,Boulder Creek,stream_sampling_point,NA,39.972231,-105.466014,4326,NA,14489,18,2008-05-31T00:00:00Z,2010-09-29T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BC_SW_18,Barker,Boulder Creek,stream_sampling_point,NA,39.967183,-105.479797,4326,NA,6957,18,2009-05-15T00:00:00Z,2010-06-26T00:00:00Z,America/Denver
-czo,CZO,boulder,Boulder Creek,BC_SW_20,Nederland,Boulder Creek,stream_gauge,non-experimental,39.961639,-105.505789,4326,9512.97241923792,189210,28,1996-01-02T00:00:00Z,2021-07-06T00:00:00Z,America/Denver
+czo,CZO,boulder,Boulder Creek,BC_SW_20,Nederland,Boulder Creek,stream_gauge,non-experimental,39.961639,-105.505789,4326,9512.97241923792,184290,28,1996-01-02T00:00:00Z,2021-07-06T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,BT_SW_0,Betasso,Betasso,stream_sampling_point,NA,40.007136,-105.334322,4326,NA,63708,28,2008-05-24T00:00:00Z,2019-07-25T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,GGU_SPW1,Gordon Gulch Upper Spring 1,NA,stream_sampling_point,NA,40.019453,-105.476139,4326,NA,63330,28,2008-10-17T00:00:00Z,2020-09-25T00:00:00Z,America/Denver
 czo,CZO,boulder,Boulder Creek,GGU_SPW2,Gordon Gulch Upper Spring 2,NA,stream_sampling_point,NA,40.019453,-105.474922,4326,NA,60551,28,2009-03-26T00:00:00Z,2020-09-25T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,RedondoMeadow,Redondo Meadow,NA,stream_gauge,non-experimental,35.8546,-106.5941,4326,593.261080250809,587781,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,HistoryGrove,History Grove,NA,stream_gauge,non-experimental,35.8759,-106.5125,4326,75.6108628476042,822991,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,UpperJaramillo,Upper Jaramillo Creek,Jaramillo Creek,stream_gauge,non-experimental,35.9092,-106.5304,4326,741.450188562766,824990,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,LowerJaramillo,Lower Jaramillo Creek,Jaramillo Creek,stream_gauge,non-experimental,35.8929,-106.4958,4326,2732.24985312627,702659,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,UpperLaJara,Upper La Jara Creek,La Jara Creek,stream_gauge,non-experimental,35.87033,-106.527,4326,351.149135173723,586802,62,2006-03-14T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,LowerLaJara,Lower La Jara Creek,La Jara Creek,stream_gauge,non-experimental,35.8667,-106.5235,4326,373.28415234567,822962,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,LowerRedondo,Lower Redondo Creek,Redondo Creek,stream_gauge,non-experimental,35.8663,-106.5978,4326,1302.28802127629,539598,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,MC_ FLUME,Mixed Conifer ZOB,NA,stream_gauge,non-experimental,35.88083,-106.53575,4326,37.1871598794662,353218,60,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,MarshallGulch,Marshall Gulch Schist catchment,Marshall Gulch,stream_gauge,non-experimental,32.427351,-110.757857,4326,159.79358126511,381588,61,2006-07-10T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,Bigelow,Bigelow Zero Order Basin,NA,stream_gauge,non-experimental,32.4152,-110.7243,4326,3.97090664506893,362962,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,OracleRidge,Oracle Ridge,NA,stream_gauge,non-experimental,32.4494,-110.7399,4326,88.0602738509782,374307,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,UpperRedondo,Upper Redondo Creek,Redondo Creek,stream_gauge,non-experimental,35.8929,-106.577,4326,422.937647917331,617101,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
-czo,CZO,catalina_jemez,Catalina-Jemez,FLUME_MCZOB,MC ZOB Flume,NA,stream_gauge,non-experimental,35.88083,-106.536,4326,37.1871598797235,676237,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,RedondoMeadow,Redondo Meadow,NA,stream_gauge,non-experimental,35.8546,-106.5941,4326,593.261080250809,583639,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,HistoryGrove,History Grove,NA,stream_gauge,non-experimental,35.8759,-106.5125,4326,75.6108628476042,818849,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,UpperJaramillo,Upper Jaramillo Creek,Jaramillo Creek,stream_gauge,non-experimental,35.9092,-106.5304,4326,741.450188562766,820848,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,LowerJaramillo,Lower Jaramillo Creek,Jaramillo Creek,stream_gauge,non-experimental,35.8929,-106.4958,4326,2732.24985312627,698517,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,UpperLaJara,Upper La Jara Creek,La Jara Creek,stream_gauge,non-experimental,35.87033,-106.527,4326,351.149135173723,582660,62,2006-03-14T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,LowerLaJara,Lower La Jara Creek,La Jara Creek,stream_gauge,non-experimental,35.8667,-106.5235,4326,373.28415234567,818820,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,LowerRedondo,Lower Redondo Creek,Redondo Creek,stream_gauge,non-experimental,35.8663,-106.5978,4326,1302.28802127629,535456,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,MC_ FLUME,Mixed Conifer ZOB,NA,stream_gauge,non-experimental,35.88083,-106.53575,4326,37.1871598794662,349076,60,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,MarshallGulch,Marshall Gulch Schist catchment,Marshall Gulch,stream_gauge,non-experimental,32.427351,-110.757857,4326,159.79358126511,377446,61,2006-07-10T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,Bigelow,Bigelow Zero Order Basin,NA,stream_gauge,non-experimental,32.4152,-110.7243,4326,3.97090664506893,358820,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,OracleRidge,Oracle Ridge,NA,stream_gauge,non-experimental,32.4494,-110.7399,4326,88.0602738509782,370165,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,UpperRedondo,Upper Redondo Creek,Redondo Creek,stream_gauge,non-experimental,35.8929,-106.577,4326,422.937647917331,612959,62,2005-09-27T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
+czo,CZO,catalina_jemez,Catalina-Jemez,FLUME_MCZOB,MC ZOB Flume,NA,stream_gauge,non-experimental,35.88083,-106.536,4326,37.1871598797235,672095,62,2007-01-01T00:00:00Z,2021-05-12T00:00:00Z,America/Denver
 czo,CZO,calhoun,Calhoun,Tyger_River_hwy49,Tyger River at Hwy 49,NA,stream_sampling_point,NA,34.66616,-81.7393,4326,NA,20690,22,2014-08-22T00:00:00Z,2017-07-14T00:00:00Z,US/Eastern
 czo,CZO,calhoun,Calhoun,Isaacs_Creek_Bombing_Rang,Isaacs Creek at Bombing Range Rd,NA,stream_sampling_point,NA,34.65018,-81.7376,4326,NA,20651,22,2014-08-22T00:00:00Z,2017-07-14T00:00:00Z,US/Eastern
 czo,CZO,calhoun,Calhoun,Enoree_River_Jones_Ford,Enoree River at Jones Ford Rd,NA,stream_sampling_point,NA,34.57408,-81.7884,4326,NA,20751,23,2014-08-22T00:00:00Z,2017-07-14T00:00:00Z,US/Eastern
@@ -271,14 +271,14 @@ czo,CZO,calhoun,Calhoun,weir_3,Weir 3,NA,stream_gauge,NA,34.6098,-81.6952,4326,4
 czo,CZO,calhoun,Calhoun,weir_4,Weir 4,NA,stream_gauge,NA,34.61222,-81.6943,4326,6.53204726042579,49991,24,2014-07-18T00:00:00Z,2018-12-12T00:00:00Z,US/Eastern
 czo,CZO,calhoun,Calhoun,Holcombes_Branch,Holcombe's Branch,NA,stream_sampling_point,NA,34.61308,-81.6966,4326,NA,27321,22,2014-07-18T00:00:00Z,2018-12-12T00:00:00Z,US/Eastern
 czo,CZO,calhoun,Calhoun,weir_2,Weir 2,NA,stream_gauge,NA,34.61411,-81.6933,4326,7.31408599206745,21125,23,2014-07-18T00:00:00Z,2017-10-01T00:00:00Z,US/Eastern
-lter,LTER,luquillo,Luquillo,Q1,Quebrada uno-Bisley,NA,stream_gauge,non-experimental,18.315717,-65.74538,4326,6.87398372518258,566827,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,Q2,Quebrada dos-Bisley,NA,stream_gauge,non-experimental,18.314637,-65.74629,4326,6.34778435550733,564035,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,Q3,Quebrada tres-Bisley,NA,stream_gauge,non-experimental,18.314091,-65.747312,4326,32.7462092697066,567534,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,QG,Quebrada Guaba,NA,stream_gauge,non-experimental,18.283889,-65.788889,4326,144.597929683885,421640,20,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,QS,Quebrada Sonadora,NA,stream_gauge,non-experimental,18.322596,-65.8184,4326,265.586111516204,527271,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,Q1,Quebrada uno-Bisley,NA,stream_gauge,non-experimental,18.315717,-65.74538,4326,6.87398372518258,545569,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,Q2,Quebrada dos-Bisley,NA,stream_gauge,non-experimental,18.314637,-65.74629,4326,6.34778435550733,542777,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,Q3,Quebrada tres-Bisley,NA,stream_gauge,non-experimental,18.314091,-65.747312,4326,32.7462092697066,546276,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,QG,Quebrada Guaba,NA,stream_gauge,non-experimental,18.283889,-65.788889,4326,144.597929683885,400382,20,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,QS,Quebrada Sonadora,NA,stream_gauge,non-experimental,18.322596,-65.8184,4326,265.586111516204,506013,21,1975-01-01T00:00:00Z,2021-06-17T00:00:00Z,Etc/GMT-4
 lter,LTER,luquillo,Luquillo,MG,Rio Mameyes,NA,stream_sampling_point,NA,18.3561,-65.7685,4326,NA,73383,17,1997-09-29T00:00:00Z,2010-02-23T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,RI,Rio Icacos,NA,stream_gauge,non-experimental,18.275091,-65.785529,4326,337.355165941145,535660,21,1975-01-01T00:00:00Z,2021-07-09T00:00:00Z,Etc/GMT-4
-lter,LTER,luquillo,Luquillo,MPR,Puente Roto Mameyes,NA,stream_gauge,non-experimental,18.326951,-65.750292,4326,1790.56214287312,528055,21,1975-01-01T00:00:00Z,2021-07-09T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,RI,Rio Icacos,NA,stream_gauge,non-experimental,18.275091,-65.785529,4326,337.355165941145,514402,21,1975-01-01T00:00:00Z,2021-07-09T00:00:00Z,Etc/GMT-4
+lter,LTER,luquillo,Luquillo,MPR,Puente Roto Mameyes,NA,stream_gauge,non-experimental,18.326951,-65.750292,4326,1790.56214287312,506797,21,1975-01-01T00:00:00Z,2021-07-09T00:00:00Z,Etc/GMT-4
 lter,LTER,luquillo,Luquillo,QP,Quebrada Prieta,NA,stream_sampling_point,NA,18.2569,-65.7789,4326,NA,134799,17,1990-01-25T00:00:00Z,2012-12-26T00:00:00Z,Etc/GMT-4
 lter,LTER,luquillo,Luquillo,QPA,Quebrada Prieta A,NA,stream_sampling_point,NA,18.2629,-65.7697,4326,NA,53324,17,1989-06-06T00:00:00Z,1999-10-19T00:00:00Z,Etc/GMT-4
 lter,LTER,luquillo,Luquillo,QPB,Quebrada Prieta B,NA,stream_sampling_point,NA,18.2642,-65.7697,4326,NA,41482,14,1989-06-06T00:00:00Z,1997-09-16T00:00:00Z,Etc/GMT-4
@@ -328,23 +328,23 @@ usfs,USFS,suef,SUEF,GSCC04,Coyote Creek Watershed 4 Gauging Station,NA,stream_ga
 usfs,USFS,suef,SUEF,GSFC01,Fox Creek Watershed 1 Gauging Station,NA,stream_sampling_point,NA,45.43363,-122.043,4326,NA,76921,21,1969-10-06T00:00:00Z,1981-11-24T00:00:00Z,America/Los_Angeles
 usfs,USFS,suef,SUEF,GSFC02,Fox Creek Watershed 2 Gauging Station,NA,stream_sampling_point,NA,45.43413,-122.043,4326,NA,76921,21,1969-10-06T00:00:00Z,1981-11-24T00:00:00Z,America/Los_Angeles
 usfs,USFS,suef,SUEF,GSFC03,Fox Creek Watershed 3 Gauging Station,NA,stream_sampling_point,NA,45.43454,-122.043,4326,NA,76921,21,1969-10-06T00:00:00Z,1981-11-24T00:00:00Z,America/Los_Angeles
-usfs,USFS,santee,Santee,WS77,Weir 77,NA,stream_gauge,NA,33.141649,-79.779912,4326,150.83648435153,230882,28,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
-usfs,USFS,santee,Santee,WS78,Weir 78,Turkey Creek,stream_gauge,NA,33.1311815286249,-79.7840809256234,4326,5244.37377903638,135962,23,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
-usfs,USFS,santee,Santee,WS79,Weir 79,NA,stream_gauge,NA,33.1412234754962,-79.7908352648646,4326,475.662314369468,154077,27,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
-usfs,USFS,santee,Santee,WS80,Weir 80,NA,stream_gauge,NA,33.1443029554038,-79.790443356472,4326,159.795123899505,226484,27,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
-krycklan,Krycklan,krycklan,Krycklan,Site1,Risbäcken,NA,stream_gauge,NA,64.2485054693468,19.8080506416433,4326,47.5694721429244,429700,85,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site2,Västrabäcken,NA,stream_gauge,NA,64.2514254759827,19.777804398224202,4326,11.7982393005235,899361,89,1987-07-25T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site4,Kallkälsmyren,NA,stream_gauge,NA,64.2594511474447,19.7737483329001,4326,17.6353214792886,883764,87,1986-07-16T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site5,Stortjärn outlet,NA,stream_gauge,NA,64.2602610826913,19.760338571586,4326,64.8931515175411,424981,84,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site6,Stortjärnbäcken,NA,stream_gauge,NA,64.2509736643358,19.7731431669639,4326,108.981561140621,415083,83,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site7,Kallkälsbäcken,NA,stream_gauge,NA,64.2513011962503,19.7779000580925,4326,46.3987691083924,1075291,89,1981-01-01T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site9,Nyängesbäcken,NA,stream_gauge,NA,64.2375278452578,19.7915621692725,4326,285.959541731316,434650,83,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site10,Stormyrbäcken,NA,stream_gauge,NA,64.2569994296571,19.7866430184375,4326,333.195890730624,296557,82,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site12,Nymyrbäcken,NA,stream_gauge,NA,64.2411874792113,19.8143185691995,4326,539.962963821855,207389,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site13,Långbäcken,NA,stream_gauge,NA,64.2328569897307,19.7871074196692,4326,408.915582628012,439953,82,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site14,Åhedbäcken,NA,stream_gauge,NA,64.2261543208972,19.7707682829758,4326,1400.00964373161,193927,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site15,Övre Krycklan,NA,stream_gauge,NA,64.2485848642973,19.8382111005231,4326,1898.52017140841,200145,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
-krycklan,Krycklan,krycklan,Krycklan,Site16,Krycklan,NA,stream_gauge,NA,64.198508,19.869488,4326,6740.34293136757,485812,85,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+usfs,USFS,santee,Santee,WS77,Weir 77,NA,stream_gauge,NA,33.141649,-79.779912,4326,150.83648435153,225132,28,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
+usfs,USFS,santee,Santee,WS78,Weir 78,Turkey Creek,stream_gauge,NA,33.1311815286249,-79.7840809256234,4326,5244.37377903638,130212,23,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
+usfs,USFS,santee,Santee,WS79,Weir 79,NA,stream_gauge,NA,33.1412234754962,-79.7908352648646,4326,475.662314369468,148327,27,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
+usfs,USFS,santee,Santee,WS80,Weir 80,NA,stream_gauge,NA,33.1443029554038,-79.790443356472,4326,159.795123899505,220734,27,1963-12-13T00:00:00Z,2018-01-01T00:00:00Z,US/Eastern
+krycklan,Krycklan,krycklan,Krycklan,Site1,Risbäcken,NA,stream_gauge,NA,64.2485054693468,19.8080506416433,4326,47.5694721429244,427393,85,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site2,Västrabäcken,NA,stream_gauge,NA,64.2514254759827,19.777804398224202,4326,11.7982393005235,897054,89,1987-07-25T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site4,Kallkälsmyren,NA,stream_gauge,NA,64.2594511474447,19.7737483329001,4326,17.6353214792886,881457,87,1986-07-16T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site5,Stortjärn outlet,NA,stream_gauge,NA,64.2602610826913,19.760338571586,4326,64.8931515175411,422674,84,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site6,Stortjärnbäcken,NA,stream_gauge,NA,64.2509736643358,19.7731431669639,4326,108.981561140621,412776,83,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site7,Kallkälsbäcken,NA,stream_gauge,NA,64.2513011962503,19.7779000580925,4326,46.3987691083924,1072984,89,1981-01-01T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site9,Nyängesbäcken,NA,stream_gauge,NA,64.2375278452578,19.7915621692725,4326,285.959541731316,432343,83,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site10,Stormyrbäcken,NA,stream_gauge,NA,64.2569994296571,19.7866430184375,4326,333.195890730624,294250,82,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site12,Nymyrbäcken,NA,stream_gauge,NA,64.2411874792113,19.8143185691995,4326,539.962963821855,205082,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site13,Långbäcken,NA,stream_gauge,NA,64.2328569897307,19.7871074196692,4326,408.915582628012,437646,82,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site14,Åhedbäcken,NA,stream_gauge,NA,64.2261543208972,19.7707682829758,4326,1400.00964373161,191620,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site15,Övre Krycklan,NA,stream_gauge,NA,64.2485848642973,19.8382111005231,4326,1898.52017140841,197838,79,1990-08-04T00:00:00Z,2020-10-12T00:00:00Z,Etc/GMT+2
+krycklan,Krycklan,krycklan,Krycklan,Site16,Krycklan,NA,stream_gauge,NA,64.198508,19.869488,4326,6740.34293136757,483505,85,1990-08-04T00:00:00Z,2021-04-22T00:00:00Z,Etc/GMT+2
 czo,CZO,shale_hills,Shale Hills,GRO,Garner Run Outlet,NA,stream_gauge,non-experimental,40.6925,-77.9277,4326,136.561342413334,11354,23,2006-01-01T00:00:00Z,2020-03-01T00:00:00Z,US/Eastern
 czo,CZO,shale_hills,Shale Hills,SCAL,"Shaver's Creek, above Lake Perez",NA,stream_gauge,non-experimental,40.673619,-77.902569,4326,1545.70004102989,17057,24,2006-01-01T00:00:00Z,2021-01-06T00:00:00Z,US/Eastern
 czo,CZO,shale_hills,Shale Hills,SCBL,"Shaver's Creek, below Lake Perez",NA,stream_sampling_point,NA,40.656772,-77.918722,4326,NA,7110,23,2013-09-13T00:00:00Z,2015-01-23T00:00:00Z,US/Eastern
