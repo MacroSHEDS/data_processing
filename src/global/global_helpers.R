@@ -10021,8 +10021,16 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent(glue('Preparing dataset v{vv} for Figshare',
                          vv = dataset_version),
                     logger = logger_module)
-    dir.create('data/general/figshare_extras', showWarnings = FALSE)
-    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/04a_site_metadata.csv')
+    make_figshare_skeleton(where = 'data/general/figshare_extras')
+    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/04_site_documentation/04a_site_metadata.csv')
+    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation_packageformat/site_metadata.csv')
+    prepare_variable_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/variable_metadata.csv',
+                                           fs_format = 'new')
+    prepare_variable_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation_packageformat/variable_metadata.csv',
+                                           fs_format = 'old')
+    assemble_misc_files_figshare(where = 'data/general/figshare_extras/macrosheds_documentation/')
+    prepare_data_irregularities_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/08_data_irregularities.csv')
+
     prepare_dataset_for_figshare(dataset_version = dataset_version)
 
 
@@ -10030,6 +10038,15 @@ postprocess_entire_dataset <- function(site_data,
                          vv = dataset_version),
                     logger = logger_module)
     upload_dataset_to_figshare(dataset_version = dataset_version)
+}
+
+make_figshare_skeleton <- function(where){
+
+    dir.create(file.path(where, 'macrosheds_documentation'), showWarnings = FALSE, recursive = TRUE)
+    dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
 }
 
 prepare_site_metadata_for_figshare <- function(outfile){
@@ -10067,20 +10084,97 @@ prepare_site_metadata_for_figshare <- function(outfile){
 
 prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
 
-    #fs_format: either "old" for the original (37 zips) figshare format,
-    #or "new" for the more condensed and user-friendly, but less package-friendly format.
-    #in old-mode, just one variable metadata file is written. in new format, it's split into
-    #timeseries and ws attrs
-
-    # figd <-
+    #outfile: depends on fs_format. if "old", outfile will be written as-is. if
+    #   "new", outfile provides only the core part of the output filename, and two
+    #   separate output files are written--one for timeseries variables (prepended with '/05_timeseries_documentation/05b_timeseries_'),
+    #   and one for ws attr variables (prepended with '/06_ws_attr_documentation/06b_ws_attr_'). missing paths are created if necessary.
+    #fs_format: either "old" for compatibility with the original (37 zips) figshare format,
+    #   or "new" for the more condensed and user-friendly, but less package-friendly format.
+    #   in old-mode, just one variable metadata file is written. in new format, it's split into
+    #   timeseries and ws attrs. In new format, range check limits are written too, as a third file.
 
     if(fs_format == 'new'){
 
+        outfile_ts <- file.path(dirname(outfile),
+                                '05_timeseries_documentation',
+                                paste0('05b_timeseries_',
+                                       basename(outfile)))
+        outfile_ws <- file.path(dirname(outfile),
+                                '06_ws_attr_documentation',
+                                paste0('06b_ws_attr_',
+                                       basename(outfile)))
+        outfile_range_check <- file.path(dirname(outfile),
+                                         '05_timeseries_documentation',
+                                         '05e_range_check_limits.csv')
+
+        read_csv('../portal/data/general/catalog_files/all_variables.csv',
+                         col_types = cols()) %>%
+            select(variable_code = VariableCode,
+                   variable_name = VariableName,
+                   chem_category = ChemCategory,
+                   unit = Unit,
+                   # method
+                   observations = Observations,
+                   n_sites = Sites,
+                   # mean_obs_per_site = MeanObsPerSite,
+                   first_record_utc = FirstRecordUTC,
+                   last_record_utc = LastRecordUTC) %>%
+            filter(! grepl('_flux$', chem_category)) %>%#TEMP: removing flux metadata
+            write_csv(outfile_ts)
+
+        ms_vars %>%
+            filter(variable_type == 'ws_char') %>%
+            select(variable_code, variable_name, unit) %>%
+            write_csv(outfile_ws)
+
+        ms_vars %>%
+            filter(variable_type != 'ws_char') %>%
+            select(variable_code, variable_name, unit,
+                   range_check_minimum = val_min,
+                   range_check_maximum = val_max) %>%
+            write_csv(outfile_range_check)
 
     } else if(fs_format == 'old'){
 
-        write_csv(figd, outfile)
+        ms_vars %>%
+            select(variable_code, variable_name, unit, variable_type,
+                   variable_subtype, valence, flux_convertible) %>%
+            write_csv(outfile)
     }
+}
+
+assemble_misc_files_figshare <- function(where){
+
+    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', where)
+    file.copy('src/templates/figshare_docfiles/02_glossary.txt', where)
+    file.copy('src/templates/figshare_docfiles/03_changelog.txt', where)
+    file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
+              file.path(where, '04_site_documentation'))
+    file.copy('../portal/static/documentation/timeseries/columns.txt',
+              file.path(where, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
+    file.copy('../portal/static/documentation/watershed_summary/columns.csv',
+              file.path(where, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
+    file.copy('../portal/static/documentation/watershed_trait_timeseries/columns.txt',
+              file.path(where, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
+    file.copy('src/templates/figshare_docfiles/05c_timeseries_variable_metadata_column_descriptions.txt',
+              file.path(where, '05_timeseries_documentation'))
+    file.copy('src/templates/figshare_docfiles/06c_ws_attr_variable_metadata_column_descriptions.txt',
+              file.path(where, '06_ws_attr_documentation'))
+    file.copy('../portal/data/general/spatial_downloadables/variable_category_codes.csv',
+              file.path(where, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
+    file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
+              file.path(where, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
+
+}
+
+prepare_data_irregularities_for_figshare <- function(outfile){
+
+    irregs <- sm(googlesheets4::read_sheet(
+        'https://docs.google.com/spreadsheets/d/1R2eUTwDEHLhBGJ0OJkgt8Aleu1jo0z_b9C4gHrKoRWE/edit#gid=0',
+        na = c('', 'NA'),
+        col_types = 'ccccccccn'
+    ))
+
 }
 
 prepare_dataset_for_figshare <- function(dataset_version){
@@ -10502,13 +10596,13 @@ upload_dataset_to_figshare <- function(dataset_version){
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
     other_uploadsD <- c(documentation = '../portal/static/documentation/README.txt',
-                        policy = 'data/general/figshare_extras/06a_ws_attr_LEGAL.csv',
-                        policy = 'data/general/figshare_extras/05a_timeseries_LEGAL.csv',
+                        policy = 'data/general/figshare_extras/macrosheds_documentation_packageformat/ws_attr_LEGAL.csv',
+                        policy = 'data/general/figshare_extras/macrosheds_documentation_packageformat/timeseries_LEGAL.csv',
                         policy = 'data/general/figshare_extras/01_data_use_policy.txt')
     titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
-    other_uploadsE <- c(metadata = 'data/general/figshare_extras/04a_site_metadata.csv',
-                        metadata = 'data/general/figshare_extras/variable_metadata.csv')
+    other_uploadsE <- c(metadata = 'data/general/figshare_extras/macrosheds_documentation_packageformat/site_metadata.csv',
+                        metadata = 'data/general/figshare_extras/macrosheds_documentation_packageformat/variable_metadata.csv')
     titlesE <- c('site_metadata', 'variable_metadata')
 
     other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
@@ -11560,18 +11654,24 @@ catalog_held_data <- function(network_domain, site_data){
                     ungroup() %>%
                     bind_rows(product_breakdown)
 
-                chem_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
-                is_chemvar <- product_breakdown$var %in% chem_vars
+                flx_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
+                is_flxvar <- product_breakdown$var %in% flx_vars
+                other_chemish_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 0 &
+                    ms_vars$variable_type %in% c('phys', 'chem_mix', 'chem_discrete', 'bio', 'gas') &
+                    ms_vars$unit %in% c('ueq/L', 'mg/L', 'eq/L')]
+                is_other_chemish <- product_breakdown$var %in% other_chemish_vars
 
                 product_breakdown$chem_class <- 'NA'
                 if(grepl('stream_flux_inst_scaled', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'stream_flux'
+                    product_breakdown$chem_class[is_flxvar] <- 'stream_flux'
+                    product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
                 } else if(grepl('precip_flux_inst_scaled', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'precip_flux'
+                    product_breakdown$chem_class[is_flxvar] <- 'precip_flux'
+                    product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
                 } else if(grepl('precip_chemistry', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'precip_conc'
+                    product_breakdown$chem_class[is_flxvar | is_other_chemish] <- 'precip_conc'
                 } else if(grepl('stream_chemistry', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'stream_conc'
+                    product_breakdown$chem_class[is_flxvar | is_other_chemish] <- 'stream_conc'
                 }
             }
 
