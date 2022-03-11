@@ -474,8 +474,8 @@ process_2_ms001 <- function(network, domain, prodname_ms){
                                   'RI' = '50075000', 'MPR' = '50065500',
                                   'RS' = '50067000', 'RES4' = '50063800',
                                   'QT' = '50063500'),
-                        time_step = c('sub_daily', 'sub_daily', 'sub_daily',
-                                      'sub_daily', 'sub_daily', 'sub_daily',
+                        time_step = c('daily', 'sub_daily', 'daily',
+                                      'daily', 'daily', 'daily',
                                       'daily'))
 }
 
