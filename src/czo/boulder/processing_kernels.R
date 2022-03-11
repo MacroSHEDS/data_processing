@@ -335,6 +335,8 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
+    # u = Undetected
+    # DL = below detection limit
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
                                                      '<0.145',

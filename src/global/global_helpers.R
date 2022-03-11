@@ -9846,6 +9846,11 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     #time_step: either a single input of 'daily' or 'sub_daily' depending what data
     #    is available or perfected. Or a vector the same length as sites with either
     #    'daily' and 'sub_daily'.
+    
+    # TODO
+    # At some point this function should pull all daily data and sub daily data 
+    # and combine the two so as much sub daily data is grabbed but when only daily
+    # data is available, that is used. 
 
     if(length(time_step) == 1) {
         time_step <- rep(time_step, length(sites))

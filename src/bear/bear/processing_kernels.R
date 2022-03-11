@@ -165,8 +165,6 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #. handle_errors
 process_0_VERSIONLESS004 <- download_from_googledrive
 
-
-
 #munge kernels ####
 
 #stream_chemistry: STATUS=READY
@@ -465,10 +463,11 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                         domain = domain,
                         prodname_ms = prodname_ms,
                         sites = c('WB' = '01022295', 'EB' = '01022294'),
-                        time_step = c('sub_daily', 'sub_daily'))
+                        time_step = c('daily', 'daily'))
     
     return()
 }
+
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms002 <- derive_stream_flux
