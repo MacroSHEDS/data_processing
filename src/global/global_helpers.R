@@ -10021,26 +10021,21 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent(glue('Preparing dataset v{vv} for Figshare',
                          vv = dataset_version),
                     logger = logger_module)
-    make_figshare_skeleton(where = 'data/general/figshare_extras')
-    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/04_site_documentation/04a_site_metadata.csv')
-    prepare_site_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation_packageformat/site_metadata.csv')
-    prepare_variable_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/variable_metadata.csv',
-                                           fs_format = 'new')
-    prepare_variable_metadata_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation_packageformat/variable_metadata.csv',
-                                           fs_format = 'old')
-    assemble_misc_files_figshare(where = 'data/general/figshare_extras/macrosheds_documentation/')
-    prepare_data_irregularities_for_figshare(outfile = 'data/general/figshare_extras/macrosheds_documentation/08_data_irregularities.csv')
-
-    prepare_dataset_for_figshare(dataset_version = dataset_version)
-
+    fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
+    dir.create(fs_dir, showWarnings = FALSE)
+    prepare_for_figshare(where = fs_dir,
+                         dataset_version = dataset_version)
+    prepare_for_figshare_packageformat(where = fs_dir,
+                                       dataset_version = dataset_version)
 
     log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                          vv = dataset_version),
                     logger = logger_module)
     upload_dataset_to_figshare(dataset_version = dataset_version)
+    upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
 }
 
-make_figshare_skeleton <- function(where){
+make_figshare_docs_skeleton <- function(where){
 
     dir.create(file.path(where, 'macrosheds_documentation'), showWarnings = FALSE, recursive = TRUE)
     dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
@@ -10143,58 +10138,55 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
     }
 }
 
-assemble_misc_files_figshare <- function(where){
+assemble_misc_docs_figshare <- function(where){
 
-    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', where)
-    file.copy('src/templates/figshare_docfiles/02_glossary.txt', where)
-    file.copy('src/templates/figshare_docfiles/03_changelog.txt', where)
+    docs_dir <- file.path(where, 'macrosheds_documentation')
+    dir.create(docs_dir, showWarnings = FALSE)
+
+    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', docs_dir)
+    file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
+    file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
     file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
-              file.path(where, '04_site_documentation'))
+              file.path(docs_dir, '04_site_documentation'))
     file.copy('../portal/static/documentation/timeseries/columns.txt',
-              file.path(where, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
+              file.path(docs_dir, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
     file.copy('../portal/static/documentation/watershed_summary/columns.csv',
-              file.path(where, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
+              file.path(docs_dir, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
     file.copy('../portal/static/documentation/watershed_trait_timeseries/columns.txt',
-              file.path(where, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
+              file.path(docs_dir, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
     file.copy('src/templates/figshare_docfiles/05c_timeseries_variable_metadata_column_descriptions.txt',
-              file.path(where, '05_timeseries_documentation'))
+              file.path(docs_dir, '05_timeseries_documentation'))
     file.copy('src/templates/figshare_docfiles/06c_ws_attr_variable_metadata_column_descriptions.txt',
-              file.path(where, '06_ws_attr_documentation'))
+              file.path(docs_dir, '06_ws_attr_documentation'))
     file.copy('../portal/data/general/spatial_downloadables/variable_category_codes.csv',
-              file.path(where, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
+              file.path(docs_dir, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
     file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
-              file.path(where, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
+              file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
 
+    prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
 }
 
-prepare_data_irregularities_for_figshare <- function(outfile){
+prepare_data_irreg_doc_for_figshare <- function(outfile){
 
-    irregs <- sm(googlesheets4::read_sheet(
+    sm(googlesheets4::read_sheet(
         'https://docs.google.com/spreadsheets/d/1R2eUTwDEHLhBGJ0OJkgt8Aleu1jo0z_b9C4gHrKoRWE/edit#gid=0',
         na = c('', 'NA'),
         col_types = 'ccccccccn'
-    ))
-
+    )) %>%
+        mutate(included_in_current_dataset = as.logical(included_in_current_dataset)) %>%
+        write_csv(outfile)
 }
 
-prepare_dataset_for_figshare <- function(dataset_version){
+prepare_ts_data_for_figshare <- function(where, dataset_version){
 
-    if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" calls below probably will not work on windows.',
-                   'investigate and update that call if necessary'))
-    }
+    tld <- file.path(where, 'macrosheds_timeseries_data')
 
-    ## make new figshare version dir and copy over all files from the output dataset
-    ## clean up some stuff
-    dir.create(glue('macrosheds_figshare_v', dataset_version),
-               showWarnings = FALSE)
-
+    ## copy over all files from the output dataset. clean up some stuff
     file.copy(from = glue('macrosheds_dataset_v', dataset_version),
-              to = glue('macrosheds_figshare_v', dataset_version),
+              to = where,
               recursive = TRUE)
-
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
-                vv = dataset_version)
+    file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
+                to = tld)
 
     unlink(file.path(tld, 'load_entire_product.R'))
 
@@ -10206,6 +10198,7 @@ prepare_dataset_for_figshare <- function(dataset_version){
 
     warning('temporarily removing NEON')
     dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    unlink(file.path(tld, 'neon/'), recursive = TRUE)
 
     for(jd in dmn_dirs){
 
@@ -10243,6 +10236,144 @@ prepare_dataset_for_figshare <- function(dataset_version){
                        intern = TRUE)
         if(! is_empty(rslt)){
             setwd('../../..')
+            # warning(paste('precursor files still present for', dmn))
+            # next
+            stop(paste('precursor files still present for', dmn))
+        }
+
+        ## add a readme to each domain dir
+        file.copy(from = '../../../src/templates/ts_docs_readme.txt',
+                  to = file.path(dmn, 'documentation', 'README.txt'))
+
+        setwd('../../..')
+    }
+}
+
+prepare_ws_attr_data_for_figshare <- function(where){
+
+    tld <- file.path(where, 'macrosheds_watershed_attribute_data')
+
+    dir.create(file.path(tld, 'ws_attr_timeseries'),
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    ## copy over all files from the portal dataset
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'climate.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'hydrology.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'landcover.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'parentmaterial.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'terrain.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'vegetation.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/watershed_summaries.csv',
+              to = file.path(tld, 'ws_attr_summaries.csv'))
+
+    warning('temporarily removing NEON data')
+    system("find macrosheds_figshare_v1/macrosheds_watershed_attribute_data/ws_attr_timeseries -name '*.csv' | xargs sed -e '/neon/d' -i")
+}
+
+prepare_for_figshare <- function(where, dataset_version){
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update those calls if necessary'))
+    }
+
+    #prepare documentation and metadata
+    make_figshare_docs_skeleton(where = where)
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+                                           fs_format = 'new')
+    assemble_misc_docs_figshare(where = file.path(where, 'data/general/figshare_extras/macrosheds_documentation/'))
+
+    #prepare data
+    prepare_ts_data_for_figshare(where = where,
+                                 dataset_version = dataset_version)
+    prepare_ws_attr_data_for_figshare(where = where)
+}
+
+prepare_for_figshare_packageformat <- function(where, dataset_version){
+
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
+                                           fs_format = 'old')
+    file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
+              file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'))
+    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
+              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'))
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update that call if necessary'))
+    }
+
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
+                vv = dataset_version)
+
+    ## copy over all files from the output dataset. clean up some stuff
+    file.copy(from = glue('macrosheds_dataset_v', dataset_version),
+              to = where,
+              recursive = TRUE)
+    file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
+                to = tld)
+
+    unlink(file.path(tld, 'load_entire_product.R'))
+
+    all_dirs <- list.dirs(tld)
+
+    dmn_dirs <- grep(pattern = 'derived$',
+                     x = all_dirs,
+                     value = TRUE)
+
+    warning('temporarily removing NEON')
+    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    unlink(file.path(tld, 'neon/'), recursive = TRUE)
+
+    for(jd in dmn_dirs){
+
+        message(paste('working on', jd))
+
+        ## incise the now-superfluous "derived" directory from the path
+        to_folder <- sub(pattern = '/derived$',
+                         replacement = '',
+                         x = jd)
+
+        system(glue('mv {j}/* {t}',
+                    j = jd,
+                    t = to_folder))
+        file.remove(jd)
+
+        dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
+
+        parent_folder <- sub(pattern = glue('/', dmn),
+                             replacement = '',
+                             x = to_folder)
+
+        #dip into network dir for convenience. this is not ideal
+        setwd(parent_folder)
+
+        ## TEMP
+        warning('temporarily removing all flux data from figshare dataset')
+        flux_dirs_to_rm <- grep(pattern = 'flux',
+                                x = list.files(dmn,
+                                               full.names = TRUE),
+                                value = TRUE)
+        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
+
+
+        ## remove the prodcode extensions from dirnames
+        rslt <- character()
+        rslt <- system(paste0("rename 's/(.+)__ms[0-9]{3}/$1/' ", dmn, "/* 2>&1"),
+                       intern = TRUE)
+        if(! is_empty(rslt)){
+            setwd('../../..')
+            # warning('precursor files still present')
+            # next
             stop('precursor files still present')
         }
 
@@ -10381,7 +10512,16 @@ figshare_add_articles_to_collection <- function(collection_id,
 figshare_list_collections <- function(token){
 
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::GET('https://api.figshare.com/v2/account/collections',
+    r <- httr::GET('https://api.figshare.com/v2/account/collections?page_size=1000',
+                   httr::add_headers(header))
+
+    return(content(r))
+}
+
+figshare_list_articles <- function(token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+    r <- httr::GET('https://api.figshare.com/v2/account/articles?page_size=1000',
                    httr::add_headers(header))
 
     return(content(r))
@@ -10453,10 +10593,9 @@ figshare_upload_article <- function(article_id,
     }
 }
 
-upload_dataset_to_figshare <- function(dataset_version){
+upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     # require(rfigshare) #unmaintained
-
 
     ### ONE-TIME PREP
 
@@ -10483,29 +10622,22 @@ upload_dataset_to_figshare <- function(dataset_version){
     token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
     auth_header <- c(Authorization = sprintf('token %s', token))
     cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
 
-
-    ### TODO
+    message('uploading dataset to fighare under original format (still used by macrosheds package)')
 
     stop('v1 has been uploaded and published. uploading again may automatically create v2. we need to carefully investigate this, and maybe write new API calls')
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
-    #
-    # check for already-uploaded datasets (NOT YET IMPLEMENTED)
-    # r <- httr::GET('https://api.figshare.com/v2/account/articles',
-    #                httr::add_headers(auth_header))
-    #
-    # json <- httr::content(r,
-    #                       as = "text",
-    #                       encoding = "UTF-8")
-    #
-    # d <- try(jsonlite::fromJSON(json),
-    #          silent = TRUE)
-    #
-    # update articles (if they remain in My Data) (there's an API endpoint for this)
-    # replace articles in collection (there's an API endpoint for this)
 
+    existing_articles <- figshare_list_articles(token)
+    existing_article_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
+    ) %>%
+        filter(! is.na(domain)) %>%
+        select(-title)
 
     ### CREATE, UPLOAD, PUBLISH TIMESERIES
 
@@ -10520,23 +10652,31 @@ upload_dataset_to_figshare <- function(dataset_version){
 
             dmn <- sub('.zip', '', dmns[j])
 
-            #create figshare "article", which in this case is a dataset
-            fs_id <- expo_backoff(
-                expr = {
-                    figshare_create_article(
-                        title = glue('Network: ', ntw, ', Domain: ', dmn),
-                        description = glue('MacroSheds timeseries data, shapefiles, ',
-                                           'and metadata for domain: {d}, within network: {n}',
-                                           d = dmn,
-                                           n = ntw),
-                        keywords = list('czo'),
-                        category_ids = cat_ids,
-                        type = 'dataset',
-                        authors = conf$figshare_author_list,
-                        token = token)
-                },
-                max_attempts = 6
-            ) %>% invisible()
+            ## if new dmn, create figshare "article", which in this case is a dataset.
+            ## else get the fs_id of the existing article
+
+            if(! dmn %in% existing_article_deets$domain){
+                fs_id <- expo_backoff(
+                    expr = {
+                        figshare_create_article(
+                            title = glue('Network: ', ntw, ', Domain: ', dmn),
+                            description = glue('MacroSheds timeseries data, shapefiles, ',
+                                               'and metadata for domain: {d}, within network: {n}',
+                                               d = dmn,
+                                               n = ntw),
+                            keywords = list('czo'),
+                            category_ids = cat_ids,
+                            type = 'dataset',
+                            authors = conf$figshare_author_list,
+                            token = token)
+                    },
+                    max_attempts = 6
+                ) %>% invisible()
+            } else {
+                fs_id <- existing_article_deets$id[existing_article_deets$domain == dmn]
+            }
+
+            HERE: now verify that uploading a new fie to the same article will auto-update version
 
             #upload domain zip to that article
             expo_backoff(
@@ -10547,7 +10687,8 @@ upload_dataset_to_figshare <- function(dataset_version){
                     #                 n = ntw,
                     #                 d = dmn))
                     figshare_upload_article(fs_id,
-                                            file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
+                                            file = glue('{t}/{n}/{d}.zip',
+                                                        t = tld,
                                                         n = ntw,
                                                         d = dmn),
                                             token = token)
@@ -13467,31 +13608,31 @@ generate_watershed_raw_spatial_dataset <- function(){
         filter(substr(var, 1, 1) == 'v') %>%
         write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
 
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
-        flags = '-9Xjq')
-
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
+    #     flags = '-9Xjq')
+    #
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
 
     write_csv(category_codes,
               '../portal/data/general/spatial_downloadables/variable_category_codes.csv')
