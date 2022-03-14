@@ -320,9 +320,9 @@ process_2_ms011 <- function(network, domain, prodname_ms) {
                                   'POBR' = '01583570', 'DRKR' = '01589330',
                                   'BARN' = '01583580', 'MCDN' = '01589238',
                                   'MAWI' = '01589351'),
-                        time_step = c('sub_daily', 'sub_daily', 'sub_daily',
-                                      'sub_daily', 'sub_daily', 'sub_daily',
-                                      'sub_daily', 'sub_daily', 'daily'))
+                        time_step = c('daily', 'daily', 'daily',
+                                      'daily', 'daily', 'daily',
+                                      'daily', 'daily', 'daily'))
 
   return()
 }
