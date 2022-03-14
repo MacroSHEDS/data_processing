@@ -527,9 +527,9 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
                         domain = domain,
                         prodname_ms = prodname_ms,
                         sites = c('SP02' = '11120520',
-                                  # THis site only have gauge height, look at santa data 
+                                  # This site only has gauge height, look at santa data 
                                   'MC06' = '11119745'),
-                        time_step = 'sub_daily')
+                        time_step = c('daily', 'daily'))
 
     return()
 }
