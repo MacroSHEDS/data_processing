@@ -106,7 +106,8 @@ get_usgs_verstion <- function(prodname_ms,
 
         if(nrow(one_parm) > 1){
             one_parm <- one_parm %>%
-                filter(data_type_cd == 'uv')
+                filter(count_nu == max(one_parm$count_nu))
+                # filter(data_type_cd == 'uv')
         }
 
         one_parm <- one_parm %>%

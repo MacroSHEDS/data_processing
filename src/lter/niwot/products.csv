@@ -12,6 +12,8 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 160,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 162,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 163,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
+278,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
+236,discharge,ready,ready,NA,discharge__ms001,NA
 102,discharge,ready,ready,NA,discharge__ms001,NA
 102,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,
 111,discharge,ready,ready,NA,discharge__ms001,NA
