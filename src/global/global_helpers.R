@@ -10007,6 +10007,10 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
+    log_with_indent('adding legal metadata to each domain directory',
+                    logger = logger_module)
+    legal_details_scrape(dataset_version = dataset_version)
+
     log_with_indent(glue('Generating output dataset v',
                          dataset_version),
                     logger = logger_module)
@@ -10262,7 +10266,7 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
         }
 
         ## add a readme to each domain dir
-        file.copy(from = '../../../src/templates/ts_docs_readme.txt',
+        file.copy(from = '../../../src/templates/figshare_docfiles/ts_docs_readme.txt',
                   to = file.path(dmn, 'documentation', 'README.txt'))
 
         setwd('../../..')
@@ -10401,7 +10405,7 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
         }
 
         ## add a readme to each domain dir
-        file.copy(from = '../../../src/templates/ts_docs_readme.txt',
+        file.copy(from = '../../../src/templates/figshare_docfiles/ts_docs_readme.txt',
                   to = file.path(dmn, 'documentation', 'README.txt'))
 
         zip(zipfile = glue(dmn, '.zip'),
@@ -14495,14 +14499,17 @@ run_checks <- function(){
     }
 }
 
-# metadata and citation information function
-metadata_scrape <- function() {
+legal_details_scrape <- function(dataset_version){
+
+    ## metadata and citation information function
+
     # retrieve metadata
     meta_info <- sm(googlesheets4::read_sheet(
            conf$site_doi,
            na = c('', 'NA'),
-           col_types = 'cccccccc'
-       ))
+           col_types = 'ccccccccc'
+       )) %>%
+        select(-citation_used)
 
     meta_urls <- sm(googlesheets4::read_sheet(
         conf$domain_urls,
@@ -14510,47 +14517,72 @@ metadata_scrape <- function() {
         col_types = 'cc'
     ))
 
-    # meta_info <- read.csv("metadata/site_doi_license.csv")
-    # meta_urls <- read.csv("metadata/domain_urls.csv")
-
     # locate domain directory
-    network_dir <- paste0(getwd(),"/","macrosheds_dataset_v1/")
-    network_paths <- list.files(network_dir, all.files=T, full.names=T)
+    network_dir <- file.path(getwd(), paste0('macrosheds_dataset_v', dataset_version))
+    network_paths <- list.files(network_dir,
+                                full.names = TRUE)
 
-
-    readme <- readLines("README.txt")
+    readme <- readLines('src/templates/figshare_docfiles/ts_readme.txt')
 
     # loop domains, and print data .csv and guide .txt
-    for (domain_name in unique(meta_info$domain)) {
+    for(domain_name in unique(meta_info$domain)){
+
         # subset all the domain metadata
-        domain_info <- unique(meta_info[which(meta_info$domain == domain_name),])
-        domain_info <- domain_info[, !(names(domain_info) %in% c("prodcode"))]
+        domain_info <- unique(meta_info[meta_info$domain == domain_name, ])
 
         # subset the domain URLs
-        domain_url <- meta_urls[which(meta_urls$domain == domain_name),]
-        str_url <- toString(unique(domain_url$url))
+        domain_url <- meta_urls[meta_urls$domain == domain_name, ]
+        str_url <- paste(unique(domain_url$url), collapse = ', ')
 
         # merge to a single data frame
         domain_all <- merge(domain_info, domain_url, 'domain')
 
-        for (network in network_paths) {
-            for (domain in list.files(network, all.files=T, full.names=T)) {
-                # write to CSV
-                if (basename(domain) == domain_name) {
-                    file_name <- paste0(network_dir, basename(network),"/",
-                                        basename(domain), "/", basename(domain), ".csv")
-                    readme_domain <- paste0(network_dir, basename(network),"/",
-                                            basename(domain), "/", "Citation Instructions.txt")
+        network_name <- network_domain %>%
+            filter(domain == !!domain_name) %>%
+            pull(network)
 
-                    reader <- file(readme_domain)
-                    headerline <- paste0("Domain: ", basename(domain))
-                    subline <- paste0("Data Source URL: ", str_url, "\n")
-                    writeLines(c(headerline, subline, readme), reader)
-                    close(reader)
+        if(! length(network_name)) next #domain not fully hooked up
 
-                    write.csv(domain_all, file_name, row.names = F)
-                }
-            }
-        }
+        ntw_pth <- grep(paste0(network_name, '$'), network_paths, value = TRUE)
+
+        dmn_pth <- list.files(ntw_pth, full.names = TRUE) %>%
+            str_subset(domain_name)
+
+        if(! length(dmn_pth)) next #there's been a network/domain change and somebody's trying to run this without rebuilding everything
+
+        #add column of macrosheds prodnames to clarify primary prodcodes
+        dmn_prods <- try({
+            read_csv(glue('src/{n}/{d}/products.csv',
+                          n = network_name,
+                          d = domain_name),
+                     col_types = cols())
+        })
+
+        if(inherits(dmn_prods, 'try-error')) next
+
+        dmn_prods <- dmn_prods %>%
+            select(prodcode,
+                   ms_prodnames = prodname) %>%
+            group_by(prodcode) %>%
+            summarize(ms_prodnames = paste(ms_prodnames, collapse = ', ')) %>%
+            ungroup()
+
+        domain_all <- domain_all %>%
+            left_join(dmn_prods, by = 'prodcode') %>%
+            select(domain, ms_prodnames, prodcode, everything()) %>%
+            arrange(ms_prodnames, prodcode)
+
+        #write legal table and accompanying readme
+        file_name <- file.path(network_dir, network_name, domain_name, 'LEGAL.csv')
+        readme_domain <- file.path(network_dir, network_name, domain_name,
+                                   'citation_instructions.txt')
+
+        reader <- file(readme_domain)
+        headerline <- paste0('Domain: ', domain_name)
+        subline <- paste0('Data Source URL: ', str_url, '\n')
+        writeLines(c(headerline, subline, readme), reader)
+        close(reader)
+
+        write_csv(domain_all, file_name)
     }
 }
