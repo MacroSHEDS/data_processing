@@ -788,7 +788,7 @@ ms_read_raw_csv <- function(filepath,
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
     }
-    
+
     if(missing(set_to_0)) {
         set_to_0 <- NULL
     }
@@ -922,7 +922,7 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_NA[i]] <- NA
         }
     }
-    
+
     # Set values to 0 if used as a flag for below detection limit
     if(! is.null(set_to_0)){
         for(i in 1:length(set_to_0)){
@@ -9846,11 +9846,11 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     #time_step: either a single input of 'daily' or 'sub_daily' depending what data
     #    is available or perfected. Or a vector the same length as sites with either
     #    'daily' and 'sub_daily'.
-    
+
     # TODO
-    # At some point this function should pull all daily data and sub daily data 
+    # At some point this function should pull all daily data and sub daily data
     # and combine the two so as much sub daily data is grabbed but when only daily
-    # data is available, that is used. 
+    # data is available, that is used.
 
     if(length(time_step) == 1) {
         time_step <- rep(time_step, length(sites))
@@ -10323,9 +10323,11 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
                                            fs_format = 'old')
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
-              file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'))
+              file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
+              overwrite = TRUE)
     file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
-              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'))
+              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
+              overwrite = TRUE)
 
     if(.Platform$OS.type == 'windows'){
         stop(paste('The "system" calls below probably will not work on windows.',
@@ -10339,6 +10341,7 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     file.copy(from = glue('macrosheds_dataset_v', dataset_version),
               to = where,
               recursive = TRUE)
+    if(file.exists(tld)) unlink(tld, recursive = TRUE) #so we can overwrite
     file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
                 to = tld)
 
@@ -10436,10 +10439,14 @@ figshare_create_article <- function(title,
                                   authors = authors),
                              auto_unbox = TRUE)
 
-    post <- httr::POST(request,
+    post <- expo_backoff(
+        expr = {
+            httr::POST(request,
                        config = httr::add_headers(header),
                        body = meta)
-                       # httr::verbose())
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     if(post$status_code > 201){
         httr::stop_for_status(post)
@@ -10459,20 +10466,45 @@ figshare_create_article <- function(title,
 }
 
 figshare_delete_article <- function(article_id,
-                                    file_id = NULL,
                                     token){
 
     base <- "https://api.figshare.com/v2"
     method <- paste("account/articles", article_id, sep = "/")
-    if (!is.null(file_id)) {
-        method <- paste(method, "files", file_id, sep = "/")
-    }
+    # if (!is.null(file_id)) {
+    #     method <- paste(method, "files", file_id, sep = "/")
+    # }
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::DELETE(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr =  httr::DELETE(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to delete article', article_id))
+    }
+}
+
+figshare_delete_article_file <- function(article_id,
+                                         file_id,
+                                         token){
+
+    #for deleting files, which are found within articles
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/articles", article_id, 'files', file_id, sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr =  httr::DELETE(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
+
+    if(r$status_code > 204){
+        stop(paste('failed to delete file', file_id, 'within article', article_id))
     }
 }
 
@@ -10483,7 +10515,12 @@ figshare_publish_article <- function(article_id,
     method <- paste("account/articles", article_id, 'publish', sep = "/")
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::POST(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr = httr::POST(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to publish article', article_id))
@@ -10497,14 +10534,19 @@ figshare_publish_collection <- function(collection_id,
     method <- paste("account/collections", collection_id, 'publish', sep = "/")
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::POST(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr = httr::POST(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to publish collection', collection_id))
     }
 }
 
-figshare_add_articles_to_collection <- function(collection_id,
+figshare_add_new_articles_to_collection <- function(collection_id,
                                                 article_ids,
                                                 token){
 
@@ -10517,9 +10559,10 @@ figshare_add_articles_to_collection <- function(collection_id,
     meta <- jsonlite::toJSON(list(articles = article_ids),
                              auto_unbox = TRUE)
 
-    r <- httr::POST(request,
-                    body = meta,
-                    config = httr::add_headers(header))
+    r <- expo_backoff(
+        expr = httr::POST(request, body = meta, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to add articles',
@@ -10529,11 +10572,44 @@ figshare_add_articles_to_collection <- function(collection_id,
     }
 }
 
+figshare_replace_all_articles_in_collection <- function(collection_id,
+                                                        article_ids,
+                                                        token){
+
+    if(is.numeric(article_ids)) article_ids <- as.list(article_ids)
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/collections", collection_id, 'articles', sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+    meta <- jsonlite::toJSON(list(articles = article_ids),
+                             auto_unbox = TRUE)
+
+    r <- expo_backoff(
+        expr = httr::PUT(request, body = meta, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
+
+    if(r$status_code > 201){
+        stop(paste('failed to replace articles',
+                   paste(article_ids, collapse = ', '),
+                   'in collection',
+                   collection_id))
+    }
+}
+
 figshare_list_collections <- function(token){
 
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::GET('https://api.figshare.com/v2/account/collections?page_size=1000',
+
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET('https://api.figshare.com/v2/account/collections?page_size=1000',
                    httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     return(content(r))
 }
@@ -10541,8 +10617,31 @@ figshare_list_collections <- function(token){
 figshare_list_articles <- function(token){
 
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::GET('https://api.figshare.com/v2/account/articles?page_size=1000',
-                   httr::add_headers(header))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET('https://api.figshare.com/v2/account/articles?page_size=1000',
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
+
+    return(content(r))
+}
+
+figshare_list_article_files <- function(article_id,
+                                        token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET(paste0('https://api.figshare.com/v2/account/articles/',
+                             article_id, '/files?page_size=1000'),
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     return(content(r))
 }
@@ -10552,6 +10651,7 @@ figshare_upload_article <- function(article_id,
                                     token,
                                     ...){
 
+    stop('undeveloped. still same as figshare_upload_article_packageversion')
     require(tools)
 
     base <- 'https://api.figshare.com/v2'
@@ -10607,15 +10707,13 @@ figshare_upload_article <- function(article_id,
                             config = httr::add_headers(auth_header))
 
     if(final_out$status_code > 202){
-        stop(paste('error uploading', article_id))
+        stop(paste0('error uploading ', basename(file), ' (', article_id, ').'))
     } else {
-        message(paste('Uploaded', article_id))
+        message(paste0('Uploaded ', basename(file), ' (', article_id, ').'))
     }
 }
 
-upload_dataset_to_figshare_packageversion <- function(dataset_version){
-
-    # require(rfigshare) #unmaintained
+upload_dataset_to_figshare <- function(dataset_version){
 
     ### ONE-TIME PREP
 
@@ -10645,19 +10743,29 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
 
+    # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
     message('uploading dataset to fighare under original format (still used by macrosheds package)')
 
-    stop('v1 has been uploaded and published. uploading again may automatically create v2. we need to carefully investigate this, and maybe write new API calls')
-    # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+                                  c('y', 'n'))
+
+    if(usr_rsp == 'n'){
+        print('aborting upload')
+        return()
+    }
 
     existing_articles <- figshare_list_articles(token)
-    existing_article_deets <- tibble(
+    existing_dmn_deets <- tibble(
         title = sapply(existing_articles, function(x) x$title),
         id = sapply(existing_articles, function(x) x$id),
         domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
     ) %>%
         filter(! is.na(domain)) %>%
         select(-title)
+    existing_extras_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+    )
 
     ### CREATE, UPLOAD, PUBLISH TIMESERIES
 
@@ -10675,63 +10783,47 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             ## if new dmn, create figshare "article", which in this case is a dataset.
             ## else get the fs_id of the existing article
 
-            if(! dmn %in% existing_article_deets$domain){
-                fs_id <- expo_backoff(
-                    expr = {
-                        figshare_create_article(
-                            title = glue('Network: ', ntw, ', Domain: ', dmn),
-                            description = glue('MacroSheds timeseries data, shapefiles, ',
-                                               'and metadata for domain: {d}, within network: {n}',
-                                               d = dmn,
-                                               n = ntw),
-                            keywords = list('czo'),
-                            category_ids = cat_ids,
-                            type = 'dataset',
-                            authors = conf$figshare_author_list,
-                            token = token)
-                    },
-                    max_attempts = 6
-                ) %>% invisible()
+            print(paste('uploading', ntw, dmn))
+
+            if(! dmn %in% existing_dmn_deets$domain){
+                fs_id <- figshare_create_article(
+                    title = glue('Network: ', ntw, ', Domain: ', dmn),
+                    description = glue('MacroSheds timeseries data, shapefiles, ',
+                                       'and metadata for domain: {d}, within network: {n}',
+                                       d = dmn,
+                                       n = ntw),
+                    keywords = list('czo'),
+                    category_ids = cat_ids,
+                    type = 'dataset',
+                    authors = conf$figshare_author_list,
+                    token = token)
             } else {
-                fs_id <- existing_article_deets$id[existing_article_deets$domain == dmn]
+                fs_id <- existing_dmn_deets$id[existing_dmn_deets$domain == dmn]
             }
 
-            HERE: now verify that uploading a new fie to the same article will auto-update version
+            #if existing article, delete old version
+            if(dmn %in% existing_dmn_deets$domain){
 
-            #upload domain zip to that article
-            expo_backoff(
-                expr = {
-                    # rfigshare::fs_upload(
-                    #     fs_id,
-                    #     file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
-                    #                 n = ntw,
-                    #                 d = dmn))
-                    figshare_upload_article(fs_id,
-                                            file = glue('{t}/{n}/{d}.zip',
-                                                        t = tld,
-                                                        n = ntw,
-                                                        d = dmn),
-                                            token = token)
-                },
-                max_attempts = 6
-            ) %>% invisible()
+                fls <- figshare_list_article_files(fs_id,
+                                                   token = token)
 
-            expo_backoff(
-                expr = {
-                    figshare_add_articles_to_collection(collection_id = collection_id,
-                                                        article_ids = fs_id,
-                                                        token = token)
-               },
-               max_attempts = 6
-            ) %>% invisible()
+                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
 
-            expo_backoff(
-                expr = {
-                    figshare_publish_article(article_id = fs_id,
+                figshare_delete_article_file(fs_id,
+                                             file_id = fls[[1]]$id,
                                              token = token)
-               },
-               max_attempts = 6
-            ) %>% invisible()
+            }
+
+            #upload new/updated domain zip to that article
+            figshare_upload_article(fs_id,
+                                    file = glue('{t}/{n}/{d}.zip',
+                                                t = tld,
+                                                n = ntw,
+                                                d = dmn),
+                                    token = token)
+
+            figshare_publish_article(article_id = fs_id,
+                                     token = token)
         }
     }
 
@@ -10739,6 +10831,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
                                  full.names = TRUE)
+    other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
     names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
     titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
 
@@ -10756,70 +10849,270 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
-    other_uploadsD <- c(documentation = '../portal/static/documentation/README.txt',
-                        policy = 'data/general/figshare_extras/macrosheds_documentation_packageformat/ws_attr_LEGAL.csv',
-                        policy = 'data/general/figshare_extras/macrosheds_documentation_packageformat/timeseries_LEGAL.csv',
-                        policy = 'data/general/figshare_extras/01_data_use_policy.txt')
+    other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
+                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
+                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
+                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
     titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
-    other_uploadsE <- c(metadata = 'data/general/figshare_extras/macrosheds_documentation_packageformat/site_metadata.csv',
-                        metadata = 'data/general/figshare_extras/macrosheds_documentation_packageformat/variable_metadata.csv')
+    other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
     titlesE <- c('site_metadata', 'variable_metadata')
 
     other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
     titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
+
+    print(paste('uploading extras'))
 
     for(i in seq_along(other_uploads)){
 
         uf <- other_uploads[i]
         ut <- titles[i]
 
-        fs_id <- expo_backoff(
-            expr = {
-                figshare_create_article(
-                    title = ut,
-                    description = 'See README',
-                    keywords = list(names(uf)),
-                    category_ids = cat_ids,
-                    authors = conf$figshare_author_list,
-                    type = 'dataset',
-                    token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        if(! ut %in% existing_extras_deets$title){
+            fs_id <- figshare_create_article(
+                title = ut,
+                description = 'See README',
+                keywords = list(names(uf)),
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+        }
 
-        expo_backoff(
-            expr = {
-                figshare_upload_article(fs_id,
-                                        file = unname(uf),
-                                        token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        #if existing article, delete old version
+        if(ut %in% existing_extras_deets$title){
 
-        expo_backoff(
-            expr = {
-                figshare_add_articles_to_collection(collection_id = collection_id,
-                                                    article_ids = fs_id,
-                                                    token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
 
-        expo_backoff(
-            expr = {
-                figshare_publish_article(article_id = fs_id,
+            if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+
+            figshare_delete_article_file(fs_id,
+                                         file_id = fls[[1]]$id,
                                          token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        }
+
+        figshare_upload_article(fs_id,
+                                file = unname(uf),
+                                token = token)
+
+        # figshare_add_articles_to_collection(collection_id = collection_id,
+        #                                     article_ids = fs_id,
+        #                                     token = token)
+
+        figshare_publish_article(article_id = fs_id,
+                                 token = token)
     }
 
 
-    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION
+    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
 
-    figshare_publish_collection(collection_id = collection_id,
+    # figshare_publish_collection(collection_id = collection_id,
+    #                             token = token)
+}
+
+upload_dataset_to_figshare_packageversion <- function(dataset_version){
+
+    ### ONE-TIME PREP
+
+    ## create a collection on Figshare (already done; its ID is below)
+
+    ## get a Figshare private access token (PAT) and add it to R env
+    # usethis::edit_r_environ()
+
+    ## get category IDs from category names
+    # qqq <- content(rfigshare::fs_category_list(debug = TRUE))[[1]]
+    # all_categories <- sapply(qqq, function(x) { xx = x$name; names(xx) = x$id ; return(xx)})
+    # categories <- c('Earth Sciences not elsewhere classified',
+    #                 'Environmental Monitoring',
+    #                 'Geochemistry not elsewhere classified',
+    #                 'Hydrology',
+    #                 'Landscape Ecology',
+    #                 'Freshwater Ecology')
+    # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
+
+
+    ### EVERY-TIME PREP
+
+    collection_id <- 5621740 #see comments above
+    token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
+    auth_header <- c(Authorization = sprintf('token %s', token))
+    cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
+                vv = dataset_version)
+
+    # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
+    message('uploading dataset to fighare under original format (still used by macrosheds package)')
+
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+                                  c('y', 'n'))
+
+    if(usr_rsp == 'n'){
+        print('aborting upload')
+        return()
+    }
+
+    existing_articles <- figshare_list_articles(token)
+    existing_dmn_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
+    ) %>%
+        filter(! is.na(domain)) %>%
+        select(-title)
+    existing_extras_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+    )
+
+    ### CREATE, UPLOAD, PUBLISH TIMESERIES
+
+    ntws <- list.files(tld)
+
+    for(i in seq_along(ntws)){
+
+        ntw <- ntws[i]
+        dmns <- list.files(file.path(tld, ntw))
+
+        for(j in seq_along(dmns)){
+
+            dmn <- sub('.zip', '', dmns[j])
+
+            ## if new dmn, create figshare "article", which in this case is a dataset.
+            ## else get the fs_id of the existing article
+
+            print(paste('uploading', ntw, dmn))
+
+            if(! dmn %in% existing_dmn_deets$domain){
+                fs_id <- figshare_create_article(
+                    title = glue('Network: ', ntw, ', Domain: ', dmn),
+                    description = glue('MacroSheds timeseries data, shapefiles, ',
+                                       'and metadata for domain: {d}, within network: {n}',
+                                       d = dmn,
+                                       n = ntw),
+                    keywords = list('czo'),
+                    category_ids = cat_ids,
+                    type = 'dataset',
+                    authors = conf$figshare_author_list,
+                    token = token)
+            } else {
+                fs_id <- existing_dmn_deets$id[existing_dmn_deets$domain == dmn]
+            }
+
+            #if existing article, delete old version
+            if(dmn %in% existing_dmn_deets$domain){
+
+                fls <- figshare_list_article_files(fs_id,
+                                                   token = token)
+
+                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+
+                figshare_delete_article_file(fs_id,
+                                             file_id = fls[[1]]$id,
+                                             token = token)
+            }
+
+            #upload new/updated domain zip to that article
+            figshare_upload_article(fs_id,
+                                    file = glue('{t}/{n}/{d}.zip',
+                                                t = tld,
+                                                n = ntw,
+                                                d = dmn),
+                                    token = token)
+
+            figshare_publish_article(article_id = fs_id,
+                                     token = token)
+        }
+    }
+
+
+    ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
+    other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
+                                 full.names = TRUE)
+    other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
+    names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
+    titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
+
+    other_uploadsB <- c(
+        documentation = '../portal/static/documentation/timeseries/columns.txt',
+        documentation = '../portal/static/documentation/watershed_summary/columns.csv',
+        documentation = '../portal/static/documentation/watershed_trait_timeseries/columns.txt')
+    titlesB <- paste(str_match(other_uploadsB,
+                               '/([^/]+)/columns\\....$')[, 2],
+                     'column descriptions')
+
+    other_uploadsC <- list.files('../portal/static/documentation',
+                                 full.names = TRUE,
+                                 pattern = '*.csv')
+    names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
+    titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
+
+    other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
+                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
+                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
+                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
+    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
+
+    other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
+    titlesE <- c('site_metadata', 'variable_metadata')
+
+    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
+    titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
+
+    print(paste('uploading extras'))
+
+    for(i in seq_along(other_uploads)){
+
+        uf <- other_uploads[i]
+        ut <- titles[i]
+
+        if(! ut %in% existing_extras_deets$title){
+            fs_id <- figshare_create_article(
+                title = ut,
+                description = 'See README',
+                keywords = list(names(uf)),
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+        }
+
+        if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+
+        #if existing article, delete old version
+        if(ut %in% existing_extras_deets$title){
+
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
+
+            figshare_delete_article_file(fs_id,
+                                         file_id = fls[[1]]$id,
+                                         token = token)
+        }
+
+        figshare_upload_article(fs_id,
+                                file = unname(uf),
                                 token = token)
+
+        # figshare_add_articles_to_collection(collection_id = collection_id,
+        #                                     article_ids = fs_id,
+        #                                     token = token)
+
+        figshare_publish_article(article_id = fs_id,
+                                 token = token)
+    }
+
+
+    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
+
+    # figshare_publish_collection(collection_id = collection_id,
+    #                             token = token)
 }
 
 detrmin_mean_record_length <- function(df){
