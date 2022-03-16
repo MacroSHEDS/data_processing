@@ -2,10 +2,11 @@ Thanks for checking out MacroSheds.
 
 There's a lot of documentation here. We don't expect you to read everything, but PLEASE
 carefully consider the data policy. Most of the data included here are (re)distributed
-under CC-BY-4.0, so you're free to share and adapt with attribution, but a few of our
-primary sources have more restrictive rules, and you could get into trouble by using
-MacroSheds data heedlessly. See the data policy (01_data_use_policy.txt, alongside this readme)
-for more information.
+under CC0 (no rights reserved) or CC-BY-4.0 (attribution required), but a few of our
+primary sources have more restrictive rules. See the data policy (01_data_use_policy.txt)
+alongside this readme for more information. For citations, licenses, etc., broken down
+by domain and product, see 05a_timeseries_LEGAL.csv and 06a_ws_attr_LEGAL.csv.
+And please contact us (mail@macrosheds.org) if you feel any MacroSheds content should be amended.
 
 Otherwise, just refer to this file, and the many others it describes, as needed. And
 don't forget about macrosheds.org for visualizing the MacroSheds dataset, and the "macrosheds"
@@ -40,7 +41,6 @@ DOCUMENTATION (this directory)
 
 WATERSHED ATTRIBUTES
 summaries
-(annual summaries)?
 timeseries by category, 1-6
 maybe add some readmes that refer back to the master readmes
 
