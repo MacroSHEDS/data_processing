@@ -10744,95 +10744,41 @@ upload_dataset_to_figshare <- function(dataset_version){
     token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
     auth_header <- c(Authorization = sprintf('token %s', token))
     cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
-                vv = dataset_version)
+    tld <- paste0('macrosheds_figshare_v', dataset_version)
 
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
-    message('uploading dataset to fighare under original format (still used by macrosheds package)')
+    message('uploading official dataset to fighare collection')
 
     usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
                                   c('y', 'n'))
 
     if(usr_rsp == 'n'){
-        print('aborting upload')
+        print('upload aborted')
         return()
     }
 
     existing_articles <- figshare_list_articles(token)
-    existing_dmn_deets <- tibble(
-        title = sapply(existing_articles, function(x) x$title),
-        id = sapply(existing_articles, function(x) x$id),
-        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
-    ) %>%
-        filter(! is.na(domain)) %>%
-        select(-title)
-    existing_extras_deets <- tibble(
+    existing_article_deets <- tibble(
         title = sapply(existing_articles, function(x) x$title),
         id = sapply(existing_articles, function(x) x$id),
     )
 
-    ### CREATE, UPLOAD, PUBLISH TIMESERIES
+    ### ASSEMBLE DATASET COMPONENTS
 
-    ntws <- list.files(tld)
+    components <- paste(tld,
+                        c('macrosheds_documentation', 'macrosheds_timeseries_data',
+                          'macrosheds_watershed_attribute_data'),
+                        sep = '/')
 
-    for(i in seq_along(ntws)){
+    for(comp in components){
 
-        ntw <- ntws[i]
-        dmns <- list.files(file.path(tld, ntw))
+        compzip <- paste0(comp, '.zip')
+        if(file.exists(compzip)) unlink(compzip)
 
-        for(j in seq_along(dmns)){
+        zip(zipfile = compzip,
+            files = comp,
+            flags = '-rj9X')
 
-            dmn <- sub('.zip', '', dmns[j])
-
-            ## if new dmn, create figshare "article", which in this case is a dataset.
-            ## else get the fs_id of the existing article
-
-            print(paste('uploading', ntw, dmn))
-
-            if(! dmn %in% existing_dmn_deets$domain){
-                fs_id <- figshare_create_article(
-                    title = glue('Network: ', ntw, ', Domain: ', dmn),
-                    description = glue('MacroSheds timeseries data, shapefiles, ',
-                                       'and metadata for domain: {d}, within network: {n}',
-                                       d = dmn,
-                                       n = ntw),
-                    keywords = list('czo'),
-                    category_ids = cat_ids,
-                    type = 'dataset',
-                    authors = conf$figshare_author_list,
-                    token = token)
-            } else {
-                fs_id <- existing_dmn_deets$id[existing_dmn_deets$domain == dmn]
-            }
-
-            #if existing article, delete old version
-            if(dmn %in% existing_dmn_deets$domain){
-
-                fls <- figshare_list_article_files(fs_id,
-                                                   token = token)
-
-                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-
-                figshare_delete_article_file(fs_id,
-                                             file_id = fls[[1]]$id,
-                                             token = token)
-            }
-
-            #upload new/updated domain zip to that article
-            figshare_upload_article(fs_id,
-                                    file = glue('{t}/{n}/{d}.zip',
-                                                t = tld,
-                                                n = ntw,
-                                                d = dmn),
-                                    token = token)
-
-            figshare_publish_article(article_id = fs_id,
-                                     token = token)
-        }
-    }
-
-
-    ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
                                  full.names = TRUE)
     other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
@@ -10866,14 +10812,14 @@ upload_dataset_to_figshare <- function(dataset_version){
     other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
     titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
 
-    print(paste('uploading extras'))
+    ### CREATE, UPLOAD, ADD TO COLLECTION, PUBLISH, PUBLISH COLLECTION
 
     for(i in seq_along(other_uploads)){
 
         uf <- other_uploads[i]
         ut <- titles[i]
 
-        if(! ut %in% existing_extras_deets$title){
+        if(! ut %in% existing_article_deets$title){
             fs_id <- figshare_create_article(
                 title = ut,
                 description = 'See README',
@@ -10883,11 +10829,11 @@ upload_dataset_to_figshare <- function(dataset_version){
                 type = 'dataset',
                 token = token)
         } else {
-            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+            fs_id <- existing_article_deets$id[existing_article_deets$title == ut]
         }
 
         #if existing article, delete old version
-        if(ut %in% existing_extras_deets$title){
+        if(ut %in% existing_article_deets$title){
 
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
@@ -10903,9 +10849,9 @@ upload_dataset_to_figshare <- function(dataset_version){
                                 file = unname(uf),
                                 token = token)
 
-        # figshare_add_articles_to_collection(collection_id = collection_id,
-        #                                     article_ids = fs_id,
-        #                                     token = token)
+        figshare_add_articles_to_collection(collection_id = collection_id,
+                                            article_ids = fs_id,
+                                            token = token)
 
         figshare_publish_article(article_id = fs_id,
                                  token = token)
@@ -10914,15 +10860,13 @@ upload_dataset_to_figshare <- function(dataset_version){
 
     ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
 
-    # figshare_publish_collection(collection_id = collection_id,
-    #                             token = token)
+    figshare_publish_collection(collection_id = collection_id,
+                                token = token)
 }
 
 upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     ### ONE-TIME PREP
-
-    ## create a collection on Figshare (already done; its ID is below)
 
     ## get a Figshare private access token (PAT) and add it to R env
     # usethis::edit_r_environ()
@@ -10941,7 +10885,6 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     ### EVERY-TIME PREP
 
-    collection_id <- 5621740 #see comments above
     token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
     auth_header <- c(Authorization = sprintf('token %s', token))
     cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
@@ -10955,7 +10898,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                   c('y', 'n'))
 
     if(usr_rsp == 'n'){
-        print('aborting upload')
+        print('upload aborted')
         return()
     }
 
