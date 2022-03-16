@@ -264,7 +264,7 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    
+
     # held_data = get_data_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge')
@@ -312,8 +312,6 @@ for(dmnrow in 1:nrow(network_domain)){
 logger_module <- 'ms.module'
 
 # write csv + readme domain metadata
-metadata_scrape()
-
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
