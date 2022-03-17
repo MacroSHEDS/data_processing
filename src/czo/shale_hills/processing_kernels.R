@@ -262,7 +262,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'P (\u03bcmol L-1)' = 'P',
                                         'Zn (\u03bcmol L-1)' = 'Zn'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         convert_to_BDL_flag = c('BDL'))
 
     h6 <- ms_cast_and_reflag(h6,
                              varflag_col_pattern = NA)
