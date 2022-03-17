@@ -620,6 +620,7 @@ ms_read_raw_csv <- function(filepath,
                             alt_datacol_pattern,
                             is_sensor,
                             set_to_NA,
+                            convert_to_BDL_flag,
                             set_to_0,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
@@ -696,7 +697,15 @@ ms_read_raw_csv <- function(filepath,
     #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
     #set_to_NA: For values such as 9999 that are proxies for NA values.
-    #set_to_0: For values that we want to set to zero. This can be used to set
+    #convert_to_BDL_flag: character vector of QC flags that should be interpreted
+    #   as "below detection limit". For numeric codes, e.g. -888, give their
+    #   character representations, i.e. "-888."
+    #   This is only for below-detection-limit flags within data columns.
+    #   Codes will be standardized to "BDL" and extracted into the variable-flag column
+    #   corresponding to each data variable. Variable-flag columns will be created
+    #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
+    #set_to_0: For values that we want to set to zero. We're setting BDLs to
+    #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
@@ -787,6 +796,10 @@ ms_read_raw_csv <- function(filepath,
 
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
+    }
+
+    if(missing(convert_to_BDL_flag)) {
+        convert_to_BDL_flag <- NULL
     }
 
     if(missing(set_to_0)) {
@@ -906,9 +919,9 @@ ms_read_raw_csv <- function(filepath,
                across(everything(), as.character))
     }
 
-    d <- d %>%
-        as_tibble() %>%
-        select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
+    d <- sw(select(d, any_of(c(names(colnames_all), 'NA.')))) %>% #for NA meaning "sodium"
+        as_tibble()
+
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
 
     # Remove any variable flags created by pattern but do not exist in data
@@ -930,9 +943,44 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    #move BDL flags from data columns into flag columns. Replace with NA,
+    #which will be converted to 1/2 detlim downstream
+    bdl_cols_do_not_drop <- c()
+    for(i in seq_along(convert_to_BDL_flag)){
+
+        bdl_flag <- convert_to_BDL_flag[i]
+        all_datacols <- c(data_cols, alt_datacols)
+        for(j in seq_along(all_datacols)){
+
+            d_varcode <- unname(all_datacols)[j]
+            d_colname <- names(all_datacols)[j]
+            d_clm <- d[[d_colname]]
+            if(is.null(d_clm)) next #column doesn't exist
+
+            bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
+
+            candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
+
+            var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
+            if(! var_flagcol_already_exists){
+                d[[candidate_flagcol]] <- NA_character_
+            }
+
+            d[bdl_inds, candidate_flagcol] <- 'BDL'
+            d[bdl_inds, d_colname] <- NA_character_
+
+            bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
+                                      paste0(d_colname, '__|dat'))
+        }
+    }
+
+    bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
+
     #Set correct class for each column
     colnames_d <- colnames(d)
 
+    illegal_chars <- c()
     for(i in 1:ncol(d)){
 
         if(colnames_d[i] == 'NA.'){
@@ -940,9 +988,26 @@ ms_read_raw_csv <- function(filepath,
             next
         }
 
-        class(d[[i]]) <- classes_all[names(classes_all) == colnames_d[i]]
+        if(colnames_d[i] == 'numeric'){
+            illegal_char_inds <- sw(! is.na(d[[i]]) & is.na(as.numeric(d[[i]])))
+            new_illegal_chars <- unique(pull(d[illegal_char_inds, i]))
+            illegal_chars <- c(illegal_chars, new_illegal_chars)
+
+            print(paste0('illegal chars in column ', colnames_d[i], ': ',
+                         paste(new_illegal_chars, collapse = ', ')))
+        }
+
+        sw(class(d[[i]]) <- classes_all[names(classes_all) == colnames_d[i]])
     }
-    # d[] <- sw(Map(`class<-`, d, classes_all)) #sometimes classes_all is too long, which makes this fail
+
+    logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
+                       n = network,
+                       d = domain,
+                       s = site_code,
+                       p = prodname_ms,
+                       cc = component,
+                       ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
+            logger = logger_module)
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
@@ -972,12 +1037,13 @@ ms_read_raw_csv <- function(filepath,
                 across(any_of(c('datetime', 'site_code')),
                        ~ ! is.na(.x)))
 
-    #remove all-NA data columns and rows with NA in all data columns.
+    #remove all-NA data columns (except if they have BDLs) and rows with NA in all data columns.
     #also remove flag columns for all-NA data columns.
     all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
                               MARGIN = 2,
                               function(x) all(is.na(x)))
     all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
+    all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
     all_na_cols <- c(all_na_cols,
                      sub(pattern = '__\\|dat',
                          replacement = '__|flg',
@@ -1016,7 +1082,7 @@ ms_read_raw_csv <- function(filepath,
         is_sensor <- is_sensor[data_col_order]
     }
 
-    #fix sites names if multiple names refer to the same site
+    #fix site names if multiple names refer to the same site
     if(! is.null(alt_site_code)){
 
         for(z in 1:length(alt_site_code)){
