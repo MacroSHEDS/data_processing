@@ -10551,8 +10551,8 @@ figshare_publish_collection <- function(collection_id,
 }
 
 figshare_add_new_articles_to_collection <- function(collection_id,
-                                                article_ids,
-                                                token){
+                                                    article_ids,
+                                                    token){
 
     if(is.numeric(article_ids)) article_ids <- as.list(article_ids)
 
@@ -10655,7 +10655,6 @@ figshare_upload_article <- function(article_id,
                                     token,
                                     ...){
 
-    stop('undeveloped. still same as figshare_upload_article_packageversion')
     require(tools)
 
     base <- 'https://api.figshare.com/v2'
@@ -10765,75 +10764,49 @@ upload_dataset_to_figshare <- function(dataset_version){
 
     ### ASSEMBLE DATASET COMPONENTS
 
-    components <- paste(tld,
-                        c('macrosheds_documentation', 'macrosheds_timeseries_data',
-                          'macrosheds_watershed_attribute_data'),
-                        sep = '/')
+    components <- c('macrosheds_documentation', 'macrosheds_timeseries_data',
+                    'macrosheds_watershed_attribute_data')
 
+    fs_ids <- c()
     for(comp in components){
 
         compzip <- paste0(comp, '.zip')
         if(file.exists(compzip)) unlink(compzip)
 
+        setwd(tld) #can't seem to find a way around setwd. zip inserts junk files otherwise. -j can't be used here.
         zip(zipfile = compzip,
             files = comp,
-            flags = '-rj9X')
+            flags = '-r9X')
+        setwd('..')
 
-    other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
-                                 full.names = TRUE)
-    other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
-    names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
-    titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
+        keywords <- list('watershed', 'basin', 'catchment', 'ecosystem', 'long-term data',
+                         'compilation', 'hydrology', 'climate', 'terrain', 'landcover',
+                         'biogeochemistry', 'stream', 'river')
 
-    other_uploadsB <- c(
-        documentation = '../portal/static/documentation/timeseries/columns.txt',
-        documentation = '../portal/static/documentation/watershed_summary/columns.csv',
-        documentation = '../portal/static/documentation/watershed_trait_timeseries/columns.txt')
-    titlesB <- paste(str_match(other_uploadsB,
-                               '/([^/]+)/columns\\....$')[, 2],
-                     'column descriptions')
+        ### FIGSHARE INTERACTIONS
 
-    other_uploadsC <- list.files('../portal/static/documentation',
-                                 full.names = TRUE,
-                                 pattern = '*.csv')
-    names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
-    titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
+        existing_article <- comp %in% existing_article_deets$title
 
-    other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
-                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
-                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
-                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
-    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
-
-    other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
-                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
-    titlesE <- c('site_metadata', 'variable_metadata')
-
-    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
-    titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
-
-    ### CREATE, UPLOAD, ADD TO COLLECTION, PUBLISH, PUBLISH COLLECTION
-
-    for(i in seq_along(other_uploads)){
-
-        uf <- other_uploads[i]
-        ut <- titles[i]
-
-        if(! ut %in% existing_article_deets$title){
+        #if existing article, get figshare ID; otherwise create new article
+        if(! existing_article){
             fs_id <- figshare_create_article(
-                title = ut,
-                description = 'See README',
-                keywords = list(names(uf)),
+                title = comp,
+                description = case_when(comp == 'macrosheds_documentation' ~ 'Documentation, metadata, and legal information about the MacroSheds dataset',
+                                        comp == 'macrosheds_timeseries_data' ~ 'All MacroSheds discharge, precip, and chemistry time series',
+                                        comp == 'macrosheds_watershed_attribute_data' ~ 'All MacroSheds watershed descriptor data'),
+                keywords = keywords,
                 category_ids = cat_ids,
                 authors = conf$figshare_author_list,
                 type = 'dataset',
                 token = token)
         } else {
-            fs_id <- existing_article_deets$id[existing_article_deets$title == ut]
+            fs_id <- existing_article_deets$id[existing_article_deets$title == comp]
         }
 
+        fs_ids <- c(fs_ids, fs_id)
+
         #if existing article, delete old version
-        if(ut %in% existing_article_deets$title){
+        if(existing_article){
 
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
@@ -10846,19 +10819,26 @@ upload_dataset_to_figshare <- function(dataset_version){
         }
 
         figshare_upload_article(fs_id,
-                                file = unname(uf),
+                                file = file.path(tld, compzip),
                                 token = token)
 
-        figshare_add_articles_to_collection(collection_id = collection_id,
-                                            article_ids = fs_id,
-                                            token = token)
+        if(! existing_article){
+            figshare_add_new_articles_to_collection(collection_id = collection_id,
+                                                    article_ids = fs_id,
+                                                    token = token)
+        }
+    }
 
+    figshare_replace_all_articles_in_collection(collection_id = collection_id,
+                                                article_ids = fs_ids,
+                                                token = token)
+
+    for(comp in components){
         figshare_publish_article(article_id = fs_id,
                                  token = token)
     }
 
-
-    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
+    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION
 
     figshare_publish_collection(collection_id = collection_id,
                                 token = token)
