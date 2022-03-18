@@ -239,7 +239,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          datetime_tz = 'America/New_York',
                          site_code_col = 'Site',
                          alt_site_code = list('SH_weir' = c('SSHCZO-WIER', 'SH-WEIR'),
-                                              'GRO' = 'GR outlet', 'GR'),
+                                              'GRO' = c('GR outlet', 'GR')),
                          data_cols =  c('Temperature (C )' = 'temp',
                                         'pH',
                                         'DO (%)' = 'DO_sat',

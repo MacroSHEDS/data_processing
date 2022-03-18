@@ -699,7 +699,7 @@ ms_read_raw_csv <- function(filepath,
     #set_to_NA: For values such as 9999 that are proxies for NA values.
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
-    #   character representations, i.e. "-888."
+    #   character representations, i.e. "-888".
     #   This is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
     #   corresponding to each data variable. Variable-flag columns will be created
@@ -710,7 +710,8 @@ ms_read_raw_csv <- function(filepath,
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
     #   data column, omit this argument and use summary_flagcols for all
-    #   flag information.
+    #   flag information. If that one data column contains BDL flags (see
+    #   convert_to_BDL_flag), some amending of this function might be needed.
     #alt_varflagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. just in case there are two naming conventions for
     #   variable-specific flag columns
@@ -782,6 +783,10 @@ ms_read_raw_csv <- function(filepath,
         if(! sampling_type %in% c('G', 'I')){
             stop('sampling_type must be either I or G')
         }
+    }
+
+    if(missing(var_flagcol_pattern) && ! missing(alt_varflagcol_pattern)){
+        stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
     }
 
     #parse args; deal with missing args
@@ -946,6 +951,7 @@ ms_read_raw_csv <- function(filepath,
     #move BDL flags from data columns into flag columns. Replace with NA,
     #which will be converted to 1/2 detlim downstream
     bdl_cols_do_not_drop <- c()
+    new_varflag_cols <- c()
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
@@ -960,11 +966,17 @@ ms_read_raw_csv <- function(filepath,
             bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
+            if(! is.na(var_flagcols)){
+                candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
+                var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
+            } else {
+                candidate_flagcol <- paste0(d_varcode, '__|flg')
+                var_flagcol_already_exists <- FALSE
+            }
 
-            var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             if(! var_flagcol_already_exists){
                 d[[candidate_flagcol]] <- NA_character_
+                new_varflag_cols <- c(new_varflag_cols, candidate_flagcol)
             }
 
             d[bdl_inds, candidate_flagcol] <- 'BDL'
@@ -977,6 +989,11 @@ ms_read_raw_csv <- function(filepath,
 
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
 
+    #establish class of newly created varflag cols
+    new_varflag_classes <- rep('character', times = length(new_varflag_cols))
+    names(new_varflag_classes) <- new_varflag_cols
+    classes_all <- c(classes_all, new_varflag_classes)
+
     #Set correct class for each column
     colnames_d <- colnames(d)
 
@@ -984,28 +1001,38 @@ ms_read_raw_csv <- function(filepath,
     for(i in 1:ncol(d)){
 
         if(colnames_d[i] == 'NA.'){
-            class(d[[i]]) <- 'numeric'
+            sw(class(d[[i]]) <- 'numeric')
             next
         }
 
-        if(colnames_d[i] == 'numeric'){
-            illegal_char_inds <- sw(! is.na(d[[i]]) & is.na(as.numeric(d[[i]])))
-            new_illegal_chars <- unique(pull(d[illegal_char_inds, i]))
-            illegal_chars <- c(illegal_chars, new_illegal_chars)
+        newclass <- unname(classes_all[names(classes_all) == colnames_d[i]])
 
-            print(paste0('illegal chars in column ', colnames_d[i], ': ',
-                         paste(new_illegal_chars, collapse = ', ')))
+        #notify about illegal characters in data columns
+        if(newclass == 'numeric'){
+
+            illegal_char_inds <- sw(! is.na(d[[i]]) & is.na(as.numeric(d[[i]])))
+            if(any(illegal_char_inds)){
+
+                new_illegal_chars <- unique(pull(d[illegal_char_inds, i]))
+                illegal_chars <- c(illegal_chars, new_illegal_chars)
+
+                message(paste0('[See next log warning.] Illegal chars in column ', colnames_d[i], ': "',
+                               paste(new_illegal_chars, collapse = '", "'),
+                               '"'))
+            }
         }
 
-        sw(class(d[[i]]) <- classes_all[names(classes_all) == colnames_d[i]])
+        sw(class(d[[i]]) <- newclass)
     }
 
+    illegal_chars <- unique(illegal_chars)
+    cmpnt <- if(exists('component')) component else '[no component]'
     logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
                        n = network,
                        d = domain,
                        s = site_code,
                        p = prodname_ms,
-                       cc = component,
+                       cc = cmpnt,
                        ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
             logger = logger_module)
 
@@ -1317,9 +1344,11 @@ ms_cast_and_reflag <- function(d,
                                variable_flags_to_drop,
                                variable_flags_clean,
                                variable_flags_dirty,
+                               variable_flags_bdl,
                                summary_flags_to_drop,
                                summary_flags_clean,
-                               summary_flags_dirty){
+                               summary_flags_dirty,
+                               summary_flags_bdl){
 
     #TODO: add a silent = TRUE option. this would hide all warnings
     #allow for alternative pattern specifications.
@@ -1355,14 +1384,19 @@ ms_cast_and_reflag <- function(d,
     #   set to NA. This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
-    #   ms_status of 1, meaning dirty. This parameter is optional, though at least 2
+    #   ms_status of 1, meaning dirty/questionable. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
     #   must be supplied if varflag_col_pattern is not
     #   set to NA. This parameter does not use the '#*#' wildcard.
+    #variable_flags_bdl: optional character vector of values that might appear in
+    #   the variable flag columns indicating that their corresponding data values are
+    #   below detection limit. These values will be replaced with half their
+    #   detection limit, determined by identify_detection_limit_t. Resulting
+    #   ms_status will be set to 1 (dirty/questionable).
     #summary_flags_to_drop: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in
-    #   the summary flag/status columns. Elements of these vectors are treated as
+    #   the summary flag/status columns. Associated records are treated as
     #   bad data and are removed. Use '#*#' to refer to all values not
     #   included in summary_flags_clean. This parameter is optional, though
     #   if there are summary flag columns, at least 2
@@ -1374,7 +1408,7 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_clean: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Elements of these vectors are given an ms_status of 0, meaning clean.
+    #   Associated records are given an ms_status of 0, meaning clean.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
@@ -1385,7 +1419,7 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_dirty: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Elements of these vectors are given an ms_status of 1, meaning dirty.
+    #   Associated records are given an ms_status of 1, meaning dirty.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
@@ -1393,6 +1427,11 @@ ms_cast_and_reflag <- function(d,
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
+    #summary_flags_bdl: optional named list. names correspond to columns in d that
+    #   contain summary flag/status information. List elements must be character vectors
+    #   of values that might appear in the summary flag/status columns.
+    #   Associated data records are assigned 1/2 their detection limit (determined
+    #   by identify_detection_limit_t and ms_status is set to 1 (dirty/questionable).
 
     #return value: a long-format tibble with 5 columns: datetime, site_code,
     #   var, val, ms_status. Rows with NA in any column are removed.
@@ -1405,7 +1444,8 @@ ms_cast_and_reflag <- function(d,
     sumdrop <- ! missing(summary_flags_to_drop) && ! is.null(summary_flags_to_drop)
     sumclen <- ! missing(summary_flags_clean) && ! is.null(summary_flags_clean)
     sumdirt <- ! missing(summary_flags_dirty) && ! is.null(summary_flags_dirty)
-    no_sumflags <- all(c(sumdrop, sumclen, sumdirt) == FALSE)
+    sumbdl <- ! missing(summary_flags_bdl) && ! is.null(summary_flags_bdl)
+    no_sumflags <- all(c(sumdrop, sumclen, sumdirt) == FALSE) #not including bdl...
 
     if(sum(c(sumdrop, sumclen, sumdirt)) == 1){
         stop(paste0('Must supply 2 (or none) of summary_flags_to_drop, ',
@@ -1443,6 +1483,7 @@ ms_cast_and_reflag <- function(d,
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
     varclen <- ! missing(variable_flags_clean) && ! is.null(variable_flags_clean)
     vardirt <- ! missing(variable_flags_dirty) && ! is.null(variable_flags_dirty)
+    varbdl <- ! missing(variable_flags_bdl) && ! is.null(variable_flags_bdl)
     no_varflags <- is.na(varflag_col_pattern)
 
     if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags){
@@ -1470,6 +1511,8 @@ ms_cast_and_reflag <- function(d,
         } else {
             summary_colnames <- names(summary_flags_clean)
         }
+    } else if(sumbdl){
+        summary_colnames <- names(summary_flags_bdl)
     } else {
         summary_colnames <- NULL
     }
@@ -1517,7 +1560,22 @@ ms_cast_and_reflag <- function(d,
 
     #remove rows with NA in the value column (these take up space and can be
     #reconstructed by casting to wide form
+    HERE (see also below)
+    need to see how identify_detection_limit_t works with NAs
+    DO NOT remove NAs here. remove them after until after BDL has been applied below
     d <- filter(d, ! is.na(dat))
+
+    #get detection limits so we can apply 1/2 detlim for flags indicating sample is below detlim
+    if(sumbdl || varbdl){
+
+        detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
+                                                  arrange(site_code, var, datetime),
+                                              write_detlim_file = FALSE,
+                                              return_detlims = TRUE,
+                                              ignore_arrange = TRUE)
+
+        halfdl <- 10^-detlims / 2 #convert detlim from int to decimal, then half it
+    }
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
@@ -1559,7 +1617,22 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
-    #binarize remaining flag information (0 = clean, 1 = dirty)
+    HERE (see above too)
+    fill out the two template conditionals below
+    make sure control flow is still intact for this function. its pretty heavy
+    need to test this function with both varflags and summflags
+    ms_cast_and_reflag (process_1_2783) has test code in it "TEST"
+
+    #set BDL values and ms_statuses
+    if(sumbdl){
+
+    }
+
+    if(varbdl){
+        variable_flags_bdl
+    }
+
+    #binarize remaining flag information (0 = clean, 1 = questionable)
     if(! no_varflags){
         if(varclen){
             d <- mutate(d, ms_status = case_when(
@@ -8448,29 +8521,39 @@ knit_det_limits <- function(network, domain, prodname_ms){
     return(detlim)
 }
 
-identify_detection_limit_t <- function(X, network, domain, prodname_ms,
+identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodname_ms = NULL,
+                                       write_detlim_file = TRUE,
                                        return_detlims = FALSE,
                                        ignore_arrange = FALSE){
 
+    #X: dataframe in proto-MacroSheds format. see below
+    #network: string, name of network, required only if write_detlim_file is TRUE
+    #domain: string, name of domain, required only if write_detlim_file is TRUE
+    #prodname_ms: string, name of prodname_ms, required only if write_detlim_file is TRUE
+    #write_detlim_file: logical. if TRUE, detlims will be written to disk. see below.
+    #return_detlims: logical. if TRUE, detlims will be returned. see below.
+    #ignore arrange: logical. do we need this param? can it be hard-coded? neon is the only domain that needs TRUE. let's investigate.
+
     #this is the temporally explicit version of identify_detection_limit (_t).
     #it supersedes the scalar version (identify_detection_limit_s).
-    #that version just returns its output. This version relies on stored data,
-    #so automatically writes to data/<network>/<domain>/detection_limits.json,
+    #that version just returns its output. This version optionally writes
+    #to data/<network>/<domain>/detection_limits.json,
     #and, if return_detlims = TRUE, returns its output as an integer vector
     #of detection limits with length equal to the number of rows in X, where each
-    #value holds the detection limit of its corresponding data value in X$val
+    #value holds the detection limit of its corresponding data value in X$val.
 
     #X is a 2d array-like object. must have datetime,
     #site_code, var, and val columns. if X was generated by ms_cast_and_reflag,
     #you're good to go.
 
-    #the detection limit (number of decimal places)
+    #if desired, the detection limit (number of decimal places)
     #of each column is written to data/<network>/<domain>/detection_limits.json
     #as a nested list:
     #prodname_ms
-    #    variable
-    #        startdt: datetime1, datetime2, datetimeN...
-    #        lim:     limit1,    limit2,    limitN...
+    #    site_code
+    #        variable
+    #            startdt: datetime1, datetime2... datetimeN
+    #            lim:     limit1,    limit2...    limitN
 
     #detection limit (detlim) is computed as the
     #number of characters following the decimal. NA detlims are filled
@@ -8485,118 +8568,129 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     #   won't line up with their corresponding data values.
     #   If X was generated by ms_cast_and_reflag, you're good to go.
 
-    if(!isTRUE(ignore_arrange)){
+    if(! write_detlim_file && ! return_detlims){
+        stop('write_detlim_file and return_detlims both FALSE. nothing to do.')
+    }
+
+    if(write_detlim_file && any(c(is.null(prodname_ms), is.null(network), is.null(domain)))){
+        stop('prodname_ms, network, and domain must be supplied if write_detlim_file is TRUE')
+    }
+
+    if(! ignore_arrange){
         X <- as_tibble(X) %>%
             arrange(site_code, var, datetime)
     }
 
-    identify_detection_limit_ <- function(X, v, output = 'list'){
+    if(write_detlim_file){
 
-        if(! output %in% c('vector', 'list')){
-            stop('output must be "vector" or "list"')
-        }
+        identify_detection_limit_ <- function(X, v, output = 'list'){
 
-        x <- filter(X, var == v)
+            if(! output %in% c('vector', 'list')){
+                stop('output must be "vector" or "list"')
+            }
 
-        if(nrow(x) == 0){
-            return(NULL)
-        }
+            x <- filter(X, var == v)
 
-        sn = x$site_code
-        dt = x$datetime
+            if(nrow(x) == 0){
+                return(NULL)
+            }
 
-        options(scipen = 100)
-        nas <- is.na(x$val) | x$val == 0
+            sn = x$site_code
+            dt = x$datetime
 
-        val <- as.character(x$val)
-        nsigdigs <- stringr::str_split_fixed(val, '\\.', 2)[, 2] %>%
-            nchar()
+            options(scipen = 100)
+            nas <- is.na(x$val) | x$val == 0
 
-        nsigdigs[nas] <- NA
+            val <- as.character(x$val)
+            nsigdigs <- stringr::str_split_fixed(val, '\\.', 2)[, 2] %>%
+                nchar()
 
-        #for each site, clean up the timeseries of detection limits:
-        #   first, fill NAs by locf, then by nocb
-        #   next, force positive monotonicity by locf
-        nsigdigs_l <- tibble(nsigdigs, dt, sn) %>%
-            base::split(sn) %>%
-            map(~ if(all(is.na(.x$nsigdigs))) .x else
-                mutate(.x,
-                       nsigdigs = imputeTS::na_locf(nsigdigs,
-                                                    na_remaining = 'rev') %>%
-                           force_monotonic_locf()))
+            nsigdigs[nas] <- NA
 
-        if(output == 'vector'){
+            #for each site, clean up the timeseries of detection limits:
+            #   first, fill NAs by locf, then by nocb
+            #   next, force positive monotonicity by locf
+            nsigdigs_l <- tibble(nsigdigs, dt, sn) %>%
+                base::split(sn) %>%
+                map(~ if(all(is.na(.x$nsigdigs))) .x else
+                    mutate(.x,
+                           nsigdigs = imputeTS::na_locf(nsigdigs,
+                                                        na_remaining = 'rev') %>%
+                               force_monotonic_locf()))
 
-            #avoid the case where the first few detection lims
-            #are artificially set low because their last sigdig is 0
-            nsigdigs_l <- lapply(X = nsigdigs_l,
-                                 FUN = function(z){
+            if(output == 'vector'){
 
-                                     #for sites with all-NA detlims, return as-is
-                                     if(all(is.na(z$nsigdigs))){
+                #avoid the case where the first few detection lims
+                #are artificially set low because their last sigdig is 0
+                nsigdigs_l <- lapply(X = nsigdigs_l,
+                                     FUN = function(z){
+
+                                         #for sites with all-NA detlims, return as-is
+                                         if(all(is.na(z$nsigdigs))){
+                                             return(z)
+                                         }
+
+                                         if(length(z$nsigdigs) > 5 &&
+                                            length(unique(z$nsigdigs[1:5]) > 1)){
+                                             z$nsigdigs[1:5] <- z$nsigdigs[6]
+                                         }
+
                                          return(z)
-                                     }
+                                     })
 
-                                     if(length(z$nsigdigs) > 5 &&
-                                        length(unique(z$nsigdigs[1:5]) > 1)){
-                                         z$nsigdigs[1:5] <- z$nsigdigs[6]
-                                     }
+                nsigdigs_df <- Reduce(bind_rows, nsigdigs_l) %>%
+                    arrange(sn, dt) #probably superfluous, but safe
 
-                                     return(z)
-                                 })
+                options(scipen = 0)
 
-            nsigdigs_df <- Reduce(bind_rows, nsigdigs_l) %>%
-                arrange(sn, dt) #probably superfluous, but safe
+                detlims <- nsigdigs_df$nsigdigs
+
+                return(detlims)
+            }
+
+            #build datetime-detlim pairs for each change in detlim for each variable
+            detlims <- lapply(X = nsigdigs_l,
+                              FUN = function(z){
+
+                                  #for sites with all-NA detlims, build the same
+                                  #default list as above
+                                  if(all(is.na(z$nsigdigs))){
+                                      detlims <- list(startdt = as.character(z$dt[1]),
+                                                      lim = NA)
+                                      return(detlims)
+                                  }
+
+                                  runs <- rle2(z$nsigdigs)
+
+                                  #avoid the case where the first few detection lims
+                                  #are artificially set low because their last
+                                  #sigdig is 0
+                                  if(runs$lengths[1] %in% 1:5 && nrow(runs) > 1){
+                                      runs <- runs[-1, ]
+                                      runs$starts[1] <- 1
+                                  }
+
+                                  detlims <- list(startdt = as.character(z$dt[runs$starts]),
+                                                  lim = runs$values)
+                              })
 
             options(scipen = 0)
-
-            detlims <- nsigdigs_df$nsigdigs
 
             return(detlims)
         }
 
-        #build datetime-detlim pairs for each change in detlim for each variable
-        detlims <- lapply(X = nsigdigs_l,
-                          FUN = function(z){
+        variables <- unique(X$var)
 
-                              #for sites with all-NA detlims, build the same
-                              #default list as above
-                              if(all(is.na(z$nsigdigs))){
-                                  detlims <- list(startdt = as.character(z$dt[1]),
-                                                  lim = NA)
-                                  return(detlims)
-                              }
+        detlim <- lapply(variables,
+                         function(z) identify_detection_limit_(X, z))
+        detlim <- detlim[! sapply(detlim, is.null)]
+        names(detlim) <- variables
 
-                              runs <- rle2(z$nsigdigs)
-
-                              #avoid the case where the first few detection lims
-                              #are artificially set low because their last
-                              #sigdig is 0
-                              if(runs$lengths[1] %in% 1:5 && nrow(runs) > 1){
-                                  runs <- runs[-1, ]
-                                  runs$starts[1] <- 1
-                              }
-
-                              detlims <- list(startdt = as.character(z$dt[runs$starts]),
-                                              lim = runs$values)
-                          })
-
-        options(scipen = 0)
-
-        return(detlims)
+        write_detection_limit(detlim,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms)
     }
-
-    variables <- unique(X$var)
-
-    detlim <- lapply(variables,
-                     function(z) identify_detection_limit_(X, z))
-    detlim <- detlim[! sapply(detlim, is.null)]
-    names(detlim) <- variables
-
-    write_detection_limit(detlim,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms)
 
     if(return_detlims){
 
@@ -8613,8 +8707,6 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
 
         return(detlim_v)
     }
-
-    #return()
 }
 
 apply_detection_limit_t <- function(X,
@@ -9202,6 +9294,7 @@ carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = 
                                     prodname_ms = prodname_ms,
                                     return_detlims = TRUE,
                                     ignore_arrange = ignore_arrange)
+
     u <- detection_limit_as_uncertainty(u)
     errors(d$val) <- u
     # d <- insert_uncertainty_df(d, u)
