@@ -21,6 +21,7 @@ plots/diagnostic_plots_*
 all_*/
 data.bak
 macrosheds_dataset_v*
+macrosheds_figshare_v*
 data_hbef_highres
 data/general/nhd_hr
 output/

@@ -620,6 +620,7 @@ ms_read_raw_csv <- function(filepath,
                             alt_datacol_pattern,
                             is_sensor,
                             set_to_NA,
+                            convert_to_BDL_flag,
                             set_to_0,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
@@ -696,12 +697,21 @@ ms_read_raw_csv <- function(filepath,
     #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
     #set_to_NA: For values such as 9999 that are proxies for NA values.
-    #set_to_0: For values that we want to set to zero. This can be used to set
+    #convert_to_BDL_flag: character vector of QC flags that should be interpreted
+    #   as "below detection limit". For numeric codes, e.g. -888, give their
+    #   character representations, i.e. "-888".
+    #   This is only for below-detection-limit flags within data columns.
+    #   Codes will be standardized to "BDL" and extracted into the variable-flag column
+    #   corresponding to each data variable. Variable-flag columns will be created
+    #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
+    #set_to_0: For values that we want to set to zero. We're setting BDLs to
+    #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
     #   information that is specific to one variable. If there's only one
     #   data column, omit this argument and use summary_flagcols for all
-    #   flag information.
+    #   flag information. If that one data column contains BDL flags (see
+    #   convert_to_BDL_flag), some amending of this function might be needed.
     #alt_varflagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. just in case there are two naming conventions for
     #   variable-specific flag columns
@@ -775,6 +785,10 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    if(missing(var_flagcol_pattern) && ! missing(alt_varflagcol_pattern)){
+        stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
+    }
+
     #parse args; deal with missing args
     datetime_colnames <- names(datetime_cols)
     datetime_formats <- unname(datetime_cols)
@@ -788,7 +802,11 @@ ms_read_raw_csv <- function(filepath,
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
     }
-    
+
+    if(missing(convert_to_BDL_flag)) {
+        convert_to_BDL_flag <- NULL
+    }
+
     if(missing(set_to_0)) {
         set_to_0 <- NULL
     }
@@ -906,9 +924,9 @@ ms_read_raw_csv <- function(filepath,
                across(everything(), as.character))
     }
 
-    d <- d %>%
-        as_tibble() %>%
-        select(one_of(c(names(colnames_all), 'NA.'))) #for NA as in sodium
+    d <- sw(select(d, any_of(c(names(colnames_all), 'NA.')))) %>% #for NA meaning "sodium"
+        as_tibble()
+
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
 
     # Remove any variable flags created by pattern but do not exist in data
@@ -922,7 +940,7 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_NA[i]] <- NA
         }
     }
-    
+
     # Set values to 0 if used as a flag for below detection limit
     if(! is.null(set_to_0)){
         for(i in 1:length(set_to_0)){
@@ -930,19 +948,93 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    #move BDL flags from data columns into flag columns. Replace with NA,
+    #which will be converted to 1/2 detlim downstream
+    bdl_cols_do_not_drop <- c()
+    new_varflag_cols <- c()
+    for(i in seq_along(convert_to_BDL_flag)){
+
+        bdl_flag <- convert_to_BDL_flag[i]
+        all_datacols <- c(data_cols, alt_datacols)
+        for(j in seq_along(all_datacols)){
+
+            d_varcode <- unname(all_datacols)[j]
+            d_colname <- names(all_datacols)[j]
+            d_clm <- d[[d_colname]]
+            if(is.null(d_clm)) next #column doesn't exist
+
+            bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
+
+            if(! is.na(var_flagcols)){
+                candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
+                var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
+            } else {
+                candidate_flagcol <- paste0(d_varcode, '__|flg')
+                var_flagcol_already_exists <- FALSE
+            }
+
+            if(! var_flagcol_already_exists){
+                d[[candidate_flagcol]] <- NA_character_
+                new_varflag_cols <- c(new_varflag_cols, candidate_flagcol)
+            }
+
+            d[bdl_inds, candidate_flagcol] <- 'BDL'
+            d[bdl_inds, d_colname] <- NA_character_
+
+            bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
+                                      paste0(d_colname, '__|dat'))
+        }
+    }
+
+    bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
+
+    #establish class of newly created varflag cols
+    new_varflag_classes <- rep('character', times = length(new_varflag_cols))
+    names(new_varflag_classes) <- new_varflag_cols
+    classes_all <- c(classes_all, new_varflag_classes)
+
     #Set correct class for each column
     colnames_d <- colnames(d)
 
+    illegal_chars <- c()
     for(i in 1:ncol(d)){
 
         if(colnames_d[i] == 'NA.'){
-            class(d[[i]]) <- 'numeric'
+            sw(class(d[[i]]) <- 'numeric')
             next
         }
 
-        class(d[[i]]) <- classes_all[names(classes_all) == colnames_d[i]]
+        newclass <- unname(classes_all[names(classes_all) == colnames_d[i]])
+
+        #notify about illegal characters in data columns
+        if(newclass == 'numeric'){
+
+            illegal_char_inds <- sw(! is.na(d[[i]]) & is.na(as.numeric(d[[i]])))
+            if(any(illegal_char_inds)){
+
+                new_illegal_chars <- unique(pull(d[illegal_char_inds, i]))
+                illegal_chars <- c(illegal_chars, new_illegal_chars)
+
+                message(paste0('[See next log warning.] Illegal chars in column ', colnames_d[i], ': "',
+                               paste(new_illegal_chars, collapse = '", "'),
+                               '"'))
+            }
+        }
+
+        sw(class(d[[i]]) <- newclass)
     }
-    # d[] <- sw(Map(`class<-`, d, classes_all)) #sometimes classes_all is too long, which makes this fail
+
+    illegal_chars <- unique(illegal_chars)
+    cmpnt <- if(exists('component')) component else '[no component]'
+    logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
+                       n = network,
+                       d = domain,
+                       s = site_code,
+                       p = prodname_ms,
+                       cc = cmpnt,
+                       ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
+            logger = logger_module)
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
@@ -972,12 +1064,13 @@ ms_read_raw_csv <- function(filepath,
                 across(any_of(c('datetime', 'site_code')),
                        ~ ! is.na(.x)))
 
-    #remove all-NA data columns and rows with NA in all data columns.
+    #remove all-NA data columns (except if they have BDLs) and rows with NA in all data columns.
     #also remove flag columns for all-NA data columns.
     all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
                               MARGIN = 2,
                               function(x) all(is.na(x)))
     all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
+    all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
     all_na_cols <- c(all_na_cols,
                      sub(pattern = '__\\|dat',
                          replacement = '__|flg',
@@ -1016,7 +1109,7 @@ ms_read_raw_csv <- function(filepath,
         is_sensor <- is_sensor[data_col_order]
     }
 
-    #fix sites names if multiple names refer to the same site
+    #fix site names if multiple names refer to the same site
     if(! is.null(alt_site_code)){
 
         for(z in 1:length(alt_site_code)){
@@ -1251,9 +1344,11 @@ ms_cast_and_reflag <- function(d,
                                variable_flags_to_drop,
                                variable_flags_clean,
                                variable_flags_dirty,
+                               variable_flags_bdl,
                                summary_flags_to_drop,
                                summary_flags_clean,
-                               summary_flags_dirty){
+                               summary_flags_dirty,
+                               summary_flags_bdl){
 
     #TODO: add a silent = TRUE option. this would hide all warnings
     #allow for alternative pattern specifications.
@@ -1289,14 +1384,19 @@ ms_cast_and_reflag <- function(d,
     #   set to NA. This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
-    #   ms_status of 1, meaning dirty. This parameter is optional, though at least 2
+    #   ms_status of 1, meaning dirty/questionable. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
     #   must be supplied if varflag_col_pattern is not
     #   set to NA. This parameter does not use the '#*#' wildcard.
+    #variable_flags_bdl: optional character vector of values that might appear in
+    #   the variable flag columns indicating that their corresponding data values are
+    #   below detection limit. These values will be replaced with half their
+    #   detection limit, determined by identify_detection_limit_t. Resulting
+    #   ms_status will be set to 1 (dirty/questionable).
     #summary_flags_to_drop: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in
-    #   the summary flag/status columns. Elements of these vectors are treated as
+    #   the summary flag/status columns. Associated records are treated as
     #   bad data and are removed. Use '#*#' to refer to all values not
     #   included in summary_flags_clean. This parameter is optional, though
     #   if there are summary flag columns, at least 2
@@ -1308,7 +1408,7 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_clean: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Elements of these vectors are given an ms_status of 0, meaning clean.
+    #   Associated records are given an ms_status of 0, meaning clean.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
@@ -1319,7 +1419,7 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_dirty: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Elements of these vectors are given an ms_status of 1, meaning dirty.
+    #   Associated records are given an ms_status of 1, meaning dirty.
     #   This parameter is optional, though
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
@@ -1327,6 +1427,11 @@ ms_cast_and_reflag <- function(d,
     #   make sure list elements for summary flags are in the same order!
     #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
+    #summary_flags_bdl: optional named list. names correspond to columns in d that
+    #   contain summary flag/status information. List elements must be character vectors
+    #   of values that might appear in the summary flag/status columns.
+    #   Associated data records are assigned 1/2 their detection limit (determined
+    #   by identify_detection_limit_t and ms_status is set to 1 (dirty/questionable).
 
     #return value: a long-format tibble with 5 columns: datetime, site_code,
     #   var, val, ms_status. Rows with NA in any column are removed.
@@ -1339,7 +1444,8 @@ ms_cast_and_reflag <- function(d,
     sumdrop <- ! missing(summary_flags_to_drop) && ! is.null(summary_flags_to_drop)
     sumclen <- ! missing(summary_flags_clean) && ! is.null(summary_flags_clean)
     sumdirt <- ! missing(summary_flags_dirty) && ! is.null(summary_flags_dirty)
-    no_sumflags <- all(c(sumdrop, sumclen, sumdirt) == FALSE)
+    sumbdl <- ! missing(summary_flags_bdl) && ! is.null(summary_flags_bdl)
+    no_sumflags <- all(c(sumdrop, sumclen, sumdirt) == FALSE) #not including bdl...
 
     if(sum(c(sumdrop, sumclen, sumdirt)) == 1){
         stop(paste0('Must supply 2 (or none) of summary_flags_to_drop, ',
@@ -1377,6 +1483,7 @@ ms_cast_and_reflag <- function(d,
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
     varclen <- ! missing(variable_flags_clean) && ! is.null(variable_flags_clean)
     vardirt <- ! missing(variable_flags_dirty) && ! is.null(variable_flags_dirty)
+    varbdl <- ! missing(variable_flags_bdl) && ! is.null(variable_flags_bdl)
     no_varflags <- is.na(varflag_col_pattern)
 
     if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags){
@@ -1398,6 +1505,30 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
+    #make sure the same flagcodes aren't passed to more than one parameter
+    varflgs_c <- c('variable_flags_dirty', 'variable_flags_clean', 'variable_flags_to_drop', 'variable_flags_bdl')
+    dupe_flags <- c()
+    for(p in varflgs_c){
+        for(q in varflgs_c){
+            if(p == q) next
+            pp = try(get(p), silent = TRUE); if(inherits(pp, 'try-error')) next
+            qq = try(get(q), silent = TRUE); if(inherits(qq, 'try-error')) next
+            dupe_flags <- intersect(pp, qq)
+            if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
+        }
+    }
+    summflgs_c <- c('summary_flags_dirty', 'summary_flags_clean', 'summary_flags_to_drop', 'summary_flags_bdl')
+    dupe_flags <- c()
+    for(p in summflgs_c){
+        for(q in summflgs_c){
+            if(p == q) next
+            pp = try(get(p), silent = TRUE); if(inherits(pp, 'try-error')) next
+            qq = try(get(q), silent = TRUE); if(inherits(qq, 'try-error')) next
+            dupe_flags <- intersect(pp, qq)
+            if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
+        }
+    }
+
     if(! no_sumflags){
         if(sumdrop){
             summary_colnames <- names(summary_flags_to_drop)
@@ -1406,6 +1537,12 @@ ms_cast_and_reflag <- function(d,
         }
     } else {
         summary_colnames <- NULL
+    }
+
+    if(sumbdl){
+        sum_bdl_colnames <- names(summary_flags_bdl)
+    } else {
+        sum_bdl_colnames <- NULL
     }
 
     data_col_keyword <- gsub(pattern = '#V#',
@@ -1449,9 +1586,17 @@ ms_cast_and_reflag <- function(d,
         d$var <- varname
     }
 
-    #remove rows with NA in the value column (these take up space and can be
-    #reconstructed by casting to wide form
-    d <- filter(d, ! is.na(dat))
+    #get 1/2 detection limits
+    if(sumbdl || varbdl){
+
+        detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
+                                                  arrange(site_code, var, datetime),
+                                              write_detlim_file = FALSE,
+                                              return_detlims = TRUE,
+                                              ignore_arrange = TRUE)
+
+        half_detlims <- mutate(detlims, detlim = detlim / 2)
+    }
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
@@ -1493,7 +1638,7 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
-    #binarize remaining flag information (0 = clean, 1 = dirty)
+    #binarize remaining flag information (not including BDLs yet; 0 = clean, 1 = questionable)
     if(! no_varflags){
         if(varclen){
             d <- mutate(d, ms_status = case_when(
@@ -1523,6 +1668,27 @@ ms_cast_and_reflag <- function(d,
             }
         }
     }
+
+    #set val and ms_status for BDL records
+    if(sumbdl){
+        #this probably wouldn't happen unless there were only one data column
+        for(i in seq_along(summary_flags_bdl)){
+            si <- summary_flags_bdl[i]
+            bdl_inds <- d[[names(si)]] %in% si[[1]]
+            d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+            d[bdl_inds, 'ms_status'] <- 1
+        }
+    }
+
+    if(varbdl){
+        bdl_inds <- d$flg %in% variable_flags_bdl
+        d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+        d[bdl_inds, 'ms_status'] <- 1
+    }
+
+    #remove rows with NA in the value column (these take up space and can be
+    #reconstructed by casting to wide form
+    d <- filter(d, ! is.na(dat))
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
@@ -4335,7 +4501,7 @@ get_response_int <- function(msg,
     #min_val: int. minimum allowable value, inclusive
     #max_val: int. maximum allowable value, inclusive
     #subsequent prompt: not to be set directly. This is handled by
-    #   get_response_free during recursion.
+    #   get_response_int during recursion.
 
     if(subsequent_prompt){
         cat(glue('Please choose an integer in the range [{minv}, {maxv}].',
@@ -5765,7 +5931,7 @@ shortcut_idw <- function(encompassing_dem,
 
             #estimate raster values from elevation alone
             d_from_elev <- ab$elevation * elevs_masked + ab$`(Intercept)`
-            
+
             # Set all negative values to 0
             d_from_elev[d_from_elev < 0] <- 0
 
@@ -6123,14 +6289,11 @@ reconstruct_var_column <- function(d,
         }
     )
 
-    if(length(detlim) == 1){
-        var <- names(detlim)
+    prec_ind <- grepl('precipitation$', detlim$var)
+    if(any(prec_ind)){
+        var <- detlim$var[prec_ind[1]]
     } else {
-        # # d <<- d
-        # vv <<- detlim
-        # detlim = vv
-        stop(glue('Not sure if we\'ll ever encounter this, but if ',
-                  'so we need to build it now!'))
+        stop('maybe get the precipitation variable prefix from some other file')
     }
 
     d <- d %>%
@@ -8133,168 +8296,6 @@ write_metadata_d_linkprod <- function(network,
                       file = data_acq_file)
 }
 
-identify_detection_limit_s <- function(x){
-
-    #this is the scalar version of identify_detection_limit (_s).
-    #it was the first iteration, and has been superseded by the temporally-
-    #explicit version (identify_detection_limit_t).
-    #that version relies on stored data, so automatically
-    #writes to data/<network>/<domain>/detection_limits.json. This version
-    #just returns its output. This version is still used for idw (where input
-    #sites != output sites), but we should find a way to get the minimum input
-    #detection limit for all sites being averaged and apply that detlim to the
-    #output.)
-
-    #if x is a 2d array-like object, the detection limit (number of
-    #decimal places) of each column is returned. non-numeric columns return NA.
-    #If x is a vector (or something that can be coerced to a vector),
-    #the detection limit is returned as a scalar.
-
-    #detection limit is computed as the 10th percentile of the number of characters
-    #following each decimal place. NAs and zeros are ignored when computing
-    #detection limit.
-
-    identify_detection_limit_v <- function(x){
-
-        #x is a vector, or it will be coerced to one.
-        #non-numeric vectors return NA vectors of the same length
-
-        x <- unname(unlist(x))
-        if(! is.numeric(x)) return(rep(NA, length(x)))
-
-        options(scipen = 100)
-        nas <- is.na(x) | x == 0
-
-        x <- as.character(x)
-        nsigdigs <- stringr::str_split_fixed(x, '\\.', 2)[, 2] %>%
-            nchar()
-
-        nsigdigs[nas] <- NA
-
-        options(scipen = 0)
-
-        return(nsigdigs)
-    }
-
-    if(! is.null(dim(x))){
-
-        detlim <- vapply(X = x,
-                         FUN = function(y){
-                             identify_detection_limit_v(y) %>%
-                                 # Mode(na.rm = TRUE)
-                                 quantile(probs = 0.1,
-                                          na.rm = TRUE,
-                                          names = FALSE)
-                         },
-                         FUN.VALUE = numeric(1))
-
-    } else if(is.atomic(x) && length(x)){
-        detlim <- identify_detection_limit_v(x) %>%
-            # Mode(na.rm=TRUE)
-            quantile(probs = 0.1,
-                     na.rm = TRUE,
-                     names = FALSE)
-    } else {
-        stop('x must be a vector or 2d array-like')
-    }
-
-    return(detlim)
-}
-
-apply_detection_limit_s <- function(x, digits){
-
-    #this is the scalar version of apply_detection_limit (_s).
-    #it was the first iteration, and has been superseded by the temporally-
-    #explicit version (apply_detection_limit_t).
-    #that version relies on stored data, so automatically
-    #reads from data/<network>/<domain>/detection_limits.json. This version
-    #just accepts detection limits as an argument.
-    #This version is still used for idw (where input
-    #sites != output sites), but we should find a way to get the minimum input
-    #detection limit for all sites being averaged and apply that detlim to the
-    #output.)
-
-    #x: a 2d array-like or a numeric vector
-    #digits: a numeric vector if x is a 2d array-like, or a numeric scalar if
-    #digits is a vector or vector-like, containing the detection limits (in
-    #digits after the decimal) to be applied to x. application of detection
-    #limits is handled by round.
-
-    #if x is a 2d array-like object, digits are applied column-wise
-    #If x is a vector (or something that can be coerced to a vector),
-    #digits is applied elementwise
-
-    #if x is a 2d array-like with named columns and digits is a named vector,
-    #values of digits are matched by name to columns of x. unmatched values
-    #of digits are ignored. unmatched columns of x are unaffected.
-    #if either x or digits is not named, all names are ignored.
-
-    #attempting to apply detection limits to non-numerics results in error
-
-    #NA values of digits are not used.
-
-    if(! is.numeric(digits) && ! all(is.na(digits))){
-        stop('digits must be numeric')
-    }
-
-    apply_detection_limit_v <- function(x, digits){
-
-        x <- unname(unlist(x))
-        if(is.na(digits)) return(x)
-        if(! is.numeric(x)) stop('all affected columns of x must be numeric.')
-        x <- round(x, digits)
-
-        return(x)
-    }
-
-    if(! is.null(dim(x))){
-
-        # if(length(digits) != ncol(x)){
-        #     stop('length of digits must equal number of columns in x')
-        # }
-
-        if(! is.null(names(digits)) && ! is.null(colnames(x))){
-
-            #if any columns don't have detection limits specified,
-            #fill in those missing specifications with NAs
-            missing_specifications <- setdiff(colnames(x), names(digits))
-            more_digits <- rep(NA, length(missing_specifications))
-            names(more_digits) <- missing_specifications
-            digits <- c(digits, more_digits)
-
-            #ignore detection limits whose names don't match names in x
-            reorder <- match(colnames(x), names(digits))
-            digits <- digits[! is.na(reorder)]
-            reorder <- reorder[! is.na(reorder)]
-            digits <- digits[reorder]
-
-        } else if(length(digits) != ncol(x)){
-            stop('length of digits must equal number of columns in x')
-        }
-
-        x <- mapply(FUN = function(y, z){
-                    apply_detection_limit_v(y, z)
-                },
-                y = x,
-                z = digits,
-                SIMPLIFY = FALSE) %>%
-            as_tibble()
-
-    } else if(is.atomic(x) && length(x)){
-
-        if(length(digits) != 1){
-            stop('length of digits must be 1 if x is a vector')
-        }
-
-        x <- apply_detection_limit_v(x, digits)
-
-    } else {
-        stop('x must be a vector or 2d array-like')
-    }
-
-    return(x)
-}
-
 Mode <- function(x, na.rm = TRUE){
 
     if(na.rm){
@@ -8325,93 +8326,77 @@ get_successor <- function(network,
 
 knit_det_limits <- function(network, domain, prodname_ms){
 
-    # if(is_derived_product(prodname_ms) && ! ignore_pred){
-    #
-    #     #if there are multiple precursors (rare), just use the first
-    #     prodname_ms <- get_detlim_precursors(network = network,
-    #                                          domain = domain,
-    #                                          prodname_ms = prodname_ms)
-    # }
+    detlim_list <- lapply(prodname_ms, function(x) read_detection_limit(network, domain, x))
+    detlim_list <- detlim_list[sapply(detlim_list, function(x) ! is.null(x))]
+    lowest_detlims <- Reduce(
+        function(x, y){
+            full_join(x, y, by = 'var') %>%
+                mutate(detlim = pmin(detlim.x, detlim.y, na.rm = TRUE)) %>%
+                select(var, detlim)
+        },
+        detlim_list)
 
-    detlim <- read_detection_limit(network, domain, prodname_ms[1])
+    return(lowest_detlims)
+}
 
-    if(is.null(detlim)){
-        prodname_ms <- get_successor(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms[1])
+identify_series_detlim <- function(x){
+
+
+    #first gets the min of the absolute value of the series (without NAs),
+    #then if the min is e.g. 0.000416 assigns detection limit of 0.00045.
+    #surprisingly hard to spell this out, but the example is
+    #plenty clear.
+
+    #returns 0 if the min is >= 1, or if there are no nonzero data values
+
+    if(! class(x) %in% c('integer', 'numeric', 'errors')){
+        stop('x must be a numeric vector')
     }
 
-    for(i in 2:length(prodname_ms)) {
-        detlim_ <- read_detection_limit(network, domain, prodname_ms[i])
-
-        old_vars <- names(detlim)
-        new_vars <- names(detlim_)
-
-        common_vars <- base::intersect(old_vars, new_vars)
-
-        if(length(common_vars) > 0) {
-
-            for(p in 1:length(common_vars)) {
-
-                old_sites <- names(detlim[[common_vars[p]]])
-                new_sites <- names(detlim_[[common_vars[p]]])
-
-                common_sites <- base::intersect(old_sites, new_sites)
-
-                if(!length(common_sites) == 0) {
-                    new_sites <- new_sites[!new_sites %in% common_sites]
-                }
-
-                if(length(new_sites) > 0){
-                    for(z in 1:length(new_sites)) {
-                        detlim[[common_vars[p]]][[new_sites[z]]] <- detlim_[[common_vars[p]]][[new_sites[z]]]
-                    }
-                }
-            }
-        }
-
-        unique_vars <- new_vars[!new_vars %in% old_vars]
-        if(length(unique_vars) > 0) {
-            for(v in 1:length(unique_vars)) {
-                detlim[[unique_vars[v]]] <- detlim_[[unique_vars[v]]]
-            }
-
-        }
+    nonzeros <- x[! is.na(x) & x != 0]
+    if(length(nonzeros)){
+        mindetect <- min(abs(nonzeros))
+    } else {
+        return(0)
     }
+
+    x_c <- strsplit(as.character(mindetect), '')[[1]]
+
+    first_leading_nonzero_ind <- Position(function(z) ! z %in% c('.', '0'),
+                                          x_c)
+
+    non_decimal <- ! '.' %in% x_c
+    if(non_decimal) return(0)
+
+    detlim_factor <- as.numeric(x_c[first_leading_nonzero_ind])
+    first_lead_nonz_after_dec <- (first_leading_nonzero_ind - 2)
+    detlim_ <- 1*10^-first_lead_nonz_after_dec * detlim_factor
+    detlim__ <- 5*10^-(first_lead_nonz_after_dec + 1)
+    detlim <- detlim_ + detlim__
+
+    if(detlim >= 1) return(0)
 
     return(detlim)
 }
 
-identify_detection_limit_t <- function(X, network, domain, prodname_ms,
+identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodname_ms = NULL,
+                                       write_detlim_file = TRUE,
                                        return_detlims = FALSE,
                                        ignore_arrange = FALSE){
 
-    #this is the temporally explicit version of identify_detection_limit (_t).
-    #it supersedes the scalar version (identify_detection_limit_s).
-    #that version just returns its output. This version relies on stored data,
-    #so automatically writes to data/<network>/<domain>/detection_limits.json,
-    #and, if return_detlims = TRUE, returns its output as an integer vector
-    #of detection limits with length equal to the number of rows in X, where each
-    #value holds the detection limit of its corresponding data value in X$val
+    #X: dataframe in proto-MacroSheds format. see below
+    #network: string, name of network, required only if write_detlim_file is TRUE
+    #domain: string, name of domain, required only if write_detlim_file is TRUE
+    #prodname_ms: string, name of prodname_ms, required only if write_detlim_file is TRUE
+    #write_detlim_file: logical. if TRUE, detlims will be written to data/<network>/<domain>/detection_limits.json
+    #return_detlims: logical. if TRUE, detlims will be returned as a data.frame with columns:
+    #   var: variable
+    #   detlim: detection limit
+    #ignore_arrange: logical. no longer used. left for compatibility
 
     #X is a 2d array-like object. must have datetime,
-    #site_code, var, and val columns. if X was generated by ms_cast_and_reflag,
-    #you're good to go.
-
-    #the detection limit (number of decimal places)
-    #of each column is written to data/<network>/<domain>/detection_limits.json
-    #as a nested list:
-    #prodname_ms
-    #    variable
-    #        startdt: datetime1, datetime2, datetimeN...
-    #        lim:     limit1,    limit2,    limitN...
-
-    #detection limit (detlim) is computed as the
-    #number of characters following the decimal. NA detlims are filled
-    #by locf, followed by nocb. Then, to account for false detlims arising from
-    #trailing zeros, positive monotonicity is forced by carrying forward
-    #cumulative maximum detlims. Each time the detlim increases,
-    #a new startdt and limit are recorded.
+    #site_code, var, and val columns. Basically, MacroSheds format without the ms_status
+    #and ms_interp columns. if X was generated by ms_cast_and_reflag, you're good to go.
 
     #X will be sorted ascendingly by site_code, var, and then datetime. If
     #   return_detlims = TRUE and you'll be using the output to establish
@@ -8419,136 +8404,33 @@ identify_detection_limit_t <- function(X, network, domain, prodname_ms,
     #   won't line up with their corresponding data values.
     #   If X was generated by ms_cast_and_reflag, you're good to go.
 
-    if(!isTRUE(ignore_arrange)){
-        X <- as_tibble(X) %>%
-            arrange(site_code, var, datetime)
+    if(! write_detlim_file && ! return_detlims){
+        stop('write_detlim_file and return_detlims both FALSE. nothing to do.')
     }
 
-    identify_detection_limit_ <- function(X, v, output = 'list'){
-
-        if(! output %in% c('vector', 'list')){
-            stop('output must be "vector" or "list"')
-        }
-
-        x <- filter(X, var == v)
-
-        if(nrow(x) == 0){
-            return(NULL)
-        }
-
-        sn = x$site_code
-        dt = x$datetime
-
-        options(scipen = 100)
-        nas <- is.na(x$val) | x$val == 0
-
-        val <- as.character(x$val)
-        nsigdigs <- stringr::str_split_fixed(val, '\\.', 2)[, 2] %>%
-            nchar()
-
-        nsigdigs[nas] <- NA
-
-        #for each site, clean up the timeseries of detection limits:
-        #   first, fill NAs by locf, then by nocb
-        #   next, force positive monotonicity by locf
-        nsigdigs_l <- tibble(nsigdigs, dt, sn) %>%
-            base::split(sn) %>%
-            map(~ if(all(is.na(.x$nsigdigs))) .x else
-                mutate(.x,
-                       nsigdigs = imputeTS::na_locf(nsigdigs,
-                                                    na_remaining = 'rev') %>%
-                           force_monotonic_locf()))
-
-        if(output == 'vector'){
-
-            #avoid the case where the first few detection lims
-            #are artificially set low because their last sigdig is 0
-            nsigdigs_l <- lapply(X = nsigdigs_l,
-                                 FUN = function(z){
-
-                                     #for sites with all-NA detlims, return as-is
-                                     if(all(is.na(z$nsigdigs))){
-                                         return(z)
-                                     }
-
-                                     if(length(z$nsigdigs) > 5 &&
-                                        length(unique(z$nsigdigs[1:5]) > 1)){
-                                         z$nsigdigs[1:5] <- z$nsigdigs[6]
-                                     }
-
-                                     return(z)
-                                 })
-
-            nsigdigs_df <- Reduce(bind_rows, nsigdigs_l) %>%
-                arrange(sn, dt) #probably superfluous, but safe
-
-            options(scipen = 0)
-
-            detlims <- nsigdigs_df$nsigdigs
-
-            return(detlims)
-        }
-
-        #build datetime-detlim pairs for each change in detlim for each variable
-        detlims <- lapply(X = nsigdigs_l,
-                          FUN = function(z){
-
-                              #for sites with all-NA detlims, build the same
-                              #default list as above
-                              if(all(is.na(z$nsigdigs))){
-                                  detlims <- list(startdt = as.character(z$dt[1]),
-                                                  lim = NA)
-                                  return(detlims)
-                              }
-
-                              runs <- rle2(z$nsigdigs)
-
-                              #avoid the case where the first few detection lims
-                              #are artificially set low because their last
-                              #sigdig is 0
-                              if(runs$lengths[1] %in% 1:5 && nrow(runs) > 1){
-                                  runs <- runs[-1, ]
-                                  runs$starts[1] <- 1
-                              }
-
-                              detlims <- list(startdt = as.character(z$dt[runs$starts]),
-                                              lim = runs$values)
-                          })
-
-        options(scipen = 0)
-
-        return(detlims)
+    if(write_detlim_file && any(c(is.null(prodname_ms), is.null(network), is.null(domain)))){
+        stop('prodname_ms, network, and domain must be supplied if write_detlim_file is TRUE')
     }
 
     variables <- unique(X$var)
 
-    detlim <- lapply(variables,
-                     function(z) identify_detection_limit_(X, z))
-    detlim <- detlim[! sapply(detlim, is.null)]
+    detlim <- lapply(variables, function(v) identify_series_detlim(pull(X[X$var == v, 'val'])))
     names(detlim) <- variables
+    detlim <- detlim[! sapply(detlim, is.null)]
+    detlim <- tibble(var = names(detlim),
+                     detlim = unlist(detlim, use.names = FALSE))
 
-    write_detection_limit(detlim,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms)
+    if(write_detlim_file){
 
-    if(return_detlims){
-
-        detlim_v <- rep(NA, nrow(X))
-
-        for(v in variables){
-            for(s in unique(X$site_code)){
-                x <- filter(X, site_code == s)
-                dlv <- identify_detection_limit_(x, v, output = 'vector')
-                if(is.null(dlv)) next
-                detlim_v[X$site_code == s & X$var == v] <- dlv
-            }
-        }
-
-        return(detlim_v)
+        write_detection_limit(detlim,
+                              network = network,
+                              domain = domain,
+                              prodname_ms = prodname_ms)
     }
 
-    #return()
+    if(return_detlims){
+        return(detlim)
+    }
 }
 
 apply_detection_limit_t <- function(X,
@@ -8557,13 +8439,12 @@ apply_detection_limit_t <- function(X,
                                     prodname_ms,
                                     ignore_pred = FALSE){
 
-    #this is the temporally explicit version of apply_detection_limit (_t).
-    #it supersedes the scalar version (apply_detection_limit_s).
-    #that version just returns its output. This version relies on stored data,
-    #so automatically reads from data/<network>/<domain>/detection_limits.json.
+    #This function relies on stored data --
+    #automatically reads from data/<network>/<domain>/detection_limits.json.
 
     #X is a 2d array-like object. must have datetime,
-    #   site_code, var, and val columns. if X was generated by ms_cast_and_reflag,
+    #   site_code, var, and val columns. Basically, MacroSheds format without the ms_status
+    #and ms_interp columns. if X was generated by ms_cast_and_reflag,
     #   you should be good to go.
     #ignore_pred: logical; set to TRUE if detection limits should be retrieved
     #   from the supplied prodname_ms directly, rather than its precursor.
@@ -8572,6 +8453,10 @@ apply_detection_limit_t <- function(X,
     #limits to a variable for which detection limits are not known (not present
     #in detection_limits.json) results in error. Superfluous variable entries in
     #detection_limits.json are ignored.
+
+    if(nrow(X) == 0){
+        return(X)
+    }
 
     X <- as_tibble(X) %>%
         arrange(site_code, var, datetime)
@@ -8611,92 +8496,27 @@ apply_detection_limit_t <- function(X,
         stop('problem reading detection limits from file')
     }
 
-    apply_detection_limit_ <- function(x, varnm, detlim){
-
-
-        #plenty of code superfluity in this function. adapted from a previous
-        #   version and there's negligible efficiency loss if any
-
-        if(! varnm %in% names(detlim)){
-            stop(glue('Missing detection limits for var: {v}', v = varnm))
-        }
-
-        detlim_var <- detlim[[varnm]]
-
-        x <- filter(x, var == varnm)
-
-        #nrow(x) == 1 was added because there was an error occurring if there
-        #was a site with only one sample of a variable
-        if(nrow(x) == 0){
-            return(NULL)
-        }
-
-        sn = x$site_code
-        dt = x$datetime
-
-        site_lst <- tibble(dt, sn, val = x$val) %>%
-            base::split(sn)
-
-        Xerr <- lapply(X = site_lst,
-                       FUN = function(z) errors(z$val)) %>%
-            unlist() %>%
-            unname()
-
-        rounded <- lapply(X = site_lst,
-                          FUN = function(z){
-
-                              if(all(is.na(z$val))) return(z$val)
-
-                              detlim_varsite <- detlim_var[[z$sn[1]]]
-                              if(all(is.na(detlim_varsite$lim))) return(z$val)
-
-                              cutvec <- c(as.POSIXct(detlim_varsite$startdt,
-                                                     tz = 'UTC'),
-                                          as.POSIXct('2900-01-01 00:00:00'))
-
-                              roundvec <- cut(x = z$dt,
-                                              breaks = cutvec,
-                                              include.lowest = TRUE,
-                                              labels = detlim_varsite$lim) %>%
-                                              as.character() %>%
-                                              as.numeric()
-
-                              #sometimes synchronize_timestep will adjust a point
-                              #to a time before the earliest startdt recorded
-                              #in detection_limits.json. this handles that.
-                              if(length(roundvec == 1) && is.na(roundvec)){
-                                  roundvec = detlim_varsite$lim[1]
-                              } else {
-                                  roundvec <- imputeTS::na_locf(x = roundvec,
-                                                                option = 'nocb')
-                              }
-
-                              rounded <- mapply(FUN = function(a, b){
-                                                    round(a, b)
-                                                },
-                                                a = z$val,
-                                                b = roundvec,
-                                                USE.NAMES = FALSE)
-
-                              return(rounded)
-                          }) %>%
-            unlist() %>%
-            unname()
-
-        errors(rounded) <- Xerr
-
-        return(rounded)
-    }
-
     variables <- unique(X$var)
 
     for(v in variables){
-        for(s in unique(X$site_code)){
-            x <- filter(X, site_code == s)
-            dlv <- apply_detection_limit_(x, v, detlim)
-            if(is.null(dlv)) next
-            X$val[X$site_code == s & X$var == v] <- dlv
+
+        if(! v %in% detlim$var){
+            #might need to assign NAs for unknown detlims in identify_detection_limit_t
+            stop(glue('Missing detection limits for var: {v}', v = v))
         }
+
+        detlim_var <- detlim[detlim$var == v, 'detlim']
+
+        if(length(detlim_var != 1)){
+            stop(glue('incorrect detlim length (!= 1) for var: {v}', v = v))
+        }
+
+        var_inds <- X$var == v
+        xv <- X$val[var_inds]
+
+        detlim_enforce_inds <- ! is.na(xv) & ! xv == 0 & abs(xv) < detlim_var
+        xv[detlim_enforce_inds] <- detlim_var * sign(xv[detlim_enforce_inds])
+        X$val[var_inds] <- xv
     }
 
     return(X)
@@ -8717,36 +8537,17 @@ read_detection_limit <- function(network, domain, prodname_ms){
 
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
-    #NOTE: this function updated 2021-02-16, near the end of rebuilding
-    #   LTER (discovered issue with luquillo sites overwriting each other in
-    #   the detlim file). as such, it's not thoroughly tested. some stuff
-    #   that worked before might be broken now. tried to make it backward compatible though
-
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
                          n = network,
                          d = domain)
 
-    detlim_new <- detlim #better name; don't want to update every call though
-
     if(file.exists(detlims_file)){
 
         detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        if(prodname_ms %in% names(detlim_stored)){
-
-            for(v in names(detlim_new)){
-
-                site_detlims <- detlim_new[[v]]
-                for(s in names(site_detlims)){
-                    detlim_stored[[prodname_ms]][[v]][[s]] <- site_detlims[[s]]
-                }
-            }
-
-        } else {
-            detlim_stored[[prodname_ms]] <- detlim_new
-        }
+        detlim_stored[[prodname_ms]] <- detlim
 
     } else {
-        detlim_stored <- list(placeholder = detlim_new)
+        detlim_stored <- list(placeholder = detlim)
         names(detlim_stored) <- prodname_ms
     }
 
@@ -9113,17 +8914,6 @@ get_gee_standard <- function(network,
     return(fin)
 }
 
-detection_limit_as_uncertainty <- function(detlim){
-
-    # uncert <- lapply(detlim,
-    #                  FUN = function(x) 1 / 10^x) %>%
-    #               as_tibble()
-
-    uncert <- 1 / 10^detlim
-
-    return(uncert)
-}
-
 carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
 
     # Filter out any rows where vals are outside realistic  range, defined
@@ -9136,9 +8926,9 @@ carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = 
                                     prodname_ms = prodname_ms,
                                     return_detlims = TRUE,
                                     ignore_arrange = ignore_arrange)
-    u <- detection_limit_as_uncertainty(u)
+
+    u <- detection_limit_as_uncertainty(d, u)
     errors(d$val) <- u
-    # d <- insert_uncertainty_df(d, u)
 
     return(d)
 }
@@ -9265,13 +9055,16 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
     #return()
 }
 
-detection_limit_as_uncertainty <- function(detlim){
+detection_limit_as_uncertainty <- function(d, detlim){
 
-    # uncert <- lapply(detlim,
-    #                  FUN = function(x) 1 / 10^x) %>%
-    #               as_tibble()
+    #d: a dataframe in MacroSheds format
+    #detlim: a dataframe with var and detlim columns (returned by identify_detection_limit_t)
 
-    uncert <- 1 / 10^detlim
+    #the name of this function is a bit of a misnomer now. kept for compatibility.
+    #really, it's just returning a vector of detection limits corresponding to the
+    #rows (variables) of d.
+
+    uncert <- detlim$detlim[match(d$var, detlim$var)]
 
     return(uncert)
 }
@@ -9846,11 +9639,11 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     #time_step: either a single input of 'daily' or 'sub_daily' depending what data
     #    is available or perfected. Or a vector the same length as sites with either
     #    'daily' and 'sub_daily'.
-    
+
     # TODO
-    # At some point this function should pull all daily data and sub daily data 
+    # At some point this function should pull all daily data and sub daily data
     # and combine the two so as much sub daily data is grabbed but when only daily
-    # data is available, that is used. 
+    # data is available, that is used.
 
     if(length(time_step) == 1) {
         time_step <- rep(time_step, length(sites))
@@ -10007,6 +9800,10 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
+    log_with_indent('adding legal metadata to each domain directory',
+                    logger = logger_module)
+    legal_details_scrape(dataset_version = dataset_version)
+
     log_with_indent(glue('Generating output dataset v',
                          dataset_version),
                     logger = logger_module)
@@ -10041,50 +9838,188 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent(glue('Preparing dataset v{vv} for Figshare',
                          vv = dataset_version),
                     logger = logger_module)
-    prepare_dataset_for_figshare(dataset_version = dataset_version)
-
+    fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
+    dir.create(fs_dir, showWarnings = FALSE)
+    prepare_for_figshare(where = fs_dir,
+                         dataset_version = dataset_version)
+    prepare_for_figshare_packageformat(where = fs_dir,
+                                       dataset_version = dataset_version)
 
     log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                          vv = dataset_version),
                     logger = logger_module)
     upload_dataset_to_figshare(dataset_version = dataset_version)
+    upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
 }
 
-prepare_dataset_for_figshare <- function(dataset_version){
+make_figshare_docs_skeleton <- function(where){
 
-    if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" call below probably will not work on windows.',
-                   'investigate and update that call if necessary'))
+    dir.create(file.path(where, 'macrosheds_documentation'), showWarnings = FALSE, recursive = TRUE)
+    dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
+}
+
+prepare_site_metadata_for_figshare <- function(outfile){
+
+    figd <- select(site_data,
+                   network, pretty_network, domain, pretty_domain, site_code,
+                   epsg_code = CRS,
+                   timezone_olson = local_time_zone) %>%
+        right_join(read_csv('../portal/data/general/catalog_files/all_sites.csv',
+                            col_types = cols()),
+                   by = c(pretty_network = 'Network',
+                          pretty_domain = 'Domain',
+                          site_code = 'SiteCode')) %>%
+        select(network,
+               network_fullname = pretty_network,
+               domain,
+               domain_fullname = pretty_domain,
+               site_code,
+               site_fullname = SiteName,
+               stream_name = StreamName,
+               site_type = SiteType,
+               ws_status = WatershedStatus,
+               latitude = Latitude,
+               longitude = Longitude,
+               epsg_code,
+               ws_area_ha = AreaHectares,
+               n_observations = Observations,
+               n_variables = Variables,
+               first_record_utc = FirstRecordUTC,
+               last_record_utc = LastRecordUTC,
+               timezone_olson)
+
+    write_csv(figd, outfile)
+}
+
+prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
+
+    #outfile: depends on fs_format. if "old", outfile will be written as-is. if
+    #   "new", outfile provides only the core part of the output filename, and two
+    #   separate output files are written--one for timeseries variables (prepended with '/05_timeseries_documentation/05b_timeseries_'),
+    #   and one for ws attr variables (prepended with '/06_ws_attr_documentation/06b_ws_attr_'). missing paths are created if necessary.
+    #fs_format: either "old" for compatibility with the original (37 zips) figshare format,
+    #   or "new" for the more condensed and user-friendly, but less package-friendly format.
+    #   in old-mode, just one variable metadata file is written. in new format, it's split into
+    #   timeseries and ws attrs. In new format, range check limits are written too, as a third file.
+
+    if(fs_format == 'new'){
+
+        outfile_ts <- file.path(dirname(outfile),
+                                '05_timeseries_documentation',
+                                paste0('05b_timeseries_',
+                                       basename(outfile)))
+        outfile_ws <- file.path(dirname(outfile),
+                                '06_ws_attr_documentation',
+                                paste0('06b_ws_attr_',
+                                       basename(outfile)))
+        outfile_range_check <- file.path(dirname(outfile),
+                                         '05_timeseries_documentation',
+                                         '05e_range_check_limits.csv')
+
+        read_csv('../portal/data/general/catalog_files/all_variables.csv',
+                         col_types = cols()) %>%
+            select(variable_code = VariableCode,
+                   variable_name = VariableName,
+                   chem_category = ChemCategory,
+                   unit = Unit,
+                   # method
+                   observations = Observations,
+                   n_sites = Sites,
+                   # mean_obs_per_site = MeanObsPerSite,
+                   first_record_utc = FirstRecordUTC,
+                   last_record_utc = LastRecordUTC) %>%
+            filter(! grepl('_flux$', chem_category)) %>%#TEMP: removing flux metadata
+            write_csv(outfile_ts)
+
+        ms_vars %>%
+            filter(variable_type == 'ws_char') %>%
+            select(variable_code, variable_name, unit) %>%
+            write_csv(outfile_ws)
+
+        ms_vars %>%
+            filter(variable_type != 'ws_char') %>%
+            select(variable_code, variable_name, unit,
+                   range_check_minimum = val_min,
+                   range_check_maximum = val_max) %>%
+            write_csv(outfile_range_check)
+
+    } else if(fs_format == 'old'){
+
+        ms_vars %>%
+            select(variable_code, variable_name, unit, variable_type,
+                   variable_subtype, valence, flux_convertible) %>%
+            write_csv(outfile)
     }
+}
 
-    dir.create(glue('macrosheds_figshare_v', dataset_version),
-               showWarnings = FALSE)
+assemble_misc_docs_figshare <- function(where){
 
+    docs_dir <- file.path(where, 'macrosheds_documentation')
+    dir.create(docs_dir, showWarnings = FALSE)
+
+    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', docs_dir)
+    file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
+    file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
+    file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
+              file.path(docs_dir, '04_site_documentation'))
+    file.copy('../portal/static/documentation/timeseries/columns.txt',
+              file.path(docs_dir, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
+    file.copy('../portal/static/documentation/watershed_summary/columns.csv',
+              file.path(docs_dir, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
+    file.copy('../portal/static/documentation/watershed_trait_timeseries/columns.txt',
+              file.path(docs_dir, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
+    file.copy('src/templates/figshare_docfiles/05c_timeseries_variable_metadata_column_descriptions.txt',
+              file.path(docs_dir, '05_timeseries_documentation'))
+    file.copy('src/templates/figshare_docfiles/06c_ws_attr_variable_metadata_column_descriptions.txt',
+              file.path(docs_dir, '06_ws_attr_documentation'))
+    file.copy('../portal/data/general/spatial_downloadables/variable_category_codes.csv',
+              file.path(docs_dir, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
+    file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
+              file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
+
+    prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
+}
+
+prepare_data_irreg_doc_for_figshare <- function(outfile){
+
+    sm(googlesheets4::read_sheet(
+        'https://docs.google.com/spreadsheets/d/1R2eUTwDEHLhBGJ0OJkgt8Aleu1jo0z_b9C4gHrKoRWE/edit#gid=0',
+        na = c('', 'NA'),
+        col_types = 'ccccccccn'
+    )) %>%
+        mutate(included_in_current_dataset = as.logical(included_in_current_dataset)) %>%
+        write_csv(outfile)
+}
+
+prepare_ts_data_for_figshare <- function(where, dataset_version){
+
+    tld <- file.path(where, 'macrosheds_timeseries_data')
+
+    ## copy over all files from the output dataset. clean up some stuff
     file.copy(from = glue('macrosheds_dataset_v', dataset_version),
-              to = glue('macrosheds_figshare_v', dataset_version),
+              to = where,
               recursive = TRUE)
-
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
-                vv = dataset_version)
+    file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
+                to = tld)
 
     unlink(file.path(tld, 'load_entire_product.R'))
 
     all_dirs <- list.dirs(tld)
 
-    junk_dirs <- grep(pattern = 'derived$',
-                      x = all_dirs,
-                      value = TRUE)
+    dmn_dirs <- grep(pattern = 'derived$',
+                     x = all_dirs,
+                     value = TRUE)
 
-    for(jd in junk_dirs){
+    warning('temporarily removing NEON')
+    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    unlink(file.path(tld, 'neon/'), recursive = TRUE)
 
-        # fs <- list.files(jd,
-        #                  full.names = TRUE,
-        #                  recursive = TRUE)
-        #
-        # fs_new <- sub(pattern = '/derived',
-        #               replacement = '',
-        #               x = fs)
+    for(jd in dmn_dirs){
 
+        ## incise the now-superfluous "derived" directory from the path
         to_folder <- sub(pattern = '/derived$',
                          replacement = '',
                          x = jd)
@@ -10092,7 +10027,6 @@ prepare_dataset_for_figshare <- function(dataset_version){
         system(glue('mv {j}/* {t}',
                     j = jd,
                     t = to_folder))
-
         file.remove(jd)
 
         dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
@@ -10101,10 +10035,176 @@ prepare_dataset_for_figshare <- function(dataset_version){
                              replacement = '',
                              x = to_folder)
 
+        #dip into network dir for convenience. this is not ideal
         setwd(parent_folder)
+
+        ## TEMP
+        warning('temporarily removing all flux data from figshare dataset')
+        flux_dirs_to_rm <- grep(pattern = 'flux',
+                                x = list.files(dmn,
+                                               full.names = TRUE),
+                                value = TRUE)
+        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
+
+
+        ## remove the prodcode extensions from dirnames
+        rslt <- character()
+        rslt <- system(paste0("rename 's/(.+)__ms[0-9]{3}/$1/' ", dmn, "/* 2>&1"),
+                       intern = TRUE)
+        if(! is_empty(rslt)){
+            setwd('../../..')
+            # warning(paste('precursor files still present for', dmn))
+            # next
+            stop(paste('precursor files still present for', dmn))
+        }
+
+        ## add a readme to each domain dir
+        file.copy(from = '../../../src/templates/figshare_docfiles/ts_docs_readme.txt',
+                  to = file.path(dmn, 'documentation', 'README.txt'))
+
+        setwd('../../..')
+    }
+}
+
+prepare_ws_attr_data_for_figshare <- function(where){
+
+    tld <- file.path(where, 'macrosheds_watershed_attribute_data')
+
+    dir.create(file.path(tld, 'ws_attr_timeseries'),
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    ## copy over all files from the portal dataset
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'climate.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'hydrology.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'landcover.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'parentmaterial.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'terrain.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
+              to = file.path(tld, 'ws_attr_timeseries', 'vegetation.csv'))
+    file.copy(from = '../portal/data/general/spatial_downloadables/watershed_summaries.csv',
+              to = file.path(tld, 'ws_attr_summaries.csv'))
+
+    warning('temporarily removing NEON data')
+    system("find macrosheds_figshare_v1/macrosheds_watershed_attribute_data/ws_attr_timeseries -name '*.csv' | xargs sed -e '/neon/d' -i")
+}
+
+prepare_for_figshare <- function(where, dataset_version){
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update those calls if necessary'))
+    }
+
+    #prepare documentation and metadata
+    make_figshare_docs_skeleton(where = where)
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+                                           fs_format = 'new')
+    assemble_misc_docs_figshare(where = file.path(where, 'data/general/figshare_extras/macrosheds_documentation/'))
+
+    #prepare data
+    prepare_ts_data_for_figshare(where = where,
+                                 dataset_version = dataset_version)
+    prepare_ws_attr_data_for_figshare(where = where)
+}
+
+prepare_for_figshare_packageformat <- function(where, dataset_version){
+
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
+                                           fs_format = 'old')
+    file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
+              file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
+              overwrite = TRUE)
+    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
+              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
+              overwrite = TRUE)
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update that call if necessary'))
+    }
+
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
+                vv = dataset_version)
+
+    ## copy over all files from the output dataset. clean up some stuff
+    file.copy(from = glue('macrosheds_dataset_v', dataset_version),
+              to = where,
+              recursive = TRUE)
+    if(file.exists(tld)) unlink(tld, recursive = TRUE) #so we can overwrite
+    file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
+                to = tld)
+
+    unlink(file.path(tld, 'load_entire_product.R'))
+
+    all_dirs <- list.dirs(tld)
+
+    dmn_dirs <- grep(pattern = 'derived$',
+                     x = all_dirs,
+                     value = TRUE)
+
+    warning('temporarily removing NEON')
+    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    unlink(file.path(tld, 'neon/'), recursive = TRUE)
+
+    for(jd in dmn_dirs){
+
+        message(paste('working on', jd))
+
+        ## incise the now-superfluous "derived" directory from the path
+        to_folder <- sub(pattern = '/derived$',
+                         replacement = '',
+                         x = jd)
+
+        system(glue('mv {j}/* {t}',
+                    j = jd,
+                    t = to_folder))
+        file.remove(jd)
+
+        dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
+
+        parent_folder <- sub(pattern = glue('/', dmn),
+                             replacement = '',
+                             x = to_folder)
+
+        #dip into network dir for convenience. this is not ideal
+        setwd(parent_folder)
+
+        ## TEMP
+        warning('temporarily removing all flux data from figshare dataset')
+        flux_dirs_to_rm <- grep(pattern = 'flux',
+                                x = list.files(dmn,
+                                               full.names = TRUE),
+                                value = TRUE)
+        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
+
+
+        ## remove the prodcode extensions from dirnames
+        rslt <- character()
+        rslt <- system(paste0("rename 's/(.+)__ms[0-9]{3}/$1/' ", dmn, "/* 2>&1"),
+                       intern = TRUE)
+        if(! is_empty(rslt)){
+            setwd('../../..')
+            # warning('precursor files still present')
+            # next
+            stop('precursor files still present')
+        }
+
+        ## add a readme to each domain dir
+        file.copy(from = '../../../src/templates/figshare_docfiles/ts_docs_readme.txt',
+                  to = file.path(dmn, 'documentation', 'README.txt'))
+
         zip(zipfile = glue(dmn, '.zip'),
             files = dmn,
             flags = '-r9Xq')
+
         setwd('../../..')
 
         unlink(to_folder, recursive = TRUE)
@@ -10136,10 +10236,14 @@ figshare_create_article <- function(title,
                                   authors = authors),
                              auto_unbox = TRUE)
 
-    post <- httr::POST(request,
+    post <- expo_backoff(
+        expr = {
+            httr::POST(request,
                        config = httr::add_headers(header),
                        body = meta)
-                       # httr::verbose())
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     if(post$status_code > 201){
         httr::stop_for_status(post)
@@ -10159,20 +10263,45 @@ figshare_create_article <- function(title,
 }
 
 figshare_delete_article <- function(article_id,
-                                    file_id = NULL,
                                     token){
 
     base <- "https://api.figshare.com/v2"
     method <- paste("account/articles", article_id, sep = "/")
-    if (!is.null(file_id)) {
-        method <- paste(method, "files", file_id, sep = "/")
-    }
+    # if (!is.null(file_id)) {
+    #     method <- paste(method, "files", file_id, sep = "/")
+    # }
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::DELETE(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr =  httr::DELETE(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to delete article', article_id))
+    }
+}
+
+figshare_delete_article_file <- function(article_id,
+                                         file_id,
+                                         token){
+
+    #for deleting files, which are found within articles
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/articles", article_id, 'files', file_id, sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr =  httr::DELETE(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
+
+    if(r$status_code > 204){
+        stop(paste('failed to delete file', file_id, 'within article', article_id))
     }
 }
 
@@ -10183,7 +10312,12 @@ figshare_publish_article <- function(article_id,
     method <- paste("account/articles", article_id, 'publish', sep = "/")
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::POST(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr = httr::POST(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to publish article', article_id))
@@ -10197,16 +10331,21 @@ figshare_publish_collection <- function(collection_id,
     method <- paste("account/collections", collection_id, 'publish', sep = "/")
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::POST(request, config = httr::add_headers(header))
+
+
+    r <- expo_backoff(
+        expr = httr::POST(request, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to publish collection', collection_id))
     }
 }
 
-figshare_add_articles_to_collection <- function(collection_id,
-                                                article_ids,
-                                                token){
+figshare_add_new_articles_to_collection <- function(collection_id,
+                                                    article_ids,
+                                                    token){
 
     if(is.numeric(article_ids)) article_ids <- as.list(article_ids)
 
@@ -10217,9 +10356,10 @@ figshare_add_articles_to_collection <- function(collection_id,
     meta <- jsonlite::toJSON(list(articles = article_ids),
                              auto_unbox = TRUE)
 
-    r <- httr::POST(request,
-                    body = meta,
-                    config = httr::add_headers(header))
+    r <- expo_backoff(
+        expr = httr::POST(request, body = meta, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
 
     if(r$status_code > 201){
         stop(paste('failed to add articles',
@@ -10229,11 +10369,76 @@ figshare_add_articles_to_collection <- function(collection_id,
     }
 }
 
+figshare_replace_all_articles_in_collection <- function(collection_id,
+                                                        article_ids,
+                                                        token){
+
+    if(is.numeric(article_ids)) article_ids <- as.list(article_ids)
+
+    base <- "https://api.figshare.com/v2"
+    method <- paste("account/collections", collection_id, 'articles', sep = "/")
+    request <- paste(base, method, sep = "/")
+    header <- c(Authorization = sprintf("token %s", token))
+    meta <- jsonlite::toJSON(list(articles = article_ids),
+                             auto_unbox = TRUE)
+
+    r <- expo_backoff(
+        expr = httr::PUT(request, body = meta, config = httr::add_headers(header)),
+        max_attempts = 5
+    ) %>% invisible()
+
+    if(r$status_code > 201){
+        stop(paste('failed to replace articles',
+                   paste(article_ids, collapse = ', '),
+                   'in collection',
+                   collection_id))
+    }
+}
+
 figshare_list_collections <- function(token){
 
     header <- c(Authorization = sprintf("token %s", token))
-    r <- httr::GET('https://api.figshare.com/v2/account/collections',
+
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET('https://api.figshare.com/v2/account/collections?page_size=1000',
                    httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
+
+    return(content(r))
+}
+
+figshare_list_articles <- function(token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET('https://api.figshare.com/v2/account/articles?page_size=1000',
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
+
+    return(content(r))
+}
+
+figshare_list_article_files <- function(article_id,
+                                        token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET(paste0('https://api.figshare.com/v2/account/articles/',
+                             article_id, '/files?page_size=1000'),
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
 
     return(content(r))
 }
@@ -10298,16 +10503,13 @@ figshare_upload_article <- function(article_id,
                             config = httr::add_headers(auth_header))
 
     if(final_out$status_code > 202){
-        stop(paste('error uploading', article_id))
+        stop(paste0('error uploading ', basename(file), ' (', article_id, ').'))
     } else {
-        message(paste('Uploaded', article_id))
+        message(paste0('Uploaded ', basename(file), ' (', article_id, ').'))
     }
 }
 
 upload_dataset_to_figshare <- function(dataset_version){
-
-    # require(rfigshare) #unmaintained
-
 
     ### ONE-TIME PREP
 
@@ -10334,29 +10536,157 @@ upload_dataset_to_figshare <- function(dataset_version){
     token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
     auth_header <- c(Authorization = sprintf('token %s', token))
     cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_dataset_v{vv}',
+    tld <- paste0('macrosheds_figshare_v', dataset_version)
+
+    # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
+    message('uploading official dataset to fighare collection')
+
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+                                  c('y', 'n'))
+
+    if(usr_rsp == 'n'){
+        print('upload aborted')
+        return()
+    }
+
+    existing_articles <- figshare_list_articles(token)
+    existing_article_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+    )
+
+    ### ASSEMBLE DATASET COMPONENTS
+
+    components <- c('macrosheds_documentation', 'macrosheds_timeseries_data',
+                    'macrosheds_watershed_attribute_data')
+
+    fs_ids <- c()
+    for(comp in components){
+
+        compzip <- paste0(comp, '.zip')
+        if(file.exists(compzip)) unlink(compzip)
+
+        setwd(tld) #can't seem to find a way around setwd. zip inserts junk files otherwise. -j can't be used here.
+        zip(zipfile = compzip,
+            files = comp,
+            flags = '-r9X')
+        setwd('..')
+
+        keywords <- list('watershed', 'basin', 'catchment', 'ecosystem', 'long-term data',
+                         'compilation', 'hydrology', 'climate', 'terrain', 'landcover',
+                         'biogeochemistry', 'stream', 'river')
+
+        ### FIGSHARE INTERACTIONS
+
+        existing_article <- comp %in% existing_article_deets$title
+
+        #if existing article, get figshare ID; otherwise create new article
+        if(! existing_article){
+            fs_id <- figshare_create_article(
+                title = comp,
+                description = case_when(comp == 'macrosheds_documentation' ~ 'Documentation, metadata, and legal information about the MacroSheds dataset',
+                                        comp == 'macrosheds_timeseries_data' ~ 'All MacroSheds discharge, precip, and chemistry time series',
+                                        comp == 'macrosheds_watershed_attribute_data' ~ 'All MacroSheds watershed descriptor data'),
+                keywords = keywords,
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_article_deets$id[existing_article_deets$title == comp]
+        }
+
+        fs_ids <- c(fs_ids, fs_id)
+
+        #if existing article, delete old version
+        if(existing_article){
+
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
+
+            if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+
+            figshare_delete_article_file(fs_id,
+                                         file_id = fls[[1]]$id,
+                                         token = token)
+        }
+
+        figshare_upload_article(fs_id,
+                                file = file.path(tld, compzip),
+                                token = token)
+
+        if(! existing_article){
+            figshare_add_new_articles_to_collection(collection_id = collection_id,
+                                                    article_ids = fs_id,
+                                                    token = token)
+        }
+    }
+
+    figshare_replace_all_articles_in_collection(collection_id = collection_id,
+                                                article_ids = fs_ids,
+                                                token = token)
+
+    for(comp in components){
+        figshare_publish_article(article_id = fs_id,
+                                 token = token)
+    }
+
+    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION
+
+    figshare_publish_collection(collection_id = collection_id,
+                                token = token)
+}
+
+upload_dataset_to_figshare_packageversion <- function(dataset_version){
+
+    ### ONE-TIME PREP
+
+    ## get a Figshare private access token (PAT) and add it to R env
+    # usethis::edit_r_environ()
+
+    ## get category IDs from category names
+    # qqq <- content(rfigshare::fs_category_list(debug = TRUE))[[1]]
+    # all_categories <- sapply(qqq, function(x) { xx = x$name; names(xx) = x$id ; return(xx)})
+    # categories <- c('Earth Sciences not elsewhere classified',
+    #                 'Environmental Monitoring',
+    #                 'Geochemistry not elsewhere classified',
+    #                 'Hydrology',
+    #                 'Landscape Ecology',
+    #                 'Freshwater Ecology')
+    # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
+
+
+    ### EVERY-TIME PREP
+
+    token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
+    auth_header <- c(Authorization = sprintf('token %s', token))
+    cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
+    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
 
-
-    ### TODO
-
-    stop('v1 has been uploaded and published. uploading again may automatically create v2. we need to carefully investigate this, and maybe write new API calls')
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
-    #
-    # check for already-uploaded datasets (NOT YET IMPLEMENTED)
-    # r <- httr::GET('https://api.figshare.com/v2/account/articles',
-    #                httr::add_headers(auth_header))
-    #
-    # json <- httr::content(r,
-    #                       as = "text",
-    #                       encoding = "UTF-8")
-    #
-    # d <- try(jsonlite::fromJSON(json),
-    #          silent = TRUE)
-    #
-    # update articles (if they remain in My Data) (there's an API endpoint for this)
-    # replace articles in collection (there's an API endpoint for this)
+    message('uploading dataset to fighare under original format (still used by macrosheds package)')
 
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+                                  c('y', 'n'))
+
+    if(usr_rsp == 'n'){
+        print('upload aborted')
+        return()
+    }
+
+    existing_articles <- figshare_list_articles(token)
+    existing_dmn_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
+    ) %>%
+        filter(! is.na(domain)) %>%
+        select(-title)
+    existing_extras_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+    )
 
     ### CREATE, UPLOAD, PUBLISH TIMESERIES
 
@@ -10371,64 +10701,58 @@ upload_dataset_to_figshare <- function(dataset_version){
 
             dmn <- sub('.zip', '', dmns[j])
 
-            #create figshare "article", which in this case is a dataset
-            fs_id <- expo_backoff(
-                expr = {
-                    figshare_create_article(
-                        title = glue('Network: ', ntw, ', Domain: ', dmn),
-                        description = glue('MacroSheds timeseries data, shapefiles, ',
-                                           'and metadata for domain: {d}, within network: {n}',
-                                           d = dmn,
-                                           n = ntw),
-                        keywords = list('czo'),
-                        category_ids = cat_ids,
-                        type = 'dataset',
-                        authors = conf$figshare_author_list,
-                        token = token)
-                },
-                max_attempts = 6
-            ) %>% invisible()
+            ## if new dmn, create figshare "article", which in this case is a dataset.
+            ## else get the fs_id of the existing article
 
-            #upload domain zip to that article
-            expo_backoff(
-                expr = {
-                    # rfigshare::fs_upload(
-                    #     fs_id,
-                    #     file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
-                    #                 n = ntw,
-                    #                 d = dmn))
-                    figshare_upload_article(fs_id,
-                                            file = glue('macrosheds_figshare_v1/macrosheds_dataset_v1/{n}/{d}.zip',
-                                                        n = ntw,
-                                                        d = dmn),
-                                            token = token)
-                },
-                max_attempts = 6
-            ) %>% invisible()
+            print(paste('uploading', ntw, dmn))
 
-            expo_backoff(
-                expr = {
-                    figshare_add_articles_to_collection(collection_id = collection_id,
-                                                        article_ids = fs_id,
-                                                        token = token)
-               },
-               max_attempts = 6
-            ) %>% invisible()
+            if(! dmn %in% existing_dmn_deets$domain){
+                fs_id <- figshare_create_article(
+                    title = glue('Network: ', ntw, ', Domain: ', dmn),
+                    description = glue('MacroSheds timeseries data, shapefiles, ',
+                                       'and metadata for domain: {d}, within network: {n}',
+                                       d = dmn,
+                                       n = ntw),
+                    keywords = list('czo'),
+                    category_ids = cat_ids,
+                    type = 'dataset',
+                    authors = conf$figshare_author_list,
+                    token = token)
+            } else {
+                fs_id <- existing_dmn_deets$id[existing_dmn_deets$domain == dmn]
+            }
 
-            expo_backoff(
-                expr = {
-                    figshare_publish_article(article_id = fs_id,
+            #if existing article, delete old version
+            if(dmn %in% existing_dmn_deets$domain){
+
+                fls <- figshare_list_article_files(fs_id,
+                                                   token = token)
+
+                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+
+                figshare_delete_article_file(fs_id,
+                                             file_id = fls[[1]]$id,
                                              token = token)
-               },
-               max_attempts = 6
-            ) %>% invisible()
+            }
+
+            #upload new/updated domain zip to that article
+            figshare_upload_article(fs_id,
+                                    file = glue('{t}/{n}/{d}.zip',
+                                                t = tld,
+                                                n = ntw,
+                                                d = dmn),
+                                    token = token)
+
+            figshare_publish_article(article_id = fs_id,
+                                     token = token)
         }
     }
 
 
-    ### CREATE, UPLOAD, PUBLISH SPATIAL DATA AND DOCUMENTATION
+    ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
                                  full.names = TRUE)
+    other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
     names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
     titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
 
@@ -10446,63 +10770,69 @@ upload_dataset_to_figshare <- function(dataset_version){
     names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
-    other_uploadsD <- c(documentation = '../portal/static/documentation/README.txt')
-    titlesD <- 'README'
+    other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
+                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
+                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
+                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
+    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
-    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD)
-    titles <- c(titlesA, titlesB, titlesC, titlesD)
+    other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
+    titlesE <- c('site_metadata', 'variable_metadata')
+
+    other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
+    titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
+
+    print(paste('uploading extras'))
 
     for(i in seq_along(other_uploads)){
 
         uf <- other_uploads[i]
         ut <- titles[i]
 
-        fs_id <- expo_backoff(
-            expr = {
-                figshare_create_article(
-                    title = ut,
-                    description = 'See README',
-                    keywords = list(names(uf)),
-                    category_ids = cat_ids,
-                    authors = conf$figshare_author_list,
-                    type = 'dataset',
-                    token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        if(! ut %in% existing_extras_deets$title){
+            fs_id <- figshare_create_article(
+                title = ut,
+                description = 'See README',
+                keywords = list(names(uf)),
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+        }
 
-        expo_backoff(
-            expr = {
-                figshare_upload_article(fs_id,
-                                        file = unname(uf),
-                                        token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
 
-        expo_backoff(
-            expr = {
-                figshare_add_articles_to_collection(collection_id = collection_id,
-                                                    article_ids = fs_id,
-                                                    token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        #if existing article, delete old version
+        if(ut %in% existing_extras_deets$title){
 
-        expo_backoff(
-            expr = {
-                figshare_publish_article(article_id = fs_id,
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
+
+            figshare_delete_article_file(fs_id,
+                                         file_id = fls[[1]]$id,
                                          token = token)
-            },
-            max_attempts = 6
-        ) %>% invisible()
+        }
+
+        figshare_upload_article(fs_id,
+                                file = unname(uf),
+                                token = token)
+
+        # figshare_add_articles_to_collection(collection_id = collection_id,
+        #                                     article_ids = fs_id,
+        #                                     token = token)
+
+        figshare_publish_article(article_id = fs_id,
+                                 token = token)
     }
 
 
-    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION
+    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
 
-    figshare_publish_collection(collection_id = collection_id,
-                                token = token)
+    # figshare_publish_collection(collection_id = collection_id,
+    #                             token = token)
 }
 
 detrmin_mean_record_length <- function(df){
@@ -10632,7 +10962,8 @@ generate_output_dataset <- function(vsn){
     }
 
     #remove intermediate products that shouldn't be in the final dataset
-    for(k in c('precipitation', 'stream_chemistry', 'discharge')){
+    for(k in c('precipitation', 'stream_chemistry', 'discharge', 'precip_chemistry',
+               'precip_gauge_locations', 'stream_gauge_locations')){
 
         kfpaths <- find_dirs_within_outputdata(keyword = paste0(k, '__'),
                                                vsn = vsn)
@@ -11497,18 +11828,24 @@ catalog_held_data <- function(network_domain, site_data){
                     ungroup() %>%
                     bind_rows(product_breakdown)
 
-                chem_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
-                is_chemvar <- product_breakdown$var %in% chem_vars
+                flx_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
+                is_flxvar <- product_breakdown$var %in% flx_vars
+                other_chemish_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 0 &
+                    ms_vars$variable_type %in% c('phys', 'chem_mix', 'chem_discrete', 'bio', 'gas') &
+                    ms_vars$unit %in% c('ueq/L', 'mg/L', 'eq/L')]
+                is_other_chemish <- product_breakdown$var %in% other_chemish_vars
 
                 product_breakdown$chem_class <- 'NA'
                 if(grepl('stream_flux_inst_scaled', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'stream_flux'
+                    product_breakdown$chem_class[is_flxvar] <- 'stream_flux'
+                    product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
                 } else if(grepl('precip_flux_inst_scaled', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'precip_flux'
+                    product_breakdown$chem_class[is_flxvar] <- 'precip_flux'
+                    product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
                 } else if(grepl('precip_chemistry', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'precip_conc'
+                    product_breakdown$chem_class[is_flxvar | is_other_chemish] <- 'precip_conc'
                 } else if(grepl('stream_chemistry', f)){
-                    product_breakdown$chem_class[is_chemvar] <- 'stream_conc'
+                    product_breakdown$chem_class[is_flxvar | is_other_chemish] <- 'stream_conc'
                 }
             }
 
@@ -11722,13 +12059,17 @@ catalog_held_data <- function(network_domain, site_data){
                SiteCode = site_code,
                SiteName = full_name,
                StreamName = stream,
+               WatershedStatus = ws_status,
                Latitude = latitude,
                Longitude = longitude,
                # GeodeticDatum,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
                Observations, Variables, FirstRecordUTC, LastRecordUTC,
-               ExternalLink)
+               ExternalLink) %>%
+        mutate(WatershedStatus = case_when(WatershedStatus == 'exp' ~ 'experimental',
+                                           WatershedStatus == 'non_exp' ~ 'non-experimental',
+                                           TRUE ~ WatershedStatus))
 
     readr::write_csv(x = all_site_display,
                      file = '../portal/data/general/catalog_files/all_sites.csv')
@@ -13300,31 +13641,31 @@ generate_watershed_raw_spatial_dataset <- function(){
         filter(substr(var, 1, 1) == 'v') %>%
         write_csv('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
 
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
-        flags = '-9Xjq')
-    zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv.zip',
-        files = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
-        flags = '-9Xjq')
-
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
-    unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv',
+    #     flags = '-9Xjq')
+    # zip(zipfile = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv.zip',
+    #     files = '../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv',
+    #     flags = '-9Xjq')
+    #
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_climate.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_hydrology.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_parentmaterial.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_terrain.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_landcover.csv')
+    # unlink('../portal/data/general/spatial_downloadables/spatial_timeseries_vegetation.csv')
 
     write_csv(category_codes,
               '../portal/data/general/spatial_downloadables/variable_category_codes.csv')
@@ -13874,14 +14215,17 @@ run_checks <- function(){
     }
 }
 
-# metadata and citation information function
-metadata_scrape <- function() {
+legal_details_scrape <- function(dataset_version){
+
+    ## metadata and citation information function
+
     # retrieve metadata
     meta_info <- sm(googlesheets4::read_sheet(
            conf$site_doi,
            na = c('', 'NA'),
-           col_types = 'cccccccc'
-       ))
+           col_types = 'ccccccccc'
+       )) %>%
+        select(-citation_used)
 
     meta_urls <- sm(googlesheets4::read_sheet(
         conf$domain_urls,
@@ -13889,47 +14233,72 @@ metadata_scrape <- function() {
         col_types = 'cc'
     ))
 
-    # meta_info <- read.csv("metadata/site_doi_license.csv")
-    # meta_urls <- read.csv("metadata/domain_urls.csv")
-
     # locate domain directory
-    network_dir <- paste0(getwd(),"/","macrosheds_dataset_v1/")
-    network_paths <- list.files(network_dir, all.files=T, full.names=T)
+    network_dir <- file.path(getwd(), paste0('macrosheds_dataset_v', dataset_version))
+    network_paths <- list.files(network_dir,
+                                full.names = TRUE)
 
-
-    readme <- readLines("README.txt")
+    readme <- readLines('src/templates/figshare_docfiles/ts_readme.txt')
 
     # loop domains, and print data .csv and guide .txt
-    for (domain_name in unique(meta_info$domain)) {
+    for(domain_name in unique(meta_info$domain)){
+
         # subset all the domain metadata
-        domain_info <- unique(meta_info[which(meta_info$domain == domain_name),])
-        domain_info <- domain_info[, !(names(domain_info) %in% c("prodcode"))]
+        domain_info <- unique(meta_info[meta_info$domain == domain_name, ])
 
         # subset the domain URLs
-        domain_url <- meta_urls[which(meta_urls$domain == domain_name),]
-        str_url <- toString(unique(domain_url$url))
+        domain_url <- meta_urls[meta_urls$domain == domain_name, ]
+        str_url <- paste(unique(domain_url$url), collapse = ', ')
 
         # merge to a single data frame
         domain_all <- merge(domain_info, domain_url, 'domain')
 
-        for (network in network_paths) {
-            for (domain in list.files(network, all.files=T, full.names=T)) {
-                # write to CSV
-                if (basename(domain) == domain_name) {
-                    file_name <- paste0(network_dir, basename(network),"/",
-                                        basename(domain), "/", basename(domain), ".csv")
-                    readme_domain <- paste0(network_dir, basename(network),"/",
-                                            basename(domain), "/", "Citation Instructions.txt")
+        network_name <- network_domain %>%
+            filter(domain == !!domain_name) %>%
+            pull(network)
 
-                    reader <- file(readme_domain)
-                    headerline <- paste0("Domain: ", basename(domain))
-                    subline <- paste0("Data Source URL: ", str_url, "\n")
-                    writeLines(c(headerline, subline, readme), reader)
-                    close(reader)
+        if(! length(network_name)) next #domain not fully hooked up
 
-                    write.csv(domain_all, file_name, row.names = F)
-                }
-            }
-        }
+        ntw_pth <- grep(paste0(network_name, '$'), network_paths, value = TRUE)
+
+        dmn_pth <- list.files(ntw_pth, full.names = TRUE) %>%
+            str_subset(domain_name)
+
+        if(! length(dmn_pth)) next #there's been a network/domain change and somebody's trying to run this without rebuilding everything
+
+        #add column of macrosheds prodnames to clarify primary prodcodes
+        dmn_prods <- try({
+            read_csv(glue('src/{n}/{d}/products.csv',
+                          n = network_name,
+                          d = domain_name),
+                     col_types = cols())
+        })
+
+        if(inherits(dmn_prods, 'try-error')) next
+
+        dmn_prods <- dmn_prods %>%
+            select(prodcode,
+                   ms_prodnames = prodname) %>%
+            group_by(prodcode) %>%
+            summarize(ms_prodnames = paste(ms_prodnames, collapse = ', ')) %>%
+            ungroup()
+
+        domain_all <- domain_all %>%
+            left_join(dmn_prods, by = 'prodcode') %>%
+            select(domain, ms_prodnames, prodcode, everything()) %>%
+            arrange(ms_prodnames, prodcode)
+
+        #write legal table and accompanying readme
+        file_name <- file.path(network_dir, network_name, domain_name, 'LEGAL.csv')
+        readme_domain <- file.path(network_dir, network_name, domain_name,
+                                   'citation_instructions.txt')
+
+        reader <- file(readme_domain)
+        headerline <- paste0('Domain: ', domain_name)
+        subline <- paste0('Data Source URL: ', str_url, '\n')
+        writeLines(c(headerline, subline, readme), reader)
+        close(reader)
+
+        write_csv(domain_all, file_name)
     }
 }
