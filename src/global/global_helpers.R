@@ -1505,16 +1505,44 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
+    #make sure the same flagcodes aren't passed to more than one parameter
+    varflgs_c <- c('variable_flags_dirty', 'variable_flags_clean', 'variable_flags_to_drop', 'variable_flags_bdl')
+    dupe_flags <- c()
+    for(p in varflgs_c){
+        for(q in varflgs_c){
+            if(p == q) next
+            pp = try(get(p), silent = TRUE); if(inherits(pp, 'try-error')) next
+            qq = try(get(q), silent = TRUE); if(inherits(qq, 'try-error')) next
+            dupe_flags <- intersect(pp, qq)
+            if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
+        }
+    }
+    summflgs_c <- c('summary_flags_dirty', 'summary_flags_clean', 'summary_flags_to_drop', 'summary_flags_bdl')
+    dupe_flags <- c()
+    for(p in summflgs_c){
+        for(q in summflgs_c){
+            if(p == q) next
+            pp = try(get(p), silent = TRUE); if(inherits(pp, 'try-error')) next
+            qq = try(get(q), silent = TRUE); if(inherits(qq, 'try-error')) next
+            dupe_flags <- intersect(pp, qq)
+            if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
+        }
+    }
+
     if(! no_sumflags){
         if(sumdrop){
             summary_colnames <- names(summary_flags_to_drop)
         } else {
             summary_colnames <- names(summary_flags_clean)
         }
-    } else if(sumbdl){
-        summary_colnames <- names(summary_flags_bdl)
     } else {
         summary_colnames <- NULL
+    }
+
+    if(sumbdl){
+        sum_bdl_colnames <- names(summary_flags_bdl)
+    } else {
+        sum_bdl_colnames <- NULL
     }
 
     data_col_keyword <- gsub(pattern = '#V#',
@@ -1558,14 +1586,7 @@ ms_cast_and_reflag <- function(d,
         d$var <- varname
     }
 
-    #remove rows with NA in the value column (these take up space and can be
-    #reconstructed by casting to wide form
-    HERE (see also below)
-    need to see how identify_detection_limit_t works with NAs
-    DO NOT remove NAs here. remove them after until after BDL has been applied below
-    d <- filter(d, ! is.na(dat))
-
-    #get detection limits so we can apply 1/2 detlim for flags indicating sample is below detlim
+    #get 1/2 detection limits
     if(sumbdl || varbdl){
 
         detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
@@ -1574,7 +1595,7 @@ ms_cast_and_reflag <- function(d,
                                               return_detlims = TRUE,
                                               ignore_arrange = TRUE)
 
-        halfdl <- 10^-detlims / 2 #convert detlim from int to decimal, then half it
+        half_detlims <- mutate(detlims, detlim = detlim / 2)
     }
 
     #filter rows with summary flags indicating bad data (data to drop)
@@ -1617,22 +1638,7 @@ ms_cast_and_reflag <- function(d,
         }
     }
 
-    HERE (see above too)
-    fill out the two template conditionals below
-    make sure control flow is still intact for this function. its pretty heavy
-    need to test this function with both varflags and summflags
-    ms_cast_and_reflag (process_1_2783) has test code in it "TEST"
-
-    #set BDL values and ms_statuses
-    if(sumbdl){
-
-    }
-
-    if(varbdl){
-        variable_flags_bdl
-    }
-
-    #binarize remaining flag information (0 = clean, 1 = questionable)
+    #binarize remaining flag information (not including BDLs yet; 0 = clean, 1 = questionable)
     if(! no_varflags){
         if(varclen){
             d <- mutate(d, ms_status = case_when(
@@ -1662,6 +1668,27 @@ ms_cast_and_reflag <- function(d,
             }
         }
     }
+
+    #set val and ms_status for BDL records
+    if(sumbdl){
+        #this probably wouldn't happen unless there were only one data column
+        for(i in seq_along(summary_flags_bdl)){
+            si <- summary_flags_bdl[i]
+            bdl_inds <- d[[names(si)]] %in% si[[1]]
+            d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+            d[bdl_inds, 'ms_status'] <- 1
+        }
+    }
+
+    if(varbdl){
+        bdl_inds <- d$flg %in% variable_flags_bdl
+        d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+        d[bdl_inds, 'ms_status'] <- 1
+    }
+
+    #remove rows with NA in the value column (these take up space and can be
+    #reconstructed by casting to wide form
+    d <- filter(d, ! is.na(dat))
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
@@ -6262,14 +6289,11 @@ reconstruct_var_column <- function(d,
         }
     )
 
-    if(length(detlim) == 1){
-        var <- names(detlim)
+    prec_ind <- grepl('precipitation$', detlim$var)
+    if(any(prec_ind)){
+        var <- detlim$var[prec_ind[1]]
     } else {
-        # # d <<- d
-        # vv <<- detlim
-        # detlim = vv
-        stop(glue('Not sure if we\'ll ever encounter this, but if ',
-                  'so we need to build it now!'))
+        stop('maybe get the precipitation variable prefix from some other file')
     }
 
     d <- d %>%
@@ -8272,168 +8296,6 @@ write_metadata_d_linkprod <- function(network,
                       file = data_acq_file)
 }
 
-identify_detection_limit_s <- function(x){
-
-    #this is the scalar version of identify_detection_limit (_s).
-    #it was the first iteration, and has been superseded by the temporally-
-    #explicit version (identify_detection_limit_t).
-    #that version relies on stored data, so automatically
-    #writes to data/<network>/<domain>/detection_limits.json. This version
-    #just returns its output. This version is still used for idw (where input
-    #sites != output sites), but we should find a way to get the minimum input
-    #detection limit for all sites being averaged and apply that detlim to the
-    #output.)
-
-    #if x is a 2d array-like object, the detection limit (number of
-    #decimal places) of each column is returned. non-numeric columns return NA.
-    #If x is a vector (or something that can be coerced to a vector),
-    #the detection limit is returned as a scalar.
-
-    #detection limit is computed as the 10th percentile of the number of characters
-    #following each decimal place. NAs and zeros are ignored when computing
-    #detection limit.
-
-    identify_detection_limit_v <- function(x){
-
-        #x is a vector, or it will be coerced to one.
-        #non-numeric vectors return NA vectors of the same length
-
-        x <- unname(unlist(x))
-        if(! is.numeric(x)) return(rep(NA, length(x)))
-
-        options(scipen = 100)
-        nas <- is.na(x) | x == 0
-
-        x <- as.character(x)
-        nsigdigs <- stringr::str_split_fixed(x, '\\.', 2)[, 2] %>%
-            nchar()
-
-        nsigdigs[nas] <- NA
-
-        options(scipen = 0)
-
-        return(nsigdigs)
-    }
-
-    if(! is.null(dim(x))){
-
-        detlim <- vapply(X = x,
-                         FUN = function(y){
-                             identify_detection_limit_v(y) %>%
-                                 # Mode(na.rm = TRUE)
-                                 quantile(probs = 0.1,
-                                          na.rm = TRUE,
-                                          names = FALSE)
-                         },
-                         FUN.VALUE = numeric(1))
-
-    } else if(is.atomic(x) && length(x)){
-        detlim <- identify_detection_limit_v(x) %>%
-            # Mode(na.rm=TRUE)
-            quantile(probs = 0.1,
-                     na.rm = TRUE,
-                     names = FALSE)
-    } else {
-        stop('x must be a vector or 2d array-like')
-    }
-
-    return(detlim)
-}
-
-apply_detection_limit_s <- function(x, digits){
-
-    #this is the scalar version of apply_detection_limit (_s).
-    #it was the first iteration, and has been superseded by the temporally-
-    #explicit version (apply_detection_limit_t).
-    #that version relies on stored data, so automatically
-    #reads from data/<network>/<domain>/detection_limits.json. This version
-    #just accepts detection limits as an argument.
-    #This version is still used for idw (where input
-    #sites != output sites), but we should find a way to get the minimum input
-    #detection limit for all sites being averaged and apply that detlim to the
-    #output.)
-
-    #x: a 2d array-like or a numeric vector
-    #digits: a numeric vector if x is a 2d array-like, or a numeric scalar if
-    #digits is a vector or vector-like, containing the detection limits (in
-    #digits after the decimal) to be applied to x. application of detection
-    #limits is handled by round.
-
-    #if x is a 2d array-like object, digits are applied column-wise
-    #If x is a vector (or something that can be coerced to a vector),
-    #digits is applied elementwise
-
-    #if x is a 2d array-like with named columns and digits is a named vector,
-    #values of digits are matched by name to columns of x. unmatched values
-    #of digits are ignored. unmatched columns of x are unaffected.
-    #if either x or digits is not named, all names are ignored.
-
-    #attempting to apply detection limits to non-numerics results in error
-
-    #NA values of digits are not used.
-
-    if(! is.numeric(digits) && ! all(is.na(digits))){
-        stop('digits must be numeric')
-    }
-
-    apply_detection_limit_v <- function(x, digits){
-
-        x <- unname(unlist(x))
-        if(is.na(digits)) return(x)
-        if(! is.numeric(x)) stop('all affected columns of x must be numeric.')
-        x <- round(x, digits)
-
-        return(x)
-    }
-
-    if(! is.null(dim(x))){
-
-        # if(length(digits) != ncol(x)){
-        #     stop('length of digits must equal number of columns in x')
-        # }
-
-        if(! is.null(names(digits)) && ! is.null(colnames(x))){
-
-            #if any columns don't have detection limits specified,
-            #fill in those missing specifications with NAs
-            missing_specifications <- setdiff(colnames(x), names(digits))
-            more_digits <- rep(NA, length(missing_specifications))
-            names(more_digits) <- missing_specifications
-            digits <- c(digits, more_digits)
-
-            #ignore detection limits whose names don't match names in x
-            reorder <- match(colnames(x), names(digits))
-            digits <- digits[! is.na(reorder)]
-            reorder <- reorder[! is.na(reorder)]
-            digits <- digits[reorder]
-
-        } else if(length(digits) != ncol(x)){
-            stop('length of digits must equal number of columns in x')
-        }
-
-        x <- mapply(FUN = function(y, z){
-                    apply_detection_limit_v(y, z)
-                },
-                y = x,
-                z = digits,
-                SIMPLIFY = FALSE) %>%
-            as_tibble()
-
-    } else if(is.atomic(x) && length(x)){
-
-        if(length(digits) != 1){
-            stop('length of digits must be 1 if x is a vector')
-        }
-
-        x <- apply_detection_limit_v(x, digits)
-
-    } else {
-        stop('x must be a vector or 2d array-like')
-    }
-
-    return(x)
-}
-
 Mode <- function(x, na.rm = TRUE){
 
     if(na.rm){
@@ -8464,59 +8326,55 @@ get_successor <- function(network,
 
 knit_det_limits <- function(network, domain, prodname_ms){
 
-    # if(is_derived_product(prodname_ms) && ! ignore_pred){
-    #
-    #     #if there are multiple precursors (rare), just use the first
-    #     prodname_ms <- get_detlim_precursors(network = network,
-    #                                          domain = domain,
-    #                                          prodname_ms = prodname_ms)
-    # }
+    detlim_list <- lapply(prodname_ms, function(x) read_detection_limit(network, domain, x))
+    detlim_list <- detlim_list[sapply(detlim_list, function(x) ! is.null(x))]
+    lowest_detlims <- Reduce(
+        function(x, y){
+            full_join(x, y, by = 'var') %>%
+                mutate(detlim = pmin(detlim.x, detlim.y, na.rm = TRUE)) %>%
+                select(var, detlim)
+        },
+        detlim_list)
 
-    detlim <- read_detection_limit(network, domain, prodname_ms[1])
+    return(lowest_detlims)
+}
 
-    if(is.null(detlim)){
-        prodname_ms <- get_successor(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms[1])
+identify_series_detlim <- function(x){
+
+
+    #first gets the min of the absolute value of the series (without NAs),
+    #then if the min is e.g. 0.000416 assigns detection limit of 0.00045.
+    #surprisingly hard to spell this out, but the example is
+    #plenty clear.
+
+    #returns 0 if the min is >= 1, or if there are no nonzero data values
+
+    if(! class(x) %in% c('integer', 'numeric', 'errors')){
+        stop('x must be a numeric vector')
     }
 
-    for(i in 2:length(prodname_ms)) {
-        detlim_ <- read_detection_limit(network, domain, prodname_ms[i])
-
-        old_vars <- names(detlim)
-        new_vars <- names(detlim_)
-
-        common_vars <- base::intersect(old_vars, new_vars)
-
-        if(length(common_vars) > 0) {
-
-            for(p in 1:length(common_vars)) {
-
-                old_sites <- names(detlim[[common_vars[p]]])
-                new_sites <- names(detlim_[[common_vars[p]]])
-
-                common_sites <- base::intersect(old_sites, new_sites)
-
-                if(!length(common_sites) == 0) {
-                    new_sites <- new_sites[!new_sites %in% common_sites]
-                }
-
-                if(length(new_sites) > 0){
-                    for(z in 1:length(new_sites)) {
-                        detlim[[common_vars[p]]][[new_sites[z]]] <- detlim_[[common_vars[p]]][[new_sites[z]]]
-                    }
-                }
-            }
-        }
-
-        unique_vars <- new_vars[!new_vars %in% old_vars]
-        if(length(unique_vars) > 0) {
-            for(v in 1:length(unique_vars)) {
-                detlim[[unique_vars[v]]] <- detlim_[[unique_vars[v]]]
-            }
-
-        }
+    nonzeros <- x[! is.na(x) & x != 0]
+    if(length(nonzeros)){
+        mindetect <- min(abs(nonzeros))
+    } else {
+        return(0)
     }
+
+    x_c <- strsplit(as.character(mindetect), '')[[1]]
+
+    first_leading_nonzero_ind <- Position(function(z) ! z %in% c('.', '0'),
+                                          x_c)
+
+    non_decimal <- ! '.' %in% x_c
+    if(non_decimal) return(0)
+
+    detlim_factor <- as.numeric(x_c[first_leading_nonzero_ind])
+    first_lead_nonz_after_dec <- (first_leading_nonzero_ind - 2)
+    detlim_ <- 1*10^-first_lead_nonz_after_dec * detlim_factor
+    detlim__ <- 5*10^-(first_lead_nonz_after_dec + 1)
+    detlim <- detlim_ + detlim__
+
+    if(detlim >= 1) return(0)
 
     return(detlim)
 }
@@ -8530,37 +8388,15 @@ identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodnam
     #network: string, name of network, required only if write_detlim_file is TRUE
     #domain: string, name of domain, required only if write_detlim_file is TRUE
     #prodname_ms: string, name of prodname_ms, required only if write_detlim_file is TRUE
-    #write_detlim_file: logical. if TRUE, detlims will be written to disk. see below.
-    #return_detlims: logical. if TRUE, detlims will be returned. see below.
-    #ignore arrange: logical. do we need this param? can it be hard-coded? neon is the only domain that needs TRUE. let's investigate.
-
-    #this is the temporally explicit version of identify_detection_limit (_t).
-    #it supersedes the scalar version (identify_detection_limit_s).
-    #that version just returns its output. This version optionally writes
-    #to data/<network>/<domain>/detection_limits.json,
-    #and, if return_detlims = TRUE, returns its output as an integer vector
-    #of detection limits with length equal to the number of rows in X, where each
-    #value holds the detection limit of its corresponding data value in X$val.
+    #write_detlim_file: logical. if TRUE, detlims will be written to data/<network>/<domain>/detection_limits.json
+    #return_detlims: logical. if TRUE, detlims will be returned as a data.frame with columns:
+    #   var: variable
+    #   detlim: detection limit
+    #ignore_arrange: logical. no longer used. left for compatibility
 
     #X is a 2d array-like object. must have datetime,
-    #site_code, var, and val columns. if X was generated by ms_cast_and_reflag,
-    #you're good to go.
-
-    #if desired, the detection limit (number of decimal places)
-    #of each column is written to data/<network>/<domain>/detection_limits.json
-    #as a nested list:
-    #prodname_ms
-    #    site_code
-    #        variable
-    #            startdt: datetime1, datetime2... datetimeN
-    #            lim:     limit1,    limit2...    limitN
-
-    #detection limit (detlim) is computed as the
-    #number of characters following the decimal. NA detlims are filled
-    #by locf, followed by nocb. Then, to account for false detlims arising from
-    #trailing zeros, positive monotonicity is forced by carrying forward
-    #cumulative maximum detlims. Each time the detlim increases,
-    #a new startdt and limit are recorded.
+    #site_code, var, and val columns. Basically, MacroSheds format without the ms_status
+    #and ms_interp columns. if X was generated by ms_cast_and_reflag, you're good to go.
 
     #X will be sorted ascendingly by site_code, var, and then datetime. If
     #   return_detlims = TRUE and you'll be using the output to establish
@@ -8576,115 +8412,15 @@ identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodnam
         stop('prodname_ms, network, and domain must be supplied if write_detlim_file is TRUE')
     }
 
-    if(! ignore_arrange){
-        X <- as_tibble(X) %>%
-            arrange(site_code, var, datetime)
-    }
+    variables <- unique(X$var)
+
+    detlim <- lapply(variables, function(v) identify_series_detlim(pull(X[X$var == v, 'val'])))
+    names(detlim) <- variables
+    detlim <- detlim[! sapply(detlim, is.null)]
+    detlim <- tibble(var = names(detlim),
+                     detlim = unlist(detlim, use.names = FALSE))
 
     if(write_detlim_file){
-
-        identify_detection_limit_ <- function(X, v, output = 'list'){
-
-            if(! output %in% c('vector', 'list')){
-                stop('output must be "vector" or "list"')
-            }
-
-            x <- filter(X, var == v)
-
-            if(nrow(x) == 0){
-                return(NULL)
-            }
-
-            sn = x$site_code
-            dt = x$datetime
-
-            options(scipen = 100)
-            nas <- is.na(x$val) | x$val == 0
-
-            val <- as.character(x$val)
-            nsigdigs <- stringr::str_split_fixed(val, '\\.', 2)[, 2] %>%
-                nchar()
-
-            nsigdigs[nas] <- NA
-
-            #for each site, clean up the timeseries of detection limits:
-            #   first, fill NAs by locf, then by nocb
-            #   next, force positive monotonicity by locf
-            nsigdigs_l <- tibble(nsigdigs, dt, sn) %>%
-                base::split(sn) %>%
-                map(~ if(all(is.na(.x$nsigdigs))) .x else
-                    mutate(.x,
-                           nsigdigs = imputeTS::na_locf(nsigdigs,
-                                                        na_remaining = 'rev') %>%
-                               force_monotonic_locf()))
-
-            if(output == 'vector'){
-
-                #avoid the case where the first few detection lims
-                #are artificially set low because their last sigdig is 0
-                nsigdigs_l <- lapply(X = nsigdigs_l,
-                                     FUN = function(z){
-
-                                         #for sites with all-NA detlims, return as-is
-                                         if(all(is.na(z$nsigdigs))){
-                                             return(z)
-                                         }
-
-                                         if(length(z$nsigdigs) > 5 &&
-                                            length(unique(z$nsigdigs[1:5]) > 1)){
-                                             z$nsigdigs[1:5] <- z$nsigdigs[6]
-                                         }
-
-                                         return(z)
-                                     })
-
-                nsigdigs_df <- Reduce(bind_rows, nsigdigs_l) %>%
-                    arrange(sn, dt) #probably superfluous, but safe
-
-                options(scipen = 0)
-
-                detlims <- nsigdigs_df$nsigdigs
-
-                return(detlims)
-            }
-
-            #build datetime-detlim pairs for each change in detlim for each variable
-            detlims <- lapply(X = nsigdigs_l,
-                              FUN = function(z){
-
-                                  #for sites with all-NA detlims, build the same
-                                  #default list as above
-                                  if(all(is.na(z$nsigdigs))){
-                                      detlims <- list(startdt = as.character(z$dt[1]),
-                                                      lim = NA)
-                                      return(detlims)
-                                  }
-
-                                  runs <- rle2(z$nsigdigs)
-
-                                  #avoid the case where the first few detection lims
-                                  #are artificially set low because their last
-                                  #sigdig is 0
-                                  if(runs$lengths[1] %in% 1:5 && nrow(runs) > 1){
-                                      runs <- runs[-1, ]
-                                      runs$starts[1] <- 1
-                                  }
-
-                                  detlims <- list(startdt = as.character(z$dt[runs$starts]),
-                                                  lim = runs$values)
-                              })
-
-            options(scipen = 0)
-
-            return(detlims)
-        }
-
-        variables <- unique(X$var)
-
-        detlim <- lapply(variables,
-                         function(z) identify_detection_limit_(X, z))
-        detlim <- detlim[! sapply(detlim, is.null)]
-        names(detlim) <- variables
 
         write_detection_limit(detlim,
                               network = network,
@@ -8693,19 +8429,7 @@ identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodnam
     }
 
     if(return_detlims){
-
-        detlim_v <- rep(NA, nrow(X))
-
-        for(v in variables){
-            for(s in unique(X$site_code)){
-                x <- filter(X, site_code == s)
-                dlv <- identify_detection_limit_(x, v, output = 'vector')
-                if(is.null(dlv)) next
-                detlim_v[X$site_code == s & X$var == v] <- dlv
-            }
-        }
-
-        return(detlim_v)
+        return(detlim)
     }
 }
 
@@ -8715,13 +8439,12 @@ apply_detection_limit_t <- function(X,
                                     prodname_ms,
                                     ignore_pred = FALSE){
 
-    #this is the temporally explicit version of apply_detection_limit (_t).
-    #it supersedes the scalar version (apply_detection_limit_s).
-    #that version just returns its output. This version relies on stored data,
-    #so automatically reads from data/<network>/<domain>/detection_limits.json.
+    #This function relies on stored data --
+    #automatically reads from data/<network>/<domain>/detection_limits.json.
 
     #X is a 2d array-like object. must have datetime,
-    #   site_code, var, and val columns. if X was generated by ms_cast_and_reflag,
+    #   site_code, var, and val columns. Basically, MacroSheds format without the ms_status
+    #and ms_interp columns. if X was generated by ms_cast_and_reflag,
     #   you should be good to go.
     #ignore_pred: logical; set to TRUE if detection limits should be retrieved
     #   from the supplied prodname_ms directly, rather than its precursor.
@@ -8730,6 +8453,10 @@ apply_detection_limit_t <- function(X,
     #limits to a variable for which detection limits are not known (not present
     #in detection_limits.json) results in error. Superfluous variable entries in
     #detection_limits.json are ignored.
+
+    if(nrow(X) == 0){
+        return(X)
+    }
 
     X <- as_tibble(X) %>%
         arrange(site_code, var, datetime)
@@ -8769,92 +8496,27 @@ apply_detection_limit_t <- function(X,
         stop('problem reading detection limits from file')
     }
 
-    apply_detection_limit_ <- function(x, varnm, detlim){
-
-
-        #plenty of code superfluity in this function. adapted from a previous
-        #   version and there's negligible efficiency loss if any
-
-        if(! varnm %in% names(detlim)){
-            stop(glue('Missing detection limits for var: {v}', v = varnm))
-        }
-
-        detlim_var <- detlim[[varnm]]
-
-        x <- filter(x, var == varnm)
-
-        #nrow(x) == 1 was added because there was an error occurring if there
-        #was a site with only one sample of a variable
-        if(nrow(x) == 0){
-            return(NULL)
-        }
-
-        sn = x$site_code
-        dt = x$datetime
-
-        site_lst <- tibble(dt, sn, val = x$val) %>%
-            base::split(sn)
-
-        Xerr <- lapply(X = site_lst,
-                       FUN = function(z) errors(z$val)) %>%
-            unlist() %>%
-            unname()
-
-        rounded <- lapply(X = site_lst,
-                          FUN = function(z){
-
-                              if(all(is.na(z$val))) return(z$val)
-
-                              detlim_varsite <- detlim_var[[z$sn[1]]]
-                              if(all(is.na(detlim_varsite$lim))) return(z$val)
-
-                              cutvec <- c(as.POSIXct(detlim_varsite$startdt,
-                                                     tz = 'UTC'),
-                                          as.POSIXct('2900-01-01 00:00:00'))
-
-                              roundvec <- cut(x = z$dt,
-                                              breaks = cutvec,
-                                              include.lowest = TRUE,
-                                              labels = detlim_varsite$lim) %>%
-                                              as.character() %>%
-                                              as.numeric()
-
-                              #sometimes synchronize_timestep will adjust a point
-                              #to a time before the earliest startdt recorded
-                              #in detection_limits.json. this handles that.
-                              if(length(roundvec == 1) && is.na(roundvec)){
-                                  roundvec = detlim_varsite$lim[1]
-                              } else {
-                                  roundvec <- imputeTS::na_locf(x = roundvec,
-                                                                option = 'nocb')
-                              }
-
-                              rounded <- mapply(FUN = function(a, b){
-                                                    round(a, b)
-                                                },
-                                                a = z$val,
-                                                b = roundvec,
-                                                USE.NAMES = FALSE)
-
-                              return(rounded)
-                          }) %>%
-            unlist() %>%
-            unname()
-
-        errors(rounded) <- Xerr
-
-        return(rounded)
-    }
-
     variables <- unique(X$var)
 
     for(v in variables){
-        for(s in unique(X$site_code)){
-            x <- filter(X, site_code == s)
-            dlv <- apply_detection_limit_(x, v, detlim)
-            if(is.null(dlv)) next
-            X$val[X$site_code == s & X$var == v] <- dlv
+
+        if(! v %in% detlim$var){
+            #might need to assign NAs for unknown detlims in identify_detection_limit_t
+            stop(glue('Missing detection limits for var: {v}', v = v))
         }
+
+        detlim_var <- detlim[detlim$var == v, 'detlim']
+
+        if(length(detlim_var != 1)){
+            stop(glue('incorrect detlim length (!= 1) for var: {v}', v = v))
+        }
+
+        var_inds <- X$var == v
+        xv <- X$val[var_inds]
+
+        detlim_enforce_inds <- ! is.na(xv) & ! xv == 0 & abs(xv) < detlim_var
+        xv[detlim_enforce_inds] <- detlim_var * sign(xv[detlim_enforce_inds])
+        X$val[var_inds] <- xv
     }
 
     return(X)
@@ -8875,36 +8537,17 @@ read_detection_limit <- function(network, domain, prodname_ms){
 
 write_detection_limit <- function(detlim, network, domain, prodname_ms){
 
-    #NOTE: this function updated 2021-02-16, near the end of rebuilding
-    #   LTER (discovered issue with luquillo sites overwriting each other in
-    #   the detlim file). as such, it's not thoroughly tested. some stuff
-    #   that worked before might be broken now. tried to make it backward compatible though
-
     detlims_file <- glue('data/{n}/{d}/detection_limits.json',
                          n = network,
                          d = domain)
 
-    detlim_new <- detlim #better name; don't want to update every call though
-
     if(file.exists(detlims_file)){
 
         detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        if(prodname_ms %in% names(detlim_stored)){
-
-            for(v in names(detlim_new)){
-
-                site_detlims <- detlim_new[[v]]
-                for(s in names(site_detlims)){
-                    detlim_stored[[prodname_ms]][[v]][[s]] <- site_detlims[[s]]
-                }
-            }
-
-        } else {
-            detlim_stored[[prodname_ms]] <- detlim_new
-        }
+        detlim_stored[[prodname_ms]] <- detlim
 
     } else {
-        detlim_stored <- list(placeholder = detlim_new)
+        detlim_stored <- list(placeholder = detlim)
         names(detlim_stored) <- prodname_ms
     }
 
@@ -9271,17 +8914,6 @@ get_gee_standard <- function(network,
     return(fin)
 }
 
-detection_limit_as_uncertainty <- function(detlim){
-
-    # uncert <- lapply(detlim,
-    #                  FUN = function(x) 1 / 10^x) %>%
-    #               as_tibble()
-
-    uncert <- 1 / 10^detlim
-
-    return(uncert)
-}
-
 carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
 
     # Filter out any rows where vals are outside realistic  range, defined
@@ -9295,9 +8927,8 @@ carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = 
                                     return_detlims = TRUE,
                                     ignore_arrange = ignore_arrange)
 
-    u <- detection_limit_as_uncertainty(u)
+    u <- detection_limit_as_uncertainty(d, u)
     errors(d$val) <- u
-    # d <- insert_uncertainty_df(d, u)
 
     return(d)
 }
@@ -9424,13 +9055,16 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
     #return()
 }
 
-detection_limit_as_uncertainty <- function(detlim){
+detection_limit_as_uncertainty <- function(d, detlim){
 
-    # uncert <- lapply(detlim,
-    #                  FUN = function(x) 1 / 10^x) %>%
-    #               as_tibble()
+    #d: a dataframe in MacroSheds format
+    #detlim: a dataframe with var and detlim columns (returned by identify_detection_limit_t)
 
-    uncert <- 1 / 10^detlim
+    #the name of this function is a bit of a misnomer now. kept for compatibility.
+    #really, it's just returning a vector of detection limits corresponding to the
+    #rows (variables) of d.
+
+    uncert <- detlim$detlim[match(d$var, detlim$var)]
 
     return(uncert)
 }
