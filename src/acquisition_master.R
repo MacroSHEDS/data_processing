@@ -264,7 +264,7 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    
+
     # held_data = get_data_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge')
@@ -300,9 +300,9 @@ for(dmnrow in 1:nrow(network_domain)){
                     domain = domain,
                     dev_machine_status = ms_instance$machine_status,
                     verbose = TRUE))
-    # ms_derive(network = network,
-    #           prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain)
+    ms_derive(network = network,
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain)
     ms_general(network = network,
                domain = domain)
 
@@ -312,8 +312,6 @@ for(dmnrow in 1:nrow(network_domain)){
 logger_module <- 'ms.module'
 
 # write csv + readme domain metadata
-metadata_scrape()
-
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,

@@ -2,10 +2,12 @@
 
 **when in doubt, follow tidy style guide**
 
+And don't worry much about these first couple. The simple stylistic ones are below.
+
 + explicitly pass arguments where instructive/clarifying (e.g. first occurrence of call in a sequence of similar calls):
 
     ```
-    myfunc(par1 = argx, par2 = argy)  
+    myfunc(par1 = argx, par2 = argy) #more than one parameter. nice to clarify
     myfunc(argz)
     ```
 
@@ -54,15 +56,17 @@
     thinged_stuff <- do_thing(specific_stuff)
     ```
 
-+ `return` must be used in all kernel and engine functions. even if it's just `return()`. our error handling scheme requires this.
-
 + no space needed before the curly brace that sets off a function definition:
 
     `myfunc <- function(){`
 
++ use TRUE and FALSE instead of T and F
+
 + use spaces around most operators, including !, ==, %in%, +, <-, =, >=, etc.
 
     spaces are not needed around indexing/subsetting/referencing operators like [, [[, $, and ::
+
++ use a space after the comma when indexing rows but not columns of a data.frame, e.g. df[1:3, ]
 
 + use single quotes rather than double quotes to denote strings. Only use double quotes if your string includes literal "'"
 
