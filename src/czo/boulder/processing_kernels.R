@@ -335,6 +335,8 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
+    #mike: what about "U" and all the less-thans? 1/2 detlims might be appropriate for those to.
+    #   their extended metadata link appears to be broken though, so maybe we can't resolve
     # u = Undetected
     # DL = below detection limit
     d <- ms_cast_and_reflag(d,
@@ -389,9 +391,9 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -513,9 +515,9 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -641,9 +643,9 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -683,9 +685,9 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -807,9 +809,9 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -849,9 +851,9 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -891,9 +893,9 @@ process_1_2888 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
@@ -933,9 +935,9 @@ process_1_2889 <- function(network, domain, prodname_ms, site_code, component) {
     #                        network = network,
     #                        domain = domain,
     #                        prodname_ms = prodname_ms)
-    # 
+    #
     # d <- synchronize_timestep(d)
-    # 
+    #
     # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
