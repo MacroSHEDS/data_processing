@@ -125,7 +125,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                         'NH4.N.µg.N.l' = 'NH4_N',
                                         'NO3.N.µg.N.l' = 'NO3_N',
                                         'tot.N.mg.N.l' = 'TN',
-                                        'SO4.SO4.µg.SO4.l' = 'SO4_S',
+                                        'SO4.SO4.µg.SO4.l' = 'SO4',
                                         'PO4.P.µg.P.l' = 'PO4_P',
                                         'S.SO4.µg.S.l' = 'SO4_S',
                                         'Cu.µg.l' = 'Cu',
@@ -204,11 +204,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                         'Re.µg.l' = 'Re',
                                         'Ga.µg.l' = 'Ga'),
                          data_col_pattern = '#V#',
-                         set_to_NA = '<LOD',
+                         convert_to_BDL_flag = '<LOD',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            variable_flags_bdl = 'BDL')
 
 
     d <- ms_conversions(d,
@@ -381,7 +381,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                              'Re' = 'mg/l',
                                              'CH4_C' = 'mg/l',
                                              'DIC' = 'mg/l',
-                                             'CO2_C' = 'mg/l'))
+                                             'CO2_C' = 'mg/l'),
+                        keep_molecular = 'SO4')
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -472,7 +473,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'NH4.N.µg.N.l' = 'NH4_N',
                                         'NO3.N.µg.N.l' = 'NO3_N',
                                         'tot.N.mg.N.l' = 'TN',
-                                        'SO4.SO4.µg.SO4.l' = 'SO4_S',
+                                        'SO4.SO4.µg.SO4.l' = 'SO4',
                                         'CH4.C.µg.l' = 'CH4_C',
                                         'PO4.P.µg.P.l' = 'PO4_P',
                                         'S.SO4.µg.S.l' = 'SO4_S',
@@ -553,11 +554,11 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'Re.µg.l' = 'Re',
                                         'Ga.µg.l' = 'Ga'),
                          data_col_pattern = '#V#',
-                         set_to_NA = '<LOD',
+                         convert_to_BDL_flag = '<LOD',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c('NO2_N' = 'ug/l',
@@ -729,7 +730,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                              'Re' = 'mg/l',
                                              'CH4_C' = 'mg/l',
                                              'DIC' = 'mg/l',
-                                             'CO2_C' = 'mg/l'))
+                                             'CO2_C' = 'mg/l'),
+                        keep_molecular = 'SO4')
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -868,7 +870,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                      quiet = TRUE) %>%
         select(site_code = Huvudomr,
                geometry = geometry) %>%
-        mutate(site_code = paste0('Site', site_code)) 
+        mutate(site_code = paste0('Site', site_code))
 
     # Watershed boundaries don't include subbasins of if they are also gauges
     # comnining them here
