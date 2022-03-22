@@ -1,10 +1,3 @@
-MacroSheds products are referred to as <product name>__<product code>. product codes are
-used internally, and are not included with our downloadable products, however,
-they are included in our documentation to reduce potential ambiguity. Note that
-product codes of the format "msXXX", where X is an integer, are reserved for
-"derived" products. These products are at the final stage of processing, whereas
-"retrieved"/"raw" and "munged" products are precursors to derived products and (where possible)
-retain product codes as assigned by their original data providers.
 {flux_note}{vsnless_note}
 This MacroSheds data product ({p}) is a "linked product", meaning it was complete after munging and
 did not require additional "derived-level" processing. As such, the munged product

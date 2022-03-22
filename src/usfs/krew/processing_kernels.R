@@ -390,15 +390,16 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     relevant_file2 <- grep('ISCO_samples_final', fils, value = T)
     rel_file_path2 <- paste0(temp_dir, '/', relevant_file2)
 
-    d_isco <- read.csv(rel_file_path2, colClasses = 'character')
-    d_isco_names <- names(d_isco)
+    # d_isco <- read.csv(rel_file_path2, colClasses = 'character')
+    # d_isco_names <- names(d_isco)
+    #
+    # flag_cols <- grepl('BDL_', d_isco_names)
+    # new_flag_names <- paste0('Lab_', str_split_fixed(d_isco_names, '_', n = Inf)[,2], '_flag')
+    # new_names <- c(d_isco_names[!flag_cols], new_flag_names[flag_cols])
+    # names(d_isco) <- new_names
 
-    flag_cols <- grepl('BDL_', d_isco_names)
-    new_flag_names <- paste0('Lab_', str_split_fixed(d_isco_names, '_', n = Inf)[,2], '_flag')
-    new_names <- c(d_isco_names[!flag_cols], new_flag_names[flag_cols])
-    names(d_isco) <- new_names
-
-    d_isco <- ms_read_raw_csv(preprocessed_tibble = d_isco,
+    # d_isco <- ms_read_raw_csv(preprocessed_tibble = d_isco,
+    d_isco <- ms_read_raw_csv(filepath = rel_file_path2,
                          datetime_cols = list('SampleDate' = '%m/%e/%Y',
                                               'SampleTime' = '%H:%M'),
                          datetime_tz = 'America/Los_Angeles',
@@ -406,17 +407,19 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  c('pH' = 'pH',
                                         'EC' = 'spCond',
                                         'Temperature' = 'temp',
-                                        'Lab_Chloride' = 'Cl',
-                                        'Lab_Nitrate' = 'NO3',
-                                        'Lab_Phosphate' = 'PO4',
-                                        'Lab_Sulfate' = 'SO4',
-                                        'Lab_Ammonium' = 'NH4',
-                                        'Lab_Calcium' = 'Ca',
-                                        'Lab_Magnesium' = 'Mg',
-                                        'Lab_Potassium' = 'K',
-                                        'Lab_Sodium' = 'Na'),
-                         data_col_pattern = '#V#',
-                         var_flagcol_pattern = '#V#_flag',
+                                        'Chloride' = 'Cl',
+                                        'Nitrate' = 'NO3',
+                                        'Phosphate' = 'PO4',
+                                        'Sulfate' = 'SO4',
+                                        'Ammonium' = 'NH4',
+                                        'Calcium' = 'Ca',
+                                        'Magnesium' = 'Mg',
+                                        'Potassium' = 'K',
+                                        # 'alkalinity' = 'Alk', #omitted intentionally?
+                                        'Sodium' = 'Na'),
+                         data_col_pattern = 'Lab_#V#',
+                         alt_datacol_pattern = '#V#',
+                         var_flagcol_pattern = 'BDL_#V#',
                          set_to_NA = '-9999',
                          is_sensor = FALSE)
 
