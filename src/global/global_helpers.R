@@ -262,7 +262,7 @@ identify_sampling <- function(df,
                   silent = TRUE)
 
     if('try-error' %in% class(master)){
-        dir.create(sampling_dir, recursive = TRUE)
+        dir.create(sampling_dir, recursive = TRUE, showWarnings = FALSE)
         file.create(sampling_file)
         master <- list()
     }
@@ -789,6 +789,19 @@ ms_read_raw_csv <- function(filepath,
         stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
     }
 
+    dc_dupes <- duplicated(unname(data_cols))
+    if(any(dc_dupes)){
+        stop(paste('duplicate value(s) in data_cols:',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
+    }
+    dn_dupes <- duplicated(names(data_cols))
+    if(any(dn_dupes)){
+        stop(paste('duplicate name(s) in data_cols:',
+                   paste(names(data_cols)[dn_dupes],
+                         collapse = ', ')))
+    }
+
     #parse args; deal with missing args
     datetime_colnames <- names(datetime_cols)
     datetime_formats <- unname(datetime_cols)
@@ -1030,7 +1043,7 @@ ms_read_raw_csv <- function(filepath,
     logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
                        n = network,
                        d = domain,
-                       s = site_code,
+                       s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
                        p = prodname_ms,
                        cc = cmpnt,
                        ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
@@ -1060,9 +1073,9 @@ ms_read_raw_csv <- function(filepath,
                            optional = optionalize_nontoken_characters)
 
     #remove rows with NA in datetime or site_code
-    d <- filter(d,
-                across(any_of(c('datetime', 'site_code')),
-                       ~ ! is.na(.x)))
+    d <- sw(filter(d,
+                   across(any_of(c('datetime', 'site_code')),
+                          ~ ! is.na(.x))))
 
     #remove all-NA data columns (except if they have BDLs) and rows with NA in all data columns.
     #also remove flag columns for all-NA data columns.
@@ -1374,20 +1387,22 @@ ms_cast_and_reflag <- function(d,
     #   included in variable_flags_clean. This parameter is optional,
     #   though at least 2 of variable_flags_to_drop, variable_flags_clean,
     #   and variable_flags_dirty must be supplied if varflag_col_pattern is not
-    #   set to NA.
+    #   set to NA AND variable_flags_bdl is not provided.
     #   If '#*#' is used, variable_flags_clean must be supplied.
     #variable_flags_clean: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
     #   ms_status of 0, meaning clean. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
     #   must be supplied if varflag_col_pattern is not
-    #   set to NA. This parameter does not use the '#*#' wildcard.
+    #   set to NA AND variable_flags_bdl is not provided.
+    #   This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
     #   ms_status of 1, meaning dirty/questionable. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
     #   must be supplied if varflag_col_pattern is not
-    #   set to NA. This parameter does not use the '#*#' wildcard.
+    #   set to NA AND variable_flags_bdl is not provided.
+    #   This parameter does not use the '#*#' wildcard.
     #variable_flags_bdl: optional character vector of values that might appear in
     #   the variable flag columns indicating that their corresponding data values are
     #   below detection limit. These values will be replaced with half their
@@ -1486,7 +1501,7 @@ ms_cast_and_reflag <- function(d,
     varbdl <- ! missing(variable_flags_bdl) && ! is.null(variable_flags_bdl)
     no_varflags <- is.na(varflag_col_pattern)
 
-    if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags){
+    if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags && ! varbdl){
         stop(paste0('Must supply at least 2 of variable_flags_to_drop, ',
                     'variable_flags_clean, variable_flags_dirty (or set ',
                     'varflag_col_pattern = NA)'))
@@ -1633,13 +1648,13 @@ ms_cast_and_reflag <- function(d,
                 d <- filter(d, ! flg %in% variable_flags_to_drop)
             }
 
-        } else {
+        } else if(varclen && vardirt){
             d <- filter(d, flg %in% c(variable_flags_clean, variable_flags_dirty))
         }
     }
 
     #binarize remaining flag information (not including BDLs yet; 0 = clean, 1 = questionable)
-    if(! no_varflags){
+    if(! no_varflags && sum(c(varclen, vardirt, vardrop, varbdl)) != 1){
         if(varclen){
             d <- mutate(d, ms_status = case_when(
                 flg %in% variable_flags_clean ~ 0,
@@ -1693,11 +1708,11 @@ ms_cast_and_reflag <- function(d,
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
     #   varflag_col_pattern
-    d <- d %>%
+    d <- sw(d %>%
         select(-one_of(c(summary_colnames, 'flg'))) %>%
         select(datetime, site_code, var, dat, ms_status) %>%
         rename(val = dat) %>%
-        arrange(site_code, var, datetime)
+        arrange(site_code, var, datetime))
 
     return(d)
 }
@@ -2719,43 +2734,6 @@ ms_munge <- function(network = domain,
                   n = network,
                   d = domain))
     }
-
-    #calculate watershed areas for any provided watershed boundary files,
-    #and put them in the site_data file
-    # munged_dir <- glue('data/{n}/{d}/munged',
-    #                    n = network,
-    #                    d = domain)
-    #
-    # if(dir.exists(munged_dir)){
-    #     munged_subdirs <- list.dirs(munged_dir,
-    #                                 recursive = FALSE)
-    #
-    #     boundary_ind <- grepl(pattern = 'ws_boundary',
-    #                           x = munged_subdirs)
-    # }
-    #
-    # if(exists('boundary_ind') && any(boundary_ind)){
-    #
-    #     boundary_dir <- munged_subdirs[boundary_ind]
-    #
-    #     sites <- list.dirs(boundary_dir,
-    #                        full.names = FALSE,
-    #                        recursive = FALSE)
-    #
-    #     loginfo(logger = logger_module,
-    #             msg = '(Re)calculating watershed areas for site_data (provided boundaries only)')
-    #
-    # } else {
-    #     sites <- character()
-    # }
-    #
-    # for(s in sites){
-    #     catch <- ms_calc_watershed_area(network = network,
-    #                                     domain = domain,
-    #                                     site_code = s,
-    #                                     level = 'munged',
-    #                                     update_site_file = TRUE)
-    # }
 }
 
 ms_general <- function(network = domain, domain){
@@ -8507,14 +8485,14 @@ apply_detection_limit_t <- function(X,
 
         detlim_var <- detlim[detlim$var == v, 'detlim']
 
-        if(length(detlim_var != 1)){
+        if(length(detlim_var) != 1){
             stop(glue('incorrect detlim length (!= 1) for var: {v}', v = v))
         }
 
         var_inds <- X$var == v
         xv <- X$val[var_inds]
 
-        detlim_enforce_inds <- ! is.na(xv) & ! xv == 0 & abs(xv) < detlim_var
+        detlim_enforce_inds <- sw(! is.na(xv) & ! xv == 0 & abs(xv) < detlim_var)
         xv[detlim_enforce_inds] <- detlim_var * sign(xv[detlim_enforce_inds])
         X$val[var_inds] <- xv
     }
