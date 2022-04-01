@@ -795,7 +795,13 @@ ms_read_raw_csv <- function(filepath,
                    paste(unname(data_cols)[dc_dupes],
                          collapse = ', ')))
     }
-    dn_dupes <- duplicated(names(data_cols))
+    
+    # Error when only some data cols were names but other were not so setting 
+    # names as the data col name when it is not supplied. 
+    dn_dupes <- names(data_cols)
+    dn_dupes <- ifelse(dn_dupes == '', unname(data_cols), dn_dupes)
+    dn_dupes <- duplicated(dn_dupes)
+
     if(any(dn_dupes)){
         stop(paste('duplicate name(s) in data_cols:',
                    paste(names(data_cols)[dn_dupes],
@@ -1001,6 +1007,8 @@ ms_read_raw_csv <- function(filepath,
     }
 
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
+    # Remove duplicate names. I don't know how these are getting created 
+    new_varflag_cols <- unique(new_varflag_cols)
 
     #establish class of newly created varflag cols
     new_varflag_classes <- rep('character', times = length(new_varflag_cols))
@@ -1038,16 +1046,22 @@ ms_read_raw_csv <- function(filepath,
         sw(class(d[[i]]) <- newclass)
     }
 
+    # Giving a warning when there are no illegal caracters. Only do this when 
+    # illegal_chars !is.null
+    
     illegal_chars <- unique(illegal_chars)
     cmpnt <- if(exists('component')) component else '[no component]'
-    logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
-                       n = network,
-                       d = domain,
-                       s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
-                       p = prodname_ms,
-                       cc = cmpnt,
-                       ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
-            logger = logger_module)
+    
+    if(!is.null(illegal_chars)){
+        logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
+                           n = network,
+                           d = domain,
+                           s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
+                           p = prodname_ms,
+                           cc = cmpnt,
+                           ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
+                logger = logger_module)
+    }
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
@@ -1071,6 +1085,22 @@ ms_read_raw_csv <- function(filepath,
                            datetime_formats = datetime_formats,
                            datetime_tz = datetime_tz,
                            optional = optionalize_nontoken_characters)
+    
+    if(all(is.na(d$datetime))) {
+        stop('All datetime failed to parse. Check datetime formats used.')
+    }
+    
+    if(any(is.na(d$datetime))) {
+        prop_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+        
+        logwarn(msg = glue('{pna} % datetimes failed to pars in {n}, {d}, {s}, {p}',
+                           pna = prop_na,
+                           n = network,
+                           d = domain,
+                           s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
+                           p = prodname_ms),
+                logger = logger_module)
+    }
 
     #remove rows with NA in datetime or site_code
     d <- sw(filter(d,
@@ -1089,9 +1119,16 @@ ms_read_raw_csv <- function(filepath,
                          replacement = '__|flg',
                          all_na_cols))
 
+    # Check this. Need to ensure rows are not being removed if all the data values 
+    # are NA but there is BDL information in a flag column
+    flg_col_names <- colnames(d)[str_detect('__|flg', colnames(d))]
+    if(!is.null(summary_flagcols)){
+        flg_col_names <- c(flg_col_names, summary_flagcols)
+    }
+    
     d <- d %>%
         select(-one_of(all_na_cols)) %>%
-        filter_at(vars(ends_with('__|dat')),
+        filter_at(vars(c(ends_with('__|dat'), all_of(flg_col_names))),
                   any_vars(! is.na(.)))
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA

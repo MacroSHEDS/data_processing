@@ -438,17 +438,23 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'K'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
+                         set_to_NA = '',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_to_drop = 'N',
+                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                                                     'DQ', 'DC'),
                             variable_flags_clean =
-                                c('A', 'E', 'D', 'DE', '*', 'D*'),
+                                c('A', 'E'),
                             summary_flags_to_drop = list(
-                                TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
-                            summary_flags_clean = list(TYPE = c('F', 'G')),
-                            summary_flags_dirty = list(TYPE = c('P', 'G', 'C', 'A')))
+                                TYPE = c('N', 'YE')),
+                            summary_flags_dirty = list(
+                                TYPE = c('C', 'S', 'A', 'P', 'B')
+                            ),
+                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
+                                                                'QA', 'F', 'G')))
 
     d <- carry_uncertainty(d,
                            network = network,
@@ -572,16 +578,23 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                                         'K'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
+                         set_to_NA = '',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_to_drop = 'N',
+                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                                                     'DQ', 'DC'),
                             variable_flags_clean =
-                                c('A', 'E', 'D', 'DE', '*', 'D*'),
+                                c('A', 'E'),
                             summary_flags_to_drop = list(
-                                TYPE = c('N', 'S', 'YE', 'QB', 'QS', 'QL', 'QA')),
-                            summary_flags_clean = list(TYPE = c('F', 'DF')))
+                                TYPE = c('N', 'YE')),
+                            summary_flags_dirty = list(
+                                TYPE = c('C', 'S', 'A', 'P', 'B')
+                            ),
+                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
+                                                                'QA', 'F', 'G')))
 
     d <- carry_uncertainty(d,
                            network = network,
