@@ -79,7 +79,6 @@ process_0_182 <- function(set_details, network, domain){
 process_1_20 <- function(network, domain, prodname_ms, site_code,
                          component){
 
-    # Currently not considering values below detection limit (Set to NA in raw data)
     if(component %in% c('All Sites Basic Field Stream Chemistry Data',
                         'LUQ LTER method detection limits')){
         return(tibble())
@@ -96,7 +95,16 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
     
     d <- read.csv(rawfile,
                   colClasses = 'character') %>%
-        mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) 
+        mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) %>%
+        rename(NO3.NCode = NitrateCode,
+               SO4.SCode = SulfateCode,
+               ClCode = ChlorideCode,
+               NaCode = SodiumCode,
+               KCode = PotassiumCode,
+               MgCode = MagnesiumCode,
+               CaCode = CalciumCode,
+               NH4.NCode = NH4Code,
+               PO4.PCode = PO4Code)
     
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Sample_Date' = '%Y-%m-%d',
@@ -125,11 +133,12 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                                         'TSS',
                                         'TDP'),
                          data_col_pattern = '#V#',
+                         var_flagcol_pattern = '#V#Code',
                          set_to_NA = '-9999',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NO3_N = 'ug/l',
@@ -160,7 +169,16 @@ process_1_174 <- function(network, domain, prodname_ms, site_code,
 
     d <- read.csv(rawfile,
                   colClasses = 'character') %>%
-      mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) 
+      mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) %>%
+        rename(NO3.NCode = NitrateCode,
+               SO4.SCode = SulfateCode,
+               ClCode = ChlorideCode,
+               NaCode = SodiumCode,
+               KCode = PotassiumCode,
+               MgCode = MagnesiumCode,
+               CaCode = CalciumCode,
+               NH4.NCode = NH4Code,
+               PO4.PCode = PO4Code)
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -188,10 +206,11 @@ process_1_174 <- function(network, domain, prodname_ms, site_code,
                                         'SiO2'),
                          data_col_pattern = '#V#',
                          set_to_NA = '-9999',
+                         var_flagcol_pattern = '#V#Code',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4_N = 'ug/l',

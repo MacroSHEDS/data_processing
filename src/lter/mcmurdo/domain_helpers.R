@@ -27,17 +27,31 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
         d <- read.csv(rawfile, colClasses = 'character')
     }
 
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month),
-               year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
+    if(prodcode_from_prodname_ms(prodname_ms) %in% c(9010, 9011, 9013, 9015, 9018,
+                                                     9016, 9024, 9023, 9017)){
+        d <- d %>%
+            mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
+                   day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
+                   year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
+            mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
+                   time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
+            mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
+                   month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
+            mutate(year = str_replace(year, ' ', '')) %>%
+            mutate(date = paste(day, month, year, sep = '-'))
+    } else{
+        d <- d %>%
+            mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
+                   day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
+                   year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
+            mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
+                   time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
+            mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
+                   month = ifelse(nchar(month) == 1, paste0(0, month), month),
+                   year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
+            mutate(year = str_replace(year, ' ', '')) %>%
+            mutate(date = paste(day, month, year, sep = '-'))
+    }
 
     col_old <- colnames(d)
     col_name <- str_replace_all(col_old, '[.]', '_')
@@ -58,6 +72,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                  summary_flagcols = 'DIS_COMMENTS',
                                  data_col_pattern = '#V#',
                                  is_sensor = TRUE,
+                                 set_to_NA = '',
                                  sampling_type = 'I')
 
             d <- ms_cast_and_reflag(d,
@@ -77,6 +92,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                  summary_flagcols = 'DISCHARGE_QLTY',
                                  data_col_pattern = '#V#',
                                  is_sensor = TRUE,
+                                 set_to_NA = '',
                                  sampling_type = 'I')
 
             d <- ms_cast_and_reflag(d,
@@ -106,6 +122,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                  data_col_pattern = '#V#',
                                  var_flagcol_pattern = '#V#_QLTY',
                                  is_sensor = TRUE,
+                                 set_to_NA = '',
                                  sampling_type = 'I')
 
             d <- ms_cast_and_reflag(d,
@@ -127,6 +144,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                  data_col_pattern = '#V#',
                                  var_flagcol_pattern = '#V#_QLTY',
                                  is_sensor = TRUE,
+                                 set_to_NA = '',
                                  sampling_type = 'I')
 
             d <- ms_cast_and_reflag(d,
