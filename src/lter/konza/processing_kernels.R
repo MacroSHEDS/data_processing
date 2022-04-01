@@ -368,32 +368,68 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                 is.na(num_t) ~ '1200')) %>%
         mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
         select(-num_t, -RecTime, -num_d, -RecDay)
-
-    TP_codes <- c('TP below Det limit', 'TP<Det limit', 'tp< det limit', 'TP below Det limit',
-        'no3 and tp < det limit', 'tp < det limit')
+    
     NO3_codes <- c('No3 Below det limit', 'NO3 < det limit', 'NO3<det limit', 'no3 < det limit',
-        'no3 below det limit', 'no3 and tp < det limit')
-    NH4_codes <- c('NH4 <det limit', 'nh4<det limit')
-
-    d_comments <- d$COMMENTS
-
-    tp <- grepl(paste(TP_codes,collapse="|"), d_comments)
-
-    no3 <-  grepl(paste(NO3_codes,collapse="|"), d_comments)
-
-    nh4 <-  grepl(paste(NH4_codes,collapse="|"), d_comments)
+        'no3 below det limit', 'no3 and tp < det limit', 
+        'no3 not detectable', 'no3 below det limit', 'bison upstream; no3 < det limit 90.5 0',
+        'no3 < det limit(0.4)', 'no3 < det limit(0.0);  tp < srp', 'no3 < det limit(0.4);  tnp=3x',
+        'no3 below det', 'no3 < det limit; doc is OK-ran@1:1;  broke ice at 9am..',
+        'no3 < det limit; broke ice at 9am; sample at 1128', 'no3 < det limit; only ditch from K1a flowing',
+        'no3 < det limit; took from large pool below tube', 'no3 below det;  murky water',
+        'no3 < det limit; tnp=c', 'no3<detection limit', 'NO3 < det limit',
+        'new equipment installed; NO3 < det limit', 'NO3<det limit', 'lots of leaf litter and NO3 < det limit')
+    
+    NH4_codes <- c('NH4 <det limit', 'nh4<det limit', 'no height; frozen over;nh4<det limit')
+    
+    TN_codes <- c()
+    
+    SRP_codes <- c('srp < det limit', 'srp < det limit; doc = 2x', 'tank frozen over; srp/tp<detection limit',
+                   'mininimal flow particulates in sample; srp<detection limit; no/srpx3',
+                   'srp<detection limit', 'rain/mist during sampling; srp<detection limit')
+    
+    TP_codes <- c('slightly dirty=snowmelt. TP below Det limit', 'TP below Det limit',
+                  'nh4=2X. TP below Det limit', 'nh4=2X; bison in area on 01/29. TP below Det limit',
+                  'TP<Det limit', 'tp < det limit', 'no3 and tp < det limit',
+                  'tp< det limit', 'SF: tp < det limit', 'tp(2.1) < det limit',
+                  'nh4 = 3x; doc=2x(b); tn=b; tp < det limit', 'tp < det limit; mist while sampling',
+                  'tp < det limit; tank putting off a sulfur smell', 'tnp=3x; tp < det limit; cleaned algae build-up from pipe; pool smells of sulfur',
+                  'nh4=2x(b); tn=b; tp < det limit', 'tp (2.5) < det limit', 'tp(2.6) < det limit',
+                  'tp(2.9)<det limit; broke ice to get ht', 'tnp=2x(c); tp < det limit',
+                  'tp(2.5) < det limit;  samples collected in morning but processed at 5:30pm - burn crew',
+                  'tp < det limit; ice and algae', 'tp <det limit; algae and ice; had to break ice to get sample. Ice too thick to break to get height',
+                  'no/srp=x2; tp < det limit', 'doc/no/srp = 2x;  tp < det limit; sulfur smell coming from tank; algae on pipe',
+                  'tp<detection limit', 'tank frozen over; srp/tp<detection limit')
+    
+    TP_flags <- c('no3 < det limit(0.0);  tp < srp', 'tp < det limit; light rain when sampling; murky',
+                  "\"srp>tp", 'srp/tpx2; srp>tp; water level has decreased dramatically; used ion syringe to ',
+                  'srp>tp; tpx2; leaf build-up continues')
+    
+    COMMENTS_flags <- c(grep('bison', unique(d$COMMENTS), value = T), grep('cow|cows', unique(d$COMMENTS), value = T),
+                        grep('experiment', unique(d$COMMENTS), value = T), grep('turkey', unique(d$COMMENTS), value = T),
+                        'guy upstream sampling', grep('ducks', unique(d$COMMENTS), value = T),
+                        grep('people|People', unique(d$COMMENTS), value = T))
+    
+    DOC_codes <- c()
 
     d <- d %>%
-        mutate(TP_code = tp,
-               NO3_code = no3,
-               NH4_code = nh4,
-               SRP_code = FALSE,
-               TN_code = FALSE,
-               DOC_code = FALSE,
-               check = 1
+        mutate(TP = ifelse(COMMENTS %in% !!TP_codes & TP == '.', 'BDL', TP),
+               NO3 = ifelse(COMMENTS %in% !!NO3_codes & NO3 == '.', 'BDL', NO3),
+               NH4 = ifelse(COMMENTS %in% !!NH4_codes & NH4 == '.', 'BDL', NH4),
+               SRP = ifelse(COMMENTS %in% !!SRP_codes & SRP == '.', 'BDL', SRP),
+               TN = ifelse(COMMENTS %in% !!TN_codes & TN == '.', 'BDL', TN),
+               DOC = ifelse(COMMENTS %in% !!DOC_codes & DOC == '.', 'BDL', DOC)
                ) %>%
+        mutate(TP_code = ifelse(COMMENTS %in% !!TP_codes & TP != 'BDL', 'BDL', NA),
+               NO3_code = ifelse(COMMENTS %in% !!NO3_codes & NO3 != 'BDL', 'BDL', NA),
+               NH4_code = ifelse(COMMENTS %in% !!NH4_codes & NH4 != 'BDL', 'BDL', NA),
+               SRP_code = ifelse(COMMENTS %in% !!SRP_codes & SRP != 'BDL', 'BDL', NA),
+               TN_code = ifelse(COMMENTS %in% !!TN_codes & TN != 'BDL', 'BDL', NA),
+               DOC_code = ifelse(COMMENTS %in% !!DOC_codes & DOC != 'BDL', 'BDL', NA)
+        )  %>%
+        mutate(TP_code = ifelse(COMMENTS %in% !!TP_flags & is.na(TP_code), 'dirty', TP_code)) %>%
         filter(WATERSHED %in% c('n04d', 'n02b', 'n20b', 'n01b', 'nfkc', 'hokn',
-                                'sfkc', 'tube', 'kzfl', 'shan', 'hikx'))
+                                'sfkc', 'tube', 'kzfl', 'shan', 'hikx')) %>%
+        mutate(comments = ifelse(COMMENTS %in% !!COMMENTS_flags, 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
@@ -417,15 +453,17 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                         'TP', 'DOC'),
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = '#V#_code',
-                         summary_flagcols = 'check',
-                         set_to_NA = '.',
+                         summary_flagcols = 'comments',
+                         set_to_NA = c('.', ''),
+                         convert_to_BDL_flag = 'BDL',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_clean = 'FALSE',
-                            variable_flags_dirty = 'TRUE',
-                            summary_flags_to_drop = list('check' = '2'),
-                            summary_flags_clean = list('check' = '1'))
+                            # variable_flags_clean = 'FALSE',
+                            variable_flags_dirty = 'dirty',
+                            variable_flags_bdl = 'BDL',
+                            summary_flags_clean = list('comments' = c(0, NA)),
+                            summary_flags_dirty = list('comments' = c(1)))
 
     d <- ms_conversions(d,
                         # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
@@ -657,8 +695,6 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
                             summary_flags_dirty = list(Comments = 'bad'),
                             summary_flags_to_drop = list(Comments = 'remove'))
 
