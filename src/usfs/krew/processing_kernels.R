@@ -360,7 +360,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'PO4' = 'PO4',
                                         'SO4' = 'SO4'),
                          data_col_pattern = '#V#',
-                         set_to_NA = '-9999',
+                         set_to_NA = c('umol L-1', '', 'uS/cm', '-9999'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
@@ -420,7 +420,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = 'Lab_#V#',
                          alt_datacol_pattern = '#V#',
                          var_flagcol_pattern = 'BDL_#V#',
-                         set_to_NA = '-9999',
+                         set_to_NA = c('umol L-1', '', '-9999'),
                          is_sensor = FALSE)
 
     d_isco <- ms_cast_and_reflag(d_isco,

@@ -893,9 +893,11 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                                         'TDN', 'DON', 'TDP', 'DOP', 'DOC',
                                         'SS' = 'TSS',
                                         'PP' = 'TPP',
+                                        'TEMP' = 'temp',
                                         'POC', 'PON',
                                         'CHLA' = 'CHL'),
                          data_col_pattern = '#V#',
+                         set_to_NA = c('NA ', ' '),
                          summary_flagcols = 'COMMENTS',
                          is_sensor = FALSE)
 
@@ -1012,29 +1014,37 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer'))
+        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer', 
+                                 'Composite-timeweighted_6hours'))
+    
+    # Notes column contains infomation specific to varibles, creatng 
+    # variable flags from Notes column 
+    d <- d %>%
+        mutate(NO3_flag = ifelse(grepl('9', Notes), 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date.1' = '%Y-%m-%d'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Site',
                          alt_site_code = list('cart_creek' = 'CC',
-                                              'bear_meadow' = 'CS',
+                                              'bear_meadow' = c('CS', 'CS '),
                                               'saw_mill_brook' = 'SB',
                                               'ipswich_dam' = c('ID', 'ID '),
                                               'parker_dam' = 'PD'),
                          data_cols =  c('TP', 'TN', 'NO3' = 'NO3_NO2_N', 'TOC'),
                          summary_flagcols = 'Notes',
+                         var_flagcol_pattern = '#V#_flag',
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
 
+    dirty_summary_flags <- c('Rinse Error ', 'ants (no good?) ', 'replaced distributor-found rain gauge clogged ',
+                             '5', '6 9', '6', 'Samples contaminated ', 'Rinse Error 9',
+                             '2 samples/bottle? 9', 'LARGE BEETLE ', 'TP and TN are high but consistent with the MBL working file - CTW 2/15/21 ')
     d <- ms_cast_and_reflag(d,
-                            summary_flags_dirty = list('Notes' = c('ants (no good?)',
-                                                                   '5', '6', 'Rinse Error',
-                                                                   'rerun TP', 'SEWAGE SPILL!!!!',
-                                                                   'Missing 4/16-17')),
+                            summary_flags_dirty = list('Notes' = dirty_summary_flags),
                             summary_flags_to_drop = list('Notes' = 'DROP'),
-                            varflag_col_pattern = NA)
+                            variable_flags_to_drop = 'DROP',
+                            variable_flags_dirty = '1')
 
     d <- ms_conversions(d,
                    convert_units_from = c('TP' = 'umol/l',

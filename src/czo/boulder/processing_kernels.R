@@ -169,7 +169,7 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'site',
                          data_cols =  c('DISCHARGE.m.3.10..3..s' = 'discharge'),
                          data_col_pattern = '#V#',
-                         set_to_NA = 'null',
+                         set_to_NA = c('null', ''),
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
@@ -294,7 +294,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
     #Assuming IN means TIN
     #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y',
+                         datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'Location',
@@ -340,11 +340,13 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
     # u = Undetected
     # DL = below detection limit
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
-                                                     '<0.145',
-                                                     'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                            variable_flags_dirty = c('charge balance difference > 10%',
+                                                     'EQCL', 'NP',
                                                      'NV', 'QNS', 'T ERR'),
+                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
+                                                   '<0.145', '<0.364', 'DL',
+                                                   '<0.009', '<0.06', '<0.02',
+                                                   '<0.03'),
                             variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,
@@ -421,7 +423,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
     #Assuming IN means TIN
     #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y',
+                         datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'Location',
@@ -462,13 +464,14 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-
+    
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
-                                                     '<0.145',
-                                                     'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                            variable_flags_dirty = c('charge balance difference > 10%',
+                                                     'EQCL', 'NP',
                                                      'NV', 'QNS', 'T ERR'),
+                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
+                                                   '<0.145', '<0.364', 'DL', '<0.02',
+                                                   '<0.72', '<0.06', '<0.009'),
                             variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,
@@ -546,7 +549,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
     #Assuming IN means TIN
     #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y',
+                         datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'Location',
@@ -590,13 +593,14 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-
+    
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
-                                                     '<0.145',
-                                                     'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                            variable_flags_dirty = c('charge balance difference > 10%',
+                                                     'EQCL', 'NP',
                                                      'NV', 'QNS', 'T ERR'),
+                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
+                                                   '<0.145', '<0.364', 'DL', '<0.02',
+                                                   '<0.72', '<0.06', '<0.009', '<0.03'),
                             variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,
@@ -676,6 +680,7 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
                          data_cols =  c('GGL_SW_0.Specific.Conductance..uS.cm.' = 'spCond',
                                         'GGL_SW_0.Temp..C.' = 'temp'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
@@ -717,7 +722,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
     #Assuming IN means TIN
     #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y',
+                         datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site',
@@ -756,13 +761,14 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-
+    
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('u', '<0.63', '<0.09', 'U',
-                                                     '<0.145',
-                                                     'charge balance difference > 10%',
-                                                     '<0.364', 'DL', 'EQCL', 'NP',
+                            variable_flags_dirty = c('charge balance difference > 10%',
+                                                     'EQCL', 'NP',
                                                      'NV', 'QNS', 'T ERR'),
+                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
+                                                   '<0.145', '<0.364', 'DL', '<0.02',
+                                                   '<0.72', '<0.06', '<0.009', '<0.03'),
                             variable_flags_to_drop = 'DROP')
 
     d <- ms_conversions(d,

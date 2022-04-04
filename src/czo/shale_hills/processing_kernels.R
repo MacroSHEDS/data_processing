@@ -263,10 +263,23 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'Zn (\u03bcmol L-1)' = 'Zn'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         convert_to_BDL_flag = c('BDL'))
+                         convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
+    
+    # For some reason a few flag columns are being created as "character" columns
+    # and the others are "chr". When the tables goes into ms_cast_and_reflag
+    # It causes an error. Mutating them with as.character seems to fix this issue,
+    # should watch at other sites. (RESOLVED in ms_read_raw_csv)
+    
+    # h6 <- h6 %>%
+    #     mutate(across(.cols = contains('flg'), ~ as.character(.x)))
 
-    h6 <- ms_cast_and_reflag(h6,
-                             varflag_col_pattern = NA)
+    # h6 <- ms_cast_and_reflag(h6,
+    #                          varflag_col_pattern = NA)
+    
+    h6 <- ms_cast_and_reflag(d = h6,
+                             variable_flags_dirty = 'DIRTY',
+                             variable_flags_bdl = c('BDL'),
+                             variable_flags_to_drop = 'DROP')
 
     h6 <- ms_conversions(h6,
                          convert_units_from = c('F' = 'umol/l',
@@ -319,25 +332,39 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     doi_com <- full_join(doi_dates, doi2014, by = 'id') %>%
         mutate(name = str_split_fixed(id, '_', n= Inf)[,1]) %>%
         filter(!is.na(date))
-
+    
     d_2014 <- ms_read_raw_csv(preprocessed_tibble = doi_com,
-                          datetime_cols = list('date' = '%Y-%m-%d'),
-                          datetime_tz = 'America/New_York',
-                          site_code_col = 'name',
-                          alt_site_code = list('SH_weir' = c('SH')),
-                          data_cols =  c('Temperature' = 'temp',
-                                         'pH',
-                                         'DO (%)' = 'DO_sat',
-                                         'Dissolved Oxygen' = 'DO',
-                                         'Specific Conductivity' = 'spCond',
-                                         'Cl', 'SO4', 'NO3', 'Al', 'Ca',
-                                         'Fe', 'K', 'Mg', 'Mn', 'Na', 'Si', 'Sr',
-                                         'DOC'),
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE)
-
-    d_2014 <- ms_cast_and_reflag(d_2014,
-                             varflag_col_pattern = NA)
+                              datetime_cols = list('date' = '%Y-%m-%d'),
+                              datetime_tz = 'America/New_York',
+                              site_code_col = 'name',
+                              alt_site_code = list('SH_weir' = c('SH')),
+                              data_cols =  c('Temperature' = 'temp',
+                                             'pH' = 'pH',
+                                             'DO (%)' = 'DO_sat',
+                                             'Dissolved Oxygen' = 'DO',
+                                             'Specific Conductivity' = 'spCond',
+                                             'Cl' = 'Cl', 
+                                             'SO4' = 'SO4', 
+                                             'NO3' = 'NO3', 
+                                             'Al' = 'Al', 
+                                             'Ca' = 'Ca',
+                                             'Fe' = 'Fe', 
+                                             'K' = 'K', 
+                                             'Mg' = 'Mg', 
+                                             'Mn' = 'Mn', 
+                                             'Na' = 'Na', 
+                                             'Si' = 'Si', 
+                                             'Sr' = 'Sr',
+                                             'DOC' = 'DOC'),
+                              data_col_pattern = '#V#',
+                              set_to_NA = 'n.a.',
+                              convert_to_BDL_flag = c('< 0.30', '< 0.3', '< 0.03'),
+                              is_sensor = FALSE)
+    
+    d_2014 <- ms_cast_and_reflag(d = d_2014,
+                                 variable_flags_dirty = 'DIRTY',
+                                 variable_flags_bdl = c('BDL'),
+                                 variable_flags_to_drop = 'DROP')
 
     d_2014 <- ms_conversions(d_2014,
                          convert_units_from = c('Cl' = 'umol/l',
@@ -406,10 +433,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                   'Si', 'Sr', 'Fe', 'Mn', 'Ni',
                                                   'P', 'V', 'Zn', 'Ba'),
                                    data_col_pattern = '#V#',
+                                   convert_to_BDL_flag = 'BDL',
                                    is_sensor = FALSE)
-
-        sw_data <- ms_cast_and_reflag(sw_data,
-                                 varflag_col_pattern = NA)
+        
+        if(any(str_detect('__|flg', colnames(sw_data)))){
+            sw_data <- ms_cast_and_reflag(d = sw_data,
+                                          variable_flags_dirty = 'DIRTY',
+                                          variable_flags_bdl = c('BDL'),
+                                          variable_flags_to_drop = 'DROP')
+        } else{
+            sw_data <- ms_cast_and_reflag(d = sw_data,
+                                          varflag_col_pattern = NA)
+        }
 
         sw_all <- rbind(sw_all, sw_data)
     }
