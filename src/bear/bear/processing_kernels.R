@@ -278,12 +278,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   
   d <- ms_read_raw_csv(filepath = rawfile,
                        datetime_cols = list('year' = '%Y', 'month' = '%m',
-                                            'day' = '%d'),
+                                            'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',
                        data_cols =  c('vol_converted_to_depth_mm' = 'precipitation'
                        ), 
-                       summary_flagcols = '#V#',
                        data_col_pattern = '#V#',
                        set_to_NA = '',
                        is_sensor = FALSE)
@@ -337,7 +336,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   
   d <- ms_read_raw_csv(filepath = rawfile,
                        datetime_cols = list('year' = '%Y', 'month' = '%m',
-                                            'day' = '%d'),
+                                            'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',
                        data_cols =  c('Ca_ueq_L' = 'Ca',
