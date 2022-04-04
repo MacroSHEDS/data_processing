@@ -38,6 +38,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 24,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 20,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 21,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
+78,stream_chemistry,ready,ready,,stream_chemistry__ms002,NA
 ms004,stream_gauge_locations,NA,NA,ready,NA,NA
 ms001,discharge,NA,NA,ready,stream_flux_inst__ms003,NA
 ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA

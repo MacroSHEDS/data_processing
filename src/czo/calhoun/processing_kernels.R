@@ -130,6 +130,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'site',
                          data_cols =  c('discharge..L.s.' = 'discharge'),
                          data_col_pattern = '#V#',
+                         set_to_NA = 'NaN',
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
@@ -318,7 +319,7 @@ process_1_2851 <- function(network, domain, prodname_ms, site_code,
                                         'sum-anions' = 'anionCharge',
                                         'sum-cations_IC' = 'cationCharge'),
                          data_col_pattern = '#V#',
-                         set_to_NA = NA,
+                         set_to_NA = c('n.a.'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,

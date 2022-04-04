@@ -177,6 +177,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+    
     all_chem <- read.csv(rawfile, colClasses = 'character') %>%
                       rename(Ca = Ca_ueq_L, Mg = Mg_ueq_L, K = K_ueq_L,
                              Na = Na_ueq_L, Cl = Cl_ueq_L, SO4 = SO4_ueq_L, NO3 = NO3_ueq_L,
@@ -222,8 +223,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d$`GN_TP__|dat` <- d$`GN_TP__|dat`/1000 #convert from ppb to ppm
     
     d <- ms_cast_and_reflag(d,
-                            variable_flags_clean = c('RL', NA),
-                            variable_flags_dirty = 'DL',
+                            variable_flags_to_drop = 'DROP',
+                            variable_flags_dirty = c('DL', 'RL'),
                             varflag_col_pattern = '#V#__|flg')
     
     d <- ms_conversions(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l', 
@@ -277,12 +278,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   
   d <- ms_read_raw_csv(filepath = rawfile,
                        datetime_cols = list('year' = '%Y', 'month' = '%m',
-                                            'day' = '%d'),
+                                            'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',
                        data_cols =  c('vol_converted_to_depth_mm' = 'precipitation'
                        ), 
-                       summary_flagcols = '#V#',
                        data_col_pattern = '#V#',
                        set_to_NA = '',
                        is_sensor = FALSE)
@@ -336,7 +336,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   
   d <- ms_read_raw_csv(filepath = rawfile,
                        datetime_cols = list('year' = '%Y', 'month' = '%m',
-                                            'day' = '%d'),
+                                            'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',
                        data_cols =  c('Ca_ueq_L' = 'Ca',
@@ -450,8 +450,6 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
   
   return()
 }
-
-
 
 #derive kernels ####
 
