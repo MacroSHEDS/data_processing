@@ -306,7 +306,8 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
                              site_code_col = 'site',
                              data_cols =  c('StreamFlow' = 'discharge'),
                              data_col_pattern = '#V#',
-                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
+                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
+                                           ''),
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
@@ -329,7 +330,8 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
                              site_code_col = 'site',
                              data_cols =  c('WaterTemp' = 'temp'),
                              data_col_pattern = '#V#',
-                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
+                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
+                                           ''),
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
@@ -365,7 +367,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site',
                          data_cols =  c('StreamFlow' = 'discharge'),
@@ -406,7 +408,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
                              site_code_col = 'site',
                              data_cols =  c('Temp' = 'temp'),
@@ -418,7 +420,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
                              site_code_col = 'site',
                              data_cols =  c('Flow' = 'discharge'),
@@ -491,7 +493,22 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                            'NH4.N' = 'NH4_N', 'Ca40' = 'Ca', 'Mg24' = 'Mg',
                            'Na23' = 'Na', 'K39' = 'K', 'Sr88' = 'Sr', 'B11' = 'B',
                            'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2', 'Br.' = 'Br',
-                           'NO3.' = 'NO3', 'SO4.' = 'SO4', 'PO4.' = 'PO4')
+                           'NO3.' = 'NO3', 'SO4.' = 'SO4', 'PO4.' = 'PO4',
+                           'Zr90' = 'Zr', 'Si', 'P31' = 'P', 'Ortho.P' = 'PO4_P',
+                           'Cd111' = 'Cd',
+                           'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
+                           'Al', 'Ba', 'Hg202' = 'Hg')
+    
+    names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
+                                       names(col_names_to_vars))
+    
+    col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
+    
+    if(any(duplicated(unname(col_names_to_vars)))){
+        col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
+    }
+    
+    
 
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
@@ -586,7 +603,9 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                                         'Sm147', 'Eu153' = 'Eu', 'Gd157',
                                         'Tb159' = 'Tb', 'Dy164' = 'Dy', 'Ho165' = 'Ho',
                                         'Er166' = 'Er', 'Tm169' = 'Tm', 'Yb174' = 'Yb',
-                                        'Lu175' = 'Lu', 'Pb208' = 'Pb'),
+                                        'Lu175' = 'Lu', 'Pb208' = 'Pb', 'U238' = 'U',
+                                        'NH4.N' = 'NH4_N', 'Ortho.P' = 'PO4_P',
+                                        'SUVA254' = 'abs254', 'SUVA280' = 'abs280'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = FALSE)
@@ -630,7 +649,8 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                                                'Tm' = 'ng/L',
                                                'Yb' = 'ng/L',
                                                'Lu' = 'ng/L',
-                                               'Pb' = 'ng/L'),
+                                               'Pb' = 'ng/L',
+                                               'U' = 'ng/L'),
                         convert_units_to = c('F' = 'mg/L',
                                              'Cl' = 'mg/L',
                                              'NO2' = 'mg/L',
@@ -666,7 +686,8 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                                              'Tm' = 'mg/L',
                                              'Yb' = 'mg/L',
                                              'Lu' = 'mg/L',
-                                             'Pb' = 'mg/L'))
+                                             'Pb' = 'mg/L',
+                                             'U' = 'mg/L'))
 
     d <- carry_uncertainty(d,
                            network = network,

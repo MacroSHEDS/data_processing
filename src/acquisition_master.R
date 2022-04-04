@@ -253,7 +253,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 25
+# dmnrow = 3
 # print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -267,8 +267,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = get_data_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'munge')
+    owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
@@ -296,15 +296,15 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
-    sw(ms_delineate(network = network,
-                    domain = domain,
-                    dev_machine_status = ms_instance$machine_status,
-                    verbose = TRUE))
-    ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
-              domain = domain)
-    ms_general(network = network,
-               domain = domain)
+    # sw(ms_delineate(network = network,
+    #                 domain = domain,
+    #                 dev_machine_status = ms_instance$machine_status,
+    #                 verbose = TRUE))
+    # ms_derive(network = network,
+    #           # prodname_filter = c('precip_pchem_pflux'),
+    #           domain = domain)
+    # ms_general(network = network,
+    #            domain = domain)
 
     retain_ms_globals(ms_globals)
 }
