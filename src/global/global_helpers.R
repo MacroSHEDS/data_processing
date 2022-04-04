@@ -1128,7 +1128,7 @@ ms_read_raw_csv <- function(filepath,
     
     d <- d %>%
         select(-one_of(all_na_cols)) %>%
-        filter_at(vars(c(ends_with('__|dat'), all_of(flg_col_names))),
+        filter_at(vars(c(ends_with('__|dat'), any_of(flg_col_names))),
                   any_vars(! is.na(.)))
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA
@@ -9243,12 +9243,19 @@ load_config_datasets <- function(from_where){
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
+        
+        domain_detection_limits <- sm(googlesheets4::read_sheet(
+            conf$dl_sheet,
+            na = c('', 'NA'),
+            col_types = 'cccnccc'
+        ))
 
     } else if(from_where == 'local'){
 
         ms_vars <- sm(read_csv('data/general/variables.csv'))
         site_data <- sm(read_csv('data/general/site_data.csv'))
         univ_products <- sm(read_csv('data/general/universal_products.csv'))
+        domain_detection_limits <- sm(read_csv('data/general/domain_detection_limits.csv'))
 
         ws_delin_specs <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
                                    error = function(e){

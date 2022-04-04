@@ -306,7 +306,8 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
                              site_code_col = 'site',
                              data_cols =  c('StreamFlow' = 'discharge'),
                              data_col_pattern = '#V#',
-                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
+                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
+                                           ''),
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
@@ -329,7 +330,8 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
                              site_code_col = 'site',
                              data_cols =  c('WaterTemp' = 'temp'),
                              data_col_pattern = '#V#',
-                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
+                             set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
+                                           ''),
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
@@ -365,7 +367,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site',
                          data_cols =  c('StreamFlow' = 'discharge'),
@@ -406,7 +408,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
                              site_code_col = 'site',
                              data_cols =  c('Temp' = 'temp'),
@@ -418,7 +420,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%d/%Y %H:%M'),
+                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'US/Mountain',
                              site_code_col = 'site',
                              data_cols =  c('Flow' = 'discharge'),
@@ -496,6 +498,17 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                            'Cd111' = 'Cd',
                            'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
                            'Al', 'Ba', 'Hg202' = 'Hg')
+    
+    names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
+                                       names(col_names_to_vars))
+    
+    col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
+    
+    if(any(duplicated(unname(col_names_to_vars)))){
+        col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
+    }
+    
+    
 
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
