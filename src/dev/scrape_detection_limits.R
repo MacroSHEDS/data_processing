@@ -2,7 +2,7 @@
 
 
 
-all_fils <- list.files('data/czo/catalina_jemez/raw/precip_chemistry__5491/data_v2/',
+all_fils <- list.files('data/czo/catalina_jemez/raw/stream_chemistry__2740/data_v2/',
                        full.names = TRUE)
 
 all_dl <- tibble()
