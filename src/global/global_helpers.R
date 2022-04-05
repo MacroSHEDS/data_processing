@@ -795,17 +795,18 @@ ms_read_raw_csv <- function(filepath,
                    paste(unname(data_cols)[dc_dupes],
                          collapse = ', ')))
     }
-    
-    # Error when only some data cols were names but other were not so setting 
-    # names as the data col name when it is not supplied. 
-    dn_dupes <- names(data_cols)
-    dn_dupes <- ifelse(dn_dupes == '', unname(data_cols), dn_dupes)
-    dn_dupes <- duplicated(dn_dupes)
 
-    if(any(dn_dupes)){
-        stop(paste('duplicate name(s) in data_cols:',
-                   paste(names(data_cols)[dn_dupes],
-                         collapse = ', ')))
+    #@spencer: ifelse(dn_dupes == ''... would have evaluated only the first element. this should take care of it
+    datacol_names <- names(data_cols)
+    if(! is.null(datacol_names)){
+
+        dn_dupes <- duplicated(datacol_names) & datacol_names != ''
+
+        any(dn_dupes)){
+            stop(paste('duplicate name(s) in data_cols:',
+                       paste(datacol_names[dn_dupes],
+                             collapse = ', ')))
+        }
     }
 
     #parse args; deal with missing args
@@ -1007,7 +1008,7 @@ ms_read_raw_csv <- function(filepath,
     }
 
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
-    # Remove duplicate names. I don't know how these are getting created 
+    # Remove duplicate names. I don't know how these are getting created
     new_varflag_cols <- unique(new_varflag_cols)
 
     #establish class of newly created varflag cols
@@ -1046,12 +1047,12 @@ ms_read_raw_csv <- function(filepath,
         sw(class(d[[i]]) <- newclass)
     }
 
-    # Giving a warning when there are no illegal caracters. Only do this when 
+    # Giving a warning when there are no illegal caracters. Only do this when
     # illegal_chars !is.null
-    
+
     illegal_chars <- unique(illegal_chars)
-    cmpnt <- if(exists('component')) component else '[no component]'
-    
+    cmpnt <- if(exists('component') && ! is.null(component)) component else '[no component]'
+
     if(!is.null(illegal_chars)){
         logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
                            n = network,
@@ -1085,14 +1086,14 @@ ms_read_raw_csv <- function(filepath,
                            datetime_formats = datetime_formats,
                            datetime_tz = datetime_tz,
                            optional = optionalize_nontoken_characters)
-    
+
     if(all(is.na(d$datetime))) {
         stop('All datetime failed to parse. Check datetime formats used.')
     }
-    
+
     if(any(is.na(d$datetime))) {
         prop_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
-        
+
         logwarn(msg = glue('{pna} % datetimes failed to pars in {n}, {d}, {s}, {p}',
                            pna = prop_na,
                            n = network,
@@ -1119,13 +1120,13 @@ ms_read_raw_csv <- function(filepath,
                          replacement = '__|flg',
                          all_na_cols))
 
-    # Check this. Need to ensure rows are not being removed if all the data values 
+    # Check this. Need to ensure rows are not being removed if all the data values
     # are NA but there is BDL information in a flag column
     flg_col_names <- colnames(d)[str_detect('__|flg', colnames(d))]
     if(!is.null(summary_flagcols)){
         flg_col_names <- c(flg_col_names, summary_flagcols)
     }
-    
+
     d <- d %>%
         select(-one_of(all_na_cols)) %>%
         filter_at(vars(c(ends_with('__|dat'), any_of(flg_col_names))),
@@ -8357,12 +8358,11 @@ knit_det_limits <- function(network, domain, prodname_ms){
 identify_series_detlim <- function(x){
 
 
-    #first gets the min of the absolute value of the series (without NAs),
-    #then if the min is e.g. 0.000416 assigns detection limit of 0.00045.
-    #surprisingly hard to spell this out, but the example is
-    #plenty clear.
+    #gets the min of the absolute value of the series (without NAs).
+    #assumes the detection limit to be that minimum value, rounded to one
+    #sigfig. returns 0 if there are no nonzero data values
 
-    #returns 0 if the min is >= 1, or if there are no nonzero data values
+    #return value: the detection limit, as a scalar
 
     if(! class(x) %in% c('integer', 'numeric', 'errors')){
         stop('x must be a numeric vector')
@@ -8375,21 +8375,7 @@ identify_series_detlim <- function(x){
         return(0)
     }
 
-    x_c <- strsplit(as.character(mindetect), '')[[1]]
-
-    first_leading_nonzero_ind <- Position(function(z) ! z %in% c('.', '0'),
-                                          x_c)
-
-    non_decimal <- ! '.' %in% x_c
-    if(non_decimal) return(0)
-
-    detlim_factor <- as.numeric(x_c[first_leading_nonzero_ind])
-    first_lead_nonz_after_dec <- (first_leading_nonzero_ind - 2)
-    detlim_ <- 1*10^-first_lead_nonz_after_dec * detlim_factor
-    detlim__ <- 5*10^-(first_lead_nonz_after_dec + 1)
-    detlim <- detlim_ + detlim__
-
-    if(detlim >= 1) return(0)
+    detlim <- signif(mindetect, 1)
 
     return(detlim)
 }
@@ -8427,7 +8413,12 @@ identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodnam
         stop('prodname_ms, network, and domain must be supplied if write_detlim_file is TRUE')
     }
 
+    flux_convertibles <- ms_vars %>%
+        filter(as.logical(flux_convertible),
+               ! variable_code == 'suspSed') %>%
+        pull(variable_code)
     variables <- unique(X$var)
+    variables <- variables[drop_var_prefix(variables) %in% flux_convertibles]
 
     detlim <- lapply(variables, function(v) identify_series_detlim(pull(X[X$var == v, 'val'])))
     names(detlim) <- variables
@@ -9243,7 +9234,7 @@ load_config_datasets <- function(from_where){
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
-        
+
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
@@ -9291,6 +9282,10 @@ load_config_datasets <- function(from_where){
 
     assign('univ_products',
            univ_products,
+           pos = .GlobalEnv)
+
+    assign('domain_detection_limits',
+           domain_detection_limits,
            pos = .GlobalEnv)
 }
 
