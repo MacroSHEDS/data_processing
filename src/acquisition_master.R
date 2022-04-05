@@ -49,6 +49,9 @@ suppressPackageStartupMessages({
 
 })
 
+# options(warn = 2)
+# options(error = recover)
+
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
 #(or after each run that results in a change)
@@ -200,7 +203,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -237,7 +240,8 @@ if(ms_instance$use_ms_error_handling){
 }
 
 #puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-load_config_datasets(from_where = ms_instance$config_data_storage)
+load_config_datasets(from_where = 'remote')
+# load_config_datasets(from_where = ms_instance$config_data_storage)
 
 run_checks()
 
@@ -253,8 +257,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 3
-# print(network_domain, n=50)
+dmnrow = 5
+print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -267,8 +271,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = get_data_tracker(network, domain)
 
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
