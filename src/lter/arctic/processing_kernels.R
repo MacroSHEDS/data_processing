@@ -676,9 +676,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
 
         # Convert from cm/s to liters/s
         d <- d %>%
@@ -697,9 +695,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
     }
 
     return(d)
@@ -736,9 +732,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA)
+                            varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),
@@ -777,9 +771,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA)
+                            varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),
@@ -820,9 +812,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA)
+                            varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
                         convert_units_from = c('NO3' = 'mg/l'),

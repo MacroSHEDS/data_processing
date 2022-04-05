@@ -13106,6 +13106,9 @@ ms_check_range <- function(d){
             filter(variable_code == !!var_p_frop) %>%
             pull(val_min)
 
+        if(length(min_val) == 0){
+            min_val <- NA
+        }
         if(!is.na(min_val)){
             d <- d %>%
                 mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) < !!min_val, NA, val))
@@ -13114,6 +13117,10 @@ ms_check_range <- function(d){
         max_val <- ms_vars %>%
             filter(variable_code == !!var_p_frop) %>%
             pull(val_max)
+        
+        if(length(max_val) == 0){
+            max_val <- NA
+        }
 
         if(!is.na(max_val)){
             d <- d %>%

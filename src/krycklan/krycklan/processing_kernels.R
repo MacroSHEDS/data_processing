@@ -208,7 +208,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL')
+                            variable_flags_bdl = 'BDL',
+                            variable_flags_dirty = 'DIRTY',
+                            variable_flags_to_drop = 'DROP')
 
 
     d <- ms_conversions(d,
