@@ -263,7 +263,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                          'Zn (\u03bcmol L-1)' = 'Zn'),
                           data_col_pattern = '#V#',
                           is_sensor = FALSE,
-                         convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
+                          convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
 
     # For some reason a few flag columns are being created as "character" columns
     # and the others are "chr". When the tables goes into ms_cast_and_reflag
