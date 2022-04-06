@@ -802,7 +802,7 @@ ms_read_raw_csv <- function(filepath,
 
         dn_dupes <- duplicated(datacol_names) & datacol_names != ''
 
-        any(dn_dupes)){
+        if(any(dn_dupes)){
             stop(paste('duplicate name(s) in data_cols:',
                        paste(datacol_names[dn_dupes],
                              collapse = ', ')))
@@ -986,7 +986,7 @@ ms_read_raw_csv <- function(filepath,
             bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            if(! is.na(var_flagcols)){
+            if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
                 candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
                 var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             } else {
@@ -1008,7 +1008,6 @@ ms_read_raw_csv <- function(filepath,
     }
 
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
-    # Remove duplicate names. I don't know how these are getting created
     new_varflag_cols <- unique(new_varflag_cols)
 
     #establish class of newly created varflag cols
@@ -1047,13 +1046,10 @@ ms_read_raw_csv <- function(filepath,
         sw(class(d[[i]]) <- newclass)
     }
 
-    # Giving a warning when there are no illegal caracters. Only do this when
-    # illegal_chars !is.null
-
     illegal_chars <- unique(illegal_chars)
     cmpnt <- if(exists('component') && ! is.null(component)) component else '[no component]'
 
-    if(!is.null(illegal_chars)){
+    if(! is.null(illegal_chars)){
         logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
                            n = network,
                            d = domain,
@@ -1092,10 +1088,10 @@ ms_read_raw_csv <- function(filepath,
     }
 
     if(any(is.na(d$datetime))) {
-        prop_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+        pct_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
 
-        logwarn(msg = glue('{pna} % datetimes failed to pars in {n}, {d}, {s}, {p}',
-                           pna = prop_na,
+        logwarn(msg = glue('{pna}% datetimes failed to parse in {n}, {d}, {s}, {p}',
+                           pna = pct_na,
                            n = network,
                            d = domain,
                            s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
@@ -1108,29 +1104,61 @@ ms_read_raw_csv <- function(filepath,
                    across(any_of(c('datetime', 'site_code')),
                           ~ ! is.na(.x))))
 
-    #remove all-NA data columns (except if they have BDLs) and rows with NA in all data columns.
-    #also remove flag columns for all-NA data columns.
-    all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
-                              MARGIN = 2,
-                              function(x) all(is.na(x)))
-    all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
-    all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
-    all_na_cols <- c(all_na_cols,
-                     sub(pattern = '__\\|dat',
-                         replacement = '__|flg',
-                         all_na_cols))
-
-    # Check this. Need to ensure rows are not being removed if all the data values
-    # are NA but there is BDL information in a flag column
+    #identify flag columns with BDLs (should not be dropped)
     flg_col_names <- colnames(d)[str_detect('__|flg', colnames(d))]
-    if(!is.null(summary_flagcols)){
-        flg_col_names <- c(flg_col_names, summary_flagcols)
+    flg_col_names <- c(flg_col_names, summary_flagcols)
+    bdl_cols_do_not_drop2 <- apply(d[, flg_col_names], 2, function(x)
+        {
+            any(! is.na(x) & x == 'BDL')
+        }) %>%
+        names()
+    bdl_cols_do_not_drop2 <- c(bdl_cols_do_not_drop2,
+                               sub(pattern = '__\\|flg',
+                                   replacement = '__|dat',
+                                   bdl_cols_do_not_drop2))
+
+    #identify columns that are all-NA and should be dropped, unless
+    #   BDLs within. if any BDLs in summary columns, don't drop columns.
+    summary_bdls_present <- FALSE
+    if(! is.null(summary_flagcols)){
+        summary_bdls_present <- lapply(d[, summary_flagcols], function(x)
+            {
+                ! is.na(x) & x == 'BDL'
+            }) %>%
+            unlist() %>%
+            any()
     }
 
-    d <- d %>%
-        select(-one_of(all_na_cols)) %>%
-        filter_at(vars(c(ends_with('__|dat'), any_of(flg_col_names))),
-                  any_vars(! is.na(.)))
+    if(! summary_bdls_present){
+
+        all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
+                                  MARGIN = 2,
+                                  function(x) all(is.na(x)))
+        all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
+        all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
+        all_na_cols <- c(all_na_cols,
+                         sub(pattern = '__\\|dat',
+                             replacement = '__|flg',
+                             all_na_cols))
+        all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop2]
+
+    } else all_na_cols <- NULL
+
+    #identify rows with BDL flags
+    if(! is.null(flg_col_names)){
+        bdl_rows_do_not_drop <- apply(d[, flg_col_names], 1, function(x){
+            any(! is.na(x) & is.character(x) & x == 'BDL')
+        })
+    } else {
+        bdl_rows_do_not_drop = rep(FALSE, nrow(d))
+    }
+
+    #remove all-NA data columns without BDLs
+    d <- select(d, -one_of(all_na_cols))
+
+    #remove rows with NA for all data columns, except if they have BDLs.
+    keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
+    d <- d[keeper_rows | bdl_rows_do_not_drop, ]
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA
     #   values. We could instead do something more sophisticated.
@@ -1642,11 +1670,13 @@ ms_cast_and_reflag <- function(d,
     #get 1/2 detection limits
     if(sumbdl || varbdl){
 
-        detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
-                                                  arrange(site_code, var, datetime),
-                                              write_detlim_file = FALSE,
-                                              return_detlims = TRUE,
-                                              ignore_arrange = TRUE)
+        # detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
+        #                                           arrange(site_code, var, datetime),
+        #                                       write_detlim_file = FALSE,
+        #                                       return_detlims = TRUE,
+        #                                       ignore_arrange = TRUE)
+
+        detlims <- get_detection_limits(d)
 
         half_detlims <- mutate(detlims, detlim = detlim / 2)
     }
@@ -1758,7 +1788,8 @@ ms_cast_and_reflag <- function(d,
 ms_conversions <- function(d,
                            keep_molecular,
                            convert_units_from,
-                           convert_units_to){
+                           convert_units_to,
+                           row_wise = FALSE){
 
     #d: a macrosheds tibble that has already been through ms_cast_and_reflag
     #keep_molecular: a character vector of molecular formulae to be
@@ -1777,6 +1808,9 @@ ms_conversions <- function(d,
     #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
     #   and values are the units those variables should be converted to.
     #   Omit variables that don't need to be converted.
+    #row_wise: logical. If TRUE, treat every row as a unique case, with its own
+    #   separate conversion. This is necessary for converting detection limits
+    #   in domain_detection_limits.
 
     #checks
     # cm <- ! missing(convert_molecules)
@@ -1789,13 +1823,51 @@ ms_conversions <- function(d,
     if(length(convert_units_from) != length(convert_units_to)){
         stop('convert_units_from and convert_units_to must have the same length')
     }
-    cu_shared_names <- base::intersect(names(convert_units_from),
-                                       names(convert_units_to))
-    if(length(cu_shared_names) != length(convert_units_to)){
-        stop('names of convert_units_from and convert_units_to must match')
+
+    if(! row_wise){
+        if(any(duplicated(names(convert_units_from)))){
+            stop('duplicated names in convert_units_from')
+        }
+        if(any(duplicated(names(convert_units_to)))){
+            stop('duplicated names in convert_units_to')
+        }
+
+        cu_shared_names <- base::intersect(names(convert_units_from),
+                                           names(convert_units_to))
+        if(length(cu_shared_names) != length(convert_units_to)){
+            stop('names of convert_units_from and convert_units_to must match')
+        }
+
+    } else {
+
+        if(any(names(convert_units_from) != names(convert_units_to))){
+            stop('in row_wise mode, names of convert_units_from and convert_units_to must be identical')
+        }
+
+        cu_shared_names <- names(convert_units_from)
+
+        if(length(cu_shared_names) != nrow(d)){
+            stop(paste('in row_wise mode, lengths of convert_units_from and convert_units_to',
+                       'must be equal to the number of rows in d'))
+        }
+
     }
 
+    convert_units_from <- tolower(convert_units_from)
+    convert_units_to <- tolower(convert_units_to)
+
     vars <- drop_var_prefix(d$var)
+
+    if(is.null(vars) || any(is.na(vars)) || any(vars == '')){
+        stop('some vars misspecified in d. are they missing prefixes?')
+    }
+
+    errant_var_specs <- ! cu_shared_names %in% vars
+    if(any(errant_var_specs)){
+        warning(paste('variables',
+                      paste(cu_shared_names[errant_var_specs], collapse = ', '),
+                      'not present in d. did you mean something else?'))
+    }
 
     convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
                            'NO3_NO2')
@@ -1850,37 +1922,40 @@ ms_conversions <- function(d,
         d$var[vars == v] <- new_name
     }
 
-    # Converts input to grams if the final unit contains grams
-    for(i in 1:length(convert_units_from)){
+    loop_length <- ifelse(row_wise, nrow(d), length(convert_units_from))
+    for(i in 1:loop_length){
 
         unitfrom <- convert_units_from[i]
         unitto <- convert_units_to[i]
         v <- names(unitfrom)
 
+        d_subset <- if(row_wise) i else vars == v
+
+        # Converts input to grams if the final unit contains grams
         g_conver <- FALSE
         if(grepl('mol|eq', unitfrom) && grepl('g', unitto) ||
            v %in% convert_molecules){
 
-            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
-                                              input_unit = unitfrom,
-                                              molecule = v)
+            d$val[d_subset] <- convert_to_gl(x = d$val[d_subset],
+                                             input_unit = unitfrom,
+                                             molecule = v)
 
             g_conver <- TRUE
         }
 
         #convert prefix
-        d$val[vars == v] <- convert_unit(x = d$val[vars == v],
-                                         input_unit = unitfrom,
-                                         output_unit = unitto)
+        d$val[d_subset] <- convert_unit(x = d$val[d_subset],
+                                        input_unit = unitfrom,
+                                        output_unit = unitto)
 
         #Convert to mol or eq if that is the output unit
         if(grepl('mol|eq', unitto)) {
 
-            d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
-                                                input_unit = unitfrom,
-                                                output_unit = unitto,
-                                                molecule = v,
-                                                g_conver = g_conver)
+            d$val[d_subset] <- convert_from_gl(x = d$val[d_subset],
+                                               input_unit = unitfrom,
+                                               output_unit = unitto,
+                                               molecule = v,
+                                               g_conver = g_conver)
         }
     }
 
@@ -4942,7 +5017,12 @@ update_product_statuses <- function(network, domain){
     #return()
 }
 
-convert_to_gl <- function(x, input_unit, molecule) {
+convert_to_gl <- function(x, input_unit, molecule){
+
+    #this is for converting to concentration in mass per volume, from either
+    #   equivalents per volume or moles per volume. It is NOT for converting to grams
+    #   per liter. Therefore, if your input units are already xg/L, where x is
+    #   n, u, m, k, etc., this function will do nothing.
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -4973,7 +5053,12 @@ convert_to_gl <- function(x, input_unit, molecule) {
 
 }
 
-convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver) {
+convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
+
+    #this is for converting from concentration in mass per liter to either moles
+    #   per liter or equivalents per liter. It does not assume input units are
+    #   g/L, but rather any metric mass unit per liter. Specify the input units
+    #   with input_unit.
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -5049,7 +5134,7 @@ convert_unit <- function(x, input_unit, output_unit){
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
     }
 
-    old_top_unit <- str_split_fixed(old_top, "", 2)[1]
+    old_top_unit <- tolower(str_split_fixed(old_top, "", 2)[1])
 
     if(old_top_unit %in% c('g', 'e', 'q', 'l') || old_fraction[1] == 'mol') {
         old_top_conver <- 1
@@ -5057,7 +5142,7 @@ convert_unit <- function(x, input_unit, output_unit){
         old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2])
     }
 
-    old_bottom_unit <- str_split_fixed(old_bottom, "", 2)[1]
+    old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
 
     if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
         old_bottom_conver <- 1
@@ -5065,7 +5150,7 @@ convert_unit <- function(x, input_unit, output_unit){
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
 
-    new_top_unit <- str_split_fixed(new_top, "", 2)[1]
+    new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
 
     if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
         new_top_conver <- 1
@@ -5073,7 +5158,7 @@ convert_unit <- function(x, input_unit, output_unit){
         new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
     }
 
-    new_bottom_unit <- str_split_fixed(new_bottom, "", 2)[1]
+    new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
 
     if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
         new_bottom_conver <- 1
@@ -14230,6 +14315,126 @@ run_checks <- function(){
                   dv = paste(dupe_vars$variable_code,
                              collapse = ', ')))
     }
+}
+
+count_sigfigs <- function(x){
+
+    #x: numeric vector or character vector of numerals
+
+    # converts x to character, separates any digits to left and right of decimal.
+    #   computes number of sigfigs as digits to the left, not including
+    #   trailing zeros, plus digits to the right, not including leading zeros.
+
+    #this does not currently work for representations like "100.", 0.0100, 100.0, or '0123',
+    #   but it does get the job done for our purposes
+
+    options(scipen = 100)
+
+    x <- as.character(abs(as.numeric(x)))
+
+    legal_characters <- c('.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+    char_test <- sapply(x, function(z) all(str_split(z, '')[[1]] %in% legal_characters))
+    if(any(! char_test)){
+        stop('some characters are not numeric or decimal point')
+    }
+
+    has_decimal <- grepl('\\.', x)
+    tokens <- str_split(x, '\\.')
+
+    if(any(sapply(tokens, function(z) length(z) > 2))){
+        stop('got some wonky numbers here. multiple decimals?')
+    }
+
+    n_sigfigs <- sapply(tokens, function(z)
+    {
+        has_decimal <- length(z) == 2
+        if(has_decimal){
+
+            has_sigfigs_after_decimal <- any(str_split(z[2], '')[[1]] != '0')
+            has_sigfigs_before_decimal <- any(str_split(z[1], '')[[1]] != '0')
+
+            if(has_sigfigs_before_decimal && has_sigfigs_after_decimal){
+                tokens_dec <- nchar(z[2])
+                tokens_whole <- nchar(z[1])
+            } else if(has_sigfigs_after_decimal){
+                tokens_dec <- nchar(sub('^0+', '', z[2]))
+                tokens_whole <- 0
+            } else {
+                tokens_dec <- 0
+                tokens_whole <- 0
+            }
+
+        } else {
+            tokens_whole <- nchar(sub('0+$', '', z[1]))
+            tokens_dec <- 0
+        }
+
+        tokens_whole + tokens_dec
+    })
+
+    options(scipen = 0)
+
+    return(n_sigfigs)
+}
+
+standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
+
+    #fix units, get sigfigs, get canonical units
+    dls <- dls %>%
+        mutate(unit = sub('^([a-z]+)/l', '\\1/L', unit),
+               precision = count_sigfigs(detection_limit)) %>%
+        rename(unit_from = unit) %>%
+        left_join(select(vs, variable_code, unit_to = unit),
+                  by = c(variable = 'variable_code'))
+
+    core_ <- function(dl_set){
+
+        #prepare detlim data to be used with ms_conversions
+        dls_ms_format <- dl_set %>%
+            mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
+                   site_code = 'a',
+                   var = paste0('GN_', variable),
+                   val = detection_limit) %>%
+            select(datetime, site_code, var, val)
+
+        from_units <- dl_set$unit_from
+        names(from_units) <- dl_set$variable
+        to_units <- dl_set$unit_to
+        names(to_units) <- dl_set$variable
+
+        #convert detlims to canonical units
+        dls_conv <- ms_conversions(d = dls_ms_format,
+                                   convert_units_from = from_units,
+                                   convert_units_to = to_units,
+        # ms_conversions(d = dls_ms_format[1:5,],
+        #                convert_units_from = c(DOC='ug/L', TDN='mg/L', `F`='nmol/L', Cl='g/L', NO3='mg/L'),
+        #                convert_units_to = c(DOC='mg/L', TDN='mg/L', `F`='mg/L', Cl='mg/L', NO3='mg/L'),
+                                   row_wise = TRUE)
+
+        #round to original sigfigs
+        dl_set$detection_limit <- mapply(function(a, b) signif(a, b),
+                                         a = dls_conv$val,
+                                         b = dl_set$precision)
+
+        return(dl_set)
+    }
+
+    #convert detlims to MS canonical units
+    dlout_a <- core_(dls)
+
+    #also standardize detlims for the molecules that we usually convert according to
+    #the masses of their primary constituents, since some of these molecules
+    #are allowed to be carried through the ms processing pipeline as-is
+    dont_convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                                'NO3_NO2')
+
+    dls_b <- filter(dls, variable %in% dont_convert_molecules)
+
+
+
+    #run this again for all the convertible molecules and don't convert them. stick the output to the main frfame
+    #hunt down valences! what happens when one is 0?
+    #where does R_display get used?
 }
 
 legal_details_scrape <- function(dataset_version){

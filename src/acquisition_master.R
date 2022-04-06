@@ -243,6 +243,10 @@ if(ms_instance$use_ms_error_handling){
 load_config_datasets(from_where = 'remote')
 # load_config_datasets(from_where = ms_instance$config_data_storage)
 
+domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
+                                                        vs = ms_vars,
+                                                        update_on_gdrive = TRUE)
+
 run_checks()
 
 site_data <- filter(site_data,
@@ -257,7 +261,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-dmnrow = 5
+dmnrow = 16
 print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
