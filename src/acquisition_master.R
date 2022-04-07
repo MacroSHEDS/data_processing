@@ -261,7 +261,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-dmnrow = 16
+dmnrow = 17
 print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
@@ -271,7 +271,6 @@ for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
-
 
     # held_data = get_data_tracker(network, domain)
 

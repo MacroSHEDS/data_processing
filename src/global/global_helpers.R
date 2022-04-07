@@ -1667,19 +1667,19 @@ ms_cast_and_reflag <- function(d,
         d$var <- varname
     }
 
-    #get 1/2 detection limits
-    if(sumbdl || varbdl){
-
-        # detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
-        #                                           arrange(site_code, var, datetime),
-        #                                       write_detlim_file = FALSE,
-        #                                       return_detlims = TRUE,
-        #                                       ignore_arrange = TRUE)
-
-        detlims <- get_detection_limits(d)
-
-        half_detlims <- mutate(detlims, detlim = detlim / 2)
-    }
+    # #get 1/2 detection limits
+    # if(sumbdl || varbdl){
+    #
+    #     # detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
+    #     #                                           arrange(site_code, var, datetime),
+    #     #                                       write_detlim_file = FALSE,
+    #     #                                       return_detlims = TRUE,
+    #     #                                       ignore_arrange = TRUE)
+    #
+    #     detlims <- get_detection_limits(d)
+    #
+    #     half_detlims <- mutate(detlims, detlim = detlim / 2)
+    # }
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
@@ -1758,20 +1758,20 @@ ms_cast_and_reflag <- function(d,
         for(i in seq_along(summary_flags_bdl)){
             si <- summary_flags_bdl[i]
             bdl_inds <- d[[names(si)]] %in% si[[1]]
-            d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
-            d[bdl_inds, 'ms_status'] <- 1
+            # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+            d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
         }
     }
 
     if(varbdl){
         bdl_inds <- d$flg %in% variable_flags_bdl
-        d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
-        d[bdl_inds, 'ms_status'] <- 1
+        # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+        d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
     }
 
-    #remove rows with NA in the value column (these take up space and can be
-    #reconstructed by casting to wide form
-    d <- filter(d, ! is.na(dat))
+    #remove rows with NA in the value column and no bdl flag.
+    #these take up space and can be reconstructed by casting to wide form
+    d <- filter(d, ! is.na(dat) | ms_status == 2)
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
@@ -8440,6 +8440,12 @@ knit_det_limits <- function(network, domain, prodname_ms){
     return(lowest_detlims)
 }
 
+get_detection_limits <- function(d, dls){
+
+    d
+
+}
+
 identify_series_detlim <- function(x){
 
 
@@ -9323,7 +9329,7 @@ load_config_datasets <- function(from_where){
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
-            col_types = 'cccnccc'
+            col_types = 'ccccnnnccccl'
         ))
 
     } else if(from_where == 'local'){
@@ -14379,62 +14385,111 @@ count_sigfigs <- function(x){
 
 standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
+    #dls: detection limits, read from gdrive
+    #vs: variables, read from gdrive,
+    #update_on_gdrive: logical. should the domain_detection_limits file
+    #   on gdrive be updated?
+
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
-        mutate(unit = sub('^([a-z]+)/l', '\\1/L', unit),
-               precision = count_sigfigs(detection_limit)) %>%
-        rename(unit_from = unit) %>%
-        left_join(select(vs, variable_code, unit_to = unit),
-                  by = c(variable = 'variable_code'))
+        mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
+        # mutate(unit = sub('^([a-z]+)/l', '\\1/L', unit),
+               # precision = count_sigfigs(detection_limit)) %>%
+               precision = count_sigfigs(detection_limit_original)) %>%
+        # rename(unit_from = unit,
+        #        detection_limit_original = detection_limit,
+        #        variable_original = variable) %>%
+        select(-unit_converted) %>%
+        left_join(select(vs, variable_code, unit_converted = unit),
+                  by = c(variable_original = 'variable_code'))
 
-    core_ <- function(dl_set){
+    core_ <- function(dl_set, keep_molecular = NULL){
 
         #prepare detlim data to be used with ms_conversions
         dls_ms_format <- dl_set %>%
             mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
                    site_code = 'a',
-                   var = paste0('GN_', variable),
-                   val = detection_limit) %>%
+                   var = paste0('GN_', variable_original),
+                   val = detection_limit_original) %>%
             select(datetime, site_code, var, val)
 
-        from_units <- dl_set$unit_from
-        names(from_units) <- dl_set$variable
-        to_units <- dl_set$unit_to
-        names(to_units) <- dl_set$variable
+        # from_units <- dl_set$unit_from
+        # names(from_units) <- dl_set$variable_original
+        # to_units <- dl_set$unit_to
+        # names(to_units) <- dl_set$variable_original
+        from_units <- dl_set$unit_original
+        names(from_units) <- dl_set$variable_original
+        to_units <- dl_set$unit_converted
+        names(to_units) <- dl_set$variable_original
 
         #convert detlims to canonical units
         dls_conv <- ms_conversions(d = dls_ms_format,
                                    convert_units_from = from_units,
                                    convert_units_to = to_units,
-        # ms_conversions(d = dls_ms_format[1:5,],
-        #                convert_units_from = c(DOC='ug/L', TDN='mg/L', `F`='nmol/L', Cl='g/L', NO3='mg/L'),
-        #                convert_units_to = c(DOC='mg/L', TDN='mg/L', `F`='mg/L', Cl='mg/L', NO3='mg/L'),
+                                   keep_molecular = keep_molecular,
                                    row_wise = TRUE)
 
         #round to original sigfigs
-        dl_set$detection_limit <- mapply(function(a, b) signif(a, b),
-                                         a = dls_conv$val,
-                                         b = dl_set$precision)
+        dl_set$detection_limit_converted <- mapply(function(a, b) signif(a, b),
+                                                   a = dls_conv$val,
+                                                   b = dl_set$precision)
 
         return(dl_set)
     }
 
+    normally_converted_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                                      'NO3_NO2')
+    normally_converted_to <- c('NO3_N', 'SO4_S', 'PO4_P', 'SiO2_Si', 'SiO3_Si', 'NH4_N', 'NH3_N',
+                               'NO3_NO2_N')
+
     #convert detlims to MS canonical units
-    dlout_a <- core_(dls)
+    dlout_a <- core_(filter(dls, ! added_programmatically))
+
+    #update variable names for molecules that have been converted
+    dlout_a$variable_converted <- dlout_a$variable_original
+    varcode_change_inds <- dlout_a$variable_converted %in% normally_converted_molecules
+    varcodes_to_change <- dlout_a$variable_converted[varcode_change_inds]
+    new_varcodes <- normally_converted_to[match(varcodes_to_change, normally_converted_molecules)]
+    dlout_a$variable_converted[varcode_change_inds] <- new_varcodes
 
     #also standardize detlims for the molecules that we usually convert according to
     #the masses of their primary constituents, since some of these molecules
     #are allowed to be carried through the ms processing pipeline as-is
-    dont_convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
-                                'NO3_NO2')
+    dlout_b <- filter(dls,
+                      variable_original %in% normally_converted_molecules,
+                      ! added_programmatically) %>%
+        core_(keep_molecular = normally_converted_molecules) %>%
+        mutate(added_programmatically = TRUE,
+               variable_converted = variable_original)
 
-    dls_b <- filter(dls, variable %in% dont_convert_molecules)
+    dls <- bind_rows(dlout_a, dlout_b) %>%
+        # rename(unit_original = unit_from,
+        #        unit_converted = unit_to) %>%
+        select(domain, prodcode, variable_converted,
+               variable_original, detection_limit_converted,
+               detection_limit_original, precision, unit_converted,
+               unit_original, start_date, end_date, added_programmatically)
 
+    dls <- dls[! duplicated(dls), ]
 
+    if(any(duplicated(select(dls, -added_programmatically)))){
+        stop(paste('we have generated detection limits for a molecule-as-atom',
+                   'where a domain has already reported the same. implement',
+                   'filtering of our estimate in this case'))
+    }
 
-    #run this again for all the convertible molecules and don't convert them. stick the output to the main frfame
-    #hunt down valences! what happens when one is 0?
-    #where does R_display get used?
+    if(update_on_gdrive){
+        catch <- expo_backoff(
+            expr = {
+                sm(googlesheets4::write_sheet(data = dls,
+                                              ss = conf$dl_sheet,
+                                              sheet = 1))
+            },
+            max_attempts = 4
+        )
+    }
+
+    return(dls)
 }
 
 legal_details_scrape <- function(dataset_version){
