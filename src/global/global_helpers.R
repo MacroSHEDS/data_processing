@@ -1511,11 +1511,13 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_bdl: optional named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Associated data records are assigned 1/2 their detection limit (determined
-    #   by identify_detection_limit_t and ms_status is set to 1 (dirty/questionable).
+    #   Associated data records are assigned ms_status = 2, which is used as an
+    #   indicator to insert 1/2 detlims downstream.
 
     #return value: a long-format tibble with 5 columns: datetime, site_code,
-    #   var, val, ms_status. Rows with NA in any column are removed.
+    #   var, val, ms_status. Rows with NA in any non-status column are removed,
+    #   except rows with NA in the val column and ms_status == 2, designating
+    #   a BDL value that will be inserted as 1/2 detlim later.
 
     #arg checks
     if(! input_shape == 'wide'){
@@ -1666,20 +1668,6 @@ ms_cast_and_reflag <- function(d,
         colnames(d)[data_ind] <- 'dat'
         d$var <- varname
     }
-
-    # #get 1/2 detection limits
-    # if(sumbdl || varbdl){
-    #
-    #     # detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
-    #     #                                           arrange(site_code, var, datetime),
-    #     #                                       write_detlim_file = FALSE,
-    #     #                                       return_detlims = TRUE,
-    #     #                                       ignore_arrange = TRUE)
-    #
-    #     detlims <- get_detection_limits(d)
-    #
-    #     half_detlims <- mutate(detlims, detlim = detlim / 2)
-    # }
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
@@ -7085,8 +7073,6 @@ idw_log_wb <- function(verbose, site_code, i, nw){
 
     loginfo(msg,
             logger = logger_module)
-
-    #return()
 }
 
 idw_log_var <- function(verbose,
@@ -7119,8 +7105,6 @@ idw_log_var <- function(verbose,
 
     loginfo(msg,
             logger = logger_module)
-
-    #return()
 }
 
 idw_log_timestep <- function(verbose, site_code=NULL, v, k, ntimesteps,
@@ -7153,11 +7137,7 @@ idw_log_timestep <- function(verbose, site_code=NULL, v, k, ntimesteps,
         loginfo(msg,
                 logger = logger_module)
     }
-
-    #return()
 }
-
-
 
 get_detlim_precursors <- function(network,
                                   domain,
@@ -8440,10 +8420,111 @@ knit_det_limits <- function(network, domain, prodname_ms){
     return(lowest_detlims)
 }
 
-get_detection_limits <- function(d, dls){
+make_detlim_prec_lookup_table <- function(dls){
 
-    d
+    #for each variable, determine the median detlim and the minimum (coarsest)
+    #precision across all domains. For domains that report multiple values for
+    #a given variable, first take a within-domain median/min
 
+    lookup_table <- dls %>%
+        group_by(domain, var = variable_converted) %>%
+        summarize(detlim = median(detection_limit_converted),
+                  precision = min(precision)) %>%
+        group_by(var) %>%
+        summarize(detlim = median(detlim),
+                  precision = min(precision),
+                  .groups = 'drop')
+
+    return(lookup_table)
+}
+
+get_half_detlims <- function(d, detlims, prodname_ms){
+
+    #locates, estimates, or naively generates (0) detection limits for any value.
+    #order of decisions:
+    #   1. if provider reports detection limit for same domain, product, variable, and date, use that.
+    #   2. if not for same date, use the nearest date
+    #   3. if not for same product, but same variable and domain, grab nearest date
+    #   4. if not for same variable, use median (of medians) across domains
+    #   5. if nothing reported for a domain, use median (of medians) across domains
+    #   6. if nothing to guess from, use 0
+
+    #TODO: check for overlaps in the detlim file
+
+    #a bit of cleanup and setup
+    detlims <- select(detlims, domain, prodcode, var = variable_converted,
+                      detlim = detection_limit_converted, precision,
+                      start_date, end_date)
+
+    half_detlims <- rep(NA_real_, nrow(d))
+
+    d_var_with_prefixes <- d$var
+    d$var <- drop_var_prefix(d$var)
+
+    #checks for various cases
+    got_domain <- detlims$domain == domain
+    got_prodcode_at_domain <- sapply(detlims$prodcode, function(x){
+        any(str_split(x, '\\|')[[1]] == prodname_ms)
+    }) & got_domain
+    # detlims$prodcode[got_prodcode_at_domain] <- prodname_ms
+
+    #CASE 1
+    dlsub <- filter(detlims, got_prodcode_at_domain)
+    if(nrow(dlsub)){
+
+        if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 1 with dates
+            #gotta join by date ranges
+            stop('unbuilt')
+        } else { #case 1 with no dates specified
+
+            if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
+
+            half_detlims <- d %>%
+                left_join(dlsub, by = 'var') %>%
+                pull(detlim) / 2
+                # select(datetime, site_code, var, val, ms_status, detlim, precision)
+        }
+    }
+
+    still_missing <- is.na(half_detlims)
+    if(any(still_missing)){
+
+        #CASE 3
+        dlsub <- filter(detlims, got_domain & ! got_prodcode_at_domain)
+        if(nrow(dlsub)){
+
+            if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 3 with dates
+                #gotta join by date ranges
+                stop('unbuilt')
+            } else { #case 3 with no dates specified
+
+                dlsub <- dlsub %>%
+                    group_by(var) %>%
+                    summarize(detlim = median(detlim),
+                              .groups = 'drop')
+
+                half_detlims_ <- d %>%
+                    left_join(dlsub, by = 'var') %>%
+                    pull(detlim) / 2
+
+                half_detlims[still_missing] <- half_detlims_[still_missing]
+            }
+        }
+    }
+
+    #CASE 4-5: fill in remaining blanks using median detlim across all reported values
+    still_missing <- is.na(half_detlims)
+    ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
+    half_detlims[still_missing] <- unknown_detlim_prec_lookup$detlim[ref_inds] / 2
+
+    #CASE 6: fill in still remaining blanks with infinity
+    half_detlims[is.na(half_detlims)] <- Inf
+
+    #put everything back together
+    d$val <- half_detlims
+    d$var <- d_var_with_prefixes
+
+    return(d)
 }
 
 identify_series_detlim <- function(x){
@@ -9329,7 +9410,7 @@ load_config_datasets <- function(from_where){
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
-            col_types = 'ccccnnnccccl'
+            col_types = 'ccccnnnnccDDl'
         ))
 
     } else if(from_where == 'local'){
@@ -13207,8 +13288,8 @@ ms_check_range <- function(d){
         }
     }
 
-    d <- d %>%
-        filter(!is.na(val))
+    d <- filter(d,
+                ! is.na(val) | ms_status == 2)
 }
 
 download_from_googledrive <- function(set_details, network, domain){
@@ -14344,7 +14425,6 @@ count_sigfigs <- function(x){
         stop('some characters are not numeric or decimal point')
     }
 
-    has_decimal <- grepl('\\.', x)
     tokens <- str_split(x, '\\.')
 
     if(any(sapply(tokens, function(z) length(z) > 2))){
@@ -14383,6 +14463,49 @@ count_sigfigs <- function(x){
     return(n_sigfigs)
 }
 
+get_numeric_precision <- function(x){
+
+    #x: numeric vector or character vector of numerals
+
+    # determines numeric precision as the count of digits, or, for whole numbers,
+    #   the count of digits not including trailing zeros.
+
+    #WARNING: this does not currently work for representations like "100.", 0.0100, 100.0, or '0123',
+    #   but it does get the job done for our purposes
+
+    options(scipen = 100)
+
+    x <- as.character(abs(as.numeric(x)))
+
+    legal_characters <- c('.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+    char_test <- sapply(x, function(z) all(str_split(z, '')[[1]] %in% legal_characters))
+    if(any(! char_test)){
+        stop('some characters are not numeric or decimal point')
+    }
+
+    precision <- sapply(x, function(z)
+    {
+        has_decimal <- grepl('\\.', z)
+        if(has_decimal){
+            if(substr(z, 1, 1) == '0'){
+                prec <- nchar(z) - 2
+            } else {
+                prec <- nchar(z) - 1
+            }
+        } else {
+            if(all(str_split(z, '')[[1]] == '0')){
+                prec <- 0
+            } else {
+                prec <- -nchar(str_match(z, '(0*)$')[, 2]) - 1
+            }
+        }
+    }, USE.NAMES = FALSE)
+
+    options(scipen = 0)
+
+    return(precision)
+}
+
 standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     #dls: detection limits, read from gdrive
@@ -14393,12 +14516,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
-        # mutate(unit = sub('^([a-z]+)/l', '\\1/L', unit),
-               # precision = count_sigfigs(detection_limit)) %>%
-               precision = count_sigfigs(detection_limit_original)) %>%
-        # rename(unit_from = unit,
-        #        detection_limit_original = detection_limit,
-        #        variable_original = variable) %>%
+               sigfigs = count_sigfigs(detection_limit_original),
+               start_date = dmy(start_date),
+               end_date = dmy(end_date)) %>%
         select(-unit_converted) %>%
         left_join(select(vs, variable_code, unit_converted = unit),
                   by = c(variable_original = 'variable_code'))
@@ -14413,10 +14533,6 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                    val = detection_limit_original) %>%
             select(datetime, site_code, var, val)
 
-        # from_units <- dl_set$unit_from
-        # names(from_units) <- dl_set$variable_original
-        # to_units <- dl_set$unit_to
-        # names(to_units) <- dl_set$variable_original
         from_units <- dl_set$unit_original
         names(from_units) <- dl_set$variable_original
         to_units <- dl_set$unit_converted
@@ -14432,7 +14548,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
         #round to original sigfigs
         dl_set$detection_limit_converted <- mapply(function(a, b) signif(a, b),
                                                    a = dls_conv$val,
-                                                   b = dl_set$precision)
+                                                   b = dl_set$sigfigs)
 
         return(dl_set)
     }
@@ -14463,11 +14579,10 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
-        # rename(unit_original = unit_from,
-        #        unit_converted = unit_to) %>%
+        mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
-               detection_limit_original, precision, unit_converted,
+               detection_limit_original, precision, sigfigs, unit_converted,
                unit_original, start_date, end_date, added_programmatically)
 
     dls <- dls[! duplicated(dls), ]
