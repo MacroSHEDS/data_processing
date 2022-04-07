@@ -53,12 +53,12 @@ process_0_163 <- retrieve_niwot
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_278 <- retrieve_niwot <- function(set_details, network, domain) {
-    
+
     download_raw_file(network = network,
                       domain = domain,
                       set_details = set_details,
                       file_type = '.csv')
-    
+
     return()
 }
 
@@ -115,7 +115,7 @@ process_1_213 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     data_cols <- c('pH' = 'pH',
                    'cond' = 'spCond',
                    'ANC' = 'ANC',
@@ -146,7 +146,7 @@ process_1_213 <- function(network, domain, prodname_ms, site_code,
                    'TOC' = 'TOC',
                    'DOC' = 'DOC',
                    'POC' = 'POC')
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d',
                                              'time' = '%H%M'),
@@ -263,7 +263,7 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
                          convert_to_BDL_flag = unique(c('u', 'trace', '<0.71', '<0.38',
-                                                        '<0.22', '<0.1428', '<0.143', 
+                                                        '<0.22', '<0.1428', '<0.143',
                                                         '<0.449', '<0.082', '<0.087',
                                                         '<0.102', '<0.28', '<0.846',
                                                         '<0.16', '<0.323', '<0.833',
@@ -325,6 +325,10 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
+    # d <- ms_insert_half_detlims(d,
+    #                             detlims = domain_detection_limits,
+    #                             prodname_ms = prodname_ms)
+
     return(d)
 }
 
@@ -339,7 +343,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character') %>%
         mutate(time = ifelse(time == 'DNS', NA, time)) %>%
         mutate(time = ifelse(nchar(time) == 3, paste0(0, time), time))
@@ -489,8 +493,8 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'NV', 'EQCL', 'NSS'),
-                         convert_to_BDL_flag = c('<0.38', '<0.4', '<0.22', '<0.1428', 
-                                                 '<0.323', '<0.03', '<0.0388', '<0.0214', 
+                         convert_to_BDL_flag = c('<0.38', '<0.4', '<0.22', '<0.1428',
+                                                 '<0.323', '<0.03', '<0.0388', '<0.0214',
                                                  '<0.04', '<0.0258', '<0.01', 'trace',
                                                  'u'),
                          is_sensor = FALSE)
@@ -598,9 +602,9 @@ process_1_109 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'NV', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428', 
-                                                 '<0.087', '<0.28', '<0.161', '<0.063', 
-                                                 '<0.0387', '<0.0214', '<0.56', '<0.0258', 
+                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428',
+                                                 '<0.087', '<0.28', '<0.161', '<0.063',
+                                                 '<0.0387', '<0.0214', '<0.56', '<0.0258',
                                                  '<0.03', 'u', 'trace'),
                          is_sensor = FALSE)
 
@@ -668,7 +672,7 @@ process_1_110 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- read.csv(rawfile, colClasses = 'character') %>%
         mutate(time = ifelse(time == 'DNS', NA, time)) %>%
         mutate(time = ifelse(nchar(time) == 3, paste0(0, time), time))
@@ -816,9 +820,9 @@ process_1_112 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22', 
-                                                 '<0.1428', '<0.063', '<0.03', '<0.08', 
-                                                 '<0.0388', '<0.0214', '<0.04', 
+                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22',
+                                                 '<0.1428', '<0.063', '<0.03', '<0.08',
+                                                 '<0.0388', '<0.0214', '<0.04',
                                                  '<0.01', '<0.0258', 'trace',
                                                  'u'),
                          is_sensor = FALSE)
@@ -925,7 +929,7 @@ process_1_113 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NSS'),
-                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22', 
+                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22',
                                                  '<0.1428', 'u', 'trace'),
                          is_sensor = FALSE)
 
@@ -1032,7 +1036,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS'),
-                         convert_to_BDL_flag = c('<0.50', '<0.02', '<0.323', '<0.06', 
+                         convert_to_BDL_flag = c('<0.50', '<0.02', '<0.323', '<0.06',
                                                  '<0.0214', '<0.03', '<0.0258',
                                                  'u', 'trace'),
                          is_sensor = FALSE)
@@ -1140,8 +1144,8 @@ process_1_160 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NV'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428', 
-                                                 '<0.02', '<0.323', '<0.063', '<0.0388', 
+                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428',
+                                                 '<0.02', '<0.323', '<0.063', '<0.0388',
                                                  '<0.0214', '<0.04', '<0.0258', '<0.03',
                                                  'trace', 'u'),
                          is_sensor = FALSE)
@@ -1248,8 +1252,8 @@ process_1_162 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.063', '<0.03', 
-                                                 '<0.08', '<0.04', '<0.0096855', 
+                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.063', '<0.03',
+                                                 '<0.08', '<0.04', '<0.0096855',
                                                  '<-0.042314', '<0.01', 'trace',
                                                  'u'),
                          is_sensor = FALSE)
@@ -1357,7 +1361,7 @@ process_1_163 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NV'),
-                         convert_to_BDL_flag = c('<0.4', '<0.1428', '<0.143', 
+                         convert_to_BDL_flag = c('<0.4', '<0.1428', '<0.143',
                                                  '<0.0214', '<0.0258', 'trace',
                                                  'u'),
                          is_sensor = FALSE)
@@ -1419,14 +1423,14 @@ process_1_163 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_1_278 <- function(network, domain, prodname_ms, site_code,
                           component){
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
@@ -1434,7 +1438,7 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'local_site',
                          alt_site_code = list('como' = c('BRIDGE', 'BROOKS WEIR',
                                                          'HOLE IN ICE', 'MRS WEIR',
-                                                         'MRS_WEIR', 'POOL', 
+                                                         'MRS_WEIR', 'POOL',
                                                          'S-CURVE', 'SOD.ST',
                                                          'TRICKLE', 'WEIR',
                                                          'FLUME', 'C1')),
@@ -1470,14 +1474,14 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.47', '<0.50', '<0.02', '<0.05', 
+                         convert_to_BDL_flag = c('<0.47', '<0.50', '<0.02', '<0.05',
                                                  '<0.06', '<0.04', 'trace', 'u'),
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_bdl = 'BDL',
                             variable_flags_dirty = 'dirty')
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
                                                ANC = 'ueq/l',
@@ -1523,7 +1527,7 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-    
+
     return(d)
 }
 
@@ -1531,14 +1535,14 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_1_236 <- function(network, domain, prodname_ms, site_code,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-        
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Mountain',
@@ -1547,15 +1551,15 @@ process_1_236 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = 'NaN',
                          is_sensor = TRUE)
-    
-    
+
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     # Convert from daily volume to l/s
     d <- d %>%
         mutate(val = (val*1000)/86400)
-    
+
     return(d)
 }
 
@@ -1637,14 +1641,14 @@ process_1_111 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
-    
+
+
     if(grepl('stream_chemistry', prodname_ms)){
-        
+
         d <- read.csv(rawfile, colClasses = 'character') %>%
             filter(discharge != 0) %>%
             filter(temperature != 'NaN')
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
@@ -1655,11 +1659,11 @@ process_1_111 <- function(network, domain, prodname_ms, site_code,
                              summary_flagcols = 'notes',
                              set_to_NA = 'NaN',
                              is_sensor = TRUE)
-        
+
         flag_vals <- unique(d$notes)
-        
+
         flag_vals <- flag_vals[!is.na(flag_vals)]
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
@@ -1676,11 +1680,11 @@ process_1_111 <- function(network, domain, prodname_ms, site_code,
                              data_col_pattern = '#V#',
                              set_to_NA = 'NaN',
                              is_sensor = TRUE)
-        
+
         flag_vals <- unique(d$notes)
-        
+
         flag_vals <- flag_vals[!is.na(flag_vals)]
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
@@ -1707,11 +1711,11 @@ process_1_74 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     if(grepl('stream_chemistry', prodname_ms)){
-        
+
         d <- read.csv(rawfile, colClasses = 'character') %>%
             filter(discharge != 0) %>%
             filter(temperature != 'NaN')
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
@@ -1722,17 +1726,17 @@ process_1_74 <- function(network, domain, prodname_ms, site_code,
                              summary_flagcols = 'notes',
                              set_to_NA = 'NaN',
                              is_sensor = TRUE)
-        
+
         flag_vals <- unique(d$notes)
-        
+
         flag_vals <- flag_vals[!is.na(flag_vals)]
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
                                 summary_flags_dirty = list('notes' = flag_vals))
     } else{
-        
+
         d <- ms_read_raw_csv(filepath = rawfile,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
@@ -1743,16 +1747,16 @@ process_1_74 <- function(network, domain, prodname_ms, site_code,
                              data_col_pattern = '#V#',
                              set_to_NA = 'NaN',
                              is_sensor = TRUE)
-        
+
         flag_vals <- unique(d$notes)
-        
+
         flag_vals <- flag_vals[!is.na(flag_vals)]
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
                                 summary_flags_dirty = list('notes' = flag_vals))
-        
+
         # Convert from daily volume to l/s
         d <- d %>%
             mutate(val = (val*1000)/86400)
@@ -1772,13 +1776,13 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     if(grepl('stream_chemistry', prodname_ms)){
-        
+
         d <- read.csv(rawfile, colClasses = 'character') %>%
             filter(discharge != 0) %>%
             filter(temperature != 'NaN')
-        
+
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
@@ -1789,11 +1793,11 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = 'NaN',
                              summary_flagcols = 'notes',
                              is_sensor = TRUE)
-        
+
         flag_vals <- unique(d$notes)
-        
+
         flag_vals <- flag_vals[!is.na(flag_vals)]
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
@@ -1810,7 +1814,7 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = 'NaN',
                              summary_flagcols = 'notes',
                              is_sensor = TRUE)
-        
+
         flag_vals <- c('flow data interpolated and not based on stage records',
                        'flow data preliminary and subject to change',
                        'flow data estimated indirectly and not based on continuous level record',
@@ -1829,12 +1833,12 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
                        'flow data estimated from intermittent observation',
                        'flow data estimated by recession observation of 2 October',
                        'flow data interpolated because there was no record due to a jammed float')
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
                                 summary_flags_dirty = list('notes' = flag_vals))
-        
+
         # Convert from daily volume to l/s
         d <- d %>%
             mutate(val = (val*1000)/86400)
@@ -1848,14 +1852,14 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_1_169 <- function(network, domain, prodname_ms, site_code,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-        
+
         d <- ms_read_raw_csv(filepath = rawfile,
                              datetime_cols = list('date' = '%Y-%m-%d'),
                              datetime_tz = 'US/Mountain',
@@ -1865,7 +1869,7 @@ process_1_169 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = 'NaN',
                              summary_flagcols = 'notes',
                              is_sensor = TRUE)
-        
+
         flag_vals <- c('flow data interpolated and not based on stage records',
                        'flow data preliminary and subject to change',
                        'flow data estimated indirectly and not based on continuous level record',
@@ -1884,12 +1888,12 @@ process_1_169 <- function(network, domain, prodname_ms, site_code,
                        'flow data estimated from intermittent observation',
                        'flow data estimated by recession observation of 2 October',
                        'flow data interpolated because there was no record due to a jammed float')
-        
+
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_to_drop = list('notes' = 'DROP'),
                                 summary_flags_dirty = list('notes' = flag_vals))
-        
+
         # Convert from daily volume to l/s
         d <- d %>%
             mutate(val = (val*1000)/86400)
@@ -1901,14 +1905,14 @@ process_1_169 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_1_170 <- function(network, domain, prodname_ms, site_code,
                           component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Mountain',
@@ -1919,7 +1923,7 @@ process_1_170 <- function(network, domain, prodname_ms, site_code,
                          set_to_NA = 'NaN',
                          summary_flagcols = 'notes',
                          is_sensor = TRUE)
-    
+
     flag_vals <- c('flow data interpolated and not based on stage records',
                    'flow data preliminary and subject to change',
                    'flow data estimated indirectly and not based on continuous level record',
@@ -1938,12 +1942,12 @@ process_1_170 <- function(network, domain, prodname_ms, site_code,
                    'flow data estimated from intermittent observation',
                    'flow data estimated by recession observation of 2 October',
                    'flow data interpolated because there was no record due to a jammed float')
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_to_drop = list('notes' = 'DROP'),
                             summary_flags_dirty = list('notes' = flag_vals))
-    
+
     # Convert from daily volume to l/s
     d <- d %>%
         mutate(val = (val*1000)/86400)
