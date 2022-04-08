@@ -625,15 +625,6 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
 
     }
 
-     #d <- carry_uncertainty(d,
-     #                       network = network,
-     #                       domain = domain,
-     #                       prodname_ms = prodname_ms)
-
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -1014,11 +1005,11 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer', 
+        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer',
                                  'Composite-timeweighted_6hours'))
-    
-    # Notes column contains infomation specific to varibles, creatng 
-    # variable flags from Notes column 
+
+    # Notes column contains infomation specific to varibles, creatng
+    # variable flags from Notes column
     d <- d %>%
         mutate(NO3_flag = ifelse(grepl('9', Notes), 1, 0))
 
