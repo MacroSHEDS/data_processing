@@ -237,14 +237,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                                 'HCO3' = 'mg/l')) 
     
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -294,14 +289,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                           varflag_col_pattern = NA)
   
   
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
   
   d <- synchronize_timestep(d)
-  
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
   
   sites <- unique(d$site_code)
   
@@ -379,14 +369,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                            'Na' = 'mg/l', 'Cl' = 'mg/l', 'SO4' = 'mg/l',
                                            'NO3' = 'mg/l', 'NH4' = 'mg/l', 'ANC' = 'eq/l')) 
   
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
   
   d <- synchronize_timestep(d)
-  
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
   
   sites <- unique(d$site_code)
   
