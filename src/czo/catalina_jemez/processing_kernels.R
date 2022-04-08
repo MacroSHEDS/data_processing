@@ -201,7 +201,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
     #CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2504/
     #Hydroshare: https://www.hydroshare.org/resource/c0e5094d1de54547a304d4dec3a7b3ff/
-    
+
     if(component %in% c('Jemez_Methods.csv', 'Jemez_Sites.csv')) {
         return(NULL)
     }
@@ -498,17 +498,17 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                            'Cd111' = 'Cd',
                            'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
                            'Al', 'Ba', 'Hg202' = 'Hg')
-    
+
     names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
                                        names(col_names_to_vars))
-    
+
     col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
-    
+
     if(any(duplicated(unname(col_names_to_vars)))){
         col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
     }
-    
-    
+
+
 
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
@@ -707,7 +707,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
     if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
         return(NULL)
     }
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -796,7 +796,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
     if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
         return(NULL)
     }
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -840,7 +840,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
         return(NULL)
     }
@@ -892,7 +892,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
         return(NULL)
     }
@@ -1342,18 +1342,9 @@ process_2_ms001 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(X = d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms,
-                                 ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
