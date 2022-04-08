@@ -1,15 +1,19 @@
-d = tibble(datetime = as.Date(c('1998-01-02', '1988-01-01', '1999-01-01', '2000-01-01', '2000-01-01', '2000-01-01', '2000-01-01', '1950-01-01', '2023-01-01')),
+d = tibble(datetime = as.Date(c('1998-01-02', '1988-01-01', '1999-01-01', '2000-01-01',
+                                '2000-01-01', '2000-01-01', '2000-01-01', '1950-01-01', '2023-01-01')),
            site_code = 'chili',
            var = c('GN_Fe', 'GN_Mn', 'GN_Mn', 'GN_Al', 'GN_Cl', 'GN_Ca', 'GN_qq', 'GN_Mn', 'GN_Mn'),
            val = 1:9,
            ms_status = 2)
 prodname_ms = 'stream_chemistry__VERSIONLESS003'
 domain = 'walker_branch'
+which_='hdetlim'
 
 #for testing case 1 with start and end dates
 detlims = domain_detection_limits
 detlims = detlims[34:38,]
-detlims = bind_rows(detlims, tibble(domain = c('hbef', 'walker_branch', 'walker_branch', 'walker_branch', 'walker_branch', 'walker_branch', 'walker_branch'),
+detlims = bind_rows(detlims, tibble(domain = c('hbef', 'walker_branch', 'walker_branch',
+                                               'walker_branch', 'walker_branch', 'walker_branch',
+                                               'walker_branch'),
                                     prodcode = c('stream_chemistry__VERSIONLESS003',
                                                  'aa', 'bb', 'aa', 'bb',
                                                  'stream_chemistry__VERSIONLESS003',

@@ -247,7 +247,7 @@ domain_detection_limits <- standardize_detection_limits(dls = domain_detection_l
                                                         vs = ms_vars,
                                                         update_on_gdrive = TRUE)
 
-unknown_detlim_prec_lookup <- make_detlim_prec_lookup_table(domain_detection_limits)
+unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
 
 run_checks()
 
