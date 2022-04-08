@@ -325,9 +325,14 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    # d <- ms_insert_half_detlims(d,
-    #                             detlims = domain_detection_limits,
-    #                             prodname_ms = prodname_ms)
+    d <- ms_check_range(d)
+    d$val[d$ms_status == 2] <- get_half_detlims(d$val[d$ms_status == 2],
+                                                detlims = domain_detection_limits,
+                                                prodname_ms = prodname_ms)
+    #make sure this can handle an empty tibble
+    errors(d$val) <- get_detlim_precision(d,
+                                          detlims = domain_detection_limits,
+                                          prodname_ms = prodname_ms)
 
     return(d)
 }
