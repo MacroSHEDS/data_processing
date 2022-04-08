@@ -292,14 +292,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     unlink(temp_dir, recursive = TRUE)
 
@@ -361,14 +356,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
         mutate(val = val * 28.317)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
 
     unlink(temp_dir, recursive = TRUE)
@@ -456,14 +446,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                             summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
                                                                 'QA', 'F', 'G')))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     unlink(temp_dir, recursive = TRUE)
 
@@ -596,14 +581,9 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                             summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
                                                                 'QA', 'F', 'G')))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     unlink(temp_dir, recursive = TRUE)
 
