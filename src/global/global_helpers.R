@@ -8440,88 +8440,154 @@ make_detlim_prec_lookup_table <- function(dls){
 
 get_half_detlims <- function(d, detlims, prodname_ms){
 
-    #locates, estimates, or naively generates (0) detection limits for any value.
+    #locates, estimates, or naively generates (as 0s) detection limits for any value.
     #order of decisions:
     #   1. if provider reports detection limit for same domain, product, variable, and date, use that.
     #   2. if not for same date, use the nearest date
-    #   3. if not for same product, but same variable and domain, grab nearest date
+    #   3. if not for same product, but same variable and domain, use dates/grab nearest date
     #   4. if not for same variable, use median (of medians) across domains
     #   5. if nothing reported for a domain, use median (of medians) across domains
     #   6. if nothing to guess from, use 0
 
-    #TODO: check for overlaps in the detlim file
-
     #a bit of cleanup and setup
-    detlims <- select(detlims, domain, prodcode, var = variable_converted,
-                      detlim = detection_limit_converted, precision,
-                      start_date, end_date)
+    half_detlims_all <- detlims %>%
+        mutate(hdetlim = detection_limit_converted / 2) %>%
+        select(domain, prodcode, var = variable_converted, hdetlim, precision,
+               start_date, end_date)
 
-    half_detlims <- rep(NA_real_, nrow(d))
+    half_detlims_out <- rep(NA_real_, nrow(d))
 
     d_var_with_prefixes <- d$var
     d$var <- drop_var_prefix(d$var)
 
     #checks for various cases
-    got_domain <- detlims$domain == domain
-    got_prodcode_at_domain <- sapply(detlims$prodcode, function(x){
+    got_domain <- half_detlims_all$domain == domain
+    got_prodcode_at_domain <- sapply(half_detlims_all$prodcode, function(x){
         any(str_split(x, '\\|')[[1]] == prodname_ms)
     }) & got_domain
-    # detlims$prodcode[got_prodcode_at_domain] <- prodname_ms
+    # half_detlims_all$prodcode[got_prodcode_at_domain] <- prodname_ms
 
-    #CASE 1
-    dlsub <- filter(detlims, got_prodcode_at_domain)
+    #CASES 1-2
+    dlsub <- filter(half_detlims_all, got_prodcode_at_domain)
     if(nrow(dlsub)){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 1 with dates
-            #gotta join by date ranges
-            stop('unbuilt')
+
+            dlsub <- dlsub %>%
+                mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
+                       end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
+                arrange(start_date, end_date) %>%
+                as.data.table()
+
+            #date interval join:
+            #join d rows to dlsub if d's datetime falls within the covered range
+            half_detlims_out <- dlsub[as.data.table(d),
+                                      on = c("start_date<=datetime",
+                                             "end_date>=datetime",
+                                             "var==var")]$hdetlim
+
+            if(length(half_detlims_out) != nrow(d)) stop('overlapping entries in detlim table')
+
+            #forward rolling join to start_date
+            still_missing <- is.na(half_detlims_out)
+            if(any(still_missing)){
+
+                half_detlims_out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                         on = c(var = 'var',
+                                                                start_date = 'datetime'),
+                                                         roll = Inf, rollends = c(TRUE, FALSE)]$hdetlim
+            }
+
+            #backward rolling join to end_date
+            still_missing <- is.na(half_detlims_out)
+            if(any(still_missing)){
+
+                half_detlims_out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                         on = c(var = 'var',
+                                                                start_date = 'datetime'),
+                                                         roll = -Inf, rollends = c(FALSE, TRUE)]$hdetlim
+            }
+
         } else { #case 1 with no dates specified
 
             if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
-            half_detlims <- d %>%
+            half_detlims_out <- d %>%
                 left_join(dlsub, by = 'var') %>%
-                pull(detlim) / 2
-                # select(datetime, site_code, var, val, ms_status, detlim, precision)
+                pull(hdetlim)
         }
     }
 
-    still_missing <- is.na(half_detlims)
+    #CASE 3
+    still_missing <- is.na(half_detlims_out)
     if(any(still_missing)){
 
-        #CASE 3
-        dlsub <- filter(detlims, got_domain & ! got_prodcode_at_domain)
+        dlsub <- filter(half_detlims_all, got_domain & ! got_prodcode_at_domain)
         if(nrow(dlsub)){
 
             if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 3 with dates
-                #gotta join by date ranges
-                stop('unbuilt')
+
+                dlsub <- dlsub %>%
+                    mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
+                           end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
+                    arrange(start_date, end_date) %>%
+                    as.data.table()
+
+                #date interval join:
+                #join d rows to dlsub if d's datetime falls within the covered range
+                half_detlims_out <- dlsub[as.data.table(d),
+                                          on = c("start_date<=datetime",
+                                                 "end_date>=datetime",
+                                                 "var==var")]$hdetlim
+
+                if(length(half_detlims_out) != nrow(d)) stop('overlapping entries in detlim table')
+
+                #forward rolling join to start_date
+                still_missing <- is.na(half_detlims_out)
+                if(any(still_missing)){
+
+                    half_detlims_out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                             on = c(var = 'var',
+                                                                    start_date = 'datetime'),
+                                                             roll = Inf, rollends = c(TRUE, FALSE)]$hdetlim
+                }
+
+                #backward rolling join to end_date
+                still_missing <- is.na(half_detlims_out)
+                if(any(still_missing)){
+
+                    half_detlims_out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                             on = c(var = 'var',
+                                                                    start_date = 'datetime'),
+                                                             roll = -Inf, rollends = c(FALSE, TRUE)]$hdetlim
+                }
+
             } else { #case 3 with no dates specified
 
                 dlsub <- dlsub %>%
                     group_by(var) %>%
-                    summarize(detlim = median(detlim),
+                    summarize(hdetlim = median(hdetlim),
                               .groups = 'drop')
 
                 half_detlims_ <- d %>%
                     left_join(dlsub, by = 'var') %>%
-                    pull(detlim) / 2
+                    pull(hdetlim)
 
-                half_detlims[still_missing] <- half_detlims_[still_missing]
+                half_detlims_out[still_missing] <- half_detlims_[still_missing]
             }
         }
     }
 
     #CASE 4-5: fill in remaining blanks using median detlim across all reported values
-    still_missing <- is.na(half_detlims)
+    still_missing <- is.na(half_detlims_out)
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
-    half_detlims[still_missing] <- unknown_detlim_prec_lookup$detlim[ref_inds] / 2
+    half_detlims_out[still_missing] <- unknown_detlim_prec_lookup$detlim[ref_inds]
 
     #CASE 6: fill in still remaining blanks with infinity
-    half_detlims[is.na(half_detlims)] <- Inf
+    half_detlims_out[is.na(half_detlims_out)] <- Inf
 
     #put everything back together
-    d$val <- half_detlims
+    d$val <- half_detlims_out
     d$var <- d_var_with_prefixes
 
     return(d)
@@ -14516,9 +14582,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
-               sigfigs = count_sigfigs(detection_limit_original),
-               start_date = dmy(start_date),
-               end_date = dmy(end_date)) %>%
+               sigfigs = count_sigfigs(detection_limit_original)) %>%
+               # start_date = dmy(start_date),
+               # end_date = dmy(end_date)) %>%
         select(-unit_converted) %>%
         left_join(select(vs, variable_code, unit_converted = unit),
                   by = c(variable_original = 'variable_code'))
