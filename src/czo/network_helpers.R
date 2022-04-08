@@ -249,14 +249,9 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
                                       domain = domain,
                                       prodname_ms = prodname_ms)
 
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
         d <- synchronize_timestep(d)
-
-        d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
 
         if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
                              n = network,

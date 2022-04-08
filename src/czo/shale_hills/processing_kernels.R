@@ -135,14 +135,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         # m3/s to L/s
         mutate(val = val*1000)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -188,17 +183,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                             data_col_pattern = '#V#',
                             is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                                 varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -490,14 +479,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d <- rbind(h6, d_2014, sw_all) %>%
         filter(! site_code %in% c('', 'GR Dam', 'GR1', 'GR2', 'GR3', 'GR4', 'GR5'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
     for(s in 1:length(sites)){

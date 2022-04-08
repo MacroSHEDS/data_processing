@@ -8449,16 +8449,23 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     #prodname_ms: a MacroSheds prodname_ms to filter detlims by
     #which_: either "uncertainty" or "hdetlim" (meaning half-detection-limit)
 
-    #returns a vector of half-detlims or uncertainty
+    #returns a vector of half-detlims or uncertainty, or an empty vector if d has no rows
+
+    #note that, which uncertainty is returned when which_ == 'uncertainty',
+    #   it's actually precision values that are being manipulated, right till the end.
+    #   it's precision that we keep track of in unknown_detlim_prec_lookup.
 
     #locates, estimates, or naively generates (as 0s) detection limits for any value.
     #order of decisions:
-    #   1. if provider reports detection limit for same domain, product, variable, and date, use that.
+    #   1. if provider reports detlim/prec for same product, domain, variable, and date, use it
     #   2. if not for same date, use the nearest date
-    #   3. if not for same product, but same variable and domain, use dates/grab nearest date
-    #   4. if not for same variable, use median (of medians) across domains
-    #   5. if nothing reported for a domain, use median (of medians) across domains
-    #   6. if nothing to guess from, use 0 (detlim) or Inf (precision)
+    #   3. if not for same product, but same domain, variable, and date, use that
+    #   4. if not for same product or date, use the nearest date
+    #   5. if not for same variable, use median (of medians) across domains
+    #   6. if nothing reported for a domain, use median (of medians) across domains
+    #   7. if nothing to guess from, use 0 (detlim) or Inf (precision)
+
+    if(! nrow(d)) return(numeric())
 
     if(! which_ %in% c('uncertainty', 'hdetlim')){
         stop('which_ must be "uncertainty" or "hdetlim"')
@@ -8476,7 +8483,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
     d$var <- drop_var_prefix(d$var)
 
-    #checks for various cases
+    #checks for cases 1-3
     got_domain <- half_detlims_all$domain == domain
     got_prodcode_at_domain <- sapply(half_detlims_all$prodcode, function(x){
         any(str_split(x, '\\|')[[1]] == prodname_ms)
@@ -8486,7 +8493,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     dlsub <- filter(half_detlims_all, got_prodcode_at_domain)
     if(nrow(dlsub)){
 
-        if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 1 with dates
+        if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
             dlsub <- dlsub %>%
                 mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
@@ -8494,7 +8501,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                 arrange(start_date, end_date) %>%
                 as.data.table()
 
-            #date interval join:
+            #date interval join; CASE 1:
             #join d rows to dlsub if d's datetime falls within the covered range
             out <- dlsub[as.data.table(d),
                          on = c("start_date<=datetime",
@@ -8503,7 +8510,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
             if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
 
-            #forward rolling join to start_date
+            #forward rolling join to start_date; CASE 2
             still_missing <- is.na(out)
             if(any(still_missing)){
 
@@ -8513,7 +8520,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                             roll = Inf, rollends = c(TRUE, FALSE)][[which_]]
             }
 
-            #backward rolling join to end_date
+            #backward rolling join to end_date; CASE 2
             still_missing <- is.na(out)
             if(any(still_missing)){
 
@@ -8523,7 +8530,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                             roll = -Inf, rollends = c(FALSE, TRUE)][[which_]]
             }
 
-        } else { #case 1 with no dates specified
+        } else { #CASE 1 with no dates specified
 
             if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
@@ -8533,14 +8540,14 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
         }
     }
 
-    #CASE 3
+    #CASES 3-4
     still_missing <- is.na(out)
     if(any(still_missing)){
 
         dlsub <- filter(half_detlims_all, got_domain & ! got_prodcode_at_domain)
         if(nrow(dlsub)){
 
-            if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){ #case 3 with dates
+            if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
                 dlsub <- dlsub %>%
                     mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
@@ -8548,7 +8555,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                     arrange(start_date, end_date) %>%
                     as.data.table()
 
-                #date interval join:
+                #date interval join; CASE 3:
                 #join d rows to dlsub if d's datetime falls within the covered range
                 out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
                                             on = c("start_date<=datetime",
@@ -8557,7 +8564,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
                 if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
 
-                #forward rolling join to start_date
+                #forward rolling join to start_date; CASE 4
                 still_missing <- is.na(out)
                 if(any(still_missing)){
 
@@ -8567,7 +8574,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                                 roll = Inf, rollends = c(TRUE, FALSE)][[which_]]
                 }
 
-                #backward rolling join to end_date
+                #backward rolling join to end_date; CASE 4
                 still_missing <- is.na(out)
                 if(any(still_missing)){
 
@@ -8577,7 +8584,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                                 roll = -Inf, rollends = c(FALSE, TRUE)][[which_]]
                 }
 
-            } else { #case 3 with no dates specified
+            } else { #CASE 3 with no dates specified
 
                 dlsub <- dlsub %>%
                     group_by(var) %>%
@@ -8593,7 +8600,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
         }
     }
 
-    #CASE 4-5: fill in remaining blanks using median (hdetlim) or minimum (precision)
+    #CASEs 4-5: fill in remaining blanks using median (hdetlim) or minimum (precision)
     #across all reported values
     still_missing <- is.na(out)
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
@@ -8606,6 +8613,31 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     if(which_ == 'precision') out <- 10^-out
 
     return(out)
+}
+
+qc_hdetlim_and_uncert <- function(d, prodname_ms){
+
+    #d: a tibble in MacroSheds format
+
+    #returns the same tibble, with quality control, 1/2 detection limit inserted
+    #for any instance of ms_status == 2, any ms_status == 2 set back to 1,
+    #and uncertainty attached to the val column
+
+    d <- ms_check_range(d)
+
+    bdl_inds <- d$ms_status == 2
+    d$val[bdl_inds] <- get_hdetlim_or_uncert(d[bdl_inds, ],
+                                             detlims = domain_detection_limits,
+                                             prodname_ms = prodname_ms,
+                                             which_ = 'hdetlim')
+    d$ms_status[d$ms_status == 2] <- 1
+
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+    return(d)
 }
 
 identify_series_detlim <- function(x){
@@ -9953,14 +9985,9 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                                       domain = domain,
                                       prodname_ms = prodname_ms)
 
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-        d <- synchronize_timestep(d) #set to '15 min' when we have server
-
-        d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
+        d <- synchronize_timestep(d)
 
         if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
                              n = network,
@@ -13343,6 +13370,8 @@ extract_ws_mean <- function(site_boundary, raster_path){
 }
 
 ms_check_range <- function(d){
+
+    if(! nrow(d)) return(d)
 
     d_vars <- unique(d$var)
 
