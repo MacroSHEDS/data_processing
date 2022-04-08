@@ -78,6 +78,8 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
 
         if(! is_spatial){
 
+            out <- qc_hdetlim_and_uncert(out, prodname_ms = prodname_ms)
+
             #sometimes files are divided up temporally, and the last
             #row of one file gets rounded to the same datetime as the first
             #row of another. It's also possible that there are gaps between
@@ -87,14 +89,7 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
             #_only_ run it here. that will take some investigation though. for one
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
-            out <- carry_uncertainty(out,
-                                     network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms)
-            
             out <- synchronize_timestep(out)
-            
-            out <- apply_detection_limit_t(out, network, domain, prodname_ms)
         }
 
         write_ms_file(d = out,
@@ -194,7 +189,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
                     #                          use.names = TRUE,
                     #                          fill = TRUE) %>%
                     # as_tibble()
-                
+
                 out <- rbind(out, out_comp)
 
             } else {
@@ -217,6 +212,9 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
 
         if(! is_spatial){
 
+            out_comp_filt <- qc_hdetlim_and_uncert(out_comp_filt,
+                                                   prodname_ms = prodname_ms)
+
             #sometimes files are divided up temporally, and the last
             #row of one file gets rounded to the same datetime as the first
             #row of another. It's also possible that there are gaps between
@@ -226,15 +224,8 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
             #_only_ run it here. that will take some investigation though. for one
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
-            out_comp_filt <- carry_uncertainty(out_comp_filt,
-                                               network = network,
-                                               domain = domain,
-                                               prodname_ms = prodname_ms)
 
             out_comp_filt <- synchronize_timestep(out_comp_filt)
-
-            out_comp_filt <- apply_detection_limit_t(out_comp_filt, network, 
-                                                     domain, prodname_ms)
         }
 
         write_ms_file(d = out_comp_filt,
@@ -325,6 +316,9 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
 
         if(! is_spatial){
 
+            out_comp_filt <- qc_hdetlim_and_uncert(out_comp_filt,
+                                                   prodname_ms = prodname_ms)
+
             #sometimes files are divided up temporally, and the last
             #row of one file gets rounded to the same datetime as the first
             #row of another. It's also possible that there are gaps between
@@ -334,15 +328,8 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
             #_only_ run it here. that will take some investigation though. for one
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
-            out_comp_filt <- carry_uncertainty(out_comp_filt,
-                                               network = network,
-                                               domain = domain,
-                                               prodname_ms = prodname_ms)
-            
+
             out_comp_filt <- synchronize_timestep(out_comp_filt)
-            
-            out_comp_filt <- apply_detection_limit_t(out_comp_filt, network, domain, prodname_ms)
-            
         }
 
         write_ms_file(d = out_comp_filt,
@@ -430,7 +417,7 @@ munge_time_component <-  function(network, domain, site_code, prodname_ms, track
 
         filt_site <- sites[i]
         out_filt <- filter(out, site_code == filt_site)
-        
+
         prod_dir <- glue('data/{n}/{d}/munged/{p}',
                          n = network,
                          d = domain,
