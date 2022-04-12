@@ -8259,31 +8259,6 @@ qc_hdetlim_and_uncert <- function(d, prodname_ms){
     return(d)
 }
 
-identify_series_detlim <- function(x){
-
-
-    #gets the min of the absolute value of the series (without NAs).
-    #assumes the detection limit to be that minimum value, rounded to one
-    #sigfig. returns 0 if there are no nonzero data values
-
-    #return value: the detection limit, as a scalar
-
-    if(! class(x) %in% c('integer', 'numeric', 'errors')){
-        stop('x must be a numeric vector')
-    }
-
-    nonzeros <- x[! is.na(x) & x != 0]
-    if(length(nonzeros)){
-        mindetect <- min(abs(nonzeros))
-    } else {
-        return(0)
-    }
-
-    detlim <- signif(mindetect, 1)
-
-    return(detlim)
-}
-
 rle2 <- function(x){#, return_list = FALSE){
 
     r <- rle(x)
