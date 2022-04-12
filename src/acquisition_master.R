@@ -203,7 +203,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = FALSE,
+ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -240,8 +240,7 @@ if(ms_instance$use_ms_error_handling){
 }
 
 #puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-load_config_datasets(from_where = 'remote')
-# load_config_datasets(from_where = ms_instance$config_data_storage)
+load_config_datasets(from_where = ms_instance$config_data_storage)
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
@@ -263,8 +262,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-dmnrow = 4
-print(network_domain, n=50)
+# dmnrow = 8
+# print(network_domain, n=50)
 # for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -305,15 +304,15 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
-    # sw(ms_delineate(network = network,
-    #                 domain = domain,
-    #                 dev_machine_status = ms_instance$machine_status,
-    #                 verbose = TRUE))
-    # ms_derive(network = network,
-    #           # prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain)
-    # ms_general(network = network,
-    #            domain = domain)
+    sw(ms_delineate(network = network,
+                    domain = domain,
+                    dev_machine_status = ms_instance$machine_status,
+                    verbose = TRUE))
+    ms_derive(network = network,
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain)
+    ms_general(network = network,
+               domain = domain)
 
     retain_ms_globals(ms_globals)
 }
