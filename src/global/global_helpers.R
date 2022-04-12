@@ -5836,10 +5836,12 @@ shortcut_idw <- function(encompassing_dem,
     d_status <- data_values$ms_status
     d_interp <- data_values$ms_interp
     d_dt <- data_values$datetime
+    d_pfx <- data_values$prefix
     data_matrix <- select(data_values,
                           -ms_status,
                           -datetime,
-                          -ms_interp) %>%
+                          -ms_interp,
+                          -prefix) %>%
         err_df_to_matrix()
 
     #clean dem and get elevation values
@@ -5970,14 +5972,11 @@ shortcut_idw <- function(encompassing_dem,
 
         ws_mean <- tibble(datetime = d_dt,
                           site_code = stream_site_code,
+                          var = paste(d_pfx, 'precipitation', sep = '_'),
                           concentration = ws_mean,
                           ms_status = d_status,
                           ms_interp = d_interp)
 
-        ws_mean <- reconstruct_var_column(d = ws_mean,
-                                          network = network,
-                                          domain = domain,
-                                          prodname = 'precipitation')
     } else {
 
         ws_mean <- tibble(datetime = d_dt,
@@ -6216,76 +6215,6 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
                        ms_interp = d_interp)
 
     return(ws_means)
-}
-
-reconstruct_var_column <- function(d,
-                                   network,
-                                   domain,
-                                   prodname,
-                                   level = 'munged'){
-
-    #currently only used inside the precip idw interpolator, where
-    #we no longer have variable prefix information. this attempts
-    #to determine that information from the stored detlim file.
-    #it's not yet equipped to handle the case where precipitation
-    #(or any other variable) has multiple prefixes through time.
-
-    #returns d with a new var column
-
-    if(! level %in% c('munged', 'derived')){
-        stop('level must be either "munged" or "derived"')
-    }
-
-    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
-                              n = network,
-                              d = domain)))
-
-    rgx <- ifelse(level == 'munged',
-                  '^(?!ms[0-9]{3}).*?',
-                  '^ms[0-9]{3}$')
-
-    prodname_ms <- prods %>%
-        filter(prodname == !!prodname,
-               grepl(pattern = rgx,
-                     x = prodcode,
-                     perl = TRUE)) %>%
-        mutate(prodname_ms = paste(prodname,
-                                   prodcode,
-                                   sep = '__')) %>%
-        pull(prodname_ms)
-
-    detlim <- tryCatch(
-        {
-            if(length(prodname_ms) > 1){
-                knit_det_limits(network = network,
-                                domain = domain,
-                                prodname_ms = prodname_ms)
-            } else {
-                read_detection_limit(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms)
-            }
-        },
-        error = function(e){
-            stop(glue('could not read detection limits, which are ',
-                      'needed for reconstructing the var column'))
-        }
-    )
-
-    prec_ind <- grepl('precipitation$', detlim$var)
-    if(any(prec_ind)){
-        var <- detlim$var[prec_ind[1]]
-    } else {
-        stop('maybe get the precipitation variable prefix from some other file')
-    }
-
-    d <- d %>%
-        mutate(var = !!var) %>%
-        select(datetime, site_code, var,
-               any_of(x = c('val', 'concentration', 'flux')),
-               ms_status, ms_interp)
-
-    return(d)
 }
 
 dump_precip_idw_tempfile <- function(ws_means,
@@ -7175,7 +7104,15 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             group_by(datetime) %>%
             summarize(
                 ms_status = numeric_any(ms_status),
-                ms_interp = numeric_any(ms_interp))
+                ms_interp = numeric_any(ms_interp),
+                .groups = 'drop')
+
+        mode_samp_regimen <- precip %>%
+            mutate(prefix = extract_var_prefix(var)) %>%
+            select(datetime, prefix) %>%
+            group_by(datetime) %>%
+            summarize(prefix = Mode(prefix),
+                      .groups = 'drop')
 
         day_durations_byproduct <- datetimes_to_durations(
             datetime_vec = precip$datetime,
@@ -7191,6 +7128,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             tidyr::pivot_wider(names_from = site_code,
                                values_from = val) %>%
             left_join(status_cols, #they get lumped anyway
+                      by = 'datetime') %>%
+            left_join(mode_samp_regimen, #they get lumped anyway
                       by = 'datetime') %>%
             arrange(datetime)
 
@@ -9719,6 +9658,67 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
     }
 }
 
+prepare_variable_catalog_for_figshare <- function(outfile){
+
+    #prepare var data catalog files for macrosheds package
+    var_cat_files <- list.files('../portal/data/general/catalog_files/indiv_variables',
+                                full.names = TRUE)
+
+    var_cat <- map_dfr(var_cat_files,
+                       function(x){
+                           var_cat_var = str_match(x, '([^/]+)\\.csv$')[, 2]
+                           x = read_csv(x, col_types = 'cccccnTTc')
+                           x$variable_code = var_cat_var
+                           return(x)
+                       }) %>%
+        left_join(select(site_data, domain, pretty_domain, network, pretty_network) %>%
+                      distinct(domain, network, .keep_all = TRUE),
+                  by = c(Network = 'pretty_network',
+                         Domain = 'pretty_domain')) %>%
+        left_join(select(ms_vars, variable_code, variable_name) %>%
+                      distinct(),
+                         by = 'variable_code') %>%
+        select(variable_code, variable_name,
+               chem_category = ChemCategory, unit = Unit,
+               network, domain, site_code = SiteCode, observations = Observations,
+               first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
+               mean_obs_per_day = MeanObsPerDay) %>%
+        mutate(mean_obs_per_day = as.numeric(mean_obs_per_day))
+
+    # #prepare site data catalog files for macrosheds package
+    # site_cat_files <- list.files('../portal/data/general/catalog_files/indiv_sites/',
+    #                              full.names = TRUE)
+    #
+    # site_cat <- map_dfr(site_cat_files,
+    #                     function(x){
+    #                         site_cat_site = str_match(x, '([^/]+)\\.csv$')[, 2]
+    #                         x = read_csv(x, col_types = 'ccccccccccc')
+    #                         x$site_code = site_cat_site
+    #                         return(x)
+    #                     }) %>%
+    #     site_cat %>%
+    #     mutate(site_code = gsub(Domain, '', site_code),
+    #            site_code = sub('^_*', '', site_code)) %>%
+    #     select(site_code, domain, network)
+    #
+    #
+    #     left_join(select(site_data, domain, network, site_code) %>%
+    #                   distinct(domain, network, site_code, .keep_all = TRUE),
+    #               by = 'site_code') %>%
+    #     select(network, domain, site_code = SiteCode, ####
+    #            chem_category = ChemCategory, unit = Unit, observations = Observations,
+    #            first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
+    #            mean_obs_per_day = MeanObsPerDay) %>%
+    #     mutate(observations = as.numeric(observations),
+    #            mean_obs_per_day = as.numeric(mean_obs_per_day),
+    #            percent_flagged = as.numeric(percent_flagged),
+    #            percent_imputed = as.numeric(percent_imputed),
+    #            first_record_utc = ymd_hms(first_record_utc),
+    #            last_record_utc = ymd_hms(last_record_utc))
+
+    write_csv(var_cat, outfile)
+}
+
 assemble_misc_docs_figshare <- function(where){
 
     docs_dir <- file.path(where, 'macrosheds_documentation')
@@ -9880,20 +9880,22 @@ prepare_for_figshare <- function(where, dataset_version){
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
 
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update those calls if you need to update figshare from windows'))
+    }
+
+    #prepare documentation files needed by the package
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
     prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
                                            fs_format = 'old')
+    prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
     file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
               overwrite = TRUE)
-
-    if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" calls below probably will not work on windows.',
-                   'investigate and update that call if necessary'))
-    }
 
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
@@ -10541,8 +10543,9 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
     other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
-                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
-    titlesE <- c('site_metadata', 'variable_metadata')
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'),
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
+    titlesE <- c('site_metadata', 'variable_metadata', 'variable_catalog')
 
     other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
     titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
@@ -10567,13 +10570,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
         }
 
-        if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-
         #if existing article, delete old version
         if(ut %in% existing_extras_deets$title){
 
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
+
+            if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
 
             figshare_delete_article_file(fs_id,
                                          file_id = fls[[1]]$id,
@@ -10584,6 +10587,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                 file = unname(uf),
                                 token = token)
 
+        # #obsolete for packagedata
         # figshare_add_articles_to_collection(collection_id = collection_id,
         #                                     article_ids = fs_id,
         #                                     token = token)
@@ -10592,9 +10596,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                  token = token)
     }
 
-
-    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
-
+    # #obsolete for packagedata
     # figshare_publish_collection(collection_id = collection_id,
     #                             token = token)
 }
