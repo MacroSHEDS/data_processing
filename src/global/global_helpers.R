@@ -8070,11 +8070,11 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
     #returns a vector of half-detlims or uncertainty, or an empty vector if d has no rows
 
-    #note that, which uncertainty is returned when which_ == 'uncertainty',
+    #note that, when which_ == 'uncertainty',
     #   it's actually precision values that are being manipulated, right till the end.
     #   it's precision that we keep track of in unknown_detlim_prec_lookup.
 
-    #locates, estimates, or naively generates (as 0s) detection limits for any value.
+    #locates, estimates, or naively generates (as 0 or -Inf) detection limits for any value.
     #order of decisions:
     #   1. if provider reports detlim/prec for same product, domain, variable, and date, use it
     #   2. if not for same date, use the nearest date
@@ -8082,7 +8082,10 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     #   4. if not for same product or date, use the nearest date
     #   5. if not for same variable, use median (of medians) across domains
     #   6. if nothing reported for a domain, use median (of medians) across domains
-    #   7. if nothing to guess from, use 0 (detlim) or Inf (precision)
+    #   7. if nothing to guess from, use 0 (detlim) or -Inf (precision).
+    #       0 is also used as precision for a small subset of variables that will
+    #       never have reported detection limits, and for which infinite uncertainty
+    #       would be lame. Currently these are discharge, precipitation, and temperature
 
     if(! nrow(d)) return(numeric())
 
@@ -8225,8 +8228,19 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
     out[still_missing] <- pull(unknown_detlim_prec_lookup[ref_inds, which_])
 
-    #CASE 6: fill in still remaining blanks with 0 (detlim) or infinity (precision)
+    #CASE 6: fill in still remaining blanks with 0 (detlim and precision of certain variables)
+    #   or infinity (precision of obscure solutes)
     out[is.na(out)] <- data.table::fifelse(which_ == 'hdetlim', 0, -Inf)
+
+    if(which_ == 'precision'){
+
+        #special variables get 0 uncertainty, instead of Inf.  Beyond Q and P,
+        #   this would be kind of arbitrary, but we could add specCond, turbidity,
+        #   pH, alkalinity, and suspSed. these rarely or never have reported detlims.
+        special_vars <- c('discharge', 'precipitation', 'temperature')
+        special_inds <- is.infinite(out) & d$var %in% special_vars
+        out[special_inds] <- Inf #10^-Inf is 0
+    }
 
     #convert precision to uncertainty
     if(which_ == 'precision') out <- 10^-out
@@ -12838,7 +12852,7 @@ ms_check_range <- function(d){
         max_val <- ms_vars %>%
             filter(variable_code == !!var_p_frop) %>%
             pull(val_max)
-        
+
         if(length(max_val) == 0){
             max_val <- NA
         }
