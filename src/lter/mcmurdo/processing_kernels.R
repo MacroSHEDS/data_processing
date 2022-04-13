@@ -713,7 +713,7 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
@@ -723,18 +723,21 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
                          summary_flagcols = 'doc_comments',
                          set_to_NA = '',
                          is_sensor = FALSE)
-    
-    # Warning for sites are all sites that do not have a defined lat/long and move 
+
+    # Warning for sites are all sites that do not have a defined lat/long and move
     # over time so no including it in site_data
+
+    smry_flg_grep <- grep(
+        'detection|Detection|DL|no detect|ND|<0.1 mg/L C|Not detected|Not detected|<0.1 mg/L',
+        unique(d$doc_comments),
+        value = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_bdl = list(doc_comments = 
-                                                         grep('detection|Detection|DL|no detect|ND|<0.1 mg/L C|Not detected|Not detected|<0.1 mg/L', 
-                                                              unique(d$doc_comments), value = T)))
+                            summary_flags_bdl = list(doc_comments = smry_flg_grep))
 
     d <- filter_single_samp_sites(d)
-    
+
     # Code for old version of this data set
     # d <- read.csv(rawfile, colClasses = 'character') %>%
     #     rename(DOC=doc_mgl) %>%
@@ -744,7 +747,7 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
     #            strmgageid != 'delta_upper',
     #            strmgageid != 'lizotte_mouth',
     #            strmgageid != 'vguerard_lower')
-    
+
     # d <- ms_read_raw_csv(preprocessed_tibble = d,
     #                      datetime_cols = list('dataset_code' = '%m/%e/%Y %H:%M'),
     #                      datetime_tz = 'Antarctica/McMurdo',
@@ -787,7 +790,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                br = br_mgl,
                so4 = so4_mgl,
                si = si_mgl)
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
@@ -809,11 +812,11 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                          is_sensor = FALSE)
 
     var_dirty_string <- c('Not Enough water for the sample to be run fully',
-                          'Not Quantified', 
+                          'Not Quantified',
                           'value outside calibration limit and not diluted to be within calibration limit',
                           'Br not quantified', 'not quantified', 'Not Quantified', 'Ca not quantified',
                           'K not quantified', 'Li not quantified')
-    
+
     BDL_flags <- unique(c(' Li not quantified <0.001mg/L', 'Li level below detection limit',
                           'not detected', 'ND', 'ND <0.001', 'no detect',
                           ' F not quantified <0.02mg/L', 'F level below detection limit',
@@ -825,7 +828,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                           'Li ND < 0.001 mg/L', 'ND < 0.0007 mg/L', 'Li < 0.001',
                           'Li not quantified <0.001mg/L', 'ND < 0.0007 mg/L',
                           'Li < 0.001', 'Li not quantified <0.001mg/L'))
-    
+
     summary_dirty_string <- c('suspect Cl contamination because of high Cl concentrations and high Cl to Na ratios and excess anion equivalents',
                               'questionable location ID- no name on sample- time does not match COC form')
 
@@ -876,11 +879,11 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#_comments',
                          is_sensor = FALSE)
-    
-    all_comments <- c(unique(d$`GN_NO3_N__|flg`), unique(d$`GN_NO2_N__|flg`), 
+
+    all_comments <- c(unique(d$`GN_NO3_N__|flg`), unique(d$`GN_NO2_N__|flg`),
                       unique(d$`GN_NH4_N__|flg`), unique(d$`GN_SRP__|flg`))
-    
-    BDL_flags <- grep('ND|below detection limit|non-detect|Not detected|no detect|Not Detected|detection limit =', 
+
+    BDL_flags <- grep('ND|below detection limit|non-detect|Not detected|no detect|Not Detected|detection limit =',
                       all_comments, value = T)
 
     d <- ms_cast_and_reflag(d,
@@ -907,15 +910,15 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_1_78 <- function(network, domain, prodname_ms, site_code,
                          component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
-    
+
+
     d <- read.csv(rawfile, colClasses = 'character', skip = 26) %>%
         filter(STRMGAGEID != '',
                STRMGAGEID != 'garwood',
@@ -924,7 +927,7 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
                STRMGAGEID != 'lizotte_mouth',
                STRMGAGEID != 'vguerard_lower',
                STRMGAGEID != 'uvg_f21')
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
@@ -934,20 +937,20 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
                          set_to_NA = '',
                          summary_flagcols = 'TN.COMMENTS',
                          is_sensor = FALSE)
-    
+
     all_comments <- c(unique(d$TN.COMMENTS))
-    
-    BDL_flags <- grep('ND|below detection limit|non-detect|Not detected|no detect|Not Detected|detection limit =', 
+
+    BDL_flags <- grep('ND|below detection limit|non-detect|Not detected|no detect|Not Detected|detection limit =',
                       all_comments, value = T)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_bdl = list(TN.COMMENTS = BDL_flags),
                             summary_flags_dirty = list(TN.COMMENTS = 'dirty'),
                             summary_flags_to_drop = list(TN.COMMENTS = 'REMOVE'))
-    
+
     d <- filter_single_samp_sites(d)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
@@ -957,7 +960,7 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
                                              'NO2_N' = 'mg/l',
                                              'NH4_N' = 'mg/l',
                                              'SRP' = 'mg/l'))
-    
+
     return(d)
 }
 

@@ -185,14 +185,9 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
             mutate(ms_status = 1)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -258,14 +253,9 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
             mutate(ms_status = 1)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -389,15 +379,6 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                                              'CHL' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -464,7 +445,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = c('charge balance difference > 10%',
                                                      'EQCL', 'NP',
@@ -513,15 +494,6 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                                              'TPN' = 'mg/l',
                                              'CHL' = 'mg/l',
                                              'pheophy' = 'mg/l'))
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -593,7 +565,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = c('charge balance difference > 10%',
                                                      'EQCL', 'NP',
@@ -643,15 +615,6 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                              'CHL' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -685,15 +648,6 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -761,7 +715,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = c('charge balance difference > 10%',
                                                      'EQCL', 'NP',
@@ -811,15 +765,6 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                                              'CHL' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -852,15 +797,6 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component) {
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -895,15 +831,6 @@ process_1_2888 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -936,15 +863,6 @@ process_1_2889 <- function(network, domain, prodname_ms, site_code, component) {
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    #
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }

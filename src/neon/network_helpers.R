@@ -110,26 +110,13 @@ munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE
 
             d <- remove_all_na_sites(d)
 
-            if(prodname_ms == 'stream_quality__DP1.20288') {
-                d <- carry_uncertainty(d,
-                                       network = network,
-                                       domain = domain,
-                                       prodname_ms = prodname_ms,
-                                       ignore_arrange = TRUE)
-            } else {
-                d <- carry_uncertainty(d,
-                                       network = network,
-                                       domain = domain,
-                                       prodname_ms = prodname_ms)
-            }
+            if(nrow(d) == 0) return(NULL)
 
-            if(nrow(d) == 0) {
-                return(NULL)
-            }
+            d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+            if(nrow(d) == 0) return(NULL)
 
             d <- synchronize_timestep(d)
-
-            d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
             write_ms_file(d = d,
                           network = network,
