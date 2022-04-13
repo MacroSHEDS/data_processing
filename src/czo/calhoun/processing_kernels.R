@@ -93,15 +93,6 @@ process_1_6421 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    # 
-    # d <- synchronize_timestep(d)
-    # 
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -135,15 +126,6 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    # 
-    # d <- synchronize_timestep(d)
-    # 
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -243,15 +225,6 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    # 
-    # d <- synchronize_timestep(d)
-    # 
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     unlink(zipped_files, recursive = FALSE)
 
     unlink('data/czo/calhoun/raw/precipitation__4680/sitename_NA/Stream/Stream 2/', recursive = FALSE)
@@ -336,15 +309,6 @@ process_1_2851 <- function(network, domain, prodname_ms, site_code,
     #converstion function is not set up for spCond units
     d <- d %>%
         mutate(val = ifelse(var == 'GN_spCond', val * 10000, val))
-
-    # d <- carry_uncertainty(d,
-    #                        network = network,
-    #                        domain = domain,
-    #                        prodname_ms = prodname_ms)
-    # 
-    # d <- synchronize_timestep(d)
-    # 
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }

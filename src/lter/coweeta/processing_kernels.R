@@ -196,18 +196,13 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_dirty = list('QualFlag' = 1),
                           summary_flags_to_drop = list('QualFlag' = 6))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   # Convert from cm/s to liters/s
   d <- d %>%
     mutate(val = val*1000)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -257,18 +252,13 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_dirty = list('QualFlag' = 1),
                           summary_flags_to_drop = list('QualFlag' = 6))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   # Convert from cm/s to liters/s
   d <- d %>%
     mutate(val = val*1000)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -318,18 +308,13 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_dirty = list('QualFlag' = 1),
                           summary_flags_to_drop = list('QualFlag' = 6))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   # Convert from cm/s to liters/s
   d <- d %>%
     mutate(val = val*1000)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -379,18 +364,13 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_dirty = list('QualFlag' = 1),
                           summary_flags_to_drop = list('QualFlag' = 6))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   # Convert from cm/s to liters/s
   d <- d %>%
     mutate(val = val*1000)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -479,10 +459,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                            summary_flags_clean = list('check' = '1')
                           )
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- ms_conversions(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
@@ -495,8 +472,6 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                            TP = 'mg/l'))
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -534,14 +509,9 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
            ms_status = 0) %>%
       filter(site_code %in% c('N04D', 'N02B', 'N20B', 'N01B'))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -591,14 +561,9 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_to_drop = list(comments = 'bad'),
                           summary_flags_dirty = list(comments = 'remove'))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -694,10 +659,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_to_drop = list(Comments = 'bad'),
                           summary_flags_dirty = list(Comments = 'remove'))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- ms_conversions(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
@@ -710,8 +672,6 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                                            TPP = 'mg/l'))
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
@@ -747,14 +707,9 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                           summary_flags_to_drop = list(Comments = 'bad'),
                           summary_flags_dirty = list(Comments = 'remove'))
 
-  d <- carry_uncertainty(d,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- synchronize_timestep(d)
-
-  d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
   return(d)
 }
