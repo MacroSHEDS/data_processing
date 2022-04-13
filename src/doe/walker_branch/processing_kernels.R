@@ -230,10 +230,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     daily_dat <- ms_cast_and_reflag(daily_dat,
                                     varflag_col_pattern = NA)
 
-    daily_dat <- carry_uncertainty(daily_dat,
-                                   network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+    daily_dat <- qc_hdetlim_and_uncert(daily_dat, prodname_ms = prodname_ms)
 
     daily_dat <- synchronize_timestep(daily_dat)
 
@@ -260,17 +257,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                      summary_flags_to_drop = list('FLAG' = 'DROP'),
                                      summary_flags_dirty = list('FLAG' = 'FLAGGED'))
 
-    hourly_dat <- carry_uncertainty(hourly_dat,
-                                    network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms)
+    hourly_dat <- qc_hdetlim_and_uncert(hourly_dat, prodname_ms = prodname_ms)
 
     hourly_dat <- synchronize_timestep(hourly_dat)
 
     d <- rbind(daily_dat, hourly_dat) %>%
         arrange(datetime)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -341,10 +333,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                                                           'WF_REG2',
                                                                           'EFWF_ISCO')))
 
-    daily_dat <- carry_uncertainty(daily_dat,
-                                   network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+    daily_dat <- qc_hdetlim_and_uncert(daily_dat, prodname_ms = prodname_ms)
 
     daily_dat <- synchronize_timestep(daily_dat)
 
@@ -378,19 +367,12 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                                                           'WF_REG2',
                                                                           'EFWF_ISCO')))
 
-    min_dat <- carry_uncertainty(min_dat,
-                                   network = network,
-                                   domain = domain,
-                                   prodname_ms = prodname_ms)
+    min_dat <- qc_hdetlim_and_uncert(min_dat, prodname_ms = prodname_ms)
 
     min_dat <- synchronize_timestep(min_dat)
 
-
-
     d <- rbind(daily_dat, min_dat) %>%
         arrange(datetime)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -550,14 +532,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- rbind(east_dat, west_dat)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
