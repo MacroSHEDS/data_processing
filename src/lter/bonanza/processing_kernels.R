@@ -150,10 +150,10 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    look <- read.csv(rawfile, colClasses = 'character')
+    # look <- read.csv(rawfile, colClasses = 'character')
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(Date.Time = '%m/%e/%Y %H:%M:%S'),
+                         datetime_cols = c(Date.Time = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'US/Alaska',
                          site_code_col = 'Watershed',
                          data_cols =  c('Flow' = 'discharge'),

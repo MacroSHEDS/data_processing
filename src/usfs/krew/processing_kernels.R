@@ -209,13 +209,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_met,
-                         datetime_cols = list('Date' = '%m/%d/%y'),
+                         datetime_cols = list('Date' = '%m/%e/%y'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'site',
                          data_cols =  c('PRECIPITATION' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
-                         set_to_NA = '-9999',
+                         set_to_NA = c('-9999', ''),
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
@@ -287,7 +287,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  c('Q' = 'discharge'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'flag',
-                         set_to_NA = '-9999',
+                         set_to_NA = c('-9999', ''),
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
