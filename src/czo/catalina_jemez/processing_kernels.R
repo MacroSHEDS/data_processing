@@ -201,7 +201,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
     #CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2504/
     #Hydroshare: https://www.hydroshare.org/resource/c0e5094d1de54547a304d4dec3a7b3ff/
-    
+
     if(component %in% c('Jemez_Methods.csv', 'Jemez_Sites.csv')) {
         return(NULL)
     }
@@ -266,10 +266,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
     d <- d %>%
         mutate(val = val*28.317)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -314,10 +311,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
         return(d)
 
@@ -338,10 +332,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
         return(d)
     }
@@ -379,10 +370,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -433,10 +421,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -498,17 +483,17 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                            'Cd111' = 'Cd',
                            'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
                            'Al', 'Ba', 'Hg202' = 'Hg')
-    
+
     names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
                                        names(col_names_to_vars))
-    
+
     col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
-    
+
     if(any(duplicated(unname(col_names_to_vars)))){
         col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
     }
-    
-    
+
+
 
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
@@ -554,10 +539,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                         convert_units_from = units,
                         convert_units_to = new_units)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     #d <- synchronize_timestep(d)
 
@@ -689,10 +671,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                                              'Pb' = 'mg/L',
                                              'U' = 'mg/L'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -707,7 +686,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
     if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
         return(NULL)
     }
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -739,10 +718,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -779,10 +755,7 @@ process_1_2491 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -796,7 +769,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
     if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
         return(NULL)
     }
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -820,10 +793,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -840,7 +810,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     if(component %in% c('Catalina_Methods.csv', 'Catalina_Sites.csv')) {
         return(NULL)
     }
@@ -873,10 +843,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -892,7 +859,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     if(component %in% c('Jemez_Sites.csv', 'Jemez_Methods.csv')) {
         return(NULL)
     }
@@ -918,10 +885,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -984,10 +948,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1134,10 +1095,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
                                              'Pb' = 'mg/l',
                                              'U' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1230,10 +1188,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_conversions(d,
                         convert_units_from = units,
                         convert_units_to = new_units)
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1267,10 +1222,7 @@ process_1_2415 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1308,10 +1260,7 @@ process_1_2425 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 
@@ -1342,18 +1291,9 @@ process_2_ms001 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(X = d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms,
-                                 ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1401,18 +1341,9 @@ process_2_ms002 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(X = d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms,
-                                 ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1463,14 +1394,9 @@ process_2_ms003 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1521,14 +1447,9 @@ process_2_ms004 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,

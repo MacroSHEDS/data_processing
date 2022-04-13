@@ -547,14 +547,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
         mutate(val = val*15)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -662,14 +657,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
         mutate(val = val*1000)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -810,14 +800,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                   prodname_ms = prodname_ms,
                                   sampling_type = 'G')
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -1014,14 +999,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
         mutate(val = val/1000)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -1174,14 +1154,9 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                                              'PO4' = 'mg/l',
                                              'SO4' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -1319,14 +1294,9 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                                   prodname_ms = prodname_ms,
                                   sampling_type = 'G')
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -1471,14 +1441,9 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                    convert_units_from = c('TDN' = 'ug/l'),
                    convert_units_to = c('TDN' = 'mg/l'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -1651,14 +1616,9 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
         mutate(val = val*1000)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
