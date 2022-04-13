@@ -9247,7 +9247,7 @@ load_config_datasets <- function(from_where){
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
-            col_types = 'cccnccc'
+            col_types = 'cccncccnccccl'
         ))
 
     } else if(from_where == 'local'){

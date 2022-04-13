@@ -752,7 +752,7 @@ process_1_393 <-  function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y',
+                         datetime_cols = list('Date' = '%m/%e/%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site_code',

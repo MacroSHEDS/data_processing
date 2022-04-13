@@ -48,6 +48,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                  site_code_col = 'Instr_ID',
                                  data_cols =  c(Rainfall_m = 'precipitation'),
                                  data_col_pattern = '#V#',
+                                 set_to_NA = 'NULL',
                                  is_sensor = TRUE)
 
     hq_hist_d <- ms_cast_and_reflag(hq_hist_d,
@@ -78,6 +79,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                  site_code_col = 'site_code',
                                  data_cols =  c(Rainfall_m = 'precipitation'),
                                  data_col_pattern = '#V#',
+                                 set_to_NA = 'NULL',
                                  is_sensor = TRUE)
     
     pluvio_d <- ms_cast_and_reflag(pluvio_d,
@@ -94,6 +96,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                 data_cols =  c(Rainfall_m = 'precipitation'),
                                 data_col_pattern = '#V#',
                                 sampling_type = 'I',
+                                set_to_NA = 'NULL',
                                 is_sensor = TRUE)
 
     lotti_highrez_d <- ms_cast_and_reflag(lotti_highrez_d,
@@ -109,6 +112,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                        data_cols =  c(Rainfall_m = 'precipitation'),
                                        data_col_pattern = '#V#',
                                        sampling_type = 'I',
+                                       set_to_NA = 'NULL',
                                        is_sensor = TRUE)
     
     lotti_hist_d <- ms_cast_and_reflag(lotti_hist_d,
@@ -119,12 +123,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     met25_highrez_path <- grep('met25_highrez', fils, value = T)
 
     met25_highrez_d <- ms_read_raw_csv(filepath = met25_highrez_path,
-                                    datetime_cols = list('Date_time_rain' = '%m/%d/%Y %H:%M'),
+                                    datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
                                     datetime_tz = 'US/Eastern',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
+                                    set_to_NA = 'NULL',
                                     is_sensor = TRUE)
     
     met25_highrez_d <- ms_cast_and_reflag(met25_highrez_d,
@@ -140,6 +145,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                        data_cols =  c(Rainfall_m = 'precipitation'),
                                        data_col_pattern = '#V#',
                                        sampling_type = 'I',
+                                       set_to_NA = 'NULL',
                                        is_sensor = TRUE)
     
     met25_hist_d <- ms_cast_and_reflag(met25_hist_d,
@@ -157,6 +163,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
+                                    set_to_NA = 'NULL',
                                     is_sensor = TRUE)
     
     met5_highrez_d <- ms_cast_and_reflag(met5_highrez_d,
@@ -171,6 +178,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
+                                    set_to_NA = 'NULL',
                                     is_sensor = TRUE)
     
     met5_hist_d <- ms_cast_and_reflag(met5_hist_d,
@@ -187,6 +195,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                    data_cols =  c(Rainfall_m = 'precipitation'),
                                    data_col_pattern = '#V#',
                                    sampling_type = 'I',
+                                   set_to_NA = 'NULL',
                                    is_sensor = TRUE)
     
     turkey_highrez_d <- ms_cast_and_reflag(turkey_highrez_d,
@@ -253,6 +262,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                   site_code_col = 'Location',
                                   data_cols =  c(Dailyflow_ = 'discharge'),
                                   data_col_pattern = '#V#',
+                                  set_to_NA = 'NULL',
                                   is_sensor = TRUE)
         
         d_hist <- ms_cast_and_reflag(d_hist,
@@ -265,13 +275,32 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     
     all_modern <- tibble()
     for(s in 1:length(modern_paths)){
-        d_modern <- ms_read_raw_csv(filepath = modern_paths[s],
-                                  datetime_cols = list('Data_time' = '%m/%e/%Y %H:%M'),
-                                  datetime_tz = 'US/Eastern',
-                                  site_code_col = 'Location',
-                                  data_cols =  c(Flow_liter = 'discharge'),
-                                  data_col_pattern = '#V#',
-                                  is_sensor = TRUE)
+        
+        if(!grepl('ws78_15min', modern_paths[s])){
+            d_modern <- read.csv(modern_paths[s], colClasses = 'character')
+            
+            d_modern <- d_modern %>%
+                mutate(time = str_split_fixed(Data_time, ' ', n = Inf)[,2])
+            
+            d_modern <- ms_read_raw_csv(preprocessed_tibble = d_modern,
+                                        datetime_cols = list('Date_' = '%Y-%m-%d',
+                                                             'time' = '%H:%M'),
+                                        datetime_tz = 'US/Eastern',
+                                        site_code_col = 'Location',
+                                        data_cols =  c(Flow_liter = 'discharge'),
+                                        data_col_pattern = '#V#',
+                                        set_to_NA = 'NULL',
+                                        is_sensor = TRUE)
+        } else{
+            d_modern <- ms_read_raw_csv(filepath = modern_paths[s],
+                                        datetime_cols = list('Data_time' = '%m/%e/%Y %H:%M'),
+                                        datetime_tz = 'US/Eastern',
+                                        site_code_col = 'Location',
+                                        data_cols =  c(Flow_liter = 'discharge'),
+                                        data_col_pattern = '#V#',
+                                        set_to_NA = 'NULL',
+                                        is_sensor = TRUE)
+        }
         
         d_modern <- ms_cast_and_reflag(d_modern,
                                        varflag_col_pattern = NA)

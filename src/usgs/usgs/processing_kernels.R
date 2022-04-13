@@ -80,12 +80,12 @@ process_1_1 <- function(network, domain, prodname_ms, site_code,
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- read_feather(rawfile) %>%
-        rename(datetime = dateTime,
-               val = X_00060_00000) %>%
+        rename(datetime = Date,
+               val = X_00060_00003) %>%
         mutate(site_code = !!site_code) %>%
         mutate(var = 'discharge',
                val = val * 28.31685,
-               ms_status = ifelse(X_00060_00000_cd == 'A', 0, 1)) %>%
+               ms_status = ifelse(X_00060_00003_cd == 'A', 0, 1)) %>%
         select(site_code, datetime, val, var, ms_status)
 
     d <- identify_sampling_bypass(d,

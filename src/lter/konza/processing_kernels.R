@@ -455,7 +455,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                          var_flagcol_pattern = '#V#_code',
                          summary_flagcols = 'comments',
                          set_to_NA = c('.', ''),
-                         convert_to_BDL_flag = 'BDL',
+                         convert_to_BDL_flag = c('BDL', 'bdl'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
@@ -465,6 +465,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_clean = list('comments' = c(0, NA)),
                             summary_flags_dirty = list('comments' = c(1)))
 
+    # Discrepancy in konza meta data that list DOC as both mg/l and ug/l 
     d <- ms_conversions(d,
                         # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                         #                       'NH4', 'NH3'),
@@ -550,12 +551,11 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                          data_cols =  c('TSS', 'VSS'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'comments',
+                         set_to_NA = c('.', ''),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
                             summary_flags_to_drop = list(comments = 'bad'),
                             summary_flags_dirty = list(comments = 'remove'))
 
@@ -725,23 +725,22 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    d <- read.csv(rawfile1, colClasses = "character")
+    # d <- read.csv(rawfile1, colClasses = "character")
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('RecDate' = '%m/%d/%Y'),
+                         datetime_cols = list('RecDate' = '%m/%e/%Y'),
                          datetime_tz = 'US/Central',
                          site_code_col = 'watershed',
                          alt_site_code = list('HQ02' = 'HQ'),
                          data_cols =  c('ppt' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
+                         set_to_NA = c('.'),
                          # sampling_type = 'I',
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            variable_flags_to_drop = NA,
-                            variable_flags_clean = NA,
                             summary_flags_to_drop = list(Comments = 'bad'),
                             summary_flags_dirty = list(Comments = 'remove'))
 
