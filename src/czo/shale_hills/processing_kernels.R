@@ -135,14 +135,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         # m3/s to L/s
         mutate(val = val*1000)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -188,17 +183,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                             data_col_pattern = '#V#',
                             is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                                 varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
 
@@ -235,47 +224,47 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     h6 <- readxl::read_xlsx(h6_f)
 
     h6 <- ms_read_raw_csv(preprocessed_tibble = h6,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
-                         datetime_tz = 'America/New_York',
-                         site_code_col = 'Site',
-                         alt_site_code = list('SH_weir' = c('SSHCZO-WIER', 'SH-WEIR'),
-                                              'GRO' = c('GR outlet', 'GR')),
-                         data_cols =  c('Temperature (C )' = 'temp',
-                                        'pH',
-                                        'DO (%)' = 'DO_sat',
-                                        'DO (mg L-1)' = 'DO',
-                                        'TDS (mg -1)' = 'TDS',
-                                        'F (umol L-1)' = 'F',
-                                        'Cl- (umol L-1)' = 'Cl',
-                                        'SO42- (umol L-1)' = 'SO4',
-                                        'NO3-(umol L-1)' = 'NO3',
-                                        'Al (umol L-1)' = 'Al',
-                                        'Ca (umol L-1)' = 'Ca',
-                                        'Fe (umol L-1)' = 'Fe',
-                                        'K  (umol L-1)' = 'K',
-                                        'Mg (umol L-1)' = 'Mg',
-                                        'Mn (umol L-1)' = 'Mn',
-                                        'Na  (umol L-1)' = 'Na',
-                                        'Si  (umol L-1)' = 'Si',
-                                        'Sr (umol L-1)' = 'Sr',
-                                        'Ba (\u03bcmol L-1)' = 'Ba',
-                                        'P (\u03bcmol L-1)' = 'P',
-                                        'Zn (\u03bcmol L-1)' = 'Zn'),
-                         data_col_pattern = '#V#',
-                         is_sensor = FALSE,
-                         convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
-    
+                          datetime_cols = list('Date' = '%Y-%m-%d'),
+                          datetime_tz = 'America/New_York',
+                          site_code_col = 'Site',
+                          alt_site_code = list('SH_weir' = c('SSHCZO-WIER', 'SH-WEIR'),
+                                               'GRO' = c('GR outlet', 'GR')),
+                          data_cols =  c('Temperature (C )' = 'temp',
+                                         'pH',
+                                         'DO (%)' = 'DO_sat',
+                                         'DO (mg L-1)' = 'DO',
+                                         'TDS (mg -1)' = 'TDS',
+                                         'F (umol L-1)' = 'F',
+                                         'Cl- (umol L-1)' = 'Cl',
+                                         'SO42- (umol L-1)' = 'SO4',
+                                         'NO3-(umol L-1)' = 'NO3',
+                                         'Al (umol L-1)' = 'Al',
+                                         'Ca (umol L-1)' = 'Ca',
+                                         'Fe (umol L-1)' = 'Fe',
+                                         'K  (umol L-1)' = 'K',
+                                         'Mg (umol L-1)' = 'Mg',
+                                         'Mn (umol L-1)' = 'Mn',
+                                         'Na  (umol L-1)' = 'Na',
+                                         'Si  (umol L-1)' = 'Si',
+                                         'Sr (umol L-1)' = 'Sr',
+                                         'Ba (\u03bcmol L-1)' = 'Ba',
+                                         'P (\u03bcmol L-1)' = 'P',
+                                         'Zn (\u03bcmol L-1)' = 'Zn'),
+                          data_col_pattern = '#V#',
+                          is_sensor = FALSE,
+                          convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
+
     # For some reason a few flag columns are being created as "character" columns
     # and the others are "chr". When the tables goes into ms_cast_and_reflag
     # It causes an error. Mutating them with as.character seems to fix this issue,
     # should watch at other sites. (RESOLVED in ms_read_raw_csv)
-    
+
     # h6 <- h6 %>%
     #     mutate(across(.cols = contains('flg'), ~ as.character(.x)))
 
     # h6 <- ms_cast_and_reflag(h6,
     #                          varflag_col_pattern = NA)
-    
+
     h6 <- ms_cast_and_reflag(d = h6,
                              variable_flags_dirty = 'DIRTY',
                              variable_flags_bdl = c('BDL'),
@@ -332,7 +321,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     doi_com <- full_join(doi_dates, doi2014, by = 'id') %>%
         mutate(name = str_split_fixed(id, '_', n= Inf)[,1]) %>%
         filter(!is.na(date))
-    
+
     d_2014 <- ms_read_raw_csv(preprocessed_tibble = doi_com,
                               datetime_cols = list('date' = '%Y-%m-%d'),
                               datetime_tz = 'America/New_York',
@@ -343,24 +332,24 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                              'DO (%)' = 'DO_sat',
                                              'Dissolved Oxygen' = 'DO',
                                              'Specific Conductivity' = 'spCond',
-                                             'Cl' = 'Cl', 
-                                             'SO4' = 'SO4', 
-                                             'NO3' = 'NO3', 
-                                             'Al' = 'Al', 
+                                             'Cl' = 'Cl',
+                                             'SO4' = 'SO4',
+                                             'NO3' = 'NO3',
+                                             'Al' = 'Al',
                                              'Ca' = 'Ca',
-                                             'Fe' = 'Fe', 
-                                             'K' = 'K', 
-                                             'Mg' = 'Mg', 
-                                             'Mn' = 'Mn', 
-                                             'Na' = 'Na', 
-                                             'Si' = 'Si', 
+                                             'Fe' = 'Fe',
+                                             'K' = 'K',
+                                             'Mg' = 'Mg',
+                                             'Mn' = 'Mn',
+                                             'Na' = 'Na',
+                                             'Si' = 'Si',
                                              'Sr' = 'Sr',
                                              'DOC' = 'DOC'),
                               data_col_pattern = '#V#',
                               set_to_NA = 'n.a.',
                               convert_to_BDL_flag = c('< 0.30', '< 0.3', '< 0.03'),
                               is_sensor = FALSE)
-    
+
     d_2014 <- ms_cast_and_reflag(d = d_2014,
                                  variable_flags_dirty = 'DIRTY',
                                  variable_flags_bdl = c('BDL'),
@@ -435,7 +424,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                    data_col_pattern = '#V#',
                                    convert_to_BDL_flag = 'BDL',
                                    is_sensor = FALSE)
-        
+
         if(any(str_detect('__|flg', colnames(sw_data)))){
             sw_data <- ms_cast_and_reflag(d = sw_data,
                                           variable_flags_dirty = 'DIRTY',
@@ -490,14 +479,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d <- rbind(h6, d_2014, sw_all) %>%
         filter(! site_code %in% c('', 'GR Dam', 'GR1', 'GR2', 'GR3', 'GR4', 'GR5'))
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     sites <- unique(d$site_code)
     for(s in 1:length(sites)){

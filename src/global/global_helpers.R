@@ -795,17 +795,18 @@ ms_read_raw_csv <- function(filepath,
                    paste(unname(data_cols)[dc_dupes],
                          collapse = ', ')))
     }
-    
-    # Error when only some data cols were names but other were not so setting 
-    # names as the data col name when it is not supplied. 
-    dn_dupes <- names(data_cols)
-    dn_dupes <- ifelse(dn_dupes == '', unname(data_cols), dn_dupes)
-    dn_dupes <- duplicated(dn_dupes)
 
-    if(any(dn_dupes)){
-        stop(paste('duplicate name(s) in data_cols:',
-                   paste(names(data_cols)[dn_dupes],
-                         collapse = ', ')))
+    #@spencer: ifelse(dn_dupes == ''... would have evaluated only the first element. this should take care of it
+    datacol_names <- names(data_cols)
+    if(! is.null(datacol_names)){
+
+        dn_dupes <- duplicated(datacol_names) & datacol_names != ''
+
+        if(any(dn_dupes)){
+            stop(paste('duplicate name(s) in data_cols:',
+                       paste(datacol_names[dn_dupes],
+                             collapse = ', ')))
+        }
     }
 
     #parse args; deal with missing args
@@ -985,7 +986,7 @@ ms_read_raw_csv <- function(filepath,
             bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            if(! is.na(var_flagcols)){
+            if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
                 candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
                 var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             } else {
@@ -1007,7 +1008,6 @@ ms_read_raw_csv <- function(filepath,
     }
 
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
-    # Remove duplicate names. I don't know how these are getting created 
     new_varflag_cols <- unique(new_varflag_cols)
 
     #establish class of newly created varflag cols
@@ -1046,13 +1046,10 @@ ms_read_raw_csv <- function(filepath,
         sw(class(d[[i]]) <- newclass)
     }
 
-    # Giving a warning when there are no illegal caracters. Only do this when 
-    # illegal_chars !is.null
-    
     illegal_chars <- unique(illegal_chars)
-    cmpnt <- if(exists('component')) component else '[no component]'
-    
-    if(!is.null(illegal_chars)){
+    cmpnt <- if(exists('component') && ! is.null(component)) component else '[no component]'
+
+    if(! is.null(illegal_chars)){
         logwarn(msg = glue('Coercing illegal data records to NA in {n}, {d}, {s}, {p}, {cc}: {ill}',
                            n = network,
                            d = domain,
@@ -1085,16 +1082,16 @@ ms_read_raw_csv <- function(filepath,
                            datetime_formats = datetime_formats,
                            datetime_tz = datetime_tz,
                            optional = optionalize_nontoken_characters)
-    
+
     if(all(is.na(d$datetime))) {
         stop('All datetime failed to parse. Check datetime formats used.')
     }
-    
+
     if(any(is.na(d$datetime))) {
-        prop_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
-        
-        logwarn(msg = glue('{pna} % datetimes failed to pars in {n}, {d}, {s}, {p}',
-                           pna = prop_na,
+        pct_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+
+        logwarn(msg = glue('{pna}% datetimes failed to parse in {n}, {d}, {s}, {p}',
+                           pna = pct_na,
                            n = network,
                            d = domain,
                            s = ifelse(exists('site_code'), site_code, '[site_code unavailable]'),
@@ -1107,29 +1104,61 @@ ms_read_raw_csv <- function(filepath,
                    across(any_of(c('datetime', 'site_code')),
                           ~ ! is.na(.x))))
 
-    #remove all-NA data columns (except if they have BDLs) and rows with NA in all data columns.
-    #also remove flag columns for all-NA data columns.
-    all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
-                              MARGIN = 2,
-                              function(x) all(is.na(x)))
-    all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
-    all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
-    all_na_cols <- c(all_na_cols,
-                     sub(pattern = '__\\|dat',
-                         replacement = '__|flg',
-                         all_na_cols))
-
-    # Check this. Need to ensure rows are not being removed if all the data values 
-    # are NA but there is BDL information in a flag column
+    #identify flag columns with BDLs (should not be dropped)
     flg_col_names <- colnames(d)[str_detect('__|flg', colnames(d))]
-    if(!is.null(summary_flagcols)){
-        flg_col_names <- c(flg_col_names, summary_flagcols)
+    flg_col_names <- c(flg_col_names, summary_flagcols)
+    bdl_cols_do_not_drop2 <- apply(d[, flg_col_names], 2, function(x)
+        {
+            any(! is.na(x) & x == 'BDL')
+        }) %>%
+        names()
+    bdl_cols_do_not_drop2 <- c(bdl_cols_do_not_drop2,
+                               sub(pattern = '__\\|flg',
+                                   replacement = '__|dat',
+                                   bdl_cols_do_not_drop2))
+
+    #identify columns that are all-NA and should be dropped, unless
+    #   BDLs within. if any BDLs in summary columns, don't drop columns.
+    summary_bdls_present <- FALSE
+    if(! is.null(summary_flagcols)){
+        summary_bdls_present <- lapply(d[, summary_flagcols], function(x)
+            {
+                ! is.na(x) & x == 'BDL'
+            }) %>%
+            unlist() %>%
+            any()
     }
-    
-    d <- d %>%
-        select(-one_of(all_na_cols)) %>%
-        filter_at(vars(c(ends_with('__|dat'), any_of(flg_col_names))),
-                  any_vars(! is.na(.)))
+
+    if(! summary_bdls_present){
+
+        all_na_cols_bool <- apply(select(d, ends_with('__|dat')),
+                                  MARGIN = 2,
+                                  function(x) all(is.na(x)))
+        all_na_cols <- names(all_na_cols_bool[all_na_cols_bool])
+        all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop]
+        all_na_cols <- c(all_na_cols,
+                         sub(pattern = '__\\|dat',
+                             replacement = '__|flg',
+                             all_na_cols))
+        all_na_cols <- all_na_cols[! all_na_cols %in% bdl_cols_do_not_drop2]
+
+    } else all_na_cols <- NULL
+
+    #identify rows with BDL flags
+    if(! is.null(flg_col_names)){
+        bdl_rows_do_not_drop <- apply(d[, flg_col_names], 1, function(x){
+            any(! is.na(x) & is.character(x) & x == 'BDL')
+        })
+    } else {
+        bdl_rows_do_not_drop = rep(FALSE, nrow(d))
+    }
+
+    #remove all-NA data columns without BDLs
+    d <- select(d, -one_of(all_na_cols))
+
+    #remove rows with NA for all data columns, except if they have BDLs.
+    keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
+    d <- d[keeper_rows | bdl_rows_do_not_drop, ]
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA
     #   values. We could instead do something more sophisticated.
@@ -1443,8 +1472,8 @@ ms_cast_and_reflag <- function(d,
     #variable_flags_bdl: optional character vector of values that might appear in
     #   the variable flag columns indicating that their corresponding data values are
     #   below detection limit. These values will be replaced with half their
-    #   detection limit, determined by identify_detection_limit_t. Resulting
-    #   ms_status will be set to 1 (dirty/questionable).
+    #   detection limit by qc_hdetlim_and_uncert. Resulting ms_status will be
+    #   set to 1 (dirty/questionable).
     #summary_flags_to_drop: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in
@@ -1482,11 +1511,13 @@ ms_cast_and_reflag <- function(d,
     #summary_flags_bdl: optional named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
-    #   Associated data records are assigned 1/2 their detection limit (determined
-    #   by identify_detection_limit_t and ms_status is set to 1 (dirty/questionable).
+    #   Associated data records are assigned ms_status = 2, which is used as an
+    #   indicator to insert 1/2 detlims downstream.
 
     #return value: a long-format tibble with 5 columns: datetime, site_code,
-    #   var, val, ms_status. Rows with NA in any column are removed.
+    #   var, val, ms_status. Rows with NA in any non-status column are removed,
+    #   except rows with NA in the val column and ms_status == 2, designating
+    #   a BDL value that will be inserted as 1/2 detlim later.
 
     #arg checks
     if(! input_shape == 'wide'){
@@ -1638,18 +1669,6 @@ ms_cast_and_reflag <- function(d,
         d$var <- varname
     }
 
-    #get 1/2 detection limits
-    if(sumbdl || varbdl){
-
-        detlims <- identify_detection_limit_t(select(d, datetime, site_code, var, val = dat) %>%
-                                                  arrange(site_code, var, datetime),
-                                              write_detlim_file = FALSE,
-                                              return_detlims = TRUE,
-                                              ignore_arrange = TRUE)
-
-        half_detlims <- mutate(detlims, detlim = detlim / 2)
-    }
-
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
         if(sumdrop){
@@ -1727,20 +1746,20 @@ ms_cast_and_reflag <- function(d,
         for(i in seq_along(summary_flags_bdl)){
             si <- summary_flags_bdl[i]
             bdl_inds <- d[[names(si)]] %in% si[[1]]
-            d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
-            d[bdl_inds, 'ms_status'] <- 1
+            # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+            d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
         }
     }
 
     if(varbdl){
         bdl_inds <- d$flg %in% variable_flags_bdl
-        d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
-        d[bdl_inds, 'ms_status'] <- 1
+        # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+        d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
     }
 
-    #remove rows with NA in the value column (these take up space and can be
-    #reconstructed by casting to wide form
-    d <- filter(d, ! is.na(dat))
+    #remove rows with NA in the value column and no bdl flag.
+    #these take up space and can be reconstructed by casting to wide form
+    d <- filter(d, ! is.na(dat) | ms_status == 2)
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or
@@ -1757,7 +1776,8 @@ ms_cast_and_reflag <- function(d,
 ms_conversions <- function(d,
                            keep_molecular,
                            convert_units_from,
-                           convert_units_to){
+                           convert_units_to,
+                           row_wise = FALSE){
 
     #d: a macrosheds tibble that has already been through ms_cast_and_reflag
     #keep_molecular: a character vector of molecular formulae to be
@@ -1776,6 +1796,9 @@ ms_conversions <- function(d,
     #   without their sample-regimen prefixes (e.g. 'DIC', not 'GN_DIC'),
     #   and values are the units those variables should be converted to.
     #   Omit variables that don't need to be converted.
+    #row_wise: logical. If TRUE, treat every row as a unique case, with its own
+    #   separate conversion. This is necessary for converting detection limits
+    #   in domain_detection_limits.
 
     #checks
     # cm <- ! missing(convert_molecules)
@@ -1788,13 +1811,51 @@ ms_conversions <- function(d,
     if(length(convert_units_from) != length(convert_units_to)){
         stop('convert_units_from and convert_units_to must have the same length')
     }
-    cu_shared_names <- base::intersect(names(convert_units_from),
-                                       names(convert_units_to))
-    if(length(cu_shared_names) != length(convert_units_to)){
-        stop('names of convert_units_from and convert_units_to must match')
+
+    if(! row_wise){
+        if(any(duplicated(names(convert_units_from)))){
+            stop('duplicated names in convert_units_from')
+        }
+        if(any(duplicated(names(convert_units_to)))){
+            stop('duplicated names in convert_units_to')
+        }
+
+        cu_shared_names <- base::intersect(names(convert_units_from),
+                                           names(convert_units_to))
+        if(length(cu_shared_names) != length(convert_units_to)){
+            stop('names of convert_units_from and convert_units_to must match')
+        }
+
+    } else {
+
+        if(any(names(convert_units_from) != names(convert_units_to))){
+            stop('in row_wise mode, names of convert_units_from and convert_units_to must be identical')
+        }
+
+        cu_shared_names <- names(convert_units_from)
+
+        if(length(cu_shared_names) != nrow(d)){
+            stop(paste('in row_wise mode, lengths of convert_units_from and convert_units_to',
+                       'must be equal to the number of rows in d'))
+        }
+
     }
 
+    convert_units_from <- tolower(convert_units_from)
+    convert_units_to <- tolower(convert_units_to)
+
     vars <- drop_var_prefix(d$var)
+
+    if(is.null(vars) || any(is.na(vars)) || any(vars == '')){
+        stop('some vars misspecified in d. are they missing prefixes?')
+    }
+
+    errant_var_specs <- ! cu_shared_names %in% vars
+    if(any(errant_var_specs)){
+        warning(paste('variables',
+                      paste(cu_shared_names[errant_var_specs], collapse = ', '),
+                      'not present in d. did you mean something else?'))
+    }
 
     convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
                            'NO3_NO2')
@@ -1849,37 +1910,40 @@ ms_conversions <- function(d,
         d$var[vars == v] <- new_name
     }
 
-    # Converts input to grams if the final unit contains grams
-    for(i in 1:length(convert_units_from)){
+    loop_length <- ifelse(row_wise, nrow(d), length(convert_units_from))
+    for(i in 1:loop_length){
 
         unitfrom <- convert_units_from[i]
         unitto <- convert_units_to[i]
         v <- names(unitfrom)
 
+        d_subset <- if(row_wise) i else vars == v
+
+        # Converts input to grams if the final unit contains grams
         g_conver <- FALSE
         if(grepl('mol|eq', unitfrom) && grepl('g', unitto) ||
            v %in% convert_molecules){
 
-            d$val[vars == v] <- convert_to_gl(x = d$val[vars == v],
-                                              input_unit = unitfrom,
-                                              molecule = v)
+            d$val[d_subset] <- convert_to_gl(x = d$val[d_subset],
+                                             input_unit = unitfrom,
+                                             molecule = v)
 
             g_conver <- TRUE
         }
 
         #convert prefix
-        d$val[vars == v] <- convert_unit(x = d$val[vars == v],
-                                         input_unit = unitfrom,
-                                         output_unit = unitto)
+        d$val[d_subset] <- convert_unit(x = d$val[d_subset],
+                                        input_unit = unitfrom,
+                                        output_unit = unitto)
 
         #Convert to mol or eq if that is the output unit
         if(grepl('mol|eq', unitto)) {
 
-            d$val[vars == v] <- convert_from_gl(x = d$val[vars == v],
-                                                input_unit = unitfrom,
-                                                output_unit = unitto,
-                                                molecule = v,
-                                                g_conver = g_conver)
+            d$val[d_subset] <- convert_from_gl(x = d$val[d_subset],
+                                               input_unit = unitfrom,
+                                               output_unit = unitto,
+                                               molecule = v,
+                                               g_conver = g_conver)
         }
     }
 
@@ -4941,7 +5005,12 @@ update_product_statuses <- function(network, domain){
     #return()
 }
 
-convert_to_gl <- function(x, input_unit, molecule) {
+convert_to_gl <- function(x, input_unit, molecule){
+
+    #this is for converting to concentration in mass per volume, from either
+    #   equivalents per volume or moles per volume. It is NOT for converting to grams
+    #   per liter. Therefore, if your input units are already xg/L, where x is
+    #   n, u, m, k, etc., this function will do nothing.
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -4972,7 +5041,12 @@ convert_to_gl <- function(x, input_unit, molecule) {
 
 }
 
-convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver) {
+convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
+
+    #this is for converting from concentration in mass per liter to either moles
+    #   per liter or equivalents per liter. It does not assume input units are
+    #   g/L, but rather any metric mass unit per liter. Specify the input units
+    #   with input_unit.
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -5048,7 +5122,7 @@ convert_unit <- function(x, input_unit, output_unit){
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
     }
 
-    old_top_unit <- str_split_fixed(old_top, "", 2)[1]
+    old_top_unit <- tolower(str_split_fixed(old_top, "", 2)[1])
 
     if(old_top_unit %in% c('g', 'e', 'q', 'l') || old_fraction[1] == 'mol') {
         old_top_conver <- 1
@@ -5056,7 +5130,7 @@ convert_unit <- function(x, input_unit, output_unit){
         old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2])
     }
 
-    old_bottom_unit <- str_split_fixed(old_bottom, "", 2)[1]
+    old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
 
     if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
         old_bottom_conver <- 1
@@ -5064,7 +5138,7 @@ convert_unit <- function(x, input_unit, output_unit){
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
 
-    new_top_unit <- str_split_fixed(new_top, "", 2)[1]
+    new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
 
     if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
         new_top_conver <- 1
@@ -5072,7 +5146,7 @@ convert_unit <- function(x, input_unit, output_unit){
         new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
     }
 
-    new_bottom_unit <- str_split_fixed(new_bottom, "", 2)[1]
+    new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
 
     if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
         new_bottom_conver <- 1
@@ -5167,7 +5241,7 @@ write_ms_file <- function(d,
             } else {
                 warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
                              'That means this dataset has not passed through ',
-                             'carry_uncertainty yet. it should have.',
+                             'qc_hdetlim_and_uncert yet. it should have.',
                              n = network,
                              d = domain,
                              s = site_code,
@@ -5447,15 +5521,12 @@ fname_from_fpath <- function(paths, include_fext = TRUE){
     return(fnames)
 }
 
-calc_inst_flux <- function(chemprod, qprod, site_code, ignore_pred = FALSE){
+calc_inst_flux <- function(chemprod, qprod, site_code){
 
     #chemprod is the prodname_ms for stream or precip chemistry.
     #   it can be a munged or a derived product.
     #qprod is the prodname_ms for stream discharge or precip volume over time.
     #   it can be a munged or derived product.
-    #ignore_pred: logical; set to TRUE if detection limits should be retrieved
-    #   from the supplied chemprod directly, rather than its precursor. passed to
-    #   apply_detection_limit_t.
 
     if(! grepl('(precipitation|discharge)', prodname_from_prodname_ms(qprod))){
         stop('Could not determine stream/precip')
@@ -5473,12 +5544,6 @@ calc_inst_flux <- function(chemprod, qprod, site_code, ignore_pred = FALSE){
 
     if(nrow(chem) == 0) return(NULL)
 
-    # chem <- chem %>%
-    #     tidyr::pivot_wider(
-    #         names_from = 'var',
-    #         values_from = all_of(c('val', 'ms_status', 'ms_interp'))) %>%
-    #     select(datetime, starts_with(c('val', 'ms_status', 'ms_interp')))
-
     daterange <- range(chem$datetime)
 
     flow <- read_combine_feathers(network = network,
@@ -5487,10 +5552,7 @@ calc_inst_flux <- function(chemprod, qprod, site_code, ignore_pred = FALSE){
         filter(
             site_code == !!site_code,
             datetime >= !!daterange[1],
-            datetime <= !!daterange[2])# %>%
-        # rename(flow = val) %>% #quick and dirty way to convert to wide
-        # rename(!!drop_var_prefix(.$var[1]) := val) %>%
-        # select(-var, -site_code)
+            datetime <= !!daterange[2])
 
     if(nrow(flow) == 0) return(NULL)
     flow_is_highres <- Mode(diff(as.numeric(flow$datetime))) <= 15 * 60
@@ -5539,71 +5601,12 @@ calc_inst_flux <- function(chemprod, qprod, site_code, ignore_pred = FALSE){
             arrange(datetime)
     }
 
-    # #a few commented remnants from the old wide-format days have been left here,
-    # #because they might be instructive in other endeavors
-    # flux <- chem %>%
-    #
-    #     #if we ever have dependency issues with fuzzyjoin functions, we should
-    #     #   implement a data.table rolling join. We'll just have to pop off
-    #     #   the uncertainty in a separate tibble, do the join, noting which
-    #     #   datetime series is being modified, then rejoin the uncertainty.
-    #     fuzzyjoin::difference_inner_join(
-    #         flow,
-    #         by = 'datetime',
-    #         max_dist = as.difftime(tim = '14:59',
-    #                                format = '%M:%S')
-    #     ) %>%
-    #     select(-datetime.y) %>%
-    #     rename(datetime = datetime.x) %>%
-    #     # group_by(datetime) %>%
-    #     # summarize(,
-    #     #           .groups = 'drop') %>%
-    #     select_if(~(! all(is.na(.)))) %>%
-    #
-    #     # rowwise(datetime) %>%
-    #     # mutate(
-    #     #     ms_interp = numeric_any(c_across(c(ms_interp.x, ms_interp.y))),
-    #     #     ms_status = numeric_any(c_across(c(ms_status.x, ms_status.y)))) %>%
-    #     # ungroup() %>%
-    #     # select(-ms_status.x, -ms_status.y, -ms_interp.x, -ms_interp.y) %>%
-    #     # mutate_at(vars(-datetime, -flow, -ms_status, -ms_interp),
-    #     #           ~(. * flow)) %>%
-    #     # pivot_longer(cols = ! c(datetime, ms_status, ms_interp),
-    #     #              names_pattern = '(.*)',
-    #     #              names_to = 'var') %>%
-    #     # rename(val = value) %>%
-    #
-    #     mutate(
-    #         across(.cols = matches(match = '^ms_status.+',
-    #                                perl = TRUE),
-    #                .fns = ~numeric_any(na.omit(c(.x, ms_status)))),
-    #         across(.cols = matches(match = '^ms_interp.+',
-    #                                perl = TRUE),
-    #                .fns = ~numeric_any(na.omit(c(.x, ms_interp)))),
-    #         across(.cols = starts_with(match = 'val_'),
-    #                .fns = ~(.x * flow))) %>%
-    #     select(-ms_status, -ms_interp, -flow) %>%
-    #     pivot_longer(cols = ! datetime,
-    #                  names_pattern = '^(val|ms_status|ms_interp)_(.*)$',
-    #                  names_to = c('.value', 'var')) %>%
-    #
-    #     filter(! is.na(val)) %>%
-    #     mutate(site_code = !!site_code) %>%
-    #     arrange(site_code, var, datetime) %>%
-    #     select(datetime, site_code, var, val, ms_status, ms_interp)
-
     flux <- chem_split %>%
         purrr::reduce(bind_rows) %>%
         arrange(site_code, var, datetime)
         # select(datetime, site_code, var, val, ms_status, ms_interp)
 
     if(nrow(flux) == 0) return(NULL)
-
-    flux <- apply_detection_limit_t(X = flux,
-                                    network = network,
-                                    domain = domain,
-                                    prodname_ms = chemprod,
-                                    ignore_pred = ignore_pred)
 
     return(flux)
 }
@@ -5833,10 +5836,12 @@ shortcut_idw <- function(encompassing_dem,
     d_status <- data_values$ms_status
     d_interp <- data_values$ms_interp
     d_dt <- data_values$datetime
+    d_pfx <- data_values$prefix
     data_matrix <- select(data_values,
                           -ms_status,
                           -datetime,
-                          -ms_interp) %>%
+                          -ms_interp,
+                          -prefix) %>%
         err_df_to_matrix()
 
     #clean dem and get elevation values
@@ -5876,22 +5881,12 @@ shortcut_idw <- function(encompassing_dem,
         dk <- filter(data_locations,
                      site_code == colnames(data_matrix)[k])
 
-        # inv_dists_site <- 1 / raster::distanceFromPoints(dem_wb, dk)^2 %>%
-        #     terra::values(.)
-
         inv_dists_site <- 1 / terra::distance(terra::rast(dem_wb_all_na), terra::vect(dk))^2 %>%
             terra::values(.)
 
-        # inv_dists_site[is.na(elevs)] <- NA #mask
         inv_dists_site <- inv_dists_site[! is.na(elevs)] #drop elevs not included in mask
         inv_distmat[, k] <- inv_dists_site
     }
-
-    # if(output_varname == 'SPECIAL CASE PRECIP'){ REMOVE
-    #     precip_quickref <- data.frame(matrix(NA,
-    #                                          nrow = ntimesteps,
-    #                                          ncol = nrow(inv_distmat)))
-    # }
 
     #calculate watershed mean at every timestep
     if(save_precip_quickref) precip_quickref <- list()
@@ -5899,13 +5894,6 @@ shortcut_idw <- function(encompassing_dem,
     ws_mean <- rep(NA, nrow(data_matrix))
     ntimesteps <- nrow(data_matrix)
     for(k in 1:ntimesteps){
-
-        # idw_log_timestep(verbose = verbose,
-        #                  site_code = stream_site_code,
-        #                  v = output_varname,
-        #                  k = k,
-        #                  ntimesteps = ntimesteps,
-        #                  time_elapsed = (proc.time() - ptm)[3] / 60)
 
         #assign cell weights as normalized inverse squared distances
         dk <- t(data_matrix[k, , drop = FALSE])
@@ -5952,31 +5940,13 @@ shortcut_idw <- function(encompassing_dem,
 
             #average both approaches (this should be weighted toward idw
             #when close to any data location, and weighted half and half when far)
-            # d_idw <- mapply(function(x, y) mean(c(x, y), na.rm=TRUE),
-            #                 d_idw,
-            #                 d_from_elev)
             d_idw <- (d_idw + d_from_elev) / 2
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
         errors(ws_mean)[k] <- mean(errors(d_idw), na.rm=TRUE)
 
-        # quickref_ind <- k %% 1000 REMOVE
-        # update_quickref <- quickref_ind == 0
-        # if(! update_quickref){
-        # precip_quickref[[quickref_ind]] <- p_idw
         if(save_precip_quickref) precip_quickref[[k]] <- d_idw
-        # } else {
-
-        # precip_quickref[[1000]] <- p_idw
-
-        # save_precip_quickref(precip_idw_list = precip_quickref,
-        #                      network = network,
-        #                      domain = domain,
-        #                      site_code = stream_site_code,
-        #                      # chunk_number = quickref_chunk)
-        #                      timestep = k)
-        # }
     }
 
     if(save_precip_quickref){
@@ -6002,14 +5972,11 @@ shortcut_idw <- function(encompassing_dem,
 
         ws_mean <- tibble(datetime = d_dt,
                           site_code = stream_site_code,
+                          var = paste(d_pfx, 'precipitation', sep = '_'),
                           concentration = ws_mean,
                           ms_status = d_status,
                           ms_interp = d_interp)
 
-        ws_mean <- reconstruct_var_column(d = ws_mean,
-                                          network = network,
-                                          domain = domain,
-                                          prodname = 'precipitation')
     } else {
 
         ws_mean <- tibble(datetime = d_dt,
@@ -6250,76 +6217,6 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     return(ws_means)
 }
 
-reconstruct_var_column <- function(d,
-                                   network,
-                                   domain,
-                                   prodname,
-                                   level = 'munged'){
-
-    #currently only used inside the precip idw interpolator, where
-    #we no longer have variable prefix information. this attempts
-    #to determine that information from the stored detlim file.
-    #it's not yet equipped to handle the case where precipitation
-    #(or any other variable) has multiple prefixes through time.
-
-    #returns d with a new var column
-
-    if(! level %in% c('munged', 'derived')){
-        stop('level must be either "munged" or "derived"')
-    }
-
-    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
-                              n = network,
-                              d = domain)))
-
-    rgx <- ifelse(level == 'munged',
-                  '^(?!ms[0-9]{3}).*?',
-                  '^ms[0-9]{3}$')
-
-    prodname_ms <- prods %>%
-        filter(prodname == !!prodname,
-               grepl(pattern = rgx,
-                     x = prodcode,
-                     perl = TRUE)) %>%
-        mutate(prodname_ms = paste(prodname,
-                                   prodcode,
-                                   sep = '__')) %>%
-        pull(prodname_ms)
-
-    detlim <- tryCatch(
-        {
-            if(length(prodname_ms) > 1){
-                knit_det_limits(network = network,
-                                domain = domain,
-                                prodname_ms = prodname_ms)
-            } else {
-                read_detection_limit(network = network,
-                                     domain = domain,
-                                     prodname_ms = prodname_ms)
-            }
-        },
-        error = function(e){
-            stop(glue('could not read detection limits, which are ',
-                      'needed for reconstructing the var column'))
-        }
-    )
-
-    prec_ind <- grepl('precipitation$', detlim$var)
-    if(any(prec_ind)){
-        var <- detlim$var[prec_ind[1]]
-    } else {
-        stop('maybe get the precipitation variable prefix from some other file')
-    }
-
-    d <- d %>%
-        mutate(var = !!var) %>%
-        select(datetime, site_code, var,
-               any_of(x = c('val', 'concentration', 'flux')),
-               ms_status, ms_interp)
-
-    return(d)
-}
-
 dump_precip_idw_tempfile <- function(ws_means,
                                      network,
                                      domain,
@@ -6370,7 +6267,6 @@ write_precip_quickref <- function(precip_idw_list,
                                   domain,
                                   site_code,
                                   chunkdtrange){
-                                 # timestep){
 
     #allows precip values computed by shortcut_idw for each watershed
     #   raster cell to be reused by shortcut_idw_concflux_v2
@@ -6999,8 +6895,6 @@ idw_log_wb <- function(verbose, site_code, i, nw){
 
     loginfo(msg,
             logger = logger_module)
-
-    #return()
 }
 
 idw_log_var <- function(verbose,
@@ -7033,8 +6927,6 @@ idw_log_var <- function(verbose,
 
     loginfo(msg,
             logger = logger_module)
-
-    #return()
 }
 
 idw_log_timestep <- function(verbose, site_code=NULL, v, k, ntimesteps,
@@ -7067,52 +6959,6 @@ idw_log_timestep <- function(verbose, site_code=NULL, v, k, ntimesteps,
         loginfo(msg,
                 logger = logger_module)
     }
-
-    #return()
-}
-
-
-
-get_detlim_precursors <- function(network,
-                                  domain,
-                                  prodname_ms){
-
-    #this gets the prodname_ms for the direct precursor of a derived
-    #product. for example, for hjandrews 'precipitation__ms001' it would return
-    #'precipitation__5482'. This is necessary when applying detection limits
-    #to a derived product, because those limits were defined on the direct
-    #precursor
-
-    #for precip flux products, the direct precursor is considered to be precip
-    #chem. for derived products that aggregate two or more munged products of
-    #the same type (e.g. discharge__9, discharge__10, etc. from
-    #lter/konza), this returns all of those products as precursors.
-
-    #for precip_pchem_pflux (the all-in-one precip derive kernel), this returns
-    #the precursors for both precipitation and precip_chemistry.
-
-    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
-                              n = network,
-                              d = domain)))
-
-    prodname <- prodname_from_prodname_ms(prodname_ms)
-
-    if(prodname == 'precip_flux_inst'){
-        prodname <- 'precip_chemistry'
-    } else if(prodname == 'precip_pchem_pflux'){
-        prodname <- c('precip_chemistry', 'precipitation')
-    } else if(prodname == 'stream_flux_inst'){
-        prodname <- c('stream_chemistry', 'discharge')
-    }
-
-    precursors <- prods %>%
-        filter(
-            prodname %in% !!prodname,
-            ! grepl('^ms[0-9]{3}$', prodcode)) %>%
-        mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
-        pull(prodname_ms)
-
-    return(precursors)
 }
 
 datetimes_to_durations <- function(datetime_vec,
@@ -7253,16 +7099,20 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #this avoids a lot of slow summarizing
     if(! pchem_only){
 
-        # if(length(unique(precip$var)) > 1){
-        #     logwarn(paste('Multiple precip prefixes encountered.'))
-        # }
-
         status_cols <- precip %>%
             select(datetime, ms_status, ms_interp) %>%
             group_by(datetime) %>%
             summarize(
                 ms_status = numeric_any(ms_status),
-                ms_interp = numeric_any(ms_interp))
+                ms_interp = numeric_any(ms_interp),
+                .groups = 'drop')
+
+        mode_samp_regimen <- precip %>%
+            mutate(prefix = extract_var_prefix(var)) %>%
+            select(datetime, prefix) %>%
+            group_by(datetime) %>%
+            summarize(prefix = Mode(prefix),
+                      .groups = 'drop')
 
         day_durations_byproduct <- datetimes_to_durations(
             datetime_vec = precip$datetime,
@@ -7278,6 +7128,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
             tidyr::pivot_wider(names_from = site_code,
                                values_from = val) %>%
             left_join(status_cols, #they get lumped anyway
+                      by = 'datetime') %>%
+            left_join(mode_samp_regimen, #they get lumped anyway
                       by = 'datetime') %>%
             arrange(datetime)
 
@@ -7379,10 +7231,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                    i = i,
                    nw = nrow(wb))
 
-        precursor_prodnames <- get_detlim_precursors(network = network,
-                                                     domain = domain,
-                                                     prodname_ms = prodname_ms)
-
         nthreads <- parallel::detectCores()
 
         ## IDW INTERPOLATE PRECIP FOR ALL TIMESTEPS. STORE CELL VALUES
@@ -7399,10 +7247,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
             ws_mean_precip <- tibble()
             for(s in 1:length(precip_superchunklist)){
-            # ws_mean_precip <- foreach::foreach(
-            #     s = 1:length(precip_superchunklist),
-            #     .combine = idw_parallel_combine,
-            #     .init = 'first iter') %:% {
 
                 precip_superchunk <- precip_superchunklist[[s]]
 
@@ -7436,13 +7280,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
 
                     pchunk <- precip_chunklist[[j]]
 
-                    # idw_log_var(verbose = verbose,
-                    #             site_code = site_code,
-                    #             v = 'precipitation',
-                    #             j = paste('chunk', j + (nthreads * (s - 1))),
-                    #             ntimesteps = nrow(pchunk),
-                    #             nvars = nchunks_precip)
-
                     foreach_return <- shortcut_idw(
                         encompassing_dem = dem,
                         wshd_bnd = wbi,
@@ -7471,24 +7308,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 stop('NA datetime found in ws_mean_precip')
             }
 
-            # #restore original varnames by site and dt
-            # ws_mean_precip <- ws_mean_precip %>%
-            #     arrange(datetime) %>%
-            #     select(-var) %>% #just a placeholder
-            #     left_join(precip_varnames,
-            #               by = c('datetime', 'site_code'))
-
             ws_mean_precip <- ws_mean_precip %>%
                 dplyr::rename_all(dplyr::recode, concentration = 'val') %>%
-                # rename(val = concentration) %>%
                 arrange(datetime)
-
-            ws_mean_precip <- apply_detection_limit_t(
-                X = ws_mean_precip,
-                network = network,
-                domain = domain,
-                prodname_ms = precursor_prodnames[grepl('^precipitation',
-                                                        precursor_prodnames)])
 
             write_ms_file(ws_mean_precip,
                           network = network,
@@ -7601,90 +7423,9 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                               ws_mean_chemflux_var)
             }
 
-
-
-            # clst <- ms_parallelize()
-            #
-            # ws_mean_chemflux <- foreach::foreach(
-            #     j = 1:nvars,
-            #     # .verbose = TRUE,
-            #     .combine = idw_parallel_combine,
-            #     .init = 'first iter') %do% {
-            #
-            #     v <- pchem_vars[j]
-            #     jd <- pchem_setlist[[j]]
-            #     ntimesteps_chemflux <- nrow(jd)
-            #
-            #     if(v %in% pchem_vars_fluxable && ! pchem_only){
-            #         is_fluxable <- TRUE
-            #     } else {
-            #         is_fluxable <- FALSE
-            #     }
-            #
-            #     idw_log_var(verbose = verbose,
-            #                 site_code = site_code,
-            #                 v = v,
-            #                 j = j,
-            #                 nvars = nvars,
-            #                 ntimesteps = ntimesteps_chemflux,
-            #                 is_fluxable = is_fluxable)
-            #
-            #     if(ntimesteps_chemflux > 5000){
-            #        # (exists('ntimesteps_precip') && ntimesteps_precip > 2e5)){
-            #         nchunks <- nthreads %/% 2 #overkill?
-            #     } else {
-            #         nchunks <- nthreads
-            #     }
-            #
-            #     chunklist <- chunk_df(d = jd,
-            #                           nchunks = nchunks)
-            #
-            #     foreach_chunk_outer <- foreach::foreach(
-            #         l = 1:min(nchunks, nrow(jd)),
-            #         .combine = idw_parallel_combine,
-            #         .init = 'first iter') %dopar% {
-            #
-            #         if(is_fluxable){
-            #
-            #             foreach_chunk_inner <- shortcut_idw_concflux_v2(
-            #                 encompassing_dem = dem,
-            #                 wshd_bnd = wbi,
-            #                 ws_area = wbi_area_ha,
-            #                 data_locations = rg,
-            #                 precip_values = precip,
-            #                 chem_values = chunklist[[l]],
-            #                 stream_site_code = site_code,
-            #                 output_varname = v,
-            #                 verbose = verbose)
-            #
-            #         } else {
-            #
-            #             foreach_chunk_inner <- shortcut_idw(
-            #                 encompassing_dem = dem,
-            #                 wshd_bnd = wbi,
-            #                 data_locations = rg,
-            #                 data_values = chunklist[[l]],
-            #                 stream_site_code = site_code,
-            #                 output_varname = v,
-            #                 elev_agnostic = TRUE,
-            #                 verbose = verbose)
-            #         }
-            #
-            #         foreach_chunk_inner
-            #     }
-            #
-            #     foreach_chunk_outer
-            # }
-            #
-            # rm(chunklist); gc()
-            #
-            # ms_unparallelize(clst)
-
             if(any(is.na(ws_mean_chemflux$datetime))){
                 stop('NA datetime found in ws_mean_chemflux')
             }
-
-            chemprod <- precursor_prodnames[grepl('chem', precursor_prodnames)]
 
             if(! pchem_only){
 
@@ -7692,11 +7433,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                     select(-concentration) %>%
                     rename(val = flux) %>%
                     arrange(var, datetime)
-
-                ws_mean_pflux <- apply_detection_limit_t(ws_mean_pflux,
-                                                         network = network,
-                                                         domain = domain,
-                                                         prodname_ms = chemprod)
 
                 write_ms_file(ws_mean_pflux,
                               network = network,
@@ -7714,11 +7450,6 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                 select(-any_of('flux')) %>%
                 rename(val = concentration) %>%
                 arrange(var, datetime)
-
-            ws_mean_pchem <- apply_detection_limit_t(ws_mean_pchem,
-                                                     network = network,
-                                                     domain = domain,
-                                                     prodname_ms = chemprod)
 
             write_ms_file(ws_mean_pchem,
                           network = network,
@@ -7767,9 +7498,6 @@ ms_unparallelize <- function(cluster_object){
 
     #if cluster_object is NULL, nothing will happen
 
-    # tryCatch({print(site_code)},
-    #         error=function(e) print('nope'))
-
     if(is.null(cluster_object)){
         future::plan(future::sequential)
         return()
@@ -7782,34 +7510,6 @@ ms_unparallelize <- function(cluster_object){
 
     rm(list = ls(name = fe_junk),
        pos = fe_junk)
-
-    # #remove any unneeded globals that were created during parallelization
-    # unneeded_globals <- c('pchem_vars', 'pchem_vars_fluxable',
-    #                       'dem', 'wbi', 'rg', 'precip',
-    #                       'pchem_setlist', 'first_fluxvar_ind', 'i', 'j')
-    # sw(rm(list = unneeded_globals,
-    #       envir = .GlobalEnv))
-
-    # #restore globals that were overwritten during parallelization
-    # protected_vars <- mget('protected_vars',
-    #                           envir = protected_environment)
-    #
-    # for(i in 1:length(protected_vars)){
-    #
-    #     nm <- names(protected_vars)[i]
-    #     val <- protected_vars[[i]]
-    #
-    #     if(! is.null(val)){
-    #         assign(nm,
-    #                value = val,
-    #                envir = .GlobalEnv)
-    #     } else {
-    #
-    #         #or remove them if they didn't exist before parallelization
-    #         sw(rm(list = nm,
-    #               envir = .GlobalEnv))
-    #     }
-    # }
 }
 
 chunk_df <- function(d, nchunks, create_index_column = FALSE){
@@ -8339,234 +8039,224 @@ get_successor <- function(network,
     return(successor)
 }
 
-knit_det_limits <- function(network, domain, prodname_ms){
+make_hdetlim_prec_lookup_table <- function(dls){
 
-    detlim_list <- lapply(prodname_ms, function(x) read_detection_limit(network, domain, x))
-    detlim_list <- detlim_list[sapply(detlim_list, function(x) ! is.null(x))]
-    lowest_detlims <- Reduce(
-        function(x, y){
-            full_join(x, y, by = 'var') %>%
-                mutate(detlim = pmin(detlim.x, detlim.y, na.rm = TRUE)) %>%
-                select(var, detlim)
-        },
-        detlim_list)
+    #for each variable, determine the median detlim and the minimum (coarsest)
+    #precision across all domains. For domains that report multiple values for
+    #a given variable, first take a within-domain median/min
 
-    return(lowest_detlims)
+    #return a table of half-detlim ("hdetlim") and precision
+
+    lookup_table <- dls %>%
+        group_by(domain, var = variable_converted) %>%
+        summarize(detlim = median(detection_limit_converted),
+                  precision = min(precision)) %>%
+        group_by(var) %>%
+        summarize(detlim = median(detlim),
+                  precision = min(precision),
+                  .groups = 'drop') %>%
+        mutate(hdetlim = detlim / 2) %>%
+        select(-detlim)
+
+    return(lookup_table)
 }
 
-identify_series_detlim <- function(x){
+get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
+    #d: a tibble in MacroSheds format
+    #detlims: the output of standardize_detection_limits
+    #prodname_ms: a MacroSheds prodname_ms to filter detlims by
+    #which_: either "uncertainty" or "hdetlim" (meaning half-detection-limit)
 
-    #first gets the min of the absolute value of the series (without NAs),
-    #then if the min is e.g. 0.000416 assigns detection limit of 0.00045.
-    #surprisingly hard to spell this out, but the example is
-    #plenty clear.
+    #returns a vector of half-detlims or uncertainty, or an empty vector if d has no rows
 
-    #returns 0 if the min is >= 1, or if there are no nonzero data values
+    #note that, which uncertainty is returned when which_ == 'uncertainty',
+    #   it's actually precision values that are being manipulated, right till the end.
+    #   it's precision that we keep track of in unknown_detlim_prec_lookup.
 
-    if(! class(x) %in% c('integer', 'numeric', 'errors')){
-        stop('x must be a numeric vector')
+    #locates, estimates, or naively generates (as 0s) detection limits for any value.
+    #order of decisions:
+    #   1. if provider reports detlim/prec for same product, domain, variable, and date, use it
+    #   2. if not for same date, use the nearest date
+    #   3. if not for same product, but same domain, variable, and date, use that
+    #   4. if not for same product or date, use the nearest date
+    #   5. if not for same variable, use median (of medians) across domains
+    #   6. if nothing reported for a domain, use median (of medians) across domains
+    #   7. if nothing to guess from, use 0 (detlim) or Inf (precision)
+
+    if(! nrow(d)) return(numeric())
+
+    if(! which_ %in% c('uncertainty', 'hdetlim')){
+        stop('which_ must be "uncertainty" or "hdetlim"')
     }
 
-    nonzeros <- x[! is.na(x) & x != 0]
-    if(length(nonzeros)){
-        mindetect <- min(abs(nonzeros))
-    } else {
-        return(0)
-    }
+    if(which_ == 'uncertainty') which_ <- 'precision' #precision will be converted to uncert at the end
 
-    x_c <- strsplit(as.character(mindetect), '')[[1]]
+    #a bit of cleanup and setup
+    half_detlims_all <- detlims %>%
+        mutate(hdetlim = detection_limit_converted / 2) %>%
+        select(domain, prodcode, var = variable_converted, hdetlim, precision,
+               start_date, end_date)
 
-    first_leading_nonzero_ind <- Position(function(z) ! z %in% c('.', '0'),
-                                          x_c)
+    out <- rep(NA_real_, nrow(d))
 
-    non_decimal <- ! '.' %in% x_c
-    if(non_decimal) return(0)
+    d$var <- drop_var_prefix(d$var)
 
-    detlim_factor <- as.numeric(x_c[first_leading_nonzero_ind])
-    first_lead_nonz_after_dec <- (first_leading_nonzero_ind - 2)
-    detlim_ <- 1*10^-first_lead_nonz_after_dec * detlim_factor
-    detlim__ <- 5*10^-(first_lead_nonz_after_dec + 1)
-    detlim <- detlim_ + detlim__
+    #checks for cases 1-3
+    got_domain <- half_detlims_all$domain == domain
+    got_prodcode_at_domain <- sapply(half_detlims_all$prodcode, function(x){
+        any(str_split(x, '\\|')[[1]] == prodname_ms)
+    }) & got_domain
 
-    if(detlim >= 1) return(0)
+    #CASES 1-2
+    dlsub <- filter(half_detlims_all, got_prodcode_at_domain)
+    if(nrow(dlsub)){
 
-    return(detlim)
-}
+        if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
-identify_detection_limit_t <- function(X, network = NULL, domain = NULL, prodname_ms = NULL,
-                                       write_detlim_file = TRUE,
-                                       return_detlims = FALSE,
-                                       ignore_arrange = FALSE){
+            dlsub <- dlsub %>%
+                mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
+                       end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
+                arrange(start_date, end_date) %>%
+                as.data.table()
 
-    #X: dataframe in proto-MacroSheds format. see below
-    #network: string, name of network, required only if write_detlim_file is TRUE
-    #domain: string, name of domain, required only if write_detlim_file is TRUE
-    #prodname_ms: string, name of prodname_ms, required only if write_detlim_file is TRUE
-    #write_detlim_file: logical. if TRUE, detlims will be written to data/<network>/<domain>/detection_limits.json
-    #return_detlims: logical. if TRUE, detlims will be returned as a data.frame with columns:
-    #   var: variable
-    #   detlim: detection limit
-    #ignore_arrange: logical. no longer used. left for compatibility
+            #date interval join; CASE 1:
+            #join d rows to dlsub if d's datetime falls within the covered range
+            out <- dlsub[as.data.table(d),
+                         on = c("start_date<=datetime",
+                                "end_date>=datetime",
+                                "var==var")][[which_]]
 
-    #X is a 2d array-like object. must have datetime,
-    #site_code, var, and val columns. Basically, MacroSheds format without the ms_status
-    #and ms_interp columns. if X was generated by ms_cast_and_reflag, you're good to go.
+            if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
 
-    #X will be sorted ascendingly by site_code, var, and then datetime. If
-    #   return_detlims = TRUE and you'll be using the output to establish
-    #   uncertainty, be sure that X is already sorted in this way, or detlims
-    #   won't line up with their corresponding data values.
-    #   If X was generated by ms_cast_and_reflag, you're good to go.
+            #forward rolling join to start_date; CASE 2
+            still_missing <- is.na(out)
+            if(any(still_missing)){
 
-    if(! write_detlim_file && ! return_detlims){
-        stop('write_detlim_file and return_detlims both FALSE. nothing to do.')
-    }
+                out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                            on = c(var = 'var',
+                                                   start_date = 'datetime'),
+                                            roll = Inf, rollends = c(TRUE, FALSE)][[which_]]
+            }
 
-    if(write_detlim_file && any(c(is.null(prodname_ms), is.null(network), is.null(domain)))){
-        stop('prodname_ms, network, and domain must be supplied if write_detlim_file is TRUE')
-    }
+            #backward rolling join to end_date; CASE 2
+            still_missing <- is.na(out)
+            if(any(still_missing)){
 
-    variables <- unique(X$var)
+                out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                            on = c(var = 'var',
+                                                   start_date = 'datetime'),
+                                            roll = -Inf, rollends = c(FALSE, TRUE)][[which_]]
+            }
 
-    detlim <- lapply(variables, function(v) identify_series_detlim(pull(X[X$var == v, 'val'])))
-    names(detlim) <- variables
-    detlim <- detlim[! sapply(detlim, is.null)]
-    detlim <- tibble(var = names(detlim),
-                     detlim = unlist(detlim, use.names = FALSE))
+        } else { #CASE 1 with no dates specified
 
-    if(write_detlim_file){
+            if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
-        write_detection_limit(detlim,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms)
-    }
-
-    if(return_detlims){
-        return(detlim)
-    }
-}
-
-apply_detection_limit_t <- function(X,
-                                    network,
-                                    domain,
-                                    prodname_ms,
-                                    ignore_pred = FALSE){
-
-    #This function relies on stored data --
-    #automatically reads from data/<network>/<domain>/detection_limits.json.
-
-    #X is a 2d array-like object. must have datetime,
-    #   site_code, var, and val columns. Basically, MacroSheds format without the ms_status
-    #and ms_interp columns. if X was generated by ms_cast_and_reflag,
-    #   you should be good to go.
-    #ignore_pred: logical; set to TRUE if detection limits should be retrieved
-    #   from the supplied prodname_ms directly, rather than its precursor.
-
-    #Attempting to apply detection
-    #limits to a variable for which detection limits are not known (not present
-    #in detection_limits.json) results in error. Superfluous variable entries in
-    #detection_limits.json are ignored.
-
-    if(nrow(X) == 0){
-        return(X)
-    }
-
-    X <- as_tibble(X) %>%
-        arrange(site_code, var, datetime)
-
-    if(ignore_pred &&
-       (length(prodname_ms) > 1 || ! is_derived_product(prodname_ms))){
-        stop('If ignoring precursors, a single derived prodname_ms must be supplied')
-    }
-
-    if(length(prodname_ms) > 1 && any(is_derived_product(prodname_ms))){
-        #i can't think of a time when we'd need to supply multiple derived
-        #products and knit them, but if such a case exists feel free to
-        #amend this error checker
-        stop('Cannot knit multiple detlims when one or more of them is derived.')
-    }
-
-    if(length(prodname_ms) == 1 &&
-       is_derived_product(prodname_ms) &&
-       ! ignore_pred){
-
-        prodname_ms <- get_detlim_precursors(network = network,
-                                             domain = domain,
-                                             prodname_ms = prodname_ms)
-    }
-
-    if(length(prodname_ms) > 1) {
-        detlim <- knit_det_limits(network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms)
-    } else {
-        detlim <- read_detection_limit(network = network,
-                                       domain = domain,
-                                       prodname_ms = prodname_ms)
-    }
-
-    if(is_ms_err(detlim)){
-        stop('problem reading detection limits from file')
-    }
-
-    variables <- unique(X$var)
-
-    for(v in variables){
-
-        if(! v %in% detlim$var){
-            #might need to assign NAs for unknown detlims in identify_detection_limit_t
-            stop(glue('Missing detection limits for var: {v}', v = v))
+            out <- d %>%
+                left_join(dlsub, by = 'var') %>%
+                pull(!!which_)
         }
+    }
 
-        detlim_var <- detlim[detlim$var == v, 'detlim']
+    #CASES 3-4
+    still_missing <- is.na(out)
+    if(any(still_missing)){
 
-        if(length(detlim_var) != 1){
-            stop(glue('incorrect detlim length (!= 1) for var: {v}', v = v))
+        dlsub <- filter(half_detlims_all, got_domain & ! got_prodcode_at_domain)
+        if(nrow(dlsub)){
+
+            if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
+
+                dlsub <- dlsub %>%
+                    mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
+                           end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
+                    arrange(start_date, end_date) %>%
+                    as.data.table()
+
+                #date interval join; CASE 3:
+                #join d rows to dlsub if d's datetime falls within the covered range
+                out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                            on = c("start_date<=datetime",
+                                                   "end_date>=datetime",
+                                                   "var==var")][[which_]]
+
+                if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
+
+                #forward rolling join to start_date; CASE 4
+                still_missing <- is.na(out)
+                if(any(still_missing)){
+
+                    out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                on = c(var = 'var',
+                                                       start_date = 'datetime'),
+                                                roll = Inf, rollends = c(TRUE, FALSE)][[which_]]
+                }
+
+                #backward rolling join to end_date; CASE 4
+                still_missing <- is.na(out)
+                if(any(still_missing)){
+
+                    out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
+                                                on = c(var = 'var',
+                                                       start_date = 'datetime'),
+                                                roll = -Inf, rollends = c(FALSE, TRUE)][[which_]]
+                }
+
+            } else { #CASE 3 with no dates specified
+
+                dlsub <- dlsub %>%
+                    group_by(var) %>%
+                    summarize(!!sym(which_) := median(!!sym(which_)),
+                              .groups = 'drop')
+
+                out_ <- d %>%
+                    left_join(dlsub, by = 'var') %>%
+                    pull(!!which_)
+
+                out[still_missing] <- out_[still_missing]
+            }
         }
-
-        var_inds <- X$var == v
-        xv <- X$val[var_inds]
-
-        detlim_enforce_inds <- sw(! is.na(xv) & ! xv == 0 & abs(xv) < detlim_var)
-        xv[detlim_enforce_inds] <- detlim_var * sign(xv[detlim_enforce_inds])
-        X$val[var_inds] <- xv
     }
 
-    return(X)
+    #CASEs 4-5: fill in remaining blanks using median (hdetlim) or minimum (precision)
+    #across all reported values
+    still_missing <- is.na(out)
+    ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
+    out[still_missing] <- pull(unknown_detlim_prec_lookup[ref_inds, which_])
+
+    #CASE 6: fill in still remaining blanks with 0 (detlim) or infinity (precision)
+    out[is.na(out)] <- data.table::fifelse(which_ == 'hdetlim', 0, -Inf)
+
+    #convert precision to uncertainty
+    if(which_ == 'precision') out <- 10^-out
+
+    return(out)
 }
 
-read_detection_limit <- function(network, domain, prodname_ms){
+qc_hdetlim_and_uncert <- function(d, prodname_ms){
 
-    detlims <- glue('data/{n}/{d}/detection_limits.json',
-                    n = network,
-                    d = domain) %>%
-        readr::read_file() %>%
-        jsonlite::fromJSON()
+    #d: a tibble in MacroSheds format
 
-    detlims_prod <- detlims[[prodname_ms]]
+    #returns the same tibble, with quality control, 1/2 detection limit inserted
+    #for any instance of ms_status == 2, any ms_status == 2 set back to 1,
+    #and uncertainty attached to the val column
 
-    return(detlims_prod)
-}
+    d <- ms_check_range(d)
 
-write_detection_limit <- function(detlim, network, domain, prodname_ms){
+    bdl_inds <- d$ms_status == 2
+    d$val[bdl_inds] <- get_hdetlim_or_uncert(d[bdl_inds, ],
+                                             detlims = domain_detection_limits,
+                                             prodname_ms = prodname_ms,
+                                             which_ = 'hdetlim')
+    d$ms_status[d$ms_status == 2] <- 1
 
-    detlims_file <- glue('data/{n}/{d}/detection_limits.json',
-                         n = network,
-                         d = domain)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
 
-    if(file.exists(detlims_file)){
-
-        detlim_stored <- jsonlite::fromJSON(readr::read_file(detlims_file))
-        detlim_stored[[prodname_ms]] <- detlim
-
-    } else {
-        detlim_stored <- list(placeholder = detlim)
-        names(detlim_stored) <- prodname_ms
-    }
-
-    readr::write_file(jsonlite::toJSON(detlim_stored), detlims_file)
+    return(d)
 }
 
 rle2 <- function(x){#, return_list = FALSE){
@@ -8929,25 +8619,6 @@ get_gee_standard <- function(network,
     return(fin)
 }
 
-carry_uncertainty <- function(d, network, domain, prodname_ms, ignore_arrange = FALSE){
-
-    # Filter out any rows where vals are outside realistic  range, defined
-    # in variables sheet
-    d <- ms_check_range(d)
-
-    u <- identify_detection_limit_t(d,
-                                    network = network,
-                                    domain = domain,
-                                    prodname_ms = prodname_ms,
-                                    return_detlims = TRUE,
-                                    ignore_arrange = ignore_arrange)
-
-    u <- detection_limit_as_uncertainty(d, u)
-    errors(d$val) <- u
-
-    return(d)
-}
-
 err_df_to_matrix <- function(df){
 
     if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
@@ -9068,20 +8739,6 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
     write_feather(final, final_path)
 
     #return()
-}
-
-detection_limit_as_uncertainty <- function(d, detlim){
-
-    #d: a dataframe in MacroSheds format
-    #detlim: a dataframe with var and detlim columns (returned by identify_detection_limit_t)
-
-    #the name of this function is a bit of a misnomer now. kept for compatibility.
-    #really, it's just returning a vector of detection limits corresponding to the
-    #rows (variables) of d.
-
-    uncert <- detlim$detlim[match(d$var, detlim$var)]
-
-    return(uncert)
 }
 
 err_df_to_matrix <- function(df){
@@ -9243,11 +8900,11 @@ load_config_datasets <- function(from_where){
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
-        
+
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
-            col_types = 'cccnccc'
+            col_types = 'ccccnnnnccDDl'
         ))
 
     } else if(from_where == 'local'){
@@ -9291,6 +8948,10 @@ load_config_datasets <- function(from_where){
 
     assign('univ_products',
            univ_products,
+           pos = .GlobalEnv)
+
+    assign('domain_detection_limits',
+           domain_detection_limits,
            pos = .GlobalEnv)
 }
 
@@ -9705,14 +9366,9 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                                       domain = domain,
                                       prodname_ms = prodname_ms)
 
-        d <- carry_uncertainty(d,
-                               network = network,
-                               domain = domain,
-                               prodname_ms = prodname_ms)
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-        d <- synchronize_timestep(d) #set to '15 min' when we have server
-
-        d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred=TRUE)
+        d <- synchronize_timestep(d)
 
         if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
                              n = network,
@@ -9977,6 +9633,67 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
     }
 }
 
+prepare_variable_catalog_for_figshare <- function(outfile){
+
+    #prepare var data catalog files for macrosheds package
+    var_cat_files <- list.files('../portal/data/general/catalog_files/indiv_variables',
+                                full.names = TRUE)
+
+    var_cat <- map_dfr(var_cat_files,
+                       function(x){
+                           var_cat_var = str_match(x, '([^/]+)\\.csv$')[, 2]
+                           x = read_csv(x, col_types = 'cccccnTTc')
+                           x$variable_code = var_cat_var
+                           return(x)
+                       }) %>%
+        left_join(select(site_data, domain, pretty_domain, network, pretty_network) %>%
+                      distinct(domain, network, .keep_all = TRUE),
+                  by = c(Network = 'pretty_network',
+                         Domain = 'pretty_domain')) %>%
+        left_join(select(ms_vars, variable_code, variable_name) %>%
+                      distinct(),
+                         by = 'variable_code') %>%
+        select(variable_code, variable_name,
+               chem_category = ChemCategory, unit = Unit,
+               network, domain, site_code = SiteCode, observations = Observations,
+               first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
+               mean_obs_per_day = MeanObsPerDay) %>%
+        mutate(mean_obs_per_day = as.numeric(mean_obs_per_day))
+
+    # #prepare site data catalog files for macrosheds package
+    # site_cat_files <- list.files('../portal/data/general/catalog_files/indiv_sites/',
+    #                              full.names = TRUE)
+    #
+    # site_cat <- map_dfr(site_cat_files,
+    #                     function(x){
+    #                         site_cat_site = str_match(x, '([^/]+)\\.csv$')[, 2]
+    #                         x = read_csv(x, col_types = 'ccccccccccc')
+    #                         x$site_code = site_cat_site
+    #                         return(x)
+    #                     }) %>%
+    #     site_cat %>%
+    #     mutate(site_code = gsub(Domain, '', site_code),
+    #            site_code = sub('^_*', '', site_code)) %>%
+    #     select(site_code, domain, network)
+    #
+    #
+    #     left_join(select(site_data, domain, network, site_code) %>%
+    #                   distinct(domain, network, site_code, .keep_all = TRUE),
+    #               by = 'site_code') %>%
+    #     select(network, domain, site_code = SiteCode, ####
+    #            chem_category = ChemCategory, unit = Unit, observations = Observations,
+    #            first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
+    #            mean_obs_per_day = MeanObsPerDay) %>%
+    #     mutate(observations = as.numeric(observations),
+    #            mean_obs_per_day = as.numeric(mean_obs_per_day),
+    #            percent_flagged = as.numeric(percent_flagged),
+    #            percent_imputed = as.numeric(percent_imputed),
+    #            first_record_utc = ymd_hms(first_record_utc),
+    #            last_record_utc = ymd_hms(last_record_utc))
+
+    write_csv(var_cat, outfile)
+}
+
 assemble_misc_docs_figshare <- function(where){
 
     docs_dir <- file.path(where, 'macrosheds_documentation')
@@ -10138,20 +9855,22 @@ prepare_for_figshare <- function(where, dataset_version){
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
 
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update those calls if you need to update figshare from windows'))
+    }
+
+    #prepare documentation files needed by the package
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
     prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
                                            fs_format = 'old')
+    prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
     file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
               overwrite = TRUE)
-
-    if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" calls below probably will not work on windows.',
-                   'investigate and update that call if necessary'))
-    }
 
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
@@ -10799,8 +10518,9 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
 
     other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
-                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'))
-    titlesE <- c('site_metadata', 'variable_metadata')
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'),
+                        metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
+    titlesE <- c('site_metadata', 'variable_metadata', 'variable_catalog')
 
     other_uploads <- c(other_uploadsA, other_uploadsB, other_uploadsC, other_uploadsD, other_uploadsE)
     titles <- c(titlesA, titlesB, titlesC, titlesD, titlesE)
@@ -10825,13 +10545,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
         }
 
-        if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-
         #if existing article, delete old version
         if(ut %in% existing_extras_deets$title){
 
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
+
+            if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
 
             figshare_delete_article_file(fs_id,
                                          file_id = fls[[1]]$id,
@@ -10842,6 +10562,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                 file = unname(uf),
                                 token = token)
 
+        # #obsolete for packagedata
         # figshare_add_articles_to_collection(collection_id = collection_id,
         #                                     article_ids = fs_id,
         #                                     token = token)
@@ -10850,9 +10571,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                  token = token)
     }
 
-
-    ### ONCE EVERYTHING IS PUBLIC, PUBLISH THE WHOLE COLLECTION (obsolete for packagedata)
-
+    # #obsolete for packagedata
     # figshare_publish_collection(collection_id = collection_id,
     #                             token = token)
 }
@@ -13096,6 +12815,8 @@ extract_ws_mean <- function(site_boundary, raster_path){
 
 ms_check_range <- function(d){
 
+    if(! nrow(d)) return(d)
+
     d_vars <- unique(d$var)
 
     for(c in 1:length(d_vars)){
@@ -13121,8 +12842,8 @@ ms_check_range <- function(d){
         }
     }
 
-    d <- d %>%
-        filter(!is.na(val))
+    d <- filter(d,
+                ! is.na(val) | ms_status == 2)
 }
 
 download_from_googledrive <- function(set_details, network, domain){
@@ -14235,6 +13956,209 @@ run_checks <- function(){
                   dv = paste(dupe_vars$variable_code,
                              collapse = ', ')))
     }
+}
+
+count_sigfigs <- function(x){
+
+    #x: numeric vector or character vector of numerals
+
+    # converts x to character, separates any digits to left and right of decimal.
+    #   computes number of sigfigs as digits to the left, not including
+    #   trailing zeros, plus digits to the right, not including leading zeros.
+
+    #this does not currently work for representations like "100.", 0.0100, 100.0, or '0123',
+    #   but it does get the job done for our purposes
+
+    options(scipen = 100)
+
+    x <- as.character(abs(as.numeric(x)))
+
+    legal_characters <- c('.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+    char_test <- sapply(x, function(z) all(str_split(z, '')[[1]] %in% legal_characters))
+    if(any(! char_test)){
+        stop('some characters are not numeric or decimal point')
+    }
+
+    tokens <- str_split(x, '\\.')
+
+    if(any(sapply(tokens, function(z) length(z) > 2))){
+        stop('got some wonky numbers here. multiple decimals?')
+    }
+
+    n_sigfigs <- sapply(tokens, function(z)
+    {
+        has_decimal <- length(z) == 2
+        if(has_decimal){
+
+            has_sigfigs_after_decimal <- any(str_split(z[2], '')[[1]] != '0')
+            has_sigfigs_before_decimal <- any(str_split(z[1], '')[[1]] != '0')
+
+            if(has_sigfigs_before_decimal && has_sigfigs_after_decimal){
+                tokens_dec <- nchar(z[2])
+                tokens_whole <- nchar(z[1])
+            } else if(has_sigfigs_after_decimal){
+                tokens_dec <- nchar(sub('^0+', '', z[2]))
+                tokens_whole <- 0
+            } else {
+                tokens_dec <- 0
+                tokens_whole <- 0
+            }
+
+        } else {
+            tokens_whole <- nchar(sub('0+$', '', z[1]))
+            tokens_dec <- 0
+        }
+
+        tokens_whole + tokens_dec
+    })
+
+    options(scipen = 0)
+
+    return(n_sigfigs)
+}
+
+get_numeric_precision <- function(x){
+
+    #x: numeric vector or character vector of numerals
+
+    # determines numeric precision as the count of digits, or, for whole numbers,
+    #   the count of digits not including trailing zeros.
+
+    #WARNING: this does not currently work for representations like "100.", 0.0100, 100.0, or '0123',
+    #   but it does get the job done for our purposes
+
+    options(scipen = 100)
+
+    x <- as.character(abs(as.numeric(x)))
+
+    legal_characters <- c('.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+    char_test <- sapply(x, function(z) all(str_split(z, '')[[1]] %in% legal_characters))
+    if(any(! char_test)){
+        stop('some characters are not numeric or decimal point')
+    }
+
+    precision <- sapply(x, function(z)
+    {
+        has_decimal <- grepl('\\.', z)
+        if(has_decimal){
+            if(substr(z, 1, 1) == '0'){
+                prec <- nchar(z) - 2
+            } else {
+                prec <- nchar(z) - 1
+            }
+        } else {
+            if(all(str_split(z, '')[[1]] == '0')){
+                prec <- 0
+            } else {
+                prec <- -nchar(str_match(z, '(0*)$')[, 2]) - 1
+            }
+        }
+    }, USE.NAMES = FALSE)
+
+    options(scipen = 0)
+
+    return(precision)
+}
+
+standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
+
+    #dls: detection limits, read from gdrive
+    #vs: variables, read from gdrive,
+    #update_on_gdrive: logical. should the domain_detection_limits file
+    #   on gdrive be updated?
+
+    #fix units, get sigfigs, get canonical units
+    dls <- dls %>%
+        mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
+               sigfigs = count_sigfigs(detection_limit_original)) %>%
+               # start_date = dmy(start_date),
+               # end_date = dmy(end_date)) %>%
+        select(-unit_converted) %>%
+        left_join(select(vs, variable_code, unit_converted = unit),
+                  by = c(variable_original = 'variable_code'))
+
+    core_ <- function(dl_set, keep_molecular = NULL){
+
+        #prepare detlim data to be used with ms_conversions
+        dls_ms_format <- dl_set %>%
+            mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
+                   site_code = 'a',
+                   var = paste0('GN_', variable_original),
+                   val = detection_limit_original) %>%
+            select(datetime, site_code, var, val)
+
+        from_units <- dl_set$unit_original
+        names(from_units) <- dl_set$variable_original
+        to_units <- dl_set$unit_converted
+        names(to_units) <- dl_set$variable_original
+
+        #convert detlims to canonical units
+        dls_conv <- ms_conversions(d = dls_ms_format,
+                                   convert_units_from = from_units,
+                                   convert_units_to = to_units,
+                                   keep_molecular = keep_molecular,
+                                   row_wise = TRUE)
+
+        #round to original sigfigs
+        dl_set$detection_limit_converted <- mapply(function(a, b) signif(a, b),
+                                                   a = dls_conv$val,
+                                                   b = dl_set$sigfigs)
+
+        return(dl_set)
+    }
+
+    normally_converted_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
+                                      'NO3_NO2')
+    normally_converted_to <- c('NO3_N', 'SO4_S', 'PO4_P', 'SiO2_Si', 'SiO3_Si', 'NH4_N', 'NH3_N',
+                               'NO3_NO2_N')
+
+    #convert detlims to MS canonical units
+    dlout_a <- core_(filter(dls, ! added_programmatically))
+
+    #update variable names for molecules that have been converted
+    dlout_a$variable_converted <- dlout_a$variable_original
+    varcode_change_inds <- dlout_a$variable_converted %in% normally_converted_molecules
+    varcodes_to_change <- dlout_a$variable_converted[varcode_change_inds]
+    new_varcodes <- normally_converted_to[match(varcodes_to_change, normally_converted_molecules)]
+    dlout_a$variable_converted[varcode_change_inds] <- new_varcodes
+
+    #also standardize detlims for the molecules that we usually convert according to
+    #the masses of their primary constituents, since some of these molecules
+    #are allowed to be carried through the ms processing pipeline as-is
+    dlout_b <- filter(dls,
+                      variable_original %in% normally_converted_molecules,
+                      ! added_programmatically) %>%
+        core_(keep_molecular = normally_converted_molecules) %>%
+        mutate(added_programmatically = TRUE,
+               variable_converted = variable_original)
+
+    dls <- bind_rows(dlout_a, dlout_b) %>%
+        mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
+        select(domain, prodcode, variable_converted,
+               variable_original, detection_limit_converted,
+               detection_limit_original, precision, sigfigs, unit_converted,
+               unit_original, start_date, end_date, added_programmatically)
+
+    dls <- dls[! duplicated(dls), ]
+
+    if(any(duplicated(select(dls, -added_programmatically)))){
+        stop(paste('we have generated detection limits for a molecule-as-atom',
+                   'where a domain has already reported the same. implement',
+                   'filtering of our estimate in this case'))
+    }
+
+    if(update_on_gdrive){
+        catch <- expo_backoff(
+            expr = {
+                sm(googlesheets4::write_sheet(data = dls,
+                                              ss = conf$dl_sheet,
+                                              sheet = 1))
+            },
+            max_attempts = 4
+        )
+    }
+
+    return(dls)
 }
 
 legal_details_scrape <- function(dataset_version){

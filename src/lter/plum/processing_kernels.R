@@ -625,15 +625,6 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
 
     }
 
-     #d <- carry_uncertainty(d,
-     #                       network = network,
-     #                       domain = domain,
-     #                       prodname_ms = prodname_ms)
-
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-
     return(d)
 }
 
@@ -763,11 +754,6 @@ process_1_393 <-  function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-
-
-    # d <- synchronize_timestep(d)
-    #
-    # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     return(d)
 }
@@ -1014,11 +1000,11 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer', 
+        filter(SampleType %in% c('Daily', 'TwoDayComposite', 'Volunteer',
                                  'Composite-timeweighted_6hours'))
-    
-    # Notes column contains infomation specific to varibles, creatng 
-    # variable flags from Notes column 
+
+    # Notes column contains infomation specific to varibles, creatng
+    # variable flags from Notes column
     d <- d %>%
         mutate(NO3_flag = ifelse(grepl('9', Notes), 1, 0))
 
@@ -1211,18 +1197,9 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(X = d,
-                                 network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms,
-                                 ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1304,14 +1281,9 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1362,14 +1334,9 @@ process_2_ms003 <- function(network, domain, prodname_ms){
         d <- rbind(d, site_full)
     }
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms, ignore_pred = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1446,8 +1413,7 @@ process_2_ms005 <- function(network, domain, prodname_ms){
 
         flux <- sw(calc_inst_flux(chemprod = schem_prodname_ms,
                                   qprod = disch_prodname_ms,
-                                  site_code = s,
-                                  ignore_pred = TRUE))
+                                  site_code = s))
 
         if(!is.null(flux)) {
 

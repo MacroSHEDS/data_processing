@@ -596,33 +596,6 @@ process_1_DP1.20053 <- function(network, domain, prodname_ms, site_code,
     out_sub[is.na(out_sub)] <- NA
 
     return(out_sub)
-
-    # d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-    #                      datetime_cols = c(startDateTime = '%Y-%m-%d %H:%M:%S'),
-    #                      datetime_tz = 'UTC',
-    #                      site_code_col = 'siteID',
-    #                      data_cols = c(surfWaterTempMean = 'temp'),
-    #                      data_col_pattern = '#V#',
-    #                      is_sensor = TRUE,
-    #                      summary_flagcols = 'finalQF')
-    #
-    # d <- ms_cast_and_reflag(d,
-    #                         summary_flags_clean = list(finalQF = 0),
-    #                         summary_flags_dirty = list(fieldCode = 1),
-    #                         varflag_col_pattern = NA)
-    # #
-    # # # d <- ms_conversions(d, )
-    # #
-    # # d <- carry_uncertainty(d,
-    # #                        network = network,
-    # #                        domain = domain,
-    # #                        prodname_ms = prodname_ms)
-    # #
-    # # d <- synchronize_timestep(d)
-    # #
-    # # d <- apply_detection_limit_t(d, network, domain, prodname_ms)
-    #
-    # return(d)
 }
 
 #air_pressure: STATUS=PAUSED
