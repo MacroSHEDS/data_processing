@@ -163,14 +163,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     d$val <- d$val * 28.316846592 # converting to lps
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     unlink(temp_dir, recursive = TRUE)
 
@@ -267,14 +262,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_conversions(d, convert_units_from = c('SO4' = 'mg/l'), convert_units_to = c('SO4' = 'mg/l')) # going from mg/l to mg/l as S
 
-    d <- carry_uncertainty(d,
-                           network = network,
-                           domain = domain,
-                           prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
-
-    d <- apply_detection_limit_t(d, network, domain, prodname_ms)
 
     unlink(temp_dir, recursive = TRUE)
 
