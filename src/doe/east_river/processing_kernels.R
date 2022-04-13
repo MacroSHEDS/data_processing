@@ -528,7 +528,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d <- read.delim(rawfile, sep = ',') %>%
-        mutate(site = 'KCOMKRET2')
+        mutate(site = 'KCOMKRET2') %>%
+        as_tibble()
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -640,7 +641,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                q = `Q m3/s`) %>%
         mutate(site = 'PH')
 
-    all_sites <- rbind(all_sites, one_site)
+    all_sites <- rbind(all_sites, one_site) %>%
+        as_tibble()
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
@@ -786,7 +788,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
-               !is.na(var))
+               !is.na(var)) %>%
+        as_tibble()
     
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -977,7 +980,8 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
         mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
         mutate(val = as.numeric(val),
                ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status)
+        select(datetime, site_code, val, var, ms_status) %>%
+        as_tibble()
 
     # look <- d %>%
     #     group_by(datetime, site_code, var) %>%
@@ -1128,7 +1132,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
-               !is.na(var))
+               !is.na(var)) %>%
+        as_tibble()
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -1280,7 +1285,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
-               !is.na(var))
+               !is.na(var)) %>%
+        as_tibble()
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -1423,7 +1429,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
-               !is.na(var))
+               !is.na(var)) %>%
+        as_tibble()
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'

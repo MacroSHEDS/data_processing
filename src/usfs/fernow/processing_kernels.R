@@ -256,7 +256,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%d/%Y'),
+                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),

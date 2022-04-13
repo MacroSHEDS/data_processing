@@ -206,9 +206,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
 
         # Convert from cm/s to liters/s
         d <- d %>%
@@ -227,9 +225,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
     }
     return(d)
 }
@@ -260,9 +256,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
 
         # Convert from cm/s to liters/s
         d <- d %>%
@@ -281,9 +275,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                variable_flags_to_drop = NA,
-                                variable_flags_clean = NA)
+                                varflag_col_pattern = NA)
     }
 
     return(d)
