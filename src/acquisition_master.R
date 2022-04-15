@@ -247,6 +247,7 @@ domain_detection_limits <- standardize_detection_limits(dls = domain_detection_l
                                                         update_on_gdrive = TRUE)
 
 unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
+superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
 
 run_checks()
 
