@@ -14044,6 +14044,10 @@ run_checks <- function(){
                   dv = paste(dupe_vars$variable_code,
                              collapse = ', ')))
     }
+
+    if(any(domain_detection_limits$precision == 0)){
+        stop('precisions of 0 detected in domain_detection_limits')
+    }
 }
 
 count_sigfigs <- function(x){
