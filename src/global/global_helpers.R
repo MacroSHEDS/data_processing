@@ -5836,12 +5836,10 @@ shortcut_idw <- function(encompassing_dem,
     d_status <- data_values$ms_status
     d_interp <- data_values$ms_interp
     d_dt <- data_values$datetime
-    d_pfx <- data_values$prefix
+    if('prefix' %in% colnames(data_values)) d_pfx <- data_values$prefix
+
     data_matrix <- select(data_values,
-                          -ms_status,
-                          -datetime,
-                          -ms_interp,
-                          -prefix) %>%
+                          -any_of(c('ms_status', 'datetime', 'ms_interp', 'prefix'))) %>%
         err_df_to_matrix()
 
     #clean dem and get elevation values
@@ -6039,6 +6037,8 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #   This should only be set to TRUE for one iteration of the calling loop,
     #   or else time will be wasted rewriting the files.
     #   REMOVED; OBSOLETE
+
+    precip_values$prefix <- NULL
 
     precip_quickref <- read_precip_quickref(network = network,
                                             domain = domain,
@@ -6499,6 +6499,15 @@ populate_implicit_NAs <- function(d,
     return(complete_d)
 }
 
+get_superunknowns <- function(special_vars){
+
+    non_ws_chars <- filter(ms_vars, variable_type != 'ws_char') %>% pull(variable_code)
+    superunknowns <- non_ws_chars[! non_ws_chars %in% unknown_detlim_prec_lookup$var]
+    superunknowns <- superunknowns[! superunknowns %in% special_vars]
+
+    return(superunknowns)
+}
+
 ms_linear_interpolate <- function(d, interval){
 
     #d: a ms tibble with no ms_interp column (this will be created)
@@ -6574,22 +6583,36 @@ ms_linear_interpolate <- function(d, interval){
 
                 #unless not enough data in group; then do nothing
             } else val
-        ) %>%
-        mutate(
-            err = errors(val), #extract error from data vals
-            err = case_when(
-                err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
-                TRUE ~ err),
-            val = if(sum(! is.na(err)) > 0){
-                set_errors(val, #and then carry error to interped rows
-                           imputeTS::na_locf(err,
-                                             na_remaining = 'rev'))
-            } else {
-                set_errors(val, #unless not enough error to interp
-                           0)
-            }) %>%
+        )
+
+    err <- errors(d_interp$val) #extract error from data vals
+    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    if(sum(! is.na(err)) > 0){
+        #and then carry error to interped rows
+        errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
+    } else {
+        errors(d_interp$val) <- 0 # #unless not enough error to interp
+    }
+
+    d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
+
+        # mutate(
+        #     err = errors(val), #extract error from data vals
+        #     err = case_when(
+        #         err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
+        #         TRUE ~ err),
+        #     val = if(sum(! is.na(err)) > 0){
+        #         set_errors(val, #and then carry error to interped rows
+        #                    imputeTS::na_locf(err,
+        #                                      na_remaining = 'rev'))
+        #     } else {
+        #         set_errors(val, #unless not enough error to interp
+        #                    0)
+        #     }) %>%
+        # select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        # arrange(site_code, var, datetime)
 
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
@@ -8228,19 +8251,18 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
     out[still_missing] <- pull(unknown_detlim_prec_lookup[ref_inds, which_])
 
-    #CASE 6: fill in still remaining blanks with 0 (detlim and precision of certain variables)
-    #   or infinity (precision of obscure solutes)
-    out[is.na(out)] <- data.table::fifelse(which_ == 'hdetlim', 0, -Inf)
+    #CASE 6: fill in still remaining blanks with 0 (Inf becomes 0 below)
+    out[is.na(out)] <- data.table::fifelse(which_ == 'hdetlim', 0, Inf)
 
-    if(which_ == 'precision'){
-
-        #special variables get 0 uncertainty, instead of Inf.  Beyond Q and P,
-        #   this would be kind of arbitrary, but we could add specCond, turbidity,
-        #   pH, alkalinity, and suspSed. these rarely or never have reported detlims.
-        special_vars <- c('discharge', 'precipitation', 'temperature')
-        special_inds <- is.infinite(out) & d$var %in% special_vars
-        out[special_inds] <- Inf #10^-Inf is 0
-    }
+    # if(which_ == 'precision'){
+    #
+    #     #special variables get 0 uncertainty, instead of Inf.  Beyond Q and P,
+    #     #   this would be kind of arbitrary, but we could add specCond, turbidity,
+    #     #   pH, alkalinity, and suspSed. these rarely or never have reported detlims.
+    #     special_vars <- c('discharge', 'precipitation', 'temperature')
+    #     special_inds <- is.infinite(out) & d$var %in% special_vars
+    #     out[special_inds] <- Inf #10^-Inf is 0
+    # }
 
     #convert precision to uncertainty
     if(which_ == 'precision') out <- 10^-out
@@ -9432,6 +9454,47 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
     }
 }
 
+insert_unknown_uncertainties <- function(path){
+
+    #loads all feather files in path. replaces val_err with NA for superunknown vars.
+
+    paths <- list.files(path = path,
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- paths[! grepl('/biplot', paths)]
+
+    for(p in paths){
+
+        if(! 'var' %in% names(feather::feather_metadata(p)$types)) next
+        d <- read_feather(p)
+        d$val_err[drop_var_prefix(d$var) %in% superunknowns] <- NA
+        write_feather(d, p)
+    }
+}
+
+NaN_to_NA <- function(path){
+
+    #loads all feather files in path. replaces NaN in val or val_err column with NA
+
+    paths <- list.files(path = path,
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- paths[! grepl('/biplot', paths)]
+
+    for(p in paths){
+
+        if(! 'var' %in% names(feather::feather_metadata(p)$types)) next
+        d <- read_feather(p)
+        d$val[is.na(d$val)] <- NA
+        d$val_err[is.na(d$val_err)] <- NA
+        write_feather(d, p)
+    }
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -9500,6 +9563,13 @@ postprocess_entire_dataset <- function(site_data,
                          dataset_version),
                     logger = logger_module)
     generate_output_dataset(vsn = dataset_version)
+
+    log_with_indent('replacing superunknown uncertainties and NaNs with NA',
+                    logger = logger_module)
+    insert_unknown_uncertainties(path = paste0('macrosheds_dataset_v', dataset_version))
+    insert_unknown_uncertainties(path = '../portal/data')
+    NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
+    NaN_to_NA(path = '../portal/data')
 
     log_with_indent('cataloging held data', logger = logger_module)
     catalog_held_data(site_data = site_data,
@@ -9666,7 +9736,7 @@ prepare_variable_catalog_for_figshare <- function(outfile){
                          Domain = 'pretty_domain')) %>%
         left_join(select(ms_vars, variable_code, variable_name) %>%
                       distinct(),
-                         by = 'variable_code') %>%
+                  by = 'variable_code') %>%
         select(variable_code, variable_name,
                chem_category = ChemCategory, unit = Unit,
                network, domain, site_code = SiteCode, observations = Observations,
@@ -10768,9 +10838,6 @@ generate_output_dataset <- function(vsn){
 
     #add notes
     warning("Don't forget to add notes! (and eventually generate changelog automatically)")
-
-    #zip it up
-    #...
 }
 
 thin_portal_data <- function(network_domain, thin_interval){
