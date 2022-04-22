@@ -239,6 +239,14 @@ if(ms_instance$use_ms_error_handling){
 #puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
+
+domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
+                                                        vs = ms_vars,
+                                                        update_on_gdrive = TRUE)
+
+unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
+superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
+
 run_checks()
 
 site_data <- filter(site_data,
@@ -253,9 +261,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 25
+# dmnrow = 4
 # print(network_domain, n=50)
-# for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -296,15 +303,15 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
-    # sw(ms_delineate(network = network,
-    #                 domain = domain,
-    #                 dev_machine_status = ms_instance$machine_status,
-    #                 verbose = TRUE))
-    # ms_derive(network = network,
-    #           # prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain)
-    # ms_general(network = network,
-    #            domain = domain)
+    sw(ms_delineate(network = network,
+                    domain = domain,
+                    dev_machine_status = ms_instance$machine_status,
+                    verbose = TRUE))
+    ms_derive(network = network,
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain)
+    ms_general(network = network,
+               domain = domain)
 
     retain_ms_globals(ms_globals)
 }
