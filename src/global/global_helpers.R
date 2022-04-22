@@ -9520,9 +9520,6 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
 
-    log_with_indent('determining which domains have Q', logger = logger_module)
-    list_domains_with_discharge(site_data = site_data)
-
     if(! is.na(thin_portal_data_to_interval)){
         log_with_indent('thinning portal datasets to 1 day',
                         logger = logger_module)
@@ -9574,6 +9571,9 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('cataloging held data', logger = logger_module)
     catalog_held_data(site_data = site_data,
                       network_domain = network_domain)
+
+    log_with_indent('determining which domains have Q', logger = logger_module)
+    list_domains_with_discharge(site_data = site_data)
 
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
@@ -12830,7 +12830,7 @@ load_spatial_data <- function(){
         ) %>% invisible()
 
         print(paste0('Unzipping ', needed_sets$name[i]))
-        
+
         if(needed_sets$name[i] == 'phenology.zip'){
             if(Sys.info()['sysname'] %in% c('Linux', 'linux')){
                 system(paste0('unzip ', getwd(), '/', zip_path, ' -d ', getwd(), '/data/spatial/phenology'))
