@@ -8996,12 +8996,28 @@ write_portal_config_datasets <- function(){
     #production. also, nice to report download sizes this way and avoid some
     #real-time calculation.
 
+    disturbance_record <- sm(googlesheets4::read_sheet(
+        conf$disturbance_record_gsheet,
+        na = c('', 'NA'),
+        col_types = 'c'
+    ))
+
+    site_doi_license <- sm(googlesheets4::read_sheet(
+        conf$site_doi_license_gsheet,
+        skip = 5,
+        na = c('', 'NA'),
+        col_types = 'c'
+    ))
+
     dir.create('../portal/data/general',
                showWarnings = FALSE,
                recursive = TRUE)
 
-    write_csv(ms_vars, '../portal/data/general/variables.csv')
     write_csv(site_data, '../portal/data/general/site_data.csv')
+    write_csv(ms_vars, '../portal/data/general/variables.csv')
+    # write_csv(univ_products, '../portal/data/general/universal_products.csv')
+    write_csv(disturbance_record, '../portal/data/general/disturbance_record.csv')
+    write_csv(site_doi_license, '../portal/data/general/site_doi_license.csv')
 }
 
 compute_download_filesizes <- function(){
