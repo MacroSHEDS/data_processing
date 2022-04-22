@@ -1733,7 +1733,7 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
   }
 }
 
-#daymet: STATUS=PENDING
+#daymet: STATUS=READY
 #. handle_errors
 process_3_ms824 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
