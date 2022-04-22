@@ -3452,11 +3452,10 @@ delineate_watershed_apriori <- function(lat,
     dir.create(path = inspection_dir,
                showWarnings = FALSE)
 
-    #Old files were making it though to the next site and show old boundaries
-    dir_clean <- list.files(inspection_dir)
+    old_files <- list.files(inspection_dir)
 
-    if(length(dir_clean) > 0) {
-        file.remove(paste(inspection_dir, dir_clean, sep = '/'))
+    if(length(old_files) > 0){
+        file.remove(file.path(inspection_dir, old_files))
     }
 
     proj <- choose_projection(lat = lat,
@@ -9500,7 +9499,8 @@ postprocess_entire_dataset <- function(site_data,
                                        dataset_version,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
-                                       generate_csv_for_each_product){
+                                       generate_csv_for_each_product,
+                                       push_new_version_to_figshare = FALSE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
@@ -9557,7 +9557,7 @@ postprocess_entire_dataset <- function(site_data,
 
     log_with_indent('adding legal metadata to each domain directory',
                     logger = logger_module)
-    legal_details_scrape(dataset_version = dataset_version)
+    # legal_details_scrape(dataset_version = dataset_version)
 
     log_with_indent(glue('Generating output dataset v',
                          dataset_version),
@@ -9597,21 +9597,27 @@ postprocess_entire_dataset <- function(site_data,
     #                 logger = logger_module)
     # compute_download_filesizes()
 
-    log_with_indent(glue('Preparing dataset v{vv} for Figshare',
-                         vv = dataset_version),
-                    logger = logger_module)
-    fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
-    dir.create(fs_dir, showWarnings = FALSE)
-    prepare_for_figshare(where = fs_dir,
-                         dataset_version = dataset_version)
-    prepare_for_figshare_packageformat(where = fs_dir,
-                                       dataset_version = dataset_version)
+    if(push_new_version_to_figshare){
 
-    log_with_indent(glue('Uploading dataset v{vv} to Figshare',
-                         vv = dataset_version),
-                    logger = logger_module)
-    upload_dataset_to_figshare(dataset_version = dataset_version)
-    upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
+        message('Are you sure you want to modify our published dataset? ESC within 10 seconds if not.')
+        Sys.sleep(10)
+
+        log_with_indent(glue('Preparing dataset v{vv} for Figshare',
+                             vv = dataset_version),
+                        logger = logger_module)
+        fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
+        dir.create(fs_dir, showWarnings = FALSE)
+        prepare_for_figshare(where = fs_dir,
+                             dataset_version = dataset_version)
+        prepare_for_figshare_packageformat(where = fs_dir,
+                                           dataset_version = dataset_version)
+
+        log_with_indent(glue('Uploading dataset v{vv} to Figshare',
+                             vv = dataset_version),
+                        logger = logger_module)
+        upload_dataset_to_figshare(dataset_version = dataset_version)
+        upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
+    }
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -12097,6 +12103,11 @@ ms_complete_all_cases <- function(network_domain){
         d <- read_feather(p)
         sites <- unique(d$site_code)
         vars <- unique(d$var)
+
+        if(all(class(d$datetime) == 'Date')){
+            warning(paste('converting datetime column from date to datetime after reading', p))
+            d$datetime <- lubridate::as_datetime(d$datetime)
+        }
 
         dupes_present <- FALSE
         for(s in sites){
