@@ -265,7 +265,6 @@ dir.create('logs', showWarnings = FALSE)
 
 # dmnrow = 25
 # print(network_domain, n=50)
-# for(dmnrow in 1:nrow(network_domain)){
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -305,15 +304,17 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
-    sw(ms_delineate(network = network,
-                    domain = domain,
-                    dev_machine_status = ms_instance$machine_status,
-                    verbose = TRUE))
+    if(domain != 'mcmurdo'){
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        verbose = TRUE))
+    }
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
-    ms_general(network = network,
-               domain = domain)
+    # ms_general(network = network,
+    #            domain = domain)
 
     retain_ms_globals(ms_globals)
 }
@@ -326,7 +327,8 @@ postprocess_entire_dataset(site_data = site_data,
                            dataset_version = vsn,
                            thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
-                           generate_csv_for_each_product = FALSE)
+                           generate_csv_for_each_product = FALSE,
+                           push_new_version_to_figshare = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

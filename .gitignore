@@ -25,3 +25,5 @@ macrosheds_figshare_v*
 data_hbef_highres
 data/general/nhd_hr
 output/
+logs.bak/
+old_dataset_dirs.tar.gz
