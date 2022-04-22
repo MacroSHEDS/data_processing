@@ -1365,6 +1365,11 @@ rebuild_portal_data_before_postprocessing <- function(network_domain, backup = T
     }
 
     if(backup){
+
+        if(file.exists('../portal/data.bak')){
+            stop('../portal/data.bak already exists. do something with it before running this.')
+        }
+
         file.rename('../portal/data', '../portal/data.bak')
     }
 
