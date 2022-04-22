@@ -182,17 +182,33 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
 
     raw <- read.delim(rawfile, colClasses = 'character') %>%
         filter(X0CM != -9999)
+    
+    dif_date_time <- raw[grepl(paste0(month.abb, collapse = '|'), raw$DATE),]
+    og_date_time <- raw[!grepl(paste0(month.abb, collapse = '|'), raw$DATE),]
 
-    d <- ms_read_raw_csv(preprocessed_tibble = raw,
-                         datetime_cols = c(DATE = '%m/%d/%Y',
-                                           TIME = '%H:%M'),
-                         datetime_tz = 'US/Alaska',
-                         site_code_col = 'SITE',
-                         data_cols =  c('X0CM'= 'temp'),
-                         data_col_pattern = '#V#',
-                         is_sensor = TRUE,
-                         sampling_type = 'I')
+    og_date_time <- ms_read_raw_csv(preprocessed_tibble = og_date_time,
+                                    datetime_cols = c(DATE = '%m/%e/%Y',
+                                                      TIME = '%H:%M'),
+                                    datetime_tz = 'US/Alaska',
+                                    site_code_col = 'SITE',
+                                    data_cols =  c('X0CM'= 'temp'),
+                                    data_col_pattern = '#V#',
+                                    is_sensor = TRUE,
+                                    sampling_type = 'I')
+    
+    dif_date_time <- ms_read_raw_csv(preprocessed_tibble = dif_date_time,
+                                     datetime_cols = c(DATE = '%e-%b-%y',
+                                                       TIME = '%H:%M'),
+                                     datetime_tz = 'US/Alaska',
+                                     site_code_col = 'SITE',
+                                     data_cols =  c('X0CM'= 'temp'),
+                                     data_col_pattern = '#V#',
+                                     is_sensor = TRUE,
+                                     sampling_type = 'I')
 
+    d <- rbind(og_date_time, dif_date_time) %>%
+        arrange(site_code, datetime)
+    
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
     
