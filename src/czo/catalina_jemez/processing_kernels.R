@@ -292,7 +292,8 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(time = str_split_fixed(DateTime, ' ', n = Inf)[,2]) %>%
         mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
         mutate(date = str_split_fixed(DateTime, ' ', n = Inf)[,1]) %>%
-        mutate(site = 'Bigelow')
+        mutate(site = 'Bigelow') %>%
+        filter(DateTime != '')
 
     if(grepl('discharge', prodname_ms)){
 
@@ -558,6 +559,10 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                     s = site_code,
                     c = component)
     
+    # Could not identify units on isotopes
+    if(component == 'Isotopes_Stream_2006_2012.csv') {
+        return()
+    }
     d <- read.csv(rawfile, colClasses = 'character')
     
     col_names <- colnames(d)
