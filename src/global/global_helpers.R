@@ -12830,8 +12830,19 @@ load_spatial_data <- function(){
         ) %>% invisible()
 
         print(paste0('Unzipping ', needed_sets$name[i]))
-        unzip(zipfile = zip_path,
-              exdir = 'data/spatial')
+        
+        if(needed_sets$name[i] == 'phenology.zip'){
+            if(Sys.info()['sysname'] %in% c('Linux', 'linux')){
+                system(paste0('unzip ', getwd(), '/', zip_path, ' -d ', getwd(), '/data/spatial/phenology'))
+            } else {
+                loginfo(generate_ms_exception('Wow! This file is to big to unzip with R, use terminal to unzip'),
+                        logger = logger_module)
+                next
+            }
+        } else{
+            unzip(zipfile = zip_path,
+                  exdir = 'data/spatial')
+        }
 
         file_check <- list.files('data/spatial')
 
