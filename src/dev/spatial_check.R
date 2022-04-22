@@ -1,5 +1,5 @@
 #### bare_cover
-fils <- list.files('data/lter/hjandrews/ws_traits/bare_cover/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/bare_cover/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -11,7 +11,7 @@ raw_fils <- grep('raw', fils, value = TRUE)
 raw_data <- map_dfr(raw_fils, read_feather)
 
 #### bfi
-fils <- list.files('data/lter/hjandrews/ws_traits/bfi/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/bfi/', full.names = T)
 # sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(fils, read_feather)
 sum_data %>%
@@ -23,7 +23,7 @@ raw_fils <- grep('raw', fils, value = TRUE)
 raw_data <- map_dfr(raw_fils, read_feather)
 
 #### precip
-fils <- list.files('data/lter/hjandrews/ws_traits/cc_precip/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/cc_precip/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -43,7 +43,7 @@ look <- raw_data %>%
     summarise(n = n())
 
 #### temp
-fils <- list.files('data/lter/hjandrews/ws_traits/cc_temp/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/cc_temp/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -63,7 +63,7 @@ look <- raw_data %>%
     summarise(n = n())
 
 #### end of season
-fils <- list.files('data/lter/hjandrews/ws_traits/end_season/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/end_season/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -79,7 +79,7 @@ raw_data %>%
     geom_line()
 
 #### et_ref
-fils <- list.files('data/lter/hjandrews/ws_traits/et_ref/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/et_ref/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -95,7 +95,7 @@ raw_data %>%
     geom_line()
 
 #### fpar
-fils <- list.files('data/lter/hjandrews/ws_traits/fpar/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/fpar/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -111,11 +111,11 @@ raw_data %>%
     geom_line()
 
 #### geochemical
-fils <- list.files('data/lter/hjandrews/ws_traits/geochemical/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/geochemical/', full.names = T)
 sum_data <- map_dfr(fils, read_feather)
 
 #### gpp
-fils <- list.files('data/lter/hjandrews/ws_traits/gpp/', full.names = T)
+fils <- list.files('data/czo/boulder/ws_traits/gpp/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -131,7 +131,7 @@ raw_data %>%
     geom_line()
 
 #### lai
-fils <- list.files('data/lter/hjandrews/ws_traits/lai/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/lai/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -147,7 +147,7 @@ raw_data %>%
     geom_line()
 
 #### length
-fils <- list.files('data/lter/hjandrews/ws_traits/length_season/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/length_season/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -163,7 +163,7 @@ raw_data %>%
     geom_line()
 
 #### max_season
-fils <- list.files('data/lter/hjandrews/ws_traits/max_season/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/max_season/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -179,7 +179,7 @@ raw_data %>%
     geom_line()
 
 #### nadp
-fils <- list.files('data/lter/hjandrews/ws_traits/nadp/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/nadp/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -188,7 +188,7 @@ sum_data %>%
     geom_line()
 
 #### ndvi
-fils <- list.files('data/lter/hjandrews/ws_traits/ndvi/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/ndvi/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -204,7 +204,7 @@ raw_data %>%
     geom_line()
 
 #### nlcd
-fils <- list.files('data/lter/hjandrews/ws_traits/nlcd/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/nlcd/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -220,7 +220,7 @@ raw_data %>%
     geom_line()
 
 #### npp
-fils <- list.files('data/lter/hjandrews/ws_traits/npp/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/npp/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -236,11 +236,11 @@ raw_data %>%
     geom_line()
 
 #### nrcs_soils
-fils <- list.files('data/lter/hjandrews/ws_traits/nrcs_soils/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/nrcs_soils/', full.names = T)
 sum_data <- map_dfr(fils, read_feather)
 
 #### nsidc
-fils <- list.files('data/lter/hjandrews/ws_traits/nsidc/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/nsidc/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -256,11 +256,11 @@ raw_data %>%
     geom_line()
 
 #### pelletier_soil_thickness
-fils <- list.files('data/lter/hjandrews/ws_traits/pelletier_soil_thickness/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/pelletier_soil_thickness/', full.names = T)
 sum_data <- map_dfr(fils, read_feather)
 
 #### start_season
-fils <- list.files('data/lter/hjandrews/ws_traits/start_season/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/start_season/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -276,7 +276,7 @@ raw_data %>%
     geom_line()
 
 #### tcw
-fils <- list.files('data/lter/hjandrews/ws_traits/tcw/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/tcw/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -292,11 +292,11 @@ raw_data %>%
     geom_line()
 
 #### terrain
-fils <- list.files('data/lter/hjandrews/ws_traits/terrain/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/terrain/', full.names = T)
 sum_data <- map_dfr(fils, read_feather)
 
 #### tree_cover
-fils <- list.files('data/lter/hjandrews/ws_traits/tree_cover/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/tree_cover/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
@@ -305,7 +305,7 @@ sum_data %>%
     geom_line()
 
 #### veg_cover
-fils <- list.files('data/lter/hjandrews/ws_traits/veg_cover/', full.names = T)
+fils <- list.files('data/lter/hbef/ws_traits/veg_cover/', full.names = T)
 sum_fils <- grep('sum', fils, value = TRUE)
 sum_data <- map_dfr(sum_fils, read_feather)
 sum_data %>%
