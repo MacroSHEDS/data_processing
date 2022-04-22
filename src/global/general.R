@@ -11,6 +11,8 @@ if(ms_instance$use_ms_error_handling){
 unprod <- univ_products  %>%
     filter(status == 'ready')
 
+# unprod = filter(unprod, grepl('season', prodname))
+
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)

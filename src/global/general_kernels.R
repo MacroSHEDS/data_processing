@@ -704,7 +704,7 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_code,
                                   ws_boundaries = boundaries))
 
     if(is_ms_exception(soil_tib)) {
-      sw(loginfo(soil_tib, logger_module))
+      sw(logerror(soil_tib, logger = logger_module))
         next
     } else{
       soil_tib <- append_unprod_prefix(soil_tib, prodname_ms)
@@ -991,8 +991,8 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
       msg <- generate_ms_exception(glue('No data available for {s}',
                                         s = sites[s]))
 
-      loginfo(msg = msg,
-              logger = logger_module)
+      logerror(msg = msg,
+               logger = logger_module)
       next
       }
 
@@ -1043,8 +1043,8 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
       msg <- generate_ms_exception(glue('No data was retrived for {s}',
                                         s = sites[s]))
 
-      loginfo(msg = msg,
-              logger = logger_module)
+      logerror(msg = msg,
+               logger = logger_module)
     } else{
       fin_nadp <- append_unprod_prefix(fin_nadp, prodname_ms)
       write_feather(fin_nadp, glue('{d}sum_{s}.feather',
@@ -1086,8 +1086,8 @@ process_3_ms815 <- function(network, domain, prodname_ms, site_code,
         msg <- generate_ms_exception(glue('No data was retrived for {s}',
                                           s = sites[s]))
 
-        loginfo(msg = msg,
-                logger = logger_module)
+        logerror(msg = msg,
+                 logger = logger_module)
         next
     }
 
@@ -1154,8 +1154,8 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
     if(nrow(all_vars) == 0){
         
         msg <- generate_ms_exception(glue('No data available for: ', sites[s]))
-        loginfo(msg = msg,
-                logger = logger_module)
+        logerror(msg = msg,
+                 logger = logger_module)
         
         next
     }
@@ -1273,8 +1273,8 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_code,
             msg <- generate_ms_exception(glue('No data was retrived for {s}',
                                               s = sites[s]))
             
-            loginfo(msg = msg,
-                    logger = logger_module)
+            logerror(msg = msg,
+                     logger = logger_module)
             
             next
         }
@@ -1485,8 +1485,8 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
       msg <- generate_ms_exception(glue('No data available for {s}',
                                         s = sites[s]))
 
-      loginfo(msg = msg,
-              logger = logger_module)
+      logerror(msg = msg,
+               logger = logger_module)
       next
     }
 
