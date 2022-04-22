@@ -49,9 +49,6 @@ suppressPackageStartupMessages({
 
 })
 
-# options(warn = 2)
-# options(error = recover)
-
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
 #(or after each run that results in a change)
@@ -242,6 +239,7 @@ if(ms_instance$use_ms_error_handling){
 #puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
+
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
                                                         update_on_gdrive = TRUE)
@@ -263,7 +261,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 25
+# dmnrow = 4
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -272,6 +270,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
+
 
     # held_data = get_data_tracker(network, domain)
 
