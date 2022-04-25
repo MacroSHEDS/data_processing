@@ -1291,6 +1291,108 @@ correct_all_geometries <- function(path, dir_pattern = 'ws_boundary'){
     }
 }
 
+rebuild_portal_data_before_postprocessing <- function(network_domain, backup = TRUE){
+
+    dir_wrapper <- function(path, keyword){
+
+        files <- dir(path = path,
+                     pattern = paste0(keyword, '*'),
+                     recursive = TRUE,
+                     full.names = TRUE,
+                     include.dirs = TRUE)
+
+        return(files)
+    }
+
+    remove_rubbish <- function(path){
+
+        dirs_to_delete <- c()
+
+        #collect compprod dirs (intermediate products) that shouldn't be in the
+        #final dataset
+        for(k in c('cdnr_discharge__', 'usgs_discharge__')){
+
+            dirs_to_delete <- c(dirs_to_delete,
+                                dir_wrapper(path = path,
+                                            keyword = k))
+        }
+
+        #remove intermediate products that shouldn't be in the final dataset
+        for(k in c('precipitation', 'stream_chemistry', 'discharge', 'precip_chemistry',
+                   'precip_gauge_locations', 'stream_gauge_locations')){
+
+            kfpaths <- dir_wrapper(path = path,
+                                   keyword = paste0(k, '__'))
+
+            kpaths <- str_match(string = kfpaths,
+                                pattern = paste0('(.*)?/',
+                                                 k))[, 2] %>%
+                # '__ms[0-9]{3}$'))[, 2] %>%
+                sort()
+
+            kfac <- factor(kpaths)
+            dirs_with_k_compprods <- as.character(kfac[duplicated(kfac)])
+
+            for(dr in dirs_with_k_compprods){
+
+                k_dirs <- list.files(path = dr,
+                                     pattern = paste0('^', k, '__'))
+
+                if(length(k_dirs) != 2){
+                    stop('there should only be two dirs in consideration here')
+                }
+
+                prodname_numeric <- str_match(string = k_dirs,
+                                              pattern = paste0(k, '__ms([0-9]{3})'))[, 2] %>%
+                    as.numeric()
+
+                if(any(is.na(prodname_numeric))){
+                    dir_to_delete_ind <- which(is.na(prodname_numeric))
+                } else {
+                    dir_to_delete_ind <- which.min(prodname_numeric)
+                }
+
+                dirs_to_delete <- c(dirs_to_delete,
+                                    file.path(dr, k_dirs[dir_to_delete_ind]))
+            }
+        }
+
+        #drop em all from the final dataset
+        for(dr in dirs_to_delete){
+            unlink(x = dr,
+                   recursive = TRUE)
+        }
+    }
+
+    if(backup){
+
+        if(file.exists('../portal/data.bak')){
+            stop('../portal/data.bak already exists. do something with it before running this.')
+        }
+
+        file.rename('../portal/data', '../portal/data.bak')
+    }
+
+    dir.create('../portal/data/general',
+               recursive = TRUE,
+               showWarnings = FALSE)
+
+    for(i in seq_len(nrow(network_domain))){
+
+        ntw = network_domain$network[i]
+        dmn = network_domain$domain[i]
+
+        dir.create(file.path('../portal/data', dmn))
+        system(glue('cp -a data/{n}/{d}/derived/* ../portal/data/{d}', n = ntw, d = dmn))
+        remove_rubbish(path = file.path('../portal/data', dmn))
+        system(glue("rename 's/(.+?)__.*/$1/' ../portal/data/{d}/*", d = dmn))
+    }
+
+    warning(paste('this is not mega tested because mike already had a weird portal',
+                  'state at the time it was implemented. inspect portal/data and make',
+                  'sure it looks good before and after postprocessing. especially portal/data/general'))
+}
+
 # correct_all_geometries(path = '~/git/macrosheds/data_acquisition/data')
 # correct_all_geometries(path = '~/git/macrosheds/portal/data')
 # correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1')
