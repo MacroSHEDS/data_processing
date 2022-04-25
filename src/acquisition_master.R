@@ -320,7 +320,10 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms.module'
 
-# write csv + readme domain metadata
+#use this e.g. if someone else ran (part of) the loop above and you downloaded its output
+# rebuild_portal_data_before_postprocessing(network_domain = network_domain,
+#                                           backup = TRUE)
+
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
