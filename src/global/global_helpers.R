@@ -13565,9 +13565,13 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('../portal/data/{d}/stream_chemistry/',
+        dom_path <- glue('../portal/data/{d}/',
                          d = dom)
-        site_files <- list.files(dom_path)
+        domain_files <- list.files(dom_path)
+        
+        chem_prod <- grep('stream_chemistry', domain_files, value = TRUE)
+        
+        site_files <- list.files(glue(dom_path, chem_prod))
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
         stream_sites <- site_data %>%
@@ -13581,32 +13585,38 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
             for(p in 1:length(stream_sites)){
 
-                path_chem <- glue("../portal/data/{d}/stream_chemistry/{s}.feather",
+                path_chem <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                   d = dom,
+                                  prod = grep('stream_chemistry', domain_files, value = T),
                                   s = stream_sites[p])
 
-                path_q <- glue("../portal/data/{d}/discharge/{s}.feather",
+                path_q <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                d = dom,
+                               prod = grep('discharge', domain_files, value = T),
                                s = stream_sites[p])
 
-                path_flux <- glue("../portal/data/{d}/stream_flux_inst_scaled/{s}.feather",
+                path_flux <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                   d = dom,
+                                  prod = grep('stream_flux_inst_scaled', domain_files, value = T),
                                   s = stream_sites[p])
 
-                path_precip <- glue("../portal/data/{d}/precipitation/{s}.feather",
+                path_precip <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                     d = dom,
+                                    prod = grep('precipitation', domain_files, value = T),
                                     s = stream_sites[p])
 
-                path_precip_chem <- glue("../portal/data/{d}/precip_chemistry/{s}.feather",
+                path_precip_chem <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                          d = dom,
+                                         prod = grep('precip_chemistry', domain_files, value = T),
                                          s = stream_sites[p])
 
-                path_precip_flux <- glue("../portal/data/{d}/precip_flux_inst_scaled/{s}.feather",
+                path_precip_flux <- glue("../portal/data/{d}/{prod}/{s}.feather",
                                          d = dom,
+                                         prod = grep('precip_flux_inst_scaled', domain_files, value = T),
                                          s = stream_sites[p])
 
                 #Stream discharge
-                if(! file.exists(path_q)){
+                if(! file.exists(path_q) || length(path_q) == 0){
                     site_q <- tibble()
                     q_record_length <- 365
                 } else {
@@ -13656,7 +13666,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_q)
 
                 #Stream chemistry concentration
-                if(!file.exists(path_chem)) {
+                if(!file.exists(path_chem) || length(path_flux) == 0) {
                     site_chem <- tibble()
                 } else {
 
@@ -13701,7 +13711,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_chem)
 
                 #Stream chemistry flux
-                if(!file.exists(path_flux)) {
+                if(!file.exists(path_flux) || length(path_flux) == 0) {
                     site_flux <- tibble()
                 } else {
 
@@ -13745,7 +13755,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_flux)
 
                 #Precipitation
-                if(!file.exists(path_precip)) {
+                if(!file.exists(path_precip) || length(path_precip) == 0) {
                     site_precip <- tibble()
                 } else {
 
@@ -13784,7 +13794,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_precip)
 
                 #Precipitation chemistry concentration
-                if(!file.exists(path_precip_chem)) {
+                if(!file.exists(path_precip_chem) || length(path_precip_chem) == 0) {
                     site_precip_chem <- tibble()
                 } else {
 
@@ -13826,9 +13836,13 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_precip_chem)
 
                 #Precipitation chemistry flux
-                if(!file.exists(path_precip_flux)) {
+                if(!file.exists(path_precip_flux) || length(path_precip_flux) == 0) {
                     site_precip_flux <- tibble()
                 } else {
+                    
+                    if(length(path_precip_flux) > 1){
+                        path_precip_flux <- path_precip_flux[!grepl('CUSTOM', path_precip_flux)]
+                    }
 
                     site_precip_flux <- read_feather(path_precip_flux)  %>%
                         mutate(Year = year(datetime),

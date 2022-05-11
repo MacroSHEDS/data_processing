@@ -327,7 +327,7 @@ logger_module <- 'ms.module'
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
-                           thin_portal_data_to_interval = NA,#'1 day',
+                           thin_portal_data_to_interval = NA, #'1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = FALSE,
                            push_new_version_to_figshare = FALSE)
