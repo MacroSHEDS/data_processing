@@ -2081,7 +2081,8 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                                            'discharge__74',
                                            'discharge__105',
                                            'discharge__169',
-                                           'discharge__170'))
+                                           'discharge__170',
+                                           'discharge__236'))
 
     return()
 }
@@ -2108,7 +2109,8 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
                                            'stream_chemistry__102',
                                            'stream_chemistry__111',
                                            'stream_chemistry__74',
-                                           'stream_chemistry__105'))
+                                           'stream_chemistry__105',
+                                           'stream_chemistry__278'))
 
     return()
 }
