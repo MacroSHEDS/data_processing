@@ -47,6 +47,8 @@ suppressPackageStartupMessages({
     # library(fuzzyjoin) #nvm. too memory inefficient. implementing rolling join
     #   from data.table instead
 
+    #other stuff we need when R updates
+    # install.packages('geojsonio')
 })
 
 #set the dataset version. This is used to name the output dataset and diagnostic
@@ -312,8 +314,8 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
-    # ms_general(network = network,
-    #            domain = domain)
+    ms_general(network = network,
+               domain = domain)
 
     retain_ms_globals(ms_globals)
 }
