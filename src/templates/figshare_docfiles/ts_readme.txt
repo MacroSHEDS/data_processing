@@ -1,5 +1,5 @@
 By using these data, you acknowledge that you have read the MacroSheds Data Use Agreements,
-included with our published documentation at PLACEHOLDER0, and available under the Data tab at macrosheds.org.
+included with our published documentation at https://doi.org/10.6084/m9.figshare.c.5621740, and available under the Data tab at macrosheds.org.
 Please contact us (mail@macrosheds.org) if you feel these agreements, or any other text included with MacroSheds
 documentation and data, should be amended.
 
