@@ -1,6 +1,6 @@
 These files provide detailed documentation of the code involved in preparing individual
 MacroSheds products for specific domains and sites. For comprehensive project documentation,
-see PLACEHOLDER0.
+see https://doi.org/10.6084/m9.figshare.c.5621740.
 
 MacroSheds products are referred to as <product name>__<product code>. product codes are
 used internally, and are not attached to our downloadable products, however,
