@@ -9625,6 +9625,8 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent('NOT pushing data to Figshare.',
                         logger = logger_module)
     }
+    
+    message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -10493,6 +10495,9 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     #                 'Freshwater Ecology')
     # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
 
+    if(! dir.exists('../r_package/R')){
+        stop('cannot find r_package/R (needed for updating figshare file IDs). maybe your package path is different?')
+    }
 
     ### EVERY-TIME PREP
 
@@ -10530,6 +10535,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     ntws <- list.files(tld)
 
+    file_ids_for_r_package <- tibble()
     for(i in seq_along(ntws)){
 
         ntw <- ntws[i]
@@ -10586,9 +10592,18 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
             figshare_publish_article(article_id = fs_id,
                                      token = token)
+
+            #get new file ID
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
+            file_ids_for_r_package <- bind_rows(
+                file_ids_for_r_package,
+                tibble(network = ntw, domain = dmn, fig_code = fls[[1]]$id))
         }
     }
 
+    save(file_ids_for_r_package,
+         file = '../r_package/R/sysdata.rda')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
@@ -10665,18 +10680,49 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                 file = unname(uf),
                                 token = token)
 
-        # #obsolete for packagedata
-        # figshare_add_articles_to_collection(collection_id = collection_id,
-        #                                     article_ids = fs_id,
-        #                                     token = token)
-
         figshare_publish_article(article_id = fs_id,
                                  token = token)
-    }
 
-    # #obsolete for packagedata
-    # figshare_publish_collection(collection_id = collection_id,
-    #                             token = token)
+        #update file IDs for R package functions that reference figshare
+        fls <- figshare_list_article_files(fs_id,
+                                           token = token)
+
+        if(ut == 'site_metadata'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_download_site_data.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_site_data.R. maybe your path is different?')
+        }
+
+        if(ut == 'variable_metadata'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_download_variables.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions.R. maybe your path is different?')
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_conversions.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+        }
+
+        if(ut == 'variable_catalog'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_catalog.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_catalog.R maybe your path is different?')
+        }
+    }
 }
 
 detrmin_mean_record_length <- function(df){
