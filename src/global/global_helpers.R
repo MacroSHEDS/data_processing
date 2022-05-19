@@ -2837,7 +2837,18 @@ ms_munge <- function(network = domain,
     }
 }
 
-ms_general <- function(network = domain, domain){
+ms_general <- function(network = domain,
+                       domain,
+                       get_missing_only = FALSE){
+
+    #if get_missing_only is TRUE, ws_traits will only be retrieved
+    #for ws_traits directories that are missing or empty
+
+    if(get_missing_only){
+        get_missing_only <<- TRUE
+    } else {
+        get_missing_only <<- FALSE
+    }
 
     source(glue('src/global/general.R',
                 n = network,
@@ -9625,7 +9636,7 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent('NOT pushing data to Figshare.',
                         logger = logger_module)
     }
-    
+
     message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
 
