@@ -3327,7 +3327,7 @@ delineate_watershed_apriori_recurse <- function(lat,
                                  L = 0.1)
     }
 
-    if(! grepl('[0-9]', resp)){
+    if(! any(grepl('[0-9]', resp))){
 
         if(is.null(buffer_radius)){
             buffer_radius_ <- delin_out$buffer_radius
@@ -8435,7 +8435,7 @@ get_gee_standard <- function(network,
     }
 
     if(contiguous_us){
-        usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
+        usa_bb <- sf::st_bbox(obj = c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                       ymax = 49.384), crs = 4326) %>%
             sf::st_as_sfc(., crs = 4326)
 
@@ -8444,8 +8444,8 @@ get_gee_standard <- function(network,
         if(! is_usa){
             return(NULL)
         }
-
     }
+
     qaqc <- FALSE
     if(!is.null(qa_band) || !is.null(bit_mask)){
         if(any(is.null(qa_band), is.null(bit_mask))){
@@ -8455,18 +8455,6 @@ get_gee_standard <- function(network,
         }
     }
 
-    # area <- sf::st_area(site_boundary)
-    #
-    # sheds <- site_boundary %>%
-    #     as.data.frame() %>%
-    #     sf::st_as_sf() %>%
-    #     select(site_code) %>%
-    #     sf::st_transform(4326) %>%
-    #     sf::st_set_crs(4326)
-    #
-    # site <- unique(sheds$site_code)
-
-    #if(as.numeric(area) > 10528200 || batch){
     if(batch){
 
         # Remove file if is in drive
@@ -8479,6 +8467,7 @@ get_gee_standard <- function(network,
             # Return a mask band image, giving the qa value.
             image$bitwiseAnd(qa)$lt(1)
         }
+
         clean_gee_img <- function(img) {
             # Extract the selected band
             img_values <- img$select(band)
@@ -8494,9 +8483,8 @@ get_gee_standard <- function(network,
 
         }
 
-
         user_info <- rgee::ee_user_info(quiet = TRUE)
-        # asset_path <- paste0(user_info$asset_home, '/data_aq_sheds')
+
         asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}/',
                              a = user_info$asset_home,
                              d = domain)
@@ -9633,7 +9621,12 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
         upload_dataset_to_figshare(dataset_version = dataset_version)
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
+    } else {
+        log_with_indent('NOT pushing data to Figshare.',
+                        logger = logger_module)
     }
+    
+    message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -9734,7 +9727,7 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
 
         ms_vars %>%
             select(variable_code, variable_name, unit, variable_type,
-                   variable_subtype, valence, flux_convertible) %>%
+                   variable_subtype, valence, molecule, flux_convertible) %>%
             write_csv(outfile)
     }
 }
@@ -9951,7 +9944,7 @@ prepare_for_figshare <- function(where, dataset_version){
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
     prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
                                            fs_format = 'new')
-    assemble_misc_docs_figshare(where = file.path(where, 'data/general/figshare_extras/macrosheds_documentation/'))
+    assemble_misc_docs_figshare(where = where)
 
     #prepare data
     prepare_ts_data_for_figshare(where = where,
@@ -10388,7 +10381,7 @@ upload_dataset_to_figshare <- function(dataset_version){
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
     message('uploading official dataset to fighare collection')
 
-    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? (y/n) >',
                                   c('y', 'n'))
 
     if(usr_rsp == 'n'){
@@ -10502,6 +10495,9 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     #                 'Freshwater Ecology')
     # cat_ids <- as.numeric(names(all_categories[all_categories %in% categories]))
 
+    if(! dir.exists('../r_package/R')){
+        stop('cannot find r_package/R (needed for updating figshare file IDs). maybe your package path is different?')
+    }
 
     ### EVERY-TIME PREP
 
@@ -10514,7 +10510,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
     message('uploading dataset to fighare under original format (still used by macrosheds package)')
 
-    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? >',
+    usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? (y/n) >',
                                   c('y', 'n'))
 
     if(usr_rsp == 'n'){
@@ -10539,6 +10535,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     ntws <- list.files(tld)
 
+    file_ids_for_r_package <- tibble()
     for(i in seq_along(ntws)){
 
         ntw <- ntws[i]
@@ -10575,11 +10572,14 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                 fls <- figshare_list_article_files(fs_id,
                                                    token = token)
 
-                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-
-                figshare_delete_article_file(fs_id,
-                                             file_id = fls[[1]]$id,
-                                             token = token)
+                # if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
+                if(length(fls) >= 1){
+                    for(k in seq_along(fls)){
+                        figshare_delete_article_file(fs_id,
+                                                     file_id = fls[[k]]$id,
+                                                     token = token)
+                    }
+                }
             }
 
             #upload new/updated domain zip to that article
@@ -10592,9 +10592,18 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
             figshare_publish_article(article_id = fs_id,
                                      token = token)
+
+            #get new file ID
+            fls <- figshare_list_article_files(fs_id,
+                                               token = token)
+            file_ids_for_r_package <- bind_rows(
+                file_ids_for_r_package,
+                tibble(network = ntw, domain = dmn, fig_code = fls[[1]]$id))
         }
     }
 
+    save(file_ids_for_r_package,
+         file = '../r_package/R/sysdata.rda')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
@@ -10657,29 +10666,63 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
 
-            if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
 
-            figshare_delete_article_file(fs_id,
-                                         file_id = fls[[1]]$id,
-                                         token = token)
+            if(length(fls) >= 1){
+                for(j in seq_along(fls)){
+                    figshare_delete_article_file(fs_id,
+                                                 file_id = fls[[j]]$id,
+                                                 token = token)
+                }
+            }
         }
 
         figshare_upload_article(fs_id,
                                 file = unname(uf),
                                 token = token)
 
-        # #obsolete for packagedata
-        # figshare_add_articles_to_collection(collection_id = collection_id,
-        #                                     article_ids = fs_id,
-        #                                     token = token)
-
         figshare_publish_article(article_id = fs_id,
                                  token = token)
-    }
 
-    # #obsolete for packagedata
-    # figshare_publish_collection(collection_id = collection_id,
-    #                             token = token)
+        #update file IDs for R package functions that reference figshare
+        fls <- figshare_list_article_files(fs_id,
+                                           token = token)
+
+        if(ut == 'site_metadata'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_download_site_data.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_site_data.R. maybe your path is different?')
+        }
+
+        if(ut == 'variable_metadata'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_download_variables.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions.R. maybe your path is different?')
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_conversions.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+        }
+
+        if(ut == 'variable_catalog'){
+            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+                                    fls[[1]]$id,
+                                    "/g' ../r_package/R/ms_catalog.R -i"),
+                             intern = TRUE,
+                             ignore.stdout = FALSE,
+                             ignore.stderr = FALSE)
+            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_catalog.R maybe your path is different?')
+        }
+    }
 }
 
 detrmin_mean_record_length <- function(df){
@@ -12849,7 +12892,8 @@ load_spatial_data <- function(){
 
         if(needed_sets$name[i] == 'phenology.zip'){
             if(Sys.info()['sysname'] %in% c('Linux', 'linux')){
-                system(paste0('unzip ', getwd(), '/', zip_path, ' -d ', getwd(), '/data/spatial/phenology'))
+                system(paste0('unzip ', getwd(), '/',
+                              zip_path, ' -d ', getwd(), '/data/spatial/phenology'))
             } else {
                 loginfo(generate_ms_exception('Wow! This file is to big to unzip with R, use terminal to unzip'),
                         logger = logger_module)
@@ -14307,20 +14351,33 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
 legal_details_scrape <- function(dataset_version){
 
+    #this was written before we knew the full extent of IR subtlety, for both
+    #timeseries and ws attribute data. rather than confuse users with 3 sources
+    #of IR details (ms_generate_attribution, 01b_attribution_and_intellectual_rights_complete.docx,
+    #LEGAL.csv[s]--really a subset of 05a_timeseries_LEGAL.csv that doesn't account for
+    #06a_ws_attr_LEGAL.csv), let's just direct them to the first two, which are comprehensive.
+
     ## metadata and citation information function
 
+    # meta_info_header <- sm(googlesheets4::read_sheet(
+    #        conf$site_doi,
+    #        col_types = 'c',
+    #        n_max = 5,
+    #        col_names = FALSE
+    #    ))
+
     # retrieve metadata
-    meta_info <- sm(googlesheets4::read_sheet(
-           conf$site_doi,
-           na = c('', 'NA'),
-           col_types = 'ccccccccc'
-       )) %>%
-        select(-citation_used)
+    # meta_info <- sm(googlesheets4::read_sheet(
+    #        conf$site_doi,
+    #        na = c('', 'NA'),
+    #        col_types = 'c',
+    #        skip = 5
+    #    ))
 
     meta_urls <- sm(googlesheets4::read_sheet(
         conf$domain_urls,
         na = c('', 'NA'),
-        col_types = 'cc'
+        col_types = 'c'
     ))
 
     # locate domain directory
@@ -14333,15 +14390,15 @@ legal_details_scrape <- function(dataset_version){
     # loop domains, and print data .csv and guide .txt
     for(domain_name in unique(meta_info$domain)){
 
-        # subset all the domain metadata
-        domain_info <- unique(meta_info[meta_info$domain == domain_name, ])
+        # # subset all the domain metadata
+        # domain_info <- unique(meta_info[meta_info$domain == domain_name, ])
 
         # subset the domain URLs
         domain_url <- meta_urls[meta_urls$domain == domain_name, ]
         str_url <- paste(unique(domain_url$url), collapse = ', ')
 
-        # merge to a single data frame
-        domain_all <- merge(domain_info, domain_url, 'domain')
+        # # merge to a single data frame
+        # domain_all <- merge(domain_info, domain_url, 'domain')
 
         network_name <- network_domain %>%
             filter(domain == !!domain_name) %>%
@@ -14356,30 +14413,36 @@ legal_details_scrape <- function(dataset_version){
 
         if(! length(dmn_pth)) next #there's been a network/domain change and somebody's trying to run this without rebuilding everything
 
-        #add column of macrosheds prodnames to clarify primary prodcodes
-        dmn_prods <- try({
-            read_csv(glue('src/{n}/{d}/products.csv',
-                          n = network_name,
-                          d = domain_name),
-                     col_types = cols())
-        })
-
-        if(inherits(dmn_prods, 'try-error')) next
-
-        dmn_prods <- dmn_prods %>%
-            select(prodcode,
-                   ms_prodnames = prodname) %>%
-            group_by(prodcode) %>%
-            summarize(ms_prodnames = paste(ms_prodnames, collapse = ', ')) %>%
-            ungroup()
-
-        domain_all <- domain_all %>%
-            left_join(dmn_prods, by = 'prodcode') %>%
-            select(domain, ms_prodnames, prodcode, everything()) %>%
-            arrange(ms_prodnames, prodcode)
+        # #add column of macrosheds prodnames to clarify primary prodcodes
+        # dmn_prods <- try({
+        #     read_csv(glue('src/{n}/{d}/products.csv',
+        #                   n = network_name,
+        #                   d = domain_name),
+        #              col_types = cols())
+        # })
+        #
+        # if(inherits(dmn_prods, 'try-error')) next
+        #
+        # dmn_prods <- dmn_prods %>%
+        #     select(prodcode,
+        #            ms_prodnames = prodname) %>%
+        #     group_by(prodcode) %>%
+        #     summarize(ms_prodnames = paste(ms_prodnames, collapse = ', ')) %>%
+        #     ungroup()
+        #
+        # domain_all <- domain_all %>%
+        #     left_join(dmn_prods, by = c(macrosheds_prodcode = 'prodcode')) %>%
+        #     select(domain, macrosheds_prodnames = ms_prodnames,
+        #            macrosheds_prodcode, everything()) %>%
+        #     arrange(macrosheds_prodnames, macrosheds_prodcode)
 
         #write legal table and accompanying readme
-        file_name <- file.path(network_dir, network_name, domain_name, 'LEGAL.csv')
+        # file_name <- file.path(network_dir, network_name, domain_name, 'LEGAL.csv')
+
+        #use this to write file called READ_THIS_FIRST.txt to all figshare domain
+        #folders, for packageversion too.
+
+
         readme_domain <- file.path(network_dir, network_name, domain_name,
                                    'citation_instructions.txt')
 
@@ -14389,6 +14452,6 @@ legal_details_scrape <- function(dataset_version){
         writeLines(c(headerline, subline, readme), reader)
         close(reader)
 
-        write_csv(domain_all, file_name)
+        # write_csv(domain_all, file_name)
     }
 }
