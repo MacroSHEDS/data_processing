@@ -273,7 +273,6 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-
     # held_data = get_data_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'munge')
@@ -283,7 +282,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -314,8 +313,11 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
-    ms_general(network = network,
-               domain = domain)
+    if(domain != 'mcmurdo'){
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = TRUE)
+    }
 
     retain_ms_globals(ms_globals)
 }
@@ -329,7 +331,7 @@ logger_module <- 'ms.module'
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
-                           thin_portal_data_to_interval = NA, #'1 day',
+                           thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = FALSE,
                            push_new_version_to_figshare = FALSE)
