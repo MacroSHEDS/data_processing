@@ -1597,7 +1597,7 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
   }
 }
 
-#glhymps: STATUS=PENDING
+#glhymps: STATUS=READY
 #. handle_errors
 process_3_ms822 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
@@ -1666,7 +1666,7 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
   }
 }
 
-#lithology: STATUS=PENDING
+#lithology: STATUS=READY
 #. handle_errors
 process_3_ms823 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
@@ -1846,7 +1846,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
   return()
 }
 
-#modis_igbp: STATUS=PENDING
+#modis_igbp: STATUS=READY
 #. handle_errors
 process_3_ms825 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
