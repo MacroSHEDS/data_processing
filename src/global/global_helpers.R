@@ -7858,7 +7858,7 @@ write_metadata_d <- function(network,
                                  domain = domain,
                                  prodname_ms = prodname_ms)
 
-    if(length(precursors == 1) && precursors == 'no precursors'){
+    if(length(precursors) == 1 && precursors == 'no precursors'){
 
         if(grepl('(^cdnr_|^usgs_)', prodname_ms)){
             return()
@@ -13623,9 +13623,9 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         dom_path <- glue('../portal/data/{d}/',
                          d = dom)
         domain_files <- list.files(dom_path)
-        
+
         chem_prod <- grep('stream_chemistry', domain_files, value = TRUE)
-        
+
         site_files <- list.files(glue(dom_path, chem_prod))
         sites <- str_split_fixed(site_files, pattern = '[.]', n = 2)[,1]
 
@@ -13894,7 +13894,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 if(!file.exists(path_precip_flux) || length(path_precip_flux) == 0) {
                     site_precip_flux <- tibble()
                 } else {
-                    
+
                     if(length(path_precip_flux) > 1){
                         path_precip_flux <- path_precip_flux[!grepl('CUSTOM', path_precip_flux)]
                     }
