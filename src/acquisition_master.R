@@ -263,7 +263,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 17
+# dmnrow = 12
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -316,7 +316,7 @@ for(dmnrow in 1:nrow(network_domain)){
     if(domain != 'mcmurdo'){
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = TRUE)
+                   get_missing_only = F)
     }
 
     retain_ms_globals(ms_globals)

@@ -286,12 +286,12 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_code,
 
     if(grepl('veg_cover', prodname_ms)) {
         var <- try(get_gee_standard(network=network,
-                                domain=domain,
-                                gee_id='MODIS/006/MOD44B',
-                                band='Percent_NonTree_Vegetation',
-                                prodname='veg_cover',
-                                rez=250,
-                                site_boundary=boundaries))
+                                    domain=domain,
+                                    gee_id='MODIS/006/MOD44B',
+                                    band='Percent_NonTree_Vegetation',
+                                    prodname='veg_cover',
+                                    rez=250,
+                                    site_boundary=boundaries))
     }
 
     if(grepl('bare_cover', prodname_ms)) {
@@ -1795,7 +1795,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
                                            fileNamePrefix = 'rgee')
 
   ee_task$start()
-  ee_monitoring(ee_task, quiet = TRUE)
+  ee_monitoring(ee_task, quiet = TRUE, max_attempts = Inf)
 
   temp_rgee <- tempfile(fileext = '.csv')
 
