@@ -80,9 +80,9 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i= 17
-
+# i = 1
 for(i in 1:nrow(unprod)){
+# for(i in 5:7){
 
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
