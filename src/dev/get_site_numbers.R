@@ -9,7 +9,7 @@ setwd('macrosheds/data_acquisition/')
 
 vsn = 1
 
-all_fis <- list.files(glue('macrosheds_figshare_v{vsn}/macrosheds_timeseries_data/'), recursive = T, full.names = T)
+all_fis <- list.files(glue('macrosheds_dataset_v{vsn}/'), recursive = T, full.names = T)
 
 q_files <- grep('discharge', all_fis, value = T)
 q_files <- grep('feather', q_files, value = T)

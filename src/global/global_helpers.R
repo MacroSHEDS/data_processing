@@ -8569,7 +8569,7 @@ get_gee_standard <- function(network,
                                               fileNamePrefix = 'rgee')
 
         ee_task$start()
-        ee_monitoring(ee_task, quiet = TRUE)
+        ee_monitoring(ee_task, max_attempts = Inf, quiet = TRUE)
 
         temp_rgee <- tempfile(fileext = '.csv')
 
