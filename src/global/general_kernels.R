@@ -1606,8 +1606,8 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
                   n = network,
                   d = domain), recursive = TRUE)
 
-  glhymps <- st_read('data/spatial/GLHYMPS/GLHYMPS.gdb')
-
+  glhymps <- st_read('data/spatial/GLHYMPS/GLHYMPS.shp')
+  
   sites <- boundaries$site_code
   for(s in 1:length(sites)){
 
@@ -1626,12 +1626,12 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
 
     # glhymps is maybe an invalid geometry, need to fix
     sub_surface <- sf::st_intersection(glhymps, site_boundary) %>%
-      mutate(intersect_area = as.numeric(sf::st_area(Shape))) %>%
+      mutate(intersect_area = as.numeric(sf::st_area(geometry))) %>%
       mutate(prop_basin = intersect_area/!!site_area) %>%
-      mutate(Porosity_weight = Porosity*prop_basin,
-             Permeability_no_permafrost_weight = Permeability_no_permafrost*prop_basin,
-             Permeability_permafrost_weight = Permeability_permafrost*prop_basin,
-             Permeability_standard_deviation_weight = Permeability_standard_deviation*prop_basin)
+      mutate(Porosity_weight = Porosty*prop_basin,
+             Permeability_no_permafrost_weight = Prmblty_n_*prop_basin,
+             Permeability_permafrost_weight = Prmblt_*prop_basin,
+             Permeability_standard_deviation_weight = Prmblty_s_*prop_basin)
 
     area_sub_dif <- sum(sub_surface$intersect_area)/site_area
     area_sub_dif <- abs(1-area_sub_dif)
@@ -1645,11 +1645,11 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
     sub_surface <- sub_surface %>%
       group_by(site_code) %>%
       summarise(sub_surf_porosity_mean = sum(Porosity_weight),
-                sub_surf_porosity_sd = sd(Porosity),
+                sub_surf_porosity_sd = sd(Porosty),
                 sub_surf_permeability_mean = sum(Permeability_no_permafrost_weight),
-                sub_surf_permeability_sd = sd(Permeability_no_permafrost),
+                sub_surf_permeability_sd = sd(Prmblty_n_),
                 sub_surf_permeability_perm_mean = sum(Permeability_permafrost_weight),
-                sub_surf_permeability_perm_sd = sd(Permeability_permafrost)) %>%
+                sub_surf_permeability_perm_sd = sd(Prmblt_)) %>%
       as_tibble() %>%
       select(site_code, starts_with('sub_surf')) %>%
       pivot_longer(cols = starts_with('sub_surf'), names_to = 'var', values_to = 'val') %>%
@@ -1675,7 +1675,15 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
                   n = network,
                   d = domain), recursive = TRUE)
 
+  sf::sf_use_s2(FALSE)
   glim <- st_read('data/spatial/LiMW/LiMW_GIS 2015.gdb')
+  glim <- sf::st_make_valid(glim)
+
+  # glim_look <- rgdal::readOGR('data/spatial/LiMW/LiMW_GIS 2015.gdb')
+  # glim_look_sf <- st_as_sf(glim_look)
+  # glim_safe <- st_make_valid(glim_look_sf)
+  # rgdal:::writeOGR(glim_safe, 'data/spatial/LiMW/LiMW_GIS 2015.shp', driver = 'ESRI Shapefile')
+  # st_write(glim_safe, 'data/spatial/LiMW/LiMW_GIS 2015', driver = 'GeoJSON')
 
   geol_codes <- c('ND', 'SU', 'SS', 'SM', 'SC', 'PY', 'EV', 'MT', 'PA', 'PI',
                   'PB', 'VA', 'VI', 'VB', 'IG', 'WB')
@@ -1731,6 +1739,7 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
                                     s = sites[s]))
 
   }
+  sf::sf_use_s2(TRUE)
 }
 
 #daymet: STATUS=READY

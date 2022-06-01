@@ -80,10 +80,12 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i = 1
+# i = 25
 for(i in 1:nrow(unprod)){
-# for(i in 5:7){
+# for(i in 26:26){
 
+    sf::sf_use_s2(TRUE)
+    
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
