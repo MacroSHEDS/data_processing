@@ -116,6 +116,11 @@ for(i in 1:nrow(unprod)){
 
         trait_dir <- glue('data/{network}/{domain}/ws_traits/{p}',
                           p = prodname_from_prodname_ms(prodname_ms))
+        trait_dir <- sub('prism_', 'cc_', trait_dir)
+        trait_dir <- sub('_temp_mean', '_temp', trait_dir)
+        trait_dir <- sub('season_length', 'length_season', trait_dir)
+        trait_dir <- sub('idbp', 'igbp', trait_dir)
+
         already_have <- dir.exists(trait_dir) && length(list.files(trait_dir))
         general_status <- ifelse(already_have, 'ok', 'pending')
 
