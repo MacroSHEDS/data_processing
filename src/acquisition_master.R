@@ -298,21 +298,21 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                          domain = domain)
 
-    # ms_retrieve(network = network,
-    #             # prodname_filter = c('stream_chemistry'),
-    #             domain = domain)
-    # ms_munge(network = network,
-    #          # prodname_filter = c('stream_chemistry'),
-    #          domain = domain)
-    # if(domain != 'mcmurdo'){
-    #     sw(ms_delineate(network = network,
-    #                     domain = domain,
-    #                     dev_machine_status = ms_instance$machine_status,
-    #                     verbose = TRUE))
-    # }
-    # ms_derive(network = network,
-    #           # prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain)
+    ms_retrieve(network = network,
+                # prodname_filter = c('stream_chemistry'),
+                domain = domain)
+    ms_munge(network = network,
+             # prodname_filter = c('stream_chemistry'),
+             domain = domain)
+    if(domain != 'mcmurdo'){
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        verbose = TRUE))
+    }
+    ms_derive(network = network,
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain)
     
     if(domain != 'mcmurdo'){
         ms_general(network = network,
