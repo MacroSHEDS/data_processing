@@ -80,9 +80,9 @@ if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
             logger = logger_module)
 }
 
-# i = 25
+# i = 27
 for(i in 1:nrow(unprod)){
-# for(i in 26:26){
+# for(i in 28:28){
 
     sf::sf_use_s2(TRUE)
     
