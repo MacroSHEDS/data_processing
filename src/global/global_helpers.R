@@ -9515,6 +9515,7 @@ postprocess_entire_dataset <- function(site_data,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product,
+                                       reformat_camels = TRUE,
                                        push_new_version_to_figshare = FALSE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
@@ -9593,6 +9594,13 @@ postprocess_entire_dataset <- function(site_data,
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
     # clean_portal_dataset()
+    
+    if(reformat_camels) {
+        log_with_indent('Reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
+        reformat_camels_for_ms()
+    } else{
+        log_with_indent('NOT reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
+    }
 
     log_with_indent('Generating spatial summary data',
                     logger = logger_module)
@@ -14479,3 +14487,60 @@ legal_details_scrape <- function(dataset_version){
         # write_csv(domain_all, file_name)
     }
 }
+
+reformat_camels_for_ms <- function(){
+    
+    # This function will reformat the camels metrics computed for MacroSheds 
+    # watersheds to the MacroSheds format.
+    
+    ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
+    
+    all_files <- list.files(ms_attributes_dir, recursive = T, full.names = TRUE)
+    
+    
+    
+    soil_files <- all_files[grep('soil.feather', all_files)]
+    clim_files <- all_files[grep('clim.feather', all_files)]
+    topo_files <- all_files[grep('topo.feather', all_files)]
+    geol_files <- all_files[grep('geol.feather', all_files)]
+    daymet_files <- all_files[grep('daymet_full_climate.feather', all_files)]
+    
+    soil <- map_dfr(soil_files, read_feather)
+    clim <- map_dfr(clim_files, read_feather)
+    topo <- map_dfr(topo_files, read_feather)
+    geol <- map_dfr(geol_files, read_feather)
+    
+    dir.create('data/camels_compliant')
+    dir.create('data/camels_compliant/daymet')
+    
+    
+    write_csv(soil, 'data/camels_compliant/soil.csv')
+    write_csv(clim, 'data/camels_compliant/clim.csv')
+    write_csv(topo, 'data/camels_compliant/topo.csv')
+    write_csv(geol, 'data/camels_compliant/geol.csv')
+    
+    for(i in 1:length(daymet_files)){
+        this_daymet <- read_feather(daymet_files[i])
+        
+        sites <- unique(this_daymet$site_code)
+        
+        for(s in 1:length(sites)){
+            this_site <- this_daymet %>%
+                filter(site_code == !!sites[s]) %>%
+                rename(`dayl(s)` = dayl,
+                       `prcp(mm/day)` = prcp,
+                       `srad(W/m2)` = srad,
+                       `swe(mm)` = swe,
+                       `tmax(C)` = tmax,
+                       `tmin(C)` = tmin,
+                       `vp(Pa)` = vp,
+                       `pet(mm)` = pet) 
+            
+            write_csv(this_site, glue('data/camels_compliant/daymet/{s}.csv',
+                                      s = sites[s]))
+        }
+    }
+}
+
+
+
