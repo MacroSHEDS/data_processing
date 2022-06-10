@@ -9614,7 +9614,7 @@ postprocess_entire_dataset <- function(site_data,
 
     if(push_new_version_to_figshare){
 
-        message('Are you sure you want to modify our published dataset? ESC within 10 seconds if not.')
+        message('Are you sure you want to modify our published dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 
         log_with_indent(glue('Preparing dataset v{vv} for Figshare',
@@ -9809,7 +9809,19 @@ assemble_misc_docs_figshare <- function(where){
     docs_dir <- file.path(where, 'macrosheds_documentation')
     dir.create(docs_dir, showWarnings = FALSE)
 
-    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', docs_dir)
+    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
+                                path = file.path(docs_dir, '01a_data_use_agreements.docx'),
+                                overwrite = TRUE)
+    googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
+                                path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
+                                overwrite = TRUE)
+    select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
+        write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
+    file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt', docs_dir)
+    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/timeseries_refs.bib',
+              file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib'))
+    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/ws_attr_refs.bib',
+              file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib'))
     file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
     file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
     file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
@@ -9978,9 +9990,10 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
-    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
-              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
-              overwrite = TRUE)
+    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
+                                path = file.path(where, 'macrosheds_documentation_packageformat',
+                                                 'data_use_agreements.docx'),
+                                overwrite = TRUE)
 
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
@@ -10638,10 +10651,10 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
     other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
-                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
-                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
-                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
-    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
+                        # policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
+                        # policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
+                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_agreements.docx'))
+    titlesD <- c('README', 'data_use_POLICY')
 
     other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
                         metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'),

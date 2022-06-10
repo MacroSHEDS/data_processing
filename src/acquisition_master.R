@@ -39,6 +39,7 @@ suppressPackageStartupMessages({
     library(doParallel) #replaced by doFuture, but still needed on BM1
     library(doFuture)
     library(googlesheets4)
+    library(googledrive)
     library(rgee) #requires geojsonio package
     library(osmdata)
 
@@ -316,7 +317,7 @@ for(dmnrow in 1:nrow(network_domain)){
     if(domain != 'mcmurdo'){
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = F)
+                   get_missing_only = TRUE)
     }
 
     retain_ms_globals(ms_globals)
