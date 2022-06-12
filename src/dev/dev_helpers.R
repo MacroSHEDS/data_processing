@@ -1291,6 +1291,11 @@ correct_all_geometries <- function(path, dir_pattern = 'ws_boundary'){
     }
 }
 
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/data')
+# correct_all_geometries(path = '~/git/macrosheds/portal/data')
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1')
+# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_figshare_v1')
+
 rebuild_portal_data_before_postprocessing <- function(network_domain, backup = TRUE){
 
     dir_wrapper <- function(path, keyword){
@@ -1393,7 +1398,28 @@ rebuild_portal_data_before_postprocessing <- function(network_domain, backup = T
                   'sure it looks good before and after postprocessing. especially portal/data/general'))
 }
 
-# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/data')
-# correct_all_geometries(path = '~/git/macrosheds/portal/data')
-# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_dataset_v1')
-# correct_all_geometries(path = '~/git/macrosheds/data_acquisition/macrosheds_figshare_v1')
+insert_retrieval_datetimes <- function(){
+
+    #this inserts the last modification datetime of each raw documentation file as
+    #the presumed retrieval datetime for the corresponding raw data product.
+
+    #used in a pinch. hopefully a real recording method has been implemented by now.
+
+    fs <- list.files('data',
+                     recursive = TRUE, full.names = TRUE)
+    fs <- fs[grepl('/raw/', fs)]
+    fs <- fs[grepl('/documentation/', fs)]
+
+    for(f in fs){
+
+        rt <- read_lines(f)
+        if(length(rt) != 1) stop('sup with this')
+        if(grepl('UTC\\)$', rt)) next
+        rt <- glue(
+            rt, ' (',
+            as.character(lubridate::with_tz(file.info(f)$mtime, 'UTC')),
+            ' UTC)')
+
+        write_lines(rt, f)
+    }
+}
