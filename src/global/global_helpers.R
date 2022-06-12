@@ -9568,10 +9568,6 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
-    log_with_indent('adding legal metadata to each domain directory',
-                    logger = logger_module)
-    # legal_details_scrape(dataset_version = dataset_version)
-
     log_with_indent(glue('Generating output dataset v',
                          dataset_version),
                     logger = logger_module)
@@ -9594,13 +9590,6 @@ postprocess_entire_dataset <- function(site_data,
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
     # clean_portal_dataset()
-    
-    if(reformat_camels) {
-        log_with_indent('Reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
-        reformat_camels_for_ms()
-    } else{
-        log_with_indent('NOT reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
-    }
 
     log_with_indent('Generating spatial summary data',
                     logger = logger_module)
@@ -9634,6 +9623,11 @@ postprocess_entire_dataset <- function(site_data,
                              dataset_version = dataset_version)
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
+        reformat_camels_for_ms()
+
+        # log_with_indent('adding legal metadata to each domain directory',
+        #                 logger = logger_module)
+        # legal_details_scrape(dataset_version = dataset_version)
 
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
@@ -9654,6 +9648,7 @@ make_figshare_docs_skeleton <- function(where){
     dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '07_CAMELS-compliant_datasets_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
 }
 
@@ -9825,11 +9820,18 @@ assemble_misc_docs_figshare <- function(where){
                                 overwrite = TRUE)
     select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
         write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
-    file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt', docs_dir)
+    file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
+              file.path(docs_dir, '05_timeseries_documentation'))
     file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/timeseries_refs.bib',
               file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib'))
     file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/ws_attr_refs.bib',
               file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib'))
+    file.copy('src/templates/figshare_docfiles/07a_CAMELS-compliant_datasets_metadata.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    file.copy('src/templates/figshare_docfiles/07b_CAMELS-compliant_ws_attributes_column_descriptions.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    file.copy('src/templates/figshare_docfiles/07c_CAMELS-compliant_Daymet_forcings_column_descriptions.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
     file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
     file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
     file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
@@ -9981,6 +9983,14 @@ prepare_for_figshare <- function(where, dataset_version){
     prepare_ts_data_for_figshare(where = where,
                                  dataset_version = dataset_version)
     prepare_ws_attr_data_for_figshare(where = where)
+
+    #decided to change some dirnames. easiest to just do that as a patch here
+    file.rename(file.path(where, 'macrosheds_documentation'),
+                file.path(where, '0_documentation_and_metadata'))
+    file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
+                file.path(where, '1_watershed_attribute_data'))
+    file.rename(file.path(where, 'macrosheds_timeseries_data'),
+                file.path(where, '2_timeseries_data'))
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
@@ -11570,7 +11580,7 @@ get_source_urls <- function(result_obj, processing_func){
 
     if(uses_gdrive_func){
 
-        source_urls <- 'MacroSheds drive; not yet public'
+        source_urls <- 'MacroSheds drive (contact us for original source): https://drive.google.com/drive/folders/1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr?usp=sharing'
 
     } else if('url' %in% names(result_obj)){
 
@@ -14489,41 +14499,42 @@ legal_details_scrape <- function(dataset_version){
 }
 
 reformat_camels_for_ms <- function(){
-    
-    # This function will reformat the camels metrics computed for MacroSheds 
-    # watersheds to the MacroSheds format.
-    
-    ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
-    
-    all_files <- list.files(ms_attributes_dir, recursive = T, full.names = TRUE)
-    
-    
-    
+
+    # ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
+    ms_attributes_dir <- '../qa_experimentation/data/ms_in_camels_format'
+
+    all_files <- list.files(ms_attributes_dir, recursive = TRUE, full.names = TRUE)
+
     soil_files <- all_files[grep('soil.feather', all_files)]
     clim_files <- all_files[grep('clim.feather', all_files)]
     topo_files <- all_files[grep('topo.feather', all_files)]
+    vege_files <- all_files[grep('vege.feather', all_files)]
     geol_files <- all_files[grep('geol.feather', all_files)]
     daymet_files <- all_files[grep('daymet_full_climate.feather', all_files)]
-    
+    daymet_files <- daymet_files[! grepl('/NC/', daymet_files)]
+    warning('removing NC daymet data from camels set')
+
     soil <- map_dfr(soil_files, read_feather)
     clim <- map_dfr(clim_files, read_feather)
     topo <- map_dfr(topo_files, read_feather)
     geol <- map_dfr(geol_files, read_feather)
-    
-    dir.create('data/camels_compliant')
-    dir.create('data/camels_compliant/daymet')
-    
-    
-    write_csv(soil, 'data/camels_compliant/soil.csv')
-    write_csv(clim, 'data/camels_compliant/clim.csv')
-    write_csv(topo, 'data/camels_compliant/topo.csv')
-    write_csv(geol, 'data/camels_compliant/geol.csv')
-    
+    vege <- map_dfr(vege_files, read_feather)
+
+    dir.create('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes')
+    dir.create('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings')
+
+    write_csv(soil, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/soil.csv')
+    write_csv(clim, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/clim.csv')
+    write_csv(topo, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/topo.csv')
+    write_csv(geol, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/geol.csv')
+    write_csv(vege, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/vege.csv')
+
     for(i in 1:length(daymet_files)){
+
         this_daymet <- read_feather(daymet_files[i])
-        
+
         sites <- unique(this_daymet$site_code)
-        
+
         for(s in 1:length(sites)){
             this_site <- this_daymet %>%
                 filter(site_code == !!sites[s]) %>%
@@ -14534,13 +14545,10 @@ reformat_camels_for_ms <- function(){
                        `tmax(C)` = tmax,
                        `tmin(C)` = tmin,
                        `vp(Pa)` = vp,
-                       `pet(mm)` = pet) 
-            
-            write_csv(this_site, glue('data/camels_compliant/daymet/{s}.csv',
+                       `pet(mm)` = pet)
+
+            write_csv(this_site, glue('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings/{s}.csv',
                                       s = sites[s]))
         }
     }
 }
-
-
-
