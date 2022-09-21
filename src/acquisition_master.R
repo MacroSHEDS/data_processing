@@ -100,6 +100,16 @@ ms_init <- function(use_gpu = FALSE,
     successes <- 0
     which_machine <- 'unknown'
 
+    # example dev computer 'registration' code block
+    ## res <- try(setwd('~/your/file/path/to/macrosheds/data_processing'), silent=TRUE) # example
+    ## if(! 'try-error' %in% class(res)){
+    ##     successes <- successes + 1
+    ##     which_machine <- 'your_machine') # machine name is completely up to you, does not matter
+    ##     instance_type <- 'dev' # instance type is 'dev' for all personal computers
+    ##     machine_status <- 'n00b' # unless you have > 32GB of RAM and > 8 CPUS, your 'n00b'
+    ##     op_system <- 'mac' # whats your OS?
+    ## }
+
     res <- try(setwd('~/macrosheds_data_processing'), silent=TRUE) #DCC
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -171,6 +181,15 @@ ms_init <- function(use_gpu = FALSE,
     #     machine_status <- '1337'
     # }
 
+    res <- try(setwd('/home/weston/science/macrosheds/data_processing'), silent=TRUE) # wes
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'wes'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
     res <- try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -218,12 +237,14 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
     TRUE ~ 'UNKNOWN')
+
+googledrive::drive_auth(email = gee_login)
 
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
 
-googledrive::drive_auth(email = gee_login)
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -263,8 +284,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 1
-# print(network_domain, n=50)
+## dmnrow = 26
+## print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -304,12 +325,14 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
+
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         verbose = TRUE))
     }
+
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
