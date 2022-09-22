@@ -1,19 +1,14 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
-VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms006,NA,east_river_met,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-04a0bf909a5e63a-20201207T194832971
-VERSIONLESS002,discharge,ready,ready,NA,discharge__ms002,NA,east_river_discharge,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-39d95e263bec24d-20190301T155200040382
-VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_isotopes,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-1a238fda8efff28-20201008T062924406
-VERSIONLESS004,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_cations,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-00d153692f1826b-20201008T064447692
-VERSIONLESS005,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_anions,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-b2f6dc82c561acf-20201008T063210052
-VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_carbon,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-7129d0cae9524f7-20201008T064208417
-VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_nitrogen,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-27b02333d31ae19-20201008T063638376
-VERSIONLESS008,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms006,NA,east_river_ws_boundaries,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-3b9a58adc163fd4-20190509T155206477018
-VERSIONLESS009,discharge,ready,ready,NA,discharge__ms002,NA,east_river_discharge_v2,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-ed7388a0308c456-20210430T041037813424
-ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
-ms002,discharge,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
-ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
-ms004,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms006,NA,NA,NA
-ms005,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
-ms006,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
-ms007,ws_boundary,NA,NA,linked,NA,automated entry,NA,NA
-ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
-ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms006,automated entry,NA,NA
+VERSIONLESS001,precipitation,ready,ready,,precip_pchem_pflux__ms006,W9 __ daily ppt,sleeper_ppt,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
+VERSIONLESS002,precip_chem,ready,ready,,precip_pchem_pflux__ms006,,sleeper_pchem,https://www.sciencebase.gov/catalog/file/get/5c5c89b6e4b070828902d1c9?f=__disk__0c%2F04%2F18%2F0c04182d4c0c9c86b261a5ace5a3096dfb83b579
+VERSIONLESS003,discharge,ready,ready,,discharge__ms002,W9 __ 5m discharge,sleeper_discharge_w9,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__4a%2F22%2Ffe%2F4a22fe9a1dc7ccd38edb195dfb73f3eb9b168964
+VERSIONLESS004,discharge,ready,ready,,discharge__ms002,using USGS dataRetrieval,sleeper_discharge_w5,NA
+VERSIONLESS005,discharge,ready,ready,,discharge__ms002,using USGS dataRetrieval,sleeper_discharge_w3,NA
+VERSIONLESS006,stream_chemistry,ready,ready,,stream_chemistry__ms001,,sleeper_chem,https://www.sciencebase.gov/catalog/file/get/5c5c89b6e4b070828902d1c9?f=__disk__0c%2F04%2F18%2F0c04182d4c0c9c86b261a5ace5a3096dfb83b579
+VERSIONLESS007,stream_chemistry,ready,ready,,stream_chemistry__ms001,W9 __ daily temp min max,sleeper_chem_w9,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
+ms001,stream_chemistry,,,ready,stream_flux_inst__ms003,NA,NA,NA
+ms002,discharge,,,ready,stream_flux_inst__ms003,NA,NA,NA
+ms003,stream_flux_inst,,,ready,NA,NA,NA,NA
+ms004,precip_gauge_locations,,,ready,precip_pchem_pflux__ms006,NA,NA,NA
+ms005,stream_gauge_locations,,,ready,NA,NA,NA,NA
+ms006,precip_pchem_pflux,,,ready,NA,NA,NA,NA

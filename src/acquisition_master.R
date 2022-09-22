@@ -316,6 +316,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     update_product_statuses(network = network,
                            domain = domain)
+
     get_all_local_helpers(network = network,
                          domain = domain)
 
