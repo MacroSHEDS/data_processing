@@ -4,7 +4,7 @@ source('src/webb/sleeper/domain_helpers.R')
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
-
+    # START OF BLOCK YOU DONT CHANGE #
     # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -17,35 +17,20 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
+    # END OF BLOCK YOU DONT CHANGE #
+
     # create documentation file
-    rawfile <- glue('{rd}/{c}.txt',
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    # here, we start to tailor things to our domain:
+    # download the data form the download link!
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
 
+    # this code records metadat about the date, time, and other details
     res <- httr::HEAD(set_details$url)
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
@@ -62,7 +47,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#discharge: STATUS=READY
+#precip_chem: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
@@ -86,22 +71,6 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-#
-#     login_escape <- sub(pattern = '@',
-#                         replacement = '%40',
-#                         x = set_details$orcid_login)
-#
-#     url_with_auth <- sub(pattern = '://',
-#                          replacement = paste0('://', login_escape, ':',
-#                                               set_details$orcid_pass, '@'),
-#                          x = set_details$url)
-#
-#     download.file(url = url_with_auth,
-#                   destfile = rawfile,
-#                   quiet = FALSE,
-#                   cacheOK = FALSE)
-#
-#     res <- httr::HEAD(url_with_auth)
 
     res <- httr::HEAD(set_details$url)
 
@@ -119,7 +88,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
@@ -176,7 +145,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
@@ -233,7 +202,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
@@ -404,119 +373,6 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#ws_boundary: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS008 <- function(set_details, network, domain) {
-
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.zip',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          skip = FALSE,
-                          overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
-}
-
-#discharge: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS009 <- function(set_details, network, domain) {
-
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.zip',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          skip = FALSE,
-                          overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
-}
 
 #munge kernels ####
 
@@ -575,7 +431,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#discharge: STATUS=READY
+#precip_chem: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -686,7 +542,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -832,7 +688,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -1032,7 +888,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -1473,179 +1329,6 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
     }
 
     unlink(temp_dir, recursive = TRUE)
-
-    return()
-}
-
-#ws_boundary: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
-
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
-
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    path <- paste(temp_dir, 'data', sep = '/')
-
-    sheds <- sf::st_read(path)
-
-    projstring <- choose_projection(unprojected = TRUE)
-
-    sheds <- sheds %>%
-        filter(NAME %in% c('Copper', 'Marmot', 'Bradley', 'Rustlers', 'Gothic',
-                           'Quigley', 'Rock', 'Avery')) %>%
-        select(site_code = NAME, area = km2) %>%
-        mutate(area = area*100)
-
-    sites <- unique(sheds$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- sheds %>%
-            filter(site_code == !!sites[s]) %>%
-            sf::st_transform(., crs = projstring)
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = TRUE)
-    }
-
-    unlink(temp_dir, recursive = TRUE)
-
-    return()
-}
-
-#discharge: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, component) {
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
-
-    temp_dir <- tempdir()
-
-    zipped_files <- unzip(rawfile,
-          list = T)
-
-    files_wanted <- zipped_files$Name[! grepl('Stream_discharge_data_collected_within_the_East_River_Colorado_for_the_Lawrence_Berkeley_National_Laboratory',
-                                              zipped_files$Name)]
-    unzip(rawfile,
-          files = files_wanted,
-          exdir = temp_dir)
-
-    temp_dir_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
-    rel_file <- grep('streamflow|Streamflow', temp_dir_files, value = TRUE)
-
-    all_sites <- tibble()
-    for(i in 1:length(rel_file)){
-
-        site_code <- str_match(rel_file[i], '.+/(.+)_[sS]treamflow.+\\.xlsx$')[, 2]
-
-        if(site_code == 'Pumphouse') site_code <- 'PH'
-
-        sheets <- readxl::excel_sheets(rel_file[i])
-
-        if('corrected' %in% sheets){
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'corrected')
-        } else if('Corrected' %in% sheets) {
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'Corrected')
-        } else {
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'flow')
-        }
-
-        sheet_names <- names(one_site)
-
-        date_col <- grep('Time|time', sheet_names, value = TRUE)
-        q_col <- sheet_names[str_detect(sheet_names,
-                            regex('(m3/s)|cms', ignore_case = T))]
-
-        if(length(q_col) == 0){
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'mean daily')
-
-            sheet_names <- names(one_site)
-
-            date_col <- grep('Time|time|date', sheet_names, value = TRUE)
-            q_col <- sheet_names[str_detect(sheet_names,
-                                            regex('(m3/s)|cms', ignore_case = T))]
-        }
-
-        one_site <- try(one_site %>%
-                            mutate(site_code := !!site_code) %>%
-                            select(date = !!date_col,
-                                   q = !!q_col,
-                                   site_code))
-
-        if(inherits(one_site, 'try-error')) {
-
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'mean daily') %>%
-                mutate(site_code = !!site_code) %>%
-                select(date,
-                       q = `mean daily Q (m3/s)`,
-                       site_code)
-        }
-
-        all_sites <- rbind(all_sites, one_site)
-    }
-
-    all_sites <- all_sites %>%
-        rename(datetime = date,
-               val = q) %>%
-        mutate(var = 'discharge',
-               ms_status = 0)
-
-    d <- identify_sampling_bypass(all_sites,
-                                  is_sensor = T,
-                                  sampling_type = 'I',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms)
-
-    # Discharge is in m^3/s, converting to L/s
-    d <- d %>%
-        mutate(val = val*1000)
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
 
     return()
 }
