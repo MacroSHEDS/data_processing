@@ -848,19 +848,33 @@ process_1_DP4.00130 <-function(network, domain, prodname_ms, site_code,
 
   rawfiles <- list.files(rawdir)
 
-  relevant_file <- 'csd_continuousDischarge.feather'
+  if(site_code == 'TOMB'){
+      relevant_file <- 'csd_continuousDischargeUSGS.feather'
+  } else {
+      relevant_file <- 'csd_continuousDischarge.feather'
+  }
 
   if(relevant_file %in% rawfiles) {
 
     rawd <- read_feather(glue(rawdir, '/', relevant_file))
 
-    out_sub <- rawd %>%
-      mutate(dischargeFinalQFSciRvw = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw),
-             dischargeFinalQF = ifelse(is.na(dischargeFinalQF), 0, dischargeFinalQF)) %>%
-      mutate(ms_status = ifelse(dischargeFinalQF == 1 | dischargeFinalQFSciRvw == 1,
-                                1, 0)) %>%
-      mutate(var = 'discharge') %>%
-      select(site_code = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
+      if(site_code == 'TOMB'){
+
+        out_sub <- rawd %>%
+          mutate(ms_status = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw)) %>%
+          mutate(var = 'discharge') %>%
+          select(site_code = siteID, datetime = endDate, var, val = usgsDischarge, ms_status)
+
+      } else {
+
+        out_sub <- rawd %>%
+          mutate(dischargeFinalQFSciRvw = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw),
+                 dischargeFinalQF = ifelse(is.na(dischargeFinalQF), 0, dischargeFinalQF)) %>%
+          mutate(ms_status = ifelse(dischargeFinalQF == 1 | dischargeFinalQFSciRvw == 1,
+                                    1, 0)) %>%
+          mutate(var = 'discharge') %>%
+          select(site_code = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
+      }
 
   } else {
     return(generate_ms_exception('Missing discharge files'))

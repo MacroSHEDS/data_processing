@@ -3,7 +3,8 @@ This MacroSheds data product ({p}) was generated from the following munged Macro
 
 {mp}
 
-Source data were retrieved from the following web page(s), static file(s), or web-API endpoint(s):
+Source data were retrieved from the following web page(s), static file(s), or web-API endpoint(s)
+on the datetime in parentheses:
 
 {ru}
 
