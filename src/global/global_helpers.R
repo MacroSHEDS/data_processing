@@ -3252,16 +3252,14 @@ delineate_watershed_apriori_recurse <- function(lat,
         allow_alphanumeric_response = FALSE)
 
     if('n' %in% resp){
-        unlink(write_dir,
-               recursive = TRUE)
+        unlink(write_dir)
         print(glue('Moving on. You haven\'t seen the last of {s}!',
                    s = site_code))
         return(1)
     }
 
     if('a' %in% resp){
-        unlink(write_dir,
-               recursive = TRUE)
+        unlink(write_dir)
         print(glue('Aborted. Any completed delineations have been saved.'))
         return(2)
     }
@@ -7611,24 +7609,10 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                           rd = raw_dir,
                           p = prodname_ms)
 
-    readr::write_file(murl,
+    readr::write_file(paste0(murl, ' (retrieved ',
+                             lubridate::with_tz(Sys.time(), 'UTC'),
+                             ')'),
                       file = data_acq_file)
-
-    # #create portal directory if necessary
-    # portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
-    #                    d = domain,
-    #                    p = strsplit(prodname_ms, '__')[[1]][1])
-    # dir.create(portal_dir,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-    #
-    # #hardlink file
-    # portal_file <- glue(portal_dir, '/raw_data_documentation_url.txt')
-    # unlink(portal_file)
-    # invisible(sw(file.link(to = portal_file,
-    #                        from = data_acq_file)))
-
-    #return()
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
