@@ -1,0 +1,47 @@
+MacroSheds detection limits as reported by primary data sources:
+Column names and their descriptions
+
+
+1. domain
+
+MacroSheds domain code. A domain includes one or more sites under common management.
+
+
+2. prodcode
+
+MacroSheds product name (e.g. stream_chemistry) and product code (e.g. 208). Product codes are shared with primary source where possible.
+Multiple products may be included in this column, separated by a "|" character.
+
+3. variable_converted
+
+Usually the same as variable_original. MacroSheds represents some molecules by their primary atomic constituents, e.g. NH4 as NH4-N.
+In these cases we convert the detection limit into terms of the primary constituent via molar mass ratios.
+
+4. variable_original
+
+The variable measured by the primary source.
+
+5. detection_limit_converted
+
+The detection limit as stored by MacroSheds, representing any unit or molecular conversions we've applied.
+
+6. detection_limit_original
+
+The detection limit as reported by the primary source
+
+7. unit_converted
+
+The MacroSheds standard unit into which the detection limit was converted. See 05b_timeseries_variable_metadata.csv for a full list of MacroSheds variables.
+
+8. unit_original
+
+The unit of the detection limit as reported by the primary source
+
+9. start_date
+
+the date as YYYY-MM-DD on which the corresponding detection limit became effective.
+
+10. end_date
+
+the date as YYYY-MM-DD on which the corresponding detection limit no longer applies.
+

@@ -1152,11 +1152,11 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
     }
 
     if(nrow(all_vars) == 0){
-        
+
         msg <- generate_ms_exception(glue('No data available for: ', sites[s]))
         logerror(msg = msg,
                  logger = logger_module)
-        
+
         next
     }
 
@@ -1272,10 +1272,10 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_code,
         if(inherits(ws_values, 'try-error')){
             msg <- generate_ms_exception(glue('No data was retrived for {s}',
                                               s = sites[s]))
-            
+
             logerror(msg = msg,
                      logger = logger_module)
-            
+
             next
         }
 
@@ -1460,14 +1460,14 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                              d = domain))
 
     ws_prodname <- grep('ws_boundary', files, value = TRUE)
-    
-    # If there are multiple ws boundary folders, get largest prod code 
+
+    # If there are multiple ws boundary folders, get largest prod code
     if(length(ws_prodname) > 1){
 
         prod_codes <- str_match(ws_prodname, 'ms([0-9]{3})$')[,2]
-        
+
         max_code <- max(prod_codes)
-        
+
         ws_prodname <- ws_prodname[grep(max_code, prod_codes)]
     }
 
@@ -1503,7 +1503,7 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
         snow_year <- str_match(snow_files[p], 'WY([0-9]{4})_v01\\.nc$')[1,2]
         site_boundary <- sf::st_read(ws_path, quiet  = TRUE) %>%
           terra::vect(.)
-        
+
         snow_file <- terra::rast(snow_files[p])
 
         swe_tib = terra::extract(snow_file, site_boundary, weights = TRUE)
@@ -1604,10 +1604,10 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
 
   dir.create(glue('data/{n}/{d}/ws_traits/glhymps/',
                   n = network,
-                  d = domain), recursive = TRUE)
+                  d = domain), recursive = TRUE, showWarnings = FALSE)
 
   glhymps <- st_read('data/spatial/GLHYMPS/GLHYMPS.shp')
-  
+
   sites <- boundaries$site_code
   for(s in 1:length(sites)){
 
@@ -1615,11 +1615,12 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
       filter(site_code == !!sites[s]) %>%
       sf::st_transform(sf::st_crs(glhymps)) %>%
         sf::st_make_valid()
-    
+
     site_area <- site_data %>%
       filter(network == !!network,
              domain == !!domain,
-             site_code == !!sites[s]) %>%
+             site_code == !!sites[s],
+             site_type != 'rain_gauge') %>%
       pull(ws_area_ha)
 
     site_area <- site_area * 10000
@@ -1824,7 +1825,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
 
   final <- fin_table %>%
     select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
-  
+
   if(nrow(final) == 0){
     return(generate_ms_exception(glue('No data was retrived for {s}',
                                       s = site_code)))
