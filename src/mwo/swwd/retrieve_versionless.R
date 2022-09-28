@@ -1,6 +1,3 @@
-#this is for unorganized versioness data (e.g. a single zip file for all
-#sites). we could turn this into a function, and make a separate function for
-#versionless data that's separated into several files.
 
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)
@@ -18,9 +15,8 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-site_code <- 'sitename_NA'
-
-## i = 4
+site_code <- 'sitecode_NA'
+## i = 1
 for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
@@ -66,23 +62,11 @@ for(i in seq_len(nrow(prod_info))){
                showWarnings = FALSE,
                recursive = TRUE)
 
-    retrieval_s <- held_data[[prodname_ms]][['sitename_NA']][['retrieve']][['status']]
-
-    if(retrieval_s == 'ok'){
-        loginfo(glue('Nothing to do for {s} {p}',
-                     s=site_code, p=prodname_ms), logger=logger_module)
-        next
-    } else {
-        loginfo(glue('Retrieving {s} {p}',
-                     s=site_code, p=prodname_ms), logger=logger_module)
-    }
-
-    retrieve_sleepers_product(network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_code = site_code,
-                         tracker = held_data,
-                         url = prod_info$url[i])
+    retrieve_versionless_product(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms,
+                                 site_code = site_code,
+                                 tracker = held_data)
 
     if(! is.na(prod_info$munge_status[i])){
         update_data_tracker_m(network = network,
