@@ -67,8 +67,6 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
 
@@ -102,32 +100,14 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.zip',
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
 
     res <- httr::HEAD(set_details$url)
 
@@ -159,32 +139,15 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.zip',
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          skip = FALSE,
-                          overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
+    # call our dataRetrieval function
+    q <- retrieve_usgs_sleeper_daily_q(set_details)
+
+    # download it to the raw file locatin
+    write_csv(q, file = rawfile)
 
     res <- httr::HEAD(set_details$url)
 
@@ -216,32 +179,15 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.zip',
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
-                          skip = FALSE,
-                          overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
+    # call our dataRetrieval function
+    q <- retrieve_usgs_sleeper_daily_q(set_details)
+
+    # download it to the raw file locatin
+    write_csv(q, file = rawfile)
 
     res <- httr::HEAD(set_details$url)
 
@@ -279,26 +225,8 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
 
     res <- httr::HEAD(set_details$url)
 
@@ -330,32 +258,14 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.zip',
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          username = set_details$orcid_login,
-                          password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
 
     res <- httr::HEAD(set_details$url)
 

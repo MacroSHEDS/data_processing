@@ -226,7 +226,7 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -237,11 +237,18 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
+    ## ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
+    ## you can add your name to the vector below,
+    ## if you would like to use the macrosheds.project GEE account
+    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
+#load authorization file for macrosheds google sheets and drive
+#same account must have GEE and GDrive access
+googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
+#initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
 
@@ -284,7 +291,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-## dmnrow = 26
+## dmnrow = 20
 ## print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -294,17 +301,19 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    # held_data = get_data_tracker(network, domain)
+    held_data = get_data_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive')
-    # owrite_tracker(network, domain)
+    ## dangerous lines - use at your own risk!    :0
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive')
+    ## owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
-    # owrite_tracker(network, domain)
+    ## less dangerous version below, clears tracker for just a specified product
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -323,6 +332,7 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
+
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)

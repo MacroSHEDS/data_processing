@@ -1,3 +1,11 @@
+## run these before working inside retrieve_product func
+## network = network
+## domain = domain
+## prodname_ms = prodname_ms
+## site_code = site_code
+## tracker = held_data
+## url = prod_info$url[i]
+
 retrieve_sleepers_product <- function(network,
                                  domain,
                                  prodname_ms,
@@ -26,10 +34,17 @@ retrieve_sleepers_product <- function(network,
     # remember, this "retrieve_product" function is being called, in the retrieve.R script,
     # in a loop over the product names from products.csv -- this is why the products.csv prod names
     # must match the end of the procesing kernels which are written to retrieve that product
+
+    # if you're working on pkernels and not actually running this func, uncomment and run these lines:
+    ## set_details = deets
+    ## network = network
+    ## domain = domain
+
     result <- do.call(processing_func,
                       args = list(set_details = deets,
                                   network = network,
                                   domain = domain))
+
 
     new_status <- evaluate_result_status(result)
 
@@ -51,4 +66,16 @@ retrieve_sleepers_product <- function(network,
                      domain = domain,
                      prodname_ms = prodname_ms)
 
+}
+
+retrieve_usgs_sleeper_daily_q <- function(set_details) {
+  if(grepl("w5", set_details$component) == TRUE) {
+    q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
+                                   parameterCd = "00060")
+  } else if(grepl("w3", set_details$component) == TRUE) {
+    q <- dataRetrieval::readNWISdv(siteNumbers = "01135150",
+                                   parameterCd = "00060")
+  }
+
+  return(q)
 }

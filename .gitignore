@@ -27,3 +27,4 @@ data/general/nhd_hr
 output/
 old_dataset_dirs.tar.gz
 old_logs
+vault/*
