@@ -264,7 +264,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 20
+# dmnrow = 8
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -281,7 +281,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
@@ -303,7 +303,7 @@ for(dmnrow in 1:nrow(network_domain)){
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
     ms_munge(network = network,
-             # prodname_filter = c('discharge'),
+             prodname_filter = c('stream_chemistry'),
              domain = domain)
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
