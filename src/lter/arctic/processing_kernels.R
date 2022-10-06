@@ -495,7 +495,7 @@ process_1_1489 <- function(network, domain, prodname_ms, site_code,
                          summary_flagcols = 'Flag_Daily_Precip_Total_mm')
 
     d <- ms_cast_and_reflag(d,
-                            summary_flags_clean = list('Flag_Daily_Precip_Total_mm' = ''),
+                            summary_flags_to_drop = list('Flag_Daily_Precip_Total_mm' = 'ensuring any other flag gets ms_status of 0'),
                             summary_flags_dirty = list('Flag_Daily_Precip_Total_mm' = 'E'),
                             varflag_col_pattern = NA)
 
@@ -536,7 +536,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
                              sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
-                                summary_flags_clean = list('Comments' = ''),
+                                summary_flags_to_drop = list('Comments' = 'ensuring any other comment gets ms_status of 0'),
                                 summary_flags_dirty = list('Comments' = c('Late season staff gauge',
                                                                           'WINTER')),
                                 varflag_col_pattern = NA)
@@ -561,7 +561,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
                              sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
-                                summary_flags_clean = list('Comments' = ''),
+                                summary_flags_to_drop = list('Comments' = 'ensuring any other comment gets ms_status of 0'),
                                 summary_flags_dirty = list('Comments' = c('Late season staff gauge',
                                                                           'WINTER')),
                                 varflag_col_pattern = NA)
