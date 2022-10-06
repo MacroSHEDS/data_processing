@@ -643,6 +643,7 @@ ms_read_raw_csv <- function(filepath,
     #   indicating where this is needed
     #site_code_col should eventually work like datetime_cols (in case site_code is
     #   separated into multiple components)
+    #can't deal with missing sitecode column as is
 
     #filepath: string
     #preprocessed_tibble: a tibble with all character columns. Supply this
@@ -6550,9 +6551,9 @@ ms_linear_interpolate <- function(d, interval){
     }
 
     var <- drop_var_prefix(d$var[1])
-    max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
-                                    yes = 3, #is Q-ish
-                                    no = 15) #is chemistry/etc
+    max_samples_to_impute <- ifelse(test = var == 'discharge',
+                                    yes = 3, #is Q
+                                    no = 15) #is chemistry or precipitation
 
     if(interval == '15 min'){
         max_samples_to_impute <- max_samples_to_impute * 96
@@ -6630,7 +6631,182 @@ ms_linear_interpolate <- function(d, interval){
     return(d_interp)
 }
 
-synchronize_timestep <- function(d){
+ms_nocb_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for pchem only, where measured concentrations represent aggregated
+    #concentration over the measurement period.
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_nocb_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_nocb_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 45 #fixed because this func is only called for pchem
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(
+
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant now, but can't hurt)
+            ms_status = imputeTS::na_locf(ms_status,
+                                          option = 'nocb',
+                                          na_remaining = 'rev'),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_locf(val,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val
+        )
+
+    err <- errors(d_interp$val) #extract error from data vals
+    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    if(sum(! is.na(err)) > 0){
+        #and then carry error to interped rows
+        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
+    } else {
+        errors(d_interp$val) <- 0 # #unless not enough error to interp
+    }
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    return(d_interp)
+}
+
+ms_nocb_mean_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for precipitation depth/volume only, where measurements represent
+    #accumulation over the measurement period. if NAs are present, successive NAs can be
+    #assumed to sum to the next measured value. Therefore each NA in a series can be estimated
+    #as the next measured value divided by the number of NAs in the series.
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_nocb_mean_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_nocb_mean_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 15 #fixed because this func is only called for precip
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(
+
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant now, but can't hurt)
+            ms_status = imputeTS::na_locf(ms_status,
+                                          option = 'nocb',
+                                          na_remaining = 'rev'),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_locf(val,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val
+        )
+
+    err <- errors(d_interp$val) #extract error from data vals
+    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    if(sum(! is.na(err)) > 0){
+        #and then carry error to interped rows
+        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
+    } else {
+        errors(d_interp$val) <- 0 # #unless not enough error to interp
+    }
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    #identify series of records that need to be divided by their n
+    laginterp <- lag(d_interp$ms_interp)
+    laginterp[1] <- d_interp$ms_interp[1]
+    laginterp <- as.numeric(laginterp | d_interp$ms_interp)
+
+    err_ <- errors::errors(d_interp$val)
+    d_interp$val <- errors::drop_errors(d_interp$val)
+    vals_interpted <- d_interp$val * laginterp
+
+    #use run length encoding to do the division quickly
+    vals_new <- rle2(vals_interpted) %>%
+        mutate(values = values / lengths) %>%
+        select(lengths, values) %>%
+        as.list()
+    class(vals_new) <- 'rle'
+    vals_new <- inverse.rle(vals_new)
+
+    real_vals_new <- vals_new != 0
+    d_interp$val[real_vals_new] <- vals_new[real_vals_new]
+    errors::errors(d_interp$val) <- err_
+
+    return(d_interp)
+}
+
+synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                                  # desired_interval){
                                  # impute_limit = 30){
 
@@ -6741,11 +6917,12 @@ synchronize_timestep <- function(d){
         summary_and_interp_chunk <- sitevar_chunk[to_summarize_bool, ]
         interp_only_chunk <- sitevar_chunk[! to_summarize_bool, ]
 
+        var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+        var_is_pchem <- prodname_from_prodname_ms(prodname_ms_) == 'precip_chemistry'
+
         if(nrow(summary_and_interp_chunk)){
 
             #summarize by sum for P, and mean for everything else
-            # var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
-            var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
             summary_and_interp_chunk_dt <- summary_and_interp_chunk %>%
                 mutate(val_err = errors(val),
@@ -6798,9 +6975,19 @@ synchronize_timestep <- function(d){
             ms_status_fill = NA,
             interval = rounding_intervals[i])
 
-        d_split[[i]] <- ms_linear_interpolate(
-            d = sitevar_chunk,
-            interval = rounding_intervals[i])
+        if(! var_is_p && ! var_is_pchem){
+            d_split[[i]] <- ms_linear_interpolate(
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+        } else if(var_is_pchem){
+            d_split[[i]] <- ms_nocb_interpolate(
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+        } else { #precip
+            d_split[[i]] <- ms_nocb_mean_interpolate(
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+        }
     }
 
     #recombine list of tibbles into single tibble
@@ -8289,25 +8476,15 @@ qc_hdetlim_and_uncert <- function(d, prodname_ms){
     return(d)
 }
 
-rle2 <- function(x){#, return_list = FALSE){
+rle2 <- function(x){
 
     r <- rle(x)
     ends <- cumsum(r$lengths)
-
-    # if(return_list){
-    #
-    #     r <- list(values = r$values,
-    #               starts = c(1, ends[-length(ends)] + 1),
-    #               stops = ends,
-    #               lengths = r$lengths)
-    #
-    # } else {
 
     r <- tibble(values = r$values,
                 starts = c(1, ends[-length(ends)] + 1),
                 stops = ends,
                 lengths = r$lengths)
-    # }
 
     return(r)
 }
