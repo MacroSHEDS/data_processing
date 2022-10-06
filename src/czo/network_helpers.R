@@ -115,9 +115,9 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail){
                                s = sites,
                                c = components)
 
-            email_err(msgs = update_msg,
-                      addrs = conf$report_emails,
-                      pw = conf$gmail_pw)
+            #email_err(msgs = update_msg,
+            #          addrs = conf$report_emails,
+            #          pw = conf$gmail_pw)
         }
     }
 

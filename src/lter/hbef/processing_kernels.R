@@ -239,11 +239,12 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
                                        'pHmetrohm'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
+                         set_to_NA = -999.9, #also -3, but that can be a real value in other columns. will get dropped in postprocessing
                          summary_flagcols = 'fieldCode')
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_clean = list(fieldCode = NA),
-                            summary_flags_to_drop = list(fieldCode = '#*#'),
+                            summary_flags_dirty = list(fieldCode = c(969, 970)),
                             varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
