@@ -5935,7 +5935,8 @@ shortcut_idw <- function(encompassing_dem,
             d_elev <- tibble(site_code = rownames(dk),
                              d = dk[,1]) %>%
                 left_join(data_locations,
-                          by = 'site_code')
+                          by = 'site_code') %>%
+                mutate(d = errors::drop_errors(d))
             mod <- lm(d ~ elevation, data = d_elev)
             ab <- as.list(mod$coefficients)
 
@@ -5945,9 +5946,12 @@ shortcut_idw <- function(encompassing_dem,
             # Set all negative values to 0
             d_from_elev[d_from_elev < 0] <- 0
 
-            #average both approaches (this should be weighted toward idw
-            #when close to any data location, and weighted half and half when far)
-            d_idw <- (d_idw + d_from_elev) / 2
+            #get weighted mean of both approaches:
+            #weight on idw is 1; weight on elev-predicted is |R^2|
+            abs_r2 <- abs(cor(d_elev$d, mod$fitted.values)^2)
+            # abs_adjr2 <- abs(1 - (1 - r2) * ((nobs(mod) - 1) / mod$df.residual))
+
+            d_idw <- (d_idw + d_from_elev * abs_r2) / (1 + abs_r2)
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
@@ -6567,12 +6571,12 @@ ms_linear_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
-            #carry ms_status to any rows that have just been populated (probably
-            #redundant now, but can't hurt)
             ms_status = imputeTS::na_locf(ms_status,
-                                           na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -6591,38 +6595,31 @@ ms_linear_interpolate <- function(d, interval){
                                            maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+                #do the same for uncertainty
+                imputeTS::na_interpolation(val_err,
+                                           maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
 
-        # mutate(
-        #     err = errors(val), #extract error from data vals
-        #     err = case_when(
-        #         err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
-        #         TRUE ~ err),
-        #     val = if(sum(! is.na(err)) > 0){
-        #         set_errors(val, #and then carry error to interped rows
-        #                    imputeTS::na_locf(err,
-        #                                      na_remaining = 'rev'))
-        #     } else {
-        #         set_errors(val, #unless not enough error to interp
-        #                    0)
-        #     }) %>%
-        # select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
-        # arrange(site_code, var, datetime)
-
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
     d_interp <- filter(d_interp,
@@ -6666,13 +6663,14 @@ ms_nocb_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
-            #carry ms_status to any rows that have just been populated (probably
-            #redundant now, but can't hurt)
+            #carry ms_status to any rows that have just been populated
             ms_status = imputeTS::na_locf(ms_status,
                                           option = 'nocb',
-                                          na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             val = if(sum(! is.na(val)) > 1){
 
@@ -6683,22 +6681,90 @@ ms_nocb_interpolate <- function(d, interval){
                                   maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
 
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    return(d_interp)
+}
+
+ms_zero_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for precip only, and only relevant at konza (so far)
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 45 #fixed because this func is only called for precip
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(
+
+            ms_status = imputeTS::na_replace(ms_status,
+                                             fill = 1,
+                                             maxgap = max_samples_to_impute),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_replace(val,
+                                     fill = 0,
+                                     maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val
+        )
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
     d_interp <- filter(d_interp,
@@ -6744,13 +6810,15 @@ ms_nocb_mean_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
             #carry ms_status to any rows that have just been populated (probably
             #redundant now, but can't hurt)
             ms_status = imputeTS::na_locf(ms_status,
                                           option = 'nocb',
-                                          na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             val = if(sum(! is.na(val)) > 1){
 
@@ -6761,17 +6829,28 @@ ms_nocb_mean_interpolate <- function(d, interval){
                                   maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
@@ -6789,19 +6868,30 @@ ms_nocb_mean_interpolate <- function(d, interval){
 
     err_ <- errors::errors(d_interp$val)
     d_interp$val <- errors::drop_errors(d_interp$val)
-    vals_interpted <- d_interp$val * laginterp
+    vals_interped <- d_interp$val * laginterp
+    err_interped <- err_ * laginterp
 
     #use run length encoding to do the division quickly
-    vals_new <- rle2(vals_interpted) %>%
+    vals_new <- rle2(vals_interped) %>%
         mutate(values = values / lengths) %>%
         select(lengths, values) %>%
         as.list()
     class(vals_new) <- 'rle'
     vals_new <- inverse.rle(vals_new)
 
+    #same for uncertainty
+    err_new <- rle2(err_interped) %>%
+        mutate(values = values / lengths) %>%
+        select(lengths, values) %>%
+        as.list()
+    class(err_new) <- 'rle'
+    err_new <- inverse.rle(err_new)
+
     real_vals_new <- vals_new != 0
     d_interp$val[real_vals_new] <- vals_new[real_vals_new]
-    errors::errors(d_interp$val) <- err_
+    errors::errors(d_interp$val) <- err_new
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
 
     return(d_interp)
 }
@@ -6984,9 +7074,12 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
         } else { #precip
-            d_split[[i]] <- ms_nocb_mean_interpolate(
+            d_split[[i]] <- ms_zero_interpolate( #so far only needed for konza
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
+            # d_split[[i]] <- ms_nocb_mean_interpolate( #this might apply in some cases, but not yet.
+            #     d = sitevar_chunk,
+            #     interval = rounding_intervals[i])
         }
     }
 
@@ -11582,14 +11675,6 @@ approxjoin_datetime <- function(x,
               datetime_max = datetime_x + rollmax)]
     y[, `:=` (datetime_y_orig = datetime_y)] #datetime col will be dropped from y
 
-    # if(indices_only){
-    #     y_indices <- y[x,
-    #                    on = .(datetime_y <= datetime_max,
-    #                           datetime_y >= datetime_min),
-    #                    which = TRUE]
-    #     return(y_indices)
-    # }
-
     #join x rows to y if y's datetime falls within the x range
     joined <- y[x, on = .(datetime_y <= datetime_max,
                           datetime_y >= datetime_min)]
@@ -11598,8 +11683,9 @@ approxjoin_datetime <- function(x,
     #for any datetimes in x or y that were matched more than once, keep only
     #the nearest match
     joined[, `:=` (datetime_match_diff = abs(datetime_x - datetime_y_orig))]
-    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_x]
-    joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_y_orig]
+    joined = joined[order(datetime_match_diff),
+                    lapply(.SD, function(z) first(na.omit(z))),
+                    by = datetime_x]
 
     if(indices_only){
         y_indices <- which(y$datetime_y %in% joined$datetime_y_orig)
