@@ -203,7 +203,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -264,7 +264,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 8
+# dmnrow = 12
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -281,7 +281,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
@@ -297,7 +297,7 @@ for(dmnrow in 1:nrow(network_domain)){
     update_product_statuses(network = network,
                            domain = domain)
     get_all_local_helpers(network = network,
-                         domain = domain)
+                          domain = domain)
 
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
@@ -312,7 +312,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         verbose = TRUE))
     }
     ms_derive(network = network,
-              prodname_filter = c('discharge'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     if(domain != 'mcmurdo'){

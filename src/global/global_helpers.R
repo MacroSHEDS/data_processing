@@ -409,8 +409,8 @@ identify_sampling_bypass <- function(df,
                               prodname_ms,
                               sampling_type = NULL){
 
-    #This case is used (primarily for neon) when use of d_raw and
-    # ms_cast_flag are not used because of incaomptable data structures
+    #This case is used (primarily for neon) when use of ms_read_raw_csv and
+    # ms_cast_and_reflag are prohibited because of incompatible data structures
 
     #checks
     if(!is.logical(is_sensor)){
@@ -700,8 +700,10 @@ ms_read_raw_csv <- function(filepath,
     #set_to_NA: For values such as 9999 that are proxies for NA values.
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
-    #   character representations, i.e. "-888".
-    #   This is only for below-detection-limit flags within data columns.
+    #   character representations, i.e. "-888". Accepts '#*#' as a wildcard that
+    #   can stand in for any numeral or a decimal. Wildcard is useful for forms like
+    #   "<0.03", "<0.05", etc. Instead of listing these, you can just pass "<#*#".
+    #   This parameter is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
     #   corresponding to each data variable. Variable-flag columns will be created
     #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
@@ -973,10 +975,17 @@ ms_read_raw_csv <- function(filepath,
     #which will be converted to 1/2 detlim downstream
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
+    all_datacols <- c(data_cols, alt_datacols)
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
-        all_datacols <- c(data_cols, alt_datacols)
+        if(grepl('#*#', bdl_flag)){
+            bdl_flag <- sub('#*#', '[0-9\\.]+', bdl_flag, fixed = TRUE)
+            has_wildcard <- TRUE
+        } else {
+            has_wildcard <- FALSE
+        }
+
         for(j in seq_along(all_datacols)){
 
             d_varcode <- unname(all_datacols)[j]
@@ -984,7 +993,12 @@ ms_read_raw_csv <- function(filepath,
             d_clm <- d[[d_colname]]
             if(is.null(d_clm)) next #column doesn't exist
 
-            bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            if(has_wildcard){
+                bdl_inds <- ! is.na(d_clm) & grepl(bdl_flag, d_clm)
+            } else {
+                bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            }
+
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
             if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
@@ -993,6 +1007,10 @@ ms_read_raw_csv <- function(filepath,
             } else {
                 candidate_flagcol <- paste0(d_varcode, '__|flg')
                 var_flagcol_already_exists <- FALSE
+            }
+
+            if(candidate_flagcol %in% new_varflag_cols){
+                var_flagcol_already_exists <- TRUE
             }
 
             if(! var_flagcol_already_exists){
@@ -5935,7 +5953,8 @@ shortcut_idw <- function(encompassing_dem,
             d_elev <- tibble(site_code = rownames(dk),
                              d = dk[,1]) %>%
                 left_join(data_locations,
-                          by = 'site_code')
+                          by = 'site_code') %>%
+                mutate(d = errors::drop_errors(d))
             mod <- lm(d ~ elevation, data = d_elev)
             ab <- as.list(mod$coefficients)
 
@@ -5945,9 +5964,10 @@ shortcut_idw <- function(encompassing_dem,
             # Set all negative values to 0
             d_from_elev[d_from_elev < 0] <- 0
 
-            #average both approaches (this should be weighted toward idw
-            #when close to any data location, and weighted half and half when far)
-            d_idw <- (d_idw + d_from_elev) / 2
+            #get weighted mean of both approaches:
+            #weight on idw is 1; weight on elev-predicted is R^2
+            rsq <- cor(d_elev$d, mod$fitted.values)^2
+            d_idw <- (d_idw + d_from_elev * rsq) / (1 + rsq)
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
@@ -6567,12 +6587,12 @@ ms_linear_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
-            #carry ms_status to any rows that have just been populated (probably
-            #redundant now, but can't hurt)
             ms_status = imputeTS::na_locf(ms_status,
-                                           na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -6591,38 +6611,31 @@ ms_linear_interpolate <- function(d, interval){
                                            maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+                #do the same for uncertainty
+                imputeTS::na_interpolation(val_err,
+                                           maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
 
-        # mutate(
-        #     err = errors(val), #extract error from data vals
-        #     err = case_when(
-        #         err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
-        #         TRUE ~ err),
-        #     val = if(sum(! is.na(err)) > 0){
-        #         set_errors(val, #and then carry error to interped rows
-        #                    imputeTS::na_locf(err,
-        #                                      na_remaining = 'rev'))
-        #     } else {
-        #         set_errors(val, #unless not enough error to interp
-        #                    0)
-        #     }) %>%
-        # select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
-        # arrange(site_code, var, datetime)
-
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
     d_interp <- filter(d_interp,
@@ -6666,13 +6679,14 @@ ms_nocb_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
-            #carry ms_status to any rows that have just been populated (probably
-            #redundant now, but can't hurt)
+            #carry ms_status to any rows that have just been populated
             ms_status = imputeTS::na_locf(ms_status,
                                           option = 'nocb',
-                                          na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             val = if(sum(! is.na(val)) > 1){
 
@@ -6683,22 +6697,90 @@ ms_nocb_interpolate <- function(d, interval){
                                   maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
 
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    return(d_interp)
+}
+
+ms_zero_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for precip only, and only relevant at konza (so far)
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 45 #fixed because this func is only called for precip
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(
+
+            ms_status = imputeTS::na_replace(ms_status,
+                                             fill = 1,
+                                             maxgap = max_samples_to_impute),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_replace(val,
+                                     fill = 0,
+                                     maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val
+        )
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
     d_interp <- filter(d_interp,
@@ -6744,13 +6826,15 @@ ms_nocb_mean_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
             #carry ms_status to any rows that have just been populated (probably
             #redundant now, but can't hurt)
             ms_status = imputeTS::na_locf(ms_status,
                                           option = 'nocb',
-                                          na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             val = if(sum(! is.na(val)) > 1){
 
@@ -6761,17 +6845,28 @@ ms_nocb_mean_interpolate <- function(d, interval){
                                   maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
@@ -6789,19 +6884,30 @@ ms_nocb_mean_interpolate <- function(d, interval){
 
     err_ <- errors::errors(d_interp$val)
     d_interp$val <- errors::drop_errors(d_interp$val)
-    vals_interpted <- d_interp$val * laginterp
+    vals_interped <- d_interp$val * laginterp
+    err_interped <- err_ * laginterp
 
     #use run length encoding to do the division quickly
-    vals_new <- rle2(vals_interpted) %>%
+    vals_new <- rle2(vals_interped) %>%
         mutate(values = values / lengths) %>%
         select(lengths, values) %>%
         as.list()
     class(vals_new) <- 'rle'
     vals_new <- inverse.rle(vals_new)
 
+    #same for uncertainty
+    err_new <- rle2(err_interped) %>%
+        mutate(values = values / lengths) %>%
+        select(lengths, values) %>%
+        as.list()
+    class(err_new) <- 'rle'
+    err_new <- inverse.rle(err_new)
+
     real_vals_new <- vals_new != 0
     d_interp$val[real_vals_new] <- vals_new[real_vals_new]
-    errors::errors(d_interp$val) <- err_
+    errors::errors(d_interp$val) <- err_new
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
 
     return(d_interp)
 }
@@ -6984,9 +7090,12 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
         } else { #precip
-            d_split[[i]] <- ms_nocb_mean_interpolate(
+            d_split[[i]] <- ms_zero_interpolate( #so far only needed for konza
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
+            # d_split[[i]] <- ms_nocb_mean_interpolate( #this might apply in some cases, but not yet.
+            #     d = sitevar_chunk,
+            #     interval = rounding_intervals[i])
         }
     }
 
@@ -11456,6 +11565,12 @@ approxjoin_datetime <- function(x,
                                 indices_only = FALSE){
                                 #direction = 'forward'){
 
+    #TODO: update to match nearest non-NA value by column if we ever go sub-daily.
+    #some code for this in place below, but note that implementing this will
+    #break incides_only. also there will be no good way to select the matching
+    #date in cases where there are multiple data columns. i.e. there will be
+    #seprate matched dates for each column... not sure how to handle.
+
     #x and y: macrosheds standard tibbles with only one site_code,
     #   which must be the same in x and y. Nonstandard tibbles may also work,
     #   so long as they have datetime columns, but the only case where we need
@@ -11515,37 +11630,47 @@ approxjoin_datetime <- function(x,
     }
     if(! is.logical(indices_only)) stop('indices_only must be a logical')
 
-    #deal with the case of x or y being a specialized "flow" tibble
-    # x_is_flowtibble <- y_is_flowtibble <- FALSE
-    # if('flow' %in% colnames(x)) x_is_flowtibble <- TRUE
-    # if('flow' %in% colnames(y)) y_is_flowtibble <- TRUE
-    # if(x_is_flowtibble && ! y_is_flowtibble){
-    #     varname <- y$var[1]
-    #     y$var = NULL
-    # } else if(y_is_flowtibble && ! x_is_flowtibble){
-    #     varname <- x$var[1]
-    #     x$var = NULL
-    # } else if(! x_is_flowtibble && ! y_is_flowtibble){
-    #     varname <- x$var[1]
-    #     x$var = NULL
-    #     y$var = NULL
-    # } else {
-    #     stop('x and y are both "flow" tibbles. There should be no need for this')
-    # }
-    # if(x_is_flowtibble) x <- rename(x, val = flow)
-    # if(y_is_flowtibble) y <- rename(y, val = flow)
-
     #data.table doesn't work with the errors package, so error needs
-    #to be separated into its own column. also give same-name columns suffixes
+    #to be separated into its own column and handled with care.
 
-    if('val' %in% colnames(x)){ #crude catch for nonstandard ms tibbles (fine for now)
+    # #this will be useful if we go sub-daily
+    # if(any(c('val', 'ms_status') %in% colnames(x))){
+    #
+    #     x <- x %>%
+    #         mutate(
+    #                # across(where(~inherits(., 'errors')),
+    #                #        ~case_when(! is.na(.) & is.na(errors(.)) ~ set_errors(., 0), TRUE ~ .)),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~errors(.),
+    #                       .names = '{.col}_err'),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~drop_errors(.))) %>%
+    #         rename_with(.fn = ~paste0(., '_x'),
+    #                     .cols = everything()) %>%
+    #         # rename(datetime_x = datetime) %>%
+    #         as.data.table()
+    #
+    #     y <- y %>%
+    #         mutate(
+    #                # across(where(~inherits(., 'errors')),
+    #                #        ~case_when(! is.na(.) & is.na(errors(.)) ~ set_errors(., 0), TRUE ~ .)),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~errors(.),
+    #                       .names = '{.col}_err'),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~drop_errors(.))) %>%
+    #         rename_with(.fn = ~paste0(., '_y'),
+    #                     .cols = everything()) %>%
+    #         # rename(datetime_y = datetime) %>%
+    #         as.data.table()
+
+    if('val' %in% colnames(x)){
+
         x <- x %>%
             mutate(err = errors(val),
                    val = errors::drop_errors(val)) %>%
             rename_with(.fn = ~paste0(., '_x'),
                         .cols = everything()) %>%
-                        # .cols = any_of(c('site_code', 'var', 'val',
-                        #                  'ms_status', 'ms_interp'))) %>%
             as.data.table()
 
         y <- y %>%
@@ -11554,9 +11679,23 @@ approxjoin_datetime <- function(x,
             rename_with(.fn = ~paste0(., '_y'),
                         .cols = everything()) %>%
             as.data.table()
+
     } else {
-        x <- dplyr::rename(x, datetime_x = datetime) %>% as.data.table()
-        y <- dplyr::rename(y, datetime_y = datetime) %>% as.data.table()
+
+        if(indices_only){
+            x <- rename(x, datetime_x = datetime) %>%
+                mutate(across(where(~inherits(., 'errors')),
+                              ~drop_errors(.))) %>%
+                as.data.table()
+
+            y <- rename(y, datetime_y = datetime) %>%
+                mutate(across(where(~inherits(., 'errors')),
+                              ~drop_errors(.))) %>%
+                as.data.table()
+        } else {
+            stop('this case not yet handled')
+        }
+
     }
 
     #alternative implementation of the "on" argument in data.table joins...
@@ -11582,14 +11721,6 @@ approxjoin_datetime <- function(x,
               datetime_max = datetime_x + rollmax)]
     y[, `:=` (datetime_y_orig = datetime_y)] #datetime col will be dropped from y
 
-    # if(indices_only){
-    #     y_indices <- y[x,
-    #                    on = .(datetime_y <= datetime_max,
-    #                           datetime_y >= datetime_min),
-    #                    which = TRUE]
-    #     return(y_indices)
-    # }
-
     #join x rows to y if y's datetime falls within the x range
     joined <- y[x, on = .(datetime_y <= datetime_max,
                           datetime_y >= datetime_min)]
@@ -11600,6 +11731,10 @@ approxjoin_datetime <- function(x,
     joined[, `:=` (datetime_match_diff = abs(datetime_x - datetime_y_orig))]
     joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_x]
     joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_y_orig]
+    #this will grab the nearest non-NA for each column, but that messes up the datatime indices
+    # joined = joined[order(datetime_match_diff),
+    #                 lapply(.SD, function(z) dplyr::first(na.omit(z))),
+    #                 by = datetime_x]
 
     if(indices_only){
         y_indices <- which(y$datetime_y %in% joined$datetime_y_orig)
@@ -11616,31 +11751,25 @@ approxjoin_datetime <- function(x,
         setnames(joined, 'datetime_y_orig', 'datetime')
     }
 
-    #restore error objects, var column, original column names (with suffixes).
-    #original column order
+    # #restore error objects, var column, original column names (with suffixes).
+    # #original column order (incomplete. execution always returns before this point
+    # #in idw, which is the only place where it would be necessary)
+    # ernames = grep('_err_[xy]$', colnames(joined), value = TRUE)
+    # ernames = ernames[sub('err_', '', ernames) %in% colnames(joined)]
+    # for(erc in ernames){
+    #     dac = sub('err_', '', erc)
+    #     if(dac %in%
+    #     set(joined, j = dac,
+    #         value = set_errors(joined[[dac]], joined[[erc]]))
+    # }
+
     joined <- as_tibble(joined) %>%
         mutate(val_x = errors::set_errors(val_x, err_x),
                val_y = errors::set_errors(val_y, err_y)) %>%
         select(-err_x, -err_y)
-        # mutate(var = !!varname)
-
-    # if(x_is_flowtibble) joined <- rename(joined,
-    #                                      flow = val_x,
-    #                                      ms_status_flow = ms_status_x,
-    #                                      ms_interp_flow = ms_interp_x)
-    # if(y_is_flowtibble) joined <- rename(joined,
-    #                                      flow = val_y,
-    #                                      ms_status_flow = ms_status_y,
-    #                                      ms_interp_flow = ms_interp_y)
-
-    # if(! sum(grepl('^val_[xy]$', colnames(joined))) > 1){
-    #     joined <- rename(joined, val = matches('^val_[xy]$'))
-    # }
 
     joined <- select(joined,
                      datetime,
-                     # matches('^val_?[xy]?$'),
-                     # any_of('flow'),
                      starts_with('site_code'),
                      any_of(c(starts_with('var_'), matches('^var$'))),
                      any_of(c(starts_with('val_'), matches('^val$'))),
