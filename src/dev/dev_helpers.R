@@ -1423,3 +1423,17 @@ insert_retrieval_datetimes <- function(){
         write_lines(rt, f)
     }
 }
+
+get_nonnumerics <- function(d){
+
+    #gets unique nonnumeric values by row. useful for identifying quality codes
+    #within data columns
+
+    nonnumerics = apply(d, 2, function(x){
+        xx = as.numeric(x)
+        nonnumerics = is.na(xx)
+        out = unique(x[nonnumerics])
+    })
+
+    return(nonnumerics)
+}
