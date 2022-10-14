@@ -207,8 +207,6 @@ process_1_213 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -311,8 +309,6 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -422,8 +418,6 @@ process_1_107 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -529,8 +523,6 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -634,8 +626,6 @@ process_1_109 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -745,8 +735,6 @@ process_1_110 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -850,8 +838,6 @@ process_1_112 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -954,8 +940,6 @@ process_1_113 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1061,8 +1045,6 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -1167,8 +1149,6 @@ process_1_160 <- function(network, domain, prodname_ms, site_code,
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     return(d)
 }
 
@@ -1271,8 +1251,6 @@ process_1_162 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1377,8 +1355,6 @@ process_1_163 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -1488,8 +1464,6 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                                              TIP = 'mg/l',
                                              TIN = 'mg/l',
                                              H = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }

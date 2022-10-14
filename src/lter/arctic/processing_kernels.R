@@ -344,9 +344,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
     d <- d %>%
         full_join(var_names, by = 'Type') %>%
         select(site_code, datetime=Date, val=Value, Comments, var) %>%
-        mutate(ms_status = case_when(Comments == 'ISCO' ~ 0,
-                                     Comments == ' ' ~ 0,
-                                     TRUE ~ 1)) %>%
+        mutate(ms_status = ifelse(Flag == 1, 0, 1)) %>%
         select(-Comments) %>%
         mutate(date = str_split_fixed(datetime, ' ', n = Inf)[,1]) %>%
         # mutate(time = str_split_fixed(datetime, ' ', n = Inf)[,2]) %>%
@@ -456,7 +454,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                              E_pheophy = 'mg/cm2',
                                              T_ECHL = 'mg/cm2',
                                              CH4 = 'mg/l'))
-    
+
     remove_1_vars <- d %>%
       group_by(site_code, var) %>%
       summarise(n = n()) %>%
