@@ -133,9 +133,9 @@ process_1_152 <- function(network, domain, prodname_ms, site_code,
                                              'TDN' = 'mg/l',
                                              'SiO2' = 'mg/l',
                                              'DON' = 'mg/l'))
-    
+
     return(d)
-    
+
 }
 
 #discharge: STATUS=READY
@@ -163,7 +163,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     return(d)
 
 }
@@ -182,7 +182,7 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
 
     raw <- read.delim(rawfile, colClasses = 'character') %>%
         filter(X0CM != -9999)
-    
+
     dif_date_time <- raw[grepl(paste0(month.abb, collapse = '|'), raw$DATE),]
     og_date_time <- raw[!grepl(paste0(month.abb, collapse = '|'), raw$DATE),]
 
@@ -195,7 +195,7 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
                                     data_col_pattern = '#V#',
                                     is_sensor = TRUE,
                                     sampling_type = 'I')
-    
+
     dif_date_time <- ms_read_raw_csv(preprocessed_tibble = dif_date_time,
                                      datetime_cols = c(DATE = '%e-%b-%y',
                                                        TIME = '%H:%M'),
@@ -208,10 +208,10 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
 
     d <- rbind(og_date_time, dif_date_time) %>%
         arrange(site_code, datetime)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     return(d)
 
 }
@@ -245,7 +245,7 @@ process_1_167 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
                          set_to_NA = c('-9999', '999.00', '-9999.000', '-7999.000',
-                                       '999.000'))
+                                       '999.000', ''))
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('flag' = 'Q'),
@@ -253,13 +253,10 @@ process_1_167 <- function(network, domain, prodname_ms, site_code,
                             varflag_col_pattern = NA)
 
     if(component == '167_TIPBUCK_CPEAK_1993-2016.txt'){
-
-        d <- d %>%
-            filter(datetime >= '1998-01-01')
+        d <- filter(d, datetime >= '1998-01-01')
     }
-    
-    return(d)
 
+    return(d)
 }
 
 #precip_chemistry: STATUS=READY
@@ -297,10 +294,10 @@ process_1_157 <- function(network, domain, prodname_ms, site_code,
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            summary_flags_dirty = list('Invalcode' = 'x'),
-                            summary_flags_to_drop = list('Invalcode' = 'BAD'),
+                            summary_flags_dirty = list('Invalcode' = c('x', 'x           ')),
+                            summary_flags_to_drop = list('Invalcode' = 'placeholder'),
                             varflag_col_pattern = NA)
-    
+
     return(d)
 
 }

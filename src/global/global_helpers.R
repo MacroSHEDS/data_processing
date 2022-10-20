@@ -1173,7 +1173,7 @@ ms_read_raw_csv <- function(filepath,
     }
 
     #remove all-NA data columns without BDLs
-    d <- select(d, -one_of(all_na_cols))
+    d <- select(d, -any_of(all_na_cols))
 
     #remove rows with NA for all data columns, except if they have BDLs.
     keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
@@ -5258,15 +5258,19 @@ write_ms_file <- function(d,
                          pd = prod_dir,
                          s = site_code)
 
-        if(sep_errors) {
+        if('val_err' %in% colnames(d) && inherits(d$val, 'errors')){
+            stop('this dataset has uncertainty on the val column AND a val_err column. investigate')
+        }
+
+        if(sep_errors){
 
             #separate uncertainty into a new column.
             #remove errors attribute from val column if it exists (it always should)
-            d$val_err <- errors(d$val)
-            if('errors' %in% class(d$val)){
+            if(inherits(d$val, 'errors')){
+                d$val_err <- errors(d$val)
                 d$val <- errors::drop_errors(d$val)
-            } else {
-                warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
+            } else if(! 'val_err' %in% colnames(d)){
+                stop(glue('Uncertainty missing from val column and no val_err column for ({n}-{d}-{s}-{p}). ',
                              'That means this dataset has not passed through ',
                              'qc_hdetlim_and_uncert yet. it should have.',
                              n = network,
@@ -8354,18 +8358,19 @@ get_successor <- function(network,
 
 make_hdetlim_prec_lookup_table <- function(dls){
 
-    #for each variable, determine the median detlim and the minimum (coarsest)
-    #precision across all domains. For domains that report multiple values for
-    #a given variable, first take a within-domain median/min
+    #for each variable, determine the minimum detlim and the minimum (coarsest)
+    #precision across all domains.
 
     #return a table of half-detlim ("hdetlim") and precision
 
     lookup_table <- dls %>%
-        group_by(domain, var = variable_converted) %>%
-        summarize(detlim = median(detection_limit_converted),
-                  precision = min(precision)) %>%
-        group_by(var) %>%
-        summarize(detlim = median(detlim),
+        # group_by(domain, var = variable_converted) %>%
+        # summarize(detlim = median(detection_limit_converted),
+        #           precision = min(precision)) %>%
+        # group_by(var) %>%
+        # summarize(detlim = median(detlim),
+        group_by(var = variable_converted) %>%
+        summarize(detlim = min(detection_limit_converted),
                   precision = min(precision),
                   .groups = 'drop') %>%
         mutate(hdetlim = detlim / 2) %>%
@@ -8389,12 +8394,12 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
     #locates, estimates, or naively generates (as 0 or -Inf) detection limits for any value.
     #order of decisions:
-    #   1. if provider reports detlim/prec for same product, domain, variable, and date, use it
-    #   2. if not for same date, use the nearest date
-    #   3. if not for same product, but same domain, variable, and date, use that
-    #   4. if not for same product or date, use the nearest date
-    #   5. if not for same variable, use median (of medians) across domains
-    #   6. if nothing reported for a domain, use median (of medians) across domains
+    #   1. if provider reports detlim/prec for same product, domain, variable, and daterange, use it
+    #   2. if not for same daterange, use the nearest daterange
+    #   3. if not for same product, but same domain, variable, and daterange, use that
+    #   4. if not for same product or daterange, use the nearest daterange
+    #   5. if not for same variable, use minimum for that variable across domains
+    #   6. if nothing reported for a domain, use minima across domains
     #   7. if nothing to guess from, use 0 (detlim) or -Inf (precision).
     #       0 is also used as precision for a small subset of variables that will
     #       never have reported detection limits, and for which infinite uncertainty
@@ -8535,7 +8540,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
         }
     }
 
-    #CASEs 4-5: fill in remaining blanks using median (hdetlim) or minimum (precision)
+    #CASEs 4-5: fill in remaining blanks using minimum (hdetlim or precision)
     #across all reported values
     still_missing <- is.na(out)
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
