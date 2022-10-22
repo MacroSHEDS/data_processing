@@ -336,7 +336,8 @@ postprocess_entire_dataset(site_data = site_data,
                            thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = FALSE,
-                           push_new_version_to_figshare = FALSE)
+                           push_new_version_to_figshare = FALSE,
+                           push_new_version_to_edi = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

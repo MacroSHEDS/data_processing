@@ -9784,6 +9784,23 @@ NaN_to_NA <- function(path){
     }
 }
 
+convert_output_dset_feathers_to_csv <- function(){
+
+    stop('still needs a path')
+    #loads all feather files in EDI folder rewrites them as csv. removes the originals.
+
+    paths <- list.files(path = '',
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    for(p in paths){
+        read_feather(p) %>%
+            write_csv(p)
+        file.remove(p)
+    }
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -9791,12 +9808,17 @@ postprocess_entire_dataset <- function(site_data,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product,
                                        reformat_camels = TRUE,
-                                       push_new_version_to_figshare = FALSE){
+                                       push_new_version_to_figshare = FALSE,
+                                       push_new_version_to_edi = FALSE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
+    #push_new_version_to_figshare: if TRUE, publishes the basic version of our dataset that's
+    #   stored on Figshare and queried by the macrosheds R package
+    #push_new_version_to_edi: if TRUE, publishes the full version of our dataset to EDI
 
-    #for post-derive steps that save the portal some processing.
+    #for post-derive steps (and patches, honestly) that finalize the dataset and/or
+    #save the portal some processing.
 
     loginfo(msg = 'Postprocessing all domains and products:',
             logger = logger_module)
@@ -9886,7 +9908,7 @@ postprocess_entire_dataset <- function(site_data,
 
     if(push_new_version_to_figshare){
 
-        message('Are you sure you want to modify our published dataset? mash ESC within 10 seconds if not.')
+        message('Are you sure you want to modify our published package dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 
         log_with_indent(glue('Preparing dataset v{vv} for Figshare',
@@ -9894,8 +9916,8 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
         fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
         dir.create(fs_dir, showWarnings = FALSE)
-        prepare_for_figshare(where = fs_dir,
-                             dataset_version = dataset_version)
+        # prepare_for_figshare(where = fs_dir,
+        #                      dataset_version = dataset_version)
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
         reformat_camels_for_ms()
@@ -9907,14 +9929,38 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
                         logger = logger_module)
-        upload_dataset_to_figshare(dataset_version = dataset_version)
+        # upload_dataset_to_figshare(dataset_version = dataset_version)
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
     } else {
         log_with_indent('NOT pushing data to Figshare.',
                         logger = logger_module)
     }
 
-    message('PUSH NEW macrosheds package version now that figshare ids are updated')
+    if(push_new_version_to_edi){
+
+        message('Are you sure you want to modify our full published dataset? mash ESC within 10 seconds if not.')
+        Sys.sleep(10)
+
+        log_with_indent(glue('Preparing dataset v{vv} for EDI',
+                             vv = dataset_version),
+                        logger = logger_module)
+        edi_dir <- paste0('macrosheds__v', dataset_version)
+        dir.create(edi_dir, showWarnings = FALSE)
+        prepare_for_edi(where = edi_dir,
+                        dataset_version = dataset_version)
+
+        convert_output_dset_feathers_to_csv() #maybe just poach the code from the def
+
+        log_with_indent(glue('Uploading dataset v{vv} to EDI',
+                             vv = dataset_version),
+                        logger = logger_module)
+        upload_dataset_to_edi(dataset_version = dataset_version)
+    } else {
+        log_with_indent('NOT pushing data to EDI',
+                        logger = logger_module)
+    }
+
+    message('PUSH NEW macrosheds package version now that figshare ids are updated (still relevant?)')
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -10241,6 +10287,34 @@ prepare_ws_attr_data_for_figshare <- function(where){
 }
 
 prepare_for_figshare <- function(where, dataset_version){
+
+    if(.Platform$OS.type == 'windows'){
+        stop(paste('The "system" calls below probably will not work on windows.',
+                   'investigate and update those calls if necessary'))
+    }
+
+    #prepare documentation and metadata
+    make_figshare_docs_skeleton(where = where)
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+                                           fs_format = 'new')
+    assemble_misc_docs_figshare(where = where)
+
+    #prepare data
+    prepare_ts_data_for_figshare(where = where,
+                                 dataset_version = dataset_version)
+    prepare_ws_attr_data_for_figshare(where = where)
+
+    #decided to change some dirnames. easiest to just do that as a patch here
+    file.rename(file.path(where, 'macrosheds_documentation'),
+                file.path(where, '0_documentation_and_metadata'))
+    file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
+                file.path(where, '1_watershed_attribute_data'))
+    file.rename(file.path(where, 'macrosheds_timeseries_data'),
+                file.path(where, '2_timeseries_data'))
+}
+
+prepare_for_edi <- function(where, dataset_version){
 
     if(.Platform$OS.type == 'windows'){
         stop(paste('The "system" calls below probably will not work on windows.',
