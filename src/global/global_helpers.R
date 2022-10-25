@@ -9808,8 +9808,7 @@ postprocess_entire_dataset <- function(site_data,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product,
                                        reformat_camels = TRUE,
-                                       push_new_version_to_figshare = FALSE,
-                                       push_new_version_to_edi = FALSE){
+                                       push_new_version_to_figshare_and_edi = FALSE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
@@ -9906,7 +9905,7 @@ postprocess_entire_dataset <- function(site_data,
     #                 logger = logger_module)
     # compute_download_filesizes()
 
-    if(push_new_version_to_figshare){
+    if(push_new_version_to_figshare_and_edi){
 
         message('Are you sure you want to modify our published package dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
@@ -9936,10 +9935,7 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
-    if(push_new_version_to_edi){
-
-        message('Are you sure you want to modify our full published dataset? mash ESC within 10 seconds if not.')
-        Sys.sleep(10)
+    if(push_new_version_to_figshare_and_edi){
 
         log_with_indent(glue('Preparing dataset v{vv} for EDI',
                              vv = dataset_version),
@@ -10314,32 +10310,35 @@ prepare_for_figshare <- function(where, dataset_version){
                 file.path(where, '2_timeseries_data'))
 }
 
-prepare_for_edi <- function(where, dataset_version){
+convert_ts_feathers_to_csv <- function(where){
 
-    if(.Platform$OS.type == 'windows'){
-        stop(paste('The "system" calls below probably will not work on windows.',
-                   'investigate and update those calls if necessary'))
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.feather',
+                     full.names = TRUE)
+
+    fs_csv <- sub('\\.feather', '.csv', fs)
+
+    for(i in seq_along(fs)){
+
+        f = fs[i]
+
+        read_feather(f) %>%
+            write_csv(fs_csv[i])
+
+        file.remove(f)
     }
 
-    #prepare documentation and metadata
-    make_figshare_docs_skeleton(where = where)
-    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
-    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
-                                           fs_format = 'new')
-    assemble_misc_docs_figshare(where = where)
+}
 
-    #prepare data
-    prepare_ts_data_for_figshare(where = where,
-                                 dataset_version = dataset_version)
-    prepare_ws_attr_data_for_figshare(where = where)
+prepare_for_edi <- function(where, dataset_version){
 
-    #decided to change some dirnames. easiest to just do that as a patch here
-    file.rename(file.path(where, 'macrosheds_documentation'),
-                file.path(where, '0_documentation_and_metadata'))
-    file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
-                file.path(where, '1_watershed_attribute_data'))
-    file.rename(file.path(where, 'macrosheds_timeseries_data'),
-                file.path(where, '2_timeseries_data'))
+    log_with_indent('Converting 2_timeseries_data feathers to CSV (takes a few mins)',
+                    indent = 2,
+                    logger = logger_module)
+    convert_ts_feathers_to_csv(file.path(where, '2_timeseries_data'))
+    distribute_variable_prefixes(where)
+
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
@@ -11145,7 +11144,6 @@ detrmin_mean_record_length <- function(df){
     }
     return(days_in_rec)
 }
-
 
 clean_portal_dataset <- function(){
 

@@ -1,0 +1,4 @@
+id	unitType	parentSI	multiplierToSI	description
+kilogramCarbonPerSquareMeter   arealMassDensity            kg*C/m^2
+micrometerPerSecond  speed   meterPerSecond  0.000001    ug/S
+dayOfYear             numeric day of calendar year
