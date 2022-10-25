@@ -221,7 +221,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -266,7 +266,7 @@ if(ms_instance$use_ms_error_handling){
     source_decoratees('src/global/global_helpers.R') #parse decorators
 }
 
-#puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
+#puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
 
@@ -291,7 +291,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-## dmnrow = 20
+dmnrow = 20
 ## print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
