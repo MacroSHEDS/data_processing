@@ -14532,3 +14532,24 @@ reformat_camels_for_ms <- function(){
 
 
 
+scrape_data_download_urls <- function() {
+  raw_fp <- "./vault/raw_documentation_files/"
+
+
+  raw_networks <- list.files(raw_fp)
+  raw_networks_fp <- list.files(raw_fp, full.names = TRUE)
+
+  for(network_fp in raw_networks_fp) {
+    domains <- list.files(raw_networks_fp[1])
+
+    for(domain in domains) {
+      writeLines('reading documentation for data source:', domain)
+      product_docs <- list.files(file.path(network_fp, domain, "raw", "documentation"), full.names = TRUE)
+
+      for(file in product_docs) {
+        data_source_doc <- readLines(file)
+
+      }
+    }
+  }
+}
