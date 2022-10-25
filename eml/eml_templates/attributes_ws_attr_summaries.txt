@@ -1,0 +1,57 @@
+attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
+network		categorical				
+domain		categorical				
+site_code		character				
+ws_area_ha		numeric	!Add units here!			
+cc_mean_annual_precip		numeric	!Add units here!			
+cc_mean_annual_temp		numeric	!Add units here!			
+vd_mean_sos		numeric	!Add units here!			
+vd_mean_eos		numeric	!Add units here!			
+vd_mean_los		numeric	!Add units here!			
+va_mean_annual_gpp		numeric	!Add units here!			
+va_mean_annual_npp		numeric	!Add units here!			
+te_slope_mean		numeric	!Add units here!			
+te_elev_mean		numeric	!Add units here!			
+te_elev_min		numeric	!Add units here!			
+te_elev_max		numeric	!Add units here!			
+te_aspect_mean		numeric	!Add units here!			
+hd_bfi_mean		numeric	!Add units here!			
+lg_nlcd_water		numeric	!Add units here!			
+lg_nlcd_ice_snow		numeric	!Add units here!			
+lg_nlcd_dev_open		numeric	!Add units here!			
+lg_nlcd_dev_low		numeric	!Add units here!			
+lg_nlcd_dev_med		numeric	!Add units here!			
+lg_nlcd_dev_hi		numeric	!Add units here!			
+lg_nlcd_barren		numeric	!Add units here!			
+lg_nlcd_forest_dec		numeric	!Add units here!			
+lg_nlcd_forest_evr		numeric	!Add units here!			
+lg_nlcd_forest_mix		numeric	!Add units here!			
+lg_nlcd_shrub_dwr		numeric	!Add units here!			
+lg_nlcd_shrub		numeric	!Add units here!			
+lg_nlcd_grass		numeric	!Add units here!			
+lg_nlcd_sedge		numeric	!Add units here!			
+lg_lncd_lichens		numeric	!Add units here!			
+lg_nlcd_moss		numeric	!Add units here!			
+lg_nlcd_pasture		numeric	!Add units here!			
+lg_nlcd_crop		numeric	!Add units here!			
+lg_nlcd_wetland_wood		numeric	!Add units here!			
+lg_nlcd_wetland_herb		numeric	!Add units here!			
+pf_soil_org		numeric	!Add units here!			
+pf_soil_sand		numeric	!Add units here!			
+pf_soil_silt		numeric	!Add units here!			
+pf_soil_clay		numeric	!Add units here!			
+pf_soil_ph		numeric	!Add units here!			
+pi_soil_thickness		numeric	!Add units here!			
+ci_mean_annual_et		numeric	!Add units here!			
+pd_geo_Al2O3_mean		numeric	!Add units here!			
+pd_geo_CaO_mean		numeric	!Add units here!			
+pd_geo_CompressStrength_mean		numeric	!Add units here!			
+pd_geo_Fe2O3_mean		numeric	!Add units here!			
+pd_geo_HydaulicCond_mean		numeric	!Add units here!			
+pd_geo_K2O_mean		numeric	!Add units here!			
+pd_geo_MgO_mean		numeric	!Add units here!			
+pd_geo_N_mean		numeric	!Add units here!			
+pd_geo_Na2O_mean		numeric	!Add units here!			
+pd_geo_P2O5_mean		numeric	!Add units here!			
+pd_geo_S_mean		numeric	!Add units here!			
+pd_geo_SiO2_mean		numeric	!Add units here!			
