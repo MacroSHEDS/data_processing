@@ -58,7 +58,9 @@ suppressPackageStartupMessages({
 vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300)
+        timeout = 300,
+        readr.show_progress = FALSE,
+        readr.show_col_types = FALSE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
