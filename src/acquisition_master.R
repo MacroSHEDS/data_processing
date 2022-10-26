@@ -39,6 +39,7 @@ suppressPackageStartupMessages({
     library(doParallel) #replaced by doFuture, but still needed on BM1
     library(doFuture)
     library(googlesheets4)
+    library(googledrive)
     library(rgee) #requires geojsonio package
     library(osmdata)
 
@@ -291,8 +292,13 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
+<<<<<<< HEAD
 dmnrow = 20
 ## print(network_domain, n=50)
+=======
+# dmnrow = 12
+# print(network_domain, n=50)
+>>>>>>> e2604ab9dbc8d0a005d9012d15cfa35daa6e4c0e
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -327,14 +333,14 @@ for(dmnrow in 1:nrow(network_domain)){
                            domain = domain)
 
     get_all_local_helpers(network = network,
-                         domain = domain)
+                          domain = domain)
 
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -345,13 +351,13 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
-    
+
     if(domain != 'mcmurdo'){
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = F)
+                   get_missing_only = TRUE)
     }
 
     retain_ms_globals(ms_globals)

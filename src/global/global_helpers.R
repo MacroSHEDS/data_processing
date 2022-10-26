@@ -409,8 +409,8 @@ identify_sampling_bypass <- function(df,
                               prodname_ms,
                               sampling_type = NULL){
 
-    #This case is used (primarily for neon) when use of d_raw and
-    # ms_cast_flag are not used because of incaomptable data structures
+    #This case is used (primarily for neon) when use of ms_read_raw_csv and
+    # ms_cast_and_reflag are prohibited because of incompatible data structures
 
     #checks
     if(!is.logical(is_sensor)){
@@ -643,6 +643,7 @@ ms_read_raw_csv <- function(filepath,
     #   indicating where this is needed
     #site_code_col should eventually work like datetime_cols (in case site_code is
     #   separated into multiple components)
+    #can't deal with missing sitecode column as is
 
     #filepath: string
     #preprocessed_tibble: a tibble with all character columns. Supply this
@@ -699,8 +700,10 @@ ms_read_raw_csv <- function(filepath,
     #set_to_NA: For values such as 9999 that are proxies for NA values.
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
-    #   character representations, i.e. "-888".
-    #   This is only for below-detection-limit flags within data columns.
+    #   character representations, i.e. "-888". Accepts '#*#' as a wildcard that
+    #   can stand in for any numeral or a decimal. Wildcard is useful for forms like
+    #   "<0.03", "<0.05", etc. Instead of listing these, you can just pass "<#*#".
+    #   This parameter is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
     #   corresponding to each data variable. Variable-flag columns will be created
     #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
@@ -972,10 +975,17 @@ ms_read_raw_csv <- function(filepath,
     #which will be converted to 1/2 detlim downstream
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
+    all_datacols <- c(data_cols, alt_datacols)
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
-        all_datacols <- c(data_cols, alt_datacols)
+        if(grepl('#*#', bdl_flag)){
+            bdl_flag <- sub('#*#', '[0-9\\.]+', bdl_flag, fixed = TRUE)
+            has_wildcard <- TRUE
+        } else {
+            has_wildcard <- FALSE
+        }
+
         for(j in seq_along(all_datacols)){
 
             d_varcode <- unname(all_datacols)[j]
@@ -983,7 +993,12 @@ ms_read_raw_csv <- function(filepath,
             d_clm <- d[[d_colname]]
             if(is.null(d_clm)) next #column doesn't exist
 
-            bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            if(has_wildcard){
+                bdl_inds <- ! is.na(d_clm) & grepl(bdl_flag, d_clm)
+            } else {
+                bdl_inds <- ! is.na(d_clm) & d_clm == bdl_flag
+            }
+
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
             if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
@@ -992,6 +1007,10 @@ ms_read_raw_csv <- function(filepath,
             } else {
                 candidate_flagcol <- paste0(d_varcode, '__|flg')
                 var_flagcol_already_exists <- FALSE
+            }
+
+            if(candidate_flagcol %in% new_varflag_cols){
+                var_flagcol_already_exists <- TRUE
             }
 
             if(! var_flagcol_already_exists){
@@ -3252,16 +3271,14 @@ delineate_watershed_apriori_recurse <- function(lat,
         allow_alphanumeric_response = FALSE)
 
     if('n' %in% resp){
-        unlink(write_dir,
-               recursive = TRUE)
+        unlink(write_dir)
         print(glue('Moving on. You haven\'t seen the last of {s}!',
                    s = site_code))
         return(1)
     }
 
     if('a' %in% resp){
-        unlink(write_dir,
-               recursive = TRUE)
+        unlink(write_dir)
         print(glue('Aborted. Any completed delineations have been saved.'))
         return(2)
     }
@@ -5936,7 +5953,8 @@ shortcut_idw <- function(encompassing_dem,
             d_elev <- tibble(site_code = rownames(dk),
                              d = dk[,1]) %>%
                 left_join(data_locations,
-                          by = 'site_code')
+                          by = 'site_code') %>%
+                mutate(d = errors::drop_errors(d))
             mod <- lm(d ~ elevation, data = d_elev)
             ab <- as.list(mod$coefficients)
 
@@ -5946,9 +5964,10 @@ shortcut_idw <- function(encompassing_dem,
             # Set all negative values to 0
             d_from_elev[d_from_elev < 0] <- 0
 
-            #average both approaches (this should be weighted toward idw
-            #when close to any data location, and weighted half and half when far)
-            d_idw <- (d_idw + d_from_elev) / 2
+            #get weighted mean of both approaches:
+            #weight on idw is 1; weight on elev-predicted is R^2
+            rsq <- cor(d_elev$d, mod$fitted.values)^2
+            d_idw <- (d_idw + d_from_elev * rsq) / (1 + rsq)
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
@@ -6552,9 +6571,9 @@ ms_linear_interpolate <- function(d, interval){
     }
 
     var <- drop_var_prefix(d$var[1])
-    max_samples_to_impute <- ifelse(test = var %in% c('precipitation', 'discharge'),
-                                    yes = 3, #is Q-ish
-                                    no = 15) #is chemistry/etc
+    max_samples_to_impute <- ifelse(test = var == 'discharge',
+                                    yes = 3, #is Q
+                                    no = 15) #is chemistry or precipitation
 
     if(interval == '15 min'){
         max_samples_to_impute <- max_samples_to_impute * 96
@@ -6568,12 +6587,12 @@ ms_linear_interpolate <- function(d, interval){
     ms_interp_column <- is.na(d$val)
 
     d_interp <- d %>%
-        mutate(
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
 
-            #carry ms_status to any rows that have just been populated (probably
-            #redundant now, but can't hurt)
             ms_status = imputeTS::na_locf(ms_status,
-                                           na_remaining = 'rev'),
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
 
             # val = if(sum(! is.na(val)) > 2){
             #
@@ -6592,38 +6611,31 @@ ms_linear_interpolate <- function(d, interval){
                                            maxgap = max_samples_to_impute)
 
                 #unless not enough data in group; then do nothing
-            } else val
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+                #do the same for uncertainty
+                imputeTS::na_interpolation(val_err,
+                                           maxgap = max_samples_to_impute)
+            } else val_err
         )
 
-    err <- errors(d_interp$val) #extract error from data vals
-    err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
-    if(sum(! is.na(err)) > 0){
-        #and then carry error to interped rows
-        errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
-    } else {
-        errors(d_interp$val) <- 0 # #unless not enough error to interp
-    }
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, na_remaining = 'rev')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
 
     d_interp <- d_interp %>%
         select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
         arrange(site_code, var, datetime)
 
-        # mutate(
-        #     err = errors(val), #extract error from data vals
-        #     err = case_when(
-        #         err == 0 ~ NA_real_, #change new uncerts (0s by default) to NA
-        #         TRUE ~ err),
-        #     val = if(sum(! is.na(err)) > 0){
-        #         set_errors(val, #and then carry error to interped rows
-        #                    imputeTS::na_locf(err,
-        #                                      na_remaining = 'rev'))
-        #     } else {
-        #         set_errors(val, #unless not enough error to interp
-        #                    0)
-        #     }) %>%
-        # select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
-        # arrange(site_code, var, datetime)
-
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
     ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
     d_interp$ms_interp <- as.numeric(ms_interp_column)
     d_interp <- filter(d_interp,
@@ -6632,7 +6644,275 @@ ms_linear_interpolate <- function(d, interval){
     return(d_interp)
 }
 
-synchronize_timestep <- function(d){
+ms_nocb_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for pchem only, where measured concentrations represent aggregated
+    #concentration over the measurement period.
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_nocb_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_nocb_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 45 #fixed because this func is only called for pchem
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
+
+            #carry ms_status to any rows that have just been populated
+            ms_status = imputeTS::na_locf(ms_status,
+                                          option = 'nocb',
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_locf(val,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
+        )
+
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    return(d_interp)
+}
+
+ms_zero_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for precip only, and only relevant at konza (so far)
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_zero_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 45 #fixed because this func is only called for precip
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(
+
+            ms_status = imputeTS::na_replace(ms_status,
+                                             fill = 1,
+                                             maxgap = max_samples_to_impute),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_replace(val,
+                                     fill = 0,
+                                     maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val
+        )
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    return(d_interp)
+}
+
+ms_nocb_mean_interpolate <- function(d, interval){
+
+    #d: a ms tibble with no ms_interp column (this will be created)
+    #interval: the sampling interval (either '15 min' or '1 day').
+
+    #for precipitation depth/volume only, where measurements represent
+    #accumulation over the measurement period. if NAs are present, successive NAs can be
+    #assumed to sum to the next measured value. Therefore each NA in a series can be estimated
+    #as the next measured value divided by the number of NAs in the series.
+
+    #fills gaps up to maxgap (determined automatically), then removes missing values
+
+    if(length(unique(d$site_code)) > 1){
+        stop(paste('ms_nocb_mean_interpolate is not designed to handle datasets',
+                   'with more than one site.'))
+    }
+
+    if(length(unique(d$var)) > 1){
+        stop(paste('ms_nocb_mean_interpolate is not designed to handle datasets',
+                   'with more than one variable'))
+    }
+
+    if(! interval %in% c('15 min', '1 day')){
+        stop('interval must be "15 min" or "1 day", unless we have decided otherwise')
+    }
+
+    var <- drop_var_prefix(d$var[1])
+    max_samples_to_impute <- 15 #fixed because this func is only called for precip
+
+    if(interval == '15 min'){
+        max_samples_to_impute <- max_samples_to_impute * 96
+    }
+
+    d <- arrange(d, datetime)
+    ms_interp_column <- is.na(d$val)
+
+    d_interp <- d %>%
+        mutate(val_err = errors::errors(val),
+               val = errors::drop_errors(val),
+
+            #carry ms_status to any rows that have just been populated (probably
+            #redundant now, but can't hurt)
+            ms_status = imputeTS::na_locf(ms_status,
+                                          option = 'nocb',
+                                          na_remaining = 'rev',
+                                          maxgap = max_samples_to_impute),
+
+            val = if(sum(! is.na(val)) > 1){
+
+                #nocb interp NA vals
+                imputeTS::na_locf(val,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+
+                #unless not enough data in group; then do nothing
+            } else val,
+            val_err = if(sum(! is.na(val_err)) > 1){
+
+                #do the same for uncertainty
+                imputeTS::na_locf(val_err,
+                                  option = 'nocb',
+                                  na_remaining = 'keep',
+                                  maxgap = max_samples_to_impute)
+            } else val_err
+        )
+
+    errors::errors(d_interp$val) <- d_interp$val_err
+    d_interp$val_err <- NULL
+
+    # err <- errors(d_interp$val) #extract error from data vals
+    # err[err == 0] <- NA_real_ #change new uncerts (0s by default) to NA
+    # if(sum(! is.na(err)) > 0){
+    #     #and then carry error to interped rows
+    #     errors(d_interp$val) <- imputeTS::na_locf(err, option = 'nocb')
+    # } else {
+    #     errors(d_interp$val) <- 0 # #unless not enough error to interp
+    # }
+
+    d_interp <- d_interp %>%
+        select(any_of(c('datetime', 'site_code', 'var', 'val', 'ms_status', 'ms_interp'))) %>%
+        arrange(site_code, var, datetime)
+
+    ms_interp_column <- ms_interp_column & ! is.na(d_interp$val)
+    d_interp$ms_interp <- as.numeric(ms_interp_column)
+    d_interp <- filter(d_interp,
+                       ! is.na(val))
+
+    #identify series of records that need to be divided by their n
+    laginterp <- lag(d_interp$ms_interp)
+    laginterp[1] <- d_interp$ms_interp[1]
+    laginterp <- as.numeric(laginterp | d_interp$ms_interp)
+
+    err_ <- errors::errors(d_interp$val)
+    d_interp$val <- errors::drop_errors(d_interp$val)
+    vals_interped <- d_interp$val * laginterp
+    err_interped <- err_ * laginterp
+
+    #use run length encoding to do the division quickly
+    vals_new <- rle2(vals_interped) %>%
+        mutate(values = values / lengths) %>%
+        select(lengths, values) %>%
+        as.list()
+    class(vals_new) <- 'rle'
+    vals_new <- inverse.rle(vals_new)
+
+    #same for uncertainty
+    err_new <- rle2(err_interped) %>%
+        mutate(values = values / lengths) %>%
+        select(lengths, values) %>%
+        as.list()
+    class(err_new) <- 'rle'
+    err_new <- inverse.rle(err_new)
+
+    real_vals_new <- vals_new != 0
+    d_interp$val[real_vals_new] <- vals_new[real_vals_new]
+    errors::errors(d_interp$val) <- err_new
+
+    d_interp$ms_status[is.na(d_interp$ms_status)] = 0
+
+    return(d_interp)
+}
+
+synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                                  # desired_interval){
                                  # impute_limit = 30){
 
@@ -6743,11 +7023,12 @@ synchronize_timestep <- function(d){
         summary_and_interp_chunk <- sitevar_chunk[to_summarize_bool, ]
         interp_only_chunk <- sitevar_chunk[! to_summarize_bool, ]
 
+        var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
+        var_is_pchem <- prodname_from_prodname_ms(prodname_ms_) == 'precip_chemistry'
+
         if(nrow(summary_and_interp_chunk)){
 
             #summarize by sum for P, and mean for everything else
-            # var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
-            var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
 
             summary_and_interp_chunk_dt <- summary_and_interp_chunk %>%
                 mutate(val_err = errors(val),
@@ -6800,9 +7081,22 @@ synchronize_timestep <- function(d){
             ms_status_fill = NA,
             interval = rounding_intervals[i])
 
-        d_split[[i]] <- ms_linear_interpolate(
-            d = sitevar_chunk,
-            interval = rounding_intervals[i])
+        if(! var_is_p && ! var_is_pchem){
+            d_split[[i]] <- ms_linear_interpolate(
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+        } else if(var_is_pchem){
+            d_split[[i]] <- ms_nocb_interpolate(
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+        } else { #precip
+            d_split[[i]] <- ms_zero_interpolate( #so far only needed for konza
+                d = sitevar_chunk,
+                interval = rounding_intervals[i])
+            # d_split[[i]] <- ms_nocb_mean_interpolate( #this might apply in some cases, but not yet.
+            #     d = sitevar_chunk,
+            #     interval = rounding_intervals[i])
+        }
     }
 
     #recombine list of tibbles into single tibble
@@ -7611,24 +7905,10 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                           rd = raw_dir,
                           p = prodname_ms)
 
-    readr::write_file(murl,
+    readr::write_file(paste0(murl, ' (retrieved ',
+                             lubridate::with_tz(Sys.time(), 'UTC'),
+                             ')'),
                       file = data_acq_file)
-
-    # #create portal directory if necessary
-    # portal_dir <- glue('../portal/data/{d}/{p}', #portal ignores network
-    #                    d = domain,
-    #                    p = strsplit(prodname_ms, '__')[[1]][1])
-    # dir.create(portal_dir,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-    #
-    # #hardlink file
-    # portal_file <- glue(portal_dir, '/raw_data_documentation_url.txt')
-    # unlink(portal_file)
-    # invisible(sw(file.link(to = portal_file,
-    #                        from = data_acq_file)))
-
-    #return()
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -8305,25 +8585,15 @@ qc_hdetlim_and_uncert <- function(d, prodname_ms){
     return(d)
 }
 
-rle2 <- function(x){#, return_list = FALSE){
+rle2 <- function(x){
 
     r <- rle(x)
     ends <- cumsum(r$lengths)
-
-    # if(return_list){
-    #
-    #     r <- list(values = r$values,
-    #               starts = c(1, ends[-length(ends)] + 1),
-    #               stops = ends,
-    #               lengths = r$lengths)
-    #
-    # } else {
 
     r <- tibble(values = r$values,
                 starts = c(1, ends[-length(ends)] + 1),
                 stops = ends,
                 lengths = r$lengths)
-    # }
 
     return(r)
 }
@@ -9568,10 +9838,6 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
-    log_with_indent('adding legal metadata to each domain directory',
-                    logger = logger_module)
-    # legal_details_scrape(dataset_version = dataset_version)
-
     log_with_indent(glue('Generating output dataset v',
                          dataset_version),
                     logger = logger_module)
@@ -9594,13 +9860,6 @@ postprocess_entire_dataset <- function(site_data,
     # log_with_indent(glue('Removing unneeded files from portal dataset.',
     #                 logger = logger_module)
     # clean_portal_dataset()
-    
-    if(reformat_camels) {
-        log_with_indent('Reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
-        reformat_camels_for_ms()
-    } else{
-        log_with_indent('NOT reformatting CAMELS attributes to MacroSheds format', logger = logger_module)
-    }
 
     log_with_indent('Generating spatial summary data',
                     logger = logger_module)
@@ -9622,7 +9881,7 @@ postprocess_entire_dataset <- function(site_data,
 
     if(push_new_version_to_figshare){
 
-        message('Are you sure you want to modify our published dataset? ESC within 10 seconds if not.')
+        message('Are you sure you want to modify our published dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 
         log_with_indent(glue('Preparing dataset v{vv} for Figshare',
@@ -9634,6 +9893,11 @@ postprocess_entire_dataset <- function(site_data,
                              dataset_version = dataset_version)
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
+        reformat_camels_for_ms()
+
+        # log_with_indent('adding legal metadata to each domain directory',
+        #                 logger = logger_module)
+        # legal_details_scrape(dataset_version = dataset_version)
 
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
@@ -9654,6 +9918,7 @@ make_figshare_docs_skeleton <- function(where){
     dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, 'macrosheds_documentation', '07_CAMELS-compliant_datasets_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
 }
 
@@ -9817,7 +10082,26 @@ assemble_misc_docs_figshare <- function(where){
     docs_dir <- file.path(where, 'macrosheds_documentation')
     dir.create(docs_dir, showWarnings = FALSE)
 
-    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt', docs_dir)
+    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
+                                path = file.path(docs_dir, '01a_data_use_agreements.docx'),
+                                overwrite = TRUE)
+    googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
+                                path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
+                                overwrite = TRUE)
+    select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
+        write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
+    file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
+              file.path(docs_dir, '05_timeseries_documentation'))
+    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/timeseries_refs.bib',
+              file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib'))
+    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/ws_attr_refs.bib',
+              file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib'))
+    file.copy('src/templates/figshare_docfiles/07a_CAMELS-compliant_datasets_metadata.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    file.copy('src/templates/figshare_docfiles/07b_CAMELS-compliant_ws_attributes_column_descriptions.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    file.copy('src/templates/figshare_docfiles/07c_CAMELS-compliant_Daymet_forcings_column_descriptions.txt',
+              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
     file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
     file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
     file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
@@ -9969,6 +10253,14 @@ prepare_for_figshare <- function(where, dataset_version){
     prepare_ts_data_for_figshare(where = where,
                                  dataset_version = dataset_version)
     prepare_ws_attr_data_for_figshare(where = where)
+
+    #decided to change some dirnames. easiest to just do that as a patch here
+    file.rename(file.path(where, 'macrosheds_documentation'),
+                file.path(where, '0_documentation_and_metadata'))
+    file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
+                file.path(where, '1_watershed_attribute_data'))
+    file.rename(file.path(where, 'macrosheds_timeseries_data'),
+                file.path(where, '2_timeseries_data'))
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
@@ -9986,9 +10278,10 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
-    file.copy('src/templates/figshare_docfiles/01_data_use_policy.txt',
-              file.path(where, 'macrosheds_documentation_packageformat', 'data_use_policy.txt'),
-              overwrite = TRUE)
+    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
+                                path = file.path(where, 'macrosheds_documentation_packageformat',
+                                                 'data_use_agreements.docx'),
+                                overwrite = TRUE)
 
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
@@ -10646,10 +10939,10 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
     other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
-                        policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
-                        policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
-                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_policy.txt'))
-    titlesD <- c('README', 'watershed_attribute_LEGAL', 'timeseries_LEGAL', 'data_use_POLICY')
+                        # policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
+                        # policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
+                        policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_agreements.docx'))
+    titlesD <- c('README', 'data_use_POLICY')
 
     other_uploadsE <- c(metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/site_metadata.csv'),
                         metadata = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_metadata.csv'),
@@ -11272,6 +11565,12 @@ approxjoin_datetime <- function(x,
                                 indices_only = FALSE){
                                 #direction = 'forward'){
 
+    #TODO: update to match nearest non-NA value by column if we ever go sub-daily.
+    #some code for this in place below, but note that implementing this will
+    #break incides_only. also there will be no good way to select the matching
+    #date in cases where there are multiple data columns. i.e. there will be
+    #seprate matched dates for each column... not sure how to handle.
+
     #x and y: macrosheds standard tibbles with only one site_code,
     #   which must be the same in x and y. Nonstandard tibbles may also work,
     #   so long as they have datetime columns, but the only case where we need
@@ -11331,37 +11630,47 @@ approxjoin_datetime <- function(x,
     }
     if(! is.logical(indices_only)) stop('indices_only must be a logical')
 
-    #deal with the case of x or y being a specialized "flow" tibble
-    # x_is_flowtibble <- y_is_flowtibble <- FALSE
-    # if('flow' %in% colnames(x)) x_is_flowtibble <- TRUE
-    # if('flow' %in% colnames(y)) y_is_flowtibble <- TRUE
-    # if(x_is_flowtibble && ! y_is_flowtibble){
-    #     varname <- y$var[1]
-    #     y$var = NULL
-    # } else if(y_is_flowtibble && ! x_is_flowtibble){
-    #     varname <- x$var[1]
-    #     x$var = NULL
-    # } else if(! x_is_flowtibble && ! y_is_flowtibble){
-    #     varname <- x$var[1]
-    #     x$var = NULL
-    #     y$var = NULL
-    # } else {
-    #     stop('x and y are both "flow" tibbles. There should be no need for this')
-    # }
-    # if(x_is_flowtibble) x <- rename(x, val = flow)
-    # if(y_is_flowtibble) y <- rename(y, val = flow)
-
     #data.table doesn't work with the errors package, so error needs
-    #to be separated into its own column. also give same-name columns suffixes
+    #to be separated into its own column and handled with care.
 
-    if('val' %in% colnames(x)){ #crude catch for nonstandard ms tibbles (fine for now)
+    # #this will be useful if we go sub-daily
+    # if(any(c('val', 'ms_status') %in% colnames(x))){
+    #
+    #     x <- x %>%
+    #         mutate(
+    #                # across(where(~inherits(., 'errors')),
+    #                #        ~case_when(! is.na(.) & is.na(errors(.)) ~ set_errors(., 0), TRUE ~ .)),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~errors(.),
+    #                       .names = '{.col}_err'),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~drop_errors(.))) %>%
+    #         rename_with(.fn = ~paste0(., '_x'),
+    #                     .cols = everything()) %>%
+    #         # rename(datetime_x = datetime) %>%
+    #         as.data.table()
+    #
+    #     y <- y %>%
+    #         mutate(
+    #                # across(where(~inherits(., 'errors')),
+    #                #        ~case_when(! is.na(.) & is.na(errors(.)) ~ set_errors(., 0), TRUE ~ .)),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~errors(.),
+    #                       .names = '{.col}_err'),
+    #                across(where(~inherits(., 'errors')),
+    #                       ~drop_errors(.))) %>%
+    #         rename_with(.fn = ~paste0(., '_y'),
+    #                     .cols = everything()) %>%
+    #         # rename(datetime_y = datetime) %>%
+    #         as.data.table()
+
+    if('val' %in% colnames(x)){
+
         x <- x %>%
             mutate(err = errors(val),
                    val = errors::drop_errors(val)) %>%
             rename_with(.fn = ~paste0(., '_x'),
                         .cols = everything()) %>%
-                        # .cols = any_of(c('site_code', 'var', 'val',
-                        #                  'ms_status', 'ms_interp'))) %>%
             as.data.table()
 
         y <- y %>%
@@ -11370,9 +11679,23 @@ approxjoin_datetime <- function(x,
             rename_with(.fn = ~paste0(., '_y'),
                         .cols = everything()) %>%
             as.data.table()
+
     } else {
-        x <- dplyr::rename(x, datetime_x = datetime) %>% as.data.table()
-        y <- dplyr::rename(y, datetime_y = datetime) %>% as.data.table()
+
+        if(indices_only){
+            x <- rename(x, datetime_x = datetime) %>%
+                mutate(across(where(~inherits(., 'errors')),
+                              ~drop_errors(.))) %>%
+                as.data.table()
+
+            y <- rename(y, datetime_y = datetime) %>%
+                mutate(across(where(~inherits(., 'errors')),
+                              ~drop_errors(.))) %>%
+                as.data.table()
+        } else {
+            stop('this case not yet handled')
+        }
+
     }
 
     #alternative implementation of the "on" argument in data.table joins...
@@ -11398,14 +11721,6 @@ approxjoin_datetime <- function(x,
               datetime_max = datetime_x + rollmax)]
     y[, `:=` (datetime_y_orig = datetime_y)] #datetime col will be dropped from y
 
-    # if(indices_only){
-    #     y_indices <- y[x,
-    #                    on = .(datetime_y <= datetime_max,
-    #                           datetime_y >= datetime_min),
-    #                    which = TRUE]
-    #     return(y_indices)
-    # }
-
     #join x rows to y if y's datetime falls within the x range
     joined <- y[x, on = .(datetime_y <= datetime_max,
                           datetime_y >= datetime_min)]
@@ -11416,6 +11731,10 @@ approxjoin_datetime <- function(x,
     joined[, `:=` (datetime_match_diff = abs(datetime_x - datetime_y_orig))]
     joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_x]
     joined <- joined[, .SD[which.min(datetime_match_diff)], by = datetime_y_orig]
+    #this will grab the nearest non-NA for each column, but that messes up the datatime indices
+    # joined = joined[order(datetime_match_diff),
+    #                 lapply(.SD, function(z) dplyr::first(na.omit(z))),
+    #                 by = datetime_x]
 
     if(indices_only){
         y_indices <- which(y$datetime_y %in% joined$datetime_y_orig)
@@ -11432,31 +11751,25 @@ approxjoin_datetime <- function(x,
         setnames(joined, 'datetime_y_orig', 'datetime')
     }
 
-    #restore error objects, var column, original column names (with suffixes).
-    #original column order
+    # #restore error objects, var column, original column names (with suffixes).
+    # #original column order (incomplete. execution always returns before this point
+    # #in idw, which is the only place where it would be necessary)
+    # ernames = grep('_err_[xy]$', colnames(joined), value = TRUE)
+    # ernames = ernames[sub('err_', '', ernames) %in% colnames(joined)]
+    # for(erc in ernames){
+    #     dac = sub('err_', '', erc)
+    #     if(dac %in%
+    #     set(joined, j = dac,
+    #         value = set_errors(joined[[dac]], joined[[erc]]))
+    # }
+
     joined <- as_tibble(joined) %>%
         mutate(val_x = errors::set_errors(val_x, err_x),
                val_y = errors::set_errors(val_y, err_y)) %>%
         select(-err_x, -err_y)
-        # mutate(var = !!varname)
-
-    # if(x_is_flowtibble) joined <- rename(joined,
-    #                                      flow = val_x,
-    #                                      ms_status_flow = ms_status_x,
-    #                                      ms_interp_flow = ms_interp_x)
-    # if(y_is_flowtibble) joined <- rename(joined,
-    #                                      flow = val_y,
-    #                                      ms_status_flow = ms_status_y,
-    #                                      ms_interp_flow = ms_interp_y)
-
-    # if(! sum(grepl('^val_[xy]$', colnames(joined))) > 1){
-    #     joined <- rename(joined, val = matches('^val_[xy]$'))
-    # }
 
     joined <- select(joined,
                      datetime,
-                     # matches('^val_?[xy]?$'),
-                     # any_of('flow'),
                      starts_with('site_code'),
                      any_of(c(starts_with('var_'), matches('^var$'))),
                      any_of(c(starts_with('val_'), matches('^val$'))),
@@ -11558,7 +11871,7 @@ get_source_urls <- function(result_obj, processing_func){
 
     if(uses_gdrive_func){
 
-        source_urls <- 'MacroSheds drive; not yet public'
+        source_urls <- 'MacroSheds drive (contact us for original source): https://drive.google.com/drive/folders/1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr?usp=sharing'
 
     } else if('url' %in% names(result_obj)){
 
@@ -14477,41 +14790,42 @@ legal_details_scrape <- function(dataset_version){
 }
 
 reformat_camels_for_ms <- function(){
-    
-    # This function will reformat the camels metrics computed for MacroSheds 
-    # watersheds to the MacroSheds format.
-    
-    ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
-    
-    all_files <- list.files(ms_attributes_dir, recursive = T, full.names = TRUE)
-    
-    
-    
+
+    # ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
+    ms_attributes_dir <- '../qa_experimentation/data/ms_in_camels_format'
+
+    all_files <- list.files(ms_attributes_dir, recursive = TRUE, full.names = TRUE)
+
     soil_files <- all_files[grep('soil.feather', all_files)]
     clim_files <- all_files[grep('clim.feather', all_files)]
     topo_files <- all_files[grep('topo.feather', all_files)]
+    vege_files <- all_files[grep('vege.feather', all_files)]
     geol_files <- all_files[grep('geol.feather', all_files)]
     daymet_files <- all_files[grep('daymet_full_climate.feather', all_files)]
-    
+    daymet_files <- daymet_files[! grepl('/NC/', daymet_files)]
+    warning('removing NC daymet data from camels set')
+
     soil <- map_dfr(soil_files, read_feather)
     clim <- map_dfr(clim_files, read_feather)
     topo <- map_dfr(topo_files, read_feather)
     geol <- map_dfr(geol_files, read_feather)
-    
-    dir.create('data/camels_compliant')
-    dir.create('data/camels_compliant/daymet')
-    
-    
-    write_csv(soil, 'data/camels_compliant/soil.csv')
-    write_csv(clim, 'data/camels_compliant/clim.csv')
-    write_csv(topo, 'data/camels_compliant/topo.csv')
-    write_csv(geol, 'data/camels_compliant/geol.csv')
-    
+    vege <- map_dfr(vege_files, read_feather)
+
+    dir.create('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes')
+    dir.create('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings')
+
+    write_csv(soil, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/soil.csv')
+    write_csv(clim, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/clim.csv')
+    write_csv(topo, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/topo.csv')
+    write_csv(geol, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/geol.csv')
+    write_csv(vege, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/vege.csv')
+
     for(i in 1:length(daymet_files)){
+
         this_daymet <- read_feather(daymet_files[i])
-        
+
         sites <- unique(this_daymet$site_code)
-        
+
         for(s in 1:length(sites)){
             this_site <- this_daymet %>%
                 filter(site_code == !!sites[s]) %>%
@@ -14522,13 +14836,14 @@ reformat_camels_for_ms <- function(){
                        `tmax(C)` = tmax,
                        `tmin(C)` = tmin,
                        `vp(Pa)` = vp,
-                       `pet(mm)` = pet) 
-            
-            write_csv(this_site, glue('data/camels_compliant/daymet/{s}.csv',
+                       `pet(mm)` = pet)
+
+            write_csv(this_site, glue('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings/{s}.csv',
                                       s = sites[s]))
         }
     }
 }
+<<<<<<< HEAD
 
 
 
@@ -14554,3 +14869,5 @@ scrape_data_download_urls <- function() {
     }
   }
 }
+=======
+>>>>>>> e2604ab9dbc8d0a005d9012d15cfa35daa6e4c0e

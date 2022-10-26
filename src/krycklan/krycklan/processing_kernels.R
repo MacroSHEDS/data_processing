@@ -418,7 +418,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- read.csv(rawfile,
                   stringsAsFactors = FALSE,
-                  colClasses = "character")
+                  colClasses = 'character')
 
     colnames(d) <- str_remove_all(colnames(d), 'Â')
 
@@ -546,7 +546,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'Re.µg.l' = 'Re',
                                         'Ga.µg.l' = 'Ga'),
                          data_col_pattern = '#V#',
-                         convert_to_BDL_flag = '<LOD',
+                         convert_to_BDL_flag = '<LOD', #confirmed: only non-numeric value in any data column
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
