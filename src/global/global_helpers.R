@@ -9193,7 +9193,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnncccc'
+            col_types = 'ccccccccnnnnnccccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -9367,7 +9367,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnncccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
@@ -11795,6 +11795,7 @@ retrieve_versionless_product <- function(network,
 
     rt <- tracker[[prodname_ms]][[site_code]]$retrieve
 
+    ## i = 1
     for(i in 1:nrow(rt)){
 
         held_dt <- as.POSIXct(rt$held_version[i],
@@ -14841,4 +14842,27 @@ reformat_camels_for_ms <- function(){
                                       s = sites[s]))
         }
     }
+}
+
+scrape_data_download_urls <- function() {
+  raw_fp <- "./vault/raw_documentation_files/"
+
+
+  raw_networks <- list.files(raw_fp)
+  raw_networks_fp <- list.files(raw_fp, full.names = TRUE)
+
+  for(network_fp in raw_networks_fp) {
+    domains <- list.files(raw_networks_fp[1])
+
+    for(domain in domains) {
+      writeLines('reading documentation for data source:', domain)
+      product_names <- list.files(file.path(network_fp, domain, "raw", "documentation"))
+      product_docs <- list.files(file.path(network_fp, domain, "raw", "documentation"), full.names = TRUE)
+
+      for(file in product_docs) {
+        data_source_doc <- readLines(file)
+
+      }
+    }
+  }
 }
