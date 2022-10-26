@@ -368,9 +368,9 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                 is.na(num_t) ~ '1200')) %>%
         mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
         select(-num_t, -RecTime, -num_d, -RecDay)
-    
+
     NO3_codes <- c('No3 Below det limit', 'NO3 < det limit', 'NO3<det limit', 'no3 < det limit',
-        'no3 below det limit', 'no3 and tp < det limit', 
+        'no3 below det limit', 'no3 and tp < det limit',
         'no3 not detectable', 'no3 below det limit', 'bison upstream; no3 < det limit 90.5 0',
         'no3 < det limit(0.4)', 'no3 < det limit(0.0);  tp < srp', 'no3 < det limit(0.4);  tnp=3x',
         'no3 below det', 'no3 < det limit; doc is OK-ran@1:1;  broke ice at 9am..',
@@ -378,15 +378,15 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
         'no3 < det limit; took from large pool below tube', 'no3 below det;  murky water',
         'no3 < det limit; tnp=c', 'no3<detection limit', 'NO3 < det limit',
         'new equipment installed; NO3 < det limit', 'NO3<det limit', 'lots of leaf litter and NO3 < det limit')
-    
+
     NH4_codes <- c('NH4 <det limit', 'nh4<det limit', 'no height; frozen over;nh4<det limit')
-    
+
     TN_codes <- c()
-    
+
     SRP_codes <- c('srp < det limit', 'srp < det limit; doc = 2x', 'tank frozen over; srp/tp<detection limit',
                    'mininimal flow particulates in sample; srp<detection limit; no/srpx3',
                    'srp<detection limit', 'rain/mist during sampling; srp<detection limit')
-    
+
     TP_codes <- c('slightly dirty=snowmelt. TP below Det limit', 'TP below Det limit',
                   'nh4=2X. TP below Det limit', 'nh4=2X; bison in area on 01/29. TP below Det limit',
                   'TP<Det limit', 'tp < det limit', 'no3 and tp < det limit',
@@ -399,16 +399,16 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                   'tp < det limit; ice and algae', 'tp <det limit; algae and ice; had to break ice to get sample. Ice too thick to break to get height',
                   'no/srp=x2; tp < det limit', 'doc/no/srp = 2x;  tp < det limit; sulfur smell coming from tank; algae on pipe',
                   'tp<detection limit', 'tank frozen over; srp/tp<detection limit')
-    
+
     TP_flags <- c('no3 < det limit(0.0);  tp < srp', 'tp < det limit; light rain when sampling; murky',
                   "\"srp>tp", 'srp/tpx2; srp>tp; water level has decreased dramatically; used ion syringe to ',
                   'srp>tp; tpx2; leaf build-up continues')
-    
+
     COMMENTS_flags <- c(grep('bison', unique(d$COMMENTS), value = T), grep('cow|cows', unique(d$COMMENTS), value = T),
                         grep('experiment', unique(d$COMMENTS), value = T), grep('turkey', unique(d$COMMENTS), value = T),
                         'guy upstream sampling', grep('ducks', unique(d$COMMENTS), value = T),
                         grep('people|People', unique(d$COMMENTS), value = T))
-    
+
     DOC_codes <- c()
 
     d <- d %>%
@@ -459,13 +459,13 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            # variable_flags_clean = 'FALSE',
+                            variable_flags_to_drop = 'ensuring other flags get ms_status of 0',
                             variable_flags_dirty = 'dirty',
                             variable_flags_bdl = 'BDL',
                             summary_flags_clean = list('comments' = c(0, NA)),
                             summary_flags_dirty = list('comments' = c(1)))
 
-    # Discrepancy in konza meta data that list DOC as both mg/l and ug/l 
+    # Discrepancy in konza meta data that list DOC as both mg/l and ug/l
     d <- ms_conversions(d,
                         # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                         #                       'NH4', 'NH3'),
@@ -499,18 +499,17 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
                          datetime_tz = 'US/Central',
                          site_code_col = 'Site',
                          alt_site_code = list('N04D' = 'n04d',
-                                              'N02B'='n02b',
+                                              'N02B' = 'n02b',
                                               'N20B' = 'n20b',
                                               'N01B' = 'n01b'),
                          data_cols =  c('Conduct' = 'spCond'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
 
-      d <- d %>%
-        rename(val = 3) %>%
-        mutate(var = 'GN_spCond',
-             ms_status = 0) %>%
-        filter(site_code %in% c('N04D', 'N02B', 'N20B', 'N01B'))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
+
+    d <- filter(d, site_code %in% c('N04D', 'N02B', 'N20B', 'N01B'))
 
     return(d)
 }
@@ -556,8 +555,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list(comments = 'bad'),
-                            summary_flags_dirty = list(comments = 'remove'))
+                            summary_flags_to_drop = list(comments = 'ensuring all get ms_status=0'),
+                            summary_flags_dirty = list(comments = 'ensuring all get ms_status = 0'))
 
     return(d)
 }
@@ -592,6 +591,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                                         'ODO' = 'DO',
                                         'ODOsat' = 'DO_sat'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          summary_flagcols = 'Comments',
                          is_sensor = TRUE)
 
@@ -638,10 +638,6 @@ process_1_16 <- function(network, domain, prodname_ms, site_code,
                        sampling_type = 'I',
                        is_sensor = TRUE)
 
-  d %>%
-    ggplot(aes(datetime, `IS_temp__|dat`, colour = site_code)) +
-    geom_line()
-
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
 
@@ -666,9 +662,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
       mutate(num_d = nchar(RecDay)) %>%
       mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
       select(-num_d, -RecDay)  %>%
-      filter(Watershed != '001d',
-             Watershed != 'n01d',
-             Watershed != '')
+      filter(! Watershed %in% c('001d', 'n01d', ''))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
@@ -678,25 +672,26 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'Watershed',
                          alt_site_code = list('002C' = c('R20B', '001c', 'r20b', '001c'),
                                               '020B' = '020b',
-                                              'HQ02' = c('00HQ', '00hq', 'hq'),
+                                              'HQ' = c('00HQ', '00hq', 'hq'),
                                               'N4DF' = c('N04D', 'n04d'),
                                               'N01B' = 'n01b'),
                          data_cols =  c('NO3'='NO3_N', 'NH4'='NH4_N', 'TPsN'='TPN',
                                         'SRP', 'TPP'),
                          data_col_pattern = '#V#',
+                         set_to_NA = c('', '.', ' '),
                          summary_flagcols = 'Comments',
                          is_sensor = FALSE)
 
-    # Could use a search function to look for words that indicates bad data.
-    # over all the data with comments seem to indicate the data is in some way
-    # compromised
-    d <- d %>%
-       mutate(Comments = ifelse(Comments != '', 'bad', 'ok'))
+    clean_comments <- is.na(d$Comments) |
+        grepl('^(?:rain|snow|cloudy ?=? ?)?[0-9; \\)\\(\\/\\.=\\-]*$', d$Comments)
+    # unique(na.omit(d[clean_comments,]$Comments)) #verify
+    d$Comments <- 'dirty'
+    d$Comments[clean_comments] <- 'clean'
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_dirty = list(Comments = 'bad'),
-                            summary_flags_to_drop = list(Comments = 'remove'))
+                            summary_flags_dirty = list(Comments = 'dirty'),
+                            summary_flags_clean = list(Comments = 'clean'))
 
     d <- ms_conversions(d,
                         convert_units_from = c(NO3_N = 'ug/l',
@@ -725,13 +720,11 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    # d <- read.csv(rawfile1, colClasses = "character")
-
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('RecDate' = '%m/%e/%Y'),
                          datetime_tz = 'US/Central',
                          site_code_col = 'watershed',
-                         alt_site_code = list('HQ02' = 'HQ'),
+                         alt_site_code = list('HQ' = 'HQ02'),
                          data_cols =  c('ppt' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
@@ -740,9 +733,9 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            summary_flags_to_drop = list(Comments = 'bad'),
-                            summary_flags_dirty = list(Comments = 'remove'))
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(Comments = c('', ' ', '8.0mm due')),
+        summary_flags_to_drop = list(Comments = 'just making sure every other flag ends up as ms_status 1'))
 
     return(d)
 }
