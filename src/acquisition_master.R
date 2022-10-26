@@ -292,13 +292,6 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-<<<<<<< HEAD
-dmnrow = 20
-## print(network_domain, n=50)
-=======
-# dmnrow = 12
-# print(network_domain, n=50)
->>>>>>> e2604ab9dbc8d0a005d9012d15cfa35daa6e4c0e
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!

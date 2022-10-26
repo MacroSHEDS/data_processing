@@ -14843,9 +14843,6 @@ reformat_camels_for_ms <- function(){
         }
     }
 }
-<<<<<<< HEAD
-
-
 
 scrape_data_download_urls <- function() {
   raw_fp <- "./vault/raw_documentation_files/"
@@ -14869,5 +14866,3 @@ scrape_data_download_urls <- function() {
     }
   }
 }
-=======
->>>>>>> e2604ab9dbc8d0a005d9012d15cfa35daa6e4c0e
