@@ -101,6 +101,16 @@ ms_init <- function(use_gpu = FALSE,
     successes <- 0
     which_machine <- 'unknown'
 
+    # example dev computer 'registration' code block
+    ## res <- try(setwd('~/your/file/path/to/macrosheds/data_processing'), silent=TRUE) # example
+    ## if(! 'try-error' %in% class(res)){
+    ##     successes <- successes + 1
+    ##     which_machine <- 'your_machine') # machine name is completely up to you, does not matter
+    ##     instance_type <- 'dev' # instance type is 'dev' for all personal computers
+    ##     machine_status <- 'n00b' # unless you have > 32GB of RAM and > 8 CPUS, your 'n00b'
+    ##     op_system <- 'mac' # whats your OS?
+    ## }
+
     res <- try(setwd('~/macrosheds_data_processing'), silent=TRUE) #DCC
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -172,6 +182,15 @@ ms_init <- function(use_gpu = FALSE,
     #     machine_status <- '1337'
     # }
 
+    res <- try(setwd('/home/weston/science/macrosheds/data_processing'), silent=TRUE) # wes
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'wes'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
     res <- try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -208,7 +227,7 @@ ms_instance <- ms_init(use_ms_error_handling = FALSE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -219,12 +238,21 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
+    ## ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
+    ## you can add your name to the vector below,
+    ## if you would like to use the macrosheds.project GEE account
+    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
+#load authorization file for macrosheds google sheets and drive
+#same account must have GEE and GDrive access
+googlesheets4::gs4_auth(email = gee_login)
+googledrive::drive_auth(email = gee_login)
+
+#initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
 
-googledrive::drive_auth(email = gee_login)
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -239,7 +267,7 @@ if(ms_instance$use_ms_error_handling){
     source_decoratees('src/global/global_helpers.R') #parse decorators
 }
 
-#puts ms_vars, site_data, ws_delin_specs, univ_products into the global environment
+#puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
 
@@ -264,8 +292,6 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 12
-# print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -274,17 +300,19 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    # held_data = get_data_tracker(network, domain)
+    held_data = get_data_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive')
-    # owrite_tracker(network, domain)
+    ## dangerous lines - use at your own risk!    :0
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive')
+    ## owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
-    # owrite_tracker(network, domain)
+    ## less dangerous version below, clears tracker for just a specified product
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -296,21 +324,25 @@ for(dmnrow in 1:nrow(network_domain)){
 
     update_product_statuses(network = network,
                            domain = domain)
+
     get_all_local_helpers(network = network,
                           domain = domain)
 
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
+
     ms_munge(network = network,
              prodname_filter = c('stream_chemistry'),
              domain = domain)
+
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         verbose = TRUE))
     }
+
     ms_derive(network = network,
               prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
