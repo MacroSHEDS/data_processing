@@ -9367,7 +9367,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnncccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
