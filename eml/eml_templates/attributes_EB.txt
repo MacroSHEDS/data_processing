@@ -1,0 +1,8 @@
+"attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
+"datetime"	"date and time in UTC"	"Date"		"Y-M-D h:m:s"		
+"site_code"	"Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0"	"character"				
+"var"	"variable name and prefix. See variable prefix metadata"	"character"				
+"val"	"data value. See see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing for units"	"numeric"	"variable"		"NA"	"missing value"
+"ms_status"	"0 = clean value. 1 = questionable value"	"numeric"	"dimensionless"			
+"ms_interp"	"0 = measured or imputed by primary source. 1 = interpolated by MacroSheds"	"numeric"	"dimensionless"			
+"val_err"	"Uncertainty. See “Detection Limits and Uncertainty” section of https://eartharxiv.org/repository/view/3499/"	"numeric"	"variable"		"NA"	"missing value"
