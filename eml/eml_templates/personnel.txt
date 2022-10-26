@@ -1,7 +1,7 @@
 givenName	middleInitial	surName	organizationName	electronicMailAddress	userId	role	projectTitle	fundingAgency	fundingNumber
 Michael		Vlah	Duke University	michael.vlah@duke.edu	0000-0002-6260-2416	creator	MacroSheds	U.S.A. National Science Foundation	1926420
 Michael		Vlah	Duke University	michael.vlah@duke.edu	0000-0002-6260-2416	contact	MacroSheds	U.S.A. National Science Foundation	1926420
-Spencer		Rhea	Duke University	spencer.rhea@duke.edu		creator	MacroSheds	U.S.A. National Science Foundation	1926420
+Spencer		Rhea	Duke University	spencer.rhea@duke.edu	0000-0002-0919-2657	creator	MacroSheds	U.S.A. National Science Foundation	1926420
 Weston		Slaughter	Duke University	weston.slaughter@duke.edu	0000-0003-4675-5786	creator	MacroSheds	U.S.A. National Science Foundation	1926420
 Weston		Slaughter	Duke University	weston.slaughter@duke.edu	0000-0003-4675-5786	contact	MacroSheds	U.S.A. National Science Foundation	1926420
 Emily		Bernhardt	Duke University	emily.bernhardt@duke.edu	0000-0003-3031-621X	PI	MacroSheds	U.S.A. National Science Foundation	1926420

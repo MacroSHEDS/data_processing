@@ -44,7 +44,8 @@ template_annotations()
 
 files_to_link <- c('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_summaries.csv',
                    'macrosheds_figshare_v1/2_timeseries_data/bear/bear/discharge/EB.csv')
-link_locs <- file.path(dd, basename(files_to_link))
+basenames <- basename(files_to_link)
+link_locs <- file.path(dd, basenames)
 
 for(i in seq_along(files_to_link)){
     suppressWarnings(file.link(files_to_link[i], link_locs[i]))
@@ -56,10 +57,10 @@ make_eml(wd, dd, ed,
          geographic.description = NULL,#not needed if geographic_coverage.txt exists,
          geographic.coordinates = NULL,#same,
          maintenance.description = 'ongoing',
-         data.table = c('EB.csv', 'ws_attr_summaries.csv'),
+         data.table = basenames,
          # data.table.name = data.table, #takes care of itself
-         data.table.description = c('omg'),
-         data.table.quote.character = c('"'),
+         data.table.description = rep('placeholder', length(files_to_link)),
+         data.table.quote.character = rep('"', length(files_to_link)),
          data.table.url = NULL,
          other.entity = NULL, #list any non-table (zip, shp, R, etc) file here
          # other.entity.name = other.entity,
