@@ -8923,7 +8923,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnncccc'
+            col_types = 'ccccccccnnnnnccccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -14544,6 +14544,7 @@ scrape_data_download_urls <- function() {
 
     for(domain in domains) {
       writeLines('reading documentation for data source:', domain)
+      product_names <- list.files(file.path(network_fp, domain, "raw", "documentation"))
       product_docs <- list.files(file.path(network_fp, domain, "raw", "documentation"), full.names = TRUE)
 
       for(file in product_docs) {
