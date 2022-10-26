@@ -3,4 +3,6 @@ where you will find subheadings on time-series data processing, watershed attrib
 derivation of additional products, and technical validation.
 
 For field data collection methods, laboratory methods and protocols, and primary quality control procedures,
-consult primary source documentation. Links can be found in the data_source column of [this table](https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit?usp=sharing).
+consult primary source documentation. Links can be found in the `link` column of [this table](https://docs.google.com/spreadsheets/d/1x38OiUPhD7C3m0vBj2kRZO_ORQrks4aOo0DDrFBjY7I/edit?usp=sharing).
+
+<a href="https://www.google.com/" style="color: black; text-decoration: underline;">custom link</a>
