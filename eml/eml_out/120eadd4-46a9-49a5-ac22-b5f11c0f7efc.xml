@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eml:eml xmlns:eml="https://eml.ecoinformatics.org/eml-2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.2" packageId="120eadd4-46a9-49a5-ac22-b5f11c0f7efc" xsi:schemaLocation="https://eml.ecoinformatics.org/eml-2.2.0/eml.xsd https://eml.ecoinformatics.org/eml-2.2.0/eml.xsd" system="unknown">
+  <dataset>
+    <title>MacroSheds</title>
+    <creator>
+      <individualName>
+        <givenName>Michael</givenName>
+        <surName>Vlah</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>michael.vlah@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0002-6260-2416</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Spencer</givenName>
+        <surName>Rhea</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>spencer.rhea@duke.edu</electronicMailAddress>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Weston</givenName>
+        <surName>Slaughter</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>weston.slaughter@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4675-5786</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Nick</givenName>
+        <surName>Gubbins</surName>
+      </individualName>
+      <organizationName>Colorado State University</organizationName>
+      <electronicMailAddress>nick.gubbins@colostate.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-0688-3767</userId>
+    </creator>
+    <associatedParty>
+      <individualName>
+        <givenName>Amanda</givenName>
+        <surName>DelVecchia</surName>
+      </individualName>
+      <organizationName>University of North Carolina</organizationName>
+      <electronicMailAddress>amanda.delvecchia@unc.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4252-5991</userId>
+      <role>contributor</role>
+    </associatedParty>
+    <associatedParty>
+      <individualName>
+        <givenName>Audrey</givenName>
+        <surName>Thellman</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>audrey.thellman@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-3716-6664</userId>
+      <role>contributor</role>
+    </associatedParty>
+    <pubDate>2022-10-25</pubDate>
+    <abstract>
+      <para>There exist hundreds of long-term watershed ecosystem monitoring efforts from which solute fluxes can be calculated. While details of instrumentation and sampling methods vary between studies, the types of data collected and the questions that motivate their analysis are often remarkably similar. Nevertheless, little effort toward the compilation of these datasets has previously been made, and comparative watershed analyses have remained limited in scale. The MacroSheds project has developed a flexible, future-friendly system for continually harmonizing daily time series of streamflow, precipitation, and solute chemistry from 168+ watershed studies throughout the U.S. and beyond, and supplementing each with a comprehensive set of predictive watershed attributes. The MacroSheds dataset is an unprecedented resource for watershed ecosystem science, and for hydrology, as a small-watershed supplement to existing collections of streamflow predictors, like CAMELS and GAGES-II. Macrosheds is accompanied by a [web dashboard for visualization](macrosheds.org) and an [R package](https://github.com/MacroSHEDS/macrosheds) for local analysis. 
+</para>
+    </abstract>
+    <keywordSet>
+      <keyword>biogeochemistry https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>watershed   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>hydrology   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>basins  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>concentration   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>flux    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>long term   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>long term monitoring    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>catchment science</keyword>
+      <keyword>land cover  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>land use    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>spatial properties  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>atmospheric properties  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>data synthesis</keyword>
+      <keyword>lter</keyword>
+      <keyword>czo</keyword>
+      <keyword>usfs</keyword>
+      <keyword>usgs</keyword>
+      <keyword>doe</keyword>
+    </keywordSet>
+    <additionalInfo>
+      <para>*arse*</para>
+      <para>[link](google.com)
+</para>
+    </additionalInfo>
+    <intellectualRights>
+      <para>see https://docs.google.com/document/d/1CPaQ705QyoWfu6WjA4xHgQooCQ8arq3NZ8DO9tb9jZ0/edit?usp=sharing
+</para>
+    </intellectualRights>
+    <coverage>
+      <temporalCoverage>
+        <rangeOfDates>
+          <beginDate>
+            <calendarDate>2012-05-01</calendarDate>
+          </beginDate>
+          <endDate>
+            <calendarDate>2014-11-30</calendarDate>
+          </endDate>
+        </rangeOfDates>
+      </temporalCoverage>
+    </coverage>
+    <maintenance>
+      <description>ongoing</description>
+    </maintenance>
+    <contact>
+      <individualName>
+        <givenName>Michael</givenName>
+        <surName>Vlah</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>michael.vlah@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0002-6260-2416</userId>
+    </contact>
+    <contact>
+      <individualName>
+        <givenName>Weston</givenName>
+        <surName>Slaughter</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>weston.slaughter@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4675-5786</userId>
+    </contact>
+    <methods>
+      <methodStep>
+        <description>
+          <markdown>For MacroSheds processing methods, see the data paper [here](https://eartharxiv.org/repository/view/3499/),
+where you will find subheadings on time-series data processing, watershed attributes retrieval and processing,
+derivation of additional products, and technical validation.
+
+For field data collection methods, laboratory methods and protocols, and primary quality control procedures,
+consult primary source documentation. Links can be found in the `link` column of [this table](https://docs.google.com/spreadsheets/d/1x38OiUPhD7C3m0vBj2kRZO_ORQrks4aOo0DDrFBjY7I/edit?usp=sharing).
+
+&lt;a href="https://www.google.com/" style="color: black; text-decoration: underline;"&gt;custom link&lt;/a&gt;
+</markdown>
+        </description>
+      </methodStep>
+    </methods>
+    <project>
+      <title>MacroSheds</title>
+      <personnel>
+        <individualName>
+          <givenName>Emily</givenName>
+          <surName>Bernhardt</surName>
+        </individualName>
+        <organizationName>Duke University</organizationName>
+        <electronicMailAddress>emily.bernhardt@duke.edu</electronicMailAddress>
+        <userId directory="https://orcid.org">https://orcid.org/0000-0003-3031-621X</userId>
+        <role>Principal Investigator</role>
+      </personnel>
+      <funding>U.S.A. National Science Foundation 1926420</funding>
+      <relatedProject>
+        <title>MacroSheds</title>
+        <personnel>
+          <individualName>
+            <givenName>Matthew</givenName>
+            <givenName>R. V.</givenName>
+            <surName>Ross</surName>
+          </individualName>
+          <organizationName>Colorado State University</organizationName>
+          <electronicMailAddress>mrvr@rams.colostate.edu</electronicMailAddress>
+          <userId directory="https://orcid.org">https://orcid.org/0000-0001-9105-4255</userId>
+          <role>Principal Investigator</role>
+        </personnel>
+        <funding>U.S.A. National Science Foundation 1926420</funding>
+      </relatedProject>
+    </project>
+  </dataset>
+  <additionalMetadata>
+    <metadata>
+      <unitList>
+        <unit id="kilogramCarbonPerSquareMeter   arealMassDensity            kg*C/m^2" multiplierToSI="" name="kilogramCarbonPerSquareMeter   arealMassDensity            kg*C/m^2" parentSI="" unitType="">
+          <description/>
+        </unit>
+        <unit id="micrometerPerSecond  speed   meterPerSecond  0.000001    ug/S" multiplierToSI="" name="micrometerPerSecond  speed   meterPerSecond  0.000001    ug/S" parentSI="" unitType="">
+          <description/>
+        </unit>
+        <unit id="dayOfYear             numeric day of calendar year" multiplierToSI="" name="dayOfYear             numeric day of calendar year" parentSI="" unitType="">
+          <description/>
+        </unit>
+      </unitList>
+    </metadata>
+  </additionalMetadata>
+  <additionalMetadata>
+    <metadata>
+      <emlEditor>
+        <app>EMLassemblyline</app>
+        <release>3.5.4</release>
+      </emlEditor>
+    </metadata>
+  </additionalMetadata>
+</eml:eml>

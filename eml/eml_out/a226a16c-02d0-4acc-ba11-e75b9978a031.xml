@@ -1,0 +1,1649 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eml:eml xmlns:eml="https://eml.ecoinformatics.org/eml-2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.2" packageId="a226a16c-02d0-4acc-ba11-e75b9978a031" xsi:schemaLocation="https://eml.ecoinformatics.org/eml-2.2.0/eml.xsd https://eml.ecoinformatics.org/eml-2.2.0/eml.xsd" system="unknown">
+  <dataset>
+    <title>MacroSheds</title>
+    <creator>
+      <individualName>
+        <givenName>Michael</givenName>
+        <surName>Vlah</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>michael.vlah@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0002-6260-2416</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Spencer</givenName>
+        <surName>Rhea</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>spencer.rhea@duke.edu</electronicMailAddress>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Weston</givenName>
+        <surName>Slaughter</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>weston.slaughter@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4675-5786</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Nick</givenName>
+        <surName>Gubbins</surName>
+      </individualName>
+      <organizationName>Colorado State University</organizationName>
+      <electronicMailAddress>nick.gubbins@colostate.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-0688-3767</userId>
+    </creator>
+    <associatedParty>
+      <individualName>
+        <givenName>Amanda</givenName>
+        <surName>DelVecchia</surName>
+      </individualName>
+      <organizationName>University of North Carolina</organizationName>
+      <electronicMailAddress>amanda.delvecchia@unc.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4252-5991</userId>
+      <role>contributor</role>
+    </associatedParty>
+    <associatedParty>
+      <individualName>
+        <givenName>Audrey</givenName>
+        <surName>Thellman</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>audrey.thellman@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-3716-6664</userId>
+      <role>contributor</role>
+    </associatedParty>
+    <pubDate>2022-10-25</pubDate>
+    <abstract>
+      <para>There exist hundreds of long-term watershed ecosystem monitoring efforts from which solute fluxes can be calculated. While details of instrumentation and sampling methods vary between studies, the types of data collected and the questions that motivate their analysis are often remarkably similar. Nevertheless, little effort toward the compilation of these datasets has previously been made, and comparative watershed analyses have remained limited in scale. The MacroSheds project has developed a flexible, future-friendly system for continually harmonizing daily time series of streamflow, precipitation, and solute chemistry from 168+ watershed studies throughout the U.S. and beyond, and supplementing each with a comprehensive set of predictive watershed attributes. The MacroSheds dataset is an unprecedented resource for watershed ecosystem science, and for hydrology, as a small-watershed supplement to existing collections of streamflow predictors, like CAMELS and GAGES-II. Macrosheds is accompanied by a web dashboard for visualization (macrosheds.org) and an R package (https://github.com/MacroSHEDS/macrosheds) for local analysis. 
+</para>
+    </abstract>
+    <keywordSet>
+      <keyword>biogeochemistry https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>watershed   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>hydrology   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>basins  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>concentration   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>flux    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>long term   https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>long term monitoring    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>catchment science</keyword>
+      <keyword>land cover  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>land use    https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>spatial properties  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>atmospheric properties  https://vocab.lternet.edu/vocab/vocab/index.php</keyword>
+      <keyword>data synthesis</keyword>
+      <keyword>lter</keyword>
+      <keyword>czo</keyword>
+      <keyword>usfs</keyword>
+      <keyword>usgs</keyword>
+      <keyword>doe</keyword>
+    </keywordSet>
+    <additionalInfo>
+      <para>-----
+Glossary of Terms (*as used in this documentation)
+-----</para>
+      <para>watershed -  All land area contributing runoff to a point of interest along a stream. Does not necessarily account for inputs from subsurface flow or human-constructed diversions. We avoid the terms "catchment" and "basin," though they are sometimes used in this way.</para>
+      <para>site* - An individual gauging station or stream sampling location and its watershed.</para>
+      <para>domain* - One or more sites under common management.</para>
+      <para>network* - One or more domains under common funding/leadership.</para>
+      <para>provider* - Also sometimes referred to as a "source" -- a primary source of data assimilated into MacroSheds. May be a network, domain, or third party.</para>
+      <para>product* - A collection of data, possibly including multiple datasets/tables. Providers may separate products by temporal extent/interval, scientific category, detection method, and/or sampling location.</para>
+      <para>prodname - One of the 7 core product categories included in the MacroSheds dataset. See below.</para>
+      <para>prodcode - An alphanumeric string associated with a product. Providers have their own. MacroSheds uses its own scheme internally.  This won't be relevant for most users, but see detailed documentation included with core data downloads for more information.</para>
+      <para>site-product, site-year, etc. - Terms like these are used to designate various subdivisions of the overall MacroSheds dataset. A site-product, for example, is the collection of all data for a single MacroSheds product, available at a single site.</para>
+      <para>-----
+MacroSheds data are organized into the following products:
+-----</para>
+      <para>discharge - Streamflow; water volume over time; reported in L/s.</para>
+      <para>stream chemistry - Concentration of chemical constituents in stream water; reported in mg/L or mEq/L.</para>
+      <para>stream flux - Mass of chemical constituents in stream water, per watershed area, over time; reported in kg/ha/d. (not currently included with this dataset, but can be generated via the macrosheds package for R)</para>
+      <para>precipitation - Rainfall, snowfall, or both combined; reported per watershed in mm.</para>
+      <para>precipitation chemistry - Concentration of chemical constituents in precipitation; reported in mg/L or mEq/L; averaged across watershed area.</para>
+      <para>precipitation flux - Mass of chemical constituents in precipitation, per watershed area, over time; reported in kd/ha/d. (not currently included with this dataset, but can be generated via the macrosheds package for R)</para>
+      <para>watershed attributes - Areal watershed summary statistics, variables available are common to all MacroSheds sites.</para>
+      <para/>
+    </additionalInfo>
+    <intellectualRights>
+      <para>see https://docs.google.com/document/d/1CPaQ705QyoWfu6WjA4xHgQooCQ8arq3NZ8DO9tb9jZ0/edit?usp=sharing
+</para>
+    </intellectualRights>
+    <coverage>
+      <temporalCoverage>
+        <rangeOfDates>
+          <beginDate>
+            <calendarDate>2012-05-01</calendarDate>
+          </beginDate>
+          <endDate>
+            <calendarDate>2014-11-30</calendarDate>
+          </endDate>
+        </rangeOfDates>
+      </temporalCoverage>
+    </coverage>
+    <maintenance>
+      <description>ongoing</description>
+    </maintenance>
+    <contact>
+      <individualName>
+        <givenName>Michael</givenName>
+        <surName>Vlah</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>michael.vlah@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0002-6260-2416</userId>
+    </contact>
+    <contact>
+      <individualName>
+        <givenName>Weston</givenName>
+        <surName>Slaughter</surName>
+      </individualName>
+      <organizationName>Duke University</organizationName>
+      <electronicMailAddress>weston.slaughter@duke.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/0000-0003-4675-5786</userId>
+    </contact>
+    <methods>
+      <methodStep>
+        <description>
+          <markdown>For MacroSheds processing methods, see the data paper [here](https://eartharxiv.org/repository/view/3499/),
+where you will find subheadings on time-series data processing, watershed attributes retrieval and processing,
+derivation of additional products, and technical validation.
+
+For field data collection methods, laboratory methods and protocols, and primary quality control procedures,
+consult primary source documentation. Links can be found in the `link` column of [this table](https://docs.google.com/spreadsheets/d/1x38OiUPhD7C3m0vBj2kRZO_ORQrks4aOo0DDrFBjY7I/edit?usp=sharing).
+
+&lt;a href="https://www.google.com/" style="color: black; text-decoration: underline;"&gt;custom link&lt;/a&gt;
+</markdown>
+        </description>
+      </methodStep>
+    </methods>
+    <project>
+      <title>MacroSheds</title>
+      <personnel>
+        <individualName>
+          <givenName>Emily</givenName>
+          <surName>Bernhardt</surName>
+        </individualName>
+        <organizationName>Duke University</organizationName>
+        <electronicMailAddress>emily.bernhardt@duke.edu</electronicMailAddress>
+        <userId directory="https://orcid.org">https://orcid.org/0000-0003-3031-621X</userId>
+        <role>Principal Investigator</role>
+      </personnel>
+      <funding>U.S.A. National Science Foundation 1926420</funding>
+      <relatedProject>
+        <title>MacroSheds</title>
+        <personnel>
+          <individualName>
+            <givenName>Matthew</givenName>
+            <givenName>R. V.</givenName>
+            <surName>Ross</surName>
+          </individualName>
+          <organizationName>Colorado State University</organizationName>
+          <electronicMailAddress>mrvr@rams.colostate.edu</electronicMailAddress>
+          <userId directory="https://orcid.org">https://orcid.org/0000-0001-9105-4255</userId>
+          <role>Principal Investigator</role>
+        </personnel>
+        <funding>U.S.A. National Science Foundation 1926420</funding>
+      </relatedProject>
+    </project>
+    <dataTable>
+      <entityName>ws_attr_summaries.csv</entityName>
+      <entityDescription>placeholder</entityDescription>
+      <physical>
+        <objectName>ws_attr_summaries.csv</objectName>
+        <size unit="bytes">73379</size>
+        <authentication method="MD5">9a351ffa9004fed868192ec3760d93e7</authentication>
+        <dataFormat>
+          <textFormat>
+            <numHeaderLines>1</numHeaderLines>
+            <recordDelimiter>\n</recordDelimiter>
+            <attributeOrientation>column</attributeOrientation>
+            <simpleDelimited>
+              <fieldDelimiter>,</fieldDelimiter>
+              <quoteCharacter>"</quoteCharacter>
+            </simpleDelimited>
+          </textFormat>
+        </dataFormat>
+      </physical>
+      <attributeList>
+        <attribute>
+          <attributeName>network</attributeName>
+          <attributeDefinition>short name for the data network associated with a MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>short name for the data network associated with a MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>domain</attributeName>
+          <attributeDefinition>Short name for the data domain associated with a MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>Short name for the data domain associated with a MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>site_code</attributeName>
+          <attributeDefinition>Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>ws_area_ha</attributeName>
+          <attributeDefinition>watershed area</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>hectare</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">3.93191213796224</minimum>
+                  <maximum exclusive="false">4712891.96014439</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>cc_mean_annual_precip</attributeName>
+          <attributeDefinition>mean annual watershed-mean precipitation over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>millimeter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">463.385875921333</minimum>
+                  <maximum exclusive="false">2492.10365355505</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>cc_mean_annual_temp</attributeName>
+          <attributeDefinition>mean annual watershed-mean temperature over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>celsius</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">-1.44165548687829</minimum>
+                  <maximum exclusive="false">18.1998326231348</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>vd_mean_sos</attributeName>
+          <attributeDefinition>mean watershed Start of Growing Season over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>dayOfYear</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">-18.2941176470588</minimum>
+                  <maximum exclusive="false">164.4375</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>vd_mean_eos</attributeName>
+          <attributeDefinition>mean watershed End of Growing Season over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>dayOfYear</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">169.941176470588</minimum>
+                  <maximum exclusive="false">354.529411764706</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>vd_mean_los</attributeName>
+          <attributeDefinition>mean watershed Length of Growing Season over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>number</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">168.470588235294</minimum>
+                  <maximum exclusive="false">238.941176470588</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>va_mean_annual_gpp</attributeName>
+          <attributeDefinition>mean annual watershed-mean terrestrial gross primary production over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>kilogramsCarbonPerSquareMeter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">1589.01049259378</minimum>
+                  <maximum exclusive="false">22859.7832288355</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>va_mean_annual_npp</attributeName>
+          <attributeDefinition>mean annual watershed-mean terrestrial net primary production over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>kilogramsCarbonPerSquareMeter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">872.041194666667</minimum>
+                  <maximum exclusive="false">10849.3076269548</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>te_slope_mean</attributeName>
+          <attributeDefinition>mean watershed slope</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.212754907835778</minimum>
+                  <maximum exclusive="false">76.2845855210666</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>te_elev_mean</attributeName>
+          <attributeDefinition>mean watershed elevation</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>meter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">8.04245136111859</minimum>
+                  <maximum exclusive="false">3841.30056685359</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>te_elev_min</attributeName>
+          <attributeDefinition>minimum watershed elevation</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>meter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.949733018875122</minimum>
+                  <maximum exclusive="false">3718.42163085938</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>te_elev_max</attributeName>
+          <attributeDefinition>maximum watershed elevation</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>meter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">10.1776313781738</minimum>
+                  <maximum exclusive="false">4121.6591796875</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>te_aspect_mean</attributeName>
+          <attributeDefinition>mean watershed aspect</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>degree</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">84.6567475154241</minimum>
+                  <maximum exclusive="false">274.046124468536</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>hd_bfi_mean</attributeName>
+          <attributeDefinition>mean baseflow index (ratio of base flow to total flow)</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">9</minimum>
+                  <maximum exclusive="false">72.67</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_water</attributeName>
+          <attributeDefinition>NLCD Open Water</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">3.9</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_ice_snow</attributeName>
+          <attributeDefinition>NLCD Perennial Ice/Snow</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">16.7</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_dev_open</attributeName>
+          <attributeDefinition>NLCD Developed, Open Space</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">45.4</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_dev_low</attributeName>
+          <attributeDefinition>NLCD Developed, Low Intensity</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">37.2</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_dev_med</attributeName>
+          <attributeDefinition>NLCD Developed, Medium Intensity</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">36.9</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_dev_hi</attributeName>
+          <attributeDefinition>NLCD Developed, High Intensity</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">10.7</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_barren</attributeName>
+          <attributeDefinition>NLCD Barren Land</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">73.1</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_forest_dec</attributeName>
+          <attributeDefinition>NLCD Deciduous Forest</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">100</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_forest_evr</attributeName>
+          <attributeDefinition>NLCD Evergreen Forest</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">100</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_forest_mix</attributeName>
+          <attributeDefinition>NLCD Mixed Forest</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">75.5</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_shrub_dwr</attributeName>
+          <attributeDefinition>NLCD Dwarf Scrub</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">78.7</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_shrub</attributeName>
+          <attributeDefinition>NLCD Shrub/Scrub</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">77.6</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_grass</attributeName>
+          <attributeDefinition>NLCD Grassland/Herbaceous</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">98.4</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_sedge</attributeName>
+          <attributeDefinition>NLCD Sedge/Herbaceous</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">18.7</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_lncd_lichens</attributeName>
+          <attributeDefinition>NLCD Lichens</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>whole</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">0</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_moss</attributeName>
+          <attributeDefinition>NLCD Moss</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>whole</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">0</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_pasture</attributeName>
+          <attributeDefinition>NLCD Pasture/Hay</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">22.6</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_crop</attributeName>
+          <attributeDefinition>NLCD Cultivated Crops</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">51.2</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_wetland_wood</attributeName>
+          <attributeDefinition>NLCD Woody Wetland</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">47.3</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>lg_nlcd_wetland_herb</attributeName>
+          <attributeDefinition>NLCD Emergent Herbaceous Wetland</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">4.5</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pf_soil_org</attributeName>
+          <attributeDefinition>watershed soil organic matter content</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.33</minimum>
+                  <maximum exclusive="false">35.11</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pf_soil_sand</attributeName>
+          <attributeDefinition>watershed soil sand content</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">6.3</minimum>
+                  <maximum exclusive="false">78.99</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pf_soil_silt</attributeName>
+          <attributeDefinition>watershed soil silt content</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">18</minimum>
+                  <maximum exclusive="false">54.91</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pf_soil_clay</attributeName>
+          <attributeDefinition>watershed soil clay content</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">2.75</minimum>
+                  <maximum exclusive="false">47.08</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pf_soil_ph</attributeName>
+          <attributeDefinition>mean watershed soil pH</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>dimensionless</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">4.67</minimum>
+                  <maximum exclusive="false">7.69</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pi_soil_thickness</attributeName>
+          <attributeDefinition>mean watershed soil thickness</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>meter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.02</minimum>
+                  <maximum exclusive="false">50</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>ci_mean_annual_et</attributeName>
+          <attributeDefinition>mean daily  watershed-mean evapotranspiration (grass reference) over the entire record</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>millimeter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">2.40862767213546</minimum>
+                  <maximum exclusive="false">4.39578462544584</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_Al2O3_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological aluminum oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">3</minimum>
+                  <maximum exclusive="false">16.36</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_CaO_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological calcium oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.67</minimum>
+                  <maximum exclusive="false">34.05</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_CompressStrength_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological uniaxial compressive strength in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>megapascal</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.47</minimum>
+                  <maximum exclusive="false">183.11</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_Fe2O3_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological ferric oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">1.43</minimum>
+                  <maximum exclusive="false">21.68</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_HydaulicCond_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological hydraulic conductivity in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micrometerPerSecond</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">103.83</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_K2O_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological potassium oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.42</minimum>
+                  <maximum exclusive="false">4.08</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_MgO_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological magnesium oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.6</minimum>
+                  <maximum exclusive="false">12.78</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_N_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological nitrogen in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">1.12</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_Na2O_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological sodium oxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.2</minimum>
+                  <maximum exclusive="false">4.6</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_P2O5_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological phosphorus pentoxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0.08</minimum>
+                  <maximum exclusive="false">0.93</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_S_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological sulfur in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">1.2</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pd_geo_SiO2_mean</attributeName>
+          <attributeDefinition>watershed mean Lithological silicon dioxide in surface or near surface geology</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>percent</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">21.53</minimum>
+                  <maximum exclusive="false">72.28</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+      </attributeList>
+      <numberOfRecords>210</numberOfRecords>
+    </dataTable>
+    <dataTable>
+      <entityName>EB.csv</entityName>
+      <entityDescription>placeholder</entityDescription>
+      <physical>
+        <objectName>EB.csv</objectName>
+        <size unit="bytes">570086</size>
+        <authentication method="MD5">e273ca71724de16a8630202b659a79bc</authentication>
+        <dataFormat>
+          <textFormat>
+            <numHeaderLines>1</numHeaderLines>
+            <recordDelimiter>\n</recordDelimiter>
+            <attributeOrientation>column</attributeOrientation>
+            <simpleDelimited>
+              <fieldDelimiter>,</fieldDelimiter>
+              <quoteCharacter>"</quoteCharacter>
+            </simpleDelimited>
+          </textFormat>
+        </dataFormat>
+      </physical>
+      <attributeList>
+        <attribute>
+          <attributeName>datetime</attributeName>
+          <attributeDefinition>date and time in UTC</attributeDefinition>
+          <storageType>date</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>Y-M-D h:m:s</formatString>
+              <dateTimeDomain/>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>site_code</attributeName>
+          <attributeDefinition>Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>var</attributeName>
+          <attributeDefinition>variable name and prefix. See variable prefix metadata</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>variable name and prefix. See variable prefix metadata</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>val</attributeName>
+          <attributeDefinition>data value. See see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing for units</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>variable</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">141.58425</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>ms_status</attributeName>
+          <attributeDefinition>0 = clean value. 1 = questionable value</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>dimensionless</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>whole</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">0</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>ms_interp</attributeName>
+          <attributeDefinition>0 = measured or imputed by primary source. 1 = interpolated by MacroSheds</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>dimensionless</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>whole</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">0</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>val_err</attributeName>
+          <attributeDefinition>Uncertainty. See “Detection Limits and Uncertainty” section of https://eartharxiv.org/repository/view/3499/</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>variable</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>whole</numberType>
+                <bounds>
+                  <minimum exclusive="false">0</minimum>
+                  <maximum exclusive="false">0</maximum>
+                </bounds>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>missing value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+      </attributeList>
+      <numberOfRecords>10418</numberOfRecords>
+    </dataTable>
+  </dataset>
+  <additionalMetadata>
+    <metadata>
+      <unitList>
+        <unit id="kilogramsCarbonPerSquareMeter" multiplierToSI="1" name="kilogramsCarbonPerSquareMeter" parentSI="kilogramsPerSquareMeter" unitType="arealMassDensity">
+          <description>kg*C/m^2</description>
+        </unit>
+        <unit id="micrometerPerSecond" multiplierToSI="0.000001" name="micrometerPerSecond" parentSI="meterPerSecond" unitType="speed">
+          <description>ug/S</description>
+        </unit>
+        <unit id="dayOfYear" multiplierToSI="1" name="dayOfYear" parentSI="number" unitType="dimensionless">
+          <description>numeric day of calendar year</description>
+        </unit>
+        <unit id="variable" multiplierToSI="1" name="variable" parentSI="number" unitType="dimensionless">
+          <description>units vary. see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing for units</description>
+        </unit>
+      </unitList>
+    </metadata>
+  </additionalMetadata>
+  <additionalMetadata>
+    <metadata>
+      <emlEditor>
+        <app>EMLassemblyline</app>
+        <release>3.5.4</release>
+      </emlEditor>
+    </metadata>
+  </additionalMetadata>
+</eml:eml>
