@@ -9198,7 +9198,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnncccc'
+            col_types = 'ccccccccnnnnnccccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -9801,6 +9801,19 @@ convert_output_dset_feathers_to_csv <- function(){
     }
 }
 
+create_missing_stream_gauge_locations <- function(){
+
+    ntws <- list.files('data', full.names = TRUE)
+    ntws <- grep('general|spatial', ntws, invert = TRUE, value = TRUE)
+
+    dmns <- map(ntws, list.files, full.names = TRUE) %>% unlist()
+
+    for(d in dmns){
+
+        list.files(d)
+    }
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -9915,8 +9928,13 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
         fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
         dir.create(fs_dir, showWarnings = FALSE)
-        # prepare_for_figshare(where = fs_dir,
-        #                      dataset_version = dataset_version)
+        prepare_for_figshare(where = fs_dir,
+                             dataset_version = dataset_version)
+
+        log_with_indent('creating stream_gauge_locations shapefiles where they are missing',
+                        logger = logger_module)
+        create_missing_stream_gauge_locations()
+
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
         reformat_camels_for_ms()
@@ -9940,7 +9958,7 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent(glue('Preparing dataset v{vv} for EDI',
                              vv = dataset_version),
                         logger = logger_module)
-        edi_dir <- paste0('macrosheds__v', dataset_version)
+        edi_dir <- paste0('macrosheds_figshare_v', dataset_version)
         dir.create(edi_dir, showWarnings = FALSE)
         prepare_for_edi(where = edi_dir,
                         dataset_version = dataset_version)
@@ -10317,6 +10335,8 @@ convert_ts_feathers_to_csv <- function(where){
                      pattern = '\\.feather',
                      full.names = TRUE)
 
+    if(! length(fs)) stop('edi prep already complete?')
+
     fs_csv <- sub('\\.feather', '.csv', fs)
 
     for(i in seq_along(fs)){
@@ -10331,14 +10351,132 @@ convert_ts_feathers_to_csv <- function(where){
 
 }
 
+combine_ts_csvs <- function(where){
+
+    #combines all timeseries csvs within a domain into a single
+    #csv, continaing all sites and variable categories (discharge, stream_chemistry, etc).
+    #var_category becomes a column.
+
+    #should be merged with convert_ts_feathers_to_csv for efficiency
+
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.csv',
+                     full.names = TRUE)
+
+    domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.csv$')[, 2])
+
+    for(d in domains){
+
+        fs_d <- grep(glue('2_timeseries_data/[A-Za-z_]+/{d}?/.*\\.csv$'), fs, value = TRUE)
+        network_dir <- paste(str_split(fs_d[1], '/')[[1]][1:3], collapse = '/')
+        var_type <- str_match(fs_d, '([a-z_]+)/[^/]+\\.csv$')[, 2]
+
+        domain_combined <- tibble()
+        for(i in seq_along(fs_d)){
+
+            domain_combined <- read_csv(fs_d[i]) %>%
+                mutate(var_category = !!var_type[i]) %>%
+                relocate(var_category, .after = 'var') %>%
+                bind_rows(domain_combined)
+
+            file.remove(fs_d[i])
+        }
+
+        domain_combined %>%
+            arrange(site_code, var_category, var) %>%
+            write_csv(file.path(network_dir, paste0(d, '.csv')))
+    }
+}
+
+combine_daymet_csvs <- function(where){
+
+    #combines all daymet files into a single csv. removes individual csvs.
+
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.csv',
+                     full.names = TRUE)
+
+    map_dfr(fs, read_csv) %>%
+        write_csv(glue('{where}/CAMELS-compliant_Daymet_forcings.csv'))
+
+    file.remove(fs)
+}
+
+combine_and_move_spatial_objects <- function(from, to){
+
+    #for each domain, combined ws_boundaries, stream_gauge_locations, and precip_gauge_locations
+    #one shapefile each. moves from 2_timeseries_data to 5_shapefiles
+
+    dir.create(to, showWarnings = FALSE)
+
+    fs <- list.files(from,
+                     recursive = TRUE,
+                     pattern = '\\.shp',
+                     full.names = TRUE)
+
+    domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.shp$')[, 2])
+
+    for(d in domains){
+
+        fs_d <- grep(glue('2_timeseries_data/[A-Za-z_]+/{d}?/.*\\.shp$'), fs,
+                     value = TRUE)
+        dirsplit <- str_split(fs_d[1], '/')[[1]]
+        network_dir <- paste(dirsplit[1:3], collapse = '/')
+        domain_dir <- paste(dirsplit[1:4], collapse = '/')
+        shape_types <- unique(str_match(fs_d, glue('^{domain_dir}/([a-z_]+)'))[, 2])
+        network_dir <- sub(from, to, network_dir)
+
+        for(shape_type in shape_types){
+
+            fs_d_t <- grep(shape_type, fs_d, value = TRUE)
+
+            domain_combined <- st_read(fs_d_t[1], quiet = TRUE)
+            st_delete(fs_d_t[1],
+                      driver = 'ESRI Shapefile',
+                      quiet = TRUE)
+            fs_d_t <- fs_d_t[-1]
+
+            for(i in seq_along(fs_d_t)){
+
+                domain_combined <- st_read(fs_d_t[i], quiet = TRUE) %>%
+                    bind_rows(domain_combined)
+
+                st_delete(fs_d_t[i],
+                          driver = 'ESRI Shapefile',
+                          quiet = TRUE)
+            }
+
+            if(shape_type == 'ws_boundary') shape_type <- 'ws_boundaries'
+            st_write(domain_combined, glue('{to}/{d}_{shape_type}.shp'),
+                     quiet = TRUE)
+        }
+    }
+}
+
 prepare_for_edi <- function(where, dataset_version){
 
     log_with_indent('Converting 2_timeseries_data feathers to CSV (takes a few mins)',
                     indent = 2,
                     logger = logger_module)
     convert_ts_feathers_to_csv(file.path(where, '2_timeseries_data'))
-    distribute_variable_prefixes(where)
 
+    log_with_indent('Combining 2_timeseries_data CSVs (takes a few mins. should be merged with the previous)',
+                    indent = 2,
+                    logger = logger_module)
+    combine_ts_csvs(file.path(where, '2_timeseries_data'))
+
+    log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
+                    indent = 2,
+                    logger = logger_module)
+    combine_daymet_csvs(file.path(where, '4_CAMELS-compliant_Daymet_forcings'))
+
+    log_with_indent('Combining spatial objects by domain',
+                    indent = 2,
+                    logger = logger_module)
+    combine_and_move_spatial_objects(from = file.path(where, '2_timeseries_data'),
+                                     to = file.path(where, '5_shapefiles'))
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
