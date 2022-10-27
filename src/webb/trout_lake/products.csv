@@ -1,0 +1,14 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+1,precipitation,ready,ready,,precip_pchem_pflux__ms006,W9 __ daily ppt,sleeper_ppt,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
+2,precip_chem,ready,ready,,precip_pchem_pflux__ms006,,sleeper_pchem,https://www.sciencebase.gov/catalog/file/get/5c5c89b6e4b070828902d1c9?f=__disk__0c%2F04%2F18%2F0c04182d4c0c9c86b261a5ace5a3096dfb83b579
+3,discharge,ready,ready,,discharge__ms002,W9 __ 5m discharge,sleeper_discharge_w9,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__4a%2F22%2Ffe%2F4a22fe9a1dc7ccd38edb195dfb73f3eb9b168964
+4,discharge,ready,ready,,discharge__ms002,USGS_01135300 ,sleeper_discharge_w5,https://waterdata.usgs.gov/nwis/uv?site_no=01135300
+5,discharge,ready,ready,,discharge__ms002,USGS_01135150,sleeper_discharge_w3,https://waterdata.usgs.gov/nwis/uv?site_no=01135150
+6,stream_chemistry,ready,ready,,stream_chemistry__ms001,,sleeper_chem,https://www.sciencebase.gov/catalog/file/get/5c5c89b6e4b070828902d1c9?f=__disk__0c%2F04%2F18%2F0c04182d4c0c9c86b261a5ace5a3096dfb83b579
+7,stream_chemistry,ready,ready,,stream_chemistry__ms001,W9 __ daily temp min max,sleeper_chem_w9,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
+ms001,stream_chemistry,,,ready,stream_flux_inst__ms003,NA,NA,NA
+ms002,discharge,,,ready,stream_flux_inst__ms003,,NA,NA
+ms003,stream_flux_inst,,,ready,NA,NA,NA,NA
+ms004,precip_gauge_locations,,,ready,precip_pchem_pflux__ms006,NA,NA,NA
+ms005,stream_gauge_locations,,,ready,NA,NA,NA,NA
+ms006,precip_pchem_pflux,,,ready,NA,NA,NA,NA
