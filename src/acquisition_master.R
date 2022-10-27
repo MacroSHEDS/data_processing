@@ -245,16 +245,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
-<<<<<<< HEAD
-    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi') ~conf$gee_login_ms,
-=======
-    ## ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
-    ## you can add your name to the vector below,
-    ## if you would like to use the macrosheds.project GEE account
-    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_ms,
->>>>>>> 29ba76b4b07f9bc0743ac4d48045b43dae72ef23
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
