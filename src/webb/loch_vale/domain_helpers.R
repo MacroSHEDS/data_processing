@@ -1,11 +1,3 @@
-## run these before working inside retrieve_product func
-## network = network
-## domain = domain
-## prodname_ms = prodname_ms
-## site_code = site_code
-## tracker = held_data
-## url = prod_info$url[i]
-
 retrieve_sleepers_product <- function(network,
                                  domain,
                                  prodname_ms,
