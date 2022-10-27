@@ -1822,36 +1822,24 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
 
   googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-
-  final <- fin_table %>%
+  fin_table <- fin_table %>%
     select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
 
-  if(nrow(final) == 0){
+  if(nrow(fin_table) == 0){
     return(generate_ms_exception(glue('No data was retrived for {s}',
                                       s = site_code)))
   }
 
   dir.create(glue('data/{n}/{d}/ws_traits/daymet/',
                   n = network,
-                  d = domain))
+                  d = domain),
+             showWarnings = FALSE)
 
   file_path <- glue('data/{n}/{d}/ws_traits/daymet/domain_climate.feather',
                     n = network,
                     d = domain)
 
-  write_feather(final, file_path)
-
-  # type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
-  #
-  # dir <- glue('data/{n}/{d}/ws_traits/{v}/',
-  #             n = network, d = domain, v = type)
-  #
-  # final <- append_unprod_prefix(final, prodname_ms)
-  # final_sum <- append_unprod_prefix(final_sum, prodname_ms)
-  #
-  # save_general_files(final_file = final_sum,
-  #                    raw_file = final,
-  #                    domain_dir = dir)
+  write_feather(fin_table, file_path)
 
   return()
 }
