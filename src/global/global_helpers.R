@@ -9367,7 +9367,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnncccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         TRUE ~ 'placeholder')
 
@@ -14845,24 +14845,77 @@ reformat_camels_for_ms <- function(){
 }
 
 scrape_data_download_urls <- function() {
+  # connecting to gsheet
+  citation_gsheet <- googlesheets4::read_sheet(
+            conf$citation_gsheet,
+            na = c('', 'NA'),
+            col_types = citation_cols <- paste0(rep('c', 24), collapse=''))
+      colnames(citation_gsheet) <- citation_gsheet[6,]
+
   raw_fp <- "./vault/raw_documentation_files/"
 
+  networks <- list.files(raw_fp)
 
-  raw_networks <- list.files(raw_fp)
-  raw_networks_fp <- list.files(raw_fp, full.names = TRUE)
-
-  for(network_fp in raw_networks_fp) {
-    domains <- list.files(raw_networks_fp[1])
+  for(network in networks) {
+    ## network <- networks[5]
+    domains <- list.files(file.path(raw_fp, network))
 
     for(domain in domains) {
-      writeLines('reading documentation for data source:', domain)
-      product_names <- list.files(file.path(network_fp, domain, "raw", "documentation"))
-      product_docs <- list.files(file.path(network_fp, domain, "raw", "documentation"), full.names = TRUE)
+      ## domain <- domains[4]
+      writeLines(paste('reading documentation for data source:', domain))
 
-      for(file in product_docs) {
+      # list all files in this domain of this network
+      product_names <- list.files(file.path(raw_fp, network, domain, "raw", "documentation"))
+      product_docs <- list.files(file.path(raw_fp, network, domain, "raw", "documentation"), full.names = TRUE)
+
+
+      # filter gsheet to domain, get all prodcodes
+      dmn_citation_gsheet <- citation_gsheet %>%
+        filter(network == !!network,
+               domain == !!domain)
+
+      dmn_prodcodes <- dmn_citation_gsheet$macrosheds_prodcode
+      dmn_prodcodes_grep <- paste0(dmn_prodcodes, collapse="|")
+
+      # filter product docs to only those with prodcode text matching gsheet
+      cited_products <- product_docs[ifelse(grepl(dmn_prodcodes_grep, product_docs), TRUE, FALSE)]
+
+      for(file in cited_products) {
+        ## file <- cited_products[1]
+
+        cited_filename <- stringr::str_split(file, "__", simplify =TRUE)[2]
+        cited_prodcode <- stringr::str_split(cited_filename, ".txt", simplify =TRUE)[1]
+
         data_source_doc <- readLines(file)
+        data_source_link <- trimws(stringr::str_split(data_source_doc, "[^)][0-9]{4}\\-", simplify =TRUE)[1])
+        data_source_dt <- trimws(stringr::str_extract_all(data_source_doc, "[0-9]{4}\\-.*[^)]", simplify =TRUE))[1]
 
+        print(paste(network, domain, data_source_dt))
+
+        if(grepl("https://", data_source_link)) {
+          data_source_link <- stringr::str_split(data_source_link, " ", simplify = TRUE)[1]
+        }
+
+        # NOTE: documentation files are not mecha-standardized, this function scrapes the best standard
+        # this *should* capture all prodcodes in citation gsheet, giving NA for versionlesss
+
+        # now, for this prodcode in the citation_gsheet df, we put "docs" in the "link" column
+        citation_gsheet <- citation_gsheet %>%
+          mutate(
+            link = case_when(
+              ifelse(
+                grepl(
+                  cited_prodcode, macrosheds_prodcode), TRUE, FALSE) & domain == !!domain ~ data_source_link, TRUE ~ link),
+            link_download_datetime = case_when(
+              ifelse(
+                grepl(
+                  cited_prodcode, macrosheds_prodcode), TRUE, FALSE) & domain == !!domain ~ data_source_dt, TRUE ~ link_download_datetime)
+            ## link = case_when(link == "NA" ~ NA, TRUE ~ link)
+          )
       }
     }
   }
+  # then, we write the edited df to the actual google sheet
+  googlesheets4::sheet_write(citation_gsheet, ss = conf$citation_gsheet, sheet = "timeseries")
+  ## return(citation_gsheet)
 }
