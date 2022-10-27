@@ -1,4 +1,4 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
-VERSIONLESS_001,discharge,,,,stream_flux_inst_ms001,,panola_discharge,http://catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
-VERSIONLESS_002,stream_chemistry,,,,stream_flux_inst_ms001,,panola_chem,http://catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
-ms001,stream_flux_inst,,,,NA,NA,NA,NA
+VERSIONLESS_001,discharge,,,,stream_flux_inst_ms001,,panola_discharge,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS_002,stream_chemistry,,,,stream_flux_inst_ms001,,panola_chem,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+ms001,stream_flux_inst,,,,NA,NA,NA,
