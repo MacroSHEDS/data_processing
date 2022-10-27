@@ -9784,33 +9784,33 @@ NaN_to_NA <- function(path){
     }
 }
 
-convert_output_dset_feathers_to_csv <- function(){
-
-    stop('still needs a path')
-    #loads all feather files in EDI folder rewrites them as csv. removes the originals.
-
-    paths <- list.files(path = '',
-                        pattern = '*.feather',
-                        recursive = TRUE,
-                        full.names = TRUE)
-
-    for(p in paths){
-        read_feather(p) %>%
-            write_csv(p)
-        file.remove(p)
-    }
-}
-
-create_missing_stream_gauge_locations <- function(){
+create_missing_stream_gauge_locations <- function(where){
 
     ntws <- list.files('data', full.names = TRUE)
     ntws <- grep('general|spatial', ntws, invert = TRUE, value = TRUE)
 
-    dmns <- map(ntws, list.files, full.names = TRUE) %>% unlist()
+    dmn_paths <- map(ntws, list.files, full.names = TRUE) %>% unlist()
+    dmns <- sapply(dmn_paths, function(x) str_split(x, '/')[[1]][3],
+                   USE.NAMES = FALSE)
 
-    for(d in dmns){
+    for(i in seq_along(dmns)){
 
-        list.files(d)
+        pth <- dmn_paths[i]
+        d <- dmns[i]
+
+        derived_dirs <- list.files(file.path(pth, 'derived'))
+        if(! any(grepl('stream_gauge_locations', derived_dirs))){
+
+            site_data %>%
+                filter(domain == !!d,
+                       in_workflow == 1,
+                       site_type == 'stream_gauge') %>%
+                select(site_code, latitude, longitude) %>%
+                st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+                st_write(glue('{where}/5_shapefiles/{d}_stream_gauge_locations.shp'),
+                         driver = 'ESRI Shapefile',
+                         quiet = TRUE)
+        }
     }
 }
 
@@ -9933,7 +9933,7 @@ postprocess_entire_dataset <- function(site_data,
 
         log_with_indent('creating stream_gauge_locations shapefiles where they are missing',
                         logger = logger_module)
-        create_missing_stream_gauge_locations()
+        create_missing_stream_gauge_locations(where = fs_dir)
 
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
@@ -9963,7 +9963,8 @@ postprocess_entire_dataset <- function(site_data,
         prepare_for_edi(where = edi_dir,
                         dataset_version = dataset_version)
 
-        convert_output_dset_feathers_to_csv() #maybe just poach the code from the def
+        remove_more_neon_stuff_temporarily()
+        manually_edit_eml()
 
         log_with_indent(glue('Uploading dataset v{vv} to EDI',
                              vv = dataset_version),
@@ -9975,6 +9976,35 @@ postprocess_entire_dataset <- function(site_data,
     }
 
     message('PUSH NEW macrosheds package version now that figshare ids are updated (still relevant?)')
+}
+
+remove_more_neon_stuff_temporarily <- function(){
+    st_delete('macrosheds_figshare_v1/5_shapefiles/neon_stream_gauge_locations.shp', driver = 'ESRI Shapefile')
+}
+
+manually_edit_eml <- function(){
+
+    if(.Platform$OS.type == 'windows') stop('this will not work on windows')
+
+    att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
+
+    most_recent_eml <- system('ls -t eml/eml_out | head -n 1', intern = TRUE)
+    eml <- read_lines(file.path('eml/eml_out', most_recent_eml))
+
+    mvclines <- grep('</missingValueCode>', eml)
+    attlines <- grep('</attribute>', eml)
+
+    for(i in rev(seq_along(mvclines))){
+
+        mvcl <- mvclines[i]
+
+        if((mvcl + 1) %in% attlines){
+            #HERE: figure out which variable this is, look up its details in att.
+            #if no details, next. otherwise, insert a methods-methodStep-description block
+
+            attl <- mvcl + 1
+            eml <- c(eml[1:mvcl], neweml, eml[attl:length(eml)])
+
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -10219,7 +10249,7 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
                      x = all_dirs,
                      value = TRUE)
 
-    warning('temporarily removing NEON')
+    warning('temporarily removing NEON (there is another place where this happens)')
     dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
     unlink(file.path(tld, 'neon/'), recursive = TRUE)
 

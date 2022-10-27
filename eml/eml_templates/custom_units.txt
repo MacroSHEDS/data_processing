@@ -2,4 +2,4 @@ id	unitType	parentSI	multiplierToSI	description
 kilogramsCarbonPerSquareMeter	arealMassDensity	kilogramsPerSquareMeter	1	kg*C/m^2
 micrometerPerSecond	speed	meterPerSecond	0.000001	ug/S
 dayOfYear	dimensionless	number	1	numeric day of calendar year
-variable	dimensionless	number	1	units vary. see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing for units
+variable_unit	dimensionless	number	1	units vary. see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing for units
