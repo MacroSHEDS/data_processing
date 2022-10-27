@@ -1,8 +1,0 @@
-attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
-datetime		Date		Y-M-D h:m:s		
-site_code		categorical				
-var		categorical				
-val		numeric	see https://docs.google.com/spreadsheets/d/1zc1RydnVyAQBdrp-6wBuZl8-gemgIro5893czoGM7mw/edit?usp=sharing		NA	missing value
-ms_status		numeric	dimensionless			
-ms_interp		numeric	dimensionless			
-val_err		numeric	in same units as corresponding var		NA	missing value
