@@ -155,14 +155,11 @@ process_1_213 <- function(network, domain, prodname_ms, site_code,
                          alt_site_code = list('SODDIE' = 'SODDIE STREAM'),
                          data_cols = data_cols,
                          data_col_pattern = '#V#',
-                         set_to_NA = c('NP', 'DNS', 'QNS', 'trace'),
-                         convert_to_BDL_flag = c('u', '<0.50', 'trace','<0.02',
-                                                 '<0.06', '<0.03', '<0.04'),
+                         set_to_NA = c('NP', 'DNS', 'QNS'),
+                         convert_to_BDL_flag = c('u', '<#*#', 'trace'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -262,22 +259,10 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = unique(c('u', 'trace', '<0.71', '<0.38',
-                                                        '<0.22', '<0.1428', '<0.143',
-                                                        '<0.449', '<0.082', '<0.087',
-                                                        '<0.102', '<0.28', '<0.846',
-                                                        '<0.16', '<0.323', '<0.833',
-                                                        '<0.063', '<0.03', '<0.08',
-                                                        '<0.0387', '<0.0388', '<0.0214',
-                                                        '<0.571', '<0.04', '<0.01',
-                                                        '<0.0258', '<0.0258', '<0.0258',
-                                                        '<0.03', '<0.01', '<0.04',
-                                                        '<0.50', '<0.02', '<0.06')),
+                         convert_to_BDL_flag = c('u', 'trace', '<#*#'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -382,12 +367,10 @@ process_1_107 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS'),
-                         convert_to_BDL_flag = c('u', 'trace'),
+                         convert_to_BDL_flag = c('u', 'trace', '<#*#'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -489,15 +472,10 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'NV', 'EQCL', 'NSS'),
-                         convert_to_BDL_flag = c('<0.38', '<0.4', '<0.22', '<0.1428',
-                                                 '<0.323', '<0.03', '<0.0388', '<0.0214',
-                                                 '<0.04', '<0.0258', '<0.01', 'trace',
-                                                 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -598,15 +576,10 @@ process_1_109 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'NV', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428',
-                                                 '<0.087', '<0.28', '<0.161', '<0.063',
-                                                 '<0.0387', '<0.0214', '<0.56', '<0.0258',
-                                                 '<0.03', 'u', 'trace'),
+                         convert_to_BDL_flag = c('<#*#', 'u', 'trace'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -711,12 +684,10 @@ process_1_110 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS'),
-                         convert_to_BDL_flag = c('<0.71', 'u', 'trace'),
+                         convert_to_BDL_flag = c('<#*#', 'u', 'trace'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -816,16 +787,10 @@ process_1_112 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22',
-                                                 '<0.1428', '<0.063', '<0.03', '<0.08',
-                                                 '<0.0388', '<0.0214', '<0.04',
-                                                 '<0.01', '<0.0258', 'trace',
-                                                 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -925,13 +890,10 @@ process_1_113 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NSS'),
-                         convert_to_BDL_flag = c('<0.71', '<0.38', '<0.4', '<0.22',
-                                                 '<0.1428', 'u', 'trace'),
+                         convert_to_BDL_flag = c('<#*#', 'u', 'trace'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -1032,14 +994,10 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS'),
-                         convert_to_BDL_flag = c('<0.50', '<0.02', '<0.323', '<0.06',
-                                                 '<0.0214', '<0.03', '<0.0258',
-                                                 'u', 'trace'),
+                         convert_to_BDL_flag = c('<#*#' 'u', 'trace'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -1140,15 +1098,10 @@ process_1_160 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NV'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.1428',
-                                                 '<0.02', '<0.323', '<0.063', '<0.0388',
-                                                 '<0.0214', '<0.04', '<0.0258', '<0.03',
-                                                 'trace', 'u'),
+                         convert_to_BDL_flag = c('<#*#' 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -1248,15 +1201,10 @@ process_1_162 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.4', '<0.22', '<0.063', '<0.03',
-                                                 '<0.08', '<0.04', '<0.0096855',
-                                                 '<-0.042314', '<0.01', 'trace',
-                                                 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -1357,14 +1305,10 @@ process_1_163 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NV'),
-                         convert_to_BDL_flag = c('<0.4', '<0.1428', '<0.143',
-                                                 '<0.0214', '<0.0258', 'trace',
-                                                 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
@@ -1470,13 +1414,10 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL'),
-                         convert_to_BDL_flag = c('<0.47', '<0.50', '<0.02', '<0.05',
-                                                 '<0.06', '<0.04', 'trace', 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL',
-                            variable_flags_dirty = 'dirty')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
     d <- ms_conversions(d,
                         convert_units_from = c(NH4 = 'ueq/l',
