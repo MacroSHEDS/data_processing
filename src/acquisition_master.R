@@ -127,6 +127,15 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
+    
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'hec'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'macOS'
+    }
 
     res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
     if(! 'try-error' %in% class(res)){
@@ -203,7 +212,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -219,6 +228,7 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 try(rgee::ee_Initialize(user = gee_login,
@@ -346,3 +356,4 @@ if(length(email_err_msgs)){
 
 loginfo(msg = 'Run complete',
         logger = logger_module)
+
