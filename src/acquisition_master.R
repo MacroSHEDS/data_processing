@@ -137,6 +137,15 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'mac'
     }
 
+    res <- try(setwd('~/Desktop/MacroSheds/data_processing/src/data_acquisition'), silent=TRUE) #pranavi
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'Pranavi'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'mac'
+    }
+    
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -203,7 +212,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -213,6 +222,7 @@ googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
+
 
 #connect rgee to earth engine and python
 gee_login <- case_when(
