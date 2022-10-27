@@ -181,6 +181,16 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
+  
+    res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'bini'
+      instance_type <- 'dev'
+      machine_status <- 'noob'
+      op_system <- 'windows'
+    }
+    
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -203,7 +213,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -221,8 +231,8 @@ gee_login <- case_when(
     ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
     TRUE ~ 'UNKNOWN')
 
-try(rgee::ee_Initialize(user = gee_login,
-                        drive = TRUE))
+# try(rgee::ee_Initialize(user = gee_login,
+#                         drive = TRUE))
 
 googledrive::drive_auth(email = gee_login)
 
@@ -264,7 +274,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow = 8
+dmnrow = 29
 # print(network_domain, n=50)
 for(dmnrow in 1:nrow(network_domain)){
 
