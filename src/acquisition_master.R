@@ -137,6 +137,15 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
+    
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'hec'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'macOS'
+    }
 
     res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
     if(! 'try-error' %in% class(res)){
@@ -147,6 +156,15 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'mac'
     }
 
+    res <- try(setwd('~/Desktop/MacroSheds/data_processing/src/data_acquisition'), silent=TRUE) #pranavi
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'Pranavi'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'mac'
+    }
+    
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -200,6 +218,16 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
+  
+    res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'bini'
+      instance_type <- 'dev'
+      machine_status <- 'noob'
+      op_system <- 'windows'
+    }
+    
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -233,15 +261,12 @@ ms_instance <- ms_init(use_ms_error_handling = FALSE,
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
 
+
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Nick') ~ conf$gee_login_spencer,
-    ## ms_instance$which_machine %in% c('wes') ~ conf$gee_login_wes,
-    ## you can add your name to the vector below,
-    ## if you would like to use the macrosheds.project GEE account
-    ms_instance$which_machine %in% c('wes') ~ conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -252,8 +277,7 @@ googledrive::drive_auth(email = gee_login)
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
-
-
+                        
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -388,3 +412,4 @@ if(length(email_err_msgs)){
 
 loginfo(msg = 'Run complete',
         logger = logger_module)
+
