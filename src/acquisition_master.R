@@ -292,6 +292,13 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
+# NOTE: this should be moved I believe, and made to work with the raw data
+# dcumentation of the latest iteration...
+# this function will update the citation sheet with the data and url of raw data download
+scrape_data_download_urls()
+
+## change string in line below to find row index of your desired domain
+## dmnrow <- which(network_domain$domain == 'loch_vale')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -322,12 +329,15 @@ for(dmnrow in 1:nrow(network_domain)){
                        n = network,
                        d = domain))
 
+    # this should only run when you have your producs.csv
+    # and processing kernels prod information matching
     update_product_statuses(network = network,
                            domain = domain)
 
     get_all_local_helpers(network = network,
                           domain = domain)
 
+    # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
