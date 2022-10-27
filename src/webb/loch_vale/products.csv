@@ -1,0 +1,13 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONIONLESS001,precipitation,ready,ready,,precip_flux_ms004,hosted on gdrive,loch_vale_ppt,https://nadp.slh.wisc.edu/sites/ntn-co98/
+VERSIONIONLESS002,precip_chem,ready,ready,,precip_flux_ms004,hosted on gdrive,loch_vale_pchem,https://nadp.slh.wisc.edu/sites/ntn-co98/
+1,discharge,ready,ready,,discharge__ms001,,loch_vale_discharge_andrews_creek,https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401723105400000
+2,discharge,ready,ready,,discharge__ms001,,loch_vale_discharge_icy_brook,https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000
+3,discharge,ready,ready,,discharge__ms001,,loch_vale_discharge_loch_outlet,https://waterdata.usgs.gov/co/nwis/uv/?site_no=401733105392404
+4,stream_chemistry,ready,ready,,stream_chemistry__ms002,,loch_vale_chem_andrews_creek,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401723105400000&agency_cd=USGS&format=separated_wide_rdb
+5,stream_chemistry,ready,ready,,stream_chemistry__ms002,,loch_vale_chem_icy_brook,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401707105395000&agency_cd=USGS&format=separated_wide_rdb
+6,stream_chemistry,ready,ready,,stream_chemistry__ms002,,loch_vale_chem_loch_outlet,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401733105392404&agency_cd=USGS&format=separated_wide_rdb
+ms001,discharge,,,ready,stream_flux_ms_003,,,
+ms002,stream_chemistry,,,ready,stream_flux_ms_003,,,
+ms003,stream_flux,,,ready,,,,
+ms004,precip_flux,,,ready,,,,
