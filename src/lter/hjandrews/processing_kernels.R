@@ -277,15 +277,11 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
 
     GSWSMC <- d %>%
         filter(site_code == 'GSWSMC') %>%
-        filter(datetime > '1995-09-30 22:00:00') %>%
+        filter(datetime >= '1995-09-30 22:00:00') %>%
         mutate(site_code = 'GSMACK')
 
 
-    d <- d %>%
-        filter(site_code != 'GSWSMA',
-               site_code != 'GSWSMC',
-               site_code != 'GSWSMF',
-               site_code != 'GSMACK')
+    d <- filter(d, ! site_code %in% c('GSWSMA', 'GSWSMC', 'GSWSMF', 'GSMACK'))
 
     d <- rbind(d, GSWSMC, GSMACK)
 
@@ -400,19 +396,18 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                          alt_datacol_pattern = '#V#_OUTPUT',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_to_drop = 'N',
                             variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
                                                      'DQ', 'DC'),
-                            variable_flags_clean =
-                                c('A', 'E'),
+                            variable_flags_clean = c('A', 'E'),
                             summary_flags_to_drop = list(
                                 TYPE = c('N', 'YE')),
                             summary_flags_dirty = list(
                                 TYPE = c('C', 'S', 'A', 'P', 'B')
                             ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
+                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
                                                                 'QA', 'F', 'G')))
 
     return(d)
@@ -455,7 +450,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                          alt_datacol_pattern = '#V#_INPUT',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
-    
+
     d <- ms_cast_and_reflag(d,
                             variable_flags_to_drop = 'N',
                             variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
@@ -467,7 +462,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_dirty = list(
                                 TYPE = c('C', 'S', 'A', 'P', 'B')
                             ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 
+                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
                                                                 'QA', 'F', 'G')))
 
     #HJAndrews does not collect precip and precip chemistry at the same
