@@ -218,6 +218,16 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
+  
+    res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'bini'
+      instance_type <- 'dev'
+      machine_status <- 'noob'
+      op_system <- 'windows'
+    }
+    
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -267,8 +277,7 @@ googledrive::drive_auth(email = gee_login)
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
-
-
+                        
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
