@@ -3,7 +3,7 @@ source('src/webb/sleeper/domain_helpers.R')
 # run webb_setup() in interpreter!)
 ## webb_setup()
 # get pkernel deets
-## set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001")
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001")
 
 #retrieval kernels ####
 
