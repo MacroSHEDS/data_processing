@@ -2,6 +2,12 @@
 #retrieval kernels ####
 
 
+# run webb_setup() in interpreter!)
+## webb_setup()
+# get pkernel deets
+set_details <- webb_pkernel_setup(network = network,
+                                  domain = domain,
+                                  prodcode = "VERSIONLESS001")
 
 #discharge: STATUS=READY
 #. handle_errors
