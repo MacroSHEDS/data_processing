@@ -138,7 +138,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
     
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -250,7 +250,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = FALSE,
+ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -319,10 +319,10 @@ dir.create('logs', showWarnings = FALSE)
 # NOTE: this should be moved I believe, and made to work with the raw data
 # dcumentation of the latest iteration...
 # this function will update the citation sheet with the data and url of raw data download
-scrape_data_download_urls()
+## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'trout_lake')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
