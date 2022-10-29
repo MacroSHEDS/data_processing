@@ -1,0 +1,34 @@
+attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
+p_mean		numeric	!Add units here!			
+pet_mean		numeric	!Add units here!			
+aridity		numeric	!Add units here!			
+p_seasonality		numeric	!Add units here!			
+frac_snow		numeric	!Add units here!			
+high_prec_freq		numeric	!Add units here!			
+high_prec_dur		numeric	!Add units here!			
+high_prec_timing		categorical				
+low_prec_freq		numeric	!Add units here!			
+low_prec_dur		numeric	!Add units here!			
+low_prec_timing		categorical				
+site_code		character				
+geol_1st_class		categorical				
+glim_1st_class_frac		numeric	!Add units here!			
+geol_2nd_class		categorical				
+glim_2nd_class_frac		numeric	!Add units here!			
+carbonate_rocks_frac		numeric	!Add units here!			
+geol_porosity		numeric	!Add units here!			
+geol_permeability		numeric	!Add units here!			
+sand_frac		numeric	!Add units here!			
+silt_frac		numeric	!Add units here!			
+clay_frac		numeric	!Add units here!			
+organic_frac		numeric	!Add units here!			
+gauge_lat		numeric	!Add units here!			
+gauge_lon		numeric	!Add units here!			
+area		numeric	!Add units here!			
+elev_mean		numeric	!Add units here!			
+slope_mean		numeric	!Add units here!			
+frac_forest		numeric	!Add units here!			
+dom_land_cover_frac		numeric	!Add units here!			
+dom_land_cover		categorical				
+root_depth_50		numeric	!Add units here!			
+root_depth_99		numeric	!Add units here!			

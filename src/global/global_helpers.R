@@ -9963,7 +9963,6 @@ postprocess_entire_dataset <- function(site_data,
         prepare_for_edi(where = edi_dir,
                         dataset_version = dataset_version)
 
-        remove_more_neon_stuff_temporarily()
         manually_edit_eml()
 
         log_with_indent(glue('Uploading dataset v{vv} to EDI',
@@ -9984,27 +9983,46 @@ remove_more_neon_stuff_temporarily <- function(){
 
 manually_edit_eml <- function(){
 
-    if(.Platform$OS.type == 'windows') stop('this will not work on windows')
+    if(.Platform$OS.type == 'windows') stop('this will not work on windows (but can be adapted quickly)')
 
     att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
 
     most_recent_eml <- system('ls -t eml/eml_out | head -n 1', intern = TRUE)
     eml <- read_lines(file.path('eml/eml_out', most_recent_eml))
 
+    new_eml_chunk <- c('\t<methods>', '\t\t<methodStep>', '\t\t\t<description>',
+                       NA, '\t\t\t</description>', '\t\t</methodStep>', '\t</methods>')
+
     mvclines <- grep('</missingValueCode>', eml)
     attlines <- grep('</attribute>', eml)
+    atnlines <- grep('<attributeName>', eml)
 
     for(i in rev(seq_along(mvclines))){
 
         mvcl <- mvclines[i]
 
         if((mvcl + 1) %in% attlines){
-            #HERE: figure out which variable this is, look up its details in att.
-            #if no details, next. otherwise, insert a methods-methodStep-description block
 
             attl <- mvcl + 1
-            eml <- c(eml[1:mvcl], neweml, eml[attl:length(eml)])
+            attdif <- atnlines - attl
+            attdif <- attdif[attdif < 0]
+            atnl <- atnlines[which.max(attdif)]
+            varn <- str_match(eml[atnl], '\\<attributeName\\>([^\\<]+)\\<\\/attributeName\\>$')[, 2]
 
+            if(length(varn) != 1 || is.na(varn)) stop('problem with varn')
+
+            if(! varn %in% att$attributeName) next
+
+            attdeets <- pull(att[att$attributeName == varn, 'details'])
+
+            if(is.na(attdeets)) next
+
+            new_eml_chunk[4] <- attdeets
+            eml <- c(eml[1:mvcl], new_eml_chunk, eml[attl:length(eml)])
+        }
+    }
+
+    write_lines(eml, file.path('eml/eml_out', most_recent_eml))
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -10340,7 +10358,7 @@ prepare_for_figshare <- function(where, dataset_version){
     #prepare documentation and metadata
     make_figshare_docs_skeleton(where = where)
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
-    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+    prepare_variable_meta`data_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
                                            fs_format = 'new')
     assemble_misc_docs_figshare(where = where)
 
@@ -10415,7 +10433,7 @@ combine_ts_csvs <- function(where){
 
         domain_combined %>%
             arrange(site_code, var_category, var) %>%
-            write_csv(file.path(network_dir, paste0(d, '.csv')))
+            write_csv(file.path(network_dir, paste0('timeseries_', d, '.csv')))
     }
 }
 
@@ -10502,11 +10520,75 @@ prepare_for_edi <- function(where, dataset_version){
                     logger = logger_module)
     combine_daymet_csvs(file.path(where, '4_CAMELS-compliant_Daymet_forcings'))
 
+    log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
+                    indent = 2,
+                    logger = logger_module)
+    combine_ws_attrs(where)
+
     log_with_indent('Combining spatial objects by domain',
                     indent = 2,
                     logger = logger_module)
     combine_and_move_spatial_objects(from = file.path(where, '2_timeseries_data'),
                                      to = file.path(where, '5_shapefiles'))
+
+    #TEMPORARY
+    remove_more_neon_stuff_temporarily()
+
+    eml_misc(where)
+}
+
+combine_ws_attrs <- function(){
+
+    #ms-standard watershed attributes
+    ws_attrs <- list.files(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'),
+                           full.names = TRUE)
+
+    map_dfr(ws_attrs, read_csv) %>%
+        write_csv(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries.csv'))
+
+    file.remove(ws_attrs)
+    file.remove(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'))
+
+    #camels-compliant watershed attributes
+    ws_attrs <- list.files(glue('{where}/3_CAMELS-compliant_watershed_attributes'),
+                           full.names = TRUE)
+
+    d <- read_csv(ws_attrs[1])
+    for(i in 2:length(ws_attrs)){
+        d <- full_join(d, read_csv(ws_attrs[i]), by = 'site_code')
+    }
+
+    write_csv(d, glue('{where}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
+
+    file.remove(ws_attrs)
+}
+
+eml_misc <- function(where){
+
+    ## rename some files to clarify what they are in the absence of dir structure
+
+    # fs <- list.files(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'),
+    #                  full.names = TRUE)
+    # file.rename(fs, sub('ws_attr_timeseries/', 'ws_attr_timeseries/ws_attr_ts_', fs))
+    #
+    # fs <- list.files(glue('{where}/3_CAMELS-compliant_watershed_attributes'),
+    #                  full.names = TRUE)
+    # file.rename(fs, sub('watershed_attributes/', 'watershed_attributes/CAMELS-compliant_ws_attr_ts_', fs))
+
+    file.rename(glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS-compliant_Daymet_forcings.csv'),
+                glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'))
+
+    ## link shapefiles to eml loading dock and zip them together
+
+    dir.create('eml/data_links/shapefiles', showWarnings = FALSE)
+
+    sfs <- list.files(glue('{where}/5_shapefiles'), full.names = TRUE)
+    sfs_basenames <- basename(sfs)
+    file.link(sfs, file.path('eml/data_links/shapefiles', sfs_basenames))
+
+    zip(zipfile = 'eml/data_links/shapefiles.zip',
+        files = 'eml/data_links/shapefiles',
+        flags = '-r9Xq')
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
