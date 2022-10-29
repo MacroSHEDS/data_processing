@@ -1,0 +1,8 @@
+attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
+network		categorical				
+domain		categorical				
+site_code		categorical				
+var		categorical				
+date		Date		!Add datetime specifier here!		
+val		numeric	!Add units here!			
+pctCellErr		numeric	!Add units here!			
