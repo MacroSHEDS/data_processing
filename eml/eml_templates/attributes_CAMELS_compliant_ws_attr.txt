@@ -1,34 +1,34 @@
-attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
-p_mean		numeric	!Add units here!			
-pet_mean		numeric	!Add units here!			
-aridity		numeric	!Add units here!			
-p_seasonality		numeric	!Add units here!			
-frac_snow		numeric	!Add units here!			
-high_prec_freq		numeric	!Add units here!			
-high_prec_dur		numeric	!Add units here!			
-high_prec_timing		categorical				
-low_prec_freq		numeric	!Add units here!			
-low_prec_dur		numeric	!Add units here!			
-low_prec_timing		categorical				
-site_code		character				
-geol_1st_class		categorical				
-glim_1st_class_frac		numeric	!Add units here!			
-geol_2nd_class		categorical				
-glim_2nd_class_frac		numeric	!Add units here!			
-carbonate_rocks_frac		numeric	!Add units here!			
-geol_porosity		numeric	!Add units here!			
-geol_permeability		numeric	!Add units here!			
-sand_frac		numeric	!Add units here!			
-silt_frac		numeric	!Add units here!			
-clay_frac		numeric	!Add units here!			
-organic_frac		numeric	!Add units here!			
-gauge_lat		numeric	!Add units here!			
-gauge_lon		numeric	!Add units here!			
-area		numeric	!Add units here!			
-elev_mean		numeric	!Add units here!			
-slope_mean		numeric	!Add units here!			
-frac_forest		numeric	!Add units here!			
-dom_land_cover_frac		numeric	!Add units here!			
-dom_land_cover		categorical				
-root_depth_50		numeric	!Add units here!			
-root_depth_99		numeric	!Add units here!			
+"attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
+"site_code"	"Short name for MacroSheds site. See https://docs.google.com/spreadsheets/d/1Xd38tvB0upHjDRDa5qalGN2Ors6HHWZKpT4Bw0dDqU4/edit#gid=0"	"character"				
+"p_mean"	"mean daily precipitation 1989-10-01 to 2009-09-30 (Daymet)"	"numeric"	"millimeterPerDay"		"NA"	"missing value"
+"pet_mean"	"mean daily PET (estimated using Priestley-Taylor formulation with gridded alpha product from Aschonitis et al. 2017) (Daymet)"	"numeric"	"millimeterPerDay"		"NA"	"missing value"
+"aridity"	"aridity (ratio of pet_mean to p_mean) (Daymet)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"p_seasonality"	"seasonality and timing of precipitation (estimated using sine curves to represent the annual temperature and preciptiation cycles, positive [negative] values indicate that precipitation peaks in summer [winter], values close to 0 indicate uniform precipitation throughout the year) (Daymet)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"frac_snow"	"fraction of precipitation falling as snow (i.e., on days colder than 0°C) (Daymet)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"high_prec_freq"	"frequency of high precipitation days ( >= 5 times mean daily precipitation) (Daymet)"	"numeric"	"daysPerYear"		"NA"	"missing value"
+"high_prec_dur"	"average duration of high precipitation events (number of consecutive days >= 5 times mean daily precipitation) (Daymet)"	"numeric"	"day"		"NA"	"missing value"
+"high_prec_timing"	"season during which most high precipitation days ( >= 5 times mean daily precip.) occur (Daymet)"	"categorical"			"NA"	"missing value"
+"low_prec_freq"	"frequency of dry days ( <1 mm/day) (Daymet)"	"numeric"	"daysPerYear"		"NA"	"missing value"
+"low_prec_dur"	"average duration of dry periods (number of consecutive days <1 mm/day) (Daymet)"	"numeric"	"day"		"NA"	"missing value"
+"low_prec_timing"	"season during which most dry days ( <1 mm/day) occur (Daymet)"	"categorical"			"NA"	"missing value"
+"geol_1st_class"	"most common geologic class in the catchment (GLiM)"	"categorical"			"NA"	"missing value"
+"glim_1st_class_frac"	"fraction of the catchment area associated with its most common geologic class (GLiM)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"geol_2nd_class"	"2nd most common geologic class in the catchment (GLiM)"	"categorical"			"NA"	"missing value"
+"glim_2nd_class_frac"	"fraction of the catchment area associated with its 2nd most common geologic class (GLiM)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"carbonate_rocks_frac"	"fraction of the catchment area characterized as ""Carbonate sedimentary rocks"" (GLiM)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"geol_porosity"	"subsurface porosity (GLHYMPS)"	"numeric"	"dimensionless"		"NA"	"missing value"
+"geol_permeability"	"subsurface permeability (log10) (GLHYMPS)"	"numeric"	"squareMeter"		"NA"	"missing value"
+"sand_frac"	"sand fraction (of the soil material smaller than 2 mm, layers marked as oragnic material, water, bedrock and ""other"" were excluded) (gSSURGO)"	"numeric"	"percent"		"NA"	"missing value"
+"silt_frac"	"silt fraction (of the soil material smaller than 2 mm, layers marked as oragnic material, water, bedrock and ""other"" were excluded) (gSSURGO)"	"numeric"	"percent"		"NA"	"missing value"
+"clay_frac"	"clay fraction (of the soil material smaller than 2 mm, layers marked as oragnic material, water, bedrock and ""other"" were excluded) (gSSURGO)"	"numeric"	"percent"		"NA"	"missing value"
+"organic_frac"	"fraction of soil_depth_statsgo marked as organic material (class 13) (gSSURGO)"	"numeric"	"percent"		"NA"	"missing value"
+"gauge_lat"	"gauge latitude "	"numeric"	"degreesNorth"		"NA"	"missing value"
+"gauge_lon"	"gauge longitude"	"numeric"	"degreesEast"		"NA"	"missing value"
+"area"	"watershed area"	"numeric"	"squareKilometers"		"NA"	"missing value"
+"elev_mean"	"watershed mean elevation"	"numeric"	"meter"		"NA"	"missing value"
+"slope_mean"	"watershed mean slope"	"numeric"	"metersPerKilometer"		"NA"	"missing value"
+"frac_forest"	"forest fraction"	"numeric"	"!Add units here!"		"NA"	"missing value"
+"dom_land_cover_frac"	"fraction of the catchment area associated with the dominant land cover"	"numeric"	"dimensionless"		"NA"	"missing value"
+"dom_land_cover"	"dominant land cover type (Noah-modified 20-category IGBP-MODIS land cover)"	"categorical"			"NA"	"missing value"
+"root_depth_50"	"root depth (percentile 50% extracted from a root depth distribution based on IGBP land cover) (MODIS)"	"numeric"	"meter"		"NA"	"missing value"
+"root_depth_99"	"root depth (percentile 99% extracted from a root depth distribution based on IGBP land cover) (MODIS)"	"numeric"	"meter"		"NA"	"missing value"

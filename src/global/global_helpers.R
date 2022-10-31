@@ -10374,6 +10374,14 @@ prepare_for_figshare <- function(where, dataset_version){
                 file.path(where, '1_watershed_attribute_data'))
     file.rename(file.path(where, 'macrosheds_timeseries_data'),
                 file.path(where, '2_timeseries_data'))
+
+    #clean up camels-style data
+    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        relocate('site_code', .before = p_mean) %>%
+        filter(! grepl('[0-9]{8}', site_code)) %>%
+        arrange(site_code) %>%
+        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
+
 }
 
 convert_ts_feathers_to_csv <- function(where){
