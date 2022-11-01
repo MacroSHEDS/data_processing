@@ -29,3 +29,5 @@ old_dataset_dirs.tar.gz
 old_logs
 eml/data_links
 eml/eml_out
+vault/*
+.Rdata
