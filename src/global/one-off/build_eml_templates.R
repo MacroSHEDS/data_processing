@@ -6,10 +6,18 @@ stop('if this is for macrosheds > v1, generalize paths')
 library(EMLassemblyline)
 library(tidyverse)
 
+# setup ####
+
 setwd('~/git/macrosheds/data_acquisition')
 
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
+
+site_data <- googlesheets4::read_sheet(
+    conf$site_data_gsheet,
+    na = c('', 'NA'),
+    col_types = 'ccccccccnnnnnccccc'
+)
 
 wd <- file.path('eml', 'eml_templates')
 ed <- file.path('eml', 'eml_out')
@@ -20,34 +28,18 @@ dir.create(wd, recursive = TRUE)
 dir.create(ed, recursive = TRUE)
 dir.create(dd, recursive = TRUE)
 
-# template_directories(wd, 'macrosheds') #not needed ever
+# eml dictionaries ####
 
-template_core_metadata(wd, 'CCBY', '.txt') #requires license arg, but we don't use a standard license
-    #manually edit all files
+view_unit_dictionary()
+zz = EML::get_unitList()
+grep('pascal', zz$units$id, value=T)
+dplyr::filter(zz$units, id == 'kilogramsPerSquareMeter')
+unit_types = sort(unique(zz$unitTypes$id))
+more_unit_types = sort(unique(zz$units$unitType))
+units = sort(unique(zz$units$id))
+filter(zz$units, unitType == 'time') %>% pull(id)
 
-# d0 <- 'macrosheds_figshare_v1/2_timeseries_data'
-# d1 <- list.files(d0)
-# for(d in d1){
-#     d2 <- list.files(file.path(d0, d))
-#     for(d in d2){
-#         d3 <- list.files(file.path(d0, d1, d))
-#         grep('locations|boundary|documentation')
-template_table_attributes(wd, 'macrosheds_figshare_v1/2_timeseries_data/bear/bear/discharge', 'WB.csv')
-
-# template_table_attributes(wd, 'macrosheds_figshare_v1/2_timeseries_data/', '')
-template_table_attributes(wd, 'macrosheds_figshare_v1/1_watershed_attribute_data', 'ws_attr_summaries.csv')
-fs = list.files('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes')
-for(f in fs){
-    template_table_attributes(wd, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes', f)
-}
-
-#won't identify categorical variables on its own. go in an manually edit "character"
-template_categorical_variables(wd, dd) #Describes categorical variables of a data table (if any columns are classified as categorical in table attributes template).
-template_geographic_coverage() #Describes where the data were collected.
-template_provenance() #Describes source datasets. Explicitly listing the DOIs and/or URLs of input data help future users understand in greater detail how the derived data were created and may some day be able to assign attribution to the creators of referenced datasets.
-template_annotations()
-
-# template_arguments()
+# collect files that will be included. link them to a single directory ####
 
 ts_tables <- list.files('macrosheds_figshare_v1/2_timeseries_data', pattern = '\\.csv$',
                         recursive = TRUE, full.names = TRUE)
@@ -81,6 +73,37 @@ for(i in seq_along(files_to_link)){
     suppressWarnings(file.link(files_to_link[i], link_locs[i]))
 }
 
+# generate eml templates. these need to be manually modified ####
+
+#manually edit all files after running these lines
+
+# template_directories(wd, 'macrosheds') #might be convenient for simple projects
+template_core_metadata(wd, 'CCBY', '.txt') #requires license arg, but we don't use a standard license
+
+template_table_attributes(wd, 'eml/data_links', 'ws_attr_timeseries.csv')
+template_table_attributes(wd, 'eml/data_links', 'ws_attr_summaries.csv')
+template_table_attributes(wd, 'eml/data_links', 'timeseries_hbef.csv') #this one needs to be manually copied for all domains after filling it out
+template_table_attributes(wd, 'eml/data_links', 'CAMELS_compliant_ws_attr.csv')
+template_table_attributes(wd, 'eml/data_links', 'CAMELS_compliant_Daymet_forcings.csv')
+
+template_categorical_variables(wd, dd) #Describes categorical variables of a data table (if any columns are classified as categorical in table attributes template).
+template_geographic_coverage() #Describes where the data were collected.
+template_provenance() #Describes source datasets. Explicitly listing the DOIs and/or URLs of input data help future users understand in greater detail how the derived data were created and may some day be able to assign attribution to the creators of referenced datasets.
+template_annotations()
+
+# template_arguments() #for custom inputs?
+
+# copy the first timeseries template (hbef) to account for all the other domains ####
+
+ts_templts <- list.files('eml/data_links', pattern = '^timeseries')
+ts_templts <- grep('hbef\\.csv$', ts_templts, value = TRUE, invert = TRUE)
+ts_dmns <- str_match(ts_templts, '^timeseries_([a-z_0-9]+)\\.csv$')[, 2]
+for(td in ts_dmns){
+    file.copy(from = 'eml/eml_templates/attributes_timeseries_hbef.txt',
+              to = glue('eml/eml_templates/attributes_timeseries_{td}.txt'))
+}
+
+# write EML ####
 
 # temporal_coverage <- map(ts_tables, ~range(read_csv(.)$datetime)) %>%
 #     reduce(~c(min(c(.x[1], .y[1])), max(c(.x[2], .y[2]))))
