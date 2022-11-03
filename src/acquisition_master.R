@@ -322,7 +322,10 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'trout_lake')
+dmnrow <- which(network_domain$domain == 'sleeper')
+## network = 'webb'
+## domain = 'trout_lake'
+
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!

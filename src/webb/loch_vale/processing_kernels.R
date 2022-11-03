@@ -3,7 +3,7 @@ source('src/webb/sleeper/domain_helpers.R')
 # run webb_setup() in interpreter!)
 ## webb_setup()
 # get pkernel deets
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001")
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
 
 #retrieval kernels ####
 
@@ -99,7 +99,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = prodname_ms,
+                          p = set_details$prodname_ms,
                           s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
