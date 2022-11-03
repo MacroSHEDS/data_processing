@@ -1,5 +1,7 @@
 source('src/webb/sleeper/domain_helpers.R')
+
 #retrieval kernels ####
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -290,7 +292,8 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -303,20 +306,19 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('dateTime' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list('Date' = '%m/%d/%y'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site',
-                         data_cols =  c('PrecipRate' = 'precipitation'),
+                         data_cols =  c('Precip..mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    # Precipitation is reported in mm/min, it is a 15 minute time step so must
-    # convert
-    d <- d %>%
-        mutate(val = val*15)
+    # Precipitation is daily
+    ## d <- d %>%
+    ##     mutate(val = val*15)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
