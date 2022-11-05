@@ -10192,7 +10192,7 @@ prepare_variable_catalog_for_figshare <- function(outfile){
 
 assemble_misc_docs_figshare <- function(where){
 
-    docs_dir <- file.path(where, 'macrosheds_documentation')
+    docs_dir <- file.path(where, '0_documentation_and_metadata')
     dir.create(docs_dir, showWarnings = FALSE)
 
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
