@@ -28,11 +28,11 @@ ed <- file.path('eml', 'eml_out')
 dd <- file.path('eml', 'data_links')
 
 # unlink(dd, recursive = TRUE)
-dir.create(wd, recursive = TRUE)
-dir.create(ed, recursive = TRUE)
-dir.create(dd, recursive = TRUE)
+dir.create(wd, recursive = TRUE, showWarnings = FALSE)
+dir.create(ed, recursive = TRUE, showWarnings = FALSE)
+dir.create(dd, recursive = TRUE, showWarnings = FALSE)
 
-#helpers ####
+# helpers ####
 
 get_edi_identifier <- function(x){
 
@@ -111,9 +111,6 @@ filter(zz$units, unitType == 'time') %>% pull(id)
 
 # collect files that will be included. link them to a single directory ####
 
-ts_tables <- list.files('macrosheds_figshare_v1/2_timeseries_data', pattern = '\\.csv$',
-                        recursive = TRUE, full.names = TRUE)
-
 ##build provenance table
 
 prov <- readxl::read_xlsx('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
@@ -159,30 +156,36 @@ prov <- bind_rows(prov, prov2) %>%
 write_csv(prov, file.path(wd, 'provenance.csv'))
 #convert this to tsv manually
 
+ts_tables <- list.files('macrosheds_figshare_v1/2_timeseries_data', pattern = '\\.csv$',
+                        recursive = TRUE, full.names = TRUE)
+
 files_to_link <- c(ts_tables,
                    list.files('macrosheds_figshare_v1/1_watershed_attribute_data',
                               full.names = TRUE, recursive = TRUE),
                    'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv',
                    'macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv',
                    'macrosheds_figshare_v1/macrosheds_documentation_packageformat/site_metadata.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05b_timeseries_variable_metadata.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05e_range_check_limits.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05f_detection_limits_and_precision.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
-                   'macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/02_glossary.txt',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/03_changelog.txt',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06h_ws_attr_refs.bib',
-                   # 'macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv')
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05b_timeseries_variable_metadata.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05e_range_check_limits.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05f_detection_limits_and_precision.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv',
+                   # 06f_ws_attr_summary_column_descriptions.csv
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv'
                    #disturbance record
                    #universal products?
+                   #var catalog
 )
 
 basenames <- basename(files_to_link)
+basenames <- sub('^0[1-9][a-z]?_', '', basenames)
+basenames <- sub('site_metadata', 'sites', basenames)
+basenames <- sub('timeseries_variable_metadata', 'variables_time_series', basenames)
+basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr', basenames)
+basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
+basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
+basenames <- sub('detection_limits_and_precision', 'detection_limits', basenames)
 link_locs <- file.path(dd, basenames)
 
 descriptions <- basenames
@@ -202,12 +205,47 @@ descriptions <- str_replace(descriptions,
                             '^CAMELS_compliant_Daymet_forcings\\.csv$',
                             'Daymet climate forcings for all domains; interoperable with the CAMELS dataset (https://ral.ucar.edu/solutions/products/camels)')
 descriptions <- str_replace(descriptions,
-                            '^site_metadata\\.csv$',
-                            'Stream site information.')
+                            '^sites\\.csv$',
+                            'Stream site metadata')
+descriptions <- str_replace(descriptions,
+                            '^variables_time_series\\.csv$',
+                            'Time-series variable metadata (standard units, etc.)')
+descriptions <- str_replace(descriptions,
+                            '^range_check_limits\\.csv$',
+                            'Minimum and maximum values allowed to pass through our range filter. Values exceeding these limits are omitted from the MacroSheds dataset.')
+descriptions <- str_replace(descriptions,
+                            '^detection_limits\\.csv$',
+                            'Primary data source detection limits')
+descriptions <- str_replace(descriptions,
+                            '^variables_ws_attr\\.csv$',
+                            'Watershed attribute variable metadata (standard units and definitions)')
+descriptions <- str_replace(descriptions,
+                            '^variable_category_codes_ws_attr\\.csv$',
+                            'Watershed attribute category codes (the second letter of the variable code prefix)')
+descriptions <- str_replace(descriptions,
+                            '^variable_data_source_codes_ws_attr\\.csv$',
+                            'Watershed attribute data source codes (the first letter of the variable code prefix)')
+descriptions <- str_replace(descriptions,
+                            '^data_irregularities\\.csv$',
+                            'Any notable inconsistencies within the MacroSheds dataset')
 
 for(i in seq_along(files_to_link)){
     suppressWarnings(file.link(files_to_link[i], link_locs[i]))
 }
+
+#link additional files that will be grouped under "other entities"
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
+          file.path(dd, 'attribution_and_intellectual_rights_complete.xlsx'))
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
+          file.path(dd, 'data_use_agreements.docx'))
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib',
+          file.path(dd, 'timeseries_refs.bib'))
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06h_ws_attr_refs.bib',
+          file.path(dd, 'ws_attr_refs.bib'))
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/03_changelog.txt',
+          file.path(dd, 'changelog.txt'))
+file.link('macrosheds_figshare_v1/0_documentation_and_metadata/02_glossary.txt',
+          file.path(dd, 'glossary.txt'))
 
 file.copy('macrosheds_figshare_v1/5_shapefiles', dd, recursive = TRUE)
 file.rename('eml/data_links/5_shapefiles', 'eml/data_links/shapefiles')
@@ -228,9 +266,16 @@ template_table_attributes(wd, dd, 'ws_attr_summaries.csv')
 template_table_attributes(wd, dd, 'timeseries_hbef.csv') #this one needs to be manually copied for all domains after filling it out
 template_table_attributes(wd, dd, 'CAMELS_compliant_ws_attr.csv')
 template_table_attributes(wd, dd, 'CAMELS_compliant_Daymet_forcings.csv')
-template_table_attributes(wd, dd, 'site_metadata.csv')
+template_table_attributes(wd, dd, 'sites.csv')
+template_table_attributes(wd, dd, 'variables_time_series.csv')
+template_table_attributes(wd, dd, 'range_check_limits.csv')
+template_table_attributes(wd, dd, 'detection_limits.csv')
+template_table_attributes(wd, dd, 'variables_ws_attr.csv')
+template_table_attributes(wd, dd, 'variable_category_codes_ws_attr.csv')
+template_table_attributes(wd, dd, 'variable_data_source_codes_ws_attr.csv')
+template_table_attributes(wd, dd, 'data_irregularities.csv')
 
-template_geographic_coverage(wd, dd, 'site_metadata.csv',
+template_geographic_coverage(wd, dd, 'sites.csv',
                              lat.col = 'latitude', lon.col = 'longitude',
                              site.col = 'site_code')
 template_provenance(wd)
@@ -269,8 +314,7 @@ template_categorical_variables(wd, dd)
 temporal_coverage <- c("1945-07-01", "2022-04-16")
 
 make_eml(wd, dd, ed,
-         dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data
-from small watershed ecosystem studies',
+         dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data from small watershed ecosystem studies',
          temporal.coverage = as.Date(temporal_coverage),
          geographic.description = NULL,#not needed if geographic_coverage.txt exists,
          geographic.coordinates = NULL,#same,
@@ -280,9 +324,27 @@ from small watershed ecosystem studies',
          data.table.description = descriptions,
          data.table.quote.character = rep('"', length(files_to_link)),
          data.table.url = NULL,
-         other.entity = 'shapefiles.zip',
-         other.entity.name = 'shapefiles.zip',
-         other.entity.description = 'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains',
+         other.entity = c('shapefiles.zip',
+                          'attribution_and_intellectual_rights_complete.xlsx',
+                          'data_use_agreements.docx',
+                          'timeseries_refs.bib',
+                          'ws_attr_refs.bib',
+                          'changelog.txt',
+                          'glossary.txt'),
+         other.entity.name = c('shapefiles.zip',
+                               'attribution_and_intellectual_rights_complete.xlsx',
+                               'data_use_agreements.docx',
+                               'timeseries_refs.bib',
+                               'ws_attr_refs.bib',
+                               'changelog.txt',
+                               'glossary.txt'),
+         other.entity.description = c('Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
+                                      'Specific license requirements and expectations associated with each primary dataset. See data_use_agreements.docx.',
+                                      'Terms and conditions for using MacroSheds data.',
+                                      'Complete bibliographic references for time-series data.',
+                                      'Complete bibliographic references for watershed attribute data.',
+                                      'List of changes made since the last version of the MacroSheds dataset.',
+                                      'Glossary of terms related to the MacroSheds dataset.'),
          other.entity.url = NULL,
          user.id = conf$edi_user_id,
          user.domain = NULL, #pretty sure this doesn't apply to us

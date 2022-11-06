@@ -1,0 +1,5 @@
+attributeName	code	definition
+site_type	stream_gauge	
+site_type	stream_sampling_point	
+ws_status	experimental	
+ws_status	non-experimental	
