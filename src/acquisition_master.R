@@ -139,7 +139,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-    
+
     res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -166,7 +166,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-    
+
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -220,7 +220,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-  
+
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -229,7 +229,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-    
+
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -257,7 +257,7 @@ ms_instance <- ms_init(use_ms_error_handling = FALSE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -268,7 +268,7 @@ conf <- jsonlite::fromJSON('config.json',
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~ conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -279,7 +279,7 @@ googledrive::drive_auth(email = gee_login)
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
-                        
+
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -295,7 +295,6 @@ if(ms_instance$use_ms_error_handling){
 
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
-
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
@@ -325,6 +324,7 @@ scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
 ## dmnrow <- which(network_domain$domain == 'loch_vale')
+network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -336,10 +336,10 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive')
-    ## owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'munge')
+    owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive')
+    owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
     ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
@@ -364,30 +364,30 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
-                domain = domain)
+    # ms_retrieve(network = network,
+    #             # prodname_filter = c('stream_chemistry'),
+    #             domain = domain)
 
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
-    if(domain != 'mcmurdo'){
-        sw(ms_delineate(network = network,
-                        domain = domain,
-                        dev_machine_status = ms_instance$machine_status,
-                        verbose = TRUE))
-    }
+    # if(domain != 'mcmurdo'){
+    #     sw(ms_delineate(network = network,
+    #                     domain = domain,
+    #                     dev_machine_status = ms_instance$machine_status,
+    #                     verbose = TRUE))
+    # }
 
     ms_derive(network = network,
               prodname_filter = c('stream_chemistry'),
               domain = domain)
 
-    if(domain != 'mcmurdo'){
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = TRUE)
-    }
+    # if(domain != 'mcmurdo'){
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = TRUE)
+    # }
 
     retain_ms_globals(ms_globals)
 }

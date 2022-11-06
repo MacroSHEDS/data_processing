@@ -10358,7 +10358,7 @@ prepare_for_figshare <- function(where, dataset_version){
     #prepare documentation and metadata
     make_figshare_docs_skeleton(where = where)
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
-    prepare_variable_meta`data_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
                                            fs_format = 'new')
     assemble_misc_docs_figshare(where = where)
 
