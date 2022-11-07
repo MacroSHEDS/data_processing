@@ -1173,7 +1173,7 @@ ms_read_raw_csv <- function(filepath,
     }
 
     #remove all-NA data columns without BDLs
-    d <- select(d, -one_of(all_na_cols))
+    d <- select(d, -any_of(all_na_cols))
 
     #remove rows with NA for all data columns, except if they have BDLs.
     keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
@@ -5258,15 +5258,19 @@ write_ms_file <- function(d,
                          pd = prod_dir,
                          s = site_code)
 
-        if(sep_errors) {
+        if('val_err' %in% colnames(d) && inherits(d$val, 'errors')){
+            stop('this dataset has uncertainty on the val column AND a val_err column. investigate')
+        }
+
+        if(sep_errors){
 
             #separate uncertainty into a new column.
             #remove errors attribute from val column if it exists (it always should)
-            d$val_err <- errors(d$val)
-            if('errors' %in% class(d$val)){
+            if(inherits(d$val, 'errors')){
+                d$val_err <- errors(d$val)
                 d$val <- errors::drop_errors(d$val)
-            } else {
-                warning(glue('Uncertainty missing from val column ({n}-{d}-{s}-{p}). ',
+            } else if(! 'val_err' %in% colnames(d)){
+                stop(glue('Uncertainty missing from val column and no val_err column for ({n}-{d}-{s}-{p}). ',
                              'That means this dataset has not passed through ',
                              'qc_hdetlim_and_uncert yet. it should have.',
                              n = network,
@@ -8354,18 +8358,19 @@ get_successor <- function(network,
 
 make_hdetlim_prec_lookup_table <- function(dls){
 
-    #for each variable, determine the median detlim and the minimum (coarsest)
-    #precision across all domains. For domains that report multiple values for
-    #a given variable, first take a within-domain median/min
+    #for each variable, determine the minimum detlim and the minimum (coarsest)
+    #precision across all domains.
 
     #return a table of half-detlim ("hdetlim") and precision
 
     lookup_table <- dls %>%
-        group_by(domain, var = variable_converted) %>%
-        summarize(detlim = median(detection_limit_converted),
-                  precision = min(precision)) %>%
-        group_by(var) %>%
-        summarize(detlim = median(detlim),
+        # group_by(domain, var = variable_converted) %>%
+        # summarize(detlim = median(detection_limit_converted),
+        #           precision = min(precision)) %>%
+        # group_by(var) %>%
+        # summarize(detlim = median(detlim),
+        group_by(var = variable_converted) %>%
+        summarize(detlim = min(detection_limit_converted),
                   precision = min(precision),
                   .groups = 'drop') %>%
         mutate(hdetlim = detlim / 2) %>%
@@ -8389,12 +8394,12 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
     #locates, estimates, or naively generates (as 0 or -Inf) detection limits for any value.
     #order of decisions:
-    #   1. if provider reports detlim/prec for same product, domain, variable, and date, use it
-    #   2. if not for same date, use the nearest date
-    #   3. if not for same product, but same domain, variable, and date, use that
-    #   4. if not for same product or date, use the nearest date
-    #   5. if not for same variable, use median (of medians) across domains
-    #   6. if nothing reported for a domain, use median (of medians) across domains
+    #   1. if provider reports detlim/prec for same product, domain, variable, and daterange, use it
+    #   2. if not for same daterange, use the nearest daterange
+    #   3. if not for same product, but same domain, variable, and daterange, use that
+    #   4. if not for same product or daterange, use the nearest daterange
+    #   5. if not for same variable, use minimum for that variable across domains
+    #   6. if nothing reported for a domain, use minima across domains
     #   7. if nothing to guess from, use 0 (detlim) or -Inf (precision).
     #       0 is also used as precision for a small subset of variables that will
     #       never have reported detection limits, and for which infinite uncertainty
@@ -8535,7 +8540,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
         }
     }
 
-    #CASEs 4-5: fill in remaining blanks using median (hdetlim) or minimum (precision)
+    #CASEs 4-5: fill in remaining blanks using minimum (hdetlim or precision)
     #across all reported values
     still_missing <- is.na(out)
     ref_inds <- match(d$var[still_missing], unknown_detlim_prec_lookup$var)
@@ -9779,6 +9784,36 @@ NaN_to_NA <- function(path){
     }
 }
 
+create_missing_stream_gauge_locations <- function(where){
+
+    ntws <- list.files('data', full.names = TRUE)
+    ntws <- grep('general|spatial', ntws, invert = TRUE, value = TRUE)
+
+    dmn_paths <- map(ntws, list.files, full.names = TRUE) %>% unlist()
+    dmns <- sapply(dmn_paths, function(x) str_split(x, '/')[[1]][3],
+                   USE.NAMES = FALSE)
+
+    for(i in seq_along(dmns)){
+
+        pth <- dmn_paths[i]
+        d <- dmns[i]
+
+        derived_dirs <- list.files(file.path(pth, 'derived'))
+        if(! any(grepl('stream_gauge_locations', derived_dirs))){
+
+            site_data %>%
+                filter(domain == !!d,
+                       in_workflow == 1,
+                       site_type == 'stream_gauge') %>%
+                select(site_code, latitude, longitude) %>%
+                st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+                st_write(glue('{where}/5_shapefiles/{d}_stream_gauge_locations.shp'),
+                         driver = 'ESRI Shapefile',
+                         quiet = TRUE)
+        }
+    }
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -9786,12 +9821,16 @@ postprocess_entire_dataset <- function(site_data,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product,
                                        reformat_camels = TRUE,
-                                       push_new_version_to_figshare = FALSE){
+                                       push_new_version_to_figshare_and_edi = FALSE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
+    #push_new_version_to_figshare: if TRUE, publishes the basic version of our dataset that's
+    #   stored on Figshare and queried by the macrosheds R package
+    #push_new_version_to_edi: if TRUE, publishes the full version of our dataset to EDI
 
-    #for post-derive steps that save the portal some processing.
+    #for post-derive steps (and patches, honestly) that finalize the dataset and/or
+    #save the portal some processing.
 
     loginfo(msg = 'Postprocessing all domains and products:',
             logger = logger_module)
@@ -9879,9 +9918,9 @@ postprocess_entire_dataset <- function(site_data,
     #                 logger = logger_module)
     # compute_download_filesizes()
 
-    if(push_new_version_to_figshare){
+    if(push_new_version_to_figshare_and_edi){
 
-        message('Are you sure you want to modify our published dataset? mash ESC within 10 seconds if not.')
+        message('Are you sure you want to modify our published package dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 
         log_with_indent(glue('Preparing dataset v{vv} for Figshare',
@@ -9891,6 +9930,11 @@ postprocess_entire_dataset <- function(site_data,
         dir.create(fs_dir, showWarnings = FALSE)
         prepare_for_figshare(where = fs_dir,
                              dataset_version = dataset_version)
+
+        log_with_indent('creating stream_gauge_locations shapefiles where they are missing',
+                        logger = logger_module)
+        create_missing_stream_gauge_locations(where = fs_dir)
+
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
         reformat_camels_for_ms()
@@ -9902,14 +9946,83 @@ postprocess_entire_dataset <- function(site_data,
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
                         logger = logger_module)
-        upload_dataset_to_figshare(dataset_version = dataset_version)
+        # upload_dataset_to_figshare(dataset_version = dataset_version)
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
     } else {
         log_with_indent('NOT pushing data to Figshare.',
                         logger = logger_module)
     }
 
-    message('PUSH NEW macrosheds package version now that figshare ids are updated')
+    if(push_new_version_to_figshare_and_edi){
+
+        log_with_indent(glue('Preparing dataset v{vv} for EDI',
+                             vv = dataset_version),
+                        logger = logger_module)
+        edi_dir <- paste0('macrosheds_figshare_v', dataset_version)
+        dir.create(edi_dir, showWarnings = FALSE)
+        prepare_for_edi(where = edi_dir,
+                        dataset_version = dataset_version)
+
+        manually_edit_eml()
+
+        log_with_indent(glue('Uploading dataset v{vv} to EDI',
+                             vv = dataset_version),
+                        logger = logger_module)
+        upload_dataset_to_edi(dataset_version = dataset_version)
+    } else {
+        log_with_indent('NOT pushing data to EDI',
+                        logger = logger_module)
+    }
+
+    message('PUSH NEW macrosheds package version now that figshare ids are updated (still relevant?)')
+}
+
+remove_more_neon_stuff_temporarily <- function(){
+    st_delete('macrosheds_figshare_v1/5_shapefiles/neon_stream_gauge_locations.shp', driver = 'ESRI Shapefile')
+}
+
+manually_edit_eml <- function(){
+
+    if(.Platform$OS.type == 'windows') stop('this will not work on windows (but can be adapted quickly)')
+
+    att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
+
+    most_recent_eml <- system('ls -t eml/eml_out | head -n 1', intern = TRUE)
+    eml <- read_lines(file.path('eml/eml_out', most_recent_eml))
+
+    new_eml_chunk <- c('\t<methods>', '\t\t<methodStep>', '\t\t\t<description>',
+                       NA, '\t\t\t</description>', '\t\t</methodStep>', '\t</methods>')
+
+    mvclines <- grep('</missingValueCode>', eml)
+    attlines <- grep('</attribute>', eml)
+    atnlines <- grep('<attributeName>', eml)
+
+    for(i in rev(seq_along(mvclines))){
+
+        mvcl <- mvclines[i]
+
+        if((mvcl + 1) %in% attlines){
+
+            attl <- mvcl + 1
+            attdif <- atnlines - attl
+            attdif <- attdif[attdif < 0]
+            atnl <- atnlines[which.max(attdif)]
+            varn <- str_match(eml[atnl], '\\<attributeName\\>([^\\<]+)\\<\\/attributeName\\>$')[, 2]
+
+            if(length(varn) != 1 || is.na(varn)) stop('problem with varn')
+
+            if(! varn %in% att$attributeName) next
+
+            attdeets <- pull(att[att$attributeName == varn, 'details'])
+
+            if(is.na(attdeets)) next
+
+            new_eml_chunk[4] <- attdeets
+            eml <- c(eml[1:mvcl], new_eml_chunk, eml[attl:length(eml)])
+        }
+    }
+
+    write_lines(eml, file.path('eml/eml_out', most_recent_eml))
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -10079,7 +10192,7 @@ prepare_variable_catalog_for_figshare <- function(outfile){
 
 assemble_misc_docs_figshare <- function(where){
 
-    docs_dir <- file.path(where, 'macrosheds_documentation')
+    docs_dir <- file.path(where, '0_documentation_and_metadata')
     dir.create(docs_dir, showWarnings = FALSE)
 
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
@@ -10154,7 +10267,7 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
                      x = all_dirs,
                      value = TRUE)
 
-    warning('temporarily removing NEON')
+    warning('temporarily removing NEON (there is another place where this happens)')
     dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
     unlink(file.path(tld, 'neon/'), recursive = TRUE)
 
@@ -10261,6 +10374,229 @@ prepare_for_figshare <- function(where, dataset_version){
                 file.path(where, '1_watershed_attribute_data'))
     file.rename(file.path(where, 'macrosheds_timeseries_data'),
                 file.path(where, '2_timeseries_data'))
+
+    #clean up camels-style data
+    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        relocate('site_code', .before = p_mean) %>%
+        filter(! grepl('[0-9]{8}', site_code)) %>%
+        arrange(site_code) %>%
+        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
+
+}
+
+convert_ts_feathers_to_csv <- function(where){
+
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.feather',
+                     full.names = TRUE)
+
+    if(! length(fs)) stop('edi prep already complete?')
+
+    fs_csv <- sub('\\.feather', '.csv', fs)
+
+    for(i in seq_along(fs)){
+
+        f = fs[i]
+
+        read_feather(f) %>%
+            write_csv(fs_csv[i])
+
+        file.remove(f)
+    }
+
+}
+
+combine_ts_csvs <- function(where){
+
+    #combines all timeseries csvs within a domain into a single
+    #csv, continaing all sites and variable categories (discharge, stream_chemistry, etc).
+    #var_category becomes a column.
+
+    #should be merged with convert_ts_feathers_to_csv for efficiency
+
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.csv',
+                     full.names = TRUE)
+
+    domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.csv$')[, 2])
+
+    for(d in domains){
+
+        fs_d <- grep(glue('2_timeseries_data/[A-Za-z_]+/{d}?/.*\\.csv$'), fs, value = TRUE)
+        network_dir <- paste(str_split(fs_d[1], '/')[[1]][1:3], collapse = '/')
+        var_type <- str_match(fs_d, '([a-z_]+)/[^/]+\\.csv$')[, 2]
+
+        domain_combined <- tibble()
+        for(i in seq_along(fs_d)){
+
+            domain_combined <- read_csv(fs_d[i]) %>%
+                mutate(var_category = !!var_type[i]) %>%
+                relocate(var_category, .after = 'var') %>%
+                bind_rows(domain_combined)
+
+            file.remove(fs_d[i])
+        }
+
+        domain_combined %>%
+            arrange(site_code, var_category, var) %>%
+            write_csv(file.path(network_dir, paste0('timeseries_', d, '.csv')))
+    }
+}
+
+combine_daymet_csvs <- function(where){
+
+    #combines all daymet files into a single csv. removes individual csvs.
+
+    fs <- list.files(where,
+                     recursive = TRUE,
+                     pattern = '\\.csv',
+                     full.names = TRUE)
+
+    map_dfr(fs, read_csv) %>%
+        write_csv(glue('{where}/CAMELS-compliant_Daymet_forcings.csv'))
+
+    file.remove(fs)
+}
+
+combine_and_move_spatial_objects <- function(from, to){
+
+    #for each domain, combined ws_boundaries, stream_gauge_locations, and precip_gauge_locations
+    #one shapefile each. moves from 2_timeseries_data to 5_shapefiles
+
+    dir.create(to, showWarnings = FALSE)
+
+    fs <- list.files(from,
+                     recursive = TRUE,
+                     pattern = '\\.shp',
+                     full.names = TRUE)
+
+    domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.shp$')[, 2])
+
+    for(d in domains){
+
+        fs_d <- grep(glue('2_timeseries_data/[A-Za-z_]+/{d}?/.*\\.shp$'), fs,
+                     value = TRUE)
+        dirsplit <- str_split(fs_d[1], '/')[[1]]
+        network_dir <- paste(dirsplit[1:3], collapse = '/')
+        domain_dir <- paste(dirsplit[1:4], collapse = '/')
+        shape_types <- unique(str_match(fs_d, glue('^{domain_dir}/([a-z_]+)'))[, 2])
+        network_dir <- sub(from, to, network_dir)
+
+        for(shape_type in shape_types){
+
+            fs_d_t <- grep(shape_type, fs_d, value = TRUE)
+
+            domain_combined <- st_read(fs_d_t[1], quiet = TRUE)
+            st_delete(fs_d_t[1],
+                      driver = 'ESRI Shapefile',
+                      quiet = TRUE)
+            fs_d_t <- fs_d_t[-1]
+
+            for(i in seq_along(fs_d_t)){
+
+                domain_combined <- st_read(fs_d_t[i], quiet = TRUE) %>%
+                    bind_rows(domain_combined)
+
+                st_delete(fs_d_t[i],
+                          driver = 'ESRI Shapefile',
+                          quiet = TRUE)
+            }
+
+            if(shape_type == 'ws_boundary') shape_type <- 'ws_boundaries'
+            st_write(domain_combined, glue('{to}/{d}_{shape_type}.shp'),
+                     quiet = TRUE)
+        }
+    }
+}
+
+prepare_for_edi <- function(where, dataset_version){
+
+    log_with_indent('Converting 2_timeseries_data feathers to CSV (takes a few mins)',
+                    indent = 2,
+                    logger = logger_module)
+    convert_ts_feathers_to_csv(file.path(where, '2_timeseries_data'))
+
+    log_with_indent('Combining 2_timeseries_data CSVs (takes a few mins. should be merged with the previous)',
+                    indent = 2,
+                    logger = logger_module)
+    combine_ts_csvs(file.path(where, '2_timeseries_data'))
+
+    log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
+                    indent = 2,
+                    logger = logger_module)
+    combine_daymet_csvs(file.path(where, '4_CAMELS-compliant_Daymet_forcings'))
+
+    log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
+                    indent = 2,
+                    logger = logger_module)
+    combine_ws_attrs(where)
+
+    log_with_indent('Combining spatial objects by domain',
+                    indent = 2,
+                    logger = logger_module)
+    combine_and_move_spatial_objects(from = file.path(where, '2_timeseries_data'),
+                                     to = file.path(where, '5_shapefiles'))
+
+    #TEMPORARY
+    remove_more_neon_stuff_temporarily()
+
+    eml_misc(where)
+}
+
+combine_ws_attrs <- function(){
+
+    #ms-standard watershed attributes
+    ws_attrs <- list.files(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'),
+                           full.names = TRUE)
+
+    map_dfr(ws_attrs, read_csv) %>%
+        write_csv(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries.csv'))
+
+    file.remove(ws_attrs)
+    file.remove(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'))
+
+    #camels-compliant watershed attributes
+    ws_attrs <- list.files(glue('{where}/3_CAMELS-compliant_watershed_attributes'),
+                           full.names = TRUE)
+
+    d <- read_csv(ws_attrs[1])
+    for(i in 2:length(ws_attrs)){
+        d <- full_join(d, read_csv(ws_attrs[i]), by = 'site_code')
+    }
+
+    write_csv(d, glue('{where}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
+
+    file.remove(ws_attrs)
+}
+
+eml_misc <- function(where){
+
+    ## rename some files to clarify what they are in the absence of dir structure
+
+    # fs <- list.files(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'),
+    #                  full.names = TRUE)
+    # file.rename(fs, sub('ws_attr_timeseries/', 'ws_attr_timeseries/ws_attr_ts_', fs))
+    #
+    # fs <- list.files(glue('{where}/3_CAMELS-compliant_watershed_attributes'),
+    #                  full.names = TRUE)
+    # file.rename(fs, sub('watershed_attributes/', 'watershed_attributes/CAMELS-compliant_ws_attr_ts_', fs))
+
+    file.rename(glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS-compliant_Daymet_forcings.csv'),
+                glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'))
+
+    ## link shapefiles to eml loading dock and zip them together
+
+    dir.create('eml/data_links/shapefiles', showWarnings = FALSE)
+
+    sfs <- list.files(glue('{where}/5_shapefiles'), full.names = TRUE)
+    sfs_basenames <- basename(sfs)
+    file.link(sfs, file.path('eml/data_links/shapefiles', sfs_basenames))
+
+    zip(zipfile = 'eml/data_links/shapefiles.zip',
+        files = 'eml/data_links/shapefiles',
+        flags = '-r9Xq')
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){
@@ -11066,7 +11402,6 @@ detrmin_mean_record_length <- function(df){
     }
     return(days_in_rec)
 }
-
 
 clean_portal_dataset <- function(){
 

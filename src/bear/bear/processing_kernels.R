@@ -224,8 +224,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     
     d <- ms_cast_and_reflag(d,
                             variable_flags_to_drop = 'DROP',
-                            variable_flags_dirty = c('DL', 'RL'),
-                            varflag_col_pattern = '#V#__|flg')
+                            variable_flags_dirty = c('DL', 'RL'))
     
     d <- ms_conversions(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l', 
                                                   'Na' = 'ueq/l', 'Cl' = 'ueq/l', 'SO4' = 'ueq/l',
