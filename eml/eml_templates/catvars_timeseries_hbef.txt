@@ -1,0 +1,5 @@
+attributeName	code	definition
+var_category	discharge	
+var_category	precip_chemistry	
+var_category	precipitation	
+var_category	stream_chemistry	
