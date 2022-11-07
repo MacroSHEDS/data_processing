@@ -1,0 +1,3 @@
+attributeName	code	definition
+var_category	discharge	Stream discharge
+var_category	stream_chemistry	Stream chemistry
