@@ -140,7 +140,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
