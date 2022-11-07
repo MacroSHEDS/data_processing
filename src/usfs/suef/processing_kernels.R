@@ -433,8 +433,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = c('TYPE'))
 
     d <- ms_cast_and_reflag(d,
+                            variable_flags_bdl = '*',
                             variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
                                                      'DQ', 'DC'),
                             variable_flags_clean =
                                 c('A', 'E'),
@@ -570,8 +571,9 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     unlink(temp_dir, recursive = TRUE)
 
     d <- ms_cast_and_reflag(d,
+                            variable_flags_bdl = '*',
                             variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
                                                      'DQ', 'DC'),
                             variable_flags_clean = c('A', 'E'),
                             summary_flags_to_drop = list(

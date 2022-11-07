@@ -58,7 +58,9 @@ suppressPackageStartupMessages({
 vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300)
+        timeout = 300,
+        readr.show_progress = FALSE,
+        readr.show_col_types = FALSE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -294,7 +296,6 @@ if(ms_instance$use_ms_error_handling){
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
-
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
                                                         update_on_gdrive = TRUE)
@@ -323,6 +324,7 @@ scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
 ## dmnrow <- which(network_domain$domain == 'loch_vale')
+network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -362,30 +364,30 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
-                domain = domain)
+    # ms_retrieve(network = network,
+    #             # prodname_filter = c('stream_chemistry'),
+    #             domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
-    if(domain != 'mcmurdo'){
-        sw(ms_delineate(network = network,
-                        domain = domain,
-                        dev_machine_status = ms_instance$machine_status,
-                        verbose = TRUE))
-    }
+    # if(domain != 'mcmurdo'){
+    #     sw(ms_delineate(network = network,
+    #                     domain = domain,
+    #                     dev_machine_status = ms_instance$machine_status,
+    #                     verbose = TRUE))
+    # }
 
     ms_derive(network = network,
-              prodname_filter = c('precip_pchem_pflux'),
+              prodname_filter = c('stream_chemistry'),
               domain = domain)
 
-    if(domain != 'mcmurdo'){
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = TRUE)
-    }
+    # if(domain != 'mcmurdo'){
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = TRUE)
+    # }
 
     retain_ms_globals(ms_globals)
 }
@@ -402,7 +404,7 @@ postprocess_entire_dataset(site_data = site_data,
                            thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = FALSE,
-                           push_new_version_to_figshare = FALSE)
+                           push_new_version_to_figshare_and_edi = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
