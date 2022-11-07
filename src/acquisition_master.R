@@ -137,8 +137,8 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-    
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -164,7 +164,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-    
+
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -218,7 +218,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-  
+
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -227,7 +227,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-    
+
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -255,7 +255,7 @@ ms_instance <- ms_init(use_ms_error_handling = FALSE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -265,8 +265,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -275,9 +275,9 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = gee_login,
+try(rgee::ee_Initialize(user = conf$gee_login,
                         drive = TRUE))
-                        
+
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -334,10 +334,10 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive')
-    ## owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'munge')
+    owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive')
+    owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
     ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
