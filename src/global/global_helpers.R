@@ -10154,7 +10154,8 @@ prepare_variable_catalog_for_figshare <- function(outfile){
                network, domain, site_code = SiteCode, observations = Observations,
                first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
                mean_obs_per_day = MeanObsPerDay) %>%
-        mutate(mean_obs_per_day = as.numeric(mean_obs_per_day))
+        mutate(mean_obs_per_day = as.numeric(mean_obs_per_day),
+               mean_obs_per_day = ifelse(is.infinite(mean_obs_per_day), 1, mean_obs_per_day))
 
     # #prepare site data catalog files for macrosheds package
     # site_cat_files <- list.files('../portal/data/general/catalog_files/indiv_sites/',
