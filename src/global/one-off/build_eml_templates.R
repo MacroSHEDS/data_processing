@@ -15,6 +15,7 @@ non_lter_networks_on_edi <- c('bear')
 library(EMLassemblyline)
 library(tidyverse)
 library(glue)
+library(googlesheets4)
 
 # setup ####
 
@@ -31,6 +32,25 @@ dd <- file.path('eml', 'data_links')
 dir.create(wd, recursive = TRUE, showWarnings = FALSE)
 dir.create(ed, recursive = TRUE, showWarnings = FALSE)
 dir.create(dd, recursive = TRUE, showWarnings = FALSE)
+
+googlesheets4::read_sheet(
+    conf$disturbance_record_gsheet,
+    na = c('', 'NA'),
+    col_types = 'c'
+) %>%
+    rename(ws_status = watershed_type, pulse_or_chronic = disturbance_type,
+           disturbance = disturbance_def, details = disturbance_ex) %>%
+    write_csv(file.path(dd, 'disturbance_record.csv'))
+
+googlesheets4::read_sheet(
+    conf$univ_prods_gsheet,
+    na = c('', 'NA'),
+    col_types = 'c'
+) %>%
+    select(prodname, primary_source = data_source, retrieved_from_GEE = type,
+           doi, license, citation, url, addtl_info = notes) %>%
+    mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE)) %>%
+    write_csv(file.path(dd, 'attribution_and_intellectual_rights_ws_attr.csv'))
 
 # helpers ####
 
@@ -169,13 +189,10 @@ files_to_link <- c(ts_tables,
                    'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05e_range_check_limits.csv',
                    'macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05f_detection_limits_and_precision.csv',
                    'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv',
-                   # 06f_ws_attr_summary_column_descriptions.csv
                    'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv',
                    'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv',
-                   'macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv'
-                   #disturbance record
-                   #universal products?
-                   #var catalog
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv',
+                   'macrosheds_figshare_v1/macrosheds_documentation_packageformat/variable_catalog.csv'
 )
 
 basenames <- basename(files_to_link)
@@ -186,7 +203,11 @@ basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr', basenames)
 basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
 basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
 basenames <- sub('detection_limits_and_precision', 'detection_limits', basenames)
+basenames <- sub('CAMELS_compliant_ws_attr', 'CAMELS_compliant_ws_attr_summaries', basenames)
+basenames <- sub('variable_catalog', 'data_coverage_breakdown', basenames)
 link_locs <- file.path(dd, basenames)
+basenames <- c(basenames, 'disturbance_record.csv')
+basenames <- c(basenames, 'attribution_and_intellectual_rights_ws_attr.csv')
 
 descriptions <- basenames
 descriptions <- str_replace(descriptions,
@@ -199,7 +220,7 @@ descriptions <- str_replace(descriptions,
                             '^ws_attr_timeseries\\.csv$',
                             'Watershed attribute data, temporally explicit, for all domains')
 descriptions <- str_replace(descriptions,
-                            '^CAMELS_compliant_ws_attr\\.csv$',
+                            '^CAMELS_compliant_ws_attr_summaries\\.csv$',
                             'Watershed attribute data, temporally explicit, for all domains, and interoperable with the CAMELS dataset (https://ral.ucar.edu/solutions/products/camels)')
 descriptions <- str_replace(descriptions,
                             '^CAMELS_compliant_Daymet_forcings\\.csv$',
@@ -228,6 +249,15 @@ descriptions <- str_replace(descriptions,
 descriptions <- str_replace(descriptions,
                             '^data_irregularities\\.csv$',
                             'Any notable inconsistencies within the MacroSheds dataset')
+descriptions <- str_replace(descriptions,
+                            '^disturbance_record\\.csv$',
+                            'A register of known watershed experiments and significant natural disturbances')
+descriptions <- str_replace(descriptions,
+                            '^attribution_and_intellectual_rights_ws_attr\\.csv$',
+                            'Information about fair use of watershed attribute data. See also attribution_and_intellectual_rights_ts.xlsx.')
+descriptions <- str_replace(descriptions,
+                            '^data_coverage_breakdown\\.csv$',
+                            'Number of observations, timespan of observation, by variable and site')
 
 for(i in seq_along(files_to_link)){
     suppressWarnings(file.link(files_to_link[i], link_locs[i]))
@@ -235,7 +265,8 @@ for(i in seq_along(files_to_link)){
 
 #link additional files that will be grouped under "other entities"
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-          file.path(dd, 'attribution_and_intellectual_rights_complete.xlsx'))
+          file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx'))
+message('remove the second and third sheets from attribution_and_intellectual_rights_ts.xlsx')
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
           file.path(dd, 'data_use_agreements.docx'))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib',
@@ -264,7 +295,7 @@ template_core_metadata(wd, 'CCBY', '.txt') #requires license arg, but we don't u
 template_table_attributes(wd, dd, 'ws_attr_timeseries.csv')
 template_table_attributes(wd, dd, 'ws_attr_summaries.csv')
 template_table_attributes(wd, dd, 'timeseries_hbef.csv') #this one needs to be manually copied for all domains after filling it out
-template_table_attributes(wd, dd, 'CAMELS_compliant_ws_attr.csv')
+template_table_attributes(wd, dd, 'CAMELS_compliant_ws_attr_summaries.csv')
 template_table_attributes(wd, dd, 'CAMELS_compliant_Daymet_forcings.csv')
 template_table_attributes(wd, dd, 'sites.csv')
 template_table_attributes(wd, dd, 'variables_time_series.csv')
@@ -274,12 +305,17 @@ template_table_attributes(wd, dd, 'variables_ws_attr.csv')
 template_table_attributes(wd, dd, 'variable_category_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'variable_data_source_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'data_irregularities.csv')
+template_table_attributes(wd, dd, 'disturbance_record.csv')
+template_table_attributes(wd, dd, 'attribution_and_intellectual_rights_ws_attr.csv')
+template_table_attributes(wd, dd, 'data_coverage_breakdown.csv')
 
 template_geographic_coverage(wd, dd, 'sites.csv',
                              lat.col = 'latitude', lon.col = 'longitude',
                              site.col = 'site_code')
 template_provenance(wd)
-template_annotations()
+# template_annotations()
+
+template_categorical_variables(wd, dd)
 
 # template_arguments() #for custom inputs?
 
@@ -305,7 +341,7 @@ for(td in ts_dmns){
         write_tsv(glue('eml/eml_templates/catvars_timeseries_{td}.txt'))
 }
 
-template_categorical_variables(wd, dd)
+# template_categorical_variables(wd, dd)
 
 # write EML ####
 
@@ -322,7 +358,7 @@ make_eml(wd, dd, ed,
          data.table = basenames,
          data.table.name = basenames,
          data.table.description = descriptions,
-         data.table.quote.character = rep('"', length(files_to_link)),
+         data.table.quote.character = rep('"', length(basenames)),
          data.table.url = NULL,
          other.entity = c('shapefiles.zip',
                           'attribution_and_intellectual_rights_complete.xlsx',
@@ -338,13 +374,14 @@ make_eml(wd, dd, ed,
                                'ws_attr_refs.bib',
                                'changelog.txt',
                                'glossary.txt'),
-         other.entity.description = c('Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
-                                      'Specific license requirements and expectations associated with each primary dataset. See data_use_agreements.docx.',
-                                      'Terms and conditions for using MacroSheds data.',
-                                      'Complete bibliographic references for time-series data.',
-                                      'Complete bibliographic references for watershed attribute data.',
-                                      'List of changes made since the last version of the MacroSheds dataset.',
-                                      'Glossary of terms related to the MacroSheds dataset.'),
+         other.entity.description = c(
+             'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
+             'Specific license requirements and expectations associated with each primary dataset. See data_use_agreements.docx.',
+             'Terms and conditions for using MacroSheds data.',
+             'Complete bibliographic references for time-series data.',
+             'Complete bibliographic references for watershed attribute data.',
+             'List of changes made since the last version of the MacroSheds dataset.',
+             'Glossary of terms related to the MacroSheds dataset.'),
          other.entity.url = NULL,
          user.id = conf$edi_user_id,
          user.domain = NULL, #pretty sure this doesn't apply to us
