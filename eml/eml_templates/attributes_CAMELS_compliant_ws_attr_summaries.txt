@@ -27,7 +27,7 @@
 "area"	"watershed area"	"numeric"	"squareKilometers"		"NA"	"missing value"
 "elev_mean"	"watershed mean elevation"	"numeric"	"meter"		"NA"	"missing value"
 "slope_mean"	"watershed mean slope"	"numeric"	"metersPerKilometer"		"NA"	"missing value"
-"frac_forest"	"forest fraction"	"numeric"	"!Add units here!"		"NA"	"missing value"
+"frac_forest"	"forest fraction"	"numeric"	"dimensionless"		"NA"	"missing value"
 "dom_land_cover_frac"	"fraction of the catchment area associated with the dominant land cover"	"numeric"	"dimensionless"		"NA"	"missing value"
 "dom_land_cover"	"dominant land cover type (Noah-modified 20-category IGBP-MODIS land cover)"	"categorical"			"NA"	"missing value"
 "root_depth_50"	"root depth (percentile 50% extracted from a root depth distribution based on IGBP land cover) (MODIS)"	"numeric"	"meter"		"NA"	"missing value"
