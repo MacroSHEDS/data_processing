@@ -138,7 +138,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
     
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -156,7 +156,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'mac'
     }
 
-    res <- try(setwd('~/Desktop/MacroSheds/data_processing/src/data_acquisition'), silent=TRUE) #pranavi
+    res <- try(setwd('/Users/pranavireddi/Desktop/MacroSheds/data_processing'), silent=TRUE) #pranavi
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'Pranavi'
@@ -250,7 +250,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = FALSE,
+ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -272,7 +272,7 @@ gee_login <- case_when(
 #load authorization file for macrosheds google sheets and drive
 #same account must have GEE and GDrive access
 googlesheets4::gs4_auth(email = gee_login)
-googledrive::drive_auth(email = gee_login)
+googledrive::drive_autxh(email = gee_login)
 
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
@@ -321,8 +321,10 @@ dir.create('logs', showWarnings = FALSE)
 # this function will update the citation sheet with the data and url of raw data download
 scrape_data_download_urls()
 
+
+
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'trout_lake')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
