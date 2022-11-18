@@ -8148,6 +8148,7 @@ write_metadata_d <- function(network,
             return()
         } else if(! grepl('(gauge_locations|ws_boundary__ms...)', prodname_ms) &&
                   # For the case where all discharge is pulled from USGS
+                  exists('prod_info') &&
                   !(grepl('discharge', prodname_ms) && sum(as.numeric(grepl('discharge', prod_info$prodname))) == 1)){
             stop(glue('really no precursors for {p}? might need to update products.csv', p = prodname_ms))
         }
@@ -9822,6 +9823,7 @@ postprocess_entire_dataset <- function(site_data,
                                        generate_csv_for_each_product,
                                        reformat_camels = TRUE,
                                        push_new_version_to_figshare_and_edi = FALSE){
+                                       # filter_ungauged_sites = TRUE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
     #   set to NA (the dafault) to prevent thinning.
@@ -9834,6 +9836,11 @@ postprocess_entire_dataset <- function(site_data,
 
     loginfo(msg = 'Postprocessing all domains and products:',
             logger = logger_module)
+
+    # if(filter_ungauged_sites){
+    #     log_with_indent('Filtering ungauged sites', logger = logger_module)
+    #     site_data <- filter(site_data, site_type != 'stream_sampling_point')
+    # }
 
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
