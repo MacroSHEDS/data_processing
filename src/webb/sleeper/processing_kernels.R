@@ -1,7 +1,16 @@
 source('src/webb/sleeper/domain_helpers.R')
+source('src/webb/network_helpers.R')
 
 #retrieval kernels ####
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
+network = 'webb'
+domain = 'sleeper'
+
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
+
+prodname_ms <- set_details$prodname_ms
+site_code <- set_details$site_code
+component <- set_details$component
+url <- set_details$url
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -287,11 +296,13 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 
 
 #munge kernels ####
-
+IsDate <- function(mydate, date.format = "%m/%d/%y") {
+  tryCatch(!is.na(as.Date(mydate, date.format)),
+           error = function(err) {FALSE})
+}
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
-
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -301,28 +312,29 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d <- read.delim(rawfile, sep = ',') %>%
-        mutate(site = 'KCOMKRET2') %>%
+        mutate(site = 'RW9') %>%
         as_tibble()
 
-    #DATETIME is messed up cuz of one digit thing
+    # NOTE: return to basin-wide precip, and to 30% datetime loss
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%y'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'US/Eastern',
                          site_code_col = 'site',
                          data_cols =  c('Precip..mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
 
+    # NOTE: return too all of these
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
     # Precipitation is daily
     ## d <- d %>%
     ##     mutate(val = val*15)
+    ## d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
+    # NOTE: not applicable
+    ## d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
 
@@ -955,6 +967,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     return()
 }
+
+# for stream chem work
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS005")
+prodname_ms <- set_details$prodname_ms
+site_code <- set_details$site_code
+component <- set_details$component
+url <- set_details$url
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
