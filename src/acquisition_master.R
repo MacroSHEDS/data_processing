@@ -325,6 +325,7 @@ scrape_data_download_urls()
 ## change string in line below to find row index of your desired domain
 ## dmnrow <- which(network_domain$domain == 'loch_vale')
 network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
+network_domain=filter(network_domain, network == 'lter')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -380,7 +381,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # }
 
     ms_derive(network = network,
-              prodname_filter = c('stream_chemistry'),
+              # prodname_filter = c('stream_chemistry'),
               domain = domain)
 
     # if(domain != 'mcmurdo'){
