@@ -414,7 +414,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = FALSE)
 
     d_isco <- ms_cast_and_reflag(d_isco,
-                                 varflag_col_pattern = '#V#__|flg',
                                  variable_flags_dirty = c('Y', 'y'),
                                  variable_flags_to_drop = 'DROP')
 
