@@ -317,15 +317,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# NOTE: this should be moved I believe, and made to work with the raw data
-# dcumentation of the latest iteration...
-# this function will update the citation sheet with the data and url of raw data download
-scrape_data_download_urls()
-
 ## change string in line below to find row index of your desired domain
 ## dmnrow <- which(network_domain$domain == 'loch_vale')
-network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
-network_domain=filter(network_domain, network == 'lter')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -334,13 +327,13 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    held_data = get_data_tracker(network, domain)
+    # held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
-    held_data = invalidate_tracked_data(network, domain, 'derive')
-    owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive')
+    # owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
     ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
@@ -365,30 +358,30 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    # ms_retrieve(network = network,
-    #             # prodname_filter = c('stream_chemistry'),
-    #             domain = domain)
+    ms_retrieve(network = network,
+                # prodname_filter = c('stream_chemistry'),
+                domain = domain)
 
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
-    # if(domain != 'mcmurdo'){
-    #     sw(ms_delineate(network = network,
-    #                     domain = domain,
-    #                     dev_machine_status = ms_instance$machine_status,
-    #                     verbose = TRUE))
-    # }
+    if(domain != 'mcmurdo'){
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        verbose = TRUE))
+    }
 
     ms_derive(network = network,
               # prodname_filter = c('stream_chemistry'),
               domain = domain)
 
-    # if(domain != 'mcmurdo'){
-    #     ms_general(network = network,
-    #                domain = domain,
-    #                get_missing_only = TRUE)
-    # }
+    if(domain != 'mcmurdo'){
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = TRUE)
+    }
 
     retain_ms_globals(ms_globals)
 }

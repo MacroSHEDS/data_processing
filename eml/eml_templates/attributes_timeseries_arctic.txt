@@ -6,4 +6,4 @@
 "val"	"data value. See variables_time_series.csv for units"	"numeric"	"variable_unit"		"NA"	"missing value"
 "ms_status"	"0 = clean value. 1 = questionable value"	"numeric"	"dimensionless"			
 "ms_interp"	"0 = measured or imputed by primary source. 1 = interpolated by MacroSheds"	"numeric"	"dimensionless"			
-"val_err"	"Uncertainty. See “Detection Limits and Uncertainty” section of https://eartharxiv.org/repository/view/3499/"	"numeric"	"variable_unit"		"NA"	"missing value"
+"val_err"	"The combined standard uncertainty associated with the corresponding data point, or NA if unknown. See 'Detection Limits and Uncertainty' section of https://eartharxiv.org/repository/view/3499/"	"numeric"	"variable_unit"		"NA"	"missing value"
