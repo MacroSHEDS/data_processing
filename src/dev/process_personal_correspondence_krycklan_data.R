@@ -2,12 +2,9 @@ library(tidyverse)
 # library(feather)
 
 #TODO
-#look for other errors
-#format just like current raw data (include vars missing from this set)
-#conform colnames, etc
-#notify kim and hjalmar
-#update the raw data we have on gdrive
 #rebuild krycklan
+
+setwd('macrosheds/data_acquisition/')
 
 d = readxl::read_xlsx('~/Downloads/ICP-data.xlsx') %>%
     select(-`Depth (meters, for groundwater)`) %>%
@@ -25,7 +22,7 @@ zz = d %>%
               unqs = paste(unique(LOD), collapse = ', ')) %>%
     print(n = 100)
 
-#identify date bounds to DLs that have them ####
+#identify date bounds for DLs that have them ####
 
 bounded_lod_params = zz %>%
     filter(n == 2) %>%
@@ -57,37 +54,64 @@ lods = d %>%
     print(n=100) %>%
     write_csv('/tmp/krycklan_lods.csv')
 
-# reformat the new data to match the old. join diffs of each set ####
 
-# meanlod = function(x){
-#
-#
+#are there ever LOD values at the same time as measured values? (YES) ####
 
-#stream chem
-sc_new = d %>%
-    filter(ProjectID == 101) %>%
+ggo = d %>%
+    group_by(SiteID, Parameter, Date) %>%
+    summarize(haslod = any(Value == '<LOD'),
+              hasval = any(! Value %in% c('<LOD', 'NA'))) %>%
+    filter(haslod & hasval)
+
+ggoo = left_join(ggo, d, by = c('SiteID', 'Parameter', 'Date')) %>%
+    select(ProjectID, SiteID, Parameter, Date, Value, LOD) %>%
+    arrange(ProjectID, SiteID, Parameter, Date) %>%
+    print(n=200)
+
+# reformat the new data to match the old. join diffs of each set. write ####
+
+dd = d %>%
     mutate(Date = as.Date(Date),
+           LODbool = Value == '<LOD',
            Value = as.numeric(Value)) %>%
-    group_by(SiteID, Parameter, Date) %>%
-    summarize(Value = mean(Value, na.rm = TRUE),
-              LOD = any(! is.na(LOD))) %>%
-    ungroup()
-HERE: VERIFY THAT LOD == true CORRESPONDS TO VALUE == na
-WHERE IT DOESN'T, THAT MEANS THERE WAS A REAL VALUE FOR A REPLICATE
-
-
-
-    select(-ProjectID, -ProjectName, -SiteName, -LOD) %>%
-    group_by(SiteID, Parameter, Date) %>%
-    summarize(Value = mean(Value, na.rm = TRUE)) %>%
+    group_by(ProjectID, SiteID, Parameter, Date) %>%
+    summarize(Value = mean(Value, na.rm = TRUE), #if there's a measured value coupled with an LOD, ignore the LOD
+              # LOD = any(! is.na(LOD)) && all(is.na(Value))) %>% #if there's a measured value coupled with an LOD, don't keep the LOD flag
+              LOD = any(LODbool) && all(is.na(Value))) %>% #if there's a measured value coupled with an LOD, don't keep the LOD flag
     ungroup() %>%
+    filter(! (is.na(Value) & ! LOD)) #these values can't be estimated, so drop 'em.
+
+# dd[is.na(dd$Value) + dd$LOD == 1,]
+
+dd = dd %>%
+    mutate(Value = as.character(Value),
+           Value = ifelse(LOD, '<LOD', Value)) %>%
+    select(-LOD) %>%
     pivot_wider(names_from = Parameter, values_from = Value)
 
+sc_new = filter(dd, ProjectID == 101) %>% select(-ProjectID) %>% arrange(Date)
+pc_new = filter(dd, ProjectID == 201) %>% select(-ProjectID) %>% arrange(Date)
+
 sc_old = read_csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2021-06-08.csv')
-old_cols_keep = setdiff(colnames(sc_old), unique(sc_new$Parameter))
-# setdiff(unique(sc_new$Parameter), colnames(sc_old))
-sc_old %>%
-    select(all_of(old_cols_keep))
+old_cols_keep = setdiff(colnames(sc_old), unique(d$Parameter))
+# setdiff(unique(d$Parameter), colnames(sc_old))
+
+sc_new = sc_old %>%
+    select(all_of(old_cols_keep)) %>%
+    full_join(sc_new, by = c('SiteID', 'Date')) %>%
+    arrange(Date)
+
+pc_old = read_csv('data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitecode_NA/KCS 201 data 2021-06-08.csv')
+old_cols_keep = setdiff(colnames(pc_old), unique(d$Parameter))
+# setdiff(unique(d$Parameter), colnames(sc_old))
+
+pc_new = pc_old %>%
+    select(all_of(old_cols_keep)) %>%
+    full_join(pc_new, by = c('SiteID', 'Date')) %>%
+    arrange(Date)
+
+write_csv(sc_new, 'data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2022-11-19.csv')
+write_csv(pc_new, 'data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitecode_NA/KCS 201 data 2022-11-19.csv')
 
 # scraps ####
 
