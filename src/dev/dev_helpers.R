@@ -1435,16 +1435,38 @@ rebuild_m_and_d_docfiles <- function(network_domain){
         ntw = network_domain$network[1]
         dmn = network_domain$domain[1]
 
-        # trckr = get_data_tracker(ntw, dmn)
-        # d_prods = get_product_info(ntw, dmn, 'derive', get_statuses = 'ready')
-
-        # for(j in seq_len(nrow(d_prods))){
         docfiles = list.files(glue('data/{ntw}/{dmn}/derived/documentation'))
         prodnames_ms = str_match(docfiles, 'documentation_(.*?)\\.txt')[, 2]
         for(j in seq_along(prodnames_ms)){
 
-            # prodname_ms = paste(d_prods$prodname[j], d_prods$prodcode[j], sep = '__')
-            write_metadata_d(ntw, dmn, prodnames_ms[j])
+            doc_txt = read_file(glue('data/{ntw}/{dmn}/derived/documentation/documentation_{prodnames_ms[j]}.txt'))
+            if(grepl('linked product', doc_txt)){
+
+                prods = read_csv(glue('src/{ntw}/{dmn}/products.csv'))
+
+                # linked_prodcode = get_derive_ingredient(
+                #     network = network,
+                #     domain = domain,
+                #     prodname = prodname_from_prodname_ms(prodnames_ms[j])
+                # ) %>%
+                #     prodcode_from_prodname_ms()
+
+                prodname_ms_source = prods %>%
+                    filter(prodname == prodname_from_prodname_ms(prodnames_ms[j]),
+                           ! grepl('ms[0-9]+$', prodcode)) %>%
+                    mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+                    pull(prodname_ms)
+
+                if(length(prodname_ms_source) != 1) stop()
+
+                write_metadata_d_linkprod(network = network,
+                                          domain = domain,
+                                          prodname_ms_mr = prodname_ms_source,
+                                          prodname_ms_d = prodnames_ms[j])
+
+            } else {
+                write_metadata_d(ntw, dmn, prodnames_ms[j])
+            }
         }
     }
 }
