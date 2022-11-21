@@ -1424,6 +1424,31 @@ insert_retrieval_datetimes <- function(){
     }
 }
 
+rebuild_m_and_d_docfiles <- function(network_domain){
+
+    #if a change is made to retrieval documentation.txt files, you can use this
+    #to propagate that change to all the munge and derive documentation.txt files
+    #without having to rerun main loop components
+
+    for(i in seq_len(nrow(network_domain))){
+
+        ntw = network_domain$network[1]
+        dmn = network_domain$domain[1]
+
+        # trckr = get_data_tracker(ntw, dmn)
+        # d_prods = get_product_info(ntw, dmn, 'derive', get_statuses = 'ready')
+
+        # for(j in seq_len(nrow(d_prods))){
+        docfiles = list.files(glue('data/{ntw}/{dmn}/derived/documentation'))
+        prodnames_ms = str_match(docfiles, 'documentation_(.*?)\\.txt')[, 2]
+        for(j in seq_along(prodnames_ms)){
+
+            # prodname_ms = paste(d_prods$prodname[j], d_prods$prodcode[j], sep = '__')
+            write_metadata_d(ntw, dmn, prodnames_ms[j])
+        }
+    }
+}
+
 get_nonnumerics <- function(d){
 
     #gets unique nonnumeric values by row. useful for identifying quality codes

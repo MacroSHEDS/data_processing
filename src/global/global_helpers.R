@@ -6045,7 +6045,7 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     #returned as standard macrosheds timeseries tibbles in a single list.
 
     #encompassing_dem: RasterLayer; must cover the area of wshd_bnd and
-    #   recip_gauges
+    #   precip_gauges
     #wshd_bnd: sf polygon with columns site_code and geometry.
     #   it represents a single watershed boundary.
     #ws_area: numeric scalar representing watershed area in hectares. This is
@@ -6159,6 +6159,24 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
     dem_wb <- terra::crop(encompassing_dem, wshd_bnd)
     dem_wb <- terra::mask(dem_wb, wshd_bnd)
     elevs <- terra::values(dem_wb)
+
+    elevs_all_NA <- is.null(Find(function(x) ! is.na(x), elevs))
+
+    if(elevs_all_NA){
+        #the crop/mask strategy can fail for very small basins. This is a workaround
+        elevs_ <- terra::extract(terra::rast(encompassing_dem),
+                                 wshd_bnd,
+                                 weights = TRUE)
+        # elevs <- elevs_ %>%
+        #     select(-ID) %>%
+        #     filter(weight >= 0.5) %>%
+        #     pull(1)
+        elevs[1] <- elevs_[which.max(elevs_$weight), 2]
+        e_ <- 1 #governs precip quickref subsetting later
+    } else {
+        e_ <- TRUE
+    }
+
     elevs_masked <- elevs[! is.na(elevs)]
 
     #compute distances from all dem cells to all chemistry locations
@@ -6227,8 +6245,8 @@ shortcut_idw_concflux_v2 <- function(encompassing_dem,
         #   then multiply by watershed area in hectares.
 
         quickref_ind <- as.character(quickref_inds[k])
-        #              mg/L        mm/day                          ha
-        flux_interp <- c_idw * precip_quickref[[quickref_ind]] * ws_area / 100
+        #              mg/L        mm/day                                            ha
+        flux_interp <- c_idw * precip_quickref[[quickref_ind]][e_, , drop = FALSE] * ws_area / 100
 
         #calculate watershed averages (work around error drop)
         ws_mean_conc[k] <- mean(c_idw, na.rm=TRUE)
@@ -15185,80 +15203,4 @@ reformat_camels_for_ms <- function(){
                                       s = sites[s]))
         }
     }
-}
-
-scrape_data_download_urls <- function() {
-  # connecting to gsheet
-  citation_gsheet <- googlesheets4::read_sheet(
-            conf$citation_gsheet,
-            na = c('', 'NA'),
-            col_types = citation_cols <- paste0(rep('c', 24), collapse=''))
-      colnames(citation_gsheet) <- citation_gsheet[6,]
-
-  raw_fp <- "./vault/raw_documentation_files/"
-
-  networks <- list.files(raw_fp)
-
-  for(network in networks) {
-    ## network <- networks[5]
-    domains <- list.files(file.path(raw_fp, network))
-
-    for(domain in domains) {
-      ## domain <- domains[4]
-      writeLines(paste('reading documentation for data source:', domain))
-
-      # list all files in this domain of this network
-      product_names <- list.files(file.path(raw_fp, network, domain, "raw", "documentation"))
-      product_docs <- list.files(file.path(raw_fp, network, domain, "raw", "documentation"), full.names = TRUE)
-
-
-      # filter gsheet to domain, get all prodcodes
-      dmn_citation_gsheet <- citation_gsheet %>%
-        filter(network == !!network,
-               domain == !!domain)
-
-      dmn_prodcodes <- dmn_citation_gsheet$macrosheds_prodcode
-      dmn_prodcodes_grep <- paste0(dmn_prodcodes, collapse="|")
-
-      # filter product docs to only those with prodcode text matching gsheet
-      cited_products <- product_docs[ifelse(grepl(dmn_prodcodes_grep, product_docs), TRUE, FALSE)]
-
-      for(file in cited_products) {
-        ## file <- cited_products[1]
-
-        cited_filename <- stringr::str_split(file, "__", simplify =TRUE)[2]
-        cited_prodcode <- stringr::str_split(cited_filename, ".txt", simplify =TRUE)[1]
-
-        data_source_doc <- readLines(file)
-        data_source_link <- trimws(stringr::str_split(data_source_doc, "[^)][0-9]{4}\\-", simplify =TRUE)[1])
-        data_source_dt <- trimws(stringr::str_extract_all(data_source_doc, "[0-9]{4}\\-.*[^)]", simplify =TRUE))[1]
-
-        print(paste(network, domain, data_source_dt))
-
-        if(grepl("https://", data_source_link)) {
-          data_source_link <- stringr::str_split(data_source_link, " ", simplify = TRUE)[1]
-        }
-
-        # NOTE: documentation files are not mecha-standardized, this function scrapes the best standard
-        # this *should* capture all prodcodes in citation gsheet, giving NA for versionlesss
-
-        # now, for this prodcode in the citation_gsheet df, we put "docs" in the "link" column
-        citation_gsheet <- citation_gsheet %>%
-          mutate(
-            link = case_when(
-              ifelse(
-                grepl(
-                  cited_prodcode, macrosheds_prodcode), TRUE, FALSE) & domain == !!domain ~ data_source_link, TRUE ~ link),
-            link_download_datetime = case_when(
-              ifelse(
-                grepl(
-                  cited_prodcode, macrosheds_prodcode), TRUE, FALSE) & domain == !!domain ~ data_source_dt, TRUE ~ link_download_datetime)
-            ## link = case_when(link == "NA" ~ NA, TRUE ~ link)
-          )
-      }
-    }
-  }
-  # then, we write the edited df to the actual google sheet
-  googlesheets4::sheet_write(citation_gsheet, ss = conf$citation_gsheet, sheet = "timeseries")
-  ## return(citation_gsheet)
 }
