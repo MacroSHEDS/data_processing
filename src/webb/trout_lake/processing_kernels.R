@@ -1,10 +1,18 @@
 source('src/webb/sleeper/domain_helpers.R')
-
 install.packages(c('dataRetrieval', 'geoknife', 'sbtools'))
 library(dataRetrieval)
 
 
 #retrieval kernels ####
+network = 'webb'
+domain = 'trout_lake'
+
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
+prodname_ms <- set_details$prodname_ms
+site_code <- set_details$site_code
+component <- set_details$component
+url <- set_details$url
+
 #discharge: STATUS=READY
 #. handle_errors
 
@@ -149,7 +157,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
   # call our dataRetrieval function
   q <- readNWISdv(siteNumber="05357245", parameterCd = "00060")
   
-  # download it to the raw file locatin
+  # download it to the raw file location
   write_csv(q, file = rawfile)
   
   res <- httr::HEAD(set_details$url)
@@ -215,12 +223,18 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+    
+    d <- read.delim(rawfile, sep = ',') %>%
+         mutate(site = '5357215') %>%
+         as_tibble()
+    
+    ms_read_raw_csv()
 
     # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
     temp_dir <- tempdir()

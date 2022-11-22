@@ -364,9 +364,9 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = network,
+    ms_retrieve(network = "webb",
                 # prodname_filter = c('stream_chemistry'),
-                domain = domain)
+                domain = "trout_lake")
 
     ms_munge(network = network,
              prodname_filter = c('stream_chemistry'),
