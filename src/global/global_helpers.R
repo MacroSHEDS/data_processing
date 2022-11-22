@@ -9838,8 +9838,7 @@ postprocess_entire_dataset <- function(site_data,
                                        dataset_version,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
-                                       generate_csv_for_each_product,
-                                       reformat_camels = TRUE,
+                                       generate_csv_for_each_product = FALSE,
                                        push_new_version_to_figshare_and_edi = FALSE){
                                        # filter_ungauged_sites = TRUE){
 
@@ -9952,7 +9951,7 @@ postprocess_entire_dataset <- function(site_data,
                              vv = dataset_version),
                         logger = logger_module)
         fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
-        dir.create(fs_dir, showWarnings = FALSE)
+        dir.create(fs_dir, showWarnings = TRUE)
         prepare_for_figshare(where = fs_dir,
                              dataset_version = dataset_version)
 
@@ -10052,12 +10051,22 @@ manually_edit_eml <- function(){
 
 make_figshare_docs_skeleton <- function(where){
 
-    dir.create(file.path(where, 'macrosheds_documentation'), showWarnings = FALSE, recursive = TRUE)
-    dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
-    dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
-    dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
-    dir.create(file.path(where, 'macrosheds_documentation', '07_CAMELS-compliant_datasets_documentation'), showWarnings = FALSE)
+    # dir.create(file.path(where, 'macrosheds_documentation'), showWarnings = FALSE, recursive = TRUE)
+    # dir.create(file.path(where, 'macrosheds_documentation', '04_site_documentation'), showWarnings = FALSE)
+    # dir.create(file.path(where, 'macrosheds_documentation', '05_timeseries_documentation'), showWarnings = FALSE)
+    # dir.create(file.path(where, 'macrosheds_documentation', '06_ws_attr_documentation'), showWarnings = FALSE)
+    # dir.create(file.path(where, 'macrosheds_documentation', '07_CAMELS-compliant_datasets_documentation'), showWarnings = FALSE)
+    # dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
+
+    dir.create(file.path(where, '0_documentation_and_metadata'), showWarnings = FALSE, recursive = TRUE)
+    dir.create(file.path(where, '0_documentation_and_metadata', '04_site_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, '0_documentation_and_metadata', '05_timeseries_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, '0_documentation_and_metadata', '06_ws_attr_documentation'), showWarnings = FALSE)
+    dir.create(file.path(where, '0_documentation_and_metadata', '07_CAMELS-compliant_datasets_documentation'), showWarnings = FALSE)
     dir.create(file.path(where, 'macrosheds_documentation_packageformat'), showWarnings = FALSE)
+    dir.create(file.path(where, '3_CAMELS-compliant_watershed_attributes'), showWarnings = FALSE)
+    dir.create(file.path(where, '4_CAMELS-compliant_Daymet_forcings'), showWarnings = FALSE)
+    dir.create(file.path(where, '5_shapefiles'), showWarnings = FALSE)
 }
 
 prepare_site_metadata_for_figshare <- function(outfile){
@@ -10383,8 +10392,8 @@ prepare_for_figshare <- function(where, dataset_version){
 
     #prepare documentation and metadata
     make_figshare_docs_skeleton(where = where)
-    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation/04_site_documentation/04a_site_metadata.csv'))
-    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/macrosheds_documentation/variable_metadata.csv'),
+    prepare_site_metadata_for_figshare(outfile = file.path(where, '0_documentation_and_metadata/04_site_documentation/04a_site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, '/0_documentation_and_metadata/variable_metadata.csv'),
                                            fs_format = 'new')
     assemble_misc_docs_figshare(where = where)
 
@@ -10394,20 +10403,12 @@ prepare_for_figshare <- function(where, dataset_version){
     prepare_ws_attr_data_for_figshare(where = where)
 
     #decided to change some dirnames. easiest to just do that as a patch here
-    file.rename(file.path(where, 'macrosheds_documentation'),
-                file.path(where, '0_documentation_and_metadata'))
+    # file.rename(file.path(where, 'macrosheds_documentation'),
+    #             file.path(where, '0_documentation_and_metadata'))
     file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
                 file.path(where, '1_watershed_attribute_data'))
     file.rename(file.path(where, 'macrosheds_timeseries_data'),
                 file.path(where, '2_timeseries_data'))
-
-    #clean up camels-style data
-    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
-        relocate('site_code', .before = p_mean) %>%
-        filter(! grepl('[0-9]{8}', site_code)) %>%
-        arrange(site_code) %>%
-        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
-
 }
 
 convert_ts_feathers_to_csv <- function(where){
@@ -10569,6 +10570,14 @@ prepare_for_edi <- function(where, dataset_version){
     remove_more_neon_stuff_temporarily()
 
     eml_misc(where)
+
+    # WHERE DOES THIS FIT
+    #clean up camels-style data
+    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        relocate('site_code', .before = p_mean) %>%
+        filter(! grepl('[0-9]{8}', site_code)) %>%
+        arrange(site_code) %>%
+        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
 }
 
 combine_ws_attrs <- function(){
@@ -14398,13 +14407,12 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                             mutate(var = 'discharge') %>%
                             mutate(domain = dom)
                     }
-
                 }
 
                 all_sites <- rbind(all_sites, site_q)
 
                 #Stream chemistry concentration
-                if(!file.exists(path_chem) || length(path_flux) == 0) {
+                if(! file.exists(path_chem) || length(path_flux) == 0) {
                     site_chem <- tibble()
                 } else {
 
@@ -14449,7 +14457,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_chem)
 
                 #Stream chemistry flux
-                if(!file.exists(path_flux) || length(path_flux) == 0) {
+                if(! file.exists(path_flux) || length(path_flux) == 0) {
                     site_flux <- tibble()
                 } else {
 
@@ -14493,7 +14501,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_flux)
 
                 #Precipitation
-                if(!file.exists(path_precip) || length(path_precip) == 0) {
+                if(! file.exists(path_precip) || length(path_precip) == 0){
                     site_precip <- tibble()
                 } else {
 
@@ -14532,7 +14540,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                 all_sites <- rbind(all_sites, site_precip)
 
                 #Precipitation chemistry concentration
-                if(!file.exists(path_precip_chem) || length(path_precip_chem) == 0) {
+                if(! file.exists(path_precip_chem) || length(path_precip_chem) == 0){
                     site_precip_chem <- tibble()
                 } else {
 
@@ -14568,18 +14576,17 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                         select(-count) %>%
                         mutate(var = glue('{v}_precip_conc', v = var)) %>%
                         mutate(domain = dom)
-
                 }
 
                 all_sites <- rbind(all_sites, site_precip_chem)
 
                 #Precipitation chemistry flux
-                if(!file.exists(path_precip_flux) || length(path_precip_flux) == 0) {
+                if(! any(file.exists(path_precip_flux)) || length(path_precip_flux) == 0){
                     site_precip_flux <- tibble()
                 } else {
 
                     if(length(path_precip_flux) > 1){
-                        path_precip_flux <- path_precip_flux[!grepl('CUSTOM', path_precip_flux)]
+                        path_precip_flux <- path_precip_flux[! grepl('CUSTOM', path_precip_flux)]
                     }
 
                     site_precip_flux <- read_feather(path_precip_flux)  %>%
@@ -15172,8 +15179,8 @@ reformat_camels_for_ms <- function(){
     geol <- map_dfr(geol_files, read_feather)
     vege <- map_dfr(vege_files, read_feather)
 
-    dir.create('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes')
-    dir.create('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings')
+    dir.create('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes', showWarnings = FALSE)
+    dir.create('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings', showWarnings = FALSE)
 
     write_csv(soil, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/soil.csv')
     write_csv(clim, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/clim.csv')

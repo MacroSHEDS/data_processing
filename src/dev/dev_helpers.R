@@ -1424,7 +1424,7 @@ insert_retrieval_datetimes <- function(){
     }
 }
 
-rebuild_m_and_d_docfiles <- function(network_domain){
+rebuild_derived_docfiles <- function(network_domain){
 
     #if a change is made to retrieval documentation.txt files, you can use this
     #to propagate that change to all the munge and derive documentation.txt files
@@ -1432,8 +1432,8 @@ rebuild_m_and_d_docfiles <- function(network_domain){
 
     for(i in seq_len(nrow(network_domain))){
 
-        ntw = network_domain$network[1]
-        dmn = network_domain$domain[1]
+        ntw = network_domain$network[i]
+        dmn = network_domain$domain[i]
 
         docfiles = list.files(glue('data/{ntw}/{dmn}/derived/documentation'))
         prodnames_ms = str_match(docfiles, 'documentation_(.*?)\\.txt')[, 2]
@@ -1453,14 +1453,15 @@ rebuild_m_and_d_docfiles <- function(network_domain){
 
                 prodname_ms_source = prods %>%
                     filter(prodname == prodname_from_prodname_ms(prodnames_ms[j]),
-                           ! grepl('ms[0-9]+$', prodcode)) %>%
+                           ! grepl('ms[0-9]+$', prodcode),
+                           munge_status == 'ready') %>%
                     mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
                     pull(prodname_ms)
 
                 if(length(prodname_ms_source) != 1) stop()
 
-                write_metadata_d_linkprod(network = network,
-                                          domain = domain,
+                write_metadata_d_linkprod(network = ntw,
+                                          domain = dmn,
                                           prodname_ms_mr = prodname_ms_source,
                                           prodname_ms_d = prodnames_ms[j])
 
