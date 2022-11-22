@@ -206,3 +206,16 @@ all_chem_sites <- c(unique(str_split_fixed(chem_files, '/', n = Inf)[,7]), 'como
 setdiff(all_q_sites0, all_q_sites)
 setdiff(all_q_sites, all_q_sites0)
 
+
+#get counts by network ####
+
+#NEON NOT COUNTED
+
+dd = left_join(site_numbers, network_domain, by = c(domains = 'domain'))
+
+filter(dd, network != 'all', domains != 'neon') %>%
+    summarize(across(-c(domains, network), sum))
+filter(dd, network %in% 'lter' %>%
+    summarize(across(-c(domains, network), sum))
+filter(dd, network %in% c('lter', 'czo')) %>%
+    summarize(across(-c(domains, network), sum))
