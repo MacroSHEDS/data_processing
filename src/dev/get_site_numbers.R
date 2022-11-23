@@ -3,7 +3,9 @@ library(macrosheds)
 library(lubridate)
 library(glue)
 
-setwd('macrosheds/data_acquisition/')
+setwd('~/git/macrosheds/data_acquisition/')
+
+rm_dmns = c('neon')
 
 # tally sites from data_acquisition/macrosheds_figshare_X/macrosheds_timeseries_data ####
 
@@ -42,7 +44,11 @@ for(i in 1:length(doms)){
     site_numbers <- rbind(site_numbers, this_domain)
 }
 
-write_csv(site_numbers, 'site_count.csv')
+filter(site_numbers, ! domains %in% c(rm_dmns, 'all')) %>%
+    summarize(across(-domains, sum))
+
+
+# write_csv(site_numbers, 'site_count.csv')
 
 # tally sites from data_acquisition/data ####
 all_fis <- list.files('data/', recursive = T, full.names = T)
