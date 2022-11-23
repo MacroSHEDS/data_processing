@@ -9967,6 +9967,9 @@ postprocess_entire_dataset <- function(site_data,
         #                 logger = logger_module)
         # legal_details_scrape(dataset_version = dataset_version)
 
+        warning('TEMPORARY: removing all remaining NEON data, flux data, and in-progress domains')
+        remove_flux_neon_etc(where)
+
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
                         logger = logger_module)
@@ -10001,7 +10004,62 @@ postprocess_entire_dataset <- function(site_data,
     message('PUSH NEW macrosheds package version now that figshare ids are updated (still relevant?)')
 }
 
-remove_more_neon_stuff_temporarily <- function(){
+remove_flux_neon_etc <- function(where){
+
+    #rm domains
+
+    # rm_ntws <- c('neon', 'webb', 'mwo')
+    rm_dmns <- c('neon', 'sleeper', 'sleepers', 'loch_vale', 'trout_lake', 'panola', 'swwd')
+
+    loc <- glue('{where}/0_documentation_and_metadata/04_site_documentation/04a_site_metadata.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    loc <- glue('{where}/0_documentation_and_metadata/08_data_irregularities.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    loc <- glue('{where}/1_watershed_attribute_data/ws_attr_summaries.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    loc <- glue('{where}/1_watershed_attribute_data/ws_attr_summaries.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    loc <- glue('{where}/macrosheds_documentation_packageformat/site_metadata.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    loc <- glue('{where}/macrosheds_documentation_packageformat/variable_catalog.csv')
+    read_csv(loc) %>%
+        filter(! domain %in% rm_dmns) %>%
+        write_csv(loc)
+
+    #rm flux
+
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv')
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/02_glossary.txt')
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05c_timeseries_variable_metadata_column_descriptions.txt')
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib')
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05d_timeseries_column_descriptions.txt')
+    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv')
+    # loc <- glue('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/climate.csv')
+    loc <- glue('{where}/macrosheds_documentation_packageformat/variable_catalog.csv')
+    read_csv(loc) %>%
+        filter(! chem_category %in% c('precip_flux', 'stream_flux')) %>%
+        write_csv(loc)
+    # loc <- glue('macrosheds_figshare_v1/macrosheds_documentation_packageformat/variable_metadata.csv')
+    # read_lines(loc) %>%
+    #     str_subset('precip_flux')
+}
+
+remove_more_stuff_temporarily <- function(){
     st_delete('macrosheds_figshare_v1/5_shapefiles/neon_stream_gauge_locations.shp', driver = 'ESRI Shapefile')
 }
 
@@ -10328,13 +10386,23 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
         setwd(parent_folder)
 
         ## TEMP
-        warning('temporarily removing all flux data from figshare dataset')
+        warning('temporarily removing flux from ts data')
         flux_dirs_to_rm <- grep(pattern = 'flux',
                                 x = list.files(dmn,
                                                full.names = TRUE),
                                 value = TRUE)
         invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
 
+        zz <- list.files(glue('{dmn}/documentation'), full.names = TRUE, recursive = TRUE)
+        file.remove(grep('flux_inst', zz, value = TRUE))
+        pppf = grep('precip_pchem_pflux', zz, value = TRUE)
+        if(length(pppf) > 1) stop()
+        if(length(pppf) == 1){
+            read_file(pppf) %>%
+                str_replace('Special note for flux products:\nOur instantaneous stream flux product is called \"stream_flux_inst\" during standard kernel \nprocessing, but its name changes to \"stream_flux_inst_scaled\" during postprocessing, when each value\nis scaled by watershed area. Consider both of these variant names to refer to the same product wherever\nyou encounter them in our documentation. The same goes for \"precip_flux_inst\" and \"precip_flux_inst_scaled\".\nMore information about postprocessing code is included below.',
+                            'Special note: flux products are currently not included with the published dataset, but can be generated\nvia the macrosheds package for R. We will soon publish robust annual and monthly\nflux estimates for each siteyear, and at that time we may begin publishing instantaneous flux as well.') %>%
+                write_file(pppf)
+        }
 
         ## remove the prodcode extensions from dirnames
         rslt <- character()
@@ -10446,6 +10514,8 @@ combine_ts_csvs <- function(where){
                      recursive = TRUE,
                      pattern = '\\.csv',
                      full.names = TRUE)
+
+    if(any(grepl('flux_inst', fs))) stop('this isnt set up to separate flux and chem. need a way to do that')
 
     domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.csv$')[, 2])
 
@@ -10567,20 +10637,14 @@ prepare_for_edi <- function(where, dataset_version){
                                      to = file.path(where, '5_shapefiles'))
 
     #TEMPORARY
-    remove_more_neon_stuff_temporarily()
+    remove_more_stuff_temporarily()
 
     eml_misc(where)
 
-    # WHERE DOES THIS FIT
-    #clean up camels-style data
-    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
-        relocate('site_code', .before = p_mean) %>%
-        filter(! grepl('[0-9]{8}', site_code)) %>%
-        arrange(site_code) %>%
-        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
+    warning('compile automated chunks from build_eml_templates.R here. EDI dataset was built with haste last time, but EML and data builds are automatable')
 }
 
-combine_ws_attrs <- function(){
+combine_ws_attrs <- function(where){
 
     #ms-standard watershed attributes
     ws_attrs <- list.files(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'),
@@ -10632,6 +10696,13 @@ eml_misc <- function(where){
     zip(zipfile = 'eml/data_links/shapefiles.zip',
         files = 'eml/data_links/shapefiles',
         flags = '-r9Xq')
+
+    #clean up camels-style data
+    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        relocate('site_code', .before = p_mean) %>%
+        filter(! grepl('[0-9]{8}', site_code)) %>%
+        arrange(site_code) %>%
+        write_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
 }
 
 prepare_for_figshare_packageformat <- function(where, dataset_version){

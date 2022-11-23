@@ -1,12 +1,15 @@
 #don't source this file. it was used in the creation of macrosheds/data_processing/eml,
 #but everything in there should now be edited manually or piecemeal
+#ADDENDUM: ...except data_links, which are generated here. these should be generated
+#in prepare_for_edi. sections with ** belong there. also heed the stop message
+#and all TEMPORARY flags below.
 
 stop('if this is for macrosheds > v1, generalize paths')
 
-#REMOVE THIS WHEN mwo network is included
-rm_networks <- 'mwo'
+#TEMPORARY**
+rm_networks <- c('webb', 'mwo', 'neon')
 
-#update this if necessary
+#update this if necessary**
 non_lter_networks_on_edi <- c('bear')
 
 #also look through creator_name1 and contact_name1 on https://docs.google.com/spreadsheets/d/1x38OiUPhD7C3m0vBj2kRZO_ORQrks4aOo0DDrFBjY7I/edit#gid=1195899788
@@ -17,7 +20,7 @@ library(tidyverse)
 library(glue)
 library(googlesheets4)
 
-# setup ####
+# setup** ####
 
 setwd('~/git/macrosheds/data_acquisition')
 
@@ -38,6 +41,7 @@ googlesheets4::read_sheet(
     na = c('', 'NA'),
     col_types = 'c'
 ) %>%
+    filter(! network %in% rm_networks) %>%
     rename(ws_status = watershed_type, pulse_or_chronic = disturbance_type,
            disturbance = disturbance_def, details = disturbance_ex) %>%
     write_csv(file.path(dd, 'disturbance_record.csv'))
@@ -52,7 +56,7 @@ googlesheets4::read_sheet(
     mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE)) %>%
     write_csv(file.path(dd, 'attribution_and_intellectual_rights_ws_attr.csv'))
 
-# helpers ####
+# helpers** ####
 
 get_edi_identifier <- function(x){
 
@@ -118,6 +122,8 @@ split_names <- function(x){
     return(xsep)
 }
 
+sw = suppressWarnings
+
 # eml dictionaries (as needed) ####
 
 view_unit_dictionary()
@@ -129,12 +135,12 @@ more_unit_types = sort(unique(zz$units$unitType))
 units = sort(unique(zz$units$id))
 filter(zz$units, unitType == 'time') %>% pull(id)
 
-# collect files that will be included. link them to a single directory ####
+# collect files that will be included. link them to a single directory** ####
 
 ##build provenance table
 
 prov <- readxl::read_xlsx('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-                                skip = 6) %>%
+                                skip = 5) %>%
     mutate(dataPackageID = NA_character_, systemID = NA_character_, title = NA_character_,
            givenName = NA_character_, middleInitial = NA_character_,
            surName = NA_character_, role = NA_character_,
@@ -144,7 +150,7 @@ prov <- readxl::read_xlsx('macrosheds_figshare_v1/0_documentation_and_metadata/0
            email = contact, onlineDescription = citation, url = link, contact_name1, creator_name1)
 
 #TEMP
-prov <- filter(prov, organizationName != rm_networks)
+prov <- filter(prov, ! organizationName %in% rm_networks)
 
 lter_sites <- prov$organizationName == 'lter'
 other_edi_sites <- prov$organizationName %in% non_lter_networks_on_edi
@@ -260,30 +266,67 @@ descriptions <- str_replace(descriptions,
                             'Number of observations, timespan of observation, by variable and site')
 
 for(i in seq_along(files_to_link)){
-    suppressWarnings(file.link(files_to_link[i], link_locs[i]))
+    sw(file.remove(link_locs[i]))
+    sw(file.link(files_to_link[i], link_locs[i]))
 }
 
 #link additional files that will be grouped under "other entities"
+sw(file.remove(file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
           file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx'))
-message('remove the second and third sheets from attribution_and_intellectual_rights_ts.xlsx')
+message('manually remove the second and third sheets from attribution_and_intellectual_rights_ts.xlsx')
+sw(file.remove(file.path(dd, 'data_use_agreements.docx')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
           file.path(dd, 'data_use_agreements.docx'))
+sw(file.remove(file.path(dd, 'timeseries_refs.bib')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib',
           file.path(dd, 'timeseries_refs.bib'))
+sw(file.remove(file.path(dd, 'ws_attr_refs.bib')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06h_ws_attr_refs.bib',
           file.path(dd, 'ws_attr_refs.bib'))
+sw(file.remove(file.path(dd, 'changelog.txt')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/03_changelog.txt',
           file.path(dd, 'changelog.txt'))
+sw(file.remove(file.path(dd, 'glossary.txt')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/02_glossary.txt',
           file.path(dd, 'glossary.txt'))
 
-file.copy('macrosheds_figshare_v1/5_shapefiles', dd, recursive = TRUE)
-file.rename('eml/data_links/5_shapefiles', 'eml/data_links/shapefiles')
+#this is now taken care of during automated prep
+# file.copy('macrosheds_figshare_v1/5_shapefiles', dd, recursive = TRUE)
+# file.rename('eml/data_links/5_shapefiles', 'eml/data_links/shapefiles')
+# setwd(dd)
+# zip('shapefiles.zip', files = list.files('shapefiles', full.names = TRUE), flags = '-r9Xq')
+# unlink('shapefiles', recursive = TRUE)
+# setwd('../..')
+
+#zip documentation.txt files together (doing this as an afterthought)
+
+docfiles <- list.files('macrosheds_figshare_v1/2_timeseries_data',
+                            full.names = TRUE, recursive = TRUE,
+                            pattern = 'documentation_.*?\\.txt')
+
+docdir = glue('eml/{dd}/code_autodocumentation')
+dir.create(docdir)
+
+ntws = unique(str_match(docfiles, '^macrosheds_figshare_v1/2_timeseries_data/([a-z_]+)')[, 2])
+for(i in seq_along(ntws)){
+
+    dir.create(file.path(docdir, ntws[i]))
+    dmns = list.files(glue('macrosheds_figshare_v1/2_timeseries_data/{ntws[i]}'))
+    dmns = grep('\\.csv', dmns, invert = TRUE, value = TRUE)
+    for(j in seq_along(dmns)){
+
+        dir.create(file.path(docdir, ntws[i], dmns[j]))
+        fs = list.files(glue('macrosheds_figshare_v1/2_timeseries_data/{ntws[i]}/{dmns[j]}/documentation'), full.names = TRUE)
+        fs = grep('README.txt$', fs, invert = TRUE, value = TRUE)
+        file.copy(fs, file.path(docdir, ntws[i], dmns[j]))
+    }
+}
+
 setwd(dd)
-zip('shapefiles.zip', files = list.files('shapefiles', full.names = TRUE), flags = '-r9Xq')
-unlink('shapefiles', recursive = TRUE)
+zip('code_autodocumentation.zip', files = list.files('code_autodocumentation', full.names = TRUE), flags = '-r9Xq')
 setwd('../..')
+
 
 # generate eml templates. these need to be manually modified ####
 
@@ -343,7 +386,7 @@ for(td in ts_dmns){
 
 # template_categorical_variables(wd, dd)
 
-# write EML ####
+# write EML** ####
 
 # temporal_coverage <- map(ts_tables, ~range(read_csv(.)$datetime)) %>%
 #     reduce(~c(min(c(.x[1], .y[1])), max(c(.x[2], .y[2]))))
@@ -366,14 +409,16 @@ make_eml(wd, dd, ed,
                           'timeseries_refs.bib',
                           'ws_attr_refs.bib',
                           'changelog.txt',
-                          'glossary.txt'),
+                          'glossary.txt',
+                          'code_autodocumentation.zip'),
          other.entity.name = c('shapefiles.zip',
                                'attribution_and_intellectual_rights_ts.xlsx',
                                'data_use_agreements.docx',
                                'timeseries_refs.bib',
                                'ws_attr_refs.bib',
                                'changelog.txt',
-                               'glossary.txt'),
+                               'glossary.txt',
+                               'code_autodocumentation.zip'),
          other.entity.description = c(
              'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
              'Specific license requirements and expectations associated with each primary time-series dataset. See data_use_agreements.docx and attribution_and_intellectual_right_ws_attr.csv',
@@ -381,7 +426,8 @@ make_eml(wd, dd, ed,
              'Complete bibliographic references for time-series data.',
              'Complete bibliographic references for watershed attribute data.',
              'List of changes made since the last version of the MacroSheds dataset.',
-             'Glossary of terms related to the MacroSheds dataset.'),
+             'Glossary of terms related to the MacroSheds dataset.',
+             'Programmatically assembled pseudo-scripts intended to help users recreate/edit specific MacroSheds data products (Also see our code on GitHub).'),
          other.entity.url = NULL,
          user.id = conf$edi_user_id,
          user.domain = NULL, #pretty sure this doesn't apply to us
