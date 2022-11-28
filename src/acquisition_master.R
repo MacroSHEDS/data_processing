@@ -138,7 +138,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
     
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -274,9 +274,10 @@ gee_login <- case_when(
 googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
-#initialize and authorize GEE account
-try(rgee::ee_Initialize(user = gee_login,
-                        drive = TRUE))
+# uncomment later
+# #initialize and authorize GEE account
+# try(rgee::ee_Initialize(user = gee_login,
+#                         drive = TRUE))
                         
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -321,8 +322,9 @@ dir.create('logs', showWarnings = FALSE)
 # this function will update the citation sheet with the data and url of raw data download
 scrape_data_download_urls()
 
+# comment out later
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'panola')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -353,7 +355,7 @@ for(dmnrow in 1:nrow(network_domain)){
                        n = network,
                        d = domain))
 
-    # this should only run when you have your producs.csv
+    # this should only run when you have your products.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
                            domain = domain)
