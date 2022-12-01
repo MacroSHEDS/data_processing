@@ -1,0 +1,44 @@
+MacroSheds time-series variable metadata
+Column names and their descriptions
+
+
+1. variable_code
+
+A brief representation of the name of a MacroSheds variable. Used ubiquitously to refer to variables within the MacroSheds processing system, package, and dataset.
+
+
+2. variable_name
+
+The full name of a MacroSheds variable. Used on macrosheds.org
+
+
+3. chem_category
+
+Some chemistry variables are measured in streams and precipitation. Further, some can be converted from concentrations to fluxes. In MacroSheds dataset v1, this column distinguishes only stream vs precip. NA means the variable is not generally represented as either concentration or flux.
+
+
+4. unit
+
+The unit of the variable in the MacroSheds dataset. 
+
+
+5. observations
+
+The total number of records in the MacroSheds dataset that contain the variable.
+
+
+6. n_sites
+
+The total number of sites within MacroSheds at which the variable has been measured.
+
+
+7. first_record_utc
+
+The datetime of the earliest recording of the variable (known to MacroSheds), in UTC.
+
+
+8. last_record_utc
+
+The datetime of the most recent recording of the variable (known to MacroSheds), in UTC.
+
+

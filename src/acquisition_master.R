@@ -4,15 +4,18 @@ suppressPackageStartupMessages({
     #since we're referring to their functions directly with ::
 
     # #spatial packages
-    # library(gstat) #must load before raster package
-    # # library(terra)  #must load before gstat package
-    # library(raster) #raster has been replaced by terra (way faster)
-    # library(stars)
-    # library(sf)
+    # library(terra)  #must load before gstat package (which isn't currently needed)
+    # # library(gstat) #must load before raster package (not needed)
+    # library(raster)
+    # # library(stars) #not needed (yet)
+    library(sf) #must load here in order to look for sf::sf_use_s2 (below)
     # library(sp)
     # library(mapview)
     # library(elevatr)
     # library(rgee)
+    # remotes::install_github("giswqs/whiteboxR")
+    # library(whitebox)
+    # library(nhdplusTools)
 
     #everything else
     library(httr)
@@ -32,67 +35,383 @@ suppressPackageStartupMessages({
     library(PeriodicTable)
     library(imputeTS)
     library(errors)
-    library(foreach)
-    library(doParallel)
+    library(foreach) #loaded by doFuture
+    library(doParallel) #replaced by doFuture, but still needed on BM1
+    library(doFuture)
+    library(googlesheets4)
+    library(googledrive)
+    library(rgee) #requires geojsonio package
+    library(osmdata)
 
+    # install.packages("BiocManager") #required to get the IRanges package
+    # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
+    # library(fuzzyjoin) #nvm. too memory inefficient. implementing rolling join
+    #   from data.table instead
+
+    #other stuff we need when R updates
+    # install.packages('geojsonio')
 })
 
-try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #mike
-try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
-try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
-try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+#set the dataset version. This is used to name the output dataset and diagnostic
+#plots. it will eventually be set automatically at the start of each run.
+#(or after each run that results in a change)
+vsn <- 1.0
+
+options(dplyr.summarise.inform = FALSE,
+        timeout = 300,
+        readr.show_progress = FALSE,
+        readr.show_col_types = FALSE)
+
+ms_init <- function(use_gpu = FALSE,
+                    use_multicore_cpu = TRUE,
+                    use_ms_error_handling = TRUE,
+                    force_machine_status,
+                    config_storage_location = 'remote'){
+
+    #TODO:
+    #could add args that override automatically set instance_type, machine_status
+    #hook up use_multicore_cpu parameter (changes nothing currently)
+    #if we ever find a way to benefit from GPU computing, hook up that param too.
+
+    #use_gpu: logical. leverage GPU for turbo multithreading. not currently connected
+    #   to anything, because we don't yet have a way to benefit from GPU in R
+    #use_multicore_cpu: logical. if on a multicore machine, use all cores.
+    #   not currently hooked up. Update this parameter so that it also allows
+    #   HPC on a cluster. currently, we just determine whether the instance is
+    #   on DCC with one of the setwd hacks below.
+    #use_ms_error_handling. logical. if TRUE, errors are handled and processing
+    #   continues. if FALSE, the handle_errors decorator is not invoked, and
+    #   standard R error handling ensues.
+    #force_machine_status: override the default machine_status for the machine
+    #   you're using. options are 'n00b' and '1337'. Among other (future) things,
+    #   this determines the granularity of downloaded DEMs for watershed
+    #   delineation
+    #config_storage_location: either 'local' or 'remote'.
+    #   governs whether site_data, variables, ws_delin_specs, etc are searched
+    #   for as local CSV files or as google sheets connections.
+
+    #attempts to set working directory for various machines involved in the
+    #   macrosheds project. determines from success/failure whether the current
+    #   instance is a development instance (interactive) or a server
+    #   (production) instance.
+
+    #returns details about the current instance. these details can be
+    #   used to tailor run specifications (which code to run, and how to run it)
+    #   to the current machine:
+    #   "dev" or "server" accordingly
+
+    successes <- 0
+    which_machine <- 'unknown'
+
+    # example dev computer 'registration' code block
+    ## res <- try(setwd('~/your/file/path/to/macrosheds/data_processing'), silent=TRUE) # example
+    ## if(! 'try-error' %in% class(res)){
+    ##     successes <- successes + 1
+    ##     which_machine <- 'your_machine') # machine name is completely up to you, does not matter
+    ##     instance_type <- 'dev' # instance type is 'dev' for all personal computers
+    ##     machine_status <- 'n00b' # unless you have > 32GB of RAM and > 8 CPUS, your 'n00b'
+    ##     op_system <- 'mac' # whats your OS?
+    ## }
+
+    res <- try(setwd('~/macrosheds_data_processing'), silent=TRUE) #DCC
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'DCC'
+        instance_type <- 'server'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
+    res <- try(setwd('~/git/macrosheds/data_acquisition'), silent=TRUE) #BM1
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM1'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
+    res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM0'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
+
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'hec'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'macOS'
+    }
+
+    res <- try(setwd('~/desktop/macrosheds/data_acquisition'), silent=TRUE) #spencer
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'Spencer'
+        instance_type <- 'dev'
+        machine_status <- 'n00b'
+        op_system <- 'mac'
+    }
+
+    res <- try(setwd('~/Desktop/MacroSheds/data_processing/src/data_acquisition'), silent=TRUE) #pranavi
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'Pranavi'
+      instance_type <- 'dev'
+      machine_status <- 'n00b'
+      op_system <- 'mac'
+    }
+
+    res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'nick'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
+
+    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM2'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
+    res <- try(setwd('C:/Users/ws184/Documents/Projects/MacroSheds/data_aquisition'), silent=TRUE) #WesBm0
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'BM0'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'windows'
+    }
+
+    # try(setwd('C:/Users/mrvr/Desktop/mike/data_acquisition/'), silent=TRUE) #matt
+    # if(! 'try-error' %in% class(res)){
+    #     which_machine <- 'Matt'
+    #     successes <- successes + 1
+    #     instance_type <- 'dev'
+    #     machine_status <- '1337'
+    # }
+
+    res <- try(setwd('/home/weston/science/macrosheds/data_processing'), silent=TRUE) # wes
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'wes'
+        instance_type <- 'dev'
+        machine_status <- '1337'
+        op_system <- 'linux'
+    }
+
+    res <- try(setwd('/home/macrosheds/data_acquisition'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+        successes <- successes + 1
+        which_machine <- 'server'
+        instance_type <- 'server'
+        machine_status <- '1337'
+        op_system <- NA
+    }
+
+
+    res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
+    if(! 'try-error' %in% class(res)){
+      successes <- successes + 1
+      which_machine <- 'bini'
+      instance_type <- 'dev'
+      machine_status <- 'noob'
+      op_system <- 'windows'
+    }
+
+    if(successes > 1){
+        stop(glue('more than one working directory was available. must set the ',
+                  'correct one manually'))
+    } else if(successes == 0){
+        stop('failed to set working directory. update ms_setwd() with your wd path')
+    }
+
+    if(! missing(force_machine_status)) machine_status <- force_machine_status
+
+    instance_details <- list(which_machine = which_machine,
+                             instance_type = instance_type,
+                             machine_status = machine_status,
+                             use_gpu = use_gpu,
+                             use_multicore_cpu = use_multicore_cpu,
+                             use_ms_error_handling = use_ms_error_handling,
+                             config_data_storage = 'remote',
+                             op_system = op_system,
+                             config_data_storage = config_storage_location)
+
+    return(instance_details)
+}
+
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
+                    #   force_machine_status = 'n00b',
+                       config_storage_location = 'remote')
+
+#load authorization file for macrosheds google sheets
+googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+
+#read in secrets
+conf <- jsonlite::fromJSON('config.json',
+                           simplifyDataFrame = FALSE)
+
 
 #connect rgee to earth engine and python
-try(rgee::ee_Initialize(email = 'spencerrhea41@gmail.com', drive = TRUE))
+gee_login <- case_when(
+    ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~ conf$gee_login_ms,
+    TRUE ~ 'UNKNOWN')
 
-conf = jsonlite::fromJSON('config.json')
+#load authorization file for macrosheds google sheets and drive
+#same account must have GEE and GDrive access
+googlesheets4::gs4_auth(email = gee_login)
+googledrive::drive_auth(email = gee_login)
+
+#initialize and authorize GEE account
+try(rgee::ee_Initialize(user = gee_login,
+                        drive = TRUE))
 
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
-logging::addHandler(logging::writeToFile, logger='ms',
-    file='logs/0_ms_master.log')
+logging::addHandler(logging::writeToFile,
+                    logger = 'ms',
+                    file = 'logs/0_ms_master.log')
 
-source('src/dev_helpers.R') #comment before pushing live
 source('src/global/global_helpers.R')
-source_decoratees('src/global/global_helpers.R') #parse decorators
+source('src/dev/dev_helpers.R') #comment before pushing live
 
-ms_vars <- sm(read_csv('data/general/variables.csv'))
-network_domain <- sm(read_csv('data/general/site_data.csv')) %>%
-    filter(as.logical(in_workflow)) %>%
+if(ms_instance$use_ms_error_handling){
+    source_decoratees('src/global/global_helpers.R') #parse decorators
+}
+
+#puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
+load_config_datasets(from_where = ms_instance$config_data_storage)
+
+domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
+                                                        vs = ms_vars,
+                                                        update_on_gdrive = TRUE)
+
+unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
+superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
+
+run_checks()
+
+site_data <- filter(site_data,
+                    as.logical(in_workflow))
+
+network_domain <- site_data %>%
     select(network, domain) %>%
     distinct() %>%
     arrange(network, domain)
 
-ms_globals = c(ls(all.names=TRUE), 'ms_globals')
+ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# dmnrow=1
+# NOTE: this should be moved I believe, and made to work with the raw data
+# dcumentation of the latest iteration...
+# this function will update the citation sheet with the data and url of raw data download
+scrape_data_download_urls()
+
+## change string in line below to find row index of your desired domain
+## dmnrow <- which(network_domain$domain == 'loch_vale')
+network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
-# for(dmnrow in 2){
 
-    network = network_domain$network[dmnrow]
-    domain = network_domain$domain[dmnrow]
+    # drop_automated_entries('.') #use with caution!
+    # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
-    logger_module = set_up_logger(network=network, domain=domain)
-    loginfo(logger=logger_module,
-        msg=glue('Processing network: {n}, domain: {d}', n=network, d=domain))
+    network <- network_domain$network[dmnrow]
+    domain <- network_domain$domain[dmnrow]
 
-    update_product_statuses(network=network, domain=domain)
-    get_all_local_helpers(network=network, domain=domain)
+    held_data = get_data_tracker(network, domain)
 
-    ms_retrieve(network=network, domain=domain)
-    ms_munge(network=network, domain=domain)
-    ms_derive(network=network, domain=domain)
-    ms_general(network=network, domain=domain)
+    ## dangerous lines - use at your own risk!    :0
+    held_data = invalidate_tracked_data(network, domain, 'munge')
+    owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive')
+    owrite_tracker(network, domain)
+
+    ## less dangerous version below, clears tracker for just a specified product
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    ## owrite_tracker(network, domain)
+
+    logger_module <- set_up_logger(network = network,
+                                   domain = domain)
+
+    loginfo(logger = logger_module,
+            msg = glue('Processing network: {n}, domain: {d}',
+                       n = network,
+                       d = domain))
+
+    # this should only run when you have your producs.csv
+    # and processing kernels prod information matching
+    update_product_statuses(network = network,
+                           domain = domain)
+
+    get_all_local_helpers(network = network,
+                          domain = domain)
+
+    # stop here and go to processing_kernels.R to continue
+    # ms_retrieve(network = network,
+    #             # prodname_filter = c('stream_chemistry'),
+    #             domain = domain)
+
+    ms_munge(network = network,
+             # prodname_filter = c('stream_chemistry'),
+             domain = domain)
+
+    # if(domain != 'mcmurdo'){
+    #     sw(ms_delineate(network = network,
+    #                     domain = domain,
+    #                     dev_machine_status = ms_instance$machine_status,
+    #                     verbose = TRUE))
+    # }
+
+    ms_derive(network = network,
+              prodname_filter = c('stream_chemistry'),
+              domain = domain)
+
+    # if(domain != 'mcmurdo'){
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = TRUE)
+    # }
 
     retain_ms_globals(ms_globals)
 }
 
+logger_module <- 'ms.module'
+
+#use this e.g. if someone else ran (part of) the loop above and you downloaded its output
+# rebuild_portal_data_before_postprocessing(network_domain = network_domain,
+#                                           backup = TRUE)
+
+postprocess_entire_dataset(site_data = site_data,
+                           network_domain = network_domain,
+                           dataset_version = vsn,
+                           thin_portal_data_to_interval = NA,#'1 day',
+                           populate_implicit_missing_values = TRUE,
+                           generate_csv_for_each_product = FALSE,
+                           push_new_version_to_figshare_and_edi = FALSE)
 
 if(length(email_err_msgs)){
-    email_err(email_err_msgs, conf$report_emails, conf$gmail_pw)
+    email_err(msgs = email_err_msgs,
+              addrs = conf$report_emails,
+              pw = conf$gmail_pw)
 }
 
-loginfo('Run complete', logger='ms.module')
+loginfo(msg = 'Run complete',
+        logger = logger_module)
 

@@ -3,6 +3,7 @@
 #this will make packaging easier and more professional
 
 read_csv = readr::read_csv
+write_csv = readr::write_csv
 read_feather = feather::read_feather
 write_feather = feather::write_feather
 glue = glue::glue
@@ -49,3 +50,9 @@ map = purrr::map
 map2 = purrr::map
 st_read = sf::st_read
 errors = errors::errors
+drop_errors = errors::drop_errors
+set_errors = errors::set_errors
+pivot_wider = tidyr::pivot_wider
+pivot_longer = tidyr::pivot_longer
+rename = dplyr::rename
+where = tidyselect:::where

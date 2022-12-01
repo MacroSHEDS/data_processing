@@ -1,0 +1,14 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,CUSTOMprecipitation,ready,ready,NA,CUSTOMprecip_flux_inst__ms004,NA,fernow_precip
+VERSIONLESS002,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,fernow_discharge
+VERSIONLESS003,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms002,NA,fernow_precip_chem
+VERSIONLESS004,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,fernow_stream_chem
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms003,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms002,NA,NA
+ms002,precip_pchem_pflux,NA,NA,ready,CUSTOMprecip_flux_inst__ms004,NA,NA
+ms004,CUSTOMprecip_flux_inst,NA,NA,ready,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms002,automated entry,NA
+ms005,CUSTOMprecipitation,NA,NA,linked,NA,automated entry,NA
+ms006,discharge,NA,NA,linked,NA,automated entry,NA
+ms007,stream_chemistry,NA,NA,linked,NA,automated entry,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA
