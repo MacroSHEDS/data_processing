@@ -23,13 +23,13 @@ for(s in sites){
     wq = get_siteprod(s, water_qual_path)
 
     wq = wq %>%
-        select(site_name, startDateTime, starts_with('specificCond'),
+        select(site_code, startDateTime, starts_with('specificCond'),
             sensorDepthFinalQF) %>%
         filter_at(vars(ends_with('QF')), all_vars(. != 1 | is.na(.))) %>%
         select(-ends_with('QF'), -one_of('specificConductanceExpUncert')) %>%
         mutate(startDateTime = force_tz(startDateTime, 'UTC')) %>%
         distinct() %>%
-        arrange(site_name, startDateTime)
+        arrange(site_code, startDateTime)
 
     if(nrow(wq) == 0 ||
             ! 'specificConductance' %in% colnames(wq) ||
@@ -38,18 +38,18 @@ for(s in sites){
         next
     }
 
-    site_locs = unique(wq$site_name)
+    site_locs = unique(wq$site_code)
 
     xlims = range(wq$startDateTime, na.rm=TRUE)
     ylims = range(wq$specificConductance, na.rm=TRUE)
 
-    plot(wq$startDateTime[wq$site_name == site_locs[1]],
-        wq$specificConductance[wq$site_name == site_locs[1]],
+    plot(wq$startDateTime[wq$site_code == site_locs[1]],
+        wq$specificConductance[wq$site_code == site_locs[1]],
         bty='l', main=s, type='p', col=cols[1], pch=20, ylim=ylims,
         xlim=xlims, cex=0.7, xlab='', ylab='')
     if(length(site_locs) == 2){
-        points(wq$startDateTime[wq$site_name == site_locs[2]],
-            wq$specificConductance[wq$site_name == site_locs[2]],
+        points(wq$startDateTime[wq$site_code == site_locs[2]],
+            wq$specificConductance[wq$site_code == site_locs[2]],
             col=cols[2], pch=20, cex=0.7)
     }
 

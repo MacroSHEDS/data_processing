@@ -1,0 +1,97 @@
+MacroSheds site metadata
+Column names and their descriptions
+
+
+network:
+
+MacroSheds network ID code. Networks include one or more domains under common funding/leadership. See "domain".
+
+
+network_fullname:
+
+Not exactly "full", but at least a properly capitalized version of the network ID.
+
+
+domain:
+
+MacroSheds domain ID code. Domains include one or more sites under common management. See "site_code".
+
+
+domain_fullname:
+
+An expanded, or at least properly capitalized, rendering of the domain ID. Intended for nothing more than to resolve any potential acronym ambiguity.
+
+
+site_code:
+
+The ID code assigned to an individual MacroSheds gauging station or stream sampling location and its watershed.
+ID's assigned by primary sources are used wherever without modification wherever reasonable.
+
+
+site_fullname:
+
+The complete name of a site, as given by its primary source.
+
+
+stream_name:
+
+The name of the stream or river on which the site is established.
+
+
+site_type:
+
+Either "stream_gauge", meaning at least one installed instrument is present, or "stream_sampling_point",
+meaning only grab samples are collected at the site.
+
+
+ws_status:
+
+If the watershed associated with the site has ever undergone research-related manupilation, such as
+experimental deforestation or nutrient addition, this column will show "experimental". Otherwise, 
+"non-experimental". NA means we're not sure.
+
+
+latitude:
+
+The latitude of the site in decimal degrees. See "epsg_code".
+
+
+longitude:
+
+The longitude of the site in decimal degrees. See "epsg_code".
+
+
+epsg_code:
+
+The geodetic datum associated with the site's lat/long. At present, all coordiates reference
+WGS 84. The epsg code for WGS 84 is 4326.
+
+
+ws_area_ha:
+
+The watershed area in hectares.
+
+
+n_observations:
+
+The total number of observed records for all variables at the site.
+
+
+n_variables:
+
+The total number of variables ever collected at the site.
+
+
+first_record_utc:
+
+The datetime of the earliest record collected at the site (and assimilated into MacroSheds), in UTC.
+
+
+last_record_utc:
+
+The datetime of the most recent record collected at the site (and assimilated into MacroSheds), in UTC.
+
+
+timezone_olson:
+
+The Olson name for the local timezone of the site.

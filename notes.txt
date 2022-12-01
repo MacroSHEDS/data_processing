@@ -9,3 +9,10 @@ setting up timescaledb:
     connect to console with sudo -u postgres psql; not the 
 
 rgdal must be installed for derive kernels to work
+
+WHEN WE MOVE PROCESSING TO SERVER
+will need to set up credentials for:
+    gdrive
+    gee
+    figshare
+    
