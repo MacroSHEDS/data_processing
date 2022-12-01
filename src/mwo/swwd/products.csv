@@ -1,0 +1,4 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONLESS001,discharge,ready,ready,,stream_flux_inst__ms001,http://wq.swwdmn.org/downloads/new?opts=trout-brook%252Fgauge&site_id=trout-brook&site_label=Trout+Brook,swwd_discharge,https://docs.google.com/spreadsheets/d/1WWa7ksduQ2d1iJLeD44xPf6rkJgJ_56B/edit?usp=sharing&ouid=116436357746257286081&rtpof=true&sd=true
+VERSIONLESS002,stream_chemistry,ready,ready,,stream_flux_inst__ms001,http://wq.swwdmn.org/downloads/new?opts=trout-brook%252Fmanual&site_id=trout-brook&site_label=Trout+Brook,swwd_stream_chemistry,https://docs.google.com/spreadsheets/d/1VstZij-ix_7L1o_T7c5ERsyNB1N3AWis/edit?usp=sharing&ouid=116436357746257286081&rtpof=true&sd=true
+ms001,stream_flux_inst,,,ready,NA,NA,NA,

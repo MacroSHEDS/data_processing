@@ -2,9 +2,9 @@ zz = read_combine_feathers(network = 'neon',
                            domain = 'neon',
                            prodname_ms = 'stream_quality__DP1.20288')
 spc = zz %>%
-    select(site_name, datetime, spCond)
+    select(site_code, datetime, spCond)
 
-sites = sort(unique(spc$site_name))
+sites = sort(unique(spc$site_code))
 rc = ceiling(sqrt(length(sites)))
 
 png(width=8, height=8, units='in', type='cairo', res=300,
@@ -13,7 +13,7 @@ png(width=8, height=8, units='in', type='cairo', res=300,
 par(mfrow=c(rc, rc), mar=c(0,0,0,0), oma=c(3, 3, 0, 0))
 xlims = range(spc$datetime)
 for(s in sites){
-    spc_ = filter(spc, site_name == s) %>% arrange()
+    spc_ = filter(spc, site_code == s) %>% arrange()
     plot(spc_$datetime, spc_$spCond, type='p', xlab='', ylab='',
         yaxt='n', bty='l', col='cadetblue', pch='.', xaxt='n',
         xlim=xlims)

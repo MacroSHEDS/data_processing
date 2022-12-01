@@ -1,0 +1,5 @@
+For most products, there would be (additional) kernel function code included here. For some ws_boundary products
+like this one, we use MacroSheds' delineation tool, ms_delineate(), which can be found at
+https://github.com/MacroSHEDS/data_processing/blob/master/src/global_helpers.R
+Note that in a few cases, domains provide some but not all watershed boundary files, so you may have
+to use these documentation files *and* ms_delineate() to fully reproduce our dataset.
