@@ -324,6 +324,7 @@ dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'sleeper')
+
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -336,10 +337,10 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
-    held_data = invalidate_tracked_data(network, domain, 'derive')
-    owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive')
+    ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
     ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
