@@ -4,7 +4,7 @@
 #in prepare_for_edi. sections with ** belong there. also heed the stop message
 #and all TEMPORARY flags below.
 
-stop('if this is for macrosheds > v1, generalize paths')
+stop('if this is for macrosheds > v1, generalize paths and revisit TEMPORARY below')
 
 #TEMPORARY**
 rm_networks <- c('webb', 'mwo', 'neon')
