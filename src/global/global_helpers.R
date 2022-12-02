@@ -9944,6 +9944,8 @@ postprocess_entire_dataset <- function(site_data,
 
     if(push_new_version_to_figshare_and_edi){
 
+        stop('before building v2, take a close look at reformat_camels_for_ms and make sure 1) its incorporating new sites, and 2) it generates hydro attributes. probably need to borrow the hydro section from data_birth_dist2.R')
+
         message('Are you sure you want to modify our published package dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 

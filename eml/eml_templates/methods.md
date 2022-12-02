@@ -12,7 +12,17 @@ The subset of MacroSheds that relates to streamflow and climate forcings makes i
 
 Please note that we used gSSURGO (Soil Survey Staff 2022) instead of the superseded STATSGO dataset for soil characteristics. Two other CAMELS watershed attributes, `pet_mean` (mean potential evapotranspiration) and `aridity`, were also computed differently for MacroSheds watersheds. For these, we solved the Priestly-Taylor formulation by using a gridded _alpha_ product (Aschonitis et al. 2017), rather than calibrating _alpha_ ourselves. In addition to the `pet_mean` watershed summary variable in `CAMELS_compliant_ws_attr_summaries.csv`, we have included timeseries of pet in `CAMELS_compliant_Daymet_forcings.csv`, though pet is not a Daymet variable per se.
 
-These CAMELS variables are contained within the core MacroSheds 
+The following CAMELS watershed attributes are not included in the MacroSheds dataset, but see related or analogous variables (listed in parentheses) in ws_attr_timeseries.csv:
+
+lai_max (vb_lai_median)
+lai_diff
+gvf_max (vb_fpar_median, vb_ndvi_median)
+gvf_diff
+soil_porosity (pm_sub_surf_porosity_mean)
+soil_conductivity (pf_soil_cat_exchange_7)
+max_water_content
+water_frac (pf_soil_water_0bar, pf_soil_water_0.1bar pf_soil_water_0.33bar, pf_soil_water_15bar)
+other_frac
 
 ---
 
