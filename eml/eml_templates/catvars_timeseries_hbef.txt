@@ -1,5 +1,5 @@
 attributeName	code	definition
-var_category	discharge	
 var_category	discharge	Stream discharge
 var_category	precipitation	Precipitation depth
 var_category	stream_chemistry	Stream chemistry
+var_category	precip_chemistry	Precipitation chemistry
