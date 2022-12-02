@@ -6,6 +6,8 @@
 
 stop('if this is for macrosheds > v1, generalize paths and revisit TEMPORARY below')
 
+#REPLACE NA VALUES IN PROVENANCE.TXT WITH BLANKS
+
 #TEMPORARY**
 rm_networks <- c('webb', 'mwo', 'neon')
 
