@@ -8,21 +8,33 @@ consult primary source documentation. Links can be found in `attribution_and_int
 
 ---
 
-The subset of MacroSheds that relates to streamflow and climate forcings makes it a valuable supplement to existing datasets like <a href="https://ral.ucar.edu/solutions/products/camels" style="color: vlue; text-decoration: underline;">CAMELS</a> (Newman et al. 2014) and <a href="https://water.usgs.gov/GIS/metadata/usgswrd/XML/gagesII_Sept2011.xml" style="color: vlue; text-decoration: underline;">GAGES-II</a>  (Falcone 2011). Using CAMELS methods, we have compiled watershed attributes and Daymet forcings, for each MacroSheds site, that are commensurable with the published CAMELS dataset, enhancing the predictive power of the combined set, especially for small watersheds. Of the 181 sites with discharge data that MacroSheds adds to this corpus (as of version 1), 122 have watershed areas of 10 km2 or less, and 68 have areas of 1 km2 or less. For CAMELS, these numbers are 8 and 0, respectively. For GAGES-II, they are 207 and 2 (see Figure 2 in the MacroSheds data paper).
+The subset of MacroSheds that relates to streamflow and climate forcings makes it a valuable supplement to existing datasets like
+<a href="https://ral.ucar.edu/solutions/products/camels" style="color: vlue; text-decoration: underline;">CAMELS</a> (Newman et al. 2014) and <a href="https://water.usgs.gov/GIS/metadata/usgswrd/XML/gagesII_Sept2011.xml" style="color: vlue; text-decoration: underline;">GAGES-II</a>  (Falcone 2011).
+Using CAMELS methods, we have compiled watershed attributes and Daymet forcings, for each MacroSheds site, that are commensurable
+with the published CAMELS dataset, enhancing the predictive power of the combined set, especially for small watersheds. Of the 181
+sites with discharge data that MacroSheds adds to this corpus (as of version 1), 122 have watershed areas of 10 km2 or less, and
+68 have areas of 1 km2 or less. For CAMELS, these numbers are 8 and 0, respectively. For GAGES-II, they are 207 and 2
+(see Figure 2 in the MacroSheds data paper).
 
-Please note that we used gSSURGO (Soil Survey Staff 2022) instead of the superseded STATSGO dataset for soil characteristics. Two other CAMELS watershed attributes, `pet_mean` (mean potential evapotranspiration) and `aridity`, were also computed differently for MacroSheds watersheds. For these, we solved the Priestly-Taylor formulation by using a gridded _alpha_ product (Aschonitis et al. 2017), rather than calibrating _alpha_ ourselves. In addition to the `pet_mean` watershed summary variable in `CAMELS_compliant_ws_attr_summaries.csv`, we have included timeseries of pet in `CAMELS_compliant_Daymet_forcings.csv`, though pet is not a Daymet variable per se.
+Please note that we used gSSURGO (Soil Survey Staff 2022) instead of the superseded STATSGO dataset for soil characteristics.
+Two other CAMELS watershed attributes, `pet_mean` (mean potential evapotranspiration) and aridity, were also computed
+differently for MacroSheds watersheds. For these, we solved the Priestly-Taylor formulation by using a gridded _alpha_ product
+(Aschonitis et al. 2017), rather than calibrating _alpha_ ourselves. In addition to the pet\_mean watershed summary variable in
+`CAMELS_compliant_ws_attr_summaries.csv`, we have included timeseries of pet in `CAMELS_compliant_Daymet_forcings.csv`, though
+pet is not a Daymet variable per se.
 
-The following CAMELS watershed attributes are not included in the MacroSheds dataset, but see related or analogous variables (listed in parentheses) in ws_attr_timeseries.csv:
+The following CAMELS watershed attributes are not included in the MacroSheds dataset, but see related or analogous variables
+(listed in parentheses) in `ws_attr_timeseries.csv`:
 
-lai_max (vb_lai_median)
-lai_diff
-gvf_max (vb_fpar_median, vb_ndvi_median)
-gvf_diff
-soil_porosity (pm_sub_surf_porosity_mean)
-soil_conductivity (pf_soil_cat_exchange_7)
-max_water_content
-water_frac (pf_soil_water_0bar, pf_soil_water_0.1bar pf_soil_water_0.33bar, pf_soil_water_15bar)
-other_frac
+ 1. lai\_max (vb\_lai\_median)
+ 1. lai\_diff
+ 1. gvf\_max (vb\_fpar\_median, vb\_ndvi\_median)
+ 1. gvf\_diff
+ 1. soil\_porosity (pm\_sub\_surf\_porosity\_mean)
+ 1. soil\_conductivity (pf\_soil\_cat\_exchange\_7)
+ 1. max\_water\_content
+ 1. water\_frac (pf\_soil\_water\_0bar, pf\_soil\_water\_0.1bar pf\_soil\_water\_0.33bar, pf\_soil\_water\_15bar)
+ 1. other\_frac
 
 ---
 
