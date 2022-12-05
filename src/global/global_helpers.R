@@ -9994,10 +9994,19 @@ postprocess_entire_dataset <- function(site_data,
 
         manually_edit_eml()
 
+        stop('uncertainty should not be attached to P and Q, right? why is that happening? fix and rm the code immediately below this')
+        setwd('~/git/macrosheds/data_acquisition/eml/data_links/')
+        zz = list.files(pattern = '^timeseries_[a-z_]+\\.csv$')
+        for(z in zz){
+            read_csv(z) %>%
+                mutate(val_err = ifelse(var_category %in% c('discharge', 'precipitation'), NA_real_, val_err)) %>%
+                write_csv(z)
+        }
+
         log_with_indent(glue('Uploading dataset v{vv} to EDI',
                              vv = dataset_version),
                         logger = logger_module)
-        upload_dataset_to_edi(dataset_version = dataset_version)
+        upload_dataset_to_edi(dataset_version = dataset_version) #not yet hooked up
     } else {
         log_with_indent('NOT pushing data to EDI',
                         logger = logger_module)
