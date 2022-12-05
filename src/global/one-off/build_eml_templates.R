@@ -21,6 +21,7 @@ library(EMLassemblyline)
 library(tidyverse)
 library(glue)
 library(googlesheets4)
+library(EDIutils)
 
 # setup** ####
 
@@ -434,3 +435,6 @@ make_eml(wd, dd, ed,
          user.id = conf$edi_user_id,
          user.domain = NULL, #pretty sure this doesn't apply to us
          package.id = NULL)
+
+
+EDIutils::
