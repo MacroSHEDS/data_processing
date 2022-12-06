@@ -434,7 +434,7 @@ make_eml(wd, dd, ed,
          other.entity.url = NULL,
          user.id = conf$edi_user_id,
          user.domain = NULL, #pretty sure this doesn't apply to us
-         package.id = NULL)
+         package.id = 'edi.1262.1')
 
 
 EDIutils::
