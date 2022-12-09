@@ -23,6 +23,12 @@ differently for MacroSheds watersheds. For these, we solved the Priestly-Taylor 
 `CAMELS_compliant_ws_attr_summaries.csv`, we have included timeseries of pet in `CAMELS_compliant_Daymet_forcings.csv`, though
 pet is not a Daymet variable per se.
 
+Hydrologic attributes (q\_mean, runoff\_ratio, stream\_elas, slope\_fdc, baseflow\_index\_landson, hfd\_mean, Q5, Q95,
+high\_q\_freq, high\_q\_dur, low\_q\_freq, low\_q\_dur, zero\_q\_freq) were only computed for site-years with >= 85%
+temporal coverage (i.e. with a measurement or estimate of Q and or P on at least 85% of days), except for polar/arid sites
+at which full years of flow are never recorded. At these sites, >= 50% maximum coverage (i.e. at least half the number of days
+as the most complete year ever recorded) were required.
+
 The following CAMELS watershed attributes are not included in the MacroSheds dataset, but see related or analogous variables
 (listed in parentheses) in `ws_attr_timeseries.csv`:
 
