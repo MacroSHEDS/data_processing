@@ -6838,7 +6838,7 @@ ms_nocb_mean_interpolate <- function(d, interval){
     }
 
     var <- drop_var_prefix(d$var[1])
-    max_samples_to_impute <- 15 #fixed because this func is only called for precip
+    max_samples_to_impute <- 45 #fixed because this func is only called for precip
 
     if(interval == '15 min'){
         max_samples_to_impute <- max_samples_to_impute * 96
