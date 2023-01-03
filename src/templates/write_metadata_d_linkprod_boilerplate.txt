@@ -11,7 +11,7 @@ on the datetime in parentheses:
 To rebuild all or part of the MacroSheds dataset yourself, use our code on GitHub (and these notes). If you want to
 rebuild only this product, or if you want to modify the code used to generate this product, you
 will almost certainly have an easier time using these notes. That said, automatic documentation like this may
-to have some errors and missing details. Please contact us at mail@macrosheds.org if you're having trouble
+have some errors and missing details. Please contact us at mail@macrosheds.org if you're having trouble
 navigating our docs.
 
 {mb}

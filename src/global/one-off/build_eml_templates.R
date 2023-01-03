@@ -208,7 +208,7 @@ basenames <- basename(files_to_link)
 basenames <- sub('^0[1-9][a-z]?_', '', basenames)
 basenames <- sub('site_metadata', 'sites', basenames)
 basenames <- sub('timeseries_variable_metadata', 'variables_time_series', basenames)
-basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr', basenames)
+basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr_timeseries', basenames)
 basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
 basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
 basenames <- sub('detection_limits_and_precision', 'detection_limits', basenames)
@@ -247,7 +247,7 @@ descriptions <- str_replace(descriptions,
                             '^detection_limits\\.csv$',
                             'Primary data source detection limits')
 descriptions <- str_replace(descriptions,
-                            '^variables_ws_attr\\.csv$',
+                            '^variables_ws_attr_timeseries\\.csv$',
                             'Watershed attribute variable metadata (standard units and definitions)')
 descriptions <- str_replace(descriptions,
                             '^variable_category_codes_ws_attr\\.csv$',
@@ -347,7 +347,7 @@ template_table_attributes(wd, dd, 'sites.csv')
 template_table_attributes(wd, dd, 'variables_time_series.csv')
 template_table_attributes(wd, dd, 'range_check_limits.csv')
 template_table_attributes(wd, dd, 'detection_limits.csv')
-template_table_attributes(wd, dd, 'variables_ws_attr.csv')
+template_table_attributes(wd, dd, 'variables_ws_attr_timeseries.csv')
 template_table_attributes(wd, dd, 'variable_category_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'variable_data_source_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'data_irregularities.csv')

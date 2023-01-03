@@ -4,6 +4,8 @@ setwd('~/git/macrosheds/data_acquisition/eml/data_links')
 
 ws1 = read_csv('ws_attr_summaries.csv')
 ws2 = read_csv('CAMELS_compliant_ws_attr_summaries.csv')
+sites = read_csv('sites.csv') %>%
+    select(catchment_name = site_code, network, domain)
 
 colnames(ws1)
 colnames(ws2)
@@ -11,7 +13,7 @@ colnames(ws2)
 ws1 = ws1 %>%
     select(catchment_name = site_code,
            catchment_area_ha = ws_area_ha,
-           # mean_annual_precip_mm = cc_mean_annual_precip,
+           # mean_annual_precip_prism_mm = cc_mean_annual_precip,
            mean_annual_temp_C = cc_mean_annual_temp,
            mean_annual_aet_mm = ci_mean_annual_et)
 
@@ -27,7 +29,9 @@ ws2 = ws2 %>%
            catchment_name = site_code)
 
 out = full_join(ws1, ws2, by = 'catchment_name') %>%
-    select(catchment_name, catchment_area_ha, latitude, longitude, mean_annual_precip_mm,
+    left_join(sites, by = 'catchment_name') %>%
+    select(network, domain, catchment_name, catchment_area_ha, latitude, longitude,# mean_annual_precip_prism_mm,
+           mean_annual_precip_mm,
            mean_annual_runoff_mm, mean_annual_temp_C, mean_annual_pet_mm, mean_annual_aet_mm)
 
 write_csv(out, '/tmp/townhall_data_macrosheds.csv')

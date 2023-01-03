@@ -76,9 +76,9 @@ variables_time_series.csv
 
 ⠀⠀⠀⠀Time-series variable metadata (standard units, etc.)
 
-variables_ws_attr.csv
+variables_ws_attr_timeseries.csv
 
-⠀⠀⠀⠀Watershed attribute variable metadata (standard units and definitions)
+⠀⠀⠀⠀Variable metadata (standard units and definitions) for temporally explicit watershed attributes
 
 variable_category_codes_ws_attr.csv
 
