@@ -61,6 +61,7 @@ options(dplyr.summarise.inform = FALSE,
         timeout = 300,
         readr.show_progress = FALSE,
         readr.show_col_types = FALSE)
+        # googledrive_quiet = TRUE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,

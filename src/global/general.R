@@ -29,6 +29,13 @@ boundaries <- try(read_combine_shapefiles(network = network,
                                           domain = domain,
                                           prodname_ms = ws_prodname))
 
+#tiny watersheds can't be summarized by gee. if < 15 ha, replace with 15 ha circle on centroid
+boundaries <- boundaries %>%
+    mutate(geometry = ifelse(
+        area < 15,
+        st_buffer(st_centroid(geometry), dist = sqrt(10000 * 15 / pi)),
+        area))
+
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),
                     logger_module)
@@ -85,7 +92,7 @@ for(i in 1:nrow(unprod)){
 # for(i in 28:28){
 
     sf::sf_use_s2(TRUE)
-    
+
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
