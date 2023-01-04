@@ -8754,7 +8754,7 @@ get_gee_standard <- function(network,
     qaqc <- FALSE
     if(!is.null(qa_band) || !is.null(bit_mask)){
         if(any(is.null(qa_band), is.null(bit_mask))){
-            stop('qa_band and bit_mask must be fined is one is provided')
+            stop('qa_band and bit_mask must both be provided if one is')
         } else{
             qaqc <- TRUE
         }
@@ -8849,7 +8849,6 @@ get_gee_standard <- function(network,
                                                          'stdDev', 'mean'),
                                    retainGeometry = FALSE)
         }
-
 
         ee_description <-  glue('{n}_{d}_{p}',
                                 d = domain,
