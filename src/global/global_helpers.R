@@ -2858,7 +2858,8 @@ ms_munge <- function(network = domain,
 
 ms_general <- function(network = domain,
                        domain,
-                       get_missing_only = FALSE){
+                       get_missing_only = FALSE,
+                       general_prod_filter = NULL){
 
     #if get_missing_only is TRUE, ws_traits will only be retrieved
     #for ws_traits directories that are missing or empty
@@ -2867,6 +2868,12 @@ ms_general <- function(network = domain,
         get_missing_only <<- TRUE
     } else {
         get_missing_only <<- FALSE
+    }
+
+    if(! is.null(general_prod_filter)){
+        general_prod_filter_ <<- general_prod_filter
+    } else {
+        sw(rm('general_prod_filter_', envir = .GlobalEnv))
     }
 
     source(glue('src/global/general.R',
@@ -13947,225 +13954,6 @@ download_from_gdrive_arbitrary <- function(network,
 
 generate_watershed_summaries <- function(){
 
-    fils <- list.files('data',
-                       recursive = TRUE,
-                       full.names = TRUE)
-
-    fils <- fils[grepl('ws_traits', fils)]
-
-    wide_spat_data <- site_data %>%
-        filter(site_type == 'stream_gauge') %>%
-        select(network, domain, site_code, ws_area_ha)
-
-    # Prism precip
-    try({
-        precip_files <- fils[grepl('cc_precip', fils)]
-        precip_files <- precip_files[grepl('sum', precip_files)]
-
-        precip <- map_dfr(precip_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'cc_cumulative_precip') %>%
-            group_by(site_code) %>%
-            summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(cc_mean_annual_precip))
-    }, silent = TRUE)
-
-    # Prism temp
-    try({
-        temp_files <- fils[grepl('cc_temp', fils)]
-        temp_files <- temp_files[grepl('sum', temp_files)]
-
-        temp <- map_dfr(temp_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'cc_temp_mean') %>%
-            group_by(site_code) %>%
-            summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(cc_mean_annual_temp))
-    }, silent = TRUE)
-
-    # start of season
-    try({
-        sos_files <- fils[grepl('start_season', fils)]
-
-        sos <- map_dfr(sos_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'vd_sos_mean') %>%
-            group_by(site_code) %>%
-            summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(vd_mean_sos))
-    }, silent = TRUE)
-
-    # end of season
-    try({
-        eos_files <- fils[grepl('end_season', fils)]
-
-        eos <- map_dfr(eos_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'vd_eos_mean') %>%
-            group_by(site_code) %>%
-            summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(vd_mean_eos))
-    }, silent = TRUE)
-
-    # length of season
-    try({
-        los_files <- fils[grepl('length_season', fils)]
-
-        los <- map_dfr(los_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'vd_los_mean') %>%
-            group_by(site_code) %>%
-            summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(vd_mean_los))
-    }, silent = TRUE)
-
-    # gpp
-    try({
-        gpp_files <- fils[grepl('gpp', fils)]
-        gpp_files <- gpp_files[grepl('sum', gpp_files)]
-
-        gpp <- map_dfr(gpp_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'va_gpp_sum') %>%
-            group_by(site_code) %>%
-            summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(va_mean_annual_gpp))
-    }, silent = TRUE)
-
-    # npp
-    try({
-        npp_files <- fils[grepl('npp', fils)]
-
-        npp <- map_dfr(npp_files, read_feather) %>%
-            filter(year != substr(Sys.Date(), 0, 4),
-                   var == 'va_npp_median') %>%
-            group_by(site_code) %>%
-            summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
-            filter(!is.na(va_mean_annual_npp))
-    }, silent = TRUE)
-
-    # terrain
-    try({
-        terrain_fils <- fils[grepl('terrain', fils)]
-
-        terrain <- map_dfr(terrain_fils, read_feather) %>%
-            filter(var %in% c('te_elev_mean',
-                              'te_elev_min',
-                              'te_elev_max',
-                              'te_aspect_mean',
-                              'te_slope_mean')) %>%
-            select(-year) %>%
-            pivot_wider(names_from = 'var', values_from = 'val')
-    }, silent = TRUE)
-
-    # bfi
-    try({
-        bfi_fils <- fils[grepl('bfi', fils)]
-
-        bfi <- map_dfr(bfi_fils, read_feather) %>%
-            filter(var %in% c('hd_bfi_mean')) %>%
-            filter(pctCellErr <= 15) %>%
-            select(-year, -pctCellErr) %>%
-            pivot_wider(names_from = 'var', values_from = 'val')
-    }, silent = TRUE)
-
-    # nlcd
-    try({
-        nlcd_fils <- fils[grepl('nlcd', fils)]
-
-        nlcd <- map_dfr(nlcd_fils, read_feather) %>%
-            filter(var %in% c('lg_nlcd_barren',
-                              'lg_nlcd_crop',
-                              'lg_nlcd_dev_hi',
-                              'lg_nlcd_dev_low',
-                              'lg_nlcd_dev_med',
-                              'lg_nlcd_dev_open',
-                              'lg_nlcd_forest_dec',
-                              'lg_nlcd_forest_evr',
-                              'lg_nlcd_forest_mix',
-                              'lg_nlcd_grass',
-                              'lg_nlcd_ice_snow',
-                              'lg_nlcd_pasture',
-                              'lg_nlcd_shrub',
-                              'lg_nlcd_water',
-                              'lg_nlcd_wetland_herb',
-                              'lg_nlcd_wetland_wood',
-                              'lg_nlcd_shrub_dwr',
-                              'lg_nlcd_sedge',
-                              'lg_lncd_lichens',
-                              'lg_nlcd_moss')) %>%
-            group_by(site_code) %>%
-            mutate(max_year = max(year)) %>%
-            filter(year == max_year) %>%
-            select(-year, -max_year) %>%
-            distinct(site_code, var, .keep_all = T) %>%
-            pivot_wider(names_from = 'var', values_from = 'val')
-    }, silent = TRUE)
-
-    # soil
-    try({
-        soil_fils <- fils[grepl('soil', fils)]
-
-        soil <- map_dfr(soil_fils, read_feather) %>%
-            filter(var %in% c('pf_soil_org',
-                              'pf_soil_sand',
-                              'pf_soil_silt',
-                              'pf_soil_clay',
-                              'pf_soil_ph')) %>%
-            filter(pctCellErr <= 15) %>%
-            select(-year, -pctCellErr) %>%
-            pivot_wider(names_from = 'var', values_from = 'val')
-    }, silent = TRUE)
-
-    # soil thickness
-    try({
-        soil_thickness_fils <- fils[grepl('pelletier_soil_thickness', fils)]
-
-        soil_thickness <- map_dfr(soil_thickness_fils, read_feather) %>%
-            filter(var %in% c('pi_soil_thickness')) %>%
-            filter(pctCellErr <= 15) %>%
-            select(-year, -pctCellErr) %>%
-            pivot_wider(names_from = 'var', values_from = 'val') %>%
-            mutate(pi_soil_thickness = round(pi_soil_thickness, 2))
-    }, silent = TRUE)
-
-    # et_ref
-    try({
-        et_ref_fils <- fils[grepl('et_ref', fils)]
-        et_ref_fils <- et_ref_fils[grepl('sum', et_ref_fils)]
-
-        et_ref_thickness <- map_dfr(et_ref_fils, read_feather) %>%
-            filter(var %in% c('ck_et_ref_mean'),
-                   !is.na(val)) %>%
-            select(-year) %>%
-            group_by(site_code) %>%
-            summarise(ci_mean_annual_et = mean(val))
-    }, silent = TRUE)
-
-    # geological chem
-    try({
-        geochem_fils <- fils[grepl('geochemical', fils)]
-
-        geochem <- map_dfr(geochem_fils, read_feather) %>%
-            filter(var %in% c('pd_geo_Al2O3_mean',
-                              'pd_geo_CaO_mean',
-                              'pd_geo_CompressStrength_mean',
-                              'pd_geo_Fe2O3_mean',
-                              'pd_geo_HydaulicCond_mean',
-                              'pd_geo_K2O_mean',
-                              'pd_geo_MgO_mean',
-                              'pd_geo_N_mean',
-                              'pd_geo_Na2O_mean',
-                              'pd_geo_P2O5_mean',
-                              'pd_geo_S_mean',
-                              'pd_geo_SiO2_mean'),
-                   !is.na(val)) %>%
-            select(-year) %>%
-            group_by(site_code, var) %>%
-            summarise(mean_val = mean(val)) %>%
-            pivot_wider(names_from = 'var', values_from = 'mean_val')
-    }, silent = TRUE)
-
     join_if_exists <- function(x, d){
 
         if(exists(x,
@@ -14179,6 +13967,264 @@ generate_watershed_summaries <- function(){
         return(d)
     }
 
+    fils <- list.files('data',
+                       recursive = TRUE,
+                       full.names = TRUE)
+
+    fils <- fils[grepl('ws_traits', fils)]
+
+    wide_spat_data <- site_data %>%
+        filter(site_type == 'stream_gauge') %>%
+        select(network, domain, site_code, ws_area_ha)
+
+    # Prism precip
+    precip_files <- fils[grepl('/cc_precip', fils)]
+    precip_files <- precip_files[grepl('/sum_', precip_files)]
+
+    precip <- map_dfr(precip_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'cc_cumulative_precip') %>%
+        group_by(site_code) %>%
+        summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(cc_mean_annual_precip))
+
+    # Prism temp
+    temp_files <- fils[grepl('/cc_temp', fils)]
+    temp_files <- temp_files[grepl('/sum_', temp_files)]
+
+    temp <- map_dfr(temp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'cc_temp_mean') %>%
+        group_by(site_code) %>%
+        summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(cc_mean_annual_temp))
+
+    # start of season
+    sos_files <- fils[grepl('/start_season', fils)]
+
+    sos <- map_dfr(sos_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_sos_mean') %>%
+        group_by(site_code) %>%
+        summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_sos))
+
+    # end of season
+    eos_files <- fils[grepl('/end_season', fils)]
+
+    eos <- map_dfr(eos_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_eos_mean') %>%
+        group_by(site_code) %>%
+        summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_eos))
+
+    # length of season
+    los_files <- fils[grepl('/length_season', fils)]
+
+    los <- map_dfr(los_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_los_mean') %>%
+        group_by(site_code) %>%
+        summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_los))
+
+    # gpp
+    gpp_files <- fils[grepl('/gpp', fils)]
+    gpp_files <- gpp_files[grepl('/sum_', gpp_files)]
+
+    gpp <- map_dfr(gpp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'va_gpp_sum') %>%
+        group_by(site_code) %>%
+        summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(va_mean_annual_gpp))
+
+    # npp
+    npp_files <- fils[grepl('/npp', fils)]
+
+    npp <- map_dfr(npp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'va_npp_median') %>%
+        group_by(site_code) %>%
+        summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(va_mean_annual_npp))
+
+    # terrain
+    terrain_fils <- fils[grepl('/terrain', fils)]
+
+    terrain <- map_dfr(terrain_fils, read_feather) %>%
+        filter(var %in% c('te_elev_mean',
+                          'te_elev_min',
+                          'te_elev_max',
+                          'te_aspect_mean',
+                          'te_slope_mean')) %>%
+        select(-year) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # bfi
+    bfi_fils <- fils[grepl('/bfi', fils)]
+
+    bfi <- map_dfr(bfi_fils, read_feather) %>%
+        filter(var %in% c('hd_bfi_mean')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # nlcd
+    nlcd_fils <- fils[grepl('/nlcd', fils)]
+
+    nlcd <- map_dfr(nlcd_fils, read_feather) %>%
+        filter(! grepl('1992', var)) %>%
+        group_by(site_code) %>%
+        mutate(max_year = max(year)) %>%
+        filter(year == max_year) %>%
+        select(-year, -max_year) %>%
+        distinct(site_code, var, .keep_all = T) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # soil
+    soil_fils <- fils[grepl('/nrcs_soils', fils)]
+
+    soil <- map_dfr(soil_fils, read_feather) %>%
+        filter(var %in% c('pf_soil_org',
+                          'pf_soil_sand',
+                          'pf_soil_silt',
+                          'pf_soil_clay',
+                          'pf_soil_ph')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val')
+
+    # soil thickness
+    soil_thickness_fils <- fils[grepl('/pelletier_soil_thickness', fils)]
+
+    soil_thickness <- map_dfr(soil_thickness_fils, read_feather) %>%
+        filter(var %in% c('pi_soil_thickness')) %>%
+        filter(pctCellErr <= 15) %>%
+        select(-year, -pctCellErr) %>%
+        pivot_wider(names_from = 'var', values_from = 'val') %>%
+        mutate(pi_soil_thickness = round(pi_soil_thickness, 2))
+
+    # et_ref
+    et_ref_fils <- fils[grepl('/et_ref', fils)]
+    et_ref_fils <- et_ref_fils[grepl('/sum_', et_ref_fils)]
+
+    et_ref <- map_dfr(et_ref_fils, read_feather) %>%
+        filter(var %in% c('ck_et_ref_mean'),
+               !is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarise(ck_mean_annual_et = mean(val, na.rm = TRUE)) %>%
+        filter( ! is.na(ck_mean_annual_et))
+
+    # geological chem
+    geochem_fils <- fils[grepl('/geochemical', fils)]
+
+    geochem <- map_dfr(geochem_fils, read_feather) %>%
+        filter(grepl('mean$', var),
+               !is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val, na.rm = TRUE)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+    # fpar
+    ff <- fils[grepl('/fpar', fils) & grepl('/sum_', fils)]
+
+    fpar <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('vb_fpar_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarise(vb_mean_annual_fpar = mean(val))
+
+    # lai
+    ff <- fils[grepl('/lai', fils) & grepl('/sum_', fils)]
+
+    lai <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('vb_lai_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarise(vb_mean_annual_lai = mean(val))
+
+    # tcw (tesselated cap wetness)
+    ff <- fils[grepl('/tcw', fils) & grepl('/sum_', fils)]
+
+    tcw <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('vj_tcw_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarise(vj_mean_annual_tcw = mean(val))
+
+    # ndvi
+    ff <- fils[grepl('/ndvi', fils) & grepl('/sum_', fils)]
+
+    ndvi <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('vb_ndvi_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarise(vb_mean_annual_ndvi = mean(val))
+
+    # nsidc snow data
+    ff <- fils[grepl('/nsidc', fils) & grepl('/sum_', fils)]
+
+    nsidc <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('cl_snow_depth_ann_mean', 'cl_swe_ann_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+    # lithology
+    ff <- fils[grepl('/lithology', fils)]
+
+    lithology <- map_dfr(ff, read_feather) %>%
+        filter(grepl('geol_class', var),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+    # glhymps soil porosity
+    ff <- fils[grepl('/glhymps', fils)]
+
+    glhymps <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('pm_sub_surf_porosity_mean', 'pm_sub_surf_permeability_mean',
+                          'pm_sub_surf_permeability_perm_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+    # modis igbp
+    ff <- fils[grepl('/modis_igbp', fils)]
+
+    modis_igbp <- map_dfr(ff, read_feather) %>%
+        filter(grepl('igbp', var),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
+    # nadp
+    ff <- fils[grepl('/nadp', fils)]
+
+    nadp <- map_dfr(ff, read_feather) %>%
+        filter(grepl('_mean$', var),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code, var) %>%
+        summarise(mean_val = mean(val)) %>%
+        pivot_wider(names_from = 'var', values_from = 'mean_val')
+
     wide_spat_data <- join_if_exists('precip', wide_spat_data)
     wide_spat_data <- join_if_exists('temp', wide_spat_data)
     wide_spat_data <- join_if_exists('sos', wide_spat_data)
@@ -14191,8 +14237,18 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('nlcd', wide_spat_data)
     wide_spat_data <- join_if_exists('soil', wide_spat_data)
     wide_spat_data <- join_if_exists('soil_thickness', wide_spat_data)
-    wide_spat_data <- join_if_exists('et_ref_thickness', wide_spat_data)
+    wide_spat_data <- join_if_exists('et_ref', wide_spat_data)
     wide_spat_data <- join_if_exists('geochem', wide_spat_data)
+
+    wide_spat_data <- join_if_exists('fpar', wide_spat_data)
+    wide_spat_data <- join_if_exists('lai', wide_spat_data)
+    wide_spat_data <- join_if_exists('tcw', wide_spat_data)
+    wide_spat_data <- join_if_exists('ndvi', wide_spat_data)
+    wide_spat_data <- join_if_exists('nsidc', wide_spat_data)
+    wide_spat_data <- join_if_exists('glhymps', wide_spat_data)
+    wide_spat_data <- join_if_exists('lithoogy', wide_spat_data)
+    wide_spat_data <- join_if_exists('modis_igbp', wide_spat_data)
+    wide_spat_data <- join_if_exists('nadp', wide_spat_data)
 
     dir.create('../portal/data/general/spatial_downloadables',
                recursive = TRUE,
