@@ -35,13 +35,25 @@ boundaries <- try(read_combine_shapefiles(network = network,
                                           prodname_ms = ws_prodname))
 
 #tiny watersheds can't be summarized by gee for some products.
-#if < 10 ha, replace with 10 ha circle on centroid
-too_small_wb <- boundaries$area < 10
+#if < 15 ha, replace with 15 ha circle on centroid
+ws_areas <- site_data %>%
+    filter(in_workflow == 1,
+           site_type != 'rain_gauge',
+           domain == !!domain) %>%
+    right_join(select(boundaries, site_code)) %>%
+    select(site_code, ws_area_ha)
+
+boundaries <- boundaries %>%
+    select(-area) %>%
+    left_join(ws_areas) %>%
+    rename(area = ws_area_ha)
+
+too_small_wb <- boundaries$area < 15
 reupload <- FALSE
 if(any(too_small_wb)) reupload <- TRUE
 boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
     mutate(geometry = st_buffer(st_centroid(geometry),
-                                dist = sqrt(10000 * 10 / pi)))
+                                dist = sqrt(10000 * 15 / pi)))
 
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),

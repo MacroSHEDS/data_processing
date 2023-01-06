@@ -13985,7 +13985,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'cc_cumulative_precip') %>%
         group_by(site_code) %>%
-        summarise(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
+        summarize(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(cc_mean_annual_precip))
 
     # Prism temp
@@ -13996,7 +13996,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'cc_temp_mean') %>%
         group_by(site_code) %>%
-        summarise(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
+        summarize(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(cc_mean_annual_temp))
 
     # start of season
@@ -14006,7 +14006,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_sos_mean') %>%
         group_by(site_code) %>%
-        summarise(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(vd_mean_sos))
 
     # end of season
@@ -14016,7 +14016,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_eos_mean') %>%
         group_by(site_code) %>%
-        summarise(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(vd_mean_eos))
 
     # length of season
@@ -14026,8 +14026,18 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_los_mean') %>%
         group_by(site_code) %>%
-        summarise(vd_mean_los = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_los = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(vd_mean_los))
+
+    # maximum day of photosynthesis
+    mos_files <- fils[grepl('/max_season', fils)]
+
+    mos <- map_dfr(mos_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vd_mos_mean') %>%
+        group_by(site_code) %>%
+        summarize(vd_mean_mos = mean(val, na.arm = TRUE)) %>%
+        filter(!is.na(vd_mean_mos))
 
     # gpp
     gpp_files <- fils[grepl('/gpp', fils)]
@@ -14037,7 +14047,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_gpp_sum') %>%
         group_by(site_code) %>%
-        summarise(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
+        summarize(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(va_mean_annual_gpp))
 
     # npp
@@ -14047,7 +14057,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_npp_median') %>%
         group_by(site_code) %>%
-        summarise(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
+        summarize(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
         filter(!is.na(va_mean_annual_npp))
 
     # terrain
@@ -14115,7 +14125,8 @@ generate_watershed_summaries <- function(){
                !is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarise(ck_mean_annual_et = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        summarize(ck_mean_annual_et = mean(val, na.rm = TRUE)) %>%
         filter( ! is.na(ck_mean_annual_et))
 
     # geological chem
@@ -14126,7 +14137,8 @@ generate_watershed_summaries <- function(){
                !is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        summarize(mean_val = mean(val, na.rm = TRUE)) %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # fpar
@@ -14137,6 +14149,7 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        ungroup() %>%
         summarise(vb_mean_annual_fpar = mean(val))
 
     # lai
@@ -14147,6 +14160,7 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        ungroup() %>%
         summarise(vb_mean_annual_lai = mean(val))
 
     # tcw (tesselated cap wetness)
@@ -14157,6 +14171,7 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        ungroup() %>%
         summarise(vj_mean_annual_tcw = mean(val))
 
     # ndvi
@@ -14167,7 +14182,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarise(vb_mean_annual_ndvi = mean(val))
+        ungroup() %>%
+        summarize(vb_mean_annual_ndvi = mean(val))
 
     # nsidc snow data
     ff <- fils[grepl('/nsidc', fils) & grepl('/sum_', fils)]
@@ -14177,7 +14193,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
+        summarize(mean_val = mean(val)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # lithology
@@ -14188,7 +14205,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
+        summarize(mean_val = mean(val)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # glhymps soil porosity
@@ -14200,7 +14218,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
+        summarize(mean_val = mean(val)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # modis igbp
@@ -14211,7 +14230,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
+        summarize(mean_val = mean(val)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # nadp
@@ -14222,7 +14242,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarise(mean_val = mean(val)) %>%
+        summarize(mean_val = mean(val)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     wide_spat_data <- join_if_exists('precip', wide_spat_data)
@@ -14230,6 +14251,7 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('sos', wide_spat_data)
     wide_spat_data <- join_if_exists('eos', wide_spat_data)
     wide_spat_data <- join_if_exists('los', wide_spat_data)
+    wide_spat_data <- join_if_exists('mos', wide_spat_data)
     wide_spat_data <- join_if_exists('gpp', wide_spat_data)
     wide_spat_data <- join_if_exists('npp', wide_spat_data)
     wide_spat_data <- join_if_exists('terrain', wide_spat_data)
