@@ -11,8 +11,13 @@ if(ms_instance$use_ms_error_handling){
 unprod <- univ_products  %>%
     filter(status == 'ready')
 
-# unprod = filter(unprod, grepl('season', prodname))
+if(exists('general_prod_filter_')){
+    unprod <- filter(unprod, prodname %in% general_prod_filter_)
 
+    loginfo(paste('general_prod_filter_ is set. only working on',
+                  paste(general_prod_filter_, collapse = ', ')),
+            logger = logger_module)
+}
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
@@ -29,12 +34,14 @@ boundaries <- try(read_combine_shapefiles(network = network,
                                           domain = domain,
                                           prodname_ms = ws_prodname))
 
-#tiny watersheds can't be summarized by gee. if < 15 ha, replace with 15 ha circle on centroid
-boundaries <- boundaries %>%
-    mutate(geometry = ifelse(
-        area < 15,
-        st_buffer(st_centroid(geometry), dist = sqrt(10000 * 15 / pi)),
-        area))
+#tiny watersheds can't be summarized by gee for some products.
+#if < 10 ha, replace with 10 ha circle on centroid
+too_small_wb <- boundaries$area < 10
+reupload <- FALSE
+if(any(too_small_wb)) reupload <- TRUE
+boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
+    mutate(geometry = st_buffer(st_centroid(geometry),
+                                dist = sqrt(10000 * 10 / pi)))
 
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),
@@ -53,7 +60,7 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}',
 
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
-if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
+if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0 || reupload){
 
     loginfo('Uploading ws_boundaries to GEE',
             logger = logger_module)
