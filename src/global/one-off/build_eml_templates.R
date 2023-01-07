@@ -207,7 +207,7 @@ files_to_link <- c(ts_tables,
 basenames <- basename(files_to_link)
 basenames <- sub('^0[1-9][a-z]?_', '', basenames)
 basenames <- sub('site_metadata', 'sites', basenames)
-basenames <- sub('timeseries_variable_metadata', 'variables_time_series', basenames)
+basenames <- sub('timeseries_variable_metadata', 'variables_timeseries', basenames)
 basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr_timeseries', basenames)
 basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
 basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
@@ -221,13 +221,13 @@ basenames <- c(basenames, 'attribution_and_intellectual_rights_ws_attr.csv')
 descriptions <- basenames
 descriptions <- str_replace(descriptions,
                             '^timeseries_([a-z_]+)\\.csv$',
-                            'Time-series (streamflow, precip if available, chemistry) for domain: \\1')
+                            'Time-series (streamflow, precip if available, chemistry) for domain: \\1. See variables_timeseries.csv and variable_sample_regimen_codes_timeseries.csv')
 descriptions <- str_replace(descriptions,
                             '^ws_attr_summaries\\.csv$',
                             'Watershed attribute data, summarized across time, for all domains')
 descriptions <- str_replace(descriptions,
                             '^ws_attr_timeseries\\.csv$',
-                            'Watershed attribute data, temporally explicit, for all domains')
+                            'Watershed attribute data, temporally explicit, for all domains. See variables_ws_attr_timeseries.csv, variable_category_codes_ws_attr.csv, and variable_data_source_codes_ws_attr.csv')
 descriptions <- str_replace(descriptions,
                             '^CAMELS_compliant_ws_attr_summaries\\.csv$',
                             'Watershed attribute data, temporally explicit, for all domains, and interoperable with the CAMELS dataset (https://ral.ucar.edu/solutions/products/camels)')
@@ -238,7 +238,7 @@ descriptions <- str_replace(descriptions,
                             '^sites\\.csv$',
                             'Stream site metadata')
 descriptions <- str_replace(descriptions,
-                            '^variables_time_series\\.csv$',
+                            '^variables_timeseries\\.csv$',
                             'Time-series variable metadata (standard units, etc.)')
 descriptions <- str_replace(descriptions,
                             '^range_check_limits\\.csv$',
@@ -263,7 +263,7 @@ descriptions <- str_replace(descriptions,
                             'A register of known watershed experiments and significant natural disturbances')
 descriptions <- str_replace(descriptions,
                             '^attribution_and_intellectual_rights_ws_attr\\.csv$',
-                            'Information about fair use of watershed attribute data. See also attribution_and_intellectual_rights_ts.xlsx.')
+                            'Information about fair use of watershed attribute data. See also attribution_and_intellectual_rights_timeseries.xlsx.')
 descriptions <- str_replace(descriptions,
                             '^data_coverage_breakdown\\.csv$',
                             'Number of observations, timespan of observation, by variable and site')
@@ -274,10 +274,11 @@ for(i in seq_along(files_to_link)){
 }
 
 #link additional files that will be grouped under "other entities"
+sw(file.remove(file.path(dd, 'attribution_and_intellectual_rights_timeseries.xlsx')))
 sw(file.remove(file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-          file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx'))
-message('manually remove the second and third sheets from attribution_and_intellectual_rights_ts.xlsx')
+          file.path(dd, 'attribution_and_intellectual_rights_timeseries.xlsx'))
+message('manually remove the second and third sheets from attribution_and_intellectual_rights_timeseries.xlsx')
 sw(file.remove(file.path(dd, 'data_use_agreements.docx')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
           file.path(dd, 'data_use_agreements.docx'))
@@ -331,6 +332,19 @@ zip('code_autodocumentation.zip', files = list.files('code_autodocumentation', f
 setwd('../..')
 
 
+# make one more file for sample regimen codes ####
+
+reg_codes = tribble(~sample_regimen_code, ~definition,
+                    'IS', 'Sample collected by an Installed Sensor.',
+                    'GN', 'Sample collected by hand (Grab sample) without a sensor (Non-sensor), e.g. a water sample for lab analysis.',
+                    'IN', 'Sample collected via an Installed apparatus, though not with a sensor per se (Non-sensor). This is rare.',
+                    'GS', 'Sample collected by hand (Grab sample), using a handheld Sensor.')
+
+write_csv(reg_codes, file.path(dd, 'variable_sample_regimen_codes_timeseries.csv'))
+
+basenames = c(basenames, 'variable_sample_regimen_codes_timeseries.csv')
+descriptions = c(descriptions, 'Time-series sample regimen codes (the two-letter prefix on all time-series variable names)')
+
 # generate eml templates. these need to be manually modified ####
 
 #manually edit all files after running these lines
@@ -344,7 +358,7 @@ template_table_attributes(wd, dd, 'timeseries_hbef.csv') #this one needs to be m
 template_table_attributes(wd, dd, 'CAMELS_compliant_ws_attr_summaries.csv')
 template_table_attributes(wd, dd, 'CAMELS_compliant_Daymet_forcings.csv')
 template_table_attributes(wd, dd, 'sites.csv')
-template_table_attributes(wd, dd, 'variables_time_series.csv')
+template_table_attributes(wd, dd, 'variables_timeseries.csv')
 template_table_attributes(wd, dd, 'range_check_limits.csv')
 template_table_attributes(wd, dd, 'detection_limits.csv')
 template_table_attributes(wd, dd, 'variables_ws_attr_timeseries.csv')
@@ -354,6 +368,7 @@ template_table_attributes(wd, dd, 'data_irregularities.csv')
 template_table_attributes(wd, dd, 'disturbance_record.csv')
 template_table_attributes(wd, dd, 'attribution_and_intellectual_rights_ws_attr.csv')
 template_table_attributes(wd, dd, 'data_coverage_breakdown.csv')
+template_table_attributes(wd, dd, 'variable_sample_regimen_codes_timeseries.csv')
 
 template_geographic_coverage(wd, dd, 'sites.csv',
                              lat.col = 'latitude', lon.col = 'longitude',
@@ -407,7 +422,7 @@ make_eml(wd, dd, ed,
          data.table.quote.character = rep('"', length(basenames)),
          data.table.url = NULL,
          other.entity = c('shapefiles.zip',
-                          'attribution_and_intellectual_rights_ts.xlsx',
+                          'attribution_and_intellectual_rights_timeseries.xlsx',
                           'data_use_agreements.docx',
                           'timeseries_refs.bib',
                           'ws_attr_refs.bib',
@@ -415,7 +430,7 @@ make_eml(wd, dd, ed,
                           'glossary.txt',
                           'code_autodocumentation.zip'),
          other.entity.name = c('shapefiles.zip',
-                               'attribution_and_intellectual_rights_ts.xlsx',
+                               'attribution_and_intellectual_rights_timeseries.xlsx',
                                'data_use_agreements.docx',
                                'timeseries_refs.bib',
                                'ws_attr_refs.bib',
