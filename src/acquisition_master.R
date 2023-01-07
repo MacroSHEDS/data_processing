@@ -319,7 +319,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'calhoun')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -379,9 +379,14 @@ for(dmnrow in 1:nrow(network_domain)){
               domain = domain)
 
     if(domain != 'mcmurdo'){
+
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = TRUE)
+                   get_missing_only = F,
+                   # general_prod_filter = NULL)
+                   general_prod_filter = c('prism_precip', 'prism_temp_mean', 'et_ref'))
+                   # general_prod_filter = c('prism_temp_mean', 'et_ref'))
+                   general_prod_filter = c('et_ref'))
     }
 
     retain_ms_globals(ms_globals)

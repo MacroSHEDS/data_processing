@@ -15,7 +15,7 @@ ws1 = ws1 %>%
            catchment_area_ha = ws_area_ha,
            # mean_annual_precip_prism_mm = cc_mean_annual_precip,
            mean_annual_temp_C = cc_mean_annual_temp,
-           mean_annual_aet_mm = ci_mean_annual_et)
+           mean_annual_aet_mm = ck_mean_annual_et)
 
 ws2 = ws2 %>%
     mutate(pet_mean = pet_mean * 365,
