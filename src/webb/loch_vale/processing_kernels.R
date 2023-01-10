@@ -1,15 +1,122 @@
-source('src/webb/sleeper/domain_helpers.R')
-
+source('src/webb/loch_vale/domain_helpers.R')
+library(dataRetrieval)
 # run webb_setup() in interpreter!)
-## webb_setup()
+#webb_setup()
 # get pkernel deets
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
-
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS005")
 #retrieval kernels ####
 
-#precipitation: STATUS=READY
+#precipitation: STATUS=Ready
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
+  # START OF BLOCK YOU DONT CHANGE #
+  # this sets the file path of the raw data, should always be this same format
+  network = "webb"
+  domain = "loch_vale"
+  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = set_details$site_code)
+  
+  # this creates that directory, if it doesn't already exist
+  dir.create(path = raw_data_dest,
+             showWarnings = FALSE,
+             recursive = TRUE)
+  
+  # END OF BLOCK YOU DONT CHANGE #
+  
+  # create documentation file
+  rawfile <- glue('{rd}/{c}.csv',
+                  rd = raw_data_dest,
+                  c = set_details$component)
+  
+  # download the data form the download link!
+  R.utils::downloadFile(url = set_details$url,
+                        filename = rawfile,
+                        skip = FALSE,
+                        overwrite = TRUE)
+  
+  #bigFILE <- read_csv(rawfile)     //
+  
+  
+  # this code records metadat about the date, time, and other details
+  res <- httr::HEAD(set_details$url)
+  
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+    with_tz(tzone = 'UTC')
+  
+  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+  
+  return(deets_out)
+}
+
+
+#precip_chem: STATUS = READY
+#. handle_errors
+process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
+  # START OF BLOCK YOU DONT CHANGE #
+  # this sets the file path of the raw data, should always be this same format
+  network = "webb"
+  domain = "loch_vale"
+  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = set_details$site_code)
+  
+  # this creates that directory, if it doesn't already exist
+  dir.create(path = raw_data_dest,
+             showWarnings = FALSE,
+             recursive = TRUE)
+  
+  # END OF BLOCK YOU DONT CHANGE #
+  
+  # create documentation file
+  rawfile <- glue('{rd}/{c}.csv',
+                  rd = raw_data_dest,
+                  c = set_details$component)
+  
+  # download the data form the download link!
+  R.utils::downloadFile(url = set_details$url,
+                        filename = rawfile,
+                        skip = FALSE,
+                        overwrite = TRUE)
+  
+  ##bigFILE2 <- read_csv(rawfile)     
+
+  
+  # this code records metadat about the date, time, and other details
+  res <- httr::HEAD(set_details$url)
+  
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+    with_tz(tzone = 'UTC')
+  
+  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+  
+  return(deets_out)
+}
+
+
+
+#discharge: STATUS=READY
+#andrews_creek
+#. handle_errors
+process_0_VERSIONLESS003 <- function(set_details, network, domain) {
+  
+
     # START OF BLOCK YOU DONT CHANGE #
     # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -24,18 +131,26 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                recursive = TRUE)
 
     # END OF BLOCK YOU DONT CHANGE #
-
+    siteNumb <- "401723105400000"
+    siteNumbs <- "USGS-401723105400000"
+    parameterCD <- "00060"
+    #serv = "dv"
+    siteINFO <- readNWISdv(siteNumb,parameterCD)
+    siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+    parmsAvailable <- unique(siteAvailable$parm_cd)
+    
+    precipCD <- "00045"
+    precipCD <- readNWISsite(siteNumb)
+    
+    pCD <-readNWISdv(siteNumbers = c(siteNumbs), parameterCd = c(precipCD), startDate = "1991-09-30", endDate = "2022-11-16")
+    
     # create documentation file
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    # download the data form the download link!
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          skip = FALSE,
-                          overwrite = TRUE)
-
+    write_csv(siteINFO, file = rawfile)
+    
     # this code records metadat about the date, time, and other details
     res <- httr::HEAD(set_details$url)
 
@@ -53,48 +168,12 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#precip_chem: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.zip',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          skip = FALSE,
-                          overwrite = TRUE)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
-}
 
 #discharge: STATUS=READY
+#icy brook
 #. handle_errors
-process_0_VERSIONLESS003 <- function(set_details, network, domain) {
+process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -105,7 +184,14 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-
+    
+    siteNumb <- "401707105395000"
+    parameterCD <- "00060"
+    #serv = "dv"
+    siteINFO <- readNWISdv(siteNumb,parameterCD)
+    siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+    parmsAvailable <- unique(siteAvailable$parm_cd)
+    
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
@@ -132,46 +218,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 }
 
 #discharge: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS004 <- function(set_details, network, domain) {
-
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.csv',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    # call our dataRetrieval function
-    q <- retrieve_usgs_sleeper_daily_q(set_details)
-
-    # download it to the raw file locatin
-    write_csv(q, file = rawfile)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
-}
-
-#discharge: STATUS=READY
+#loch outlet
 #. handle_errors
 process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
@@ -184,16 +231,22 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-
+    
+    siteNumb <- "401733105392404"
+    parameterCD <- "00060"
+    #serv = "dv"
+    siteINFO <- readNWISdv(siteNumb,parameterCD)
+    siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+    parmsAvailable <- unique(siteAvailable$parm_cd)
+    
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    # call our dataRetrieval function
-    q <- retrieve_usgs_sleeper_daily_q(set_details)
-
-    # download it to the raw file locatin
-    write_csv(q, file = rawfile)
+    R.utils::downloadFile(url = set_details$url,
+                          filename = rawfile,
+                          skip = FALSE,
+                          overwrite = TRUE)
 
     res <- httr::HEAD(set_details$url)
 
@@ -211,6 +264,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
+#andrews_creek
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS006 <- function(set_details, network, domain) {
@@ -224,8 +278,23 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.zip',
+    
+    siteNumb <- "401723105400000"
+    siteN <- "USGS-401723105400000"
+    #serv = "dv"
+    siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+    siteAvailable <- filter(siteAvailable, siteAvailable$count_nu>5)
+    
+    parmsAvailable <- unique(siteAvailable$parm_cd)
+    parmsAvailable <- parmsAvailable[!is.na(parmsAvailable)]
+    
+    siteINFO <- readNWISdata(siteNumber = siteNumb, parameterCD = parmsAvailable)
+    siteNext <-readNWISdata(siteNumber = siteNumb, parameterCD = "00028")
+    siteWaterQ <-readNWISdata(siteNumber = siteNumb, service = "qw")
+    
+    siteWQ <- readWQPqw(siteNumbers = c(siteN), parameterCd = parmsAvailable)
+    
+    rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
 
@@ -250,83 +319,133 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
+
+#icy brook
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS007 <- function(set_details, network, domain) {
-
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.csv',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          skip = FALSE,
-                          overwrite = TRUE)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
+  
+  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = set_details$site_code)
+  
+  dir.create(path = raw_data_dest,
+             showWarnings = FALSE,
+             recursive = TRUE)
+  
+  siteNumb <- "401707105395000"
+  siteN <-"USGS-401707105395000"
+  #serv = "dv"
+  siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+  siteAvailable <- filter(siteAvailable, siteAvailable$count_nu>5)
+  
+  parmsAvailable <- unique(siteAvailable$parm_cd)
+  parmsAvailable <- parmsAvailable[!is.na(parmsAvailable)]
+  
+  siteINFO <- readNWISdata(siteNumber = siteNumb, parameterCD = parmsAvailable)
+  siteNext <-readNWISdata(siteNumber = siteNumb, parameterCD = "00028")
+  siteWaterQ <-readNWISdata(siteNumber = siteNumb, service = "qw")
+  
+  siteWQ <- readWQPqw(siteNumbers =  c(siteN), parameterCd = parmsAvailable)
+  
+  rawfile <- glue('{rd}/{c}.csv',
+                  rd = raw_data_dest,
+                  c = set_details$component)
+  
+  R.utils::downloadFile(url = set_details$url,
+                        filename = rawfile,
+                        skip = FALSE,
+                        overwrite = TRUE)
+  
+  res <- httr::HEAD(set_details$url)
+  
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+    with_tz(tzone = 'UTC')
+  
+  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+  
+  return(deets_out)
 }
 
+
+#loch outlet
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS008 <- function(set_details, network, domain) {
+  
+  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = set_details$site_code)
+  
+  dir.create(path = raw_data_dest,
+             showWarnings = FALSE,
+             recursive = TRUE)
+  
+  siteNumb <- "401733105392404"
+  #serv = "dv"
+  siteAvailable <- whatNWISdata(siteNumber = siteNumb)
+  #---------filtering-------------
+  #filter by # of observations
+  siteAvailable <- filter(siteAvailable, siteAvailable$count_nu>5)
+  #new column called period, day started vs ended, find Observations, want atleast a monthly value
+  period <- difftime(siteAvailable$end_date, siteAvailable$begin_date) / siteAvailable$count_nu
 
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
+  parmsAvailable <- unique(siteAvailable$parm_cd)
+  parmsAvailable <- parmsAvailable[!is.na(parmsAvailable)]
+  
+  for(x in parmsAvailable){
+    print(x)
+    siteINFO<-readNWISdata(siteNumber = siteNumb, parameterCD = x)
+    print(siteINFO)
+  }  
+  
+  siteWQ <- readNWISqw(siteNumber = siteNumb, parameterCd = parmsAvailable)
+  siteWQtwo <- readWQPqw(siteNumbers =  c("USGS-401733105392404"), parameterCd = parmsAvailable)
+  
+  
+  
+  siteWQthree <- readWQP()
+  
+  siteINFO <- readNWISdv(siteNumber = siteNumb, parameterCd = parmsAvailable)
+  siteNext <-readNWISdata(siteNumber = siteNumb, parameterCD = "00905")
+  siteWaterQ <-readNWISdata(siteNumber = siteNumb, service = "qw")
+  
 
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.csv',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          skip = FALSE,
-                          overwrite = TRUE)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
+  rawfile <- glue('{rd}/{c}.csv',
+                  rd = raw_data_dest,
+                  c = set_details$component)
+  
+  R.utils::downloadFile(url = set_details$url,
+                        filename = rawfile,
+                        skip = FALSE,
+                        overwrite = TRUE)
+  
+  res <- httr::HEAD(set_details$url)
+  
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+    with_tz(tzone = 'UTC')
+  
+  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+  
+  return(deets_out)
 }
+
 
 #munge kernels ####
 
@@ -334,7 +453,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -389,7 +508,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -501,7 +620,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -646,7 +765,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -846,7 +965,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -1002,7 +1121,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -1146,7 +1265,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
     # TDN is listed as g/l it appears but comparing to anoth east river
     # data prod, it looks like (and makes snese) that the unit is ug/l
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -1294,7 +1413,7 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
     # TDN is listed as g/l it appears but comparing to anoth east river
     # data prod, it looks like (and makes snese) that the unit is ug/l
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
