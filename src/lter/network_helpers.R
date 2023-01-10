@@ -2,43 +2,61 @@ ms_pasta_domain_refmap = list(
     hbef = 'knb-lter-hbr',
     hjandrews = 'knb-lter-and',
     konza = 'knb-lter-knz',
-    baltimore = 'knb-lter-bes'
+    baltimore = 'knb-lter-bes',
+    luquillo = 'knb-lter-luq',
+    niwot = 'knb-lter-nwt',
+    santa_barbara = 'knb-lter-sbc',
+    bonanza = 'knb-lter-bnz',
+    mcmurdo = 'knb-lter-mcm',
+    plum = 'knb-lter-pie',
+    arctic = 'knb-lter-arc'
 )
 
-#. handle_errors
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
 
-    vsn_endpoint = 'https://pasta.lternet.edu/package/eml/'
+    vsn_endpoint <- 'https://pasta.lternet.edu/package/eml/'
 
-    domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname_ms=prodname_ms)
+    domain_ref <- ms_pasta_domain_refmap[[domain]]
+    prodcode <- prodcode_from_prodname_ms(prodname_ms = prodname_ms)
 
-    vsn_request = glue(vsn_endpoint, domain_ref, '/', prodcode)
-    newest_vsn = RCurl::getURLContent(vsn_request, timeout=10)
-    newest_vsn = as.numeric(stringr::str_match(newest_vsn,
+    vsn_request <- glue(vsn_endpoint, domain_ref, '/', prodcode)
+
+    if(ms_instance$op_system == 'windows'){
+        newest_vsn <- xml2::xml_text(xml2::read_html(vsn_request))
+    } else{
+        newest_vsn <- RCurl::getURLContent(vsn_request,
+                                           timeout = 10)
+    }
+
+    newest_vsn <- as.numeric(stringr::str_match(newest_vsn,
         '[0-9]+$')[1])
 
     return(newest_vsn)
 }
 
-#. handle_errors
 get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     data_tracker){
 
-    #returns: tibble with url, site_name, component (aka element_name)
+    #returns: tibble with url, site_code, component (aka element_name)
 
-    name_endpoint = 'https://pasta.lternet.edu/package/name/eml/'
-    dl_endpoint = 'https://pasta.lternet.edu/package/data/eml/'
+    name_endpoint <- 'https://pasta.lternet.edu/package/name/eml/'
+    dl_endpoint <- 'https://pasta.lternet.edu/package/data/eml/'
 
-    domain_ref = ms_pasta_domain_refmap[[domain]]
-    prodcode = prodcode_from_prodname_ms(prodname_ms)
+    domain_ref <- ms_pasta_domain_refmap[[domain]]
+    prodcode <- prodcode_from_prodname_ms(prodname_ms)
 
-    name_request = glue(name_endpoint, domain_ref, '/', prodcode, '/',
+    name_request <- glue(name_endpoint, domain_ref, '/', prodcode, '/',
         version)
-    reqdata = RCurl::getURLContent(name_request)
-    reqdata = strsplit(reqdata, '\n')[[1]]
+
+    if(ms_instance$op_system == 'windows'){
+        reqdata <- xml2::xml_text(xml2::read_html(name_request))
+    } else{
+        reqdata <- RCurl::getURLContent(name_request)
+    }
+
+    reqdata <- strsplit(reqdata, '\n')[[1]]
     reqdata <- grep('Constants', reqdata, invert = TRUE, value = TRUE) #junk filter for hbef. might need flex
-    reqdata = str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
+    reqdata <- str_match(reqdata, '([0-9a-zA-Z]+),(.+)')
 
     element_ids = reqdata[,2]
     dl_urls = paste0(dl_endpoint, domain_ref, '/', prodcode, '/', version,
@@ -47,21 +65,23 @@ get_avail_lter_product_sets <- function(prodname_ms, version, domain,
     names <- str_match(reqdata[,3], '(.+?)_.*')[,2]
     names[names %in% c(domain, network)] = 'sitename_NA'
 
-    avail_sets = tibble(url=dl_urls,
-        site_name=names,
+    names[is.na(names)] <- 'sitename_NA'
+
+    avail_sets <- tibble(url=dl_urls,
+        site_code=names,
         component=reqdata[,3])
 
     return(avail_sets)
 }
 
-#. handle_errors
-populate_set_details <- function(tracker, prodname_ms, site_name, avail,
+populate_set_details <- function(tracker, prodname_ms, site_code, avail,
     latest_vsn){
+    #tracker=held_data;avail=avail_site_sets
 
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_name]]$retrieve
+    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
     prodcode = prodcode_from_prodname_ms(prodname_ms)
 
     retrieval_tracker = avail %>%
@@ -77,16 +97,98 @@ populate_set_details <- function(tracker, prodname_ms, site_name, avail,
             needed = avail_version - held_version > 0)
 
     if(any(is.na(retrieval_tracker$needed))){
-        msg = paste0('Must run `track_new_site_components` before ',
-            'running `populate_set_details`')
-        logerror(msg, logger=logger_module)
-        stop(msg)
+
+        #we used to raise an error for this, but now I'm just going to trust that
+        #we'll always run track_new_site_components before this function, so that
+        #we can use the same conditional to perform an important error correction:
+        #the case where a new version of a file shows up as a new file, as in the case
+        #of lter>arctic>stream_chemistry__10303>1978-2017_LTER_Streams_Chemistry_v6_csv,
+        #which became 2019_LTER_Streams_Chemistry_v9_csv and broke the system.
+
+        # msg = paste0('Must run `track_new_site_components` before ',
+        #     'running `populate_set_details`')
+        # logerror(msg = msg,
+        #          logger = logger_module)
+        # stop(msg)
+
+        prodfile <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+                                     n = network,
+                                     d = domain)))
+
+        #if there's a components column, check to see if it already specifies a
+        #component. if so, replace the old component with the new one.
+        if('components' %in% colnames(prodfile)){
+
+            old_bool <- is.na(retrieval_tracker$needed)
+            oldprod <- retrieval_tracker$component[old_bool]
+            newprod <- retrieval_tracker$component[! old_bool]
+
+            prodrow <- which(prodfile$prodcode == prodcode &
+                 prodfile$prodname == prodname_from_prodname_ms(prodname_ms))
+
+            if(! is.na(prodfile[prodrow, 'components'])){
+                prodfile[prodrow, 'components'] <- newprod
+            }
+
+            logwarn(msg = glue('Found a component that was updated with a new ',
+                               'filename as well as a new version. Updating held_data ',
+                               'and {n}/{d}/products.csv ({p1} -> {p2})',
+                               n = network,
+                               d = domain,
+                               p1 = oldprod,
+                               p2 = newprod))
+
+            write_csv(x = prodfile,
+                      file = glue('src/{n}/{d}/products.csv',
+                                  n = network,
+                                  d = domain))
+        }
+
+        retrieval_tracker <- retrieval_tracker[! old_bool, ]
+
+        tracker[[prodname_ms]][[site_code]]$retrieve <- retrieval_tracker
+        held_data <<- tracker
+    }
+
+
+    if(any(retrieval_tracker$needed)) {
+
+        email_update <- retrieval_tracker %>%
+            filter(held_version != -1) %>%
+            filter(avail_version !=  held_version)
+
+        if(!nrow(email_update) == 0) {
+
+            sites <- unique(email_update$site_code)
+            sites <- paste(sites, collapse = ', ')
+
+            components <- unique(email_update$component)
+            components <- paste(components, collapse = ', ')
+
+            logwarn(msg = glue('The domain had updated product: {p}',
+                               p = prodname_ms))
+
+            update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
+                               'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
+                               ' Check meta data to ensure munge and retrival code is ',
+                               'still acceptable for this version of the product ',
+                               '(units have not changed, there are no new variables, ',
+                               'variables names have not changed, etc.).',
+                               n = network,
+                               d = domain,
+                               p = prodname_ms,
+                               s = sites,
+                               c = components)
+
+            #email_err(msgs = update_msg,
+            #          addrs = conf$report_emails,
+            #          pw = conf$gmail_pw)
+        }
     }
 
     return(retrieval_tracker)
 }
 
-#. handle_errors
 get_lter_data <- function(domain, sets, tracker, silent=TRUE){
     # sets <- new_sets; tracker <- held_data
 
@@ -98,8 +200,8 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         s = sets[i, ]
 
-        msg = glue('Processing {st}, {p}, {c}',
-            st=s$site_name, p=s$prodname_ms, c=s$component)
+        msg = glue('Retrieving {st}, {p}, {c}',
+            st=s$site_code, p=s$prodname_ms, c=s$component)
         loginfo(msg, logger=logger_module)
 
         processing_func = get(paste0('process_0_', s$prodcode_id))
@@ -113,24 +215,45 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
     }
 }
 
-#. handle_errors
-download_raw_file <- function(network, domain,set_details, file_type = '.csv') {
+download_raw_file <- function(network, domain, set_details, file_type = '.csv') {
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
-    
+                         s = set_details$site_code)
+
     dir.create(raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-    
-    download.file(url = set_details$url,
-                  destfile = glue(raw_data_dest,
-                                  '/',
-                                  set_details$component,
-                                  file_type),
-                  cacheOK = FALSE,
-                  method = 'curl')
+
+    if(is.null(file_type)) {
+
+        download.file(url = set_details$url,
+                      destfile = glue(raw_data_dest,
+                                      '/',
+                                      set_details$component),
+                      cacheOK = FALSE,
+                      method = 'curl')
+    } else {
+
+        download.file(url = set_details$url,
+                      destfile = glue(raw_data_dest,
+                                      '/',
+                                      set_details$component,
+                                      file_type),
+                      cacheOK = FALSE,
+                      method = 'curl')
+    }
 }
+
+retrieve_lter <- function(set_details, network, domain) {
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = NULL)
+
+    return()
+}
+
