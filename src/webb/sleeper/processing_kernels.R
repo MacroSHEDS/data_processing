@@ -969,7 +969,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-# for stream chem work
+# JUMP: for stream chem work
 set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS006")
 prodname_ms <- set_details$prodname_ms
 site_code <- set_details$site_code
@@ -1015,6 +1015,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     ## NOTE: special character was microgram symbol
     ## replacing with "u"
     d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
 
     # then rename all columns with these new names
     colnames(d) <- d_new_names
@@ -1023,14 +1024,54 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     d <- d %>%
       filter(Sample_Type == "ST")
 
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here to be just the old_var = new_var structure
+    sleeper_aq_chem = c()
+
+    for(i in 1:length(sleepers_stream_chem_var_info)) {
+      og_name <- names(sleepers_stream_chem_var_info[i])
+      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+
+      sleeper_aq_chem[og_name] = ms_name
+    }
+
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date_Time' = "%Y-%m-%d %HH:%MM:%SS"),
+                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Sample_Name',
-                         data_cols =  c('' = ''),
+                         data_cols =  sleeper_aq_chem,
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         # variable specific flag pattern
+                         var_flagcol_pattern = '#V#_Lab',
+                         # summary (all vars) flag colun name
+                         summary_flagcols = 'Chemistry_Flag',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            ## characters that, if found in a variable's "flag" column
+                            # will drop that row
+                            variable_flags_to_drop = '',
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c('*'),
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            variable_flags_clean   = c(''),
+                            # will turn the *ms_status* column to 2
+                            # (e.g. set value to detection limit divided by 2)
+                            variable_flags_bdl = list(Chemistry_Flag = c())
+                            ## characters that, if found in the summary "flag" column
+                            # will drop that row
+                            summary_flags_to_drop  = list(Chemistry_Flag = c('')),
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            summary_flags_dirty    = list(Chemistry_Flag = c('')),
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            summary_flags_clean    = list(Chemistry_Flag = c())
+                            # will turn the *ms_status* column to 2
+                            # (e.g. set value to detection limit divided by 2)
+                            summary_flags_bdl = list(Chemistry_Flag = c())
+                            )
+
+
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
