@@ -1048,27 +1048,38 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = 'Chemistry_Flag',
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
+    d.l <- ms_cast_and_reflag(d,
                             ## characters that, if found in a variable's "flag" column
                             # will drop that row
-                            variable_flags_to_drop = '',
+                            ### comment out, no dropping from these flags
+                            variable_flags_to_drop = 'DIRTY_',
+
                             # will turn the *ms_status* column to 1 (e.g. flagged)
-                            variable_flags_dirty   = c('*'),
+                            ### have to supply something, this never occurs
+                            variable_flags_dirty   = c('DIRTY'),
+
                             # will turn the *ms_status* column to 0 (e.g. clean)
-                            variable_flags_clean   = c(''),
+                            ### 1:18 for each lab
+                            ## variable_flags_clean   = c(as.character(1:18)),
+
                             # will turn the *ms_status* column to 2
                             # (e.g. set value to detection limit divided by 2)
-                            variable_flags_bdl = list(Chemistry_Flag = c())
+                            ### commenting out for now
+                            ## variable_flags_bdl = list(Chemistry_Flag = c())
+
                             ## characters that, if found in the summary "flag" column
                             # will drop that row
-                            summary_flags_to_drop  = list(Chemistry_Flag = c('')),
+                            summary_flags_to_drop  = list(Chemistry_Flag = c('DIRTY')),
+
                             # will turn the *ms_status* column to 1 (e.g. flagged)
-                            summary_flags_dirty    = list(Chemistry_Flag = c('')),
+                            summary_flags_dirty    = list(Chemistry_Flag = unname(sleeper_aq_chem)),
+
                             # will turn the *ms_status* column to 0 (e.g. clean)
-                            summary_flags_clean    = list(Chemistry_Flag = c())
+                            ## summary_flags_clean    = list(Chemistry_Flag = c('NA'))
+
                             # will turn the *ms_status* column to 2
                             # (e.g. set value to detection limit divided by 2)
-                            summary_flags_bdl = list(Chemistry_Flag = c())
+                            ## summary_flags_bdl = list(Chemistry_Flag = c())
                             )
 
 
