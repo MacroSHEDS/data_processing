@@ -1,13 +1,37 @@
-prodcode,prodname,type,status,notes
-ms005,npp,gee,ready,NA
-ms006,gpp,gee,ready,NA
-ms007,lai,gee,ready,NA
-ms007,fpar,gee,ready,NA
-ms008,tree_cover,gee,ready,NA
-ms008,veg_cover,gee,ready,NA
-ms008,bare_cover,gee,ready,NA
-ms009,prism_precip,gee,ready,NA
-ms009,prism_temp_mean,gee,ready,NA
-ms010,start_season,other,ready,NA
-ms010,end_season,other,ready,NA
-ms010,max_season,other,ready,NA
+prodcode,prodname,type,status,notes,data_class,data_source,data_class_code,data_source_code,doi,license,citation,url
+ms805,npp,gee,ready,NA,vegetation,University of Montana Numerical Terradynamic Simulation Group (NTSG),v,a,10.1002/rse2.74,NA,"Robinson,
+ N.P., B.W. Allred, W.K. Smith, M.O. Jones, A. Moreno, T.A. Erickson, 
+D.E. Naugle, and S.W. Running. 2018. Terrestrial primary production for 
+the conterminous United States derived from Landsat 30 m and MODIS 250 
+m. Remote Sensing in Ecology and Conservation. doi:10.1002/rse2.74",https://www.ntsg.umt.edu/project/landsat/landsat-productivity.php
+ms806,gpp,gee,ready,NA,vegetation,University of Montana Numerical Terradynamic Simulation Group (NTSG),v,a,10.1002/rse2.74,NA,"Robinson,
+ N.P., B.W. Allred, W.K. Smith, M.O. Jones, A. Moreno, T.A. Erickson, 
+D.E. Naugle, and S.W. Running. 2018. Terrestrial primary production for 
+the conterminous United States derived from Landsat 30 m and MODIS 250 
+m. Remote Sensing in Ecology and Conservation. doi:10.1002/rse2.74",https://www.ntsg.umt.edu/project/landsat/landsat-productivity.php
+ms807,lai,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MODIS/MCD15A3H.006,NA,"Myneni, R., Knyazikhin, Y., Park, T. (2015). MCD15A3H MODIS/Terra+Aqua Leaf Area Index/FPAR 4-day L4 Global 500m SIN Grid V006 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MODIS/MCD15A3H.006",NA
+ms807,fpar,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MODIS/MCD15A3H.006,NA,"Myneni, R., Knyazikhin, Y., Park, T. (2015). MCD15A3H MODIS/Terra+Aqua Leaf Area Index/FPAR 4-day L4 Global 500m SIN Grid V006 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MODIS/MCD15A3H.006",NA
+ms808,tree_cover,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003,NA,"Townshend, J. (2016). Global Forest Cover Change (GFCC) Tree Cover Multi-Year Global 30 m V003 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003",NA
+ms808,veg_cover,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003,NA,"Townshend, J. (2016). Global Forest Cover Change (GFCC) Tree Cover Multi-Year Global 30 m V003 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003",NA
+ms808,bare_cover,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003,NA,"Townshend, J. (2016). Global Forest Cover Change (GFCC) Tree Cover Multi-Year Global 30 m V003 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MEaSUREs/GFCC/GFCC30TC.003",NA
+ms809,prism_precip,gee,ready,NA,climate,PRISM,c,c,https://doi.org/10.1002/joc.1688,https://www.prism.oregonstate.edu/terms/,"PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu, data created 4 Feb 2014, accessed 16 Dec 2020.",https://www.prism.oregonstate.edu/
+ms809,prism_temp_mean,gee,ready,NA,climate,PRISM,c,c,https://doi.org/10.1002/joc.1688,https://www.prism.oregonstate.edu/terms/,"PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu, data created 4 Feb 2014, accessed 16 Dec 2020.",https://www.prism.oregonstate.edu/
+ms810,start_season,other,ready,NA,vegetation,USGS,v,d,https://doi.org//10.5066/F7PC30G1,NA,NA,https://www.usgs.gov/special-topics/remote-sensing-phenology
+ms810,end_season,other,ready,NA,vegetation,USGS,v,d,https://doi.org//10.5066/F7PC30G1,NA,NA,https://www.usgs.gov/special-topics/remote-sensing-phenology
+ms810,max_season,other,ready,NA,vegetation,USGS,v,d,https://doi.org//10.5066/F7PC30G1,NA,NA,https://www.usgs.gov/special-topics/remote-sensing-phenology
+ms810,season_length,other,ready,NA,vegetation,USGS,v,d,https://doi.org//10.5066/F7PC30G1,NA,NA,https://www.usgs.gov/special-topics/remote-sensing-phenology
+ms811,terrain,other,ready,NA,terrain,Amazon Web Services Terrain Tiles,t,e,NA,NA,NA,NA
+ms812,nrcs_soils,other,ready,NA,parent material,NRCS-gSSURGO,p,f,https://doi.org//10.15482/USDA.ADC/1255234,NA,"Soil Survey Staff. Gridded Soil Survey Geographic (gSSURGO) Database for the Conterminous United States. United States Department of Agriculture, Natural Resources Conservation Service. Available online at https://gdg.sc.egov.usda.gov/. Month, day, year (YYYYMM official release).",https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/survey/geo/?cid=nrcs142p2_053628
+ms813,nlcd,gee,ready,NA,landcover,Multi-Resolution Land Characteristics Consortium (MRLC),l,g,https://doi.org/10.5066/P9KZCM54,https://www.usa.gov/government-works,"Dewitz, J., and U.S. Geological Survey, 2021, National Land Cover Database (NLCD) 2019 Products (ver. 2.0, June 2021): U.S. Geological Survey data release, https://doi.org/10.5066/P9KZCM54",https://www.mrlc.gov/
+ms814,nadp,other,ready,NA,climate,National Atmospheric Deposition Program (NADP),c,h,NA,NA,"National Atmospheric Deposition Program (NRSP-3). 2022. NADP Program Office, Wisconsin State Laboratory of Hygiene, 465 Henry Mall, Madison, WI 53706.",https://nadp.slh.wisc.edu/
+ms815,pelletier_soil_thickness,other,ready,https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1304,parent material,Pelletier et al. 2016,p,i,https://doi.org/10.3334/ORNLDAAC/1304,https://earthdata.nasa.gov/earth-observation-data/data-use-policy,"Pelletier, J.D., P.D. Broxton, P. Hazenberg, X. Zeng, P.A. Troch, G. Niu, Z.C. Williams, M.A. Brunke, and D. Gochis. 2016. Global 1-km Gridded Thickness of Soil, Regolith, and Sedimentary Deposit Layers. ORNL DAAC, Oak Ridge, Tennessee, USA. https://doi.org/10.3334/ORNLDAAC/1304",https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1304
+ms816,geochemical,other,ready,https://www.sciencebase.gov/catalog/item/53481333e4b06f6ce034aae7,parent material,USGS,p,d,http://dx.doi.org/10.5066/F7X0653P,NA,"Olson, J.R. and Hawkins, C.P., 2014, Geochemical Characteristics of the Conterminous United States: U.S. Geological Survey data release, http://dx.doi.org/10.5066/F7X0653P.",https://www.sciencebase.gov/catalog/item/53481333e4b06f6ce034aae7
+ms817,ndvi,gee,ready,NA,vegetation,MODIS,v,b,https://doi.org/10.5067/MODIS/MOD13Q1.006,NA,"Didan, K. (2015). MOD13Q1 MODIS/Terra Vegetation Indices 16-Day L3 Global 250m SIN Grid V006 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MODIS/MOD13Q1.006",https://lpdaac.usgs.gov/products/mod13q1v006/
+ms818,bfi,other,ready,https://databasin.org/datasets/d8c2b299681c486e8d6daf98aac10cfe/,hydrology,USGS,h,d,https://doi.org/10.3133/ofr03263,NA,"Wolock, David M. 2003. Base-flow index grid for the conterminous United States. U.S. Geological Survey Open-File Report 03-263. U.S. Geological Survey. Reston, Virginia. http://water.usgs.gov/lookup/getspatial?bfi48grd",https://databasin.org/datasets/d8c2b299681c486e8d6daf98aac10cfe/
+ms819,tcw,gee,ready,NA,vegetation,Oxford MAP TCW,v,j,https://doi.org/10.1016/j.isprsjprs.2014.10.001,NA,"Weiss, D.J., P.M. Atkinson, S. Bhatt, B. Mappin, S.I. Hay & P.W. Gething (2014) An effective approach for gap-filling continental scale remotely sensed time-series. ISPRS Journal of Photogrammetry and Remote Sensing, 98, 106-118.",https://www.bdi.ox.ac.uk/research/malaria-atlas-project
+ms820,et_ref,gee,ready,NA,climate,GRIDMET,c,k,https://doi.org/10.1002/joc.3413,NA,"Abatzoglou J. T., Development of gridded surface meteorological data for ecological applications and modelling, International Journal of Climatology. (2012) doi:10.1002/joc.3413",NA
+ms821,nsidc,other,ready,https://nsidc.org/data/NSIDC-0719/versions/1,climate,NSIDC,c,l,https://doi.org/10.5067/0GGPB220EX6A,NA,"Broxton, P., X. Zeng, and N. Dawson. 2019. Daily 4 km Gridded SWE and Snow Depth from Assimilated In-Situ and Modeled Data over the Conterminous US, Version 1. [Indicate subset used]. Boulder, Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive Center. doi: https://doi.org/10.5067/0GGPB220EX6A. [Date Accessed].",https://nsidc.org/data/NSIDC-0719/versions/1
+ms822,glhymps,other,pending,https://dataverse.scholarsportal.info/dataset.xhtml?persistentId=doi:10.5683/SP2/DLGXYO,parent material,GLHYMPS,p,m,"https://doi.org/10.5683/SP2/DLGXYO,",NA,"Gleeson, Tom, 2018, ""GLobal HYdrogeology MaPS (GLHYMPS) of permeability and porosity"", https://doi.org/10.5683/SP2/DLGXYO, Scholars Portal Dataverse, V1",https://dataverse.scholarsportal.info/dataset.xhtml?persistentId=doi:10.5683/SP2/DLGXYO
+ms823,lithology,other,pending,https://doi.pangaea.de/10.1594/PANGAEA.788537,parent material,GLiM,p,n,https://doi.org/10.1594/PANGAEA.788537,NA,"Hartmann, Jörg; Moosdorf, Nils (2012): Global Lithological Map Database v1.0 (gridded to 0.5° spatial resolution). PANGAEA, https://doi.org/10.1594/PANGAEA.788537,",https://doi.pangaea.de/10.1594/PANGAEA.788537
+ms824,daymet,gee,pending,NA,climate,Daymet,c,o,https://doi.org/10.3334/ORNLDAAC/1840,NA,"Thornton, M.M., R. Shrestha, Y. Wei, P.E. Thornton, S. Kao, and B.E. Wilson. {YEAR}. Daymet: Daily Surface Weather Data on a 1-km Grid for North America, Version 4. ORNL DAAC, Oak Ridge, Tennessee, USA",https://daymet.ornl.gov/
+ms825,modis_idbp,gee,pending,NA,landcover,MODIS,l,b,https://doi.org/10.5067/MODIS/MCD12Q1.006,NA,"Friedl, M., Sulla-Menashe, D. (2019). MCD12Q1 MODIS/Terra+Aqua Land Cover Type Yearly L3 Global 500m SIN Grid V006 [Data set]. NASA EOSDIS Land Processes DAAC. Accessed 2022-03-01 from https://doi.org/10.5067/MODIS/MCD12Q1.006",https://lpdaac.usgs.gov/products/mcd12q1v006/

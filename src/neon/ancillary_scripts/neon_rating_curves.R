@@ -3,23 +3,54 @@ library(RColorBrewer)
 library(feather)
 library(glue)
 library(lubridate)
-# library(neonUtilities)
-# library(stageQCurve)
+library(neonUtilities)
+library(viridis)
 # devtools::install_github('NEONScience/NEON-stream-discharge/L4Discharge/stageQCurve')
+# library(stageQCurve)
+
+#TODO:
+#   verify that WF 1 == flag
+#   generate curves their way
+#NOTE: there was no information in the dataQF or L1DataQF columns.
+#   recalculatedL1QF had 2744 1s and 64 0s, which seems backwards.
+#   consider all of these again on the next run.
 
 setwd('~/git/macrosheds/data_acquisition/data/neon/')
 
-#prepare rating curve data ####
+#prepare rating curve data (obsolete. this is just fied Q collection) ####
 
 #this product includes variables needed for generating rating curves.
 #it also includes velocity, width, etc.
 prodcode = 'DP1.20048.001'
 
+#download zips, unzip 'em.
+data_pile = neonUtilities::zipsByProduct(prodcode,
+    site='all', startdate=NA, enddate=NA,
+    package='basic', check.size=TRUE)
+
+neonUtilities::stackByTable('filesToStack20048',
+                            'chili',
+                            folder=TRUE,
+                            saveUnzippedFiles = TRUE,
+                            nCores=4)
+
+#originally data_pile was the output of loadByProduct, but that's mad broken.
+#so, here's the same idea with just one sitemonth.
+components = list.files('chili/NEON.D01.HOPB.DP1.20048.001.2016-03.basic.20200908T140739Z/',
+                        pattern = '*.csv',
+                        full.names = TRUE)
+data_pile = lapply(components,
+                   read_csv)
+names(data_pile) = str_match(components,
+                             '.*?/(.*)$')[,2]??/?
+data_pile = read.csv('chili/NEON.D01.HOPB.DP1.20048.001.2016-03.basic.20200908T140739Z/NEON.D01.HOPB.DP1.20048.001.dsc_fieldData.2016-03.basic.20200908T140739Z.csv')
+
 # data_pile = neonUtilities::loadByProduct(prodcode,
 #     site='all', startdate=NA, enddate=NA,
 #     package='basic', check.size=TRUE)
-# saveRDS(data_pile, 'zq_data_temp.rds')
-data_pile = readRDS('zq_data_temp.rds')
+# dir.create('ancillary', showWarnings = FALSE)
+# saveRDS(data_pile, 'ancillary/zq_data_temp.rds')
+# data_pile = readRDS('ancillary/zq_data_temp.rds')
 
 # readr::write_lines(data_pile$readme_20048$X1, '/tmp/neon_readme.txt')
 
@@ -49,6 +80,33 @@ sites = unique(zq$siteID)
 # zq2 = zq %>%
 #     filter(siteID == 'ARIK')
 # plot(zq2$streamStage, log(zq2$totalDischarge), col=zq2$)
+
+#prepare rating curve data (actual rating product) ####
+
+#this product includes variables needed for generating rating curves.
+#it also includes velocity, width, etc.
+prodcode = 'DP4.00133.001'
+
+# #download zips, unzip 'em. (uncomment and run)
+# neonUtilities::zipsByProduct(prodcode,
+#     site='all', startdate=NA, enddate=NA,
+#     package='basic', check.size=TRUE)
+#
+# neonUtilities::stackByTable('filesToStack00133',
+#                             'rating_curves_raw_20210311',
+#                             folder=TRUE,
+#                             saveUnzippedFiles=TRUE,
+#                             nCores=4)
+
+# filter(data_pile[[6]], fieldName == 'streamDischarge') %>% as.data.frame()
+
+curve_files = list.files('rating_curves_raw_20210311', recursive=TRUE,
+                         pattern='gaugeDischargeMeas', full.names=TRUE)
+zq = purrr::map_dfr(curve_files, read_csv)
+
+zq = zq %>%
+    # filter(recalculatedL1QF == 0) %>% #shouldn't 1s be flags? i think they are.
+    select(siteID, curveID, gaugeHeight, streamDischarge, recalculatedL1QF)
 
 #convert surface elev to stage and plot it####
 #surface elev acquired via macrosheds data_acquisition system
@@ -415,7 +473,7 @@ for(s in sites){
 
 dev.off()
 
-#make rating curves (still legit) ####
+#make rating curve plots (old way, based on 20048) ####
 
 xlims = range(zq$streamStage[zq$siteID != 'FLNT'], na.rm=TRUE)
 ylims = range(log(zq$totalDischarge[zq$siteID != 'FLNT']), na.rm=TRUE)
@@ -463,5 +521,82 @@ for(i in 1:length(sites)){
     mtext('Stage (m)', 1, outer=TRUE, line=3)
     mtext('Log Discharge (cms)', 2, outer=TRUE, line=4)
 }
+
+dev.off()
+
+#make rating curve plots (new way, based on 00133) ####
+
+xlims = range(zq$gaugeHeight[zq$siteID != 'FLNT'], na.rm=TRUE)
+ylims = range(log(zq$streamDischarge[zq$siteID != 'FLNT']), na.rm=TRUE)
+ylims[1] = -2.5
+
+png('../../plots/neon_legitness/neon_rating_curves_20210311.png',
+    height=10, width=10, units='in', type='cairo', res=300)
+
+nrows = 4
+ncols = 4
+npanels = length(sites)
+par(mfrow=c(nrows, ncols), oma=c(5, 6, 0, 0), mar=c(0, 0, 3, 0))
+colors = viridis::magma(7, alpha=0.3)[1:6]
+coloryearmap = as.list(colors)
+names(coloryearmap) = 2014:2019
+curveseq = seq(-1, 5, 0.01)
+sites = unique(zq$siteID)
+sites = c(sites[sites != 'WALK'], 'WALK')
+for(i in 1:npanels){
+
+    site = sites[i]
+    zqsub = filter(zq, siteID == site)
+
+    curveyears = unique(zqsub$curveID)
+    for(j in 1:length(curveyears)){
+
+        y = str_match(curveyears[j], '....\\.([0-9]{4})')[, 2]
+
+        plot_model_line = TRUE
+
+        curvesub = filter(zqsub, curveID == curveyears[j])
+        Z = curvesub$gaugeHeight
+        Q = curvesub$streamDischarge
+        mod = try(minpack.lm::nlsLM(Q ~ (a * exp(b * Z)), start=list(a=0.001, b=.001))) #exp
+        if('try-error' %in% class(mod)){
+            plot_model_line = FALSE
+            # mod = minpack.lm::nlsLM(Q ~ (a * Z^b), start=list(a=1, b=1)) #power
+            # warning(paste0('power model used for ', i))
+        }
+
+        if(j == 1){
+            # if(i == npanels) {
+            #     plot(Z, log(Q), main='', las=1, pch=20, col=colors[j], cex=2, bty='n',
+            #         yaxt='n', ylim=c(2, 8))
+            #     legend('topleft', legend=site, bty='n', text.font=2, cex=1.2)
+            # } else {
+            plot(Z, log(Q), main=site, col=coloryearmap[[y]], xlim=xlims, ylim=ylims,
+                xaxt='n', yaxt='n', pch=20, cex=2, bty='l')
+            # }
+        } else {
+            points(Z, log(Q), col = coloryearmap[[y]], pch=20, cex=2)
+        }
+
+        if(plot_model_line){
+            lines(curveseq, log(predict(mod, list(Z=curveseq))),
+                  col=coloryearmap[[y]], lty=3, lwd=1.5)
+        }
+    }
+
+    if(i > npanels - ncols) axis(1)
+    tcks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
+    logtcks = log(tcks)
+    # if((i - 1) %% nrows == 0 || i == npanels){ # if in leftmost column or if WALK
+    if((i - 1) %% nrows == 0){ # if in leftmost column or if WALK
+        axis(2, at=logtcks, labels=tcks, las=2)
+    }
+
+    mtext('Stage (m)', 1, outer=TRUE, line=3)
+    mtext('Discharge (L/s)', 2, outer=TRUE, line=4)
+}
+plot(1, 1, type='n', ann=FALSE, bty='n', axes=FALSE)
+legend('center', legend=names(coloryearmap), lty=3, lwd=2, cex=2, bty='n',
+       col=unlist(coloryearmap, use.names=FALSE))
 
 dev.off()

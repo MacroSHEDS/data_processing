@@ -1,0 +1,11 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components
+VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms002,http://www.czo.psu.edu/data_geospatial.html,NA
+VERSIONLESS002,precipitation,ready,ready,NA,precip_pchem_pflux__ms003,http://www.czo.psu.edu/data_geospatial.html,NA
+VERSIONLESS003,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,http://www.czo.psu.edu/data_geospatial.html,NA
+ms001,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms003,NA,NA
+ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms003,precip_pchem_pflux,NA,NA,ready,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms003,automated entry,NA
+ms004,discharge,NA,NA,linked,NA,automated entry,NA
+ms005,stream_chemistry,NA,NA,linked,NA,automated entry,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA
