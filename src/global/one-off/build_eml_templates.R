@@ -142,8 +142,9 @@ filter(zz$units, unitType == 'time') %>% pull(id)
 
 ##build provenance table
 
-prov <- readxl::read_xlsx('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-                                skip = 5) %>%
+# prov <- readxl::read_xlsx('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
+#                                 skip = 5) %>%
+prov <- read_csv('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv') %>%
     mutate(dataPackageID = NA_character_, systemID = NA_character_, title = NA_character_,
            givenName = NA_character_, middleInitial = NA_character_,
            surName = NA_character_, role = NA_character_,
@@ -201,7 +202,8 @@ files_to_link <- c(ts_tables,
                    'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv',
                    'macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv',
                    'macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv',
-                   'macrosheds_figshare_v1/macrosheds_documentation_packageformat/variable_catalog.csv'
+                   'macrosheds_figshare_v1/macrosheds_documentation_packageformat/variable_catalog.csv',
+                   'macrosheds_figshare_v1/0_documentation_and_metadata/attribution_and_intellectual_rights_timeseries.csv'
 )
 
 basenames <- basename(files_to_link)
@@ -219,6 +221,9 @@ basenames <- c(basenames, 'disturbance_record.csv')
 basenames <- c(basenames, 'attribution_and_intellectual_rights_ws_attr.csv')
 
 descriptions <- basenames
+descriptions <- str_replace(descriptions,
+                            '^attribution_and_intellectual_rights_ws_attr\\.csv$',
+                            'Specific license requirements and expectations associated with each primary time-series dataset. See data_use_agreements.docx and attribution_and_intellectual_right_ws_attr.csv')
 descriptions <- str_replace(descriptions,
                             '^timeseries_([a-z_]+)\\.csv$',
                             'Time-series (streamflow, precip if available, chemistry) for domain: \\1. See variables_timeseries.csv and variable_sample_regimen_codes_timeseries.csv')
@@ -263,7 +268,7 @@ descriptions <- str_replace(descriptions,
                             'A register of known watershed experiments and significant natural disturbances')
 descriptions <- str_replace(descriptions,
                             '^attribution_and_intellectual_rights_ws_attr\\.csv$',
-                            'Information about fair use of watershed attribute data. See also attribution_and_intellectual_rights_timeseries.xlsx.')
+                            'Information about fair use of watershed attribute data. See also attribution_and_intellectual_rights_timeseries.csv.')
 descriptions <- str_replace(descriptions,
                             '^data_coverage_breakdown\\.csv$',
                             'Number of observations, timespan of observation, by variable and site')
@@ -274,11 +279,6 @@ for(i in seq_along(files_to_link)){
 }
 
 #link additional files that will be grouped under "other entities"
-sw(file.remove(file.path(dd, 'attribution_and_intellectual_rights_timeseries.xlsx')))
-sw(file.remove(file.path(dd, 'attribution_and_intellectual_rights_ts.xlsx')))
-file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.xlsx',
-          file.path(dd, 'attribution_and_intellectual_rights_timeseries.xlsx'))
-message('manually remove the second and third sheets from attribution_and_intellectual_rights_timeseries.xlsx')
 sw(file.remove(file.path(dd, 'data_use_agreements.docx')))
 file.link('macrosheds_figshare_v1/0_documentation_and_metadata/01a_data_use_agreements.docx',
           file.path(dd, 'data_use_agreements.docx'))
@@ -366,6 +366,7 @@ template_table_attributes(wd, dd, 'variable_category_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'variable_data_source_codes_ws_attr.csv')
 template_table_attributes(wd, dd, 'data_irregularities.csv')
 template_table_attributes(wd, dd, 'disturbance_record.csv')
+template_table_attributes(wd, dd, 'attribution_and_intellectual_rights_timeseries.csv')
 template_table_attributes(wd, dd, 'attribution_and_intellectual_rights_ws_attr.csv')
 template_table_attributes(wd, dd, 'data_coverage_breakdown.csv')
 template_table_attributes(wd, dd, 'variable_sample_regimen_codes_timeseries.csv')
@@ -422,7 +423,6 @@ make_eml(wd, dd, ed,
          data.table.quote.character = rep('"', length(basenames)),
          data.table.url = NULL,
          other.entity = c('shapefiles.zip',
-                          'attribution_and_intellectual_rights_timeseries.xlsx',
                           'data_use_agreements.docx',
                           'timeseries_refs.bib',
                           'ws_attr_refs.bib',
@@ -430,7 +430,6 @@ make_eml(wd, dd, ed,
                           'glossary.txt',
                           'code_autodocumentation.zip'),
          other.entity.name = c('shapefiles.zip',
-                               'attribution_and_intellectual_rights_timeseries.xlsx',
                                'data_use_agreements.docx',
                                'timeseries_refs.bib',
                                'ws_attr_refs.bib',
@@ -439,7 +438,6 @@ make_eml(wd, dd, ed,
                                'code_autodocumentation.zip'),
          other.entity.description = c(
              'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
-             'Specific license requirements and expectations associated with each primary time-series dataset. See data_use_agreements.docx and attribution_and_intellectual_right_ws_attr.csv',
              'Terms and conditions for using MacroSheds data.',
              'Complete bibliographic references for time-series data.',
              'Complete bibliographic references for watershed attribute data.',
