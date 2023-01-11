@@ -49,8 +49,8 @@ boundaries <- boundaries %>%
     rename(area = ws_area_ha)
 
 too_small_wb <- boundaries$area < 15
-reupload <- FALSE
-if(any(too_small_wb)) reupload <- TRUE
+# reupload <- FALSE
+# if(any(too_small_wb)) reupload <- TRUE
 boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
     mutate(geometry = st_buffer(st_centroid(geometry),
                                 dist = sqrt(10000 * 15 / pi)))
@@ -72,39 +72,39 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}',
 
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
-if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0 || reupload){
+# if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0 || reupload){
 
-    loginfo('Uploading ws_boundaries to GEE',
-            logger = logger_module)
+loginfo('(Re)uploading ws_boundaries to GEE',
+        logger = logger_module)
 
-    sm(rgee::ee_manage_create(asset_folder))
+sm(rgee::ee_manage_create(asset_folder))
 
-    asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
+asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
 
-    ee_shape <- try(sf_as_ee(boundaries,
-                             via = 'getInfo_to_asset',
-                             assetId = asset_path,
-                             overwrite = TRUE,
-                             quiet = TRUE),
-                    silent = TRUE)
+ee_shape <- try(sf_as_ee(boundaries,
+                         via = 'getInfo_to_asset',
+                         assetId = asset_path,
+                         overwrite = TRUE,
+                         quiet = TRUE),
+                silent = TRUE)
 
-    if('try-error' %in% class(ee_shape)){
+if('try-error' %in% class(ee_shape)){
 
-        for(i in 1:nrow(boundaries)){
-            one_boundary <- boundaries[i,]
-            asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
-            sf_as_ee(one_boundary,
-                     via = 'getInfo_to_asset',
-                     assetId = asset_path,
-                     overwrite = TRUE,
-                     quiet = TRUE)
-        }
+    for(i in 1:nrow(boundaries)){
+        one_boundary <- boundaries[i,]
+        asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
+        sf_as_ee(one_boundary,
+                 via = 'getInfo_to_asset',
+                 assetId = asset_path,
+                 overwrite = TRUE,
+                 quiet = TRUE)
     }
-
-} else {
-    loginfo('ws_boundaries already uploaded to GEE',
-            logger = logger_module)
 }
+
+# } else {
+#     loginfo('ws_boundaries already uploaded to GEE',
+#             logger = logger_module)
+# }
 
 # i = 27
 for(i in 1:nrow(unprod)){

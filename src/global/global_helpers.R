@@ -9839,6 +9839,44 @@ create_missing_stream_gauge_locations <- function(where){
     }
 }
 
+postprocess_attribution_ts <- function(){
+
+    pcm <- tibble()
+    for(i in seq_len(nrow(network_domain))){
+    # for(i in seq_len(26)){
+
+        pcm <- read_csv(glue('src/{n}/{d}/products.csv',
+                             n = network_domain$network[i],
+                             d = network_domain$domain[i])) %>%
+            filter(! retrieve_status %in% c('paused', 'pending')) %>%
+            select(prodcode, prodname) %>%
+            mutate(domain = network_domain$domain[i]) %>%
+            bind_rows(pcm)
+    }
+
+    pcm <- pcm %>%
+        filter(! is.na(prodcode),
+               ! is.na(prodname),
+               ! grepl('^ms[0-9]+$', prodcode))
+
+    attrib_d <- googlesheets4::read_sheet(
+        conf$site_doi_license_gsheet,
+        skip = 5,
+        na = c('', 'NA'),
+        col_types = 'c'
+    )
+
+    attrib_d <- left_join(attrib_d, pcm,
+                             by = c(macrosheds_prodcode = 'prodcode', 'domain')) %>%
+        relocate(prodname, .after = 'macrosheds_prodcode') %>%
+        filter(! is.na(prodname)) %>%
+        rename(macrosheds_prodname = prodname) %>%
+        distinct() %>%
+        arrange(network, domain, macrosheds_prodname, macrosheds_prodcode)
+
+    return(attrib_d)
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -10308,9 +10346,12 @@ assemble_misc_docs_figshare <- function(where){
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
                                 path = file.path(docs_dir, '01a_data_use_agreements.docx'),
                                 overwrite = TRUE)
-    googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
-                                path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
-                                overwrite = TRUE)
+    # googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
+    #                             path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
+    #                             overwrite = TRUE)
+    attrib_data <- postprocess_attribution_ts()
+    write_csv(attrib_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
+
     select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
         write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
     file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
