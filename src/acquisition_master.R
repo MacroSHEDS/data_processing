@@ -130,6 +130,7 @@ ms_init <- function(use_gpu = FALSE,
         instance_type <- 'dev'
         machine_status <- '1337'
         op_system <- 'linux'
+        # macrosheds_package_dir <- 'r_package'
     }
 
     res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
