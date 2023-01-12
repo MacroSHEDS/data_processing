@@ -10349,8 +10349,11 @@ assemble_misc_docs_figshare <- function(where){
     # googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
     #                             path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
     #                             overwrite = TRUE)
-    attrib_data <- postprocess_attribution_ts()
-    write_csv(attrib_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
+    attrib_ts_data <- postprocess_attribution_ts()
+    write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
+
+    #this dataset is required for macrosheds package functioning
+    save(attrib_ts_data, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
 
     select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
         write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
