@@ -10184,6 +10184,9 @@ make_figshare_docs_skeleton <- function(where){
 
 prepare_site_metadata_for_figshare <- function(outfile){
 
+    #writes to figshare directory, where it then gets moved to edi directory,
+    #but also writes the site_data file for the ms package
+
     figd <- select(site_data,
                    network, pretty_network, domain, pretty_domain, site_code,
                    epsg_code = CRS,
@@ -10212,6 +10215,9 @@ prepare_site_metadata_for_figshare <- function(outfile){
                last_record_utc = LastRecordUTC,
                timezone_olson)
 
+    ms_site_data <- figd
+    save(ms_site_data, file = '../r_package/data/ms_site_data.RData')
+
     write_csv(figd, outfile)
 }
 
@@ -10225,6 +10231,8 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
     #   or "new" for the more condensed and user-friendly, but less package-friendly format.
     #   in old-mode, just one variable metadata file is written. in new format, it's split into
     #   timeseries and ws attrs. In new format, range check limits are written too, as a third file.
+
+    #also writes RData file for ms package
 
     if(fs_format == 'new'){
 
@@ -10240,7 +10248,7 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
                                          '05_timeseries_documentation',
                                          '05e_range_check_limits.csv')
 
-        read_csv('../portal/data/general/catalog_files/all_variables.csv',
+        ms_vars_ts <- read_csv('../portal/data/general/catalog_files/all_variables.csv',
                          col_types = cols()) %>%
             select(variable_code = VariableCode,
                    variable_name = VariableName,
@@ -10252,13 +10260,17 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
                    # mean_obs_per_site = MeanObsPerSite,
                    first_record_utc = FirstRecordUTC,
                    last_record_utc = LastRecordUTC) %>%
-            filter(! grepl('_flux$', chem_category)) %>%#TEMP: removing flux metadata
-            write_csv(outfile_ts)
+            filter(! grepl('_flux$', chem_category)) #TEMP: removing flux metadata
 
-        ms_vars %>%
+        write_csv(ms_vars_ts, outfile_ts)
+        save(ms_vars_ts, file = '../r_package/data/ms_vars_ts.RData')
+
+        ms_vars_ws <- ms_vars %>%
             filter(variable_type == 'ws_char') %>%
-            select(variable_code, variable_name, unit) %>%
-            write_csv(outfile_ws)
+            select(variable_code, variable_name, unit)
+
+        write_csv(ms_vars_ws, outfile_ws)
+        save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
 
         ms_vars %>%
             filter(variable_type != 'ws_char') %>%
@@ -10352,7 +10364,17 @@ assemble_misc_docs_figshare <- function(where){
     attrib_ts_data <- postprocess_attribution_ts()
     write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
-    #this dataset is required for macrosheds package functioning
+    attrib_ws_data <- googlesheets4::read_sheet(
+        conf$univ_prods_gsheet,
+        na = c('', 'NA'),
+        col_types = 'c'
+    ) %>%
+        select(prodname, primary_source = data_source, retrieved_from_GEE = type,
+               doi, license, citation, url, addtl_info = notes) %>%
+        mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE))
+
+    #these datasets required for macrosheds package functioning
+    save(attrib_ws_data, file = '../r_package/data/attribution_and_intellectual_rights_ws_attr.RData')
     save(attrib_ts_data, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
 
     select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
@@ -14102,7 +14124,7 @@ generate_watershed_summaries <- function(){
                var == 'va_npp_median') %>%
         group_by(site_code) %>%
         summarize(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
-        filter(!is.na(va_mean_annual_npp))
+        filter(! is.na(va_mean_annual_npp))
 
     # terrain
     terrain_fils <- fils[grepl('/terrain', fils)]
@@ -14169,20 +14191,20 @@ generate_watershed_summaries <- function(){
                !is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        ungroup() %>%
         summarize(ck_mean_annual_et = mean(val, na.rm = TRUE)) %>%
-        filter( ! is.na(ck_mean_annual_et))
+        ungroup() %>%
+        filter(! is.na(ck_mean_annual_et))
 
     # geological chem
     geochem_fils <- fils[grepl('/geochemical', fils)]
 
     geochem <- map_dfr(geochem_fils, read_feather) %>%
         filter(grepl('mean$', var),
-               !is.na(val)) %>%
+               ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        ungroup() %>%
         summarize(mean_val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # fpar
@@ -14193,8 +14215,9 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        summarize(vb_mean_annual_fpar = mean(val)) %>%
         ungroup() %>%
-        summarise(vb_mean_annual_fpar = mean(val))
+        filter(! is.na(vb_mean_annual_fpar))
 
     # lai
     ff <- fils[grepl('/lai', fils) & grepl('/sum_', fils)]
@@ -14204,8 +14227,9 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        summarize(vb_mean_annual_lai = mean(val)) %>%
         ungroup() %>%
-        summarise(vb_mean_annual_lai = mean(val))
+        filter(! is.na(vb_mean_annual_lai))
 
     # tcw (tesselated cap wetness)
     ff <- fils[grepl('/tcw', fils) & grepl('/sum_', fils)]
@@ -14215,8 +14239,9 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        summarize(vj_mean_annual_tcw = mean(val)) %>%
         ungroup() %>%
-        summarise(vj_mean_annual_tcw = mean(val))
+        filter(! is.na(vj_mean_annual_tcw))
 
     # ndvi
     ff <- fils[grepl('/ndvi', fils) & grepl('/sum_', fils)]
@@ -14226,8 +14251,9 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
+        summarize(vb_mean_annual_ndvi = mean(val)) %>%
         ungroup() %>%
-        summarize(vb_mean_annual_ndvi = mean(val))
+        filter(! is.na(vb_mean_annual_ndvi))
 
     # nsidc snow data
     ff <- fils[grepl('/nsidc', fils) & grepl('/sum_', fils)]
