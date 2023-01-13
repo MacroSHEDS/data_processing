@@ -405,6 +405,13 @@ for(td in ts_dmns){
 
 # template_categorical_variables(wd, dd)
 
+# include bibtex files with macrosheds R package ####
+
+ts_bib <- readr::read_file('eml/data_links/timeseries_refs.bib')
+save(ts_bib, file = '../r_package/data/bibtex_timeseries.RData')
+ws_bib <- readr::read_file('eml/data_links/ws_attr_refs.bib')
+save(ws_bib, file = '../r_package/data/bibtex_ws_attr.RData')
+
 # write EML** ####
 
 # temporal_coverage <- map(ts_tables, ~range(read_csv(.)$datetime)) %>%
