@@ -44,7 +44,7 @@ ws_areas <- site_data %>%
     select(site_code, ws_area_ha)
 
 boundaries <- boundaries %>%
-    select(-area) %>%
+    select(-any_of('area')) %>%
     left_join(ws_areas) %>%
     rename(area = ws_area_ha)
 
