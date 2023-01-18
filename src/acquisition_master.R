@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'calhoun')
+# dmnrow <- which(network_domain$domain == 'suef')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -359,7 +359,7 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    # stop here and go to processing_kernels.R to continue
+    stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
@@ -383,11 +383,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = F,
-                   # general_prod_filter = NULL)
-                   general_prod_filter = c('prism_precip', 'prism_temp_mean', 'et_ref'))
-                   # general_prod_filter = c('prism_temp_mean', 'et_ref'))
-                   general_prod_filter = c('et_ref'))
+                   get_missing_only = FALSE,
+                   general_prod_filter = NULL)
     }
 
     retain_ms_globals(ms_globals)
