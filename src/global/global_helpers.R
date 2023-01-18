@@ -10014,12 +10014,26 @@ postprocess_entire_dataset <- function(site_data,
         # legal_details_scrape(dataset_version = dataset_version)
 
         warning('TEMPORARY: removing all remaining NEON data, flux data, and in-progress domains')
-        remove_flux_neon_etc(where)
+        remove_flux_neon_etc(where = fs_dir)
 
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
                         logger = logger_module)
         # upload_dataset_to_figshare(dataset_version = dataset_version)
+
+        warning('IMPROVE THE FOLLOWING system calls (fix these issues upstream)')
+        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' -i"))
+        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/lg_lncd/lg_nlcd/g' -i"))
+        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i"))
+        system("find ../portal -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' -i")
+        system("find ../portal -name '*.csv' | xargs sed -e 's/lg_lncd/lg_nlcd/g' -i")
+        system("find ../portal -name '*.csv' | xargs sed -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i")
+        system("find ../portal -name '*.csv' | xargs sed -e 's/idbp/igbp/g' -i")
+        read_feather('../portal/data/general/biplot/year.feather') %>%
+            mutate(var = ifelse(var == 'lb_igbp_cloased_shrub', 'lb_igbp_closed_shrub', var),
+                   var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
+            write_feather('../portal/data/general/biplot/year.feather')
+
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
     } else {
         log_with_indent('NOT pushing data to Figshare.',
@@ -10894,7 +10908,8 @@ figshare_create_article <- function(title,
                                     keywords,
                                     category_ids,
                                     authors,
-                                    token){
+                                    token,
+                                    verbose = FALSE){
 
     if(is.character(keywords)) keywords <- as.list(keywords)
     if(is.numeric(category_ids)) category_ids <- as.list(category_ids)
@@ -10912,6 +10927,12 @@ figshare_create_article <- function(title,
                                   categories = category_ids,
                                   authors = authors),
                              auto_unbox = TRUE)
+
+    if(verbose){
+        print(request)
+        print(header)
+        print(meta)
+    }
 
     post <- expo_backoff(
         expr = {
@@ -11445,7 +11466,15 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
                                  full.names = TRUE)
-    other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
+    # other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
+    # rmneon = grep('spatial_timeseries', other_uploadsA, value = T)
+    # for(dd in rmneon){
+    #     read_csv(dd) %>% filter(domain != 'neon') %>% write_csv(dd)
+    # }
+    # fff <- list.files('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries', full.names = TRUE)
+    # for(dd in fff){
+    #     read_csv(dd) %>% filter(domain != 'neon') %>% write_csv(dd)
+    # }
     names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
     titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
 
@@ -11479,6 +11508,16 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     print(paste('uploading extras'))
 
+    #removing items that should now be accessed via EDI portal
+    rms <- (names(other_uploads) == 'metadata' | grepl('(?:columns|codes)\\.(?:txt|csv)$', other_uploads))
+    other_uploads <- other_uploads[! rms]
+    titles <- titles[! rms]
+
+    #variable catalog can be included with package data
+    ms_var_catalog <- paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv')
+    save(ms_var_catalog, file = '../r_package/data/ms_var_catalog.RData')
+
+    file_ids_for_r_package2 <- tibble()
     for(i in seq_along(other_uploads)){
 
         uf <- other_uploads[i]
@@ -11500,18 +11539,22 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         #if existing article, delete old version
         if(ut %in% existing_extras_deets$title){
 
-            fls <- figshare_list_article_files(fs_id,
-                                               token = token)
+            for(fsid_ in fs_id){
 
+                fls <- figshare_list_article_files(fsid_,
+                                                   token = token)
 
-            if(length(fls) >= 1){
-                for(j in seq_along(fls)){
-                    figshare_delete_article_file(fs_id,
-                                                 file_id = fls[[j]]$id,
-                                                 token = token)
+                if(length(fls) >= 1){
+                    for(j in seq_along(fls)){
+                        figshare_delete_article_file(fsid_,
+                                                     file_id = fls[[j]]$id,
+                                                     token = token)
+                    }
                 }
             }
         }
+
+        fs_id <- fs_id[1]
 
         figshare_upload_article(fs_id,
                                 file = unname(uf),
@@ -11524,42 +11567,48 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         fls <- figshare_list_article_files(fs_id,
                                            token = token)
 
-        if(ut == 'site_metadata'){
-            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-                                    fls[[1]]$id,
-                                    "/g' ../r_package/R/ms_download_site_data.R -i"),
-                             intern = TRUE,
-                             ignore.stdout = FALSE,
-                             ignore.stderr = FALSE)
-            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_site_data.R. maybe your path is different?')
-        }
+        file_ids_for_r_package2 <- bind_rows(
+            file_ids_for_r_package2,
+            tibble(ut, fig_code = fls[[1]]$id))
+        # if(ut == 'site_metadata'){
+        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+        #                             fls[[1]]$id,
+        #                             "/g' ../r_package/R/ms_download_site_data.R -i"),
+        #                      intern = TRUE,
+        #                      ignore.stdout = FALSE,
+        #                      ignore.stderr = FALSE)
+        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_site_data.R. maybe your path is different?')
+        # }
 
-        if(ut == 'variable_metadata'){
-            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-                                    fls[[1]]$id,
-                                    "/g' ../r_package/R/ms_download_variables.R -i"),
-                             intern = TRUE,
-                             ignore.stdout = FALSE,
-                             ignore.stderr = FALSE)
-            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions.R. maybe your path is different?')
-            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-                                    fls[[1]]$id,
-                                    "/g' ../r_package/R/ms_conversions.R -i"),
-                             intern = TRUE,
-                             ignore.stdout = FALSE,
-                             ignore.stderr = FALSE)
-        }
+        # if(ut == 'variable_metadata'){
+        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+        #                             fls[[1]]$id,
+        #                             "/g' ../r_package/R/ms_download_variables.R -i"),
+        #                      intern = TRUE,
+        #                      ignore.stdout = FALSE,
+        #                      ignore.stderr = FALSE)
+        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions.R. maybe your path is different?')
+        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+        #                             fls[[1]]$id,
+        #                             "/g' ../r_package/R/ms_conversions.R -i"),
+        #                      intern = TRUE,
+        #                      ignore.stdout = FALSE,
+        #                      ignore.stderr = FALSE)
+        # }
 
-        if(ut == 'variable_catalog'){
-            sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-                                    fls[[1]]$id,
-                                    "/g' ../r_package/R/ms_catalog.R -i"),
-                             intern = TRUE,
-                             ignore.stdout = FALSE,
-                             ignore.stderr = FALSE)
-            if(length(sysout)) stop('cannot update file ID in r_package/R/ms_catalog.R maybe your path is different?')
-        }
+        # if(ut == 'variable_catalog'){
+        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
+        #                             fls[[1]]$id,
+        #                             "/g' ../r_package/R/ms_catalog.R -i"),
+        #                      intern = TRUE,
+        #                      ignore.stdout = FALSE,
+        #                      ignore.stderr = FALSE)
+        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_catalog.R maybe your path is different?')
+        # }
     }
+
+    save(file_ids_for_r_package2,
+         file = '../r_package/data/sysdata2.RData')
 }
 
 detrmin_mean_record_length <- function(df){
@@ -14049,9 +14098,10 @@ generate_watershed_summaries <- function(){
 
     precip <- map_dfr(precip_files, read_feather) %>%
         filter(year != substr(Sys.Date(), 0, 4),
-               var == 'cc_cumulative_precip') %>%
+               var == 'cc_cumulative_precip',
+               val < 30000) %>%
         group_by(site_code) %>%
-        summarize(cc_mean_annual_precip = mean(val, na.arm = TRUE)) %>%
+        summarize(cc_mean_annual_precip = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(cc_mean_annual_precip))
 
     # Prism temp
@@ -14062,7 +14112,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'cc_temp_mean') %>%
         group_by(site_code) %>%
-        summarize(cc_mean_annual_temp = mean(val, na.arm = TRUE)) %>%
+        summarize(cc_mean_annual_temp = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(cc_mean_annual_temp))
 
     # start of season
@@ -14072,7 +14122,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_sos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_sos = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_sos = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(vd_mean_sos))
 
     # end of season
@@ -14082,7 +14132,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_eos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_eos = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_eos = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(vd_mean_eos))
 
     # length of season
@@ -14092,7 +14142,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_los_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_los = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_los = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(vd_mean_los))
 
     # maximum day of photosynthesis
@@ -14102,7 +14152,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_mos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_mos = mean(val, na.arm = TRUE)) %>%
+        summarize(vd_mean_mos = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(vd_mean_mos))
 
     # gpp
@@ -14113,7 +14163,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_gpp_sum') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_gpp = mean(val, na.arm = TRUE)) %>%
+        summarize(va_mean_annual_gpp = mean(val, na.rm = TRUE)) %>%
         filter(!is.na(va_mean_annual_gpp))
 
     # npp
@@ -14123,7 +14173,7 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_npp_median') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_npp = mean(val, na.arm = TRUE)) %>%
+        summarize(va_mean_annual_npp = mean(val, na.rm = TRUE)) %>%
         filter(! is.na(va_mean_annual_npp))
 
     # terrain
@@ -14523,6 +14573,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
     # this and compute_yearly_summary_ws should probably be combined at some point, but for now,
     # compute_yearly_summary_ws() appends compute_yearly_summary with ws_traits
+
+    #does not affect published dataset, only portal data, so no worries about filter settings.
 
     #df = default sites for each domain
     df <- site_data %>%
