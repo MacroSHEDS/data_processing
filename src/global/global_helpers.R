@@ -10034,6 +10034,15 @@ postprocess_entire_dataset <- function(site_data,
                    var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
             write_feather('../portal/data/general/biplot/year.feather')
 
+        #make feather versions of ws attr files (crude af, whatev)
+        read_csv(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.csv')) %>%
+            write_feather(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.feather'))
+        lapply(list.files(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_timeseries'),
+                          full.names = TRUE),
+               function(x){
+                   write_feather(read_csv(x), sub('\\.csv$', '.feather', x))
+               })
+
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
     } else {
         log_with_indent('NOT pushing data to Figshare.',
@@ -11464,8 +11473,14 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
          file = '../r_package/R/sysdata.rda')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
-    other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
-                                 full.names = TRUE)
+    # other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
+    other_uploadsA <- list.files(paste0('macrosheds_figshare_v', dataset_version, '/1_watershed_attribute_data/ws_attr_timeseries'),
+                                 full.names = TRUE,
+                                 pattern = '\\.feather$')
+    titlesA <- paste0('spatial_timeseries_', str_match(other_uploadsA, '/([^/]+)\\.feather(?:\\.zip)?$')[, 2])
+    other_uploadsA <- c(other_uploadsA, paste0('macrosheds_figshare_v', dataset_version, '/1_watershed_attribute_data/ws_attr_summaries.feather'))
+    titlesA <- c(titlesA, 'watershed_summaries')
+    names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
     # other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
     # rmneon = grep('spatial_timeseries', other_uploadsA, value = T)
     # for(dd in rmneon){
@@ -11475,8 +11490,6 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     # for(dd in fff){
     #     read_csv(dd) %>% filter(domain != 'neon') %>% write_csv(dd)
     # }
-    names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
-    titlesA <- str_match(other_uploadsA, '/([^/]+)\\.csv(?:\\.zip)?$')[, 2]
 
     other_uploadsB <- c(
         documentation = '../portal/static/documentation/timeseries/columns.txt',
@@ -11492,7 +11505,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     names(other_uploadsC) <- rep('documentation', length(other_uploadsC))
     titlesC <- str_match(other_uploadsC, '/([^/]+)\\.csv$')[, 2]
 
-    other_uploadsD <- c(documentation = 'macrosheds_figshare_v1/macrosheds_documentation_packageformat/README.txt',
+    other_uploadsD <- c(documentation = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/README.txt'),
                         # policy = 'src/templates/figshare_docfiles/ws_attr_LEGAL.csv',
                         # policy = 'src/templates/figshare_docfiles/timeseries_LEGAL.csv',
                         policy = paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/data_use_agreements.docx'))
@@ -11514,7 +11527,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titles <- titles[! rms]
 
     #variable catalog can be included with package data
-    ms_var_catalog <- paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv')
+    ms_var_catalog <- read_csv(paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
     save(ms_var_catalog, file = '../r_package/data/ms_var_catalog.RData')
 
     file_ids_for_r_package2 <- tibble()
