@@ -10033,6 +10033,10 @@ postprocess_entire_dataset <- function(site_data,
             mutate(var = ifelse(var == 'lb_igbp_cloased_shrub', 'lb_igbp_closed_shrub', var),
                    var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
             write_feather('../portal/data/general/biplot/year.feather')
+        read_feather('../portal/data/general/biplot/year.feather') %>%
+            filter(! (domain == 'usgs' & site_code %in% c('BARN', 'DRKR', 'GFCP', 'GFGB', 'GFGL', 'GFVN', 'MAWI', 'MCDN', 'POBR'))) %>%
+            filter(domain != 'neon') %>%
+            write_feather('../portal/data/general/biplot/year.feather')
 
         #make feather versions of ws attr files (crude af, whatev)
         read_csv(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.csv')) %>%
@@ -10286,6 +10290,13 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             filter(! grepl('_flux$', chem_category)) #TEMP: removing flux metadata
 
         write_csv(ms_vars_ts, outfile_ts)
+
+        ms_vars_ts <- ms_vars %>%
+            select(variable_code, molecule, valence, flux_convertible) %>%
+            right_join(ms_vars_ts, by = 'variable_code') %>%
+            relocate(molecule, valence, .after = 'unit') %>%
+            relocate(flux_convertible, .after = 'last_record_utc')
+
         save(ms_vars_ts, file = '../r_package/data/ms_vars_ts.RData')
 
         ms_vars_ws <- ms_vars %>%
