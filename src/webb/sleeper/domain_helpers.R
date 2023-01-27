@@ -81,7 +81,7 @@ retrieve_usgs_sleeper_daily_q <- function(set_details) {
   return(q)
 }
 
-sleepers_stream_chem_var_info <- c(
+sleepers_stream_chem_var_info <- list(
     "K.eq.L"        = c('ueq/L', 'mg/L', 'K'),
     "Mg.eq.L"       = c('ueq/L', 'mg/L', 'Mg'),
     "Na.eq.L"       = c('ueq/L', 'mg/L', 'Na'),
