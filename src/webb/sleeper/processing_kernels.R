@@ -1050,13 +1050,14 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     ## df <- d %>%
     ##   mutate(across(Chemistry_Flag:all_of(!!last_col), ~ .x))
+    ##   grepl(paste(unique(Chemistry_Flag[!is.na(Chemistry_Flag)]), collapse = "|"), cur_column()) ~ 1)
 
-    df <- d %>%
+    d <- d %>%
       dplyr::mutate(
                across(Chemistry_Flag:all_of(!!last_col) & !ends_with("_Lab"),
-                      .fns = list(varflag = ~ case_when(Chemistry_Flag == cur_column() ~ 1)),
-                      .names = "{fn}_{col}"
-                      ))
+                      .fns = list(
+                        varflag = ~ case_when(grepl(stringr::str_match(cur_column(), "[^.]+"), Chemistry_Flag) ~ 1, TRUE ~ 0)),
+                      .names = "{fn}_{col}"))
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -1066,24 +1067,24 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  sleeper_aq_chem,
                          data_col_pattern = '#V#',
                          # variable specific flag pattern
-                         var_flagcol_pattern = '#V#_Lab',
+                         var_flagcol_pattern = 'varflag_#V#',
                          # summary (all vars) flag colun name
-                         summary_flagcols = 'Chemistry_Flag',
+                         ## summary_flagcols = 'Chemistry_Flag',
                          is_sensor = FALSE)
 
     d.l <- ms_cast_and_reflag(d,
                             ## characters that, if found in a variable's "flag" column
                             # will drop that row
                             ### comment out, no dropping from these flags
-                            variable_flags_to_drop = 'DIRTY_',
+                            ## variable_flags_to_drop = '',
 
                             # will turn the *ms_status* column to 1 (e.g. flagged)
                             ### have to supply something, this never occurs
-                            variable_flags_dirty   = c('DIRTY'),
+                            variable_flags_dirty   = c(1),
 
                             # will turn the *ms_status* column to 0 (e.g. clean)
                             ### 1:18 for each lab
-                            ## variable_flags_clean   = c(as.character(1:18)),
+                            variable_flags_clean   = c(0),
 
                             # will turn the *ms_status* column to 2
                             # (e.g. set value to detection limit divided by 2)
@@ -1092,10 +1093,10 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
                             ## characters that, if found in the summary "flag" column
                             # will drop that row
-                            summary_flags_to_drop  = list(Chemistry_Flag = c('DIRTY')),
+                            ## summary_flags_to_drop  = list(Chemistry_Flag = c('DIRTY')),
 
                             # will turn the *ms_status* column to 1 (e.g. flagged)
-                            summary_flags_dirty    = list(Chemistry_Flag = unname(sleeper_aq_chem)),
+                            ## summary_flags_dirty    = list(Chemistry_Flag = unname(sleeper_aq_chem)),
 
                             # will turn the *ms_status* column to 0 (e.g. clean)
                             ## summary_flags_clean    = list(Chemistry_Flag = c('NA'))
