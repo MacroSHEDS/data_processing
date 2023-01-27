@@ -1035,6 +1035,29 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       sleeper_aq_chem[og_name] = ms_name
     }
 
+    # original data has a "summary" flag column, which lists simply a variable name -- meaning
+    # that it is sctually a variable flag column of sorts. it will be easiest if we can
+    # unpack this into a new column, for each variable, where the value = 1 if the original
+    # flag column named it in a particular observation. one added issue is this "summary" column
+    # has potential for mulitple variables at a time.
+
+    # start by making new column for each chemistry variable
+    data_frame <- transform(
+              d, Na_flag = ifelse(col1==col3, col1+col2, col1+col3)
+    )
+
+    last_col <- colnames(d)[ncol(d)]
+
+    ## df <- d %>%
+    ##   mutate(across(Chemistry_Flag:all_of(!!last_col), ~ .x))
+
+    df <- d %>%
+      dplyr::mutate(
+               across(Chemistry_Flag:all_of(!!last_col) & !ends_with("_Lab"),
+                      .fns = list(varflag = ~ case_when(Chemistry_Flag == cur_column() ~ 1)),
+                      .names = "{fn}_{col}"
+                      ))
+
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
