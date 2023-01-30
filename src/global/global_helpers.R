@@ -5165,13 +5165,31 @@ convert_unit <- function(x, input_unit, output_unit){
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
 
-    new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
 
-    if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
-        new_top_conver <- 1
-    } else {
-        new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
-    }
+    ## new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
+    ## if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
+    ##     new_top_conver <- 1
+    ## } else {
+    ##     new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
+    ## }
+
+  # debug
+    tryCatch(
+      expr = {
+          new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
+          if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
+              new_top_conver <- 1
+          } else {
+              new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
+          }
+      },
+      error = function(e) {
+        print(input_unit)
+        print(output_unit)
+        print(new_top_unit)
+      }
+    )
+  # end debug
 
     new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
 
@@ -14925,6 +14943,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
+        # ignore any entries where DL == "NA" or is.na()
+      filter(detection_limit_original != "NA",
+             !is.na(detection_limit_original)) %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
                sigfigs = count_sigfigs(detection_limit_original)) %>%
                # start_date = dmy(start_date),
@@ -14989,6 +15010,8 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
+        # filter for NAs in  dl converted (abs254_cm)
+        filter(!is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
