@@ -1044,6 +1044,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # start by making new column for each chemistry variable
     last_col <- colnames(d)[ncol(d)]
 
+    # re-distribute flags to corresponding variable
     d <- d %>%
       dplyr::mutate(
                across(Chemistry_Flag:all_of(!!last_col) & !ends_with("_Lab"),
@@ -1072,7 +1073,11 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                             variable_flags_clean   = c(0),
                             )
 
-
+    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+                  "GN_d13C", "GN_NO3_d15N", "GN_abs254")
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 2, TRUE ~ ms_status))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
