@@ -1042,15 +1042,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # has potential for mulitple variables at a time.
 
     # start by making new column for each chemistry variable
-    data_frame <- transform(
-              d, Na_flag = ifelse(col1==col3, col1+col2, col1+col3)
-    )
-
     last_col <- colnames(d)[ncol(d)]
-
-    ## df <- d %>%
-    ##   mutate(across(Chemistry_Flag:all_of(!!last_col), ~ .x))
-    ##   grepl(paste(unique(Chemistry_Flag[!is.na(Chemistry_Flag)]), collapse = "|"), cur_column()) ~ 1)
 
     d <- d %>%
       dplyr::mutate(
