@@ -1075,11 +1075,28 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
     no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
-                  "GN_d13C", "GN_NO3_d15N", "GN_abs254")
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 2, TRUE ~ ms_status))
+                  "GN_d13C", "GN_NO3_d15N")
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    # manual workaround for uncertainty and hdetlim
+    ## d <- d %>%
+    ##   mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 2, TRUE ~ ms_status))
+    ## d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
 
     d <- synchronize_timestep(d)
 
