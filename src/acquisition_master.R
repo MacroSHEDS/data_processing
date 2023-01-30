@@ -296,6 +296,9 @@ if(ms_instance$use_ms_error_handling){
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
 
+## domain_detection_limits <- domain_detection_limits %>%
+##   filter(!is.na(detection_limit_original))
+
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
                                                         update_on_gdrive = TRUE)
