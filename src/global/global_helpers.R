@@ -8489,7 +8489,6 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
             }
 
         } else { #CASE 1 with no dates specified
-
             if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
             out <- d %>%
