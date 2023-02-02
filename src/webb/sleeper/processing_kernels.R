@@ -296,69 +296,16 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 
 
 #munge kernels ####
-## IsDate <- function(mydate, date.format = "%m/%d/%y") {
-##   tryCatch(!is.na(as.Date(mydate, date.format)),
-##            error = function(err) {FALSE})
-## }
+
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
+prodname_ms <- set_details$prodname_ms
+site_code <- set_details$site_code
+component <- set_details$component
+url <- set_details$url
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
-
-    d <- read.delim(rawfile, sep = ',') %>%
-        mutate(site = 'RW9') %>%
-        as_tibble()
-
-    # NOTE: return to basin-wide precip, and to 30% datetime loss
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y'),
-                         datetime_tz = 'US/Eastern',
-                         site_code_col = 'site',
-                         data_cols =  c('Precip..mm' = 'precipitation'),
-                         data_col_pattern = '#V#',
-                         is_sensor = TRUE)
-
-    # NOTE: return too all of these
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
-
-    # Precipitation is daily
-    ## d <- d %>%
-    ##     mutate(val = val*15)
-    ## d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    # NOTE: not applicable
-    ## d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
-
-    return()
-}
-
-#precip_chem: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -367,84 +314,99 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
+    # creating a temporary directory to unzip the folder in
     temp_dir <- tempdir()
     dir.create(temp_dir,
                showWarnings = FALSE,
                recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
-
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
-    rel_file <- grep('EastRiver', temp_dir_files, value = TRUE)
+    # reading in the contents of the extracted folder
+    file_names <- list.files(temp_dir, recursive = TRUE)
+    file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
-    one_site_files <- glue(temp_dir, '/onesite')
-    dir.create(one_site_files)
+    # there are many important files in here, but we are only trying to get
+    # the raw stream chemistry data
+    chem_fp <- file_paths[grepl('Chemistry.csv', file_paths)]
 
-    rel_file_1 <- grep('EastRiver_2014-08_2016-10', rel_file, value = TRUE)
+    # the original file has encoding isssues, and connot be read directly
+    # here I use a readr function which "guesses" the most likely encodings
+    # which is good to know but I ultimately didnt use
+    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
 
-    unzip(rel_file_1,
-          exdir = one_site_files)
+    # read in the csv ignoring column name encoding issues
+    d <- read.csv(chem_fp, check.names = FALSE)
+    d_old_names <- names(d)
 
-    all_sites_files <- list.files(one_site_files, full.names = TRUE)
+    ## NOTE: special character was microgram symbol
+    ## replacing with "u"
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
 
-    all_sites_files <- all_sites_files[grepl('.xlsx', all_sites_files)]
+    # then rename all columns with these new names
+    colnames(d) <- d_new_names
 
-    all_sites <- tibble()
-    for(i in 1:length(all_sites_files)){
+    # filter to only precipitation site type
+    d <- d %>%
+      filter(Sample_Type %in% c("PE", "PW"),
+             # what do about W-9 big bucket?
+             Sample_Name == "R-29 (PPT@W-9)") %>%
+      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
 
-        site_code <- str_match(string = all_sites_files[i],
-                               pattern = '([^\\/\\\\]+)_[dD]ischarge.xlsx$')[, 2]
+    # remove all collected start and end datetime NAs and round each to previous midnight
+    d <- d %>%
+      mutate(ppt_start = as.Date(Precip_Start, format = "%Y-%m-%d %H:%M:%S"),
+             ppt_end = as.Date(Precip_Collect, format = "%Y-%m-%d %H:%M:%S")) %>%
+      filter(!is.na(ppt_start),
+             !is.na(ppt_end)) %>%
+      mutate(ppt_start = lubridate::floor_date(ppt_start, unit = "days"),
+             ppt_end = lubridate::floor_date(ppt_end, unit = "days")) %>%
+      mutate(ppt_start = format(ppt_start, "%Y-%m-%d 12:00:00 AM"),
+             ppt_end = format(ppt_end, "%Y-%m-%d 12:00:00 AM"))
 
-        one_site <- readxl::read_excel(all_sites_files[i], sheet = 'Corrected')
-        time_col <- grep('time|Time', colnames(one_site), value = TRUE)
-        q_col <- grep('cms', colnames(one_site), value = TRUE)
-        one_site <- one_site %>%
-            select('standard_time' = !!time_col, 'q' = !!q_col) %>%
-            mutate(site = !!site_code)
 
-        all_sites <- rbind(one_site, all_sites)
-    }
 
-    rel_file_2 <- grep('EastRiver_2017-10_2018-10', rel_file, value = TRUE)
+    # divide precip, collected in date ranges, to the value of the volume divided
+    # by the number of days in that range
 
-    unlink(one_site_files, recursive = TRUE)
-
-    unzip(rel_file_2,
-          exdir = one_site_files)
-
-    all_sites_files <- list.files(one_site_files, full.names = TRUE, recursive = TRUE)
-
-    all_sites_files <- all_sites_files[grepl('.xlsx', all_sites_files)]
-
-    one_site <- readxl::read_excel(all_sites_files, sheet = 'Corrected') %>%
-        select(standard_time = `Standard Time`,
-               q = `Q m3/s`) %>%
-        mutate(site = 'PH')
-
-    all_sites <- rbind(all_sites, one_site) %>%
-        as_tibble()
-
-    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
-                         datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'US/Mountain',
-                         site_code_col = 'site',
-                         data_cols =  c('q' = 'discharge'),
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date_Time' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Sample_Name',
+                         data_cols =  c('Precip.mm' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         var_flagcol_pattern = NA,
+                         is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c(1),
 
-    # Discharge is in m^3/s, converting to L/s
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            variable_flags_clean   = c(0),
+                            )
+
+    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+                  "GN_d13C", "GN_NO3_d15N")
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # replace all BDL observations with half DL value
     d <- d %>%
-        mutate(val = val*1000)
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
 
     d <- synchronize_timestep(d)
 
@@ -463,6 +425,151 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
+
+    unlink(temp_dir, recursive = TRUE)
+
+    return()
+}
+
+#precip_chem: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    # creating a temporary directory to unzip the folder in
+    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+    unzip(rawfile,
+          exdir = temp_dir)
+
+    # reading in the contents of the extracted folder
+    file_names <- list.files(temp_dir, recursive = TRUE)
+    file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+
+    # there are many important files in here, but we are only trying to get
+    # the raw stream chemistry data
+    chem_fp <- file_paths[grepl('Chemistry.csv', file_paths)]
+
+    # the original file has encoding isssues, and connot be read directly
+    # here I use a readr function which "guesses" the most likely encodings
+    # which is good to know but I ultimately didnt use
+    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
+
+    # read in the csv ignoring column name encoding issues
+    d <- read.csv(chem_fp, check.names = FALSE)
+    d_old_names <- names(d)
+
+    ## NOTE: special character was microgram symbol
+    ## replacing with "u"
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
+
+    # then rename all columns with these new names
+    colnames(d) <- d_new_names
+
+    # filter to only precipitation site type
+    d <- d %>%
+      filter(Sample_Type %in% c("PE", "PW"),
+             # what do about W-9 big bucket?
+             Sample_Name == "R-29 (PPT@W-9)") %>%
+      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here to be just the old_var = new_var structure
+    sleeper_aq_chem = c()
+
+    for(i in 1:length(sleepers_stream_chem_var_info)) {
+      og_name <- names(sleepers_stream_chem_var_info[i])
+      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+
+      sleeper_aq_chem[og_name] = ms_name
+    }
+
+    # original data has a "summary" flag column, which lists simply a variable name -- meaning
+    # that it is sctually a variable flag column of sorts. it will be easiest if we can
+    # unpack this into a new column, for each variable, where the value = 1 if the original
+    # flag column named it in a particular observation. one added issue is this "summary" column
+    # has potential for mulitple variables at a time.
+
+    # start by making new column for each chemistry variable
+    last_col <- colnames(d)[ncol(d)]
+
+    # re-distribute flags to corresponding variable
+    d <- d %>%
+      dplyr::mutate(
+               across(Chemistry_Flag:all_of(!!last_col) & !ends_with("_Lab"),
+                      .fns = list(
+                        varflag = ~ case_when(grepl(stringr::str_match(cur_column(), "[^.]+"), Chemistry_Flag) ~ 1, TRUE ~ 0)),
+                      .names = "{fn}_{col}"))
+
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Sample_Name',
+                         data_cols =  sleeper_aq_chem,
+                         data_col_pattern = '#V#',
+                         # variable specific flag pattern
+                         var_flagcol_pattern = 'varflag_#V#',
+                         # summary (all vars) flag colun name
+                         ## summary_flagcols = 'Chemistry_Flag',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c(1),
+
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            variable_flags_clean   = c(0),
+                            )
+
+    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+                  "GN_d13C", "GN_NO3_d15N")
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
+
+    d <- synchronize_timestep(d)
+
+    sites <- unique(d$site_code)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_code == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    unlink(temp_dir, recursive = TRUE)
 
     return()
 }
@@ -969,13 +1076,6 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-# JUMP: for stream chem work
-set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS006")
-prodname_ms <- set_details$prodname_ms
-site_code <- set_details$site_code
-component <- set_details$component
-url <- set_details$url
-
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
@@ -1076,11 +1176,6 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
     no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
                   "GN_d13C", "GN_NO3_d15N")
-
-    # manual workaround for uncertainty and hdetlim
-    ## d <- d %>%
-    ##   mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 2, TRUE ~ ms_status))
-    ## d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     # apply uncertainty
     d <- ms_check_range(d)
