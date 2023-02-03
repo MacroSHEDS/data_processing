@@ -991,6 +991,7 @@ ms_read_raw_csv <- function(filepath,
             d_varcode <- unname(all_datacols)[j]
             d_colname <- names(all_datacols)[j]
             d_clm <- d[[d_colname]]
+
             if(is.null(d_clm)) next #column doesn't exist
 
             if(has_wildcard){
@@ -1001,7 +1002,7 @@ ms_read_raw_csv <- function(filepath,
 
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
+            if(!(length(var_flagcols) == 1 && is.na(var_flagcols))){
                 candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
                 var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             } else {
@@ -1240,6 +1241,17 @@ ms_read_raw_csv <- function(filepath,
             }
         }
     }
+
+    ## # final check that if there is only one data column and a supplied summary flag column
+    ## # that the summary flag column has correct name
+    ## if(length(data_cols) == 1 && !is.na(summary_flagcols)){
+    ##   datcol = paste0(data_cols[[1]], "__\\|dat")
+    ##   sumcol = paste0(data_cols[[1]], "__|flg")
+    ##   full.datcol = names(d)[grepl(datcol, names(d))]
+    ##   full.sumcol = stringr::str_replace(full.datcol, '__\\|dat', '__|flg')
+
+    ##   names(d)[names(d) == summary_flagcols] <- full.sumcol
+    ## }
 
     return(d)
 }
@@ -1529,6 +1541,15 @@ ms_cast_and_reflag <- function(d,
     #   Note: This parameter does not use the '#*#' wildcard.
     #summary_flags_bdl: optional named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
+
     #   of values that might appear in the summary flag/status columns.
     #   Associated data records are assigned ms_status = 2, which is used as an
     #   indicator to insert 1/2 detlims downstream.

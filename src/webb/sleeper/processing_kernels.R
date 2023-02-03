@@ -297,117 +297,49 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 
 #munge kernels ####
 
-set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
-prodname_ms <- set_details$prodname_ms
-site_code <- set_details$site_code
-component <- set_details$component
-url <- set_details$url
-
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
 
-    # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
-    file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-
-    # there are many important files in here, but we are only trying to get
-    # the raw stream chemistry data
-    chem_fp <- file_paths[grepl('Chemistry.csv', file_paths)]
-
-    # the original file has encoding isssues, and connot be read directly
-    # here I use a readr function which "guesses" the most likely encodings
-    # which is good to know but I ultimately didnt use
-    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
-
-    # read in the csv ignoring column name encoding issues
-    d <- read.csv(chem_fp, check.names = FALSE)
-    d_old_names <- names(d)
-
-    ## NOTE: special character was microgram symbol
-    ## replacing with "u"
-    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
-    d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
-
-    # then rename all columns with these new names
-    colnames(d) <- d_new_names
+    d <- read.csv(rawfile)
 
     # filter to only precipitation site type
     d <- d %>%
-      filter(Sample_Type %in% c("PE", "PW"),
-             # what do about W-9 big bucket?
-             Sample_Name == "R-29 (PPT@W-9)") %>%
-      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+      mutate(site_code = "R-29") %>%
+      filter(!is.na(Precip..mm),
+             !is.na(Date)) %>%
+      select(Date, site_code, Precip..mm)
 
-    # remove all collected start and end datetime NAs and round each to previous midnight
-    d <- d %>%
-      mutate(ppt_start = as.Date(Precip_Start, format = "%Y-%m-%d %H:%M:%S"),
-             ppt_end = as.Date(Precip_Collect, format = "%Y-%m-%d %H:%M:%S")) %>%
-      filter(!is.na(ppt_start),
-             !is.na(ppt_end)) %>%
-      mutate(ppt_start = lubridate::floor_date(ppt_start, unit = "days"),
-             ppt_end = lubridate::floor_date(ppt_end, unit = "days")) %>%
-      mutate(ppt_start = format(ppt_start, "%Y-%m-%d 12:00:00 AM"),
-             ppt_end = format(ppt_end, "%Y-%m-%d 12:00:00 AM"))
-
-
-
-    # divide precip, collected in date ranges, to the value of the volume divided
-    # by the number of days in that range
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date_Time' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list('Date' = '%m/%d/%y'),
                          datetime_tz = 'US/Eastern',
-                         site_code_col = 'Sample_Name',
-                         data_cols =  c('Precip.mm' = 'precipitation'),
+                         site_code_col = 'site_code',
+                         data_cols =  c('Precip..mm' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         var_flagcol_pattern = NA,
+                         ## summary_flagcols = NA,
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            # will turn the *ms_status* column to 1 (e.g. flagged)
-                            variable_flags_dirty   = c(1),
+                           varflag_col_pattern = NA
+                           )
 
-                            # will turn the *ms_status* column to 0 (e.g. clean)
-                            variable_flags_clean   = c(0),
-                            )
-
-    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
-                  "GN_d13C", "GN_NO3_d15N")
-
-    # apply uncertainty
+    # apply uncertainty (no detlim for water volume)
     d <- ms_check_range(d)
     errors(d$val) <- get_hdetlim_or_uncert(d,
                                            detlims = domain_detection_limits,
                                            prodname_ms = prodname_ms,
                                            which_ = 'uncertainty')
 
-    # Sleepers metadata states that all negative values are below detection limit, with the
-    # value itself being the detection limit for that sample and method
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
-    # give ms_status = 1 to all BDL observations
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
-
+    # no need for conversions bc already in mm
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -425,8 +357,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-
-    unlink(temp_dir, recursive = TRUE)
 
     return()
 }
@@ -574,126 +504,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
+
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
-    temp_dir <- tempdir()
-
-    # dir.create(temp_dir,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-    #
-    # unlink(paste0(temp_dir, '/*'),
-    #        recursive = TRUE,
-    #        force = TRUE)
-
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-
-    temp_dir_files_csv <- temp_dir_files[grepl('.csv', temp_dir_files)]
-    temp_dir_files_p <- temp_dir_files_p[grepl('.csv', temp_dir_files)]
-
-    removed_depth <- !grepl('depth|well', temp_dir_files_csv)
-
-    file_names <- temp_dir_files_csv[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
-
-    all_sites <- tibble()
-    for(i in 1:length(file_names)){
-
-        if(file_names[i] == 'locations.csv') next
-
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
-
-        if(length(site_info) == 1) next
-
-        if(length(site_info) == 2){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-1)]
-            site_code <- paste(site_code, collapse = '_')
-        }
-
-        site_var <- site_info[1,length(site_info)]
-        site_var <- paste(site_var, collapse = '_')
-        site_var <- str_remove(site_var, '.csv')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
-            mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
-
-        all_sites <- rbind(all_sites, site_table)
-    }
-
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_var == 'deltad' ~ 'deuterium',
-                               site_var == 'deltao18' ~ 'd18O')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble()
-
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
-
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
+    d <- read.csv(rawfile)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -724,176 +547,36 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
+    d <- read.csv(rawfile) %>%
+      mutate(site_code = "W-5") %>%
+      rename(qflag = "X_00060_00003_cd")
 
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = "%Y-%m-%d"),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site_code',
+                         data_cols =  c("X_00060_00003" = "discharge"),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'qflag',
+                         is_sensor = FALSE)
 
-    # unlink(paste0(temp_dir, '/*'))
+    d <- ms_cast_and_reflag(d,
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            summary_flags_dirty   = c("qflag" = c("P", "A e")),
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            summary_flags_clean   = c( "qflag" = "A"),
+                            ## summary_flags_to_drop = "#*#",
+                            varflag_col_pattern = NA
+                            )
 
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
-
-    all_sites <- tibble()
-    for(i in 1:length(file_names)){
-
-        if(file_names[i] == 'locations.csv') next
-
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
-
-        if(length(site_info) == 1) next
-
-        if(grepl('aqlithiumion_aslithium|aqberylliumion_asberyllium', file_names[i])){
-
-            if(length(site_info) == 4){
-                site_code <- site_info[1,1]
-            } else{
-                site_code <- site_info[1,1:(length(site_info)-3)]
-                site_code <- paste(site_code, collapse = '_')
-            }
-
-        } else{
-            if(length(site_info) == 3){
-                site_code <- site_info[1,1]
-            } else{
-                 site_code <- site_info[1,1:(length(site_info)-2)]
-                 site_code <- paste(site_code, collapse = '_')
-            }
-        }
-
-        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
-        site_var <- site_info[1,length(site_info)-1]
-        site_unit <- str_remove(site_info[1,length(site_info)], '.csv')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
-            mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
-
-        all_sites <- rbind(all_sites, site_table)
-    }
-
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # cp#, er_plm#, and mdp# are all pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'cp1',
-               site != 'cp2',
-               site != 'cp3',
-               site != 'cp4',
-               site != 'cp5',
-               site != 'cp6',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6',
-               site != 'mdp1',
-               site != 'mdp2',
-               site != 'mdp3') %>%
-        mutate(var = case_when(site_var_unit == 'aluminum_ppb' ~ 'Al',
-                               site_var_unit == 'antimony_ppb' ~ 'Sb',
-                               site_var_unit == 'aqberylliumion_asberyllium_ppb' ~ 'Be',
-                               site_var_unit == 'aqlithiumion_aslithium_ppb' ~ 'Li',
-                               site_var_unit == 'arsenic_ppb' ~ 'As',
-                               site_var_unit == 'barium_ppb' ~ 'Ba',
-                               site_var_unit == 'boron_ppb' ~ 'B',
-                               site_var_unit == 'calcium_ppb' ~ 'Ca',
-                               site_var_unit == 'cadmium_ppb' ~ 'Cd',
-                               site_var_unit == 'cesium_ppb' ~ 'Cs',
-                               site_var_unit == 'chromium_ppb' ~ 'Cr',
-                               site_var_unit == 'cobalt_ppb' ~ 'Co',
-                               site_var_unit == 'copper_ppb' ~ 'Cu',
-                               site_var_unit == 'europium_ppb' ~ 'Eu',
-                               site_var_unit == 'germanium_ppb' ~ 'Ge',
-                               site_var_unit == 'iron_ppb' ~ 'Fe',
-                               site_var_unit == 'manganese_ppb' ~ 'Mn',
-                               site_var_unit == 'lead_ppb' ~ 'Pb',
-                               site_var_unit == 'magnesium_ppb' ~ 'Mg',
-                               site_var_unit == 'molybdenum_ppb' ~ 'Mo',
-                               site_var_unit == 'nickel_ppb' ~ 'Ni',
-                               site_var_unit == 'phosphorus_ppb' ~ 'P',
-                               site_var_unit == 'potassium_ppb' ~ 'K',
-                               site_var_unit == 'rubidium_ppb' ~ 'Rb',
-                               site_var_unit == 'selenium_ppb' ~ 'Se',
-                               site_var_unit == 'silicon_ppb' ~ 'Si',
-                               site_var_unit == 'silver_ppb' ~ 'Ag',
-                               site_var_unit == 'sodium_ppb' ~ 'Na',
-                               site_var_unit == 'strontium_ppb' ~ 'Sr',
-                               site_var_unit == 'thorium_ppb' ~ 'Th',
-                               site_var_unit == 'tin_ppb' ~ 'Sn',
-                               site_var_unit == 'titanium_ppb' ~ 'Ti',
-                               site_var_unit == 'uranium_ppb' ~ 'U',
-                               site_var_unit == 'vanadium_ppb' ~ 'V',
-                               site_var_unit == 'zinc_ppb' ~ 'Zn',
-                               site_var_unit == 'zirconium_ppb' ~ 'Zr')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        as_tibble()
-
-    # look <- d %>%
-    #     group_by(datetime, site_code, var) %>%
-    #     summarise(n = n())
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
-
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
-
-    # 107482
-    # Units are in ppb, converting to mg/L
-    d <- d %>%
-        mutate(val = val/1000)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -914,8 +597,6 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-
-    unlink(temp_dir, recursive = TRUE)
 
     return()
 }
@@ -923,133 +604,36 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
+    d <- read.csv(rawfile) %>%
+      mutate(site_code = "W-3") %>%
+      rename(qflag = "X_00060_00003_cd")
 
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = "%Y-%m-%d"),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site_code',
+                         data_cols =  c("X_00060_00003" = "discharge"),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'qflag',
+                         is_sensor = FALSE)
 
-    # unlink(paste0(temp_dir, '/*'))
+    d <- ms_cast_and_reflag(d,
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            summary_flags_dirty   = c("qflag" = c("P", "A e")),
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            summary_flags_clean   = c( "qflag" = "A"),
+                            ## summary_flags_to_drop = "#*#",
+                            varflag_col_pattern = NA
+                            )
 
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
-
-    all_sites <- tibble()
-    for(i in 1:length(file_names)){
-
-        if(file_names[i] == 'locations.csv') next
-
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
-
-        if(length(site_info) == 1) next
-
-        if(length(site_info) == 5){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-4)]
-            site_code <- paste(site_code, collapse = '_')
-        }
-
-        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
-            mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
-
-        all_sites <- rbind(all_sites, site_table)
-    }
-
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_var == 'chloride' ~ 'Cl',
-                               site_var == 'fluoride' ~ 'F',
-                               site_var == 'nitrate' ~ 'NO3',
-                               site_var == 'phosphate' ~ 'PO4',
-                               site_var == 'sulfate' ~ 'SO4')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble()
-
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
-
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
-
-    d <- ms_conversions(d,
-                        convert_units_from = c('Cl' = 'umol/l',
-                                               'F' = 'umol/l',
-                                               'NO3' = 'umol/l',
-                                               'PO4' = 'umol/l',
-                                               'SO4' = 'umol/l'),
-                        convert_units_to = c('Cl' = 'mg/l',
-                                             'F' = 'mg/l',
-                                             'NO3' = 'mg/l',
-                                             'PO4' = 'mg/l',
-                                             'SO4' = 'mg/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1070,8 +654,6 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-
-    unlink(temp_dir, recursive = TRUE)
 
     return()
 }
@@ -1215,6 +797,12 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     return()
 }
+
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS005")
+prodname_ms <- set_details$prodname_ms
+site_code <- set_details$site_code
+component <- set_details$component
+url <- set_details$url
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
