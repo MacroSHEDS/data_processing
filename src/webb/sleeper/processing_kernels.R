@@ -1,9 +1,9 @@
-source('src/webb/sleeper/domain_helpers.R')
+source('src/webb/sleepers/domain_helpers.R')
 source('src/webb/network_helpers.R')
 
 ## #retrieval kernels ####
 ## network = 'webb'
-## domain = 'sleeper'
+## domain = 'sleepers'
 
 ## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
 
@@ -155,7 +155,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                     c = set_details$component)
 
     # call our dataRetrieval function
-    q <- retrieve_usgs_sleeper_daily_q(set_details)
+    q <- retrieve_usgs_sleepers_daily_q(set_details)
 
     # download it to the raw file locatin
     write_csv(q, file = rawfile)
@@ -195,7 +195,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                     c = set_details$component)
 
     # call our dataRetrieval function
-    q <- retrieve_usgs_sleeper_daily_q(set_details)
+    q <- retrieve_usgs_sleepers_daily_q(set_details)
 
     # download it to the raw file locatin
     write_csv(q, file = rawfile)
@@ -414,13 +414,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here to be just the old_var = new_var structure
-    sleeper_aq_chem = c()
+    sleepers_aq_chem = c()
 
     for(i in 1:length(sleepers_stream_chem_var_info)) {
       og_name <- names(sleepers_stream_chem_var_info[i])
       ms_name <- sleepers_stream_chem_var_info[[i]][3]
 
-      sleeper_aq_chem[og_name] = ms_name
+      sleepers_aq_chem[og_name] = ms_name
     }
 
     # original data has a "summary" flag column, which lists simply a variable name -- meaning
@@ -445,7 +445,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Sample_Name',
-                         data_cols =  sleeper_aq_chem,
+                         data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
                          # variable specific flag pattern
                          var_flagcol_pattern = 'varflag_#V#',
@@ -708,13 +708,13 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here to be just the old_var = new_var structure
-    sleeper_aq_chem = c()
+    sleepers_aq_chem = c()
 
     for(i in 1:length(sleepers_stream_chem_var_info)) {
       og_name <- names(sleepers_stream_chem_var_info[i])
       ms_name <- sleepers_stream_chem_var_info[[i]][3]
 
-      sleeper_aq_chem[og_name] = ms_name
+      sleepers_aq_chem[og_name] = ms_name
     }
 
     # original data has a "summary" flag column, which lists simply a variable name -- meaning
@@ -739,7 +739,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                          datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Sample_Name',
-                         data_cols =  sleeper_aq_chem,
+                         data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
                          # variable specific flag pattern
                          var_flagcol_pattern = 'varflag_#V#',
