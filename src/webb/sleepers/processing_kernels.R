@@ -2,15 +2,6 @@ source('src/webb/sleepers/domain_helpers.R')
 source('src/webb/network_helpers.R')
 
 ## #retrieval kernels ####
-## network = 'webb'
-## domain = 'sleepers'
-
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
-
-## prodname_ms <- set_details$prodname_ms
-## site_code <- set_details$site_code
-## component <- set_details$component
-## url <- set_details$url
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -255,46 +246,6 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#stream_chemistry: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS007 <- function(set_details, network, domain) {
-
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = set_details$site_code)
-
-    dir.create(path = raw_data_dest,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    rawfile <- glue('{rd}/{c}.csv',
-                    rd = raw_data_dest,
-                    c = set_details$component)
-
-    R.utils::downloadFile(url = set_details$url,
-                          filename = rawfile,
-                          skip = FALSE,
-                          overwrite = TRUE)
-
-    res <- httr::HEAD(set_details$url)
-
-    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                       start = 1,
-                                       stop = 19),
-                            format = '%Y-%m-%dT%H:%M:%S') %>%
-        with_tz(tzone = 'UTC')
-
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
-                      access_time = as.character(with_tz(Sys.time(),
-                                                         tzone = 'UTC')),
-                      last_mod_dt = last_mod_dt)
-
-    return(deets_out)
-}
-
-
 #munge kernels ####
 
 #precipitation: STATUS=READY
@@ -327,6 +278,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = '#V#',
                          ## summary_flagcols = NA,
                          is_sensor = FALSE)
+
 
     d <- ms_cast_and_reflag(d,
                            varflag_col_pattern = NA
@@ -464,6 +416,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
     no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
                   "GN_d13C", "GN_NO3_d15N")
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -472,14 +432,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                            prodname_ms = prodname_ms,
                                            which_ = 'uncertainty')
 
-    # Sleepers metadata states that all negative values are below detection limit, with the
-    # value itself being the detection limit for that sample and method
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
-    # give ms_status = 1 to all BDL observations
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
 
     d <- synchronize_timestep(d)
 
@@ -504,6 +456,11 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS003")
+## prodname_ms <- set_details$prodname_ms
+## site_code <- set_details$site_code
+## component <- set_details$component
+## url <- set_details$url
 
 #discharge: STATUS=READY
 #. handle_errors
@@ -516,10 +473,63 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    d <- read.csv(rawfile)
+    # clean edit codes (from sleepers metadata)
+    clean_codes <- c("1", "3", "4", "2", "6", "10", "11", "13", "16", "9")
+    # dirty edit codes (from sleepers metadata)
+    dirty_codes <- c("5", "14")
+    # drop edit codes (from sleepers metadata)
+    drop_codes <- c("7")
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    # pre-processing
+    d <- read.csv(rawfile) %>%
+      mutate(site_code = "W-9",
+             date = as.Date(Date.Time..EST., format = "%m/%d/%y"),
+             Edit.Code = as.character(Edit.Code),
+             # pre-filter edit codes, to retain filtering by original info
+             # turn all "good" and "fair" edit coees to 0, and dirty to 1
+             ## edit_code = case_when(Edit.Code %in% clean_codes ~ 0, Edit.Code %in% dirty_codes ~ 1, TRUE ~ Edit.Code)
+             ) %>%
+      filter(
+        # remove all "poor" data
+        !Edit.Code %in% drop_codes
+        )
 
+    # pre-filter edit codes, to retain filtering by original info
+    # turn all "good" and "fair" edit coees to 0, and dirty to 1
+    d$Edit.Code <- ifelse(d$Edit.Code %in% clean_codes, 0, 1)
+
+    d <- d %>%
+      # mean by date to save processing time
+      group_by(site_code, date) %>%
+      summarise(
+        discharge = mean(Q..cfs),
+        Edit.Code = max(Edit.Code)
+      )
+
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('date' = "%Y-%m-%d"),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site_code',
+                         data_cols =  c("discharge" = "discharge"),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'Edit.Code',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            summary_flags_dirty   = c("Edit.Code" = 1),
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            summary_flags_clean   = c( "Edit.Code" = 0),
+                            ## summary_flags_to_drop = "#*#",
+                            varflag_col_pattern = NA
+                            )
+
+
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -537,8 +547,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-
-    unlink(temp_dir, recursive = TRUE)
 
     return()
 }
@@ -768,12 +776,12 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
     # give ms_status = 1 to all BDL observations
     d <- d %>%
       mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
 
     d <- synchronize_timestep(d)
 
@@ -797,202 +805,34 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     return()
 }
-
-set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS005")
-prodname_ms <- set_details$prodname_ms
-site_code <- set_details$site_code
-component <- set_details$component
-url <- set_details$url
-
-#stream_chemistry: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
-
-    # TDN is listed as g/l it appears but comparing to anoth east river
-    # data prod, it looks like (and makes snese) that the unit is ug/l
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
-
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
-
-    unzip(rawfile,
-          exdir = temp_dir)
-
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
-
-    all_sites <- tibble()
-    for(i in 1:length(file_names)){
-
-        if(file_names[i] == 'locations.csv') next
-
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
-
-        if(length(site_info) == 1) next
-
-        if(length(site_info) == 4){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-3)]
-            site_code <- paste(site_code, collapse = '_')
-        }
-
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
-            mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
-
-        all_sites <- rbind(all_sites, site_table)
-    }
-
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_unit == 'tdn_g_l' ~ 'TDN',
-                               site_unit == 'ammonia_n_ppm' ~ 'NH3_N')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble()
-
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
-
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
-
-    d <- ms_conversions(d,
-                   convert_units_from = c('TDN' = 'ug/l'),
-                   convert_units_to = c('TDN' = 'mg/l'))
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
-
-    unlink(temp_dir, recursive = TRUE)
-
-    return()
-}
-
 #derive kernels ####
-
-#stream_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){
-
-    combine_products(network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_chemistry__VERSIONLESS003',
-                                           'stream_chemistry__VERSIONLESS004',
-                                           'stream_chemistry__VERSIONLESS005',
-                                           'stream_chemistry__VERSIONLESS006',
-                                           'stream_chemistry__VERSIONLESS007'))
-
-}
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms) {
 
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('discharge__VERSIONLESS002',
-                                           'discharge__VERSIONLESS009'))
+                     input_prodname_ms = c('discharge__VERSIONLESS001',
+                                           'discharge__VERSIONLESS002',
+                                           'discharge__VERSIONLESS003',
+                                           ))
     return()
 }
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- derive_stream_flux
+process_2_ms002 <- derive_stream_flux
 
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_2_ms004 <- precip_gauge_from_site_data
+process_2_ms003 <- precip_gauge_from_site_data
 
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_2_ms005 <- stream_gauge_from_site_data
+process_2_ms004 <- stream_gauge_from_site_data
 
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms006 <- derive_precip_pchem_pflux
+process_2_ms005 <- derive_precip_pchem_pflux
