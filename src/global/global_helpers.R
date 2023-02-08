@@ -1541,15 +1541,6 @@ ms_cast_and_reflag <- function(d,
     #   Note: This parameter does not use the '#*#' wildcard.
     #summary_flags_bdl: optional named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
-    # Sleepers metadata states that all negative values are below detection limit, with the
-    # value itself being the detection limit for that sample and method
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
-    # give ms_status = 1 to all BDL observations
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
-
     #   of values that might appear in the summary flag/status columns.
     #   Associated data records are assigned ms_status = 2, which is used as an
     #   indicator to insert 1/2 detlims downstream.
