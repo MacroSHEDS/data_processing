@@ -1,6 +1,3 @@
-source('src/webb/sleepers/domain_helpers.R')
-source('src/webb/network_helpers.R')
-
 ## #retrieval kernels ####
 
 #precipitation: STATUS=READY
@@ -49,7 +46,13 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#precip_chem: STATUS=READY
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS002")
+## prodname_ms <- set_details$prodname_ms
+## site_code <- set_details$site_code
+## component <- set_details$component
+## url <- set_details$url
+
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
@@ -313,7 +316,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#precip_chem: STATUS=READY
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -455,12 +458,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     return()
 }
-
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS003")
-## prodname_ms <- set_details$prodname_ms
-## site_code <- set_details$site_code
-## component <- set_details$component
-## url <- set_details$url
 
 #discharge: STATUS=READY
 #. handle_errors
@@ -816,7 +813,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                      prodname_ms = prodname_ms,
                      input_prodname_ms = c('discharge__VERSIONLESS001',
                                            'discharge__VERSIONLESS002',
-                                           'discharge__VERSIONLESS003',
+                                           'discharge__VERSIONLESS003'
                                            ))
     return()
 }

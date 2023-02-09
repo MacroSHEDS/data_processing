@@ -366,22 +366,22 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
+                prodname_filter = c('precip_chemistry'),
                 domain = domain)
 
     ms_munge(network = network,
-             ## prodname_filter = c('discharge'),
+             prodname_filter = c('precip_chemistry'),
              domain = domain)
 
-    # if(domain != 'mcmurdo'){
-    #     sw(ms_delineate(network = network,
-    #                     domain = domain,
-    #                     dev_machine_status = ms_instance$machine_status,
-    #                     verbose = TRUE))
-    # }
+    if(domain != 'mcmurdo'){
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        verbose = TRUE))
+    }
 
     ms_derive(network = network,
-              prodname_filter = c('stream_chemistry'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     # if(domain != 'mcmurdo'){
