@@ -1,5 +1,5 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
-VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms005,W9 __ daily ppt,sleepers_ppt,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
+VERSIONLESS001,CUSTOMprecipitation,ready,ready,NA,CUSTOMprecip_flux_inst__ms006,W9 __ daily ppt,sleepers_ppt,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__bb%2Fa6%2Ff5%2Fbba6f5d74604694c194512bee1ee0e0cb095cd63
 VERSIONLESS002,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms005,NA,sleepers_pchem,https://www.sciencebase.gov/catalog/file/get/5c5c89b6e4b070828902d1c9?f=__disk__0c%2F04%2F18%2F0c04182d4c0c9c86b261a5ace5a3096dfb83b579
 VERSIONLESS003,discharge,ready,ready,NA,discharge__ms001,W9 __ 5m discharge,sleepers_discharge_w9,https://www.sciencebase.gov/catalog/file/get/5b2aa9bae4b040769c0ed87b?f=__disk__4a%2F22%2Ffe%2F4a22fe9a1dc7ccd38edb195dfb73f3eb9b168964
 VERSIONLESS004,discharge,ready,ready,NA,discharge__ms001,USGS_01135300,sleepers_discharge_w5,https://waterdata.usgs.gov/nwis/uv?site_no=01135300
@@ -9,5 +9,9 @@ ms001,discharge,NA,NA,ready,stream_flux_inst__ms002,NA,NA,NA
 ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
 ms003,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms005,NA,NA,NA
 ms004,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
-ms005,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
+ms005,precip_pchem_pflux,NA,NA,ready,CUSTOMprecip_flux_inst__ms006,NA,NA,NA
+ms006,CUSTOMprecip_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms007,CUSTOMprecipitation,NA,NA,linked,NA,automated entry,NA,NA
+ms008,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
 ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms005,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA

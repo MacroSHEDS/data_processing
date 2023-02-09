@@ -1,6 +1,6 @@
 ## #retrieval kernels ####
 
-#precipitation: STATUS=READY
+#CUSTOMprecipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     # START OF BLOCK YOU DONT CHANGE #
@@ -251,7 +251,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 
 #munge kernels ####
 
-#precipitation: STATUS=READY
+#CUSTOMprecipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -833,3 +833,41 @@ process_2_ms004 <- stream_gauge_from_site_data
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_precip_pchem_pflux
+
+#CUSTOMprecip_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms){
+
+    chemprod <- 'precip_chemistry__ms901'
+    qprod <- 'CUSTOMprecipitation__VERSIONLESS001'
+
+    chemfiles <- ms_list_files(network = network,
+                               domain = domain,
+                               prodname_ms = chemprod)
+
+    qfiles <- ms_list_files(network = network,
+                            domain = domain,
+                            prodname_ms = qprod)
+
+    flux_sites <- base::intersect(
+        fname_from_fpath(qfiles, include_fext = FALSE),
+        fname_from_fpath(chemfiles, include_fext = FALSE))
+
+    for(s in flux_sites){
+
+        flux <- sw(calc_inst_flux(chemprod = chemprod,
+                                  qprod = qprod,
+                                  site_code = s))
+
+        if(!is.null(flux)){
+
+            write_ms_file(d = flux,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_code = s,
+                          level = 'derived',
+                          shapefile = FALSE)
+        }
+    }
+}
