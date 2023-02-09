@@ -42,6 +42,25 @@ sites = read_csv('0_documentation_and_metadata/04_site_documentation/04a_site_me
     filter(! domain %in% c('mcmurdo', 'krycklan'))
     # st_as_sf(coords = c('longitude', 'latitude'), crs = 4326)
 
+cc = all_chem %>%
+    mutate(pfx = macrosheds::ms_extract_var_prefix(var)) %>%
+    filter(pfx == 'IS') %>%
+    group_by(site_code, var) %>%
+    summarize(n = n()) %>%
+    ungroup()
+
+c2 = all_chem %>%
+    mutate(pfx = macrosheds::ms_extract_var_prefix(var)) %>%
+    filter(pfx == 'IN') %>%
+    group_by(site_code, var) %>%
+    summarize(n = n()) %>%
+    ungroup()
+
+# cc = left_join(cc, select(sites, site_code, domain))
+# c2 = left_join(c2, select(sites, site_code, domain))
+# write_csv(cc, '/tmp/installed_sensor_sitevars.csv')
+# write_csv(c2, '/tmp/installed_nonsensor_sitevars.csv')
+
 # gg_vars = c('GN_NH4_NH3_N', 'GN_NO3_NO2_N', 'GN_TN', 'GN_UTKN', 'GN_UTP',
 #             'GN_DON', 'GN_NH3_N', 'GN_NO3_N', 'GN_TPN', 'GN_TKN', 'GN_TDP',
 #             'GN_PO4_P', 'GN_TPP', 'GN_DOC', 'GN_NH4_N', 'GN_P', 'GN_TDN',
