@@ -11481,7 +11481,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     }
 
     save(file_ids_for_r_package,
-         file = '../r_package/R/sysdata.rda')
+         file = '../r_package/data/sysdata.RData')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
     # other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
@@ -11633,6 +11633,8 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     save(file_ids_for_r_package2,
          file = '../r_package/data/sysdata2.RData')
+    readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
+         file = '../r_package/data/figshare_id_check.txt')
 }
 
 detrmin_mean_record_length <- function(df){
