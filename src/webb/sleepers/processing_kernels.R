@@ -362,7 +362,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # filter to only precipitation site type
     d <- d %>%
-      filter(Sample_Type %in% c("PE", "PW"),
+      filter(Sample_Type %in% c("PW"),
              # what do about W-9 big bucket?
              Sample_Name == "R-29 (PPT@W-9)") %>%
       mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
@@ -849,11 +849,12 @@ process_2_ms006 <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = qprod)
 
-    flux_sites <- base::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
+    flux_sites <- fname_from_fpath(chemfiles, include_fext = FALSE)
 
     for(s in flux_sites){
+        q_ws <- feather::read_feather(qfiles[[1]]) %>%
+            mutate(site_code = s)
+        feather::write_feather(q_ws, qfiles)
 
         flux <- sw(calc_inst_flux(chemprod = chemprod,
                                   qprod = qprod,

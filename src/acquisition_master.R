@@ -337,16 +337,16 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    # held_data = invalidate_tracked_data(network, domain, '')
     ## owrite_tracker(network, domain)
     ## held_data = invalidate_tracked_data(network, domain, 'derive')
     ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
-    ## owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'CUSTOMprecipitation')
+    # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -381,7 +381,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              prodname_filter = c('CUSTOMprecip_flux_inst'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     # if(domain != 'mcmurdo'){
