@@ -31,3 +31,6 @@ eml/data_links
 eml/eml_out
 vault/*
 .Rdata
+misc_backups
+eml/data_links_truncated
+eml/data_links_old_justforreference/
