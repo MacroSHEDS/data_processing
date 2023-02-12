@@ -3,7 +3,9 @@ library(macrosheds)
 library(lubridate)
 library(glue)
 
-setwd('macrosheds/data_acquisition/')
+setwd('~/git/macrosheds/data_acquisition/')
+
+rm_dmns = c('neon')
 
 # tally sites from data_acquisition/macrosheds_figshare_X/macrosheds_timeseries_data ####
 
@@ -42,7 +44,11 @@ for(i in 1:length(doms)){
     site_numbers <- rbind(site_numbers, this_domain)
 }
 
-write_csv(site_numbers, 'site_count.csv')
+filter(site_numbers, ! domains %in% c(rm_dmns, 'all')) %>%
+    summarize(across(-domains, sum))
+
+
+# write_csv(site_numbers, 'site_count.csv')
 
 # tally sites from data_acquisition/data ####
 all_fis <- list.files('data/', recursive = T, full.names = T)
@@ -206,3 +212,16 @@ all_chem_sites <- c(unique(str_split_fixed(chem_files, '/', n = Inf)[,7]), 'como
 setdiff(all_q_sites0, all_q_sites)
 setdiff(all_q_sites, all_q_sites0)
 
+
+#get counts by network ####
+
+#NEON NOT COUNTED
+
+dd = left_join(site_numbers, network_domain, by = c(domains = 'domain'))
+
+filter(dd, network != 'all', domains != 'neon') %>%
+    summarize(across(-c(domains, network), sum))
+filter(dd, network %in% 'lter' %>%
+    summarize(across(-c(domains, network), sum))
+filter(dd, network %in% c('lter', 'czo')) %>%
+    summarize(across(-c(domains, network), sum))
