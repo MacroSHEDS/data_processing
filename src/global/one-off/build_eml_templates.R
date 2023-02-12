@@ -332,7 +332,7 @@ zip('code_autodocumentation.zip', files = list.files('code_autodocumentation', f
 setwd('../..')
 
 
-# make one more file for sample regimen codes ####
+# make one more file for sample regimen codes** ####
 
 reg_codes = tribble(~sample_regimen_code, ~definition,
                     'IS', 'Sample collected by an Installed Sensor.',
