@@ -10007,7 +10007,7 @@ postprocess_entire_dataset <- function(site_data,
 
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
-        reformat_camels_for_ms()
+        reformat_camels_for_ms(vsn = dataset_version)
 
         # log_with_indent('adding legal metadata to each domain directory',
         #                 logger = logger_module)
@@ -10080,11 +10080,12 @@ postprocess_entire_dataset <- function(site_data,
         dir.create(dd, recursive = TRUE, showWarnings = FALSE)
 
         prepare_for_edi(where = edi_dir,
-                        dataset_version = dataset_version)
+                        dataset_version = dataset_version,
+                        wd = wd, ed = ed, dd = dd)
 
         manually_edit_eml()
 
-        stop('uncertainty should not be attached to P and Q, right? why is that happening? fix and rm the code immediately below this')
+        stop('figure out why some Q values have uncertainty, some have 0, some NA. fix and rm the code immediately below this')
         setwd('~/git/macrosheds/data_acquisition/eml/data_links/')
         zz = list.files(pattern = '^timeseries_[a-z_]+\\.csv$')
         for(z in zz){
@@ -10093,16 +10094,16 @@ postprocess_entire_dataset <- function(site_data,
                 write_csv(z)
         }
 
-        log_with_indent(glue('Uploading dataset v{vv} to EDI',
-                             vv = dataset_version),
-                        logger = logger_module)
-        upload_dataset_to_edi(dataset_version = dataset_version) #not yet hooked up
+        # log_with_indent(glue('Uploading dataset v{vv} to EDI',
+        #                      vv = dataset_version),
+        #                 logger = logger_module)
+        # upload_dataset_to_edi(dataset_version = dataset_version) #not yet hooked up (can't be unless they change upload size limits for package. rn we need to request permission before upload)
     } else {
         log_with_indent('NOT pushing data to EDI',
                         logger = logger_module)
     }
 
-    message('PUSH NEW macrosheds package version now that figshare ids are updated (still relevant?)')
+    message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
 
 remove_flux_neon_etc <- function(where){
@@ -10143,21 +10144,10 @@ remove_flux_neon_etc <- function(where){
         write_csv(loc)
 
     #rm flux
-
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv')
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/02_glossary.txt')
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05c_timeseries_variable_metadata_column_descriptions.txt')
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05h_timeseries_refs.bib')
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/05_timeseries_documentation/05d_timeseries_column_descriptions.txt')
-    # loc <- glue('macrosheds_figshare_v1/0_documentation_and_metadata/08_data_irregularities.csv')
-    # loc <- glue('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/climate.csv')
     loc <- glue('{where}/macrosheds_documentation_packageformat/variable_catalog.csv')
     read_csv(loc) %>%
         filter(! chem_category %in% c('precip_flux', 'stream_flux')) %>%
         write_csv(loc)
-    # loc <- glue('macrosheds_figshare_v1/macrosheds_documentation_packageformat/variable_metadata.csv')
-    # read_lines(loc) %>%
-    #     str_subset('precip_flux')
 }
 
 remove_more_stuff_temporarily <- function(){
@@ -10778,10 +10768,11 @@ prepare_for_edi <- function(where, dataset_version){
 
     eml_misc(where)
 
-    build_eml_data_links(where, vsn = dataset_version)
+    build_eml_data_links_and_generate_eml(where, vsn = dataset_version,
+                                          wd = wd, dd = dd, ed = ed)
 }
 
-build_eml_data_links <- function(where, vsn){
+build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     warning('removing neon and v2 dev domains. address this in v2')
     rm_networks <- c('webb', 'mwo', 'neon')
@@ -10789,6 +10780,7 @@ build_eml_data_links <- function(where, vsn){
     rm_neon_sites <- TRUE
     # rm_neon_sites <- FALSE #switch this too
     neon_sites <- filter(site_data, domain == 'neon') %>% pull(site_code)
+    broken_sites <- c('LaJaraSouthSpring', 'UpperJaramilloSpring') #fix these some day? they have no summary data.
 
     #update this if necessary**
     warning('is bear still the only non-lter network that\'s on EDI?')
@@ -10863,7 +10855,7 @@ build_eml_data_links <- function(where, vsn){
 
     files_to_link <- c(
         ts_tables,
-        list.files('macrosheds_figshare_v1/1_watershed_attribute_data',
+        list.files(glue('macrosheds_figshare_v{vsn}/1_watershed_attribute_data'),
                    full.names = TRUE, recursive = TRUE),
         glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'),
         glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'),
@@ -11023,7 +11015,9 @@ build_eml_data_links <- function(where, vsn){
         filter(! network %in% rm_networks) %>%
         write_csv(file.path(dd, 'attribution_and_intellectual_rights_timeseries.csv'))
 
-    file.remove(list.files(dd, pattern = '.*.feather$', full.names = TRUE)) #not sure how these got there, but doesn't matter
+    file.remove(list.files(dd, pattern = '.*\\.feather$', full.names = TRUE)) #not sure how these got there, but doesn't matter
+    basenames = grep('\\.feather$', basenames, invert = TRUE, value = TRUE)
+    descriptions = grep('\\.feather$', descriptions, invert = TRUE, value = TRUE)
 
     if(rm_neon_sites){
         read_csv('eml/data_links/CAMELS_compliant_Daymet_forcings.csv') %>%
@@ -11033,6 +11027,25 @@ build_eml_data_links <- function(where, vsn){
             filter(! site_code %in% neon_sites) %>%
             write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
     }
+
+    read_csv('eml/data_links/timeseries_mcmurdo.csv') %>%
+        select(-year) %>%
+        write_csv('eml/data_links/timeseries_mcmurdo.csv')
+
+    read_csv('eml/data_links/ws_attr_summaries.csv') %>%
+        rename(lg_nlcd_lichens = lg_lncd_lichens,
+               lb_igbp_closed_shrub = lb_igbp_cloased_shrub) %>%
+        filter(! site_code %in% broken_sites) %>%
+        write_csv('eml/data_links/ws_attr_summaries.csv')
+
+    ## add hydro attributes to CAMELS attrs
+
+    all_site_hydro <- read_feather(glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
+
+    read_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv') %>%
+        left_join(all_site_hydro) %>%
+        arrange(site_code) %>%
+        write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
 
     ## write eml
 
@@ -11887,15 +11900,6 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     other_uploadsA <- c(other_uploadsA, paste0('macrosheds_figshare_v', dataset_version, '/1_watershed_attribute_data/ws_attr_summaries.feather'))
     titlesA <- c(titlesA, 'watershed_summaries')
     names(other_uploadsA) <- rep('watershed_attributes', length(other_uploadsA))
-    # other_uploadsA = grep('spatial_timeseries', other_uploadsA, invert = TRUE, value = TRUE) #patch. see upload_dataset_to_figshare()
-    # rmneon = grep('spatial_timeseries', other_uploadsA, value = T)
-    # for(dd in rmneon){
-    #     read_csv(dd) %>% filter(domain != 'neon') %>% write_csv(dd)
-    # }
-    # fff <- list.files('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries', full.names = TRUE)
-    # for(dd in fff){
-    #     read_csv(dd) %>% filter(domain != 'neon') %>% write_csv(dd)
-    # }
 
     other_uploadsB <- c(
         documentation = '../portal/static/documentation/timeseries/columns.txt',
@@ -14809,7 +14813,7 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('ndvi', wide_spat_data)
     wide_spat_data <- join_if_exists('nsidc', wide_spat_data)
     wide_spat_data <- join_if_exists('glhymps', wide_spat_data)
-    wide_spat_data <- join_if_exists('lithoogy', wide_spat_data)
+    wide_spat_data <- join_if_exists('lithology', wide_spat_data)
     wide_spat_data <- join_if_exists('modis_igbp', wide_spat_data)
     wide_spat_data <- join_if_exists('nadp', wide_spat_data)
 
@@ -15859,9 +15863,8 @@ legal_details_scrape <- function(dataset_version){
     }
 }
 
-reformat_camels_for_ms <- function(){
+reformat_camels_for_ms <- function(vsn){
 
-    # ms_attributes_dir <- '../timeseries_experimentation/neon_camels_attr/data/ms_attributes'
     ms_attributes_dir <- '../qa_experimentation/data/ms_in_camels_format'
 
     all_files <- list.files(ms_attributes_dir, recursive = TRUE, full.names = TRUE)
@@ -15881,14 +15884,14 @@ reformat_camels_for_ms <- function(){
     geol <- map_dfr(geol_files, read_feather)
     vege <- map_dfr(vege_files, read_feather)
 
-    dir.create('macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes', showWarnings = FALSE)
-    dir.create('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings', showWarnings = FALSE)
+    dir.create(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes'), showWarnings = FALSE)
+    dir.create(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings'), showWarnings = FALSE)
 
-    write_csv(soil, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/soil.csv')
-    write_csv(clim, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/clim.csv')
-    write_csv(topo, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/topo.csv')
-    write_csv(geol, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/geol.csv')
-    write_csv(vege, 'macrosheds_figshare_v1/3_CAMELS-compliant_watershed_attributes/vege.csv')
+    write_csv(soil, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/soil.csv'))
+    write_csv(clim, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/clim.csv'))
+    write_csv(topo, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/topo.csv'))
+    write_csv(geol, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/geol.csv'))
+    write_csv(vege, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/vege.csv'))
 
     for(i in 1:length(daymet_files)){
 
@@ -15908,8 +15911,201 @@ reformat_camels_for_ms <- function(){
                        `vp(Pa)` = vp,
                        `pet(mm)` = pet)
 
-            write_csv(this_site, glue('macrosheds_figshare_v1/4_CAMELS-compliant_Daymet_forcings/{s}.csv',
+            write_csv(this_site, glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv',
                                       s = sites[s]))
         }
     }
+
+    ## summarize hydrologic watershed attributes
+
+    # read in hydrology files
+    all_fil <- list.files(glue('macrosheds_dataset_v{vsn}'), recursive = T, full.names = T)
+    all_q_fil <- grep('discharge', all_fil, value = T)
+    all_q_fil <- grep('feather', all_q_fil, value = T)
+
+    all_q <- map_dfr(all_q_fil, read_feather) %>%
+        select(-any_of('year'))
+
+    # Prep data
+    site_doms <- site_data %>%
+        filter(site_type == 'stream_gauge') %>%
+        select(site_code, domain)
+
+    # sites_to_remove <-  site_data %>%
+    #     mutate(remove = ifelse(stream == 'Kuparuk River', 1, 0)) %>%
+    #     mutate(remove = ifelse(stream == 'Oksrukuyik Creek' & domain == 'arctic', 1, remove)) %>%
+    #     mutate(remove = ifelse(is.na(remove), 0, remove)) %>%
+    #     mutate(remove = ifelse(site_code %in% c('Oksrukuyik_Creek_1.7', 'Kuparuk_River_0'), 0, remove)) %>%
+    #     mutate(remove = ifelse(domain == 'neon', 1, remove)) %>%
+    #     select(site_code, remove)
+
+    site_area <- site_data %>%
+        filter(in_workflow == 1) %>%
+        filter(site_type == 'stream_gauge') %>%
+        select(site_code, ws_area_ha)
+
+    # Scale Q to watershed area
+    q_daily <- all_q %>%
+        left_join(site_doms, by = 'site_code') %>%
+        # left_join(sites_to_remove, by = 'site_code') %>%
+        # filter(remove == 0) %>%
+        # select(-remove) %>%
+        filter(!is.na(val)) %>%
+        group_by(site_code, datetime) %>%
+        summarise(val = mean(val),
+                  ms_status = max(ms_status),
+                  ms_interp = max(ms_interp)) %>%
+        ungroup() %>%
+        mutate(q_scaled = (val*86400)/1000) %>%
+        left_join(site_area, by = 'site_code') %>%
+        mutate(q_scaled = q_scaled/(ws_area_ha*10000)) %>%
+        mutate(q_scaled = q_scaled*1000) %>%
+        filter(!is.na(q_scaled))
+
+    # Look at watershed with mostly full water years (camels function operate on water year)
+    q_check <- q_daily %>%
+        left_join(site_doms) %>%
+        filter(!domain %in% c('mcmurdo')) %>%
+        mutate(year = year(datetime),
+               month = month(datetime)) %>%
+        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
+        group_by(site_code, water_year) %>%
+        summarise(n = n(),
+                  ms_status = sum(ms_status),
+                  ms_interp = sum(ms_interp)) %>%
+        ungroup()
+
+    frz_dry_sites <- q_check %>%
+        group_by(site_code) %>%
+        summarize(nyears = n(),
+                  mean_ndays = mean(n),
+                  max_ndays = max(n),
+                  prop_mean = mean_ndays / max_ndays) %>%
+        filter(max_ndays < 365,
+               nyears > 1)
+
+    q_check = left_join(q_check, select(frz_dry_sites, site_code, max_ndays))
+
+    good_site_years <- q_check %>%
+        filter(n >= 311 |
+                   (site_code %in% frz_dry_sites$site_code & n >= max_ndays * 0.4)) %>%
+        select(site_code, water_year) %>%
+        mutate(good = 1)
+
+    all_sacled <- q_daily %>%
+        mutate(year = year(datetime),
+               month = month(datetime)) %>%
+        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
+        filter(!is.na(q_scaled)) %>%
+        group_by(site_code, water_year) %>%
+        summarise(sum = sum(q_scaled, na.rm = T),
+                  n = n(),
+                  ms_status = sum(ms_status),
+                  ms_interp = sum(ms_interp)) %>%
+        ungroup() %>%
+        # mutate(sum = sum*1000) %>%
+        left_join(good_site_years, by = c('site_code', 'water_year')) %>%
+        filter(good == 1) %>%
+        left_join(site_doms)
+
+    annual_flow <- all_sacled %>%
+        # filter(! site_code %in% c('ON02', 'TE03')) %>%
+        group_by(site_code) %>%
+        summarise(sum = mean(sum, na.rm = T)) %>%
+        ungroup() %>%
+        # full_join(., site_eco, by = 'site_code') %>%
+        # filter(!is.na(eco_region)) %>%
+        filter(!is.na(sum)) %>%
+        as.data.frame() %>%
+        select(site_code, sum)
+        # left_join(., site_eco, by = 'site_code')
+
+    # Get daymet precip
+    daymet_files <- list.files('data', recursive = T, full.names = T)
+    daymet_files <- grep('daymet', daymet_files, value = T)
+
+    all_daymet <- map_dfr(daymet_files, read_feather)
+
+    daymet_annual <- all_daymet %>%
+        group_by(site_code, date) %>%
+        summarise(prcp = mean(prcp)) %>%
+        ungroup() %>%
+        mutate(year = year(date),
+               month = month(date)) %>%
+        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
+        group_by(site_code, water_year) %>%
+        summarise(prcp = sum(prcp, na.rm = T),
+                  n = n()) %>%
+        ungroup()
+
+    runof_rations <- left_join(all_sacled, daymet_annual, by = c('site_code', 'water_year')) %>%
+        mutate(runoff_ratio = sum/prcp) %>%
+        filter(runoff_ratio < 2) %>%
+        # filter(!site_code %in% c('ON02', 'TE03')) %>%
+        group_by(site_code) %>%
+        summarise(mean_rr = mean(runoff_ratio, na.rm = T)) %>%
+        ungroup() %>%
+        # full_join(., site_eco, by = 'site_code') %>%
+        # filter(!is.na(eco_region)) %>%
+        filter(!is.na(mean_rr))
+
+    # CAMELS hydro attributes
+    setwd('../papers/release_paper')
+    source('src/camels/hydro/hydro_signatures.R')
+    setwd('../../data_acquisition')
+
+    hydro_sites <- good_site_years %>%
+        pull(site_code) %>%
+        unique()
+
+    all_site_hydro <- tibble()
+    for(i in 1:length(hydro_sites)){
+
+        good_years <- good_site_years %>%
+            filter(site_code == !!hydro_sites[i]) %>%
+            pull(water_year)
+
+        one_site_q <- q_daily %>%
+            filter(site_code == !!hydro_sites[i]) %>%
+            mutate(year = year(datetime),
+                   month = month(datetime)) %>%
+            mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
+            filter(water_year %in% !!good_years)
+
+        one_site_precip <- all_daymet %>%
+            mutate(year = year(date),
+                   month = month(date)) %>%
+            mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
+            filter(site_code == !!hydro_sites[i],
+                   water_year %in% !!good_years) %>%
+            group_by(date, site_code) %>%
+            summarise(precip = mean(prcp, na.rm = T)) %>%
+            ungroup() %>%
+            rename(datetime = date)
+
+        one_site <- full_join(one_site_q, one_site_precip) %>%
+            filter(!is.na(precip),
+                   !is.na(val)) %>%
+            select(q = q_scaled, p = precip, d = datetime) %>%
+            mutate(d = as_date(d))
+
+        warning('mike manually edited CAMELS code (hydro_signatures.R) on 2022-12-01 (see lines with "MIKE EDITED" comments). If CAMELS upstream code changes, re-apply these edits.')
+
+        site_fin <- try(compute_hydro_signatures_camels(q = one_site_q$q_scaled,
+                                                        # p = one_site$precip,
+                                                        # d =as_date(one_site$datetime),
+                                                        d =as_date(one_site_q$datetime),
+                                                        tol = 0.1, hy_cal = 'oct_us_gb',
+                                                        qpd = one_site) %>%
+                            mutate(site_code = !!hydro_sites[i]))
+
+        if(inherits(site_fin, 'try-error')){
+            print(paste(hydro_sites[i], 'Failed'))
+            next
+        }
+
+        all_site_hydro <- bind_rows(all_site_hydro, site_fin)
+    }
+
+    write_feather(all_site_hydro, glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
 }
