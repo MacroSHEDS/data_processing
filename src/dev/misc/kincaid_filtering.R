@@ -15,7 +15,9 @@ library(lubridate)
 # library(leaflet)
 library(tmap)
 
-setwd('~/git/macrosheds/data_acquisition/macrosheds_figshare_v1')
+vsn = 1
+
+setwd(glue('~/git/macrosheds/data_acquisition/macrosheds_figshare_v{vsn}'))
 
 # conf <- jsonlite::fromJSON('../config.json',
 #                            simplifyDataFrame = FALSE)
