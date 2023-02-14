@@ -10099,11 +10099,118 @@ postprocess_entire_dataset <- function(site_data,
         #                 logger = logger_module)
         # upload_dataset_to_edi(dataset_version = dataset_version) #not yet hooked up (can't be unless they change upload size limits for package. rn we need to request permission before upload)
     } else {
-        log_with_indent('NOT pushing data to EDI',
+        log_with_indent('NOT preparing data for EDI',
                         logger = logger_module)
     }
 
+    if(push_new_version_to_figshare_and_edi){
+        log_with_indent('Adding a CAMELS data to Figshare (yes, this should happen earlier)',
+                        logger = logger_module)
+        add_a_few_more_things_to_figshare(vsn = dataset_version)
+    }
+
     message('PUSH NEW macrosheds package version now that figshare ids are updated')
+}
+
+add_a_few_more_things_to_figshare <- function(){
+
+    ntw_dmn_join <- site_data %>%
+        filter(site_type != 'rain_gauge') %>%
+        select(domain, network, site_code)
+    read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code') %>%
+        write_feather(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'))
+    read_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv')) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code') %>%
+        write_feather(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
+
+    token <- Sys.getenv('RFIGSHARE_PAT')
+    cat_ids <- c(80, 214, 251, 255, 261, 673)
+    tld <- glue('macrosheds_figshare_v{vsn}/macrosheds_files_by_domain')
+
+    existing_articles <- figshare_list_articles(token)
+    existing_dmn_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
+    ) %>%
+        filter(! is.na(domain)) %>%
+        select(-title)
+    existing_extras_deets <- tibble(
+        title = sapply(existing_articles, function(x) x$title),
+        id = sapply(existing_articles, function(x) x$id),
+    )
+
+    more_fs_uploads <- c(camels_ws_attrs = glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'),
+                         camels_daymet = glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
+    more_fs_titles <- c('watershed_summaries_CAMELS', 'Daymet_forcings_CAMELS')
+
+    file_ids_for_r_package3 <- tibble()
+    for(i in seq_along(more_fs_uploads)){
+
+        uf <- more_fs_uploads[i]
+        ut <- more_fs_titles[i]
+
+        if(! ut %in% existing_extras_deets$title){
+            fs_id <- figshare_create_article(
+                title = ut,
+                description = 'See README',
+                keywords = list(names(uf)),
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+        }
+
+        #if existing article, delete old version
+        if(ut %in% existing_extras_deets$title){
+
+            for(fsid_ in fs_id){
+
+                fls <- figshare_list_article_files(fsid_,
+                                                   token = token)
+
+                if(length(fls) >= 1){
+                    for(j in seq_along(fls)){
+                        figshare_delete_article_file(fsid_,
+                                                     file_id = fls[[j]]$id,
+                                                     token = token)
+                    }
+                }
+            }
+        }
+
+        fs_id <- fs_id[1]
+
+        figshare_upload_article(fs_id,
+                                file = unname(uf),
+                                token = token)
+
+        figshare_publish_article(article_id = fs_id,
+                                 token = token) #22090694, 22090697
+
+        #update file IDs for R package functions that reference figshare
+        fls <- figshare_list_article_files(fs_id,
+                                           token = token)
+
+        file_ids_for_r_package3 <- bind_rows(
+            file_ids_for_r_package3,
+            tibble(ut, fig_code = fls[[1]]$id))
+    }
+
+    load(file = '../r_package/data/sysdata2.RData')
+    file_ids_for_r_package2 <- file_ids_for_r_package2 %>%
+        filter(! ut %in% file_ids_for_r_package3$ut) %>%
+        bind_rows(file_ids_for_r_package3)
+    save(file_ids_for_r_package2,
+         file = '../r_package/data/sysdata2.RData')
+
+    readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
+                       file = '../r_package/data/figshare_id_check.txt')
 }
 
 remove_flux_neon_etc <- function(where){
@@ -10194,6 +10301,10 @@ manually_edit_eml <- function(){
             eml <- c(eml[1:mvcl], new_eml_chunk, eml[attl:length(eml)])
         }
     }
+
+    #update access control rule (Mark recommends)
+    ctrlline <- grep('^ *<principal(?!>public)', eml, perl = TRUE)
+    eml[ctrlline] <- sub('vlahm', 'uid=vlahm,o=EDI,dc=edirepository,dc=org', eml[ctrlline])
 
     write_lines(eml, file.path('eml/eml_out', most_recent_eml))
 }
@@ -10583,6 +10694,8 @@ prepare_for_figshare <- function(where, dataset_version){
         stop(paste('The "system" calls below probably will not work on windows.',
                    'investigate and update those calls if necessary'))
     }
+
+    stop('-Inf is ending up in CAMELS_compliant_Daymet_forcings on EDI. that should get fixed upstream of figshare code. no work done on this yet, so step through and make the change approximately here. corrections of "lncd_", "idbp" etc should also happen here.')
 
     #prepare documentation and metadata
     make_figshare_docs_skeleton(where = where)
@@ -11053,11 +11166,19 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         reduce(~c(min(c(.x[1], .y[1])), max(c(.x[2], .y[2]))))
 
     if(rm_neon_sites){
-        file.copy('eml/eml_templates/geographic_coverage.txt', '/tmp/aaa')
+        file.copy('eml/eml_templates/geographic_coverage.txt', '/tmp/aaa', overwrite = TRUE)
         read_lines('eml/eml_templates/geographic_coverage.txt') %>%
             str_subset(paste0('^', paste(neon_sites, collapse = '|')), negate = TRUE) %>%
             write_lines('eml/eml_templates/geographic_coverage.txt')
     }
+
+    other_entities <- c('shapefiles.zip',
+                        'data_use_agreements.docx',
+                        'timeseries_refs.bib',
+                        'ws_attr_refs.bib',
+                        'changelog.txt',
+                        'glossary.txt',
+                        'code_autodocumentation.zip')
 
     make_eml(wd, dd, ed,
              dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data from small watershed ecosystem studies',
@@ -11069,21 +11190,9 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
              data.table.name = basenames,
              data.table.description = descriptions,
              data.table.quote.character = rep('"', length(basenames)),
-             data.table.url = NULL,
-             other.entity = c('shapefiles.zip',
-                              'data_use_agreements.docx',
-                              'timeseries_refs.bib',
-                              'ws_attr_refs.bib',
-                              'changelog.txt',
-                              'glossary.txt',
-                              'code_autodocumentation.zip'),
-             other.entity.name = c('shapefiles.zip',
-                                   'data_use_agreements.docx',
-                                   'timeseries_refs.bib',
-                                   'ws_attr_refs.bib',
-                                   'changelog.txt',
-                                   'glossary.txt',
-                                   'code_autodocumentation.zip'),
+             data.table.url = paste0('https://macrosheds.org/data/macrosheds_v1/', basenames),
+             other.entity = other_entities,
+             other.entity.name = other_entities,
              other.entity.description = c(
                  'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
                  'Terms and conditions for using MacroSheds data.',
@@ -11092,7 +11201,7 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
                  'List of changes made since the last version of the MacroSheds dataset.',
                  'Glossary of terms related to the MacroSheds dataset.',
                  'Programmatically assembled pseudo-scripts intended to help users recreate/edit specific MacroSheds data products (Also see our code on GitHub).'),
-             other.entity.url = NULL,
+             other.entity.url = paste0('https://macrosheds.org/data/macrosheds_v1/', other_entities),
              user.id = conf$edi_user_id,
              user.domain = NULL, #pretty sure this doesn't apply to us
              # package.id = 'edi.981.1')
@@ -11101,6 +11210,11 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     if(rm_neon_sites){
         file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
     }
+
+    ## (the upload to our server can be automated by uncommenting the following line
+    ## (and modifying it to accept a password):
+    # system('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v1')
+    warning('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v1')
 }
 
 get_edi_identifier <- function(x){
