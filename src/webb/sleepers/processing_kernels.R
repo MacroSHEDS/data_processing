@@ -1,5 +1,11 @@
 ## #retrieval kernels ####
 
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS002")
+## prodname_ms <- set_details$prodname_ms
+## site_code <- set_details$site_code
+## component <- set_details$component
+## url <- set_details$url
+
 #CUSTOMprecipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
@@ -45,12 +51,6 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
     return(deets_out)
 }
-
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS002")
-## prodname_ms <- set_details$prodname_ms
-## site_code <- set_details$site_code
-## component <- set_details$component
-## url <- set_details$url
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
@@ -270,7 +270,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
       filter(!is.na(Precip..mm),
              !is.na(Date)) %>%
       select(Date, site_code, Precip..mm)
-
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
