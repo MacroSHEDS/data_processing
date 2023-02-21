@@ -6,6 +6,45 @@
 ## component <- set_details$component
 ## url <- set_details$url
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS000 <- function(set_details, network, domain) {
+
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_code)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    R.utils::downloadFile(url = set_details$url,
+                          filename = rawfile,
+                          skip = FALSE,
+                          overwrite = TRUE)
+
+    res <- httr::HEAD(set_details$url)
+
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
+}
+
 #CUSTOMprecipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
@@ -44,7 +83,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -83,7 +122,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -122,7 +161,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -162,7 +201,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -202,7 +241,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -241,7 +280,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(set_details$url, ''),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -250,6 +289,122 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 }
 
 #munge kernels ####
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    # creating a temporary directory to unzip the folder in
+    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+    unzip(rawfile,
+          exdir = temp_dir)
+
+    # reading in the contents of the extracted folder
+    file_names <- list.files(temp_dir, recursive = TRUE)
+    file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+
+    # there are many important files in here, but we are only trying to get
+    # the raw stream chemistry data
+    chem_fp <- file_paths[grepl('Chemistry.csv', file_paths)]
+
+    # the original file has encoding isssues, and connot be read directly
+    # here I use a readr function which "guesses" the most likely encodings
+    # which is good to know but I ultimately didnt use
+    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
+
+    # read in the csv ignoring column name encoding issues
+    d <- read.csv(chem_fp, check.names = FALSE)
+    d_old_names <- names(d)
+
+    ## NOTE: special character was microgram symbol
+    ## replacing with "u"
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
+
+    # then rename all columns with these new names
+    colnames(d) <- d_new_names
+
+    # filter to only precipitation site type
+    d <- d %>%
+      filter(Sample_Type %in% c("PW"),
+             # what do about W-9 big bucket?
+             Sample_Name == "R-29 (PPT@W-9)") %>%
+      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Sample_Name',
+                         data_cols =  c('Precip_Depth_mm' = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         # variable specific flag pattern
+                         ## var_flagcol_pattern = 'varflag_#V#',
+                         # summary (all vars) flag colun name
+                         ## summary_flagcols = 'Chemistry_Flag',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c(1),
+
+                            # will turn the *ms_status* column to 0 (e.g. clean)
+                            variable_flags_clean   = c(0),
+                            )
+
+    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+                  "GN_d13C", "GN_NO3_d15N")
+    # Sleepers metadata states that all negative values are below detection limit, with the
+    # value itself being the detection limit for that sample and method
+    # give ms_status = 1 to all BDL observations
+    d <- d %>%
+      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+
+    d <- synchronize_timestep(d)
+
+    sites <- unique(d$site_code)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_code == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    unlink(temp_dir, recursive = TRUE)
+
+    return()
+}
+
 
 #CUSTOMprecipitation: STATUS=READY
 #. handle_errors
