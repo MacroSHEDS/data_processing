@@ -1,6 +1,6 @@
 ## #retrieval kernels ####
 
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS002")
+## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS000")
 ## prodname_ms <- set_details$prodname_ms
 ## site_code <- set_details$site_code
 ## component <- set_details$component
@@ -355,24 +355,8 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            # will turn the *ms_status* column to 1 (e.g. flagged)
-                            variable_flags_dirty   = c(1),
-
-                            # will turn the *ms_status* column to 0 (e.g. clean)
-                            variable_flags_clean   = c(0),
+                            varflag_col_pattern = NA,
                             )
-
-    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
-                  "GN_d13C", "GN_NO3_d15N")
-    # Sleepers metadata states that all negative values are below detection limit, with the
-    # value itself being the detection limit for that sample and method
-    # give ms_status = 1 to all BDL observations
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -588,6 +572,26 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                            detlims = domain_detection_limits,
                                            prodname_ms = prodname_ms,
                                            which_ = 'uncertainty')
+
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here as var = old_units and var = new_units lists
+    sleepers_aq_chem_units_old = c()
+    sleepers_aq_chem_units_new = c()
+
+    for(i in 1:length(sleepers_stream_chem_var_info)) {
+      og_name <- names(sleepers_stream_chem_var_info[i])
+      og_units <- sleepers_stream_chem_var_info[[i]][1]
+
+      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+      ms_units <-sleepers_stream_chem_var_info[[i]][2]
+
+      sleepers_aq_chem_units_old[ms_name] = og_units
+      sleepers_aq_chem_units_new[ms_name] = ms_units
+    }
+
+    d <- ms_conversions(d,
+                        convert_units_from = sleepers_aq_chem_units_old,
+                        convert_units_to = sleepers_aq_chem_units_new)
 
 
     d <- synchronize_timestep(d)
