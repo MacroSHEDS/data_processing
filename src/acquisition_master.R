@@ -337,7 +337,7 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    # held_data = invalidate_tracked_data(network, domain, '')
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
     ## owrite_tracker(network, domain)
     ## held_data = invalidate_tracked_data(network, domain, 'derive')
     ## owrite_tracker(network, domain)
@@ -366,11 +366,11 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                prodname_filter = c('precipitation'),
+                ## prodname_filter = c('precipitation'),
                 domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('precipitation'),
+             ## prodname_filter = c('precipitation'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
