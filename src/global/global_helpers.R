@@ -12239,7 +12239,8 @@ get_source_urls <- function(result_obj, processing_func){
     #find out if the processing func is an alias for download_from_googledrive()
     gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
     processing_func_text <- deparse(processing_func)
-    uses_gdrive_func <- grepl(gd_search_string, processing_func_text[3])
+    # modify to find the string anywhere in the func
+    uses_gdrive_func <- any(grepl(gd_search_string, processing_func_text))
     is_passive_kernel <- any(grepl(pattern = 'Nothing to do',
                                    x = processing_func_text,
                                    ignore.case = TRUE)) &&
@@ -13732,24 +13733,39 @@ download_from_googledrive <- function(set_details, network, domain){
     #retrieve_versionless_product()
     download_from_googledrive_function_indicator <- TRUE
 
+    sitechar = 'sitecode_NA'
+    if('site_code' %in% names(set_details)) {
+      if(set_details$site_code == 'sitename_NA') {
+        sitechar <- set_details$site_code
+      }
+    }
+
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitecode_NA',
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = set_details$prodname_ms)
+                          p = set_details$prodname_ms,
+                          s = sitechar)
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
 
     network_id <- gd_files %>%
-        filter(name == !!network)
+      filter(name == !!network)
 
-    network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+    # choose the upper folder if domain == network
+    if(domain == network) {
+      files_options <- rbind(googledrive::drive_ls(googledrive::as_id(network_id[1,]$id)),
+                             googledrive::drive_ls(googledrive::as_id(network_id[2,]$id)))
+      network_files <- files_options[grepl(domain, files_options$name),]
+      domain_files <- files_options[grepl('raw', files_options$name),]
+    } else {
+      network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+      domain_id <- network_files %>%
+          filter(name == !!domain)
 
-    domain_id <- network_files %>%
-        filter(name == !!domain)
-
-    domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+      domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+    }
 
     raw_files <- domain_files %>%
         filter(name == 'raw')
