@@ -323,7 +323,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'sleepers')
+dmnrow <- which(network_domain$domain == 'mces')
 
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
@@ -366,7 +366,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                ## prodname_filter = c('precipitation'),
+                ## prodname_filter = c('discharge'),
                 domain = domain)
 
     ms_munge(network = network,
