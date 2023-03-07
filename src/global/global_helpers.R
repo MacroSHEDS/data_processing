@@ -5086,6 +5086,9 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
     #   per liter or equivalents per liter. It does not assume input units are
     #   g/L, but rather any metric mass unit per liter. Specify the input units
     #   with input_unit.
+    if(input_unit == output_unit) {
+      return(x)
+    }
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -5152,6 +5155,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(old_fraction) == 2) {
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
+    } else {
+        old_bottom <- NULL
     }
 
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
@@ -5159,6 +5164,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(new_fraction == 2)) {
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
+    } else {
+        new_bottom <- NULL
     }
 
     old_top_unit <- tolower(str_split_fixed(old_top, "", 2)[1])
@@ -5169,21 +5176,17 @@ convert_unit <- function(x, input_unit, output_unit){
         old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2])
     }
 
-    old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    if(length(old_fraction) == 2) {
+      old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    }
 
-    if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
+    if(is.na(old_fraction[2])) {
+        old_bottom_conver <- NULL
+    } else if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
         old_bottom_conver <- 1
     } else {
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
-
-
-    ## new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
-    ## if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
-    ##     new_top_conver <- 1
-    ## } else {
-    ##     new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
-    ## }
 
   # debug
     tryCatch(
@@ -5204,8 +5207,9 @@ convert_unit <- function(x, input_unit, output_unit){
   # end debug
 
     new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
-
-    if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
+    if(is.na(new_fraction[2])) {
+        new_bottom_conver <- NULL
+    } else if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
         new_bottom_conver <- 1
     } else {
         new_bottom_conver <- as.numeric(filter(units, prefix == new_bottom_unit)[,2])
@@ -5214,8 +5218,14 @@ convert_unit <- function(x, input_unit, output_unit){
     new_val <- x*old_top_conver
     new_val <- new_val/new_top_conver
 
-    new_val <- new_val/old_bottom_conver
-    new_val <- new_val*new_bottom_conver
+    # some vars do not have a bottom unit
+    if(!is.null(old_bottom_conver)) {
+      new_val <- new_val/old_bottom_conver
+    }
+
+    if(!is.null(new_bottom_conver)) {
+      new_val <- new_val*new_bottom_conver
+    }
 
     return(new_val)
 }
