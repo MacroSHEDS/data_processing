@@ -343,15 +343,11 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_cols = list('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Sample_Name',
                          data_cols =  c('Precip_Depth_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         # variable specific flag pattern
-                         ## var_flagcol_pattern = 'varflag_#V#',
-                         # summary (all vars) flag colun name
-                         ## summary_flagcols = 'Chemistry_Flag',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
@@ -533,9 +529,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                         varflag = ~ case_when(grepl(stringr::str_match(cur_column(), "[^.]+"), Chemistry_Flag) ~ 1, TRUE ~ 0)),
                       .names = "{fn}_{col}"))
 
-    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_cols = list('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'Sample_Name',
                          data_cols =  sleepers_aq_chem,
@@ -657,7 +653,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
       # mean by date to save processing time
       group_by(site_code, date) %>%
       summarise(
-        discharge = mean(Q..cfs),
+        # take mean and multiply by 28.31 to make into lps
+        discharge = mean(Q..cfs) * 28.316847,
         Edit.Code = max(Edit.Code)
       )
 
@@ -719,14 +716,17 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     d <- read.csv(rawfile) %>%
       mutate(site_code = "W-5") %>%
-      rename(qflag = "X_00060_00003_cd")
+      rename(qflag = "X_00060_00003_cd",
+             qcfs = "X_00060_00003") %>%
+      # convert from CFS to lps
+      mutate(qlps = qcfs * 28.316847)
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = "%Y-%m-%d"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site_code',
-                         data_cols =  c("X_00060_00003" = "discharge"),
+                         data_cols =  c("qlps" = "discharge"),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'qflag',
                          is_sensor = FALSE)
@@ -776,14 +776,17 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     d <- read.csv(rawfile) %>%
       mutate(site_code = "W-3") %>%
-      rename(qflag = "X_00060_00003_cd")
+      rename(qflag = "X_00060_00003_cd",
+             qcfs = "X_00060_00003") %>%
+      # convert from CFS to lps
+      mutate(qlps = qcfs * 28.316847)
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = "%Y-%m-%d"),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site_code',
-                         data_cols =  c("X_00060_00003" = "discharge"),
+                         data_cols =  c("qlps" = "discharge"),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'qflag',
                          is_sensor = FALSE)
@@ -937,6 +940,26 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # replace all BDL observations with half DL value
     d <- d %>%
       mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here as var = old_units and var = new_units lists
+    sleepers_aq_chem_units_old = c()
+    sleepers_aq_chem_units_new = c()
+
+    for(i in 1:length(sleepers_stream_chem_var_info)) {
+      og_name <- names(sleepers_stream_chem_var_info[i])
+      og_units <- sleepers_stream_chem_var_info[[i]][1]
+
+      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+      ms_units <-sleepers_stream_chem_var_info[[i]][2]
+
+      sleepers_aq_chem_units_old[ms_name] = og_units
+      sleepers_aq_chem_units_new[ms_name] = ms_units
+    }
+
+    d <- ms_conversions(d,
+                        convert_units_from = sleepers_aq_chem_units_old,
+                        convert_units_to = sleepers_aq_chem_units_new)
 
     d <- synchronize_timestep(d)
 
