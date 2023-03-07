@@ -381,7 +381,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              prodname_filter = c('precip_pchem_pflux'),
+              ## prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     # if(domain != 'mcmurdo'){
