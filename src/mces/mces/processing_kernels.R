@@ -54,12 +54,31 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    d_sheets <- readxl::excel_sheets(rawfile)
+    for(sheet in d_sheets) {
+        this_d <- readxl::read_xlsx(rawfile, sheet = sheet)
+    }
+
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
+    d <- read.csv(rawfile)
 }
 
 #derive kernels ####
