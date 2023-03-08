@@ -62,9 +62,24 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d_sheets <- readxl::excel_sheets(rawfile)
+
     for(sheet in d_sheets) {
-        this_d <- readxl::read_xlsx(rawfile, sheet = sheet)
+      this_d <- readxl::read_xlsx(rawfile, sheet = sheet)
+
+        if(any(grepl('Discharge', names(this_d)))) {
+
+          this_d <- this_d %>%
+              mutate(site_code = sheet)
+
+          if(!exists('d_sheets_combined')) {
+            d_sheets_combined <- this_d
+          } else {
+            d_sheets_combined <- rbind(d_sheets_combined, this_d)
+          }
+        }
     }
+
+
 
 }
 
