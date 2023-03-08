@@ -725,8 +725,7 @@ ms_read_raw_csv <- function(filepath,
     #   single value of G or I and is applied to all variables in product
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
-    #   from the original file that do not contain data, flag/qaqc information,
-    #   datetime, or site_code. All-NA data columns and their corresponding
+    #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
     #   flag columns will also be omitted, as will rows where all data values
     #   are NA. Rows with NA in the datetime or site_code column are dropped.
     #   data columns are given type double. all other

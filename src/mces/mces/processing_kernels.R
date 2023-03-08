@@ -64,12 +64,20 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d_sheets <- readxl::excel_sheets(rawfile)
 
     for(sheet in d_sheets) {
-      this_d <- readxl::read_xlsx(rawfile, sheet = sheet)
+        this_d <- readxl::read_xlsx(rawfile, sheet = sheet)
 
         if(any(grepl('Discharge', names(this_d)))) {
+          sheet_site_first_name <- strsplit(stringr::str_trim(as.character(noquote(sheet))), ' ')[[1]][1]
+
+          sheet_site <- site_data %>%
+            filter(network == !!network,
+                   domain == !!domain,
+                   grepl(sheet_site_first_name, full_name)
+                   ) %>%
+            pull(site_code)
 
           this_d <- this_d %>%
-              mutate(site_code = sheet)
+              mutate(site_code = sheet_site)
 
           if(!exists('d_sheets_combined')) {
             d_sheets_combined <- this_d
@@ -78,6 +86,66 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
           }
         }
     }
+
+    q_lps = d_sheets_combined %>%
+      select(matches('Discharge')) * 28
+    colnames(q_lps) <- 'discharge'
+
+    d <- d_sheets_combined %>%
+      select(-matches('Discharge')) %>%
+      cbind(q_lps) %>%
+      mutate(
+        quality_flag = case_when(grepl('Valid', Quality) ~ 'Valid',
+                                 grepl('Suspect', Quality) ~ 'Suspect',
+                                 grepl('Estimated', Quality) ~ 'Estimated')
+      )
+
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = "%Y-%m-%d"),
+                         datetime_tz = 'US/Central',
+                         site_code_col = 'site_code',
+                         data_cols =  c('discharge' = 'discharge'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'quality_flag',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            summary_flags_clean   = c('quality_flag' = 'Valid'),
+                            summary_flags_to_drop = c('quality_flag' = 'Estimated'),
+                            summary_flags_dirty   = c('quality_flag' = 'Suspect'),
+                            varflag_col_pattern = NA
+                            )
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+
+    d <- synchronize_timestep(d)
+
+    sites <- unique(d$site_code)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_code == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    unlink(temp_dir, recursive = TRUE)
+
+    return()
 
 
 
