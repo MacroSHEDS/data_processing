@@ -154,6 +154,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -162,6 +163,102 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d <- read.csv(rawfile)
+    d <- d[5:nrow(d),]
+    colnames(d) <- d[1,]
+    d <- d[-1,]
+    raw.d <- d
+
+    mces_site_codes <- site_data %>%
+      filter(network == !!network,
+             domain == !!domain,
+             ) %>%
+      pull(site_code, full_name)
+
+    d <- d %>%
+      filter(nchar(NAME) > 1) %>%
+      mutate(
+        site_code = lapply(NAME, FUN = mces_site_lookup)
+        ) %>%
+      select(
+        site_code,
+        date = END_DATE_TIME,
+        var = PARAMETER,
+        sign_varflag = SIGN,
+        val = RESULT,
+        units = UNITS,
+        quality_varflag = QUALIFIER
+      ) %>%
+      mutate(
+        quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+      )
+    head(d)
+
+    # data provides units - lets make a quick function to pair each variable with
+    # the units reported by data source (hopefully none have multiple)
+    mces_var_units <- list()
+    for(var in unique(d$var)) {
+      d_var_units <- d %>%
+        filter(var == !!var) %>%
+        pull(units) %>%
+        unique()
+      mces_var_units[var] = d_var_units
+      mces_variable_info[var][[1]][1] = d_var_units
+    }
+
+    ## mces_variable_info[var][[1]][1]
+    ## mces_variable_info
+
+
+    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
+    d.m <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('date' = "%m/%d/%Y %H:%M"),
+                         datetime_tz = 'US/Central',
+                         site_code_col = 'site_code',
+                         data_cols =  c('discharge' = 'discharge'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'quality_flag',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            summary_flags_clean   = c('quality_flag' = 'Valid'),
+                            summary_flags_to_drop = c('quality_flag' = 'Estimated'),
+                            summary_flags_dirty   = c('quality_flag' = 'Suspect'),
+                            varflag_col_pattern = NA
+                            )
+
+    # apply uncertainty
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
+
+    d <- synchronize_timestep(d)
+
+    sites <- unique(d$site_code)
+
+    for(s in 1:length(sites)){
+
+        d_site <- d %>%
+            filter(site_code == !!sites[s])
+
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    unlink(temp_dir, recursive = TRUE)
+
+    return()
+
+
+
+
 }
 
 #derive kernels ####
