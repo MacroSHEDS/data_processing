@@ -191,39 +191,70 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mutate(
         quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
       )
-    head(d)
+    ## head(d)
 
     # data provides units - lets make a quick function to pair each variable with
     # the units reported by data source (hopefully none have multiple)
     mces_var_units <- list()
-    for(var in unique(d$var)) {
+    vars_og <- unique(d$var)
+    vars <- names(mces_variable_info)
+
+    for(var in vars) {
       d_var_units <- d %>%
-        filter(var == !!var) %>%
+        filter(var == !!var)
+
+      if(nrow(d_var_units) > 0) {
+        d_var_units <- d_var_units %>%
         pull(units) %>%
         unique()
+      }
+
       mces_var_units[var] = d_var_units
       mces_variable_info[var][[1]][1] = d_var_units
     }
 
-    ## mces_variable_info[var][[1]][1]
+    ## mces_variable_info$`Total Phosphorus, Unfiltered`
+    ## mces_variable_info$`Total Kjeldahl Nitrogen, Unfiltered`
     ## mces_variable_info
 
+    ## create structure specific to ms_read_csv data cols arg
+    mces_data_cols <- c()
+    for(i in 1:length(mces_variable_info)) {
+      entry <- mces_variable_info[i]
+      old_varname <- gsub(" |,","",names(entry))
+      ms_varname <- entry[[1]][3]
+      mces_data_cols[old_varname] = ms_varname
+    }
 
-    # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
-    d.m <- ms_read_raw_csv(preprocessed_tibble = d,
+    d <- d %>%
+      mutate(
+        var = gsub(" |,","", var)
+      ) %>%
+      filter(var %in% names(mces_data_cols))
+
+    d <- d %>%
+     pivot_wider(
+                 id_cols = c(site_code, date),
+                 values_from = c(val, quality_varflag),
+                 names_from = var
+                 ) %>%
+     unchop(everything())
+
+    # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = "%m/%d/%Y %H:%M"),
                          datetime_tz = 'US/Central',
                          site_code_col = 'site_code',
-                         data_cols =  c('discharge' = 'discharge'),
-                         data_col_pattern = '#V#',
-                         summary_flagcols = 'quality_flag',
+                         data_cols =  mces_data_cols,
+                         data_col_pattern = 'val_#V#',
+                         ## summary_flagcols = 'quality_varflag',
+                         var_flagcol_pattern = "quality_varflag_#V#",
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            summary_flags_clean   = c('quality_flag' = 'Valid'),
-                            summary_flags_to_drop = c('quality_flag' = 'Estimated'),
-                            summary_flags_dirty   = c('quality_flag' = 'Suspect'),
-                            varflag_col_pattern = NA
+                            variable_flags_clean   = c('quality_flag' = 'Valid'),
+                            variable_flags_to_drop = c('quality_flag' = 'Estimated'),
+                            variable_flags_dirty   = c('quality_flag' = 'Suspect')
                             )
 
     # apply uncertainty
@@ -235,6 +266,22 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 
     d <- synchronize_timestep(d)
+
+    ## create structure specific to ms_conversions data cols arg
+    mces_data_conversions_from <- c()
+    mces_data_conversions_to <- c()
+    for(i in 1:length(mces_variable_info)) {
+      entry <- mces_variable_info[i]
+      ms_varname <- entry[[1]][3]
+      old_units <- entry[[1]][1]
+      ms_units <- entry[[1]][2]
+      mces_data_conversions_from[ms_varname] = old_units
+      mces_data_conversions_to[ms_varname] = ms_units
+    }
+
+    d.c <- ms_conversions(d,
+                          convert_units_from = mces_data_conversions_from,
+                          convert_units_to = mces_data_conversions_to)
 
     sites <- unique(d$site_code)
 
@@ -252,13 +299,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                       shapefile = FALSE)
     }
 
-    unlink(temp_dir, recursive = TRUE)
-
     return()
-
-
-
-
 }
 
 #derive kernels ####
