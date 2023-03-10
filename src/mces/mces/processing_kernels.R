@@ -77,7 +77,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             pull(site_code)
 
           this_d <- this_d %>%
-              mutate(site_code = sheet_site)
+              mutate(site_code = gsub('.', '_', sheet_site))
 
           if(!exists('d_sheets_combined')) {
             d_sheets_combined <- this_d
@@ -191,7 +191,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mutate(
         quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
       )
-    ## head(d)
 
     # data provides units - lets make a quick function to pair each variable with
     # the units reported by data source (hopefully none have multiple)
@@ -254,17 +253,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             variable_flags_clean   = c('quality_flag' = 'Valid'),
                             variable_flags_to_drop = c('quality_flag' = 'Estimated'),
-                            variable_flags_dirty   = c('quality_flag' = 'Suspect')
+                            variable_flags_dirty   = c('quality_flag' = 'Suspect'),
+                            variable_flags_bdl = c('quality_flag' = 'BDL')
                             )
 
     # apply uncertainty
     d <- ms_check_range(d)
-    errors(d$val) <- get_hdetlim_or_uncert(d,
-                                           detlims = domain_detection_limits,
-                                           prodname_ms = prodname_ms,
-                                           which_ = 'uncertainty')
-
-
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
     d <- synchronize_timestep(d)
 
     ## create structure specific to ms_conversions data cols arg
@@ -279,7 +274,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mces_data_conversions_to[ms_varname] = ms_units
     }
 
-    d.c <- ms_conversions(d,
+    d <- ms_conversions(d,
                           convert_units_from = mces_data_conversions_from,
                           convert_units_to = mces_data_conversions_to)
 
