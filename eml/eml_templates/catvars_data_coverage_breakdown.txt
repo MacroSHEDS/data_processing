@@ -1,0 +1,6 @@
+attributeName	code	definition
+chem_category	precip_conc	Variable represents solute concentration in precipitation.
+chem_category	precip_flux	Variable represents solute flux in precipitation (flux can be estimated via the macrosheds package for R).
+chem_category	stream_conc	Variable represents solute concentration in stream water.
+chem_category	stream_flux	Variable represents solute flux in stream water (flux can be estimated via the macrosheds package for R).
+chem_category	NA	Variable does not represent a concentration or a flux.

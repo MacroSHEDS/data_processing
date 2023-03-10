@@ -1,5 +1,0 @@
-attributeName	code	definition
-site_type	stream_gauge	A stream gauge location, where discharge is measured. Chemistry may be samples here as well.
-site_type	stream_sampling_point	A location for chemistry and water quality sample collection, but not discharge measurement.
-ws_status	experimental	This watershed has been used for experimental purposes. See disturbance_record.csv.
-ws_status	non-experimental	Reference or unmodified watershed. Not subject to watershed-scale experimentation.

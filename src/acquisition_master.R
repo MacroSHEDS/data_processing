@@ -61,6 +61,7 @@ options(dplyr.summarise.inform = FALSE,
         timeout = 300,
         readr.show_progress = FALSE,
         readr.show_col_types = FALSE)
+        # googledrive_quiet = TRUE)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -129,6 +130,7 @@ ms_init <- function(use_gpu = FALSE,
         instance_type <- 'dev'
         machine_status <- '1337'
         op_system <- 'linux'
+        # macrosheds_package_dir <- 'r_package'
     }
 
     res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
@@ -324,7 +326,6 @@ dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
 ## dmnrow <- which(network_domain$domain == 'mces')
-
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -334,13 +335,13 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    held_data = get_data_tracker(network, domain)
+    # held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive')
-    ## owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive')
+    # owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
@@ -364,9 +365,15 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
+<<<<<<< HEAD
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 ## prodname_filter = c('discharge'),
+=======
+    stop here and go to processing_kernels.R to continue
+    ms_retrieve(network = network,
+                # prodname_filter = c('stream_chemistry'),
+>>>>>>> cf78239ce0e2f98a29e39cab8cdc61ced1ee11cf
                 domain = domain)
 
     ms_munge(network = network,
@@ -381,14 +388,20 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
+<<<<<<< HEAD
               ## prodname_filter = c('precip_pchem_pflux'),
+=======
+              # prodname_filter = c('stream_chemistry'),
+>>>>>>> cf78239ce0e2f98a29e39cab8cdc61ced1ee11cf
               domain = domain)
 
-    # if(domain != 'mcmurdo'){
-    #     ms_general(network = network,
-    #                domain = domain,
-    #                get_missing_only = TRUE)
-    # }
+    if(domain != 'mcmurdo'){
+
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = FALSE,
+                   general_prod_filter = NULL)
+    }
 
     retain_ms_globals(ms_globals)
 }
@@ -404,7 +417,6 @@ postprocess_entire_dataset(site_data = site_data,
                            dataset_version = vsn,
                            thin_portal_data_to_interval = NA, #'1 day',
                            populate_implicit_missing_values = TRUE,
-                           generate_csv_for_each_product = FALSE,
                            push_new_version_to_figshare_and_edi = FALSE)
 
 if(length(email_err_msgs)){
