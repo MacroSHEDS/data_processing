@@ -294,10 +294,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 }
 
 #derive kernels ####
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms001 <- stream_gauge_from_site_data
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms002 <- derive_stream_flux
-
-#stream_gauge_locations: STATUS=READY
-#. handle_errors
-process_2_ms004 <- stream_gauge_from_site_data
