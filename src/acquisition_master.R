@@ -365,15 +365,9 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-<<<<<<< HEAD
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 ## prodname_filter = c('discharge'),
-=======
-    stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
->>>>>>> cf78239ce0e2f98a29e39cab8cdc61ced1ee11cf
                 domain = domain)
 
     ms_munge(network = network,
@@ -388,11 +382,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-<<<<<<< HEAD
-              ## prodname_filter = c('precip_pchem_pflux'),
-=======
               # prodname_filter = c('stream_chemistry'),
->>>>>>> cf78239ce0e2f98a29e39cab8cdc61ced1ee11cf
               domain = domain)
 
     if(domain != 'mcmurdo'){
