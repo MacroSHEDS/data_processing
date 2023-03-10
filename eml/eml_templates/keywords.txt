@@ -1,17 +1,17 @@
 keyword	keywordThesaurus
-biogeochemistry https://vocab.lternet.edu/vocab/vocab/index.php
-watershed   https://vocab.lternet.edu/vocab/vocab/index.php
-hydrology   https://vocab.lternet.edu/vocab/vocab/index.php
-basins  https://vocab.lternet.edu/vocab/vocab/index.php
-concentration   https://vocab.lternet.edu/vocab/vocab/index.php
-flux    https://vocab.lternet.edu/vocab/vocab/index.php
-long term   https://vocab.lternet.edu/vocab/vocab/index.php
-long term monitoring    https://vocab.lternet.edu/vocab/vocab/index.php
+biogeochemistry	LTER Controlled Vocabulary
+watershed	LTER Controlled Vocabulary
+hydrology	LTER Controlled Vocabulary
+basins	LTER Controlled Vocabulary
+concentration	LTER Controlled Vocabulary
+flux	LTER Controlled Vocabulary
+long term	LTER Controlled Vocabulary
+long term monitoring	LTER Controlled Vocabulary
 catchment science
-land cover  https://vocab.lternet.edu/vocab/vocab/index.php
-land use    https://vocab.lternet.edu/vocab/vocab/index.php
-spatial properties  https://vocab.lternet.edu/vocab/vocab/index.php
-atmospheric properties  https://vocab.lternet.edu/vocab/vocab/index.php
+land cover	LTER Controlled Vocabulary
+land use	LTER Controlled Vocabulary
+spatial properties	LTER Controlled Vocabulary
+atmospheric properties	LTER Controlled Vocabulary
 data synthesis
 lter
 czo

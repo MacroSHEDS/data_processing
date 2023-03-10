@@ -1,7 +1,10 @@
 library(tidyverse)
 library(feather)
+library(glue)
 
-setwd('/home/mike/git/macrosheds/data_acquisition/macrosheds_figshare_v1/1_watershed_attribute_data')
+vsn = 1
+
+setwd(glue('/home/mike/git/macrosheds/data_acquisition/macrosheds_figshare_v{vsn}/1_watershed_attribute_data'))
 
 d = map_dfr(list.files('ws_attr_timeseries', full.names = TRUE), read_csv)
 filter(d, domain == 'hbef') %>%

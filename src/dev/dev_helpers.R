@@ -1424,6 +1424,54 @@ insert_retrieval_datetimes <- function(){
     }
 }
 
+rebuild_derived_docfiles <- function(network_domain){
+
+    #if a change is made to retrieval documentation.txt files, you can use this
+    #to propagate that change to all the munge and derive documentation.txt files
+    #without having to rerun main loop components
+
+    for(i in seq_len(nrow(network_domain))){
+
+        ntw = network_domain$network[i]
+        dmn = network_domain$domain[i]
+
+        docfiles = list.files(glue('data/{ntw}/{dmn}/derived/documentation'))
+        prodnames_ms = str_match(docfiles, 'documentation_(.*?)\\.txt')[, 2]
+        for(j in seq_along(prodnames_ms)){
+
+            doc_txt = read_file(glue('data/{ntw}/{dmn}/derived/documentation/documentation_{prodnames_ms[j]}.txt'))
+            if(grepl('linked product', doc_txt)){
+
+                prods = read_csv(glue('src/{ntw}/{dmn}/products.csv'))
+
+                # linked_prodcode = get_derive_ingredient(
+                #     network = network,
+                #     domain = domain,
+                #     prodname = prodname_from_prodname_ms(prodnames_ms[j])
+                # ) %>%
+                #     prodcode_from_prodname_ms()
+
+                prodname_ms_source = prods %>%
+                    filter(prodname == prodname_from_prodname_ms(prodnames_ms[j]),
+                           ! grepl('ms[0-9]+$', prodcode),
+                           munge_status == 'ready') %>%
+                    mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+                    pull(prodname_ms)
+
+                if(length(prodname_ms_source) != 1) stop()
+
+                write_metadata_d_linkprod(network = ntw,
+                                          domain = dmn,
+                                          prodname_ms_mr = prodname_ms_source,
+                                          prodname_ms_d = prodnames_ms[j])
+
+            } else {
+                write_metadata_d(ntw, dmn, prodnames_ms[j])
+            }
+        }
+    }
+}
+
 get_nonnumerics <- function(d){
 
     #gets unique nonnumeric values by row. useful for identifying quality codes

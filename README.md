@@ -1,3 +1,6 @@
+
+[![DOI](https://zenodo.org/badge/209650104.svg)](https://zenodo.org/badge/latestdoi/209650104)
+
 # data_acquisition directory structure
 
 + macrosheds sites are organized by network (e.g. LTER), domain (e.g. HBEF), and site (e.g. W1)
