@@ -77,7 +77,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             pull(site_code)
 
           this_d <- this_d %>%
-              mutate(site_code = gsub('.', '_', sheet_site))
+              mutate(site_code = gsub('//.', '_', sheet_site))
 
           if(!exists('d_sheets_combined')) {
             d_sheets_combined <- this_d
@@ -143,12 +143,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                       shapefile = FALSE)
     }
 
-    unlink(temp_dir, recursive = TRUE)
 
     return()
-
-
-
 }
 
 #stream_chemistry: STATUS=READY
