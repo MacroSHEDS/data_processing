@@ -1,0 +1,4 @@
+"attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
+"variable_code"	"MacroSheds variable short name"	"character"				
+"variable_name"	"Full name of MacroSheds variable"	"character"				
+"unit"	"Variable unit"	"character"				
