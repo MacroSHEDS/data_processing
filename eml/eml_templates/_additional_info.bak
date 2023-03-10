@@ -1,0 +1,39 @@
+﻿------------------
+Full file contents
+------------------
+
+data_use_agreements.docx                        Terms and conditions for using MacroSheds data.
+attribution_and_intellectual_rights_ts.xlsx     Specific license requirements and expectations associated with each
+                                                primary time-series dataset.
+attribution_and_intellectual_rights_ws_attr.csv Information about fair use of watershed attribute data
+glossary.txt                                    Glossary of terms related to the MacroSheds dataset.
+timeseries_X.csv                                Time-series (streamflow, precip if available, chemistry) for domain X
+ws_attr_summaries.csv                           Watershed attribute data, summarized across time, for all domains
+ws_attr_timeseries.csv                          Watershed attribute data, temporally explicit, for all domains
+CAMELS_compliant_Daymet_forcings.csv            Daymet climate forcings for all domains; interoperable with the CAMELS
+                                                dataset (https://ral.ucar.edu/solutions/products/camels)
+CAMELS_compliant_ws_attr_summaries.csv          Watershed attribute data, temporally explicit, for all domains, and
+                                                interoperable with the CAMELS dataset
+                                                (https://ral.ucar.edu/solutions/products/camels)
+sites.csv                                       Stream site metadata
+shapefiles.zip                                  Watershed boundaries, stream gauge locations, and precip gauge
+                                                locations, for all domains.
+variables_time_series.csv                       Time-series variable metadata (standard units, etc.)
+variables_ws_attr_timeseries.csv                Variable metadata (standard units and definitions) for temporally explicit watershed attributes
+variable_category_codes_ws_attr.csv             Watershed attribute category codes (the second letter of the variable
+                                                code prefix)
+variable_data_source_codes_ws_attr.csv          Watershed attribute data source codes (the first letter of the
+                                                variable code prefix)
+detection_limits.csv                            Primary data source detection limits
+data_coverage_breakdown.csv                     Number of observations, timespan of observation, by variable and site
+disturbance_record.csv                          A register of known watershed experiments and significant natural
+                                                disturbances
+range_check_limits.csv                          Minimum and maximum values allowed to pass through our range filter.
+                                                Values exceeding these limits are omitted from the MacroSheds dataset.
+data_irregularities.csv                         Any notable inconsistencies within the MacroSheds dataset
+changelog.txt                                   List of changes made since the last version of the MacroSheds dataset.
+code_autodocumentation.zip                      Programmatically assembled pseudo-scripts intended to help users
+                                                recreate/edit specific MacroSheds data products (Also see our code on
+                                                GitHub).
+timeseries_refs.bib                             Complete bibliographic references for time-series data.
+ws_attr_refs.bib                                Complete bibliographic references for watershed attribute data.
