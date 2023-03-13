@@ -12,8 +12,7 @@ webb_pkernel_setup <- function(network = 'webb', domain = 'loch_vale', prodcode 
     ## network = network
     ## domain = domain
 
-    logger_module <- set_up_logger(network = network,
-                                   domain = domain)
+    logger_module <- set_up_logger(network = network, domain = domain)
 
     loginfo(logger = logger_module,
             msg = glue('Processing network: {n}, domain: {d}',
@@ -36,13 +35,14 @@ webb_pkernel_setup <- function(network = 'webb', domain = 'loch_vale', prodcode 
     filter(grepl(pattern = '^VERSIONLESS',
                  x = prodcode))
 
+    if(prodcode %in% prod_info$prodcode){
+      prod_info <- filter(prod_info, prodcode == !!prodcode)
+    }
+
     if(length(prodcode) > 1) {
       stop("this helper function is made to load a single domain product at a time, pass only one prodcode to this function")
     }
 
-    if(prodcode %in% prod_info$prodcode){
-      prod_info <- filter(prod_info, prodcode == !!prodcode)
-    }
 
     ## old filter used for product *name*, we need to use code, as above
     ## if(! is.null(prodname_filter)){
@@ -82,7 +82,7 @@ webb_pkernel_setup <- function(network = 'webb', domain = 'loch_vale', prodcode 
             tracker = held_data,
             prodname_ms = prodname_ms,
             site_code = site_code,
-            site_components = prod_info$components[i],
+            site_components = prod_info$components,
             versionless = TRUE
         )
     }

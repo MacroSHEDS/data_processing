@@ -178,7 +178,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = prodname_ms,
+                          p = set_details$prodname_ms,
                           s = set_details$site_code)
 
     dir.create(path = raw_data_dest,

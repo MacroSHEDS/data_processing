@@ -1,6 +1,6 @@
 "attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
 "date"	"date as UTC timestamp with 00:00:00 time"	"Date"		"Y-M-DTh:m:sZ"		
-"site_code"	"Short name for MacroSheds site. See site_metadata.csv"	"character"				
+"site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
 "dayl(s)"	"Watershed average seconds of daylight"	"numeric"	"second"		"NA"	"missing value"
 "prcp(mm/day)"	"Watershed average precipitation"	"numeric"	"millimetersPerDay"		"NA"	"missing value"
 "srad(W/m2)"	"Watershed average solar radiation"	"numeric"	"wattPerMeterSquared"		"NA"	"missing value"
