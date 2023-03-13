@@ -1,13 +1,9 @@
-prodcode,prodname,retrieve_status,retrieve_status,retrieve_status,precursor_of,notes,components,url
-1,discharge,ready,ready,,discharge__ms001,USGS_05357215,trout_discharge_w1,https://waterdata.usgs.gov/usa/nwis/uv?05357215
-2,discharge,ready,ready,,discharge__ms002,USGS_05357230,trout_discharge_w2,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357230&agency_cd=USGS
-3,discharge,ready,ready,,discharge__ms003,USGS_05357225,trout_discharge_w3,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357225&agency_cd=USGS
-4,discharge,ready,ready,,discharge__ms004,USGS_05357245,trout_discharge_w4,https://waterdata.usgs.gov/monitoring-location/05357245/
-6,stream_chemistry,ready,ready,,stream_chemistry,For all trout_lake creeks,trout_lake_chem,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947
-,,,,,,,,
-ms001,stream_chemistry,,,ready,stream_flux_inst__ms003,NA,NA,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947
-ms002,discharge,,,ready,stream_flux_inst__ms003,,NA,NA
-ms003,stream_flux_inst,,,ready,NA,NA,NA,NA
-ms004,precip_gauge_locations,,,ready,precip_pchem_pflux__ms006,NA,NA,NA
-ms005,stream_gauge_locations,,,ready,NA,NA,NA,NA
-ms006,precip_pchem_pflux,,,ready,NA,NA,NA,NA
+prodcode,prodname,retrieve_status,retrieve_status.1,retrieve_status.2,precursor_of,notes,components,url,NA_status,munge_status,derive_status
+VERSIONLESS001,discharge,ready,ready,,discharge__ms001,USGS_05357215,trout_discharge_w1,https://waterdata.usgs.gov/usa/nwis/uv?05357215,NA,ready,NA
+VERSIONLESS002,discharge,ready,ready,,discharge__ms001,USGS_05357230,trout_discharge_w2,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357230&agency_cd=USGS,NA,ready,NA
+VERSIONLESS003,discharge,ready,ready,,discharge__ms001,USGS_05357225,trout_discharge_w3,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357225&agency_cd=USGS,NA,ready,NA
+VERSIONLESS004,discharge,ready,ready,,discharge__ms001,USGS_05357245,trout_discharge_w4,https://waterdata.usgs.gov/monitoring-location/05357245/,NA,ready,NA
+VERSIONLESS005,stream_chemistry,ready,ready,,stream_flux_inst__ms002,For all trout_lake creeks,trout_lake_chem,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947,NA,ready,NA
+ms001,discharge,,,ready,stream_flux_inst__ms002,NA,NA,NA,NA,NA,ready
+ms002,stream_flux_inst,,,ready,NA,NA,NA,NA,NA,NA,ready
+ms003,stream_gauge_locations,,,ready,NA,NA,NA,NA,NA,NA,ready

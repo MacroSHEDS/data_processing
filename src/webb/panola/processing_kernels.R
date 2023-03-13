@@ -1,7 +1,13 @@
-# source('src/webb/sleeper/domain_helpers.R')
+# source('src/webb/sleepers/domain_helpers.R')
 #retrieval kernels ####
 
 
+# run webb_setup() in interpreter!)
+## webb_setup()
+# get pkernel deets
+set_details <- webb_pkernel_setup(network = network,
+                                  domain = domain,
+                                  prodcode = "VERSIONLESS001")
 
 #discharge: STATUS=READY
 #. handle_errors
@@ -22,7 +28,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                     c = set_details$component)
 
     # call our dataRetrieval function
-    q <- retrieve_usgs_sleeper_daily_q(set_details)
+    q <- retrieve_usgs_sleepers_daily_q(set_details)
 
     # download it to the raw file locatin
     write_csv(q, file = rawfile)
