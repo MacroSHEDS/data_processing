@@ -338,115 +338,114 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_code,
 #prism_precip; prism_temp_mean: STATUS=READY
 #. handle_errors
 process_3_ms809 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+                            boundaries){
 
-  if(grepl('prism_precip', prodname_ms)) {
-    final <- try(get_gee_standard(network = network,
-                                  domain = domain,
-                                  gee_id = 'OREGONSTATE/PRISM/AN81d',
-                                  band = 'ppt',
-                                  prodname = 'precip',
-                                  rez = 4000,
-                                  site_boundary = boundaries,
-                                  batch = TRUE,
-                                  contiguous_us = TRUE))
-  }
+    if(grepl('prism_precip', prodname_ms)) {
+        final <- try(get_gee_standard(network = network,
+                                      domain = domain,
+                                      gee_id = 'OREGONSTATE/PRISM/AN81d',
+                                      band = 'ppt',
+                                      prodname = 'precip',
+                                      rez = 4000,
+                                      site_boundary = boundaries,
+                                      batch = TRUE,
+                                      contiguous_us = TRUE))
+    }
 
-  if(grepl('prism_temp_mean', prodname_ms)) {
-    final <- try(get_gee_standard(network = network,
-                                  domain = domain,
-                                  gee_id = 'OREGONSTATE/PRISM/AN81d',
-                                  band = 'tmean',
-                                  prodname = 'temp_mean',
-                                  rez = 4000,
-                                  site_boundary = boundaries,
-                                  batch = TRUE,
-                                  contiguous_us = TRUE))
-  }
+    if(grepl('prism_temp_mean', prodname_ms)) {
+        final <- try(get_gee_standard(network = network,
+                                      domain = domain,
+                                      gee_id = 'OREGONSTATE/PRISM/AN81d',
+                                      band = 'tmean',
+                                      prodname = 'temp_mean',
+                                      rez = 4000,
+                                      site_boundary = boundaries,
+                                      batch = TRUE,
+                                      contiguous_us = TRUE))
+    }
 
-  if(is.null(final)) {
-    return(generate_ms_exception(glue('No data was retrived for {s}',
-                                      s = site_code)))
-  }
+    if(is.null(final)) {
+        return(generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = site_code)))
+    }
 
-  if(class(final) == 'try-error'){
-    return(generate_ms_err(glue('error in retrieving {s}',
-                                s = site_code)))
-  }
-
+    if(class(final) == 'try-error'){
+        return(generate_ms_err(glue('error in retrieving {s}',
+                                    s = site_code)))
+    }
 
     final <- final$table %>%
         mutate(datetime = substr(datetime, 0, 8)) %>%
         mutate(datetime = ymd(datetime))
 
     if(all(is.na(final$val)) || all(final$val == 0)){
-      return(generate_ms_exception(glue('No data was retrived for {s}',
-                                        s = site_code)))
+        return(generate_ms_exception(glue('No data was retrived for {s}',
+                                          s = site_code)))
     }
 
     if(grepl('prism_precip', prodname_ms)){
 
-      final_sum_c <- final %>%
-        filter(var == 'precip_median') %>%
-        mutate(year = year(datetime)) %>%
-        group_by(site_code, year) %>%
-        summarise(cumulative_precip = sum(val, na.rm = TRUE),
-                  precip_sd_year = sd(val, na.rm = TRUE)) %>%
-        pivot_longer(cols = c('cumulative_precip', 'precip_sd_year'),
-                     names_to = 'var',
-                     values_to = 'val') %>%
-        filter(val > 0)
+        final_sum_c <- final %>%
+            filter(var == 'precip_median') %>%
+            mutate(year = year(datetime)) %>%
+            group_by(site_code, year) %>%
+            summarise(cumulative_precip = sum(val, na.rm = TRUE),
+                      precip_sd_year = sd(val, na.rm = TRUE)) %>%
+            pivot_longer(cols = c('cumulative_precip', 'precip_sd_year'),
+                         names_to = 'var',
+                         values_to = 'val') %>%
+            filter(val > 0)
 
-      final_sum_sd <- final %>%
-        filter(var == 'precip_sd') %>%
-        mutate(year = year(datetime)) %>%
-        group_by(site_code, year) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'precip_sd_space')
+        final_sum_sd <- final %>%
+            filter(var == 'precip_sd') %>%
+            mutate(year = year(datetime)) %>%
+            group_by(site_code, year) %>%
+            summarise(val = mean(val, na.rm = TRUE)) %>%
+            mutate(var = 'precip_sd_space')
 
-      final_sum <- rbind(final_sum_c, final_sum_sd) %>%
-        select(year, site_code, var, val)
+        final_sum <- rbind(final_sum_c, final_sum_sd) %>%
+            select(year, site_code, var, val)
 
-    } else{
+    } else {
 
-      final_temp <- final %>%
-        filter(var == 'temp_mean_median') %>%
-        mutate(year = year(datetime)) %>%
-        group_by(site_code, year) %>%
-        summarise(temp_mean = mean(val, na.rm = TRUE),
-                  temp_sd_year = sd(val, na.rm = TRUE)) %>%
-        pivot_longer(cols = c('temp_mean', 'temp_sd_year'),
-                     names_to = 'var',
-                     values_to = 'val')
+        final_temp <- final %>%
+            filter(var == 'temp_mean_median') %>%
+            mutate(year = year(datetime)) %>%
+            group_by(site_code, year) %>%
+            summarise(temp_mean = mean(val, na.rm = TRUE),
+                      temp_sd_year = sd(val, na.rm = TRUE)) %>%
+            pivot_longer(cols = c('temp_mean', 'temp_sd_year'),
+                         names_to = 'var',
+                         values_to = 'val')
 
-      temp_sd <- final %>%
-        filter(var == 'temp_mean_sd') %>%
-        mutate(year = year(datetime)) %>%
-        group_by(site_code, year) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
-        mutate(var = 'temp_sd_space')
+        temp_sd <- final %>%
+            filter(var == 'temp_mean_sd') %>%
+            mutate(year = year(datetime)) %>%
+            group_by(site_code, year) %>%
+            summarise(val = mean(val, na.rm = TRUE)) %>%
+            mutate(var = 'temp_sd_space')
 
-      final_sum <- rbind(final_temp, temp_sd) %>%
-        select(year, site_code, var, val)
+        final_sum <- rbind(final_temp, temp_sd) %>%
+            select(year, site_code, var, val)
     }
 
     final <- final %>%
-      select(datetime, site_code, var, val)
+        select(datetime, site_code, var, val)
 
-  type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
-  type <- ifelse(type == 'prism_precip', 'cc_precip', 'cc_temp')
+    type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
+    type <- ifelse(type == 'prism_precip', 'cc_precip', 'cc_temp')
 
-  dir <- glue('data/{n}/{d}/ws_traits/{v}/',
-              n = network, d = domain, v = type)
+    dir <- glue('data/{n}/{d}/ws_traits/{v}/',
+                n = network, d = domain, v = type)
 
-  final <- append_unprod_prefix(final, prodname_ms)
-  final_sum <- append_unprod_prefix(final_sum, prodname_ms)
+    final <- append_unprod_prefix(final, prodname_ms)
+    final_sum <- append_unprod_prefix(final_sum, prodname_ms)
 
-  save_general_files(final_file = final_sum,
-                     raw_file = final,
-                     domain_dir = dir)
+    save_general_files(final_file = final_sum,
+                       raw_file = final,
+                       domain_dir = dir)
 
-  return()
+    return()
 }
 
 #start_season; end_season; max_season; season_length: STATUS=READY
