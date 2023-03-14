@@ -2981,7 +2981,6 @@ ms_delineate <- function(network,
         }
 
         if(verbose){
-            print('   ')
             print(glue('delineating {n}-{d}-{s} (site {sti} of {sl})',
                        n = network,
                        d = domain,
