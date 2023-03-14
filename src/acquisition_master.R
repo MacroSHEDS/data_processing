@@ -310,6 +310,21 @@ run_checks()
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
+# check if watershed is in appendix, and if so,
+# if it is status == 0 (ready) or 0 (not ready)
+# and exclude all not ready from site_data
+## sites_ws_exclude <- c()
+## for(i in 1:nrow(site_data)) {
+##   site_code <- site_data$site_code[i]
+##   if(site_code %in% ws_appendix$site_code) {
+##     if(ws_appendix[ws_appendix$site_code == site_code,]$data_status == 1) {
+##       site_data <- site_data %>%
+##         filter(site_code != !!site_code)
+##       sites_ws_exclude <- c(sites_ws_exclude, site_code)
+##     }
+##   }
+## }
+
 network_domain <- site_data %>%
     select(network, domain) %>%
     distinct() %>%
@@ -325,7 +340,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-# dmnrow <- which(network_domain$domain == 'mces')
+## dmnrow <- which(network_domain$domain == 'mces')
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -378,7 +393,9 @@ for(dmnrow in 1:nrow(network_domain)){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        verbose = TRUE))
+                        ## overwrite_wb_sites = sites_ws_exclude[1],
+                        verbose = TRUE
+                        ))
     }
 
     ms_derive(network = network,
