@@ -11,6 +11,7 @@ mces_site_lookup <- function(site_string) {
     expr = {
       site_code <- mces_site_codes[grepl(site_string, names(mces_site_codes))][[1]]
       site_code <- gsub('\\.', '_', site_code)
+      site_code <- mces_sitename_preferred[site_code][[1]]
       return(site_code)
     },
     error = function(e) {
@@ -196,3 +197,23 @@ mces_variable_info <- list(
 ## "Total Organic Carbon, Unfiltered"       = c('', 'mg/L', 'TOC'),
 "Potassium, Filtered"                    = c('', 'mg/L', 'K')
 )
+
+# site translator to MCES preferred
+
+mces_sitename_preferred <- c(
+BS1_9 = "BS0019",
+BA2_2 = "BA0022",
+BE2_0 = "BE0020",
+BL3_5 = "BL0035",
+BR0_3 = "BR0003",
+CA1_7 = "CA0017",
+CR0_9 = "CR0009",
+EA0_8 = "EA0008",
+FC0_2 = "FC0002",
+NM1_8 = "NM0018",
+PU3_9 = "PU0039",
+RI1_3 = "RI0013",
+SA8_2 = "SA0082",
+SI0_1 = "SI0001",
+VA1_0 = "VA0010",
+VR2_0 = "VR0020")
