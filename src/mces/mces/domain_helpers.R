@@ -10,8 +10,6 @@ mces_site_lookup <- function(site_string) {
   tryCatch(
     expr = {
       site_code <- mces_site_codes[grepl(site_string, names(mces_site_codes))][[1]]
-      site_code <- gsub('\\.', '_', site_code)
-      site_code <- mces_sitename_preferred[site_code][[1]]
       return(site_code)
     },
     error = function(e) {
