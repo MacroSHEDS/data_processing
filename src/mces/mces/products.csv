@@ -5,3 +5,4 @@ ms001,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
 ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
 ms003,discharge,NA,NA,linked,NA,automated entry,NA,NA
 ms004,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
+ms000,ws_boundary,NA,NA,NA,,automated entry,NA,NA
