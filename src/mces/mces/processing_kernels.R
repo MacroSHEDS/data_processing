@@ -49,6 +49,10 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS003 <- download_from_googledrive
+
 ## #munge kernels ####
 #discharge: STATUS=READY
 #. handle_errors
@@ -291,6 +295,17 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     return()
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.shp',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 }
 
 #derive kernels ####
