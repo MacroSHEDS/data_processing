@@ -91,7 +91,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         }
     }
 
-    d <- d_sheets_combined %>%
+    d_sheets_combined <- d_sheets_combined %>%
       mutate(site_code = coalesce(unlist(mces_sitename_preferred)[site_code], site_code))
 
     q_lps = d_sheets_combined %>%
@@ -303,16 +303,47 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 #ws_boundary: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.shp',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+
     mces_ws_shp <- sf::read_sf(rawfile)
 
-    mces_ws_shp_mon <- mces_ws_shp %>%
-      filter(Monitored == "Y")
+    mces_site_codes <- site_data %>%
+      filter(network == !!network,
+             domain == !!domain,
+             ) %>%
+      pull(site_code)
+
+    d_ws <- mces_ws_shp %>%
+      filter(Monitored == "Y",
+             MAP_CODE1 %in% mces_site_codes) %>%
+      select(
+        site_code = MAP_CODE1,
+        geometry
+      ) %>%
+      sf::st_transform(4326) %>%
+      mutate(
+        area = units::set_units(sf::st_area(d_ws), "hectares") # meters (m) to hectares (ha)
+      )
+
+    for(i in 1:nrow(d_ws)) {
+        wb <- d_ws[i,]
+        site_code <- wb$site_code
+
+        write_ms_file(d = wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
+    }
 }
 
 #derive kernels ####
