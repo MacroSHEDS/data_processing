@@ -2895,12 +2895,14 @@ ms_general <- function(network = domain,
 ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
-                         verbose = FALSE){
+                         verbose = FALSE,
+                         overwrite_wb_sites = c() ){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
     #   accordingly. passed to delineate_watershed_apriori
     #verbose: logical. determines the amount of informative messaging during run
+    # overwrite_wb_sites: vector of sitenames to overwrite
 
     loginfo(msg = 'Beginning watershed delineation',
             logger = logger_module)
@@ -2970,8 +2972,16 @@ ms_delineate <- function(network,
     for(i in 1:nrow(site_locations)){
 
         site <- site_locations$site_code[i]
+        
+        if(length(overwrite_wb_sites) > 0) {
+          if(!site %in% overwrite_wb_sites) {
+            warning('only working on overwrite sites, skipping')
+            next
+          }
+        }
 
         if(verbose){
+            print('   ')
             print(glue('delineating {n}-{d}-{s} (site {sti} of {sl})',
                        n = network,
                        d = domain,
@@ -2987,7 +2997,10 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        if(dir.exists(site_dir) && length(dir(site_dir))){
+        print(site)
+        if(site %in% overwrite_wb_sites) {
+          warning('site in overwrite vector, launching new delineation')
+        } else if(dir.exists(site_dir) && length(dir(site_dir))){
             message(glue('{s} already delineated ({d})',
                          s = site,
                          d = site_dir))
@@ -3005,11 +3018,15 @@ ms_delineate <- function(network,
         dir.create(site_dir,
                    showWarnings = FALSE)
 
-        specs <- ws_delin_specs %>%
-            filter(
-                network == !!network,
-                domain == !!domain,
-                site_code == !!site)
+        if(site %in% overwrite_wb_sites) {
+          specs <- data.frame(matrix(ncol = 1, nrow = 0))
+        } else {
+          specs <- ws_delin_specs %>%
+              filter(
+                  network == !!network,
+                  domain == !!domain,
+                  site_code == !!site)
+        }
 
         if(nrow(specs) == 1){
 
@@ -3055,14 +3072,26 @@ ms_delineate <- function(network,
             #appropriate delineation
 
         } else if(nrow(specs) == 0){
-
-            if(ms_instance$instance_type != 'dev'){
-                stop(glue('Missing delineation specs for {n}-{d}-{s}. ',
+            if(site %in% overwrite_wb_sites) {
+              operation <- 'overwriting'
+              warning(glue('{o} delineation specs for {n}-{d}-{s}. ',
                           'Delineate locally and push changes.',
+                          o = operation,
                           n = network,
                           d = domain,
                           s = site))
+            } else {
+              operation <- 'missing'
+              if(ms_instance$instance_type != 'dev'){
+                  stop(glue('{o} delineation specs for {n}-{d}-{s}. ',
+                            'Delineate locally and push changes.',
+                            o = operation,
+                            n = network,
+                            d = domain,
+                            s = site))
+              }
             }
+          
 
             tmp <- tempdir()
 
@@ -9272,9 +9301,14 @@ load_config_datasets <- function(from_where){
             col_types = 'cccncnnccl'
         ))
 
+        ws_appendix <- sm(googlesheets4::read_sheet(
+            conf$ws_boundary_appendix_gsheet,
+            na = c('', 'NA'),
+            col_types = 'ccccccccnnnlcnnnnnc'
+        ))
+
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
-
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
@@ -9318,6 +9352,10 @@ load_config_datasets <- function(from_where){
 
     assign('ws_delin_specs',
            ws_delin_specs,
+           pos = .GlobalEnv)
+
+    assign('ws_appendix',
+           ws_appendix,
            pos = .GlobalEnv)
 
     assign('univ_products',
