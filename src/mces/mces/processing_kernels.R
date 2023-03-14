@@ -91,6 +91,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         }
     }
 
+    d <- d_sheets_combined %>%
+      mutate(site_code = coalesce(unlist(mces_sitename_preferred)[site_code], site_code))
+
     q_lps = d_sheets_combined %>%
       select(matches('Discharge')) * 28
     colnames(q_lps) <- 'discharge'
@@ -306,6 +309,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code,
                     c = component)
+    mces_ws_shp <- sf::read_sf(rawfile)
+
+    mces_ws_shp_mon <- mces_ws_shp %>%
+      filter(Monitored == "Y")
 }
 
 #derive kernels ####
