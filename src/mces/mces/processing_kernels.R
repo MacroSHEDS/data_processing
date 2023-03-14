@@ -328,7 +328,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
       ) %>%
       sf::st_transform(4326) %>%
       mutate(
-        area = units::set_units(sf::st_area(d_ws), "hectares") # meters (m) to hectares (ha)
+        area = units::set_units(sf::st_area(.), "hectares") # meters (m) to hectares (ha)
       )
 
     for(i in 1:nrow(d_ws)) {
