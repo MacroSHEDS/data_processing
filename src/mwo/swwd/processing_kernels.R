@@ -3,11 +3,135 @@
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- download_from_googledrive
+process_0_VERSIONLESS001 <- function(set_details, network, domain) {
+  prod <- 'discharge'
+  swwd_sites <- site_data %>%
+    filter(network == !!network,
+           domain == !!domain) %>%
+    pull(site_code)
+
+  default_to = getOption('timeout')
+  options(timeout=10000)
+
+  for(site in swwd_sites) {
+
+    # each file loaded into a site folder
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms,
+                      s = site,
+                      c = component)
+
+    site_download_url <- get_url_swwd_prod(site, prodname = prod)
+
+    res <- tryCatch(
+      expr = {
+       R.utils::downloadFile(
+                url = site_download_url,
+                filename = rawfile,
+                skip = FALSE,
+                overwrite = TRUE,
+                method = 'libcurl')
+      },
+      error = function(e){
+        wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+                              file = rawfile,
+                              s = site,
+                              n = network,
+                              d = domain
+                              )
+        warning(wrn_msg)
+      })
+
+    if(inherits(res, "error")) next
+
+  }
+
+  options(timeout=default_to)
+
+  # after all is said and done
+  res <- httr::HEAD(set_details$url)
+
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+      with_tz(tzone = 'UTC')
+
+  deets_out <- list(url = paste(set_details$url, ''),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+
+  return(deets_out)
+
+}
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <- download_from_googledrive
+process_0_VERSIONLESS002 <- function(set_details, network, domain) {
+
+  swwd_sites <- site_data %>%
+    filter(network == !!network,
+           domain == !!domain) %>%
+    pull(site_code)
+
+  default_to = getOption('timeout')
+  options(timeout=10000)
+
+  for(site in swwd_sites) {
+
+    # each file loaded into a site folder
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                      n = network,
+                      d = domain,
+                      p = prodname_ms,
+                      s = site,
+                      c = component)
+
+    site_download_url <- get_url_swwd_prod(site)
+
+    res <- tryCatch(
+      expr = {
+       R.utils::downloadFile(
+                url = site_download_url,
+                filename = rawfile,
+                skip = FALSE,
+                overwrite = TRUE,
+                method = 'libcurl')
+      },
+      error = function(e){
+        wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+                              file = rawfile,
+                              s = site,
+                              n = network,
+                              d = domain
+                              )
+        warning(wrn_msg)
+        next
+      })
+
+    if(inherits(res, "error")) next
+  }
+
+  options(timeout=default_to)
+  # after all is said and done
+  res <- httr::HEAD(set_details$url)
+
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+      with_tz(tzone = 'UTC')
+
+  deets_out <- list(url = paste(set_details$url, ''),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+
+  return(deets_out)
+}
 
 #munge kernels ####
 
