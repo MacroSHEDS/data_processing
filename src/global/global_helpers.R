@@ -15354,7 +15354,6 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                         select(-count) %>%
                         mutate(var = 'precip') %>%
                         mutate(domain = dom)
-
                 }
 
                 all_sites <- rbind(all_sites, site_precip)
@@ -15461,19 +15460,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     dir.create('../portal/data/general/biplot',
                showWarnings = FALSE)
 
-    if(filter_ms_interp && filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_interp0_status0.feather')
-    }
-
-    if(filter_ms_interp && !filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_interp0.feather')
-    }
-
-    if(!filter_ms_interp && filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_status0.feather')
-    }
-
-    if(!filter_ms_interp && ! filter_ms_status){
+    if(! filter_ms_interp && ! filter_ms_status){
         write_feather(all_domain, '../portal/data/general/biplot/year.feather')
     }
 }
@@ -15505,7 +15492,7 @@ compute_yearly_summary_ws <- function(){
                                  recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
-        # REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
+        # TODO: REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
         prod_files <- prod_files[! grepl('daymet', prod_files)]
 
         all_prods <- tibble()
@@ -15656,7 +15643,7 @@ run_checks <- function(){
     dupe_vars <- ms_vars %>%
         filter(duplicated(.$variable_code))
 
-    if(any(dupe_vars)){
+    if(nrow(dupe_vars)){
         stop(glue('duplicated variable(s) in ms_vars:\n{dv}',
                   dv = paste(dupe_vars$variable_code,
                              collapse = ', ')))
