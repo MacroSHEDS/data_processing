@@ -1,4 +1,3 @@
-
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)
 
@@ -15,71 +14,78 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-site_code <- 'sitecode_NA'
-## i = 1
-for(i in seq_len(nrow(prod_info))){
+swwd_sites <- site_data %>%
+    filter(network == !!network,
+            domain == !!domain) %>%
+    pull(site_code)
 
-    prodcode <- prod_info$prodcode[i]
+for(site in unique(swwd_sites)) {
+    site_code <- site
 
-    prodname_ms <<- paste0(prod_info$prodname[i],
-                           '__',
-                           prodcode)
+    for(i in seq_len(nrow(prod_info))){
 
-    held_data <<- get_data_tracker(network = network,
-                                   domain = domain)
+        prodcode <- prod_info$prodcode[i]
 
-    if(! product_is_tracked(tracker = held_data,
-                            prodname_ms = prodname_ms)){
+        prodname_ms <<- paste0(prod_info$prodname[i],
+                            '__',
+                            prodcode)
 
-        held_data <<- track_new_product(tracker = held_data,
-                                        prodname_ms = prodname_ms)
+        held_data <<- get_data_tracker(network = network,
+                                    domain = domain)
+
+        if(! product_is_tracked(tracker = held_data,
+                                prodname_ms = prodname_ms)){
+
+            held_data <<- track_new_product(tracker = held_data,
+                                            prodname_ms = prodname_ms)
+        }
+
+        if(! site_is_tracked(tracker = held_data,
+                            prodname_ms = prodname_ms,
+                            site_code = site_code)){
+
+            held_data <<- insert_site_skeleton(
+                tracker = held_data,
+                prodname_ms = prodname_ms,
+                site_code = site_code,
+                site_components = prod_info$components[i],
+                versionless = TRUE
+            )
+        }
+
+        update_data_tracker_r(network = network,
+                            domain = domain,
+                            tracker = held_data)
+
+        dest_dir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = site_code)
+
+        dir.create(path = dest_dir,
+                showWarnings = FALSE,
+                recursive = TRUE)
+
+        retrieve_versionless_product(network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms,
+                                    site_code = site_code,
+                                    tracker = held_data)
+
+        if(! is.na(prod_info$munge_status[i])){
+            update_data_tracker_m(network = network,
+                                domain = domain,
+                                tracker_name = 'held_data',
+                                prodname_ms = prodname_ms,
+                                site_code = site_code,
+                                new_status = 'pending')
+        }
+        # }
+
+        gc()
     }
 
-    if(! site_is_tracked(tracker = held_data,
-                         prodname_ms = prodname_ms,
-                         site_code = site_code)){
-
-        held_data <<- insert_site_skeleton(
-            tracker = held_data,
-            prodname_ms = prodname_ms,
-            site_code = site_code,
-            site_components = prod_info$components[i],
-            versionless = TRUE
-        )
-    }
-
-    update_data_tracker_r(network = network,
-                          domain = domain,
-                          tracker = held_data)
-
-    dest_dir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                     n = network,
-                     d = domain,
-                     p = prodname_ms,
-                     s = site_code)
-
-    dir.create(path = dest_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    retrieve_versionless_product(network = network,
-                                 domain = domain,
-                                 prodname_ms = prodname_ms,
-                                 site_code = site_code,
-                                 tracker = held_data)
-
-    if(! is.na(prod_info$munge_status[i])){
-        update_data_tracker_m(network = network,
-                              domain = domain,
-                              tracker_name = 'held_data',
-                              prodname_ms = prodname_ms,
-                              site_code = site_code,
-                              new_status = 'pending')
-    }
-    # }
-
-    gc()
+    loginfo('Retrieval complete for all versionless products',
+            logger = logger_module)
 }
-
-loginfo('Retrieval complete for all versionless products',
-        logger = logger_module)

@@ -14548,9 +14548,7 @@ download_from_googledrive <- function(set_details, network, domain){
 
     sitechar = 'sitecode_NA'
     if('site_code' %in% names(set_details)) {
-      if(set_details$site_code == 'sitename_NA') {
         sitechar <- set_details$site_code
-      }
     }
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]

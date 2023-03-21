@@ -1,52 +1,48 @@
-
 #retrieval kernels ####
 
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   prod <- 'discharge'
-  swwd_sites <- site_data %>%
-    filter(network == !!network,
-           domain == !!domain) %>%
-    pull(site_code)
+  site <- set_details$site_code
+  ## swwd_sites <- site_data %>%
+  ##   filter(network == !!network,
+  ##          domain == !!domain) %>%
+  ##   pull(site_code)
 
   default_to = getOption('timeout')
   options(timeout=10000)
 
-  for(site in swwd_sites) {
+  # each file loaded into a site folder
+  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site,
+                    c = component)
 
-    # each file loaded into a site folder
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
-                      n = network,
-                      d = domain,
-                      p = prodname_ms,
-                      s = site,
-                      c = component)
+  site_download_url <- get_url_swwd_prod(site, prodname = prod)
 
-    site_download_url <- get_url_swwd_prod(site, prodname = prod)
+  res <- tryCatch(
+    expr = {
+      R.utils::downloadFile(
+              url = site_download_url,
+              filename = rawfile,
+              skip = FALSE,
+              overwrite = TRUE,
+              method = 'libcurl')
+    },
+    error = function(e){
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+                            file = rawfile,
+                            s = site,
+                            n = network,
+                            d = domain
+                            )
+      warning(wrn_msg)
+    })
 
-    res <- tryCatch(
-      expr = {
-       R.utils::downloadFile(
-                url = site_download_url,
-                filename = rawfile,
-                skip = FALSE,
-                overwrite = TRUE,
-                method = 'libcurl')
-      },
-      error = function(e){
-        wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
-                              file = rawfile,
-                              s = site,
-                              n = network,
-                              d = domain
-                              )
-        warning(wrn_msg)
-      })
-
-    if(inherits(res, "error")) next
-
-  }
+  if(inherits(res, "error")) next
 
   options(timeout=default_to)
 
@@ -72,48 +68,46 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
-  swwd_sites <- site_data %>%
-    filter(network == !!network,
-           domain == !!domain) %>%
-    pull(site_code)
+  site <- set_details$site_code
+  ## swwd_sites <- site_data %>%
+  ##   filter(network == !!network,
+  ##          domain == !!domain) %>%
+  ##   pull(site_code)
 
   default_to = getOption('timeout')
   options(timeout=10000)
 
-  for(site in swwd_sites) {
+  # each file loaded into a site folder
+  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site,
+                    c = component)
 
-    # each file loaded into a site folder
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
-                      n = network,
-                      d = domain,
-                      p = prodname_ms,
-                      s = site,
-                      c = component)
+  site_download_url <- get_url_swwd_prod(site)
 
-    site_download_url <- get_url_swwd_prod(site)
+  res <- tryCatch(
+    expr = {
+      R.utils::downloadFile(
+              url = site_download_url,
+              filename = rawfile,
+              skip = FALSE,
+              overwrite = TRUE,
+              method = 'libcurl')
+    },
+    error = function(e){
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+                            file = rawfile,
+                            s = site,
+                            n = network,
+                            d = domain
+                            )
+      warning(wrn_msg)
+      next
+    })
 
-    res <- tryCatch(
-      expr = {
-       R.utils::downloadFile(
-                url = site_download_url,
-                filename = rawfile,
-                skip = FALSE,
-                overwrite = TRUE,
-                method = 'libcurl')
-      },
-      error = function(e){
-        wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
-                              file = rawfile,
-                              s = site,
-                              n = network,
-                              d = domain
-                              )
-        warning(wrn_msg)
-        next
-      })
-
-    if(inherits(res, "error")) next
-  }
+  if(inherits(res, "error")) next
 
   options(timeout=default_to)
   # after all is said and done
@@ -133,6 +127,10 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
   return(deets_out)
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS003 <- download_from_googledrive
+
 #munge kernels ####
 
 #discharge: STATUS=READY
@@ -149,7 +147,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     raw_xlsx <- readxl::read_xlsx(rawfile) %>%
       mutate(
-        site_code = 'trout_brook'
+        site_code = !!site_code
       ) %>%
       rename(
         discharge = 'Discharge (cfs)...8'
@@ -272,6 +270,52 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     return()
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.shp',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    mwo_ws_shp <- sf::read_sf(rawfile)
+
+    mwo_site_codes <- site_data %>%
+      filter(network == !!network,
+             domain == !!domain,
+             ) %>%
+      pull(site_code)
+
+    d_ws <- mwo_ws_shp %>%
+      filter(Monitored == "Y",
+             MAP_CODE1 %in% mwo_site_codes) %>%
+      select(
+        site_code = MAP_CODE1,
+        geometry
+      ) %>%
+      sf::st_transform(4326) %>%
+      mutate(
+        area = units::set_units(sf::st_area(.), "hectares") # meters (m) to hectares (ha)
+      )
+
+    for(i in 1:nrow(d_ws)) {
+        wb <- d_ws[i,]
+        site_code <- wb$site_code
+
+        write_ms_file(d = wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
+    }
 }
 
 #derive kernels ####
