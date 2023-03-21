@@ -382,7 +382,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                ## prodname_filter = c('discharge'),
+                prodname_filter = c('discharge'),
                 domain = domain)
 
     ms_munge(network = network,

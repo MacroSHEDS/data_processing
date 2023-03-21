@@ -5,13 +5,11 @@
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   prod <- 'discharge'
   site <- set_details$site_code
-  ## swwd_sites <- site_data %>%
-  ##   filter(network == !!network,
-  ##          domain == !!domain) %>%
-  ##   pull(site_code)
+  component <- set_details$component
+  prodname_ms <- set_details$prodname_ms
 
   default_to = getOption('timeout')
-  options(timeout=10000)
+  options(timeout=100000)
 
   # each file loaded into a site folder
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
@@ -23,7 +21,17 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
   site_download_url <- get_url_swwd_prod(site, prodname = prod)
 
-  res <- tryCatch(
+  tm = Sys.time()
+  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
+                        p = prodname_ms,
+                        s = site,
+                        n = network,
+                        d = domain,
+                        t = tm
+                        )
+  writeLines(wrn_msg)
+
+  dl <- tryCatch(
     expr = {
       R.utils::downloadFile(
               url = site_download_url,
@@ -33,21 +41,23 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
               method = 'libcurl')
     },
     error = function(e){
-      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+      tm = Sys.time()
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
                             file = rawfile,
                             s = site,
                             n = network,
-                            d = domain
+                            d = domain,
+                            t = tm
                             )
       warning(wrn_msg)
     })
 
-  if(inherits(res, "error")) next
+  if(inherits(dl, "error")) next
 
   options(timeout=default_to)
 
   # after all is said and done
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(site_download_url)
 
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
@@ -55,10 +65,14 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                           format = '%Y-%m-%dT%H:%M:%S') %>%
       with_tz(tzone = 'UTC')
 
-  deets_out <- list(url = paste(set_details$url, ''),
+  deets_out <- list(url = paste(site_download_url, ''),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
+
+  # short resting period, avoid issues with swwd site failing downloads bc
+  # too many subsequent requests. seems wiating very short window can help
+  Sys.sleep(10)
 
   return(deets_out)
 
@@ -69,13 +83,12 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
   site <- set_details$site_code
-  ## swwd_sites <- site_data %>%
-  ##   filter(network == !!network,
-  ##          domain == !!domain) %>%
-  ##   pull(site_code)
+  site <- set_details$site_code
+  component <- set_details$component
+  prodname_ms <- set_details$prodname_ms
 
   default_to = getOption('timeout')
-  options(timeout=10000)
+  options(timeout=100000)
 
   # each file loaded into a site folder
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
@@ -87,7 +100,17 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
   site_download_url <- get_url_swwd_prod(site)
 
-  res <- tryCatch(
+  tm = Sys.time()
+  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
+                        p = prodname_ms,
+                        s = site,
+                        n = network,
+                        d = domain,
+                        t = tm
+                        )
+  writeLines(wrn_msg)
+
+  dl <- tryCatch(
     expr = {
       R.utils::downloadFile(
               url = site_download_url,
@@ -97,21 +120,23 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
               method = 'libcurl')
     },
     error = function(e){
-      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, skipping to next',
+      tm = Sys.time()
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
                             file = rawfile,
                             s = site,
                             n = network,
-                            d = domain
+                            d = domain,
+                            t = tm
                             )
       warning(wrn_msg)
       next
     })
 
-  if(inherits(res, "error")) next
+  if(inherits(dl, "error")) next
 
   options(timeout=default_to)
   # after all is said and done
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(site_download_url)
 
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
@@ -119,7 +144,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                           format = '%Y-%m-%dT%H:%M:%S') %>%
       with_tz(tzone = 'UTC')
 
-  deets_out <- list(url = paste(set_details$url, ''),
+  deets_out <- list(url = paste(site_download_url, ''),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
