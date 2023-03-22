@@ -12973,8 +12973,8 @@ retrieve_versionless_product <- function(network,
                                          prodname_ms,
                                          site_code,
                                          tracker,
-                                         url
-                                         ){
+                                         orcid_login,
+                                         orcid_pass){
 
     #retrieves products that are served as static files.
     #IN PROGRESS: records source URIs as local metadata files
@@ -12993,8 +12993,7 @@ retrieve_versionless_product <- function(network,
         deets <- list(prodname_ms = prodname_ms,
                       site_code = site_code,
                       component = rt$component[i],
-                      last_mod_dt = held_dt,
-                      url = url)
+                      last_mod_dt = held_dt)
 
         result <- do.call(processing_func,
                           args = list(set_details = deets,
