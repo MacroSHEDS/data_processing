@@ -8,8 +8,21 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   component <- set_details$component
   prodname_ms <- set_details$prodname_ms
 
+  # discharge data is 10-20 years of 15m sensor data provided as a straight xlsx file
+  # the downloads are tricky, and often 504 timeout or other errors (inconsistently)
+  # TODO fix this, ideas:
+  #   - always can increase timeout
+  #   - change mode to wb, or other mode
+  #   - error out to gdrive download?
+  #   - use different link, example: http://wq.swwdmn.org/downloads/new?opts=100th-st/gauge&site_id=100th-st&site_label=100th%20St
+  #   - increase Sys.sleep() 'pause' between downloads, it does seem first downloads work more often
+
   default_to = getOption('timeout')
-  options(timeout=100000)
+  options(timeout=1000000)
+
+  # set interval to sleep after each download (seconds)
+  sleep_time = 120
+
 
   # each file loaded into a site folder
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
@@ -71,8 +84,9 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                     last_mod_dt = last_mod_dt)
 
   # short resting period, avoid issues with swwd site failing downloads bc
-  # too many subsequent requests. seems wiating very short window can help
-  Sys.sleep(10)
+  # too many subsequent requests. seems wiating a short window can help
+  writeLines(glue::glue('   sleeping for {sleep_time} seconds'))
+  Sys.sleep(sleep_time)
 
   return(deets_out)
 
