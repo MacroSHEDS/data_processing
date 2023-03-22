@@ -310,21 +310,6 @@ run_checks()
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
-# check if watershed is in appendix, and if so,
-# if it is status == 0 (ready) or 0 (not ready)
-# and exclude all not ready from site_data
-## sites_ws_exclude <- c()
-## for(i in 1:nrow(site_data)) {
-##   site_code <- site_data$site_code[i]
-##   if(site_code %in% ws_appendix$site_code) {
-##     if(ws_appendix[ws_appendix$site_code == site_code,]$data_status == 1) {
-##       site_data <- site_data %>%
-##         filter(site_code != !!site_code)
-##       sites_ws_exclude <- c(sites_ws_exclude, site_code)
-##     }
-##   }
-## }
-
 network_domain <- site_data %>%
     select(network, domain) %>%
     distinct() %>%
@@ -341,6 +326,25 @@ dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'swwd')
+
+## network_domain_sites <- site_data %>%
+##     filter(network == !!network, domain == !!domain)
+
+## for(i in 1:nrow(network_domain_sites)){
+##     site_code <- network_domain_sites$site_code[i]
+
+##     data_location <- glue('data/{n}/{d}/raw/discharge__VERSIONLESS001/{s}/swwd_discharge.xlsx',
+##                         n = network,
+##                         d = domain,
+##                         s = site_code)
+
+##     if(file.exists(data_location)){
+##         site_data <- site_data %>%
+##           filter(site_code != !!site_code)
+##     }
+## }
+
+
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
