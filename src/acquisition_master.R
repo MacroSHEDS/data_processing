@@ -327,24 +327,6 @@ dir.create('logs', showWarnings = FALSE)
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'swwd')
 
-## network_domain_sites <- site_data %>%
-##     filter(network == !!network, domain == !!domain)
-
-## for(i in 1:nrow(network_domain_sites)){
-##     site_code <- network_domain_sites$site_code[i]
-
-##     data_location <- glue('data/{n}/{d}/raw/discharge__VERSIONLESS001/{s}/swwd_discharge.xlsx',
-##                         n = network,
-##                         d = domain,
-##                         s = site_code)
-
-##     if(file.exists(data_location)){
-##         site_data <- site_data %>%
-##           filter(site_code != !!site_code)
-##     }
-## }
-
-
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
 
