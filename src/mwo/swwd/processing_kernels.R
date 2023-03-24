@@ -21,8 +21,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   options(timeout=1000000)
 
   # set interval to sleep after each download (seconds)
-  sleep_time = 120
-
+  sleep_time = 300
 
   # each file loaded into a site folder
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
