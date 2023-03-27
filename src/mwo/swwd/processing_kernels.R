@@ -175,13 +175,13 @@ process_0_VERSIONLESS003 <- download_from_googledrive
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    browser()
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/discharge.xlsx',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code)
+                    s = site_code,
+                    c = component
+                    )
 
     raw_xlsx <- readxl::read_xlsx(rawfile) %>%
       mutate(
@@ -235,77 +235,104 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
+
+mwopk = mwo_pkernel_setup(prodcode = 'VERSIONLESS002')
+prodname_ms <- paste0(mwopk$prodname, '__', mwopk$prodcode)
+site_code <- mwopk$site_code
+component <- mwopk$components
+
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/stream_chemistry.xlsx',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code)
+                    s = site_code,
+                    c = component)
 
-    header <- readxl::read_xlsx(rawfile, n_max = 1)
+    header <- readxl::read_xlsx(rawfile, .name_repair = ~make.unique(.x, sep = "_var"))
+
     raw_xlsx <- readxl::read_xlsx(rawfile, skip = 1) %>%
-      slice(2:nrow(.)) %>%
-      mutate(
-        site_code = 'trout_brook'
-      )
+      slice(2:nrow(.))
+
+    colnames(raw_xlsx) <- colnames(header)
+    raw_xlsx <- raw_xlsx[, !is.na(colnames(raw_xlsx))]
+
+    d_old_names <- colnames(header)
+
+    ## NOTE: special character was microgram symbol, removing all
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\s*\\([^\\)]+\\)', "", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('_var1', '_varflag', x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub(' ', '_', x)))
+
+    # NOTE: columns come in with utf character for microliter "u", replace?
+    # NOTE: var and q columns have two-row header style, must fix
 
     # NOTE: duplicate column names for value and flag
-    colnames(raw_xlsx) <- colnames(header)
+    colnames(raw_xlsx) <- d_new_names
 
-    d <- ms_read_raw_csv(preprocessed_tibble =  raw_xlsx,
+    # remove duplicate conducatcne (going form last keeps uS and removes mg/l conducatcne)
+    d <- raw_xlsx[, !duplicated(colnames(raw_xlsx), fromLast = TRUE)]
+    d <- d[,-1]
+
+    d <- d %>%
+      mutate(
+          site_code = !!site_code
+      )
+
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here to be just the old_var = new_var structure
+    mwo_chem_cols = c()
+    for(i in 1:length(mwo_vars)) {
+      og_name <- names(mwo_vars[i])
+      ms_name <- mwo_vars[[i]][3]
+      mwo_chem_cols[og_name] = ms_name
+    }
+
+    d <- ms_read_raw_csv(preprocessed_tibble =  d,
                          datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
-                         data_cols =  c(pH='pH',
-                                        `Specific conductance (mg/l)` = 'spCond',
-                                        # NOTE: Phosphate?
-                                        ## `Phosphorus as P (mg/l)` = 'P',
-                                        `Nitrate (NO3) as N (mg/l)` = 'NO3_N'
-                                        ),
+                         data_cols =  mwo_chem_cols,
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = '',
-                         var_flagcol_pattern = '#V#CODE',
-                         summary_flagcols = c('TYPE'))
+                         var_flagcol_pattern = '#V#_varflag'
+                         )
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean =
-                                c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c('~'),
+                            # will turn the *ms_status* column to 2 (e.g. below detection limit)
+                            variable_flags_bdl   = c('<'),
+                            )
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(ms_status == 2 ~ val/2, TRUE ~ val))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    d <- d %>%
+      mutate(ms_status = case_when(ms_status == 2 ~ 1, TRUE ~ ms_status))
+
+    # apply uncertainty
+    ## d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
 
     d <- synchronize_timestep(d)
 
-    unlink(temp_dir, recursive = TRUE)
 
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
+    write_ms_file(d = d,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_code = site_code,
+                  level = 'munged',
+                  shapefile = FALSE)
 
     return()
 }

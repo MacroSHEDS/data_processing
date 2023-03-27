@@ -94,6 +94,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d_sheets_combined <- d_sheets_combined %>%
       mutate(site_code = coalesce(unlist(mces_sitename_preferred)[site_code], site_code))
 
+    # flag "low L" vars as BDL and ocnvert to normal?
+
     q_lps = d_sheets_combined %>%
       select(matches('Discharge')) * 28
     colnames(q_lps) <- 'discharge'
