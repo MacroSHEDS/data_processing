@@ -19,6 +19,10 @@ swwd_sites <- site_data %>%
             domain == !!domain) %>%
     pull(site_code)
 
+# manual filter
+swwd_sites <- c('ms-2', 'trout-brook', 'ms-1')
+
+
 for(site in unique(swwd_sites)) {
     site_code <- site
 

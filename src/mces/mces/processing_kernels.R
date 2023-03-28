@@ -167,18 +167,21 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
+    # read in csv and remove non-data header fluff
     d <- read.csv(rawfile)
     d <- d[5:nrow(d),]
     colnames(d) <- d[1,]
     d <- d[-1,]
     raw.d <- d
 
+    # get all official site codes from site data gsheet
     mces_site_codes <- site_data %>%
       filter(network == !!network,
              domain == !!domain,
              ) %>%
       pull(site_code, full_name)
 
+    # converting csv names (which are full text names) to site codes
     d <- d %>%
       filter(nchar(NAME) > 1) %>%
       mutate(
@@ -203,26 +206,21 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     vars_og <- unique(d$var)
     vars <- names(mces_variable_info)
 
+    # doing it this way as it is theoretically dynamic with changes in underlying data units
     for(var in vars) {
-
-      d_var_units <- d %>%
-        filter(var == !!var)
-
-      if(nrow(d_var_units) > 0) {
-        d_var_units <- d_var_units %>%
-          pull(units) %>%
-          unique()
-      }
-
-      mces_var_units[var] = d_var_units
-      mces_variable_info[var][[1]][1] = d_var_units
+        d_var_units <- d %>%
+          filter(var == !!var)
+        if(nrow(d_var_units) > 0) {
+            d_var_units <- d_var_units %>%
+              pull(units) %>%
+              unique()
+        }
+        # populate variable info objects with original unit data
+        mces_var_units[var] = d_var_units
+        mces_variable_info[var][[1]][1] = d_var_units
     }
 
-    ## mces_variable_info$`Total Phosphorus, Unfiltered`
-    ## mces_variable_info$`Total Kjeldahl Nitrogen, Unfiltered`
-    ## mces_variable_info
-
-    ## create structure specific to ms_read_csv data cols arg
+    ## use variable info object to create structure specific to **ms_read_csv** data cols arg
     mces_data_cols <- c()
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
@@ -231,24 +229,35 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mces_data_cols[old_varname] = ms_varname
     }
 
+    # remove comma and space from text, and
+    # filter to only variables in mces_data_cols
     d <- d %>%
       mutate(
         var = gsub(" |,","", var)
       ) %>%
       filter(var %in% names(mces_data_cols))
 
+    # NOTE: filtered vs unfiltered versions of most variables in dataset
+    # we decided to keep F and UF seperate for total N and total P, and
+    # otherwise lump F and UF data together, with filtered data taking precedence
+    # in the event two samples overlap on the same site-date-var
+    # NOTE: the way I do this below brings me great shame. I want to fix this, and
+    # preferabl fix it as an addition to ms_read_csv
+
     # seperating and re-merging filtered and unfiltered vars,
     # keeping filtered version when both filter and unfilter
     # samples from same site/date
-
-    # manually rename vars which we want to keep F vs UF status
-    manual_vars <- c("TotalKjeldahlNitrogenUnfiltered",
-                   "TotalPhosphorousUnfiltered",
-                   "")
+    # rename few vars where filtered matters a lot
+    d <- d %>%
+      mutate(
+        var = case_when(var == 'TotalKjeldahlNitrogenFiltered' ~ 'TKN',
+                        var == 'TotalKjeldahlNitrogenUnfiltered' ~ 'UTKN',
+                        var == 'Total Phosphorus, Filtered' ~ 'TDP',
+                        TRUE ~ var)
+      )
 
     # all unfiltered vars
     d_unfiltered <- d %>%
-      filter(!var %in% reserve_vars) %>%
       filter(grepl('Unfiltered', var)) %>%
       mutate(
         var = gsub('Unfiltered', '', var)
@@ -256,14 +265,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # all filtered vars
     d_filtered <- d %>%
-      filter(!var %in% reserve_vars) %>%
       filter(!grepl('Unfiltered', var)) %>%
       mutate(
         var = gsub('Filtered', '', var)
       )
 
     d <- d_filtered %>%
-      left_join(d_unfiltered, by = c('site_code', 'date', 'var'), keep = FALSE)
+      full_join(d_unfiltered, by = c('site_code', 'date', 'var'))
 
     d <- d %>%
       mutate(
@@ -295,6 +303,15 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- d[!duplicated(d),]
 
+    # rename for ease of assignment from mces_var_info
+    d <- d %>%
+      mutate(
+        var = case_when(var ==  'TKN' ~ 'TotalKjeldahlNitrogenFiltered',
+                        var ==  'UTKN' ~ 'TotalKjeldahlNitrogenUnfiltered',
+                        var ==  'TDP' ~ 'Total Phosphorus, Filtered',
+                        TRUE ~ var)
+      )
+
     # reflect new var names (no filtered, unfiltered)
     mces_data_cols <- c()
     for(i in 1:length(mces_variable_info)) {
@@ -305,7 +322,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ms_varname <- entry[[1]][3]
       mces_data_cols[old_varname] = ms_varname
     }
-
+    mces_data_cols['TotalKjeldahlNitrogenFiltered'] = 'TKN'
+    mces_data_cols['TotalKjeldahlNitrogenUnfiltered'] = 'UTKN'
+    mces_data_cols = mces_data_cols[names(mces_data_cols) %in% 'TotalKjeldahlNitrogen' == FALSE]
 
     d <- d %>%
      pivot_wider(
@@ -314,7 +333,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                  names_from = var
                  ) %>%
      unchop(everything())
-
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
