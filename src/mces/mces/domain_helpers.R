@@ -170,7 +170,7 @@ mces_variable_info <- list(
 ## "Mercury, Unfiltred"                    = c('mg/L', 'mg/L', 'Hg'),
 "Chloride, Filtered"                     = c('mg/l', 'mg/L', 'Cl'),
 ## "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
-"Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn') # END
+"Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn')
 ## "Zinc, Unfiltered"                       = c('mg/L', 'mg/L', 'Zn'),
 ## "COD, Filtered"                          = c('', '', ''), # TODO: add variable, chemical oxygen demand
 ## "CBOD 5-day, Unfiltered"                 = c('', '', ''),# TODO: add variable, chem + biological oxygen demand
@@ -192,6 +192,10 @@ mces_variable_info <- list(
 ## "CBOD Ultimate, Filtered"                = c('', '', ''),# TODO: add variable
 ## "PCB: 1254, Unfiltered"                  = c('', '', ''),# TODO: add variable
 ## "PCB: 1221, Unfiltered"                  = c('', '', ''),# TODO: add variable
+## added for filter use
+## "TKN"      = c('mg/L', 'mg/L', 'TKN'),
+## "UTKN"    = c('mg/L', 'mg/L', 'UTKN'),
+## "TDP"             = c('mg/l', 'mg/l', 'TDP')
 )
 
 # site translator to MCES preferred
