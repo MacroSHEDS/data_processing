@@ -1975,6 +1975,11 @@ ms_conversions <- function(d,
                                                molecule = v,
                                                g_conver = g_conver)
         }
+
+        #Convert to #/mL from #/100mL
+        if(grepl('#\\/ml', unitto) && grepl('#\\/100ml', unitfrom)) {
+            d$val[d_subset] <- d$val[d_subset]/100
+        }
     }
 
     return(d)
@@ -13034,6 +13039,8 @@ retrieve_versionless_product <- function(network,
                                    prodcode_from_prodname_ms(prodname_ms)))
         }
 
+        print(paste("RESULT:", result))
+        print(paste("FUN:", processing_func))
         source_urls <- get_source_urls(result_obj = result,
                                        processing_func = processing_func)
 
@@ -14539,7 +14546,6 @@ ms_check_range <- function(d){
 }
 
 download_from_googledrive <- function(set_details, network, domain){
-
     #WARNING: any modification of the following line,
     #or insertion of code lines before it, will break
     #retrieve_versionless_product()
@@ -14562,6 +14568,8 @@ download_from_googledrive <- function(set_details, network, domain){
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
+
+    print('status: 0000011')
 
     network_id <- gd_files %>%
       filter(name == !!network)
@@ -14590,6 +14598,26 @@ download_from_googledrive <- function(set_details, network, domain){
 
     prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
 
+    if(sitechar != 'sitecode_NA') {
+
+        site_files <- prod_files
+
+        prod_folder <- site_files %>%
+            filter(name == !!set_details$site_code)
+
+        # most sites won't have ws_boundaries in gdrive
+        if(nrow(prod_folder) == 0) {
+            loginfo(glue('Nothing to do for {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+            return()
+        }
+
+        # but for those that do
+        prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
+
+    }
+
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
@@ -14598,7 +14626,7 @@ download_from_googledrive <- function(set_details, network, domain){
 
     drive_files <- prod_files$name
 
-    if(any(! drive_files %in% held_files)) {
+    if(any(!drive_files %in% held_files)) {
 
         loginfo(glue('Retrieving {p}',
                      p = set_details$prodname_ms),
