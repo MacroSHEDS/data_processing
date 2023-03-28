@@ -34,6 +34,13 @@ boundaries <- try(read_combine_shapefiles(network = network,
                                           domain = domain,
                                           prodname_ms = ws_prodname))
 
+## if(domain == 'mces') {
+##   for(i in 1:nrow(boundaries)) {
+##     boundaries$site_code[i] <- mces_sitename_preferred[boundaries$site_code[i]]
+##   }
+## }
+
+
 #tiny watersheds can't be summarized by gee for some products.
 #if < 15 ha, replace with 15 ha circle on centroid
 ws_areas <- site_data %>%
@@ -46,14 +53,18 @@ ws_areas <- site_data %>%
 boundaries <- boundaries %>%
     select(-any_of('area')) %>%
     left_join(ws_areas) %>%
-    rename(area = ws_area_ha)
+    rename(area = ws_area_ha) %>%
+    filter(!is.na(site_code))
 
 too_small_wb <- boundaries$area < 15
+
 # reupload <- FALSE
 # if(any(too_small_wb)) reupload <- TRUE
-boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
-    mutate(geometry = st_buffer(st_centroid(geometry),
-                                dist = sqrt(10000 * 15 / pi)))
+if(FALSE %in% is.na(too_small_wb)) {
+    boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
+        mutate(geometry = st_buffer(st_centroid(geometry),
+                                    dist = sqrt(10000 * 15 / pi)))
+}
 
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),

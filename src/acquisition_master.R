@@ -379,7 +379,7 @@ for(dmnrow in 1:nrow(network_domain)){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        overwrite_wb_sites = "st-paul-park",
+                        ## overwrite_wb_sites = "st-paul-park",
                         verbose = TRUE
                         ))
     }
