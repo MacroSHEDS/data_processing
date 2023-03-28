@@ -13039,8 +13039,6 @@ retrieve_versionless_product <- function(network,
                                    prodcode_from_prodname_ms(prodname_ms)))
         }
 
-        print(paste("RESULT:", result))
-        print(paste("FUN:", processing_func))
         source_urls <- get_source_urls(result_obj = result,
                                        processing_func = processing_func)
 

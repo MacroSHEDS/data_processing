@@ -165,28 +165,6 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
   return(deets_out)
 }
 
-## #ws_boundary: STATUS=PENDING
-## #. handle_errors
-## process_0_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
-##   #WARNING: any modification of the following line,
-##   #or insertion of code lines before it, will break
-##   #retrieve_versionless_product()
-##   download_from_googledrive_function_indicator <- TRUE
-
-##   warning(site_code)
-
-##   if(site_code %in% c('central-ravine', 'st-paul-park', 'colby-lake-west-tributary')) {
-##       deets <- list(prodname_ms = prodname_ms,
-##                       site_code = site_code,
-##                       component = rt$component[i],
-##                       last_mod_dt = held_dt)
-##       download_from_googledrive(set_details = deets, network, domain)
-##   } else {
-##     warning('skipping!!')
-##     return()
-##   }
-## }
-
 #munge kernels ####
 
 #discharge: STATUS=READY

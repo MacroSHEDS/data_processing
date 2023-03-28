@@ -204,13 +204,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     vars <- names(mces_variable_info)
 
     for(var in vars) {
+
       d_var_units <- d %>%
         filter(var == !!var)
 
       if(nrow(d_var_units) > 0) {
         d_var_units <- d_var_units %>%
-        pull(units) %>%
-        unique()
+          pull(units) %>%
+          unique()
       }
 
       mces_var_units[var] = d_var_units
@@ -236,6 +237,76 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ) %>%
       filter(var %in% names(mces_data_cols))
 
+    # seperating and re-merging filtered and unfiltered vars,
+    # keeping filtered version when both filter and unfilter
+    # samples from same site/date
+
+    # manually rename vars which we want to keep F vs UF status
+    manual_vars <- c("TotalKjeldahlNitrogenUnfiltered",
+                   "TotalPhosphorousUnfiltered",
+                   "")
+
+    # all unfiltered vars
+    d_unfiltered <- d %>%
+      filter(!var %in% reserve_vars) %>%
+      filter(grepl('Unfiltered', var)) %>%
+      mutate(
+        var = gsub('Unfiltered', '', var)
+      )
+
+    # all filtered vars
+    d_filtered <- d %>%
+      filter(!var %in% reserve_vars) %>%
+      filter(!grepl('Unfiltered', var)) %>%
+      mutate(
+        var = gsub('Filtered', '', var)
+      )
+
+    d <- d_filtered %>%
+      left_join(d_unfiltered, by = c('site_code', 'date', 'var'), keep = FALSE)
+
+    d <- d %>%
+      mutate(
+        val = case_when(
+          is.numeric(val.y) & is.numeric(val.x) ~ val.x,
+          is.numeric(val.y) & is.na(val.x)      ~ val.y,
+          is.na(val.y) & is.numeric(val.x)      ~ val.x,
+          TRUE                                  ~ val.x
+        ),
+        sign_varflag = case_when(
+          is.numeric(val.y) & is.numeric(val.x) ~ sign_varflag.x,
+          is.numeric(val.y) & is.na(val.x)      ~ sign_varflag.y,
+          is.na(val.y) & is.numeric(val.x)      ~ sign_varflag.x,
+          TRUE                                  ~ sign_varflag.x
+        ),
+        units = case_when(
+          is.numeric(val.y) & is.numeric(val.x) ~ units.x,
+          is.numeric(val.y) & is.na(val.x)      ~ units.y,
+          is.na(val.y) & is.numeric(val.x)      ~ units.x,
+          TRUE                                  ~ units.x
+        ),
+        quality_varflag = case_when(
+          is.numeric(val.y) & is.numeric(val.x) ~ quality_varflag.x,
+          is.numeric(val.y) & is.na(val.x)      ~ quality_varflag.y,
+          is.na(val.y) & is.numeric(val.x)      ~ quality_varflag.x,
+          TRUE                                  ~ quality_varflag.x
+        )) %>%
+      select(site_code, date, var, sign_varflag, val, units, quality_varflag)
+
+    d <- d[!duplicated(d),]
+
+    # reflect new var names (no filtered, unfiltered)
+    mces_data_cols <- c()
+    for(i in 1:length(mces_variable_info)) {
+      entry <- mces_variable_info[i]
+      old_varname <- gsub(" |,","",names(entry))
+      old_varname <- gsub("Filtered","",old_varname)
+      old_varname <- gsub("Unfiltered","",old_varname)
+      ms_varname <- entry[[1]][3]
+      mces_data_cols[old_varname] = ms_varname
+    }
+
+
     d <- d %>%
      pivot_wider(
                  id_cols = c(site_code, date),
@@ -243,6 +314,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                  names_from = var
                  ) %>%
      unchop(everything())
+
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -266,6 +338,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_check_range(d)
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
     d <- synchronize_timestep(d)
+
 
     ## create structure specific to ms_conversions data cols arg
     mces_data_conversions_from <- c()
