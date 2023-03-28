@@ -312,7 +312,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                         TRUE ~ var)
       )
 
-    # reflect new var names (no filtered, unfiltered)
+    # reflect new var names (NO filtered, unfiltered distinction)
     mces_data_cols <- c()
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
@@ -322,6 +322,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ms_varname <- entry[[1]][3]
       mces_data_cols[old_varname] = ms_varname
     }
+
+    # correcting Total N and P vars which do retain this info
     mces_data_cols['TotalKjeldahlNitrogenFiltered'] = 'TKN'
     mces_data_cols['TotalKjeldahlNitrogenUnfiltered'] = 'UTKN'
     mces_data_cols = mces_data_cols[names(mces_data_cols) %in% 'TotalKjeldahlNitrogen' == FALSE]
@@ -357,8 +359,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
     d <- synchronize_timestep(d)
 
-
-    ## create structure specific to ms_conversions data cols arg
+    ## create structure specific to **ms_conversions** units_from and units_to args
     mces_data_conversions_from <- c()
     mces_data_conversions_to <- c()
     for(i in 1:length(mces_variable_info)) {
