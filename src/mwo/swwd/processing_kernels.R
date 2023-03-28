@@ -232,10 +232,10 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 }
 
 
-mwopk = mwo_pkernel_setup(prodcode = 'VERSIONLESS002')
-prodname_ms <- paste0(mwopk$prodname, '__', mwopk$prodcode)
-site_code <- mwopk$site_code
-component <- mwopk$components
+## mwopk = mwo_pkernel_setup(prodcode = 'VERSIONLESS002')
+## prodname_ms <- paste0(mwopk$prodname, '__', mwopk$prodcode)
+## site_code <- mwopk$site_code
+## component <- mwopk$components
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
@@ -312,6 +312,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mutate(ms_status = case_when(ms_status == 2 ~ 1, TRUE ~ ms_status))
 
     # apply uncertainty
+    # NOTE; check_range breaks if multiple variable entries overlapping
+    # NOTE; fix this, then get_hdetlim should also work normally
     ## d <- ms_check_range(d)
     errors(d$val) <- get_hdetlim_or_uncert(d,
                                            detlims = domain_detection_limits,
@@ -337,7 +339,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       swwd_chem_units_new[ms_name] = ms_units
     }
 
-    d.c <- ms_conversions(d,
+    d <- ms_conversions(d,
                         convert_units_from = swwd_chem_units_old,
                         convert_units_to = swwd_chem_units_new)
 
