@@ -33,9 +33,6 @@ mwo_pkernel_setup <- function(network = 'mwo', domain = 'swwd', prodcode = "VERS
     ## network = network
     ## domain = domain
 
-    loginfo('Beginning retrieve (versionless products)',
-            logger = logger_module)
-
     prod_info <- get_product_info(network = network,
                                 domain = domain,
                                 status_level = 'retrieve',

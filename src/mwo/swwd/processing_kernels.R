@@ -165,9 +165,27 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
   return(deets_out)
 }
 
-#ws_boundary: STATUS=READY
-#. handle_errors
-process_0_VERSIONLESS003 <- download_from_googledrive
+## #ws_boundary: STATUS=PENDING
+## #. handle_errors
+## process_0_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+##   #WARNING: any modification of the following line,
+##   #or insertion of code lines before it, will break
+##   #retrieve_versionless_product()
+##   download_from_googledrive_function_indicator <- TRUE
+
+##   warning(site_code)
+
+##   if(site_code %in% c('central-ravine', 'st-paul-park', 'colby-lake-west-tributary')) {
+##       deets <- list(prodname_ms = prodname_ms,
+##                       site_code = site_code,
+##                       component = rt$component[i],
+##                       last_mod_dt = held_dt)
+##       download_from_googledrive(set_details = deets, network, domain)
+##   } else {
+##     warning('skipping!!')
+##     return()
+##   }
+## }
 
 #munge kernels ####
 
@@ -325,6 +343,25 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- synchronize_timestep(d)
 
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here as var = old_units and var = new_units lists
+    swwd_chem_units_old = c()
+    swwd_chem_units_new = c()
+
+    for(i in 1:length(mwo_vars)) {
+      og_name <- names(mwo_vars[i])
+      og_units <- mwo_vars[[i]][1]
+      # pack ms untis
+      ms_name <- mwo_vars[[i]][3]
+      ms_units <-mwo_vars[[i]][2]
+      # pack lists w units
+      swwd_chem_units_old[ms_name] = og_units
+      swwd_chem_units_new[ms_name] = ms_units
+    }
+
+    d.c <- ms_conversions(d,
+                        convert_units_from = swwd_chem_units_old,
+                        convert_units_to = swwd_chem_units_new)
 
     write_ms_file(d = d,
                   network = network,
