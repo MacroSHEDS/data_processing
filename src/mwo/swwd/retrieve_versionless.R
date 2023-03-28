@@ -86,6 +86,7 @@ for(site in unique(swwd_sites)) {
         gc()
     }
 
-    loginfo('Retrieval complete for all versionless products',
-            logger = logger_module)
 }
+
+loginfo('Retrieval complete for all versionless products',
+        logger = logger_module)
