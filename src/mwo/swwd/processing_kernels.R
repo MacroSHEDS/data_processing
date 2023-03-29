@@ -18,10 +18,10 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   #   - increase Sys.sleep() 'pause' between downloads, it does seem first downloads work more often
 
   default_to = getOption('timeout')
-  options(timeout=1000000)
+  options(timeout=5000000)
 
   # set interval to sleep after each download (seconds)
-  sleep_time = 300
+  sleep_time = 360
 
   # each file loaded into a site folder
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
@@ -352,52 +352,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                   shapefile = FALSE)
 
     return()
-}
-
-#ws_boundary: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.shp',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
-
-    mwo_ws_shp <- sf::read_sf(rawfile)
-
-    mwo_site_codes <- site_data %>%
-      filter(network == !!network,
-             domain == !!domain,
-             ) %>%
-      pull(site_code)
-
-    d_ws <- mwo_ws_shp %>%
-      filter(Monitored == "Y",
-             MAP_CODE1 %in% mwo_site_codes) %>%
-      select(
-        site_code = MAP_CODE1,
-        geometry
-      ) %>%
-      sf::st_transform(4326) %>%
-      mutate(
-        area = units::set_units(sf::st_area(.), "hectares") # meters (m) to hectares (ha)
-      )
-
-    for(i in 1:nrow(d_ws)) {
-        wb <- d_ws[i,]
-        site_code <- wb$site_code
-
-        write_ms_file(d = wb,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = site_code,
-                      level = 'munged',
-                      shapefile = TRUE,
-                      link_to_portal = FALSE)
-    }
 }
 
 #derive kernels ####
