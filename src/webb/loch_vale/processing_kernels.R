@@ -1,11 +1,13 @@
 source("/home/ws184/science/macrosheds/data_processing/src/webb/loch_vale/domain_helpers.R")
 library(dataRetrieval)
+library(data.table)
+library(tibble)
 # run webb_setup() in interpreter!)
 #webb_setup()
 # get pkernel deets
 
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS002")
-#retrieval kernels ####
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001")
+#retrieval kernels ###
 
 #precipitation: STATUS=Ready
 #. handle_errors
@@ -18,7 +20,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   site_code <- "sitename_NA"
   component <- "loch_vale_ppt"
   prodname_ms <- paste("precipitation" ,"__", prodcode, sep = "")
-  url <- "http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-All-w.csv"
+  #url <- "http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-All-w.csv"
 
 
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -45,7 +47,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                         skip = FALSE,
                         overwrite = TRUE)
 
-  #bigFILE <- read_csv(rawfile)     //
+  bigFILE <- read_csv(rawfile)     //
 
 
   # this code records metadat about the date, time, and other details
@@ -458,7 +460,16 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
-
+    
+    prodcode = "VERSIONLESS001"
+    network = "webb"
+    domain = "loch_vale"
+    site_code <- "sitename_NA"
+    component <- "loch_vale_ppt"
+    prodname_ms <- paste("precipitation" ,"__", prodcode, sep = "")
+    #url <- "http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-All-w.csv"
+  
+    
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -467,18 +478,20 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d <- read.delim(rawfile, sep = ',') %>%
-        mutate(site = 'KCOMKRET2') %>%
+        mutate(siteID = 'CO98') %>%
         as_tibble()
+    #column_diff <- select(d, ppt, subppt)    
+    d$subppt <- pmax(d$subppt, 0)
 
-    #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('dateTime' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list('dateon' = '%Y-%m-%d %H:%M'),
                          datetime_tz = 'US/Mountain',
-                         site_code_col = 'site',
-                         data_cols =  c('PrecipRate' = 'precipitation'),
+                         site_code_col = 'siteID',
+                         data_cols =  c('subppt' = "precipitation"),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
 
+    
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
