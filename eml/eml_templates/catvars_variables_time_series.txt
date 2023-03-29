@@ -1,4 +1,0 @@
-attributeName	code	definition
-chem_category	precip_conc variable represents solute concentration in precipitation	
-chem_category	stream_conc	variable represents solute concentration in stream water
-chem_category	NA	variable is only measured in stream water

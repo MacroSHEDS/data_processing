@@ -1,13 +1,169 @@
-
 #retrieval kernels ####
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- download_from_googledrive
+process_0_VERSIONLESS001 <- function(set_details, network, domain) {
+  prod <- 'discharge'
+  site <- set_details$site_code
+  component <- set_details$component
+  prodname_ms <- set_details$prodname_ms
+
+  # discharge data is 10-20 years of 15m sensor data provided as a straight xlsx file
+  # the downloads are tricky, and often 504 timeout or other errors (inconsistently)
+  # TODO fix this, ideas:
+  #   - always can increase timeout
+  #   - change mode to wb, or other mode
+  #   - error out to gdrive download?
+  #   - use different link, example: http://wq.swwdmn.org/downloads/new?opts=100th-st/gauge&site_id=100th-st&site_label=100th%20St
+  #   - increase Sys.sleep() 'pause' between downloads, it does seem first downloads work more often
+
+  default_to = getOption('timeout')
+  options(timeout=5000000)
+
+  # set interval to sleep after each download (seconds)
+  sleep_time = 360
+
+  # each file loaded into a site folder
+  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site,
+                    c = component)
+
+  site_download_url <- get_url_swwd_prod(site, prodname = prod)
+
+  tm = Sys.time()
+  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
+                        p = prodname_ms,
+                        s = site,
+                        n = network,
+                        d = domain,
+                        t = tm
+                        )
+  writeLines(wrn_msg)
+
+  dl <- tryCatch(
+    expr = {
+      R.utils::downloadFile(
+              url = site_download_url,
+              filename = rawfile,
+              skip = FALSE,
+              overwrite = TRUE,
+              method = 'libcurl')
+    },
+    error = function(e){
+      tm = Sys.time()
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
+                            file = rawfile,
+                            s = site,
+                            n = network,
+                            d = domain,
+                            t = tm
+                            )
+      warning(wrn_msg)
+    })
+
+  if(inherits(dl, "error")) next
+
+  options(timeout=default_to)
+
+  # after all is said and done
+  res <- httr::HEAD(site_download_url)
+
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+      with_tz(tzone = 'UTC')
+
+  deets_out <- list(url = paste(site_download_url, ''),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+
+  # short resting period, avoid issues with swwd site failing downloads bc
+  # too many subsequent requests. seems wiating a short window can help
+  writeLines(glue::glue('   sleeping for {sleep_time} seconds'))
+  Sys.sleep(sleep_time)
+
+  return(deets_out)
+
+}
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <- download_from_googledrive
+process_0_VERSIONLESS002 <- function(set_details, network, domain) {
+
+  site <- set_details$site_code
+  site <- set_details$site_code
+  component <- set_details$component
+  prodname_ms <- set_details$prodname_ms
+
+  default_to = getOption('timeout')
+  options(timeout=100000)
+
+  # each file loaded into a site folder
+  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site,
+                    c = component)
+
+  site_download_url <- get_url_swwd_prod(site)
+
+  tm = Sys.time()
+  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
+                        p = prodname_ms,
+                        s = site,
+                        n = network,
+                        d = domain,
+                        t = tm
+                        )
+  writeLines(wrn_msg)
+
+  dl <- tryCatch(
+    expr = {
+      R.utils::downloadFile(
+              url = site_download_url,
+              filename = rawfile,
+              skip = FALSE,
+              overwrite = TRUE,
+              method = 'libcurl')
+    },
+    error = function(e){
+      tm = Sys.time()
+      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
+                            file = rawfile,
+                            s = site,
+                            n = network,
+                            d = domain,
+                            t = tm
+                            )
+      warning(wrn_msg)
+      next
+    })
+
+  if(inherits(dl, "error")) next
+
+  options(timeout=default_to)
+  # after all is said and done
+  res <- httr::HEAD(site_download_url)
+
+  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                     start = 1,
+                                     stop = 19),
+                          format = '%Y-%m-%dT%H:%M:%S') %>%
+      with_tz(tzone = 'UTC')
+
+  deets_out <- list(url = paste(site_download_url, ''),
+                    access_time = as.character(with_tz(Sys.time(),
+                                                       tzone = 'UTC')),
+                    last_mod_dt = last_mod_dt)
+
+  return(deets_out)
+}
 
 #munge kernels ####
 
@@ -15,17 +171,17 @@ process_0_VERSIONLESS002 <- download_from_googledrive
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    browser()
-
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/discharge.xlsx',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code)
+                    s = site_code,
+                    c = component
+                    )
 
     raw_xlsx <- readxl::read_xlsx(rawfile) %>%
       mutate(
-        site_code = 'trout_brook'
+        site_code = !!site_code
       ) %>%
       rename(
         discharge = 'Discharge (cfs)...8'
@@ -75,77 +231,125 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
+
+## mwopk = mwo_pkernel_setup(prodcode = 'VERSIONLESS002')
+## prodname_ms <- paste0(mwopk$prodname, '__', mwopk$prodcode)
+## site_code <- mwopk$site_code
+## component <- mwopk$components
+
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/stream_chemistry.xlsx',
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code)
+                    s = site_code,
+                    c = component)
 
-    header <- readxl::read_xlsx(rawfile, n_max = 1)
+    header <- readxl::read_xlsx(rawfile, .name_repair = ~make.unique(.x, sep = "_var"))
+
     raw_xlsx <- readxl::read_xlsx(rawfile, skip = 1) %>%
-      slice(2:nrow(.)) %>%
-      mutate(
-        site_code = 'trout_brook'
-      )
+      slice(2:nrow(.))
+
+    colnames(raw_xlsx) <- colnames(header)
+    raw_xlsx <- raw_xlsx[, !is.na(colnames(raw_xlsx))]
+
+    d_old_names <- colnames(header)
+
+    ## NOTE: special character was microgram symbol, removing all
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\s*\\([^\\)]+\\)', "", x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub('_var1', '_varflag', x)))
+    d_new_names <- unname(sapply(d_new_names, function(x) gsub(' ', '_', x)))
+
+    # NOTE: columns come in with utf character for microliter "u", replace?
+    # NOTE: var and q columns have two-row header style, must fix
 
     # NOTE: duplicate column names for value and flag
-    colnames(raw_xlsx) <- colnames(header)
+    colnames(raw_xlsx) <- d_new_names
 
-    d <- ms_read_raw_csv(preprocessed_tibble =  raw_xlsx,
+    # remove duplicate conducatcne (going form last keeps uS and removes mg/l conducatcne)
+    d <- raw_xlsx[, !duplicated(colnames(raw_xlsx), fromLast = TRUE)]
+    d <- d[,-1]
+
+    d <- d %>%
+      mutate(
+          site_code = !!site_code
+      )
+
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here to be just the old_var = new_var structure
+    mwo_chem_cols = c()
+    for(i in 1:length(mwo_vars)) {
+      og_name <- names(mwo_vars[i])
+      ms_name <- mwo_vars[[i]][3]
+      mwo_chem_cols[og_name] = ms_name
+    }
+
+    d <- ms_read_raw_csv(preprocessed_tibble =  d,
                          datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
-                         data_cols =  c(pH='pH',
-                                        `Specific conductance (mg/l)` = 'spCond',
-                                        # NOTE: Phosphate?
-                                        ## `Phosphorus as P (mg/l)` = 'P',
-                                        `Nitrate (NO3) as N (mg/l)` = 'NO3_N'
-                                        ),
+                         data_cols =  mwo_chem_cols,
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = '',
-                         var_flagcol_pattern = '#V#CODE',
-                         summary_flagcols = c('TYPE'))
+                         var_flagcol_pattern = '#V#_varflag'
+                         )
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean =
-                                c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+                            # will turn the *ms_status* column to 1 (e.g. flagged)
+                            variable_flags_dirty   = c('~'),
+                            # will turn the *ms_status* column to 2 (e.g. below detection limit)
+                            variable_flags_bdl   = c('<'),
+                            )
+    # replace all BDL observations with half DL value
+    d <- d %>%
+      mutate(val = case_when(ms_status == 2 ~ val/2, TRUE ~ val))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    d <- d %>%
+      mutate(ms_status = case_when(ms_status == 2 ~ 1, TRUE ~ ms_status))
+
+    # apply uncertainty
+    # NOTE; check_range breaks if multiple variable entries overlapping
+    # NOTE; fix this, then get_hdetlim should also work normally
+    ## d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
+
 
     d <- synchronize_timestep(d)
 
-    unlink(temp_dir, recursive = TRUE)
+    # the chemistry name and unit data is all in a named list in domain_helpers
+    # I am going to re-pack it here as var = old_units and var = new_units lists
+    swwd_chem_units_old = c()
+    swwd_chem_units_new = c()
 
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
+    for(i in 1:length(mwo_vars)) {
+      og_name <- names(mwo_vars[i])
+      og_units <- mwo_vars[[i]][1]
+      # pack ms untis
+      ms_name <- mwo_vars[[i]][3]
+      ms_units <-mwo_vars[[i]][2]
+      # pack lists w units
+      swwd_chem_units_old[ms_name] = og_units
+      swwd_chem_units_new[ms_name] = ms_units
     }
+
+    d <- ms_conversions(d,
+                        convert_units_from = swwd_chem_units_old,
+                        convert_units_to = swwd_chem_units_new)
+
+    write_ms_file(d = d,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_code = site_code,
+                  level = 'munged',
+                  shapefile = FALSE)
 
     return()
 }
