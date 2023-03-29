@@ -31,3 +31,5 @@ eml/data_links
 eml/eml_out
 vault/*
 .Rdata
+VAULT
+.RData
