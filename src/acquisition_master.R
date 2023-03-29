@@ -176,7 +176,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    res <- try(setwd('/home/ws184/science/macrosheds/data_processing'), silent=TRUE) # BM2
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
         which_machine <- 'BM2'
