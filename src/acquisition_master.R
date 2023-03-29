@@ -305,8 +305,6 @@ domain_detection_limits <- standardize_detection_limits(dls = domain_detection_l
 unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
 superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
 
-run_checks()
-
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
@@ -389,10 +387,9 @@ for(dmnrow in 1:nrow(network_domain)){
               domain = domain)
 
     if(domain != 'mcmurdo'){
-
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = FALSE,
+                   get_missing_only = TRUE,
                    general_prod_filter = NULL)
     }
 

@@ -21,7 +21,7 @@ if(exists('general_prod_filter_')){
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-# load_spatial_data()
+## load_spatial_data()
 
 # Load in watershed Boundaries
 files <- list.files(glue('data/{n}/{d}/derived/',
@@ -33,13 +33,6 @@ ws_prodname <- grep('ws_boundary', files, value = TRUE)
 boundaries <- try(read_combine_shapefiles(network = network,
                                           domain = domain,
                                           prodname_ms = ws_prodname))
-
-## if(domain == 'mces') {
-##   for(i in 1:nrow(boundaries)) {
-##     boundaries$site_code[i] <- mces_sitename_preferred[boundaries$site_code[i]]
-##   }
-## }
-
 
 #tiny watersheds can't be summarized by gee for some products.
 #if < 15 ha, replace with 15 ha circle on centroid
@@ -53,8 +46,7 @@ ws_areas <- site_data %>%
 boundaries <- boundaries %>%
     select(-any_of('area')) %>%
     left_join(ws_areas) %>%
-    rename(area = ws_area_ha) %>%
-    filter(!is.na(site_code))
+    rename(area = ws_area_ha)
 
 too_small_wb <- boundaries$area < 15
 
