@@ -112,90 +112,90 @@ retrieve_mces_product <- function(network,
 # NOTE: "low" "low L" ?
 
 mces_variable_info <- list(
-"Total Kjeldahl Nitrogen, Filtered"      = c('mg/L', 'mg/L', 'TKN'),
-"Total Kjeldahl Nitrogen, Unfiltered"    = c('mg/L', 'mg/L', 'UTKN'),
-"Volatile Suspended Solids"              = c('mg/L', 'mg/L', 'VSS'),
-"Total Phosphorus, Filtered"             = c('mg/l', 'mg/l', 'TDP'),
-"Total Organic Carbon, Filtered"         = c('mg/L', 'mg/L', 'TOC'),
-## "Total Organic Carbon, Unfiltered"       = c('mg/L', 'mg/L', 'TOC'),
-## "Turbidity (FNU)"                        = c('FNU', 'FNU', 'turb'),
-"Ortho Phosphate as P, Filtered"         = c('mg/l', 'mg/l', 'PO4_P'),
-## "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'PO4_P'), # NOTE: ortho vs multiphosphate
-## "Chlorophyll-a, % Pheo-Corrected"        = c('', 'mg/l', ''),
-## "Chlorophyll-a/Pheophytin-a Abs. R"      = c('', 'mg/l', ''),
-## "Chlorophyll-a Trichromatic Uncorrected" = c('', 'mg/L', 'Chla'),
-"Chlorophyll-a, Pheo-Corrected"          = c('', 'mg/L', 'Chla'),
-## "Chlorophyll-b"                          = c('', '', ''),# TODO: add to variables
-## "Chlorophyll-c"                          = c('', '', ''),# TODO: add to variables
-## "Pheophytin-a"                           = c('', '', ''),# TODO: add to variables
-"E. Coli Bacteria Count"                 = c('#/100mL', '#/mL', 'Ecoli'),
-"Fecal Coliform Bacteria Count"          = c('#/100mL', '#/mL', 'fecal_coliform'),
-"Total Phosphorus, Unfiltered"           = c('mg/L', 'mg/L', 'UTP'),
-"Total Phosphorus, Particulate"          = c('mg/L', 'mg/L', 'TPP'),
-## "Total Phosphorus, Filtered, Low L"      = c('mg/L', 'mg/L', 'TDP'),
-"Ammonia Nitrogen, Filtered"             = c('mg/L', 'mg/L', 'NH3_N'),
-## "Ammonia Nitrogen, Unfiltered"           = c('mg/L', 'mg/L', 'NH3_N'),
-"Suspended Solids"                       = c('mg/L', 'mg/L', 'TSS'),
-"Total Dissolved Solids"                 = c('mg/L', 'mg/L', 'TDS'),
-"Total Nitrate/Nitrite N, Unfiltered"    = c('mg/L', 'mg/L', 'NO3_NO2_N'),
-"Nitrite N, Unfiltered"                  = c('mg/L', 'mg/L', 'NO2_N'),
-"Nitrate N, Unfiltered"                  = c('mg/l', 'mg/L', 'NO3_N'),
-"Sulfate, Filtered"                      = c('mg/L', 'mg/L', 'SO4'),
-## "Sulfate, Unfiltered"                    = c('mg/L', 'mg/L', 'SO4'),
-## "Conductivity"                           = c('umho/cm', '', ''), # NOTE: conductivity vs sp. cond vs conducatance?? # TODO: add var? conversion?
-"Dissolved Oxygen"                       = c('mg/L', 'mg/L', 'DO'),
-"Temperature"                            = c('C', 'C', 'temp'),
-"pH"                                     = c('unitless', 'unitless', 'pH'),
-"Total Alkalinity, Filtered"             = c('mg/L', 'mg/L', 'alk'), # technically, mg/L_CaCO3. issue?
-## "Total Alkalinity, Unfiltered"           = c('mg/l', 'mg/L', 'alk'),
-## "Turbidity (NTU)"                        = c('NTU', 'FNU', 'turbid'), # NOTE: NTU and FNU are slightly different, but considered acceptable use same values w either, but maybe still # TODO: add variable (???)
-## "Turbidity (NTRU)"                       = c('NTRU', 'FNU', 'turbid'), # NOTE: leaving out NTU and NTRU for now
-## "COD, Unfiltered"                        = c('', '', ''),# TODO: add to variables
-## "Hardness, Unfiltered"                   = c('', 'mg/L', 'CO3'), # NOTE: hardness just [CO3], carbonate# TODO: add to variables
-"Cadmium, Filtered"                      = c('mg/L', 'mg/L', 'Cd'),
-## "Cadmium, Unfiltered"                    = c('mg/L', 'mg/L', 'Cd'),
-"Copper, Filtered"                       = c('mg/L', 'mg/L', 'Cu'),
-## "Copper, Unfiltered"                     = c('mg/L', 'mg/L', 'Cu'),
-"Chromium, Filtered"                     = c('mg/l', 'mg/L', 'Cr'),
-## "Chromium, Unfiltered"                   = c('mg/l', 'mg/L', 'Cr'),
-"Calcium, Unfiltered"                    = c('mg/L', 'mg/L', 'Ca'),
-"Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
-"Lead, Unfiltered"                       = c('mg/L', 'mg/L', 'Pb'),
-"Potassium, Filtered"                    = c('mg/L', 'mg/L', 'K'),
-"Silica, Filtered"                       = c('mg/l', 'mg/L', 'Si'),
-"Sodium, Filtered"                       = c('mg/L', 'mg/L', 'Na'),
-"Magnesium, Filtered"                    = c('mg/l', 'mg/L', 'Mg'),
-## "Magnesium, Unfiltered"                  = c('mg/l', 'mg/L', 'Mg'),
-"Mercury, Filtered"                      = c('mg/l', 'mg/L', 'Hg'),
-## "Mercury, Unfiltred"                    = c('mg/L', 'mg/L', 'Hg'),
-"Chloride, Filtered"                     = c('mg/l', 'mg/L', 'Cl'),
-## "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
-"Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn')
-## "Zinc, Unfiltered"                       = c('mg/L', 'mg/L', 'Zn'),
-## "COD, Filtered"                          = c('', '', ''), # TODO: add variable, chemical oxygen demand
-## "CBOD 5-day, Unfiltered"                 = c('', '', ''),# TODO: add variable, chem + biological oxygen demand
-## "BOD 5-day, Unfiltered"                  = c('', '', ''),# TODO: add variable, biological oxygen demand
-## "BOD K-rate, Unfiltered"                 = c('', '', ''),# TODO: add variable
-## "BOD Ultimate, Filtered"                 = c('', '', ''),# TODO: add variable
-## "BOD K-rate, Filtered"                   = c('', '', ''),# TODO: add variable
-## "Soluble Oxygen Demand, Filtered"        = c('', '', ''),# TODO: add variable
-## "Transparency Tube"                      = c('', '', ''),# TODO: add variable (???)
-## "PCB: 1248, Unfiltered"                  = c('', '', ''),# TODO: add variable
-## "CBOD 5-day, Filtered"                   = c('', '', ''),# TODO: add variable
-## "CBOD K-rate, Unfiltered"                = c('', '', ''),# TODO: add variable
-## "CBOD K-rate, Filtered"                  = c('', '', ''),# TODO: add variable
-## "CBOD Ultimate, Unfiltered"              = c('', '', ''),# TODO: add variable
-## "PCB: 1232, Unfiltered"                  = c('', '', ''),# TODO: add variable
-## "BOD Ultimate, Unfiltered"               = c('', '', ''),# TODO: add variable
-## "PCB: 1016, Unfiltered"                  = c('', '', ''),# TODO: add variable
-## "BOD 5-day, Filtered"                    = c('', '', ''),# TODO: add variable
-## "CBOD Ultimate, Filtered"                = c('', '', ''),# TODO: add variable
-## "PCB: 1254, Unfiltered"                  = c('', '', ''),# TODO: add variable
-## "PCB: 1221, Unfiltered"                  = c('', '', ''),# TODO: add variable
-## added for filter use
-## "TKN"      = c('mg/L', 'mg/L', 'TKN'),
-## "UTKN"    = c('mg/L', 'mg/L', 'UTKN'),
-## "TDP"             = c('mg/l', 'mg/l', 'TDP')
+      "Total Kjeldahl Nitrogen, Filtered"      = c('mg/L', 'mg/L', 'TKN'),
+      "Total Kjeldahl Nitrogen, Unfiltered"    = c('mg/L', 'mg/L', 'UTKN'),
+      "Volatile Suspended Solids"              = c('mg/L', 'mg/L', 'VSS'),
+      "Total Phosphorus, Filtered"             = c('mg/l', 'mg/l', 'TDP'),
+      "Total Organic Carbon, Filtered"         = c('mg/L', 'mg/L', 'TOC'),
+      ## "Total Organic Carbon, Unfiltered"       = c('mg/L', 'mg/L', 'TOC'),
+      ## "Turbidity (FNU)"                        = c('FNU', 'FNU', 'turb'),
+      "Ortho Phosphate as P, Filtered"         = c('mg/l', 'mg/l', 'PO4_P'),
+      ## "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'PO4_P'), # NOTE: ortho vs multiphosphate
+      ## "Chlorophyll-a, % Pheo-Corrected"        = c('', 'mg/l', ''),
+      ## "Chlorophyll-a/Pheophytin-a Abs. R"      = c('', 'mg/l', ''),
+      ## "Chlorophyll-a Trichromatic Uncorrected" = c('', 'mg/L', 'Chla'),
+      "Chlorophyll-a, Pheo-Corrected"          = c('', 'mg/L', 'Chla'),
+      ## "Chlorophyll-b"                          = c('', '', ''),# TODO: add to variables
+      ## "Chlorophyll-c"                          = c('', '', ''),# TODO: add to variables
+      ## "Pheophytin-a"                           = c('', '', ''),# TODO: add to variables
+      "E. Coli Bacteria Count"                 = c('#/100mL', '#/mL', 'Ecoli'),
+      "Fecal Coliform Bacteria Count"          = c('#/100mL', '#/mL', 'fecal_coliform'),
+      "Total Phosphorus, Unfiltered"           = c('mg/L', 'mg/L', 'UTP'),
+      "Total Phosphorus, Particulate"          = c('mg/L', 'mg/L', 'TPP'),
+      ## "Total Phosphorus, Filtered, Low L"      = c('mg/L', 'mg/L', 'TDP'),
+      "Ammonia Nitrogen, Filtered"             = c('mg/L', 'mg/L', 'NH3_N'),
+      ## "Ammonia Nitrogen, Unfiltered"           = c('mg/L', 'mg/L', 'NH3_N'),
+      "Suspended Solids"                       = c('mg/L', 'mg/L', 'TSS'),
+      "Total Dissolved Solids"                 = c('mg/L', 'mg/L', 'TDS'),
+      "Total Nitrate/Nitrite N, Unfiltered"    = c('mg/L', 'mg/L', 'NO3_NO2_N'),
+      "Nitrite N, Unfiltered"                  = c('mg/L', 'mg/L', 'NO2_N'),
+      "Nitrate N, Unfiltered"                  = c('mg/l', 'mg/L', 'NO3_N'),
+      "Sulfate, Filtered"                      = c('mg/L', 'mg/L', 'SO4'),
+      ## "Sulfate, Unfiltered"                    = c('mg/L', 'mg/L', 'SO4'),
+      ## "Conductivity"                           = c('umho/cm', '', ''), # NOTE: conductivity vs sp. cond vs conducatance?? # TODO: add var? conversion?
+      "Dissolved Oxygen"                       = c('mg/L', 'mg/L', 'DO'),
+      "Temperature"                            = c('C', 'C', 'temp'),
+      "pH"                                     = c('unitless', 'unitless', 'pH'),
+      "Total Alkalinity, Filtered"             = c('mg/L', 'mg/L', 'alk'), # technically, mg/L_CaCO3. issue?
+      ## "Total Alkalinity, Unfiltered"           = c('mg/l', 'mg/L', 'alk'),
+      ## "Turbidity (NTU)"                        = c('NTU', 'FNU', 'turbid'), # NOTE: NTU and FNU are slightly different, but considered acceptable use same values w either, but maybe still # TODO: add variable (???)
+      ## "Turbidity (NTRU)"                       = c('NTRU', 'FNU', 'turbid'), # NOTE: leaving out NTU and NTRU for now
+      ## "COD, Unfiltered"                        = c('', '', ''),# TODO: add to variables
+      ## "Hardness, Unfiltered"                   = c('', 'mg/L', 'CO3'), # NOTE: hardness just [CO3], carbonate# TODO: add to variables
+      "Cadmium, Filtered"                      = c('mg/L', 'mg/L', 'Cd'),
+      ## "Cadmium, Unfiltered"                    = c('mg/L', 'mg/L', 'Cd'),
+      "Copper, Filtered"                       = c('mg/L', 'mg/L', 'Cu'),
+      ## "Copper, Unfiltered"                     = c('mg/L', 'mg/L', 'Cu'),
+      "Chromium, Filtered"                     = c('mg/l', 'mg/L', 'Cr'),
+      ## "Chromium, Unfiltered"                   = c('mg/l', 'mg/L', 'Cr'),
+      "Calcium, Unfiltered"                    = c('mg/L', 'mg/L', 'Ca'),
+      "Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
+      "Lead, Unfiltered"                       = c('mg/L', 'mg/L', 'Pb'),
+      "Potassium, Filtered"                    = c('mg/L', 'mg/L', 'K'),
+      "Silica, Filtered"                       = c('mg/l', 'mg/L', 'Si'),
+      "Sodium, Filtered"                       = c('mg/L', 'mg/L', 'Na'),
+      "Magnesium, Filtered"                    = c('mg/l', 'mg/L', 'Mg'),
+      ## "Magnesium, Unfiltered"                  = c('mg/l', 'mg/L', 'Mg'),
+      "Mercury, Filtered"                      = c('mg/l', 'mg/L', 'Hg'),
+      ## "Mercury, Unfiltred"                    = c('mg/L', 'mg/L', 'Hg'),
+      "Chloride, Filtered"                     = c('mg/l', 'mg/L', 'Cl'),
+      ## "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
+      "Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn')
+      ## "Zinc, Unfiltered"                       = c('mg/L', 'mg/L', 'Zn'),
+      ## "COD, Filtered"                          = c('', '', ''), # TODO: add variable, chemical oxygen demand
+      ## "CBOD 5-day, Unfiltered"                 = c('', '', ''),# TODO: add variable, chem + biological oxygen demand
+      ## "BOD 5-day, Unfiltered"                  = c('', '', ''),# TODO: add variable, biological oxygen demand
+      ## "BOD K-rate, Unfiltered"                 = c('', '', ''),# TODO: add variable
+      ## "BOD Ultimate, Filtered"                 = c('', '', ''),# TODO: add variable
+      ## "BOD K-rate, Filtered"                   = c('', '', ''),# TODO: add variable
+      ## "Soluble Oxygen Demand, Filtered"        = c('', '', ''),# TODO: add variable
+      ## "Transparency Tube"                      = c('', '', ''),# TODO: add variable (???)
+      ## "PCB: 1248, Unfiltered"                  = c('', '', ''),# TODO: add variable
+      ## "CBOD 5-day, Filtered"                   = c('', '', ''),# TODO: add variable
+      ## "CBOD K-rate, Unfiltered"                = c('', '', ''),# TODO: add variable
+      ## "CBOD K-rate, Filtered"                  = c('', '', ''),# TODO: add variable
+      ## "CBOD Ultimate, Unfiltered"              = c('', '', ''),# TODO: add variable
+      ## "PCB: 1232, Unfiltered"                  = c('', '', ''),# TODO: add variable
+      ## "BOD Ultimate, Unfiltered"               = c('', '', ''),# TODO: add variable
+      ## "PCB: 1016, Unfiltered"                  = c('', '', ''),# TODO: add variable
+      ## "BOD 5-day, Filtered"                    = c('', '', ''),# TODO: add variable
+      ## "CBOD Ultimate, Filtered"                = c('', '', ''),# TODO: add variable
+      ## "PCB: 1254, Unfiltered"                  = c('', '', ''),# TODO: add variable
+      ## "PCB: 1221, Unfiltered"                  = c('', '', ''),# TODO: add variable
+      ## added for filter use
+      ## "TKN"      = c('mg/L', 'mg/L', 'TKN'),
+      ## "UTKN"    = c('mg/L', 'mg/L', 'UTKN'),
+      ## "TDP"             = c('mg/l', 'mg/l', 'TDP')
 )
 
 # site translator to MCES preferred
@@ -218,3 +218,24 @@ SI0_1 = "SI0001",
 VA1_0 = "VA0010",
 VR2_0 = "VR0020"
 )
+
+# rename MCES shapefiles
+boundaries <- try(read_combine_shapefiles(network = network,
+                                          domain = domain,
+                                          prodname_ms = ws_prodname))
+
+if(domain == 'mces') {
+  for(i in 1:nrow(boundaries)) {
+    boundaries$site_code[i] <- mces_sitename_preferred[boundaries$site_code[i]]
+  }
+}
+
+for(site in boundaries$site_code) {
+    site_folders <- list.dirs('data/mces/mces/derived//ws_boundary__ms000//')
+
+    site_wb_folder <- site_folders[grepl(site, site_folders)]
+    site_shp <- boundaries %>%
+      filter(site_code == !!site)
+    site_shp_fn <- file.path(site_wb_folder, paste0(site, '.shp'))
+    sf::write_sf(site_shp, site_shp_fn)
+}

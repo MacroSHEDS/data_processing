@@ -19,6 +19,8 @@ swwd_sites <- site_data %>%
             domain == !!domain) %>%
     pull(site_code)
 
+swwd_sites <- c('ms-1')
+
 for(site in unique(swwd_sites)) {
     site_code <- site
 
