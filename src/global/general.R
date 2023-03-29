@@ -11,12 +11,17 @@ if(ms_instance$use_ms_error_handling){
 unprod <- univ_products  %>%
     filter(status == 'ready')
 
-# unprod = filter(unprod, grepl('season', prodname))
+if(exists('general_prod_filter_')){
+    unprod <- filter(unprod, prodname %in% general_prod_filter_)
 
+    loginfo(paste('general_prod_filter_ is set. only working on',
+                  paste(general_prod_filter_, collapse = ', ')),
+            logger = logger_module)
+}
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-# load_spatial_data()
+## load_spatial_data()
 
 # Load in watershed Boundaries
 files <- list.files(glue('data/{n}/{d}/derived/',
@@ -28,6 +33,30 @@ ws_prodname <- grep('ws_boundary', files, value = TRUE)
 boundaries <- try(read_combine_shapefiles(network = network,
                                           domain = domain,
                                           prodname_ms = ws_prodname))
+
+#tiny watersheds can't be summarized by gee for some products.
+#if < 15 ha, replace with 15 ha circle on centroid
+ws_areas <- site_data %>%
+    filter(in_workflow == 1,
+           site_type != 'rain_gauge',
+           domain == !!domain) %>%
+    right_join(select(boundaries, site_code)) %>%
+    select(site_code, ws_area_ha)
+
+boundaries <- boundaries %>%
+    select(-any_of('area')) %>%
+    left_join(ws_areas) %>%
+    rename(area = ws_area_ha)
+
+too_small_wb <- boundaries$area < 15
+
+# reupload <- FALSE
+# if(any(too_small_wb)) reupload <- TRUE
+if(FALSE %in% is.na(too_small_wb)) {
+    boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
+        mutate(geometry = st_buffer(st_centroid(geometry),
+                                    dist = sqrt(10000 * 15 / pi)))
+}
 
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),
@@ -46,46 +75,46 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}',
 
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
-if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0){
+# if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0 || reupload){
 
-    loginfo('Uploading ws_boundaries to GEE',
-            logger = logger_module)
+loginfo('(Re)uploading ws_boundaries to GEE',
+        logger = logger_module)
 
-    sm(rgee::ee_manage_create(asset_folder))
+sm(rgee::ee_manage_create(asset_folder))
 
-    asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
+asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
 
-    ee_shape <- try(sf_as_ee(boundaries,
-                             via = 'getInfo_to_asset',
-                             assetId = asset_path,
-                             overwrite = TRUE,
-                             quiet = TRUE),
-                    silent = TRUE)
+ee_shape <- try(sf_as_ee(boundaries,
+                         via = 'getInfo_to_asset',
+                         assetId = asset_path,
+                         overwrite = TRUE,
+                         quiet = TRUE),
+                silent = TRUE)
 
-    if('try-error' %in% class(ee_shape)){
+if('try-error' %in% class(ee_shape)){
 
-        for(i in 1:nrow(boundaries)){
-            one_boundary <- boundaries[i,]
-            asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
-            sf_as_ee(one_boundary,
-                     via = 'getInfo_to_asset',
-                     assetId = asset_path,
-                     overwrite = TRUE,
-                     quiet = TRUE)
-        }
+    for(i in 1:nrow(boundaries)){
+        one_boundary <- boundaries[i,]
+        asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
+        sf_as_ee(one_boundary,
+                 via = 'getInfo_to_asset',
+                 assetId = asset_path,
+                 overwrite = TRUE,
+                 quiet = TRUE)
     }
-
-} else {
-    loginfo('ws_boundaries already uploaded to GEE',
-            logger = logger_module)
 }
+
+# } else {
+#     loginfo('ws_boundaries already uploaded to GEE',
+#             logger = logger_module)
+# }
 
 # i = 27
 for(i in 1:nrow(unprod)){
 # for(i in 28:28){
 
     sf::sf_use_s2(TRUE)
-    
+
     prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
