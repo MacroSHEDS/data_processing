@@ -33,3 +33,6 @@ vault/*
 .Rdata
 VAULT
 .RData
+misc_backups
+eml/data_links_truncated
+eml/data_links_old_justforreference/

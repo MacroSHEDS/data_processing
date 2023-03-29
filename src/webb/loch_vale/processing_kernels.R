@@ -193,19 +193,19 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
-    prodcode = "VERSIONLESS004"
-    network = "webb"
-    domain = "loch_vale"
-    site_code <- "sitename_NA"
-    component <- "loch_vale_discharge_icy_brook"
-    prodname_ms <- paste("discharge" ,"__", prodcode, sep = "")
-    url <- "https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000"
+    # prodcode = "VERSIONLESS002"
+    # network = "webb"
+    # domain = "loch_vale"
+    # site_code <- "sitename_NA"
+    # component <- "loch_vale_discharge_icy_brook"
+    # prodname_ms <- paste("discharge" ,"__", prodcode, sep = "")
+    # url <- "https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000"
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = prodname_ms,
-                          s = site_code)
+                          p = set_details$prodname_ms,
+                          s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
