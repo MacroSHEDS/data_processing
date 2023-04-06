@@ -9371,8 +9371,12 @@ load_config_datasets <- function(from_where){
            pos = .GlobalEnv)
 }
 
-write_portal_config_datasets <- function(){
+write_portal_config_datasets <- function(portal_config = NULL){
 
+    if(!is.null(portal_config)) {
+      conf <- portal_config
+    }
+  
     #so we don't have to read these from gdrive when running the app in
     #production. also, nice to report download sizes this way and avoid some
     #real-time calculation.
@@ -9965,7 +9969,8 @@ postprocess_entire_dataset <- function(site_data,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product = FALSE,
-                                       push_new_version_to_figshare_and_edi = FALSE){
+                                       push_new_version_to_figshare_and_edi = FALSE,
+                                       portal_config = NULL){
                                        # filter_ungauged_sites = TRUE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
@@ -9990,7 +9995,7 @@ postprocess_entire_dataset <- function(site_data,
                        site_data = site_data)
 
     log_with_indent('writing config datasets to local dir', logger = logger_module)
-    write_portal_config_datasets()
+    write_portal_config_datasets(portal_config)
 
     log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
@@ -12471,7 +12476,6 @@ thin_portal_data <- function(network_domain, thin_interval){
                 needs_thin <- ! is.na(interval_min) && interval_min <= 24 * 60
 
                 if(needs_thin){
-
                     d <- read_feather(stf) %>%
                         mutate(
                             datetime = lubridate::floor_date(
@@ -12576,7 +12580,6 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #the original engine of this function, which still only converts portal data
     engine_for_portal <- function(flux_var, domains, ws_areas){
-
         for(dmn in domains){
 
             files <- try(
@@ -12650,7 +12653,6 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #the new engine, for scaling flux data within data_acquisition/data
     engine_for_data_acquis <- function(flux_var, network_domain, ws_areas){
-
         for(i in 1:nrow(network_domain)){
 
             ntw <- network_domain$network[i]
@@ -12668,6 +12670,10 @@ scale_flux_by_area <- function(network_domain, site_data){
 
                     ff <- ff[! grepl(pattern = 'inst_scaled',
                                      x = ff)]
+                    
+                    # remove custom precip prods
+                    ff <- ff[! grepl(pattern = 'CUSTOM',
+                                     x = ff)]
                 },
                 silent = TRUE
             )
@@ -12675,7 +12681,6 @@ scale_flux_by_area <- function(network_domain, site_data){
             if('try-error' %in% class(flux_var_dir) || length(flux_var_dir) == 0) next
 
             prodcode <- prodcode_from_prodname_ms(flux_var_dir)
-
             dir.create(path = glue('data/{n}/{d}/derived/{v}_scaled__{pc}',
                                    n = ntw,
                                    d = dmn,
