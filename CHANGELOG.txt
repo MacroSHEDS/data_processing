@@ -1,2 +1,5 @@
 for v2:
 for watersheds smaller than 10 ha, GEE reducers sometimes fail to produce a value. these watershed boundary features have been replaced with a 10 ha circle for the purposes of GEE reductions, resulting in cc_precip, cc_temp, and aet values where previously they were missing for calhoun weir_4, baltimore MCDN, etc. as a byproduct, other watershed summary values for these sites may have changed slightly from version 1
+
+20230406
+previously, if there were duplicate datetime-site_code pairs in a raw data file, we would keep the row with the fewest missing values. now we take the mean across each variable, omitting NAs.
