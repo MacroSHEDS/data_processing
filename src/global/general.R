@@ -21,7 +21,7 @@ if(exists('general_prod_filter_')){
 
 # Load spatial files from Drive if not already held on local machine
 # (takes a long time)
-## load_spatial_data()
+# load_spatial_data()
 
 # Load in watershed Boundaries
 files <- list.files(glue('data/{n}/{d}/derived/',
@@ -53,6 +53,7 @@ too_small_wb <- boundaries$area < 15
 # reupload <- FALSE
 # if(any(too_small_wb)) reupload <- TRUE
 if(FALSE %in% is.na(too_small_wb)) {
+    
     boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
         mutate(geometry = st_buffer(st_centroid(geometry),
                                     dist = sqrt(10000 * 15 / pi)))
