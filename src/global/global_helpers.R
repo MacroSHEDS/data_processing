@@ -625,7 +625,8 @@ ms_read_raw_csv <- function(filepath,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols,
-                            sampling_type = NULL){
+                            sampling_type = NULL,
+                            keep_bdl_values = FALSE){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -737,6 +738,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
+
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -791,6 +793,8 @@ ms_read_raw_csv <- function(filepath,
         stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
     }
 
+    # NOTE: if we want to be able to match multiple input cols to a single
+    # macrosheds var, we need to accept dupes in the data_cols values.
     dc_dupes <- duplicated(unname(data_cols))
     if(any(dc_dupes)){
         stop(paste('duplicate value(s) in data_cols:',
@@ -975,6 +979,7 @@ ms_read_raw_csv <- function(filepath,
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
     all_datacols <- c(data_cols, alt_datacols)
+
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
@@ -1018,9 +1023,18 @@ ms_read_raw_csv <- function(filepath,
                 new_varflag_cols <- c(new_varflag_cols, candidate_flagcol)
             }
 
+            # populate flag column with BDL information,
+            # and set value to NA
             d[bdl_inds, candidate_flagcol] <- 'BDL'
-            d[bdl_inds, d_colname] <- NA_character_
+            if(keep_bdl_values) {
+                d[bdl_inds, d_colname] <- sapply(d[bdl_inds, d_colname], function(x) gsub("[^0-9\\.\\-]*", "", x))
+            } else {
+                d[bdl_inds, d_colname] <- NA_character_
+            }
 
+
+            # look up DL googlsheet, and see if this site has DL info
+            # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
         }
@@ -1077,6 +1091,14 @@ ms_read_raw_csv <- function(filepath,
                            cc = cmpnt,
                            ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
                 logger = logger_module)
+    }
+
+    # merge any input columns with same end-variable, where the vlaues from whichever
+    # input column is provided first will be used when any overlapping observations
+    if(any(dc_dupes)){
+        warning(paste('duplicate value(s) in data_cols:',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
     }
 
     #rename cols to canonical names
