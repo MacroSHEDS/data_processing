@@ -269,8 +269,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes', 'BM2') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -308,6 +308,13 @@ superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation'
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
+# for run 2023_04_03
+site_data_bk <- site_data
+site_data <- site_data %>%
+  filter(
+    !domain %in% c("loch_vale", "panola", "trout_lake", "ecnhc")
+  )
+
 network_domain <- site_data %>%
     select(network, domain) %>%
     distinct() %>%
@@ -323,7 +330,9 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'mces')
+# dmnrow <- which(network_domain$domain == 'sleepers')
+
+# for run of adding mces, mwo, slleepers
 
 ## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
 for(dmnrow in 1:nrow(network_domain)){
@@ -383,7 +392,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              # prodname_filter = c('stream_flux_inst'),
               domain = domain)
 
     if(domain != 'mcmurdo'){
