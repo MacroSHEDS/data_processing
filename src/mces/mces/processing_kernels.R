@@ -197,7 +197,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         quality_varflag = QUALIFIER
       ) %>%
       mutate(
-        quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+        ## quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+        val = case_when(sign_varflag == '<' ~ paste0('<', val), TRUE ~ val)
       )
 
     # data provides units - lets make a quick function to pair each variable with
@@ -345,14 +346,15 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = 'val_#V#',
                          ## summary_flagcols = 'quality_varflag',
                          var_flagcol_pattern = "quality_varflag_#V#",
-                         is_sensor = FALSE)
+                         convert_to_BDL_flag = "<#*#",
+                         is_sensor = FALSE,
+                         keep_bdl_values = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_clean   = c('quality_flag' = 'Valid'),
                             variable_flags_to_drop = c('quality_flag' = 'Estimated'),
                             variable_flags_dirty   = c('quality_flag' = 'Suspect'),
-                            variable_flags_bdl = c('quality_flag' = 'BDL')
-                            )
+                            variable_flags_bdl = c('quality_flag' = 'BDL'))
 
     # apply uncertainty
     d <- ms_check_range(d)

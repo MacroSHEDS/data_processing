@@ -141,7 +141,7 @@ mces_variable_info <- list(
       "Nitrite N, Unfiltered"                  = c('mg/L', 'mg/L', 'NO2_N'),
       "Nitrate N, Unfiltered"                  = c('mg/l', 'mg/L', 'NO3_N'),
       "Sulfate, Filtered"                      = c('mg/L', 'mg/L', 'SO4'),
-      ## "Sulfate, Unfiltered"                    = c('mg/L', 'mg/L', 'SO4'),
+      "Sulfate, Unfiltered"                    = c('mg/L', 'mg/L', 'SO4'),
       ## "Conductivity"                           = c('umho/cm', '', ''), # NOTE: conductivity vs sp. cond vs conducatance?? # TODO: add var? conversion?
       "Dissolved Oxygen"                       = c('mg/L', 'mg/L', 'DO'),
       "Temperature"                            = c('C', 'C', 'temp'),
@@ -159,7 +159,7 @@ mces_variable_info <- list(
       "Chromium, Filtered"                     = c('mg/l', 'mg/L', 'Cr'),
       ## "Chromium, Unfiltered"                   = c('mg/l', 'mg/L', 'Cr'),
       "Calcium, Unfiltered"                    = c('mg/L', 'mg/L', 'Ca'),
-      "Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
+      ## "Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
       "Lead, Unfiltered"                       = c('mg/L', 'mg/L', 'Pb'),
       "Potassium, Filtered"                    = c('mg/L', 'mg/L', 'K'),
       "Silica, Filtered"                       = c('mg/l', 'mg/L', 'Si'),
@@ -167,7 +167,7 @@ mces_variable_info <- list(
       "Magnesium, Filtered"                    = c('mg/l', 'mg/L', 'Mg'),
       ## "Magnesium, Unfiltered"                  = c('mg/l', 'mg/L', 'Mg'),
       "Mercury, Filtered"                      = c('mg/l', 'mg/L', 'Hg'),
-      ## "Mercury, Unfiltred"                    = c('mg/L', 'mg/L', 'Hg'),
+      ## "Mercury, Unfiltered"                    = c('mg/L', 'mg/L', 'Hg'),
       "Chloride, Filtered"                     = c('mg/l', 'mg/L', 'Cl'),
       ## "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
       "Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn')
@@ -239,3 +239,24 @@ VR2_0 = "VR0020"
 #     site_shp_fn <- file.path(site_wb_folder, paste0(site, '.shp'))
 #     sf::write_sf(site_shp, site_shp_fn)
 # }
+
+combine_multiple_input_cols <- function(d, data_cols) {
+    datacol_names <- names(data_cols)
+    if(! is.null(datacol_names)){
+
+        dn_dupes <- duplicated(datacol_names) & datacol_names != ''
+
+        if(any(dn_dupes)){
+            stop(paste('duplicate name(s) in data_cols:',
+                       paste(datacol_names[dn_dupes],
+                             collapse = ', ')))
+        }
+    }
+
+    dc_dupes <- duplicated(unname(data_cols))
+    if(any(dc_dupes)){
+        warning(paste('duplicate value(s) in data_cols, merging into one column, with first input overriding where observations overlap',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
+    }
+}
