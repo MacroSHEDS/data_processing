@@ -178,7 +178,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    res <- try(setwd('/home/ws184/science/macrosheds/data_processing'), silent=TRUE) # BM2
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
         which_machine <- 'BM2'
@@ -269,8 +269,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes', 'BM2') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -307,6 +307,13 @@ superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation'
 
 site_data <- filter(site_data,
                     as.logical(in_workflow))
+
+# for run 2023_04_03
+site_data_bk <- site_data
+site_data <- site_data %>%
+  filter(
+    !domain %in% c("loch_vale", "panola", "trout_lake", "ecnhc")
+  )
 
 network_domain <- site_data %>%
     select(network, domain) %>%
