@@ -38,7 +38,7 @@ for(i in seq_len(nrow(prod_info))){
     }
 
     sites <- names(held_data[[prodname_ms]])
-    sites <- sites %in% swwd_sites
+    sites <- sites[sites %in% swwd_sites]
 
     for(j in 1:length(sites)){
 

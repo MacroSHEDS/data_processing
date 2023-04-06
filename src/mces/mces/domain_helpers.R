@@ -220,22 +220,22 @@ VR2_0 = "VR0020"
 )
 
 # rename MCES shapefiles
-boundaries <- try(read_combine_shapefiles(network = network,
-                                          domain = domain,
-                                          prodname_ms = ws_prodname))
+## boundaries <- try(read_combine_shapefiles(network = network,
+##                                           domain = domain,
+##                                           prodname_ms = ws_prodname))
 
-if(domain == 'mces') {
-  for(i in 1:nrow(boundaries)) {
-    boundaries$site_code[i] <- mces_sitename_preferred[boundaries$site_code[i]]
-  }
-}
+## if(domain == 'mces') {
+##   for(i in 1:nrow(boundaries)) {
+##     boundaries$site_code[i] <- mces_sitename_preferred[boundaries$site_code[i]]
+##   }
+## }
 
-for(site in boundaries$site_code) {
-    site_folders <- list.dirs('data/mces/mces/derived//ws_boundary__ms000//')
+## for(site in boundaries$site_code) {
+##     site_folders <- list.dirs('data/mces/mces/derived//ws_boundary__ms000//')
 
-    site_wb_folder <- site_folders[grepl(site, site_folders)]
-    site_shp <- boundaries %>%
-      filter(site_code == !!site)
-    site_shp_fn <- file.path(site_wb_folder, paste0(site, '.shp'))
-    sf::write_sf(site_shp, site_shp_fn)
-}
+##     site_wb_folder <- site_folders[grepl(site, site_folders)]
+##     site_shp <- boundaries %>%
+##       filter(site_code == !!site)
+##     site_shp_fn <- file.path(site_wb_folder, paste0(site, '.shp'))
+##     sf::write_sf(site_shp, site_shp_fn)
+## }
