@@ -710,13 +710,16 @@ ms_read_raw_csv <- function(filepath,
     #   This parameter is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
     #   corresponding to each data variable. Variable-flag columns will be created
-    #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
+    #   as necessary. See also numeric_dl_col_pattern.
+    #   See ms_cast_and_reflag for the next step in handling BDL data.
     #numeric_dl_col_pattern: as opposed to convert_to_BDL_flag, which can handle e.g.
     #   "<0.04" within a data column, this parameter is for when there's a whole
     #   separate column of numeric detection limit values for each variable (probably
-    #   this will only be true if you had use pivot_wider on a long-format table). DL
+    #   this will only be true if you had to use pivot_wider on a long-format table). DL
     #   values will be converted to "BDL" flags, which will be merged
-    #   with any other flag information.
+    #   with any other flag information. Note that convert_to_BDL_flag is not
+    #   necessary when numeric_dl_col_pattern is used. If you find a situation
+    #   where both are needed, we probably have work to do.
     #set_to_0: For values that we want to set to zero. We're setting BDLs to
     #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
