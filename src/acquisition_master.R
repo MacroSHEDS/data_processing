@@ -271,8 +271,13 @@ gee_login <- case_when(
 
 #load authorization file for macrosheds google sheets and drive
 #same account must have GEE and GDrive access
+#googlesheets4::gs4_deauth()
+#googledrive::drive_deauth()
+
 googlesheets4::gs4_auth(email = gee_login)
-googledrive::drive_autxh(email = gee_login)
+googledrive::drive_auth(email = gee_login)
+
+
 
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
@@ -350,10 +355,7 @@ for(dmnrow in 1:nrow(network_domain)){
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
 
-    loginfo(logger = logger_module,
-            msg = glue('Processing network: {n}, domain: {d}',
-                       n = network,
-                       d = domain))
+                                                                                    
 
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
