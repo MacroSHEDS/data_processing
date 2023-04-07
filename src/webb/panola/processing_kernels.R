@@ -1,5 +1,6 @@
 source('src/webb/sleeper/domain_helpers.R')
 source('src/webb/network_helpers.R')
+source('src/global/global_helpers.R')
 
 # get pkernel deets
 set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001", network='webb',
@@ -122,37 +123,121 @@ process_1_VERSIONLESS001 <-function(set_details, network, domain) {
   raw_csv <- read.csv(unz(raw_zip, "3_PMRW_Streamflow_WY86-17.csv"), header = TRUE,
            sep = ",") 
   
-  # write.csv(raw_csv, raw_csv_dest)
+  # write.csv(raw_csv, raw_data_dest)
+  ## later for reading
+  raw_csv<-read.csv(raw_csv_dest)
   
-  raw_csv<-raw_csv%>%
-  mutate(site= 'USGS_02203970')
-  copy_csv<-head(raw_csv,100)
+  raw_csv<- raw_csv%>%
+    mutate(site = 'USGS_02203970')
   d <- ms_read_raw_csv(preprocessed_tibble = raw_csv,
                        datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
                        datetime_tz = 'America/New_York',
                        site_code_col = 'site',
                        data_cols =  c('Streamflow' = 'discharge'),
                        data_col_pattern = '#V#',
-                       summary_flagcols = 'Quality_Cd',
+                       summary_flagcols = c("Quality_Cd"),
                        is_sensor = TRUE)
   
   d <- ms_cast_and_reflag(d,
-                          varflag_col_pattern = NA)
+                          varflag_col_pattern = NA,
+                          summary_flags_clean = list(Quality_Cd = c('1', '2')),
+                          summary_flags_dirty = list(Quality_Cd = c('3', '4'))
+                          )
   
-  #  1 excellent, 2 good, 3 fair, 4 poor
   # d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+   
+  # d <- synchronize_timestep(d)
   
-
-  write_ms_file(d = d,
+  sites <- unique(d$site_code)
+  
+  for(s in 1:length(sites)){
+    
+    d_site <- d %>%
+      filter(site_code == !!sites[s])
+    print(d_site)
+    write_ms_file(d = d_site,
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
-                  site_code = 'USGS_02203970',
+                  site_code = sites[s],
                   level = 'munged',
-                  shapefile = FALSE)  
+                  shapefile = FALSE)
+  }
+  
   return()
 }
 
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS002", network='webb',
+                                  domain='panola')
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS002 <-function(set_details, network, domain) {
+  
+  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = set_details$site_code)
+  
+  raw_zip <- glue('{rd}/{c}.zip',
+                  rd = raw_data_dest,
+                  c = set_details$component)
+  raw_csv_dest <- glue('{rd}/{c}.csv',
+                       rd = raw_data_dest,
+                       c = set_details$component)
+  
+  # read and save csv from zip folder
+  raw_csv <- read.csv(unz(raw_zip, "4_PMRW_StreamWaterQuality_WY86-17.csv"), header = TRUE,
+                      sep = ",") 
+  ## TODO Fix this
+  # write.csv(raw_csv, raw_data_dest)
+  ## later for reading
+  # raw_csv<-read.csv(raw_csv_dest)
+  df<- raw_csv%>%
+    mutate(site = 'USGS_02203970')
+
+  # if NO3_Conc has "<val", threshold and use val/2 
+  df$NO3_Conc <- ifelse(grepl("<", df$NO3_Conc),
+                        as.numeric(gsub("<", "", df$NO3_Conc))/2,
+                        as.numeric(df$NO3_Conc))
+
+  
+  d <- ms_read_raw_csv(preprocessed_tibble = df,
+                       datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                       datetime_tz = 'America/New_York',
+                       site_code_col = 'site',
+                       data_cols =  c(
+                         "pH"  =  "pH",
+                         "ANC_Conc" = "ANC",
+                         "Ca_Conc" = "Ca",
+                         "Mg_Conc" = "Mg",
+                         "Na_Conc" = "Na",
+                         "K_Conc" = "K",
+                         "SO4_Conc" = "SO4",
+                         "NO3_Conc" = "NO3",
+                         "Cl_Conc" = "Cl",
+                         "Si_Conc" = "Si",
+                         "DOC_Conc" = "DOC"
+                         ),
+                       set_to_NA = ".",
+                       data_col_pattern = '#V#',
+                       is_sensor = FALSE)
+  
+  d <- ms_cast_and_reflag(d,
+                          varflag_col_pattern = NA)
+    
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+  d <- synchronize_timestep(d)
+  write_ms_file(d = d,
+                network = network,
+                domain = domain,
+                prodname_ms = prodname_ms,
+                site_code = unique(d$site_code),
+                level = 'munged',
+                shapefile = FALSE)
+  }
 
 #derive kernels ####
 
@@ -160,10 +245,10 @@ process_1_VERSIONLESS001 <-function(set_details, network, domain) {
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
   
-  # combine_products(network = network,
-  #                  domain = domain,
-  #                  prodname_ms = prodname_ms,
-  #                  input_prodname_ms = c('discharge__VERSIONLESS002',
-  #                                        'discharge__VERSIONLESS009'))
+  combine_products(network = network,
+                   domain = domain,
+                   prodname_ms = prodname_ms,
+                   input_prodname_ms = c('discharge__VERSIONLESS002',
+                                         'discharge__VERSIONLESS009'))
   return()
 }
