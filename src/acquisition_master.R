@@ -266,7 +266,7 @@ conf <- jsonlite::fromJSON('config.json',
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Hector','bini','Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -355,14 +355,14 @@ for(dmnrow in 1:nrow(network_domain)){
                        n = network,
                        d = domain))
 
-    # this should only run when you have your products.csv
-    # and processing kernels prod information matching
     update_product_statuses(network = network,
                            domain = domain)
 
     get_all_local_helpers(network = network,
                           domain = domain)
-
+    # this should only run when you have your products.csv
+    # and processing kernels prod information matching
+    
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
