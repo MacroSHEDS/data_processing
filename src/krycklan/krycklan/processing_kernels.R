@@ -210,14 +210,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_conversions(d,
                         convert_units_from = c('NO2_N' = 'ug/l',
-                                               'NO3_NO2_N' = 'ug/l',
+                                               # 'NO3_NO2_N' = 'ug/l',
                                                'NH4_N' = 'ug/l',
                                                'NO3_N' = 'ug/l',
-                                               'SO4' = 'ug/l',
-                                               'DIN' = 'ug/l',
+                                               # 'SO4' = 'ug/l',
+                                               # 'DIN' = 'ug/l',
                                                'PO4_P' = 'ug/l',
                                                'SO4_S' = 'ug/l',
-                                               'TP' = 'ug/l',
+                                               # 'TP' = 'ug/l',
                                                'Cu' = 'ug/l',
                                                'Cs' = 'ug/l',
                                                'Mn' = 'ug/l',
@@ -290,19 +290,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                                'Eu' = 'ug/l',
                                                'Rh' = 'ug/l',
                                                'W' = 'ug/l',
-                                               'Re' = 'ug/l',
-                                               'CH4_C' = 'ug/l',
-                                               'DIC' = 'ug/l',
-                                               'CO2_C' = 'ug/l'),
+                                               'Re' = 'ug/l'),
+                                               # 'CH4_C' = 'ug/l',
+                                               # 'DIC' = 'ug/l',
+                                               # 'CO2_C' = 'ug/l'),
                         convert_units_to = c('NO2_N' = 'mg/l',
-                                             'NO3_NO2_N' = 'mg/l',
+                                             # 'NO3_NO2_N' = 'mg/l',
                                              'NH4_N' = 'mg/l',
                                              'NO3_N' = 'mg/l',
-                                             'SO4' = 'mg/l',
-                                             'DIN' = 'mg/l',
+                                             # 'SO4' = 'mg/l',
+                                             # 'DIN' = 'mg/l',
                                              'PO4_P' = 'mg/l',
                                              'SO4_S' = 'mg/l',
-                                             'TP' = 'mg/l',
+                                             # 'TP' = 'mg/l',
                                              'Cu' = 'mg/l',
                                              'Cs' = 'mg/l',
                                              'Mn' = 'mg/l',
@@ -375,10 +375,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                              'Eu' = 'mg/l',
                                              'Rh' = 'mg/l',
                                              'W' = 'mg/l',
-                                             'Re' = 'mg/l',
-                                             'CH4_C' = 'mg/l',
-                                             'DIC' = 'mg/l',
-                                             'CO2_C' = 'mg/l'),
+                                             'Re' = 'mg/l'),
+                                             # 'CH4_C' = 'mg/l',
+                                             # 'DIC' = 'mg/l',
+                                             # 'CO2_C' = 'mg/l'),
                         keep_molecular = 'SO4')
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
@@ -971,7 +971,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     d <- read_delim(rawfile, delim = ';', col_types = cols(.default = "c")) %>%
         mutate(site = 'Svartberget') %>%
-        rename(precip = 2)
+        rename(precip = 2) %>%
+        filter(! is.na(Datum))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Datum' = '%Y-%m-%d'),
@@ -979,6 +980,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                          site_code_col = 'site',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
+                         set_to_NA = c('-', 'mm', 'Dygntotal', 'NaN'),
                          is_sensor = TRUE)
 
     d <- ms_cast_and_reflag(d,
