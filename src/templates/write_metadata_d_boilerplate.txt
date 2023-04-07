@@ -8,11 +8,10 @@ on the datetime in parentheses:
 
 {ru}
 
-Using these notes, our code on GitHub, and assuming you have a good bit of R programming experience,
-you will ideally be able to piece together exactly how {p} was generated and regenerate it yourself.
-That said, automated documentation like this is bound to have some errors and missing details until
-we get all the kinks worked out, and in any case assembling all the code below into a usable script
-won't be an easy task. Please contact us at mail@macrosheds.org if you're having trouble
+To rebuild all or part of the MacroSheds dataset yourself, use our code on GitHub (and these notes). If you want to
+rebuild only this product, or if you want to modify the code used to generate this product, you
+will almost certainly have an easier time using these notes. That said, automatic documentation like this may
+have some errors and missing details. Please contact us at mail@macrosheds.org if you're having trouble
 navigating our docs.
 
 Below you will find the "derive kernel" function(s) by which {p} was generated.
