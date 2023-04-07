@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 source('src/webb/network_helpers.R')
 source('src/webb/sleeper/domain_helpers.R')
 install.packages(c('dataRetrieval', 'geoknife', 'sbtools'))
@@ -6,16 +7,22 @@ install.packages('tibble')
 #install.packages('arrow')
 
 
+=======
+source('src/webb/sleepers/domain_helpers.R')
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 #retrieval kernels ####
 network = 'webb'
 domain = 'trout_lake'
 
+<<<<<<< HEAD
 set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS005")
 prodname_ms <- set_details$prodname_ms
 site_code <- set_details$site_code
 component <- set_details$component
 url <- set_details$url
 
+=======
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 #discharge: STATUS=READY
 #. handle_errors
 
@@ -142,6 +149,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
+<<<<<<< HEAD
   
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
@@ -177,6 +185,43 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                     last_mod_dt = last_mod_dt)
   
   return(deets_out)
+=======
+
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_code)
+
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    rawfile <- glue('{rd}/{c}.csv',
+                    rd = raw_data_dest,
+                    c = set_details$component)
+
+    # call our dataRetrieval function
+    q <- retrieve_usgs_sleepers_daily_q(set_details)
+
+    # download it to the raw file locatin
+    write_csv(q, file = rawfile)
+
+    res <- httr::HEAD(set_details$url)
+
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
+
+    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 }
 
 #stream_chemistry: STATUS=READY
@@ -196,6 +241,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
+<<<<<<< HEAD
     print(set_details$url)
     url = "http://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947"
     R.utils::downloadFile(url = url,
@@ -203,6 +249,14 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                           skip = FALSE,
                           overwrite = TRUE,
                           )
+=======
+
+    # call our dataRetrieval function
+    q <- retrieve_usgs_sleepers_daily_q(set_details)
+
+    # download it to the raw file locatin
+    write_csv(q, file = rawfile)
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 
     res <- httr::HEAD(set_details$url)
 
@@ -534,16 +588,29 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
 #discharge: STATUS=READY
 #. handle_errors
+<<<<<<< HEAD
 process_2_ms001 <- function(network, domain, prodname_ms) {
+=======
+process_2_ms001 <- function(network, domain, prodname_ms){
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
+<<<<<<< HEAD
                      input_prodname_ms = c('discharge__VERSIONLESS001',
                                            'discharge__VERSIONLESS002', 
                                            'discharge__VERSIONLESS003',
                                            'discharge__VERSIONLESS004'))
     return()
+=======
+                     input_prodname_ms = c('stream_chemistry__VERSIONLESS003',
+                                           'stream_chemistry__VERSIONLESS004',
+                                           'stream_chemistry__VERSIONLESS005',
+                                           'stream_chemistry__VERSIONLESS006',
+                                           'stream_chemistry__VERSIONLESS007'))
+
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 }
 
 #stream_flux_inst: STATUS=READY
@@ -553,4 +620,7 @@ process_2_ms002 <- derive_stream_flux
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms003 <- stream_gauge_from_site_data
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6

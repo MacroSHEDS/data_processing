@@ -1,0 +1,20 @@
+keyword	keywordThesaurus
+biogeochemistry	LTER Controlled Vocabulary
+watershed	LTER Controlled Vocabulary
+hydrology	LTER Controlled Vocabulary
+basins	LTER Controlled Vocabulary
+concentration	LTER Controlled Vocabulary
+flux	LTER Controlled Vocabulary
+long term	LTER Controlled Vocabulary
+long term monitoring	LTER Controlled Vocabulary
+catchment science
+land cover	LTER Controlled Vocabulary
+land use	LTER Controlled Vocabulary
+spatial properties	LTER Controlled Vocabulary
+atmospheric properties	LTER Controlled Vocabulary
+data synthesis
+lter
+czo
+usfs
+usgs
+doe

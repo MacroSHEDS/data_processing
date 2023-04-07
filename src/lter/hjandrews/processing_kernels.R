@@ -393,13 +393,15 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                              'UTKN', 'TKN', 'K', 'DOC'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
+                         set_to_NA = '',
                          alt_datacol_pattern = '#V#_OUTPUT',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
     d <- ms_cast_and_reflag(d,
+                            variable_flags_bdl = '*',
                             variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
                                                      'DQ', 'DC'),
                             variable_flags_clean = c('A', 'E'),
                             summary_flags_to_drop = list(
@@ -452,8 +454,9 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                          summary_flagcols = c('TYPE'))
 
     d <- ms_cast_and_reflag(d,
+                            variable_flags_bdl = '*',
                             variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('*', 'Q', 'D*', 'C', 'D', 'DE',
+                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
                                                      'DQ', 'DC'),
                             variable_flags_clean =
                                 c('A', 'E'),
@@ -609,9 +612,6 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code,
         ungroup() %>%
         mutate(datetime = ymd(paste(year, month, day, sep = '-'))) %>%
         select(site_code, datetime, var, val, ms_status)
-
-
-
 
     #Join 2 datasets by removing daily averages when sensor data is available
     # start_dates_daily <- d %>%
