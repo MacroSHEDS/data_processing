@@ -793,15 +793,6 @@ ms_read_raw_csv <- function(filepath,
         stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
     }
 
-    # NOTE: if we want to be able to match multiple input cols to a single
-    # macrosheds var, we need to accept dupes in the data_cols values.
-    dc_dupes <- duplicated(unname(data_cols))
-    if(any(dc_dupes)){
-        stop(paste('duplicate value(s) in data_cols:',
-                   paste(unname(data_cols)[dc_dupes],
-                         collapse = ', ')))
-    }
-
     #@spencer: ifelse(dn_dupes == ''... would have evaluated only the first element. this should take care of it
     datacol_names <- names(data_cols)
     if(! is.null(datacol_names)){
@@ -955,6 +946,24 @@ ms_read_raw_csv <- function(filepath,
 
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
 
+
+    # NOTE: if we want to be able to match multiple input cols to a single
+    # macrosheds var, we need to accept dupes in the data_cols values.
+    # merge any input columns with same end-variable, where the vlaues from whichever
+    # input column is provided first will be used when any overlapping observations
+    dc_dupes <- duplicated(unname(data_cols))
+    if(any(dc_dupes)){
+      warning(paste('duplicate value(s) in data_cols:',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
+      ## warning('combinging duplicates, giving first entry column priority')
+      d <- combine_multiple_input_cols(d, data_cols = data_cols)
+
+      # prune base column tracking objects
+      var_flagcols <- var_flagcols[names(var_flagcols) %in% colnames(d)]
+      data_cols <- data_cols[names(data_cols) %in% colnames(d)]
+    }
+
     # Remove any variable flags created by pattern but do not exist in data
     # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
     # classes_all <- classes_all[names(classes_all) %in% names(d)]
@@ -979,6 +988,7 @@ ms_read_raw_csv <- function(filepath,
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
     all_datacols <- c(data_cols, alt_datacols)
+    all_datacols <- all_datacols[!is.na(all_datacols)]
 
     for(i in seq_along(convert_to_BDL_flag)){
 
@@ -992,7 +1002,7 @@ ms_read_raw_csv <- function(filepath,
 
         for(j in seq_along(all_datacols)){
 
-            d_varcode <- unname(all_datacols)[j]
+            d_varcode <- unname(all_datacols)[j][[1]]
             d_colname <- names(all_datacols)[j]
             d_clm <- d[[d_colname]]
 
@@ -1031,7 +1041,6 @@ ms_read_raw_csv <- function(filepath,
             } else {
                 d[bdl_inds, d_colname] <- NA_character_
             }
-
 
             # look up DL googlsheet, and see if this site has DL info
             # for this variable
@@ -1093,13 +1102,6 @@ ms_read_raw_csv <- function(filepath,
                 logger = logger_module)
     }
 
-    # merge any input columns with same end-variable, where the vlaues from whichever
-    # input column is provided first will be used when any overlapping observations
-    if(any(dc_dupes)){
-        warning(paste('duplicate value(s) in data_cols:',
-                   paste(unname(data_cols)[dc_dupes],
-                         collapse = ', ')))
-    }
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
