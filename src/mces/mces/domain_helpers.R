@@ -117,10 +117,10 @@ mces_variable_info <- list(
       "Volatile Suspended Solids"              = c('mg/L', 'mg/L', 'VSS'),
       "Total Phosphorus, Filtered"             = c('mg/l', 'mg/l', 'TDP'),
       "Total Organic Carbon, Filtered"         = c('mg/L', 'mg/L', 'TOC'),
-      ## "Total Organic Carbon, Unfiltered"       = c('mg/L', 'mg/L', 'TOC'),
+      "Total Organic Carbon, Unfiltered"       = c('mg/L', 'mg/L', 'TOC'),
       ## "Turbidity (FNU)"                        = c('FNU', 'FNU', 'turb'),
       "Ortho Phosphate as P, Filtered"         = c('mg/l', 'mg/l', 'PO4_P'),
-      ## "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'PO4_P'), # NOTE: ortho vs multiphosphate
+      "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'PO4_P'), # NOTE: ortho vs multiphosphate
       ## "Chlorophyll-a, % Pheo-Corrected"        = c('', 'mg/l', ''),
       ## "Chlorophyll-a/Pheophytin-a Abs. R"      = c('', 'mg/l', ''),
       ## "Chlorophyll-a Trichromatic Uncorrected" = c('', 'mg/L', 'Chla'),
@@ -134,7 +134,7 @@ mces_variable_info <- list(
       "Total Phosphorus, Particulate"          = c('mg/L', 'mg/L', 'TPP'),
       ## "Total Phosphorus, Filtered, Low L"      = c('mg/L', 'mg/L', 'TDP'),
       "Ammonia Nitrogen, Filtered"             = c('mg/L', 'mg/L', 'NH3_N'),
-      ## "Ammonia Nitrogen, Unfiltered"           = c('mg/L', 'mg/L', 'NH3_N'),
+      "Ammonia Nitrogen, Unfiltered"           = c('mg/L', 'mg/L', 'NH3_N'),
       "Suspended Solids"                       = c('mg/L', 'mg/L', 'TSS'),
       "Total Dissolved Solids"                 = c('mg/L', 'mg/L', 'TDS'),
       "Total Nitrate/Nitrite N, Unfiltered"    = c('mg/L', 'mg/L', 'NO3_NO2_N'),
@@ -153,25 +153,25 @@ mces_variable_info <- list(
       ## "COD, Unfiltered"                        = c('', '', ''),# TODO: add to variables
       ## "Hardness, Unfiltered"                   = c('', 'mg/L', 'CO3'), # NOTE: hardness just [CO3], carbonate# TODO: add to variables
       "Cadmium, Filtered"                      = c('mg/L', 'mg/L', 'Cd'),
-      ## "Cadmium, Unfiltered"                    = c('mg/L', 'mg/L', 'Cd'),
+      "Cadmium, Unfiltered"                    = c('mg/L', 'mg/L', 'Cd'),
       "Copper, Filtered"                       = c('mg/L', 'mg/L', 'Cu'),
-      ## "Copper, Unfiltered"                     = c('mg/L', 'mg/L', 'Cu'),
+      "Copper, Unfiltered"                     = c('mg/L', 'mg/L', 'Cu'),
       "Chromium, Filtered"                     = c('mg/l', 'mg/L', 'Cr'),
-      ## "Chromium, Unfiltered"                   = c('mg/l', 'mg/L', 'Cr'),
+      "Chromium, Unfiltered"                   = c('mg/l', 'mg/L', 'Cr'),
       "Calcium, Unfiltered"                    = c('mg/L', 'mg/L', 'Ca'),
-      ## "Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
+      "Nickel, Unfiltered"                     = c('mg/L', 'mg/L', 'Ni'),
       "Lead, Unfiltered"                       = c('mg/L', 'mg/L', 'Pb'),
       "Potassium, Filtered"                    = c('mg/L', 'mg/L', 'K'),
       "Silica, Filtered"                       = c('mg/l', 'mg/L', 'Si'),
       "Sodium, Filtered"                       = c('mg/L', 'mg/L', 'Na'),
       "Magnesium, Filtered"                    = c('mg/l', 'mg/L', 'Mg'),
-      ## "Magnesium, Unfiltered"                  = c('mg/l', 'mg/L', 'Mg'),
+      "Magnesium, Unfiltered"                  = c('mg/l', 'mg/L', 'Mg'),
       "Mercury, Filtered"                      = c('mg/l', 'mg/L', 'Hg'),
-      ## "Mercury, Unfiltered"                    = c('mg/L', 'mg/L', 'Hg'),
+      "Mercury, Unfiltered"                    = c('mg/L', 'mg/L', 'Hg'),
       "Chloride, Filtered"                     = c('mg/l', 'mg/L', 'Cl'),
-      ## "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
-      "Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn')
-      ## "Zinc, Unfiltered"                       = c('mg/L', 'mg/L', 'Zn'),
+      "Chloride, Unfiltered"                   = c('mg/L', 'mg/L', 'Cl'),
+      "Zinc, Filtered"                         = c('mg/L', 'mg/L', 'Zn'),
+      "Zinc, Unfiltered"                       = c('mg/L', 'mg/L', 'Zn')
       ## "COD, Filtered"                          = c('', '', ''), # TODO: add variable, chemical oxygen demand
       ## "CBOD 5-day, Unfiltered"                 = c('', '', ''),# TODO: add variable, chem + biological oxygen demand
       ## "BOD 5-day, Unfiltered"                  = c('', '', ''),# TODO: add variable, biological oxygen demand
@@ -241,6 +241,7 @@ VR2_0 = "VR0020"
 # }
 
 combine_multiple_input_cols <- function(d, data_cols) {
+
     datacol_names <- names(data_cols)
     if(! is.null(datacol_names)){
 
@@ -253,10 +254,49 @@ combine_multiple_input_cols <- function(d, data_cols) {
         }
     }
 
-    dc_dupes <- duplicated(unname(data_cols))
     if(any(dc_dupes)){
         warning(paste('duplicate value(s) in data_cols, merging into one column, with first input overriding where observations overlap',
                    paste(unname(data_cols)[dc_dupes],
                          collapse = ', ')))
     }
+
+    dc_dupes_index <- which(duplicated(data_cols) | duplicated(data_cols, fromLast = TRUE))
+
+    for(index in dc_dupes_index) {
+      pair_cols <- match(data_cols, data_cols[index])
+      ## pair_colnames <- paste0('val_', names(data_cols[!is.na(pair_cols)]))
+      pair_colnames <- names(data_cols[!is.na(pair_cols)])
+      ms_var <- unique(unname(data_cols[!is.na(pair_cols)]))[[1]]
+      warning('merging multiple input columns:', pair_colnames)
+
+      if(!all(pair_colnames %in% colnames(d))) {
+        next
+      }
+
+      covector <- c(rep(NA, nrow(d)))
+      for(paircol in pair_colnames) {
+        d_pair <- d %>%
+          pull(paircol) %>%
+          as.vector()
+
+        covector = coalesce(d_pair, covector)
+      }
+
+      for(paircol in pair_colnames) {
+        d[,which(colnames(d) == paircol)] <- covector
+      }
+
+      prefix_remove <- gsub("val_", "", pair_colnames[-1])
+
+      # keep only first pair colname
+      try(
+        d <- d %>%
+          select(
+            -!!pair_colnames[-1],
+            -contains(prefix_remove)
+          )
+      )
+    }
+
+    return(d)
 }
