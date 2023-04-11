@@ -957,7 +957,7 @@ ms_read_raw_csv <- function(filepath,
                    paste(unname(data_cols)[dc_dupes],
                          collapse = ', ')))
       ## warning('combinging duplicates, giving first entry column priority')
-      d <- combine_multiple_input_cols(d, data_cols = data_cols)
+      d <- combine_multiple_input_cols(d, data_cols = data_cols, var_flagcols = var_flagcols)
 
       # prune base column tracking objects
       var_flagcols <- var_flagcols[names(var_flagcols) %in% colnames(d)]
@@ -16375,4 +16375,93 @@ reformat_camels_for_ms <- function(vsn){
     }
 
     write_feather(all_site_hydro, glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
+}
+
+# helper which goes inside of ms_read_csv, this function allows for the users to assign multiple input columns to
+# a single output column (e.g. filtered and unfiltered data colums for Zinc)
+combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
+    # takes the tibble and data_cols arguments from ms_read_csv
+
+    # find index of all duplicate columns in data_cols input
+    dc_dupes_index <- which(duplicated(data_cols) | duplicated(data_cols, fromLast = TRUE))
+
+    # looping thru these indices
+    for(index in dc_dupes_index) {
+        # find the 'paired' columns - which indices are specifically duplicates of each other
+        # Data
+        pair_cols <- match(data_cols, data_cols[index])
+        pair_colnames <- names(data_cols[!is.na(pair_cols)])
+        # Flag
+        if(!all(is.na(var_flagcols))) {
+            pair_cols_flg <- match(var_flagcols, var_flagcols[index])
+            pair_colnames_flg <- names(var_flagcols[!is.na(pair_cols)])
+        }
+
+        ms_var <- unique(unname(data_cols[!is.na(pair_cols)]))[[1]]
+        warning('merging multiple input columns:', pair_colnames, '\n',
+                'into ms var:', ms_var)
+
+        # if input column names aren't in dataframe, move on
+        if(!all(pair_colnames %in% colnames(d))) {
+            next
+        }
+
+        # create a dummy vector
+        covector <- c(rep(NA, nrow(d)))
+        # for each paired input data column
+        for(paircol in pair_colnames) {
+            # pull just this column data as a vector
+            d_pair <- d %>%
+                pull(paircol) %>%
+                as.vector()
+            # coalesce will merge them, and where both vectors have data
+            # at the saeme index, data from the the first vector argument
+            # will be used
+            # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+            covector = coalesce(d_pair, covector)
+
+        }
+
+        if(!all(is.na(var_flagcols))) {
+            # create a dummy vector
+            covector_flg <- c(rep(NA, nrow(d)))
+
+            # for each paired input data column
+            for(paircol_flg in pair_colnames_flg) {
+                # pull just this column data as a vector
+                d_pair_flg <- d %>%
+                    pull(paircol_flg) %>%
+                    as.vector()
+                # coalesce will merge them, and where both vectors have data
+                # at the saeme index, data from the the first vector argument
+                # will be used
+                # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+                covector_flg = coalesce(d_pair_flg, covector_flg)
+
+            }
+
+            # assign all variable flag data to merged data
+            for(paircol_flg in pair_colnames_flg) {
+                d[,which(colnames(d) == paircol_flg)] <- covector_flg
+            }
+        }
+
+        # assign all variable data to merged data
+        for(paircol in pair_colnames) {
+            d[,which(colnames(d) == paircol)] <- covector
+        }
+
+
+        # keep only first pair data and flag colnames
+        prefix_remove <- gsub("val_", "", pair_colnames[-1])
+        try(
+            d <- d %>%
+            select(
+                -!!pair_colnames[-1],
+                -contains(prefix_remove)
+            )
+        )
+    }
+
+    return(d)
 }
