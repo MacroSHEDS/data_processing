@@ -253,7 +253,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
      unchop(everything())
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
-    d.m <- ms_read_raw_csv(preprocessed_tibble = d,
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = "%m/%d/%Y %H:%M"),
                          datetime_tz = 'US/Central',
                          site_code_col = 'site_code',
@@ -284,8 +284,12 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ms_varname <- entry[[1]][3]
       old_units <- entry[[1]][1]
       ms_units <- entry[[1]][2]
-      mces_data_conversions_from[ms_varname] = old_units
-      mces_data_conversions_to[ms_varname] = ms_units
+      if(ms_varname %in% names(mces_data_conversions_from)) {
+        next
+      } else {
+        mces_data_conversions_from[ms_varname] = old_units
+        mces_data_conversions_to[ms_varname] = ms_units
+      }
     }
 
     d <- ms_conversions(d,
