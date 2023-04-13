@@ -68,10 +68,11 @@ retrieve_sleepers_product <- function(network,
 
 }
 
-retrieve_usgs_sleeper_daily_q <- function(set_details) {
+retrieve_usgs_sleepers_daily_q <- function(set_details) {
   if(grepl("w5", set_details$component) == TRUE) {
     q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
-                                   parameterCd = "00060")
+                            parameterCd = "00060")
+
   } else if(grepl("w3", set_details$component) == TRUE) {
     q <- dataRetrieval::readNWISdv(siteNumbers = "01135150",
                                    parameterCd = "00060")
@@ -79,3 +80,39 @@ retrieve_usgs_sleeper_daily_q <- function(set_details) {
 
   return(q)
 }
+
+sleepers_stream_chem_var_info <- list(
+    "K.ueq.L"        = c('ueq/L', 'mg/L', 'K'),
+    "Mg.ueq.L"       = c('ueq/L', 'mg/L', 'Mg'),
+    "Na.ueq.L"       = c('ueq/L', 'mg/L', 'Na'),
+    "Ca.ueq.L"       = c('ueq/L', 'mg/L', 'Ca'),
+    "Cl.ueq.L"       = c('ueq/L', 'mg/L', 'Cl'),
+    "Si.mol.L"      = c('umol/L', 'mg/L', 'Si'),
+    "Fe.ug.L"        = c('ug/L',  'mg/L', 'Fe'),
+    "Li.ug.L"        = c('ug/L',  'mg/L', 'Li'),
+    "Mn.ug.L"        = c('ug/L',  'mg/L', 'Mn'),
+    "Al.ug.L"        = c('ug/L',  'mg/L', 'Al'),
+    "Ba.ug.L"        = c('ug/L',  'mg/L', 'Ba'),
+    "Sr.ug.L"        = c('ug/L',  'mg/L', 'Sr'),
+    "NO3.ueq.L"      = c('ueq/L', 'mg/L', 'NO3'),
+    "SO4.ueq.L"      = c('ueq/L', 'mg/L', 'SO4'),
+    "NH4.ueq.L"      = c('ueq/L', 'mg/L', 'NH4'),
+    "PO4.mg.P.L"    = c('mg/L', 'mg/L', 'PO4_P'),
+    "DOC.mg.L"      = c('mg/L', 'mg/L', 'DOC'),
+    "TDN.mg.L"      = c('mg/L', 'mg/L', 'TDN'),
+    "TDP.mg.L"      = c('mg/L', 'mg/L', 'TDP'),
+    "Temp.C"        = c('degrees C', 'degrees C', 'temp'),
+    "pH"            = c('unitless', 'unitless', 'pH'),
+    "SpCond.uS.cm"   = c('uS/cm', 'uS/cm', 'spCond'),
+    "d13C"          = c('ppt', 'ppt', 'd13C'),
+    "d18O.NO3"      = c('ppt', 'ppt', 'NO3_d18O'),
+    "d2H"           = c('ppt', 'ppt', 'deuterium'),
+    "d15N.NO3"      = c('ppt', 'ppt', 'NO3_d15N'),
+    "d18O"          = c('ppt', 'ppt', 'd18O'),
+    "87Sr.86Sr"     = c('unitless', 'unitless', 'd87Sr_d86Sr'),
+    "ANC.eq.L"      = c('eq/l', 'eq/l', ''),
+    "UV254.cm.1"    = c('AU/cm', 'AU/cm', 'abs254'),
+    "SUVA.L.mg.m.1" = c('L/(mg*m)', 'L/(mg*m)', 'SUVA'),
+    "Alo.ug.L"       = c('ug/L', 'mg/L', 'Al_om'),
+    "Alm.ug.L"       = c('ug/L', 'mg/L', 'Al_m')
+)

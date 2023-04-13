@@ -738,8 +738,7 @@ ms_read_raw_csv <- function(filepath,
     #   single value of G or I and is applied to all variables in product
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
-    #   from the original file that do not contain data, flag/qaqc information,
-    #   datetime, or site_code. All-NA data columns and their corresponding
+    #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
     #   flag columns will also be omitted, as will rows where all data values
     #   are NA. Rows with NA in the datetime or site_code column are dropped.
     #   data columns are given type double. all other
@@ -1032,6 +1031,7 @@ ms_read_raw_csv <- function(filepath,
             d_varcode <- unname(all_datacols)[j]
             d_colname <- names(all_datacols)[j]
             d_clm <- d[[d_colname]]
+
             if(is.null(d_clm)) next #column doesn't exist
 
             if(has_wildcard){
@@ -1042,7 +1042,7 @@ ms_read_raw_csv <- function(filepath,
 
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
+            if(!(length(var_flagcols) == 1 && is.na(var_flagcols))){
                 candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
                 var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             } else {
@@ -1289,6 +1289,17 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    ## # final check that if there is only one data column and a supplied summary flag column
+    ## # that the summary flag column has correct name
+    ## if(length(data_cols) == 1 && !is.na(summary_flagcols)){
+    ##   datcol = paste0(data_cols[[1]], "__\\|dat")
+    ##   sumcol = paste0(data_cols[[1]], "__|flg")
+    ##   full.datcol = names(d)[grepl(datcol, names(d))]
+    ##   full.sumcol = stringr::str_replace(full.datcol, '__\\|dat', '__|flg')
+
+    ##   names(d)[names(d) == summary_flagcols] <- full.sumcol
+    ## }
+
     return(d)
 }
 
@@ -1411,7 +1422,7 @@ dt_format_to_regex <- function(fmt, optional){
                             h = '([a-zA-Z]+)?',
                             m = '([0-9]{1,2})?',
                             e = '([0-9]{1,2})?',
-                            d = '([0-9]{2})?',
+                            d = '([0-9]{1,2})?',
                             j = '([0-9]{3})?',
                             A = '([a-zA-Z]+)?',
                             a = '([a-zA-Z]+)?',
@@ -5129,6 +5140,9 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
     #   per liter or equivalents per liter. It does not assume input units are
     #   g/L, but rather any metric mass unit per liter. Specify the input units
     #   with input_unit.
+    if(input_unit == output_unit) {
+      return(x)
+    }
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -5195,6 +5209,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(old_fraction) == 2) {
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
+    } else {
+        old_bottom <- NULL
     }
 
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
@@ -5202,6 +5218,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(new_fraction == 2)) {
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
+    } else {
+        new_bottom <- NULL
     }
 
     old_top_unit <- tolower(str_split_fixed(old_top, "", 2)[1])
@@ -5212,25 +5230,40 @@ convert_unit <- function(x, input_unit, output_unit){
         old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2])
     }
 
-    old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    if(length(old_fraction) == 2) {
+      old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    }
 
-    if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
+    if(is.na(old_fraction[2])) {
+        old_bottom_conver <- NULL
+    } else if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
         old_bottom_conver <- 1
     } else {
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
 
-    new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
-
-    if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
-        new_top_conver <- 1
-    } else {
-        new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
-    }
+  # debug
+    tryCatch(
+      expr = {
+          new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
+          if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
+              new_top_conver <- 1
+          } else {
+              new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
+          }
+      },
+      error = function(e) {
+        print(input_unit)
+        print(output_unit)
+        print(new_top_unit)
+      }
+    )
+  # end debug
 
     new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
-
-    if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
+    if(is.na(new_fraction[2])) {
+        new_bottom_conver <- NULL
+    } else if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
         new_bottom_conver <- 1
     } else {
         new_bottom_conver <- as.numeric(filter(units, prefix == new_bottom_unit)[,2])
@@ -5239,8 +5272,14 @@ convert_unit <- function(x, input_unit, output_unit){
     new_val <- x*old_top_conver
     new_val <- new_val/new_top_conver
 
-    new_val <- new_val/old_bottom_conver
-    new_val <- new_val*new_bottom_conver
+    # some vars do not have a bottom unit
+    if(!is.null(old_bottom_conver)) {
+      new_val <- new_val/old_bottom_conver
+    }
+
+    if(!is.null(new_bottom_conver)) {
+      new_val <- new_val*new_bottom_conver
+    }
 
     return(new_val)
 }
@@ -8509,6 +8548,8 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
+            # NOTE: here I believe that this function is creating overlaps in detlim
+            # and also seems to not catch all overlap completely (WS, 2023-01-30, see github issue)
             dlsub <- dlsub %>%
                 mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
                        end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
@@ -8545,7 +8586,6 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
             }
 
         } else { #CASE 1 with no dates specified
-
             if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
             out <- d %>%
@@ -13036,7 +13076,8 @@ get_source_urls <- function(result_obj, processing_func){
     #find out if the processing func is an alias for download_from_googledrive()
     gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
     processing_func_text <- deparse(processing_func)
-    uses_gdrive_func <- grepl(gd_search_string, processing_func_text[3])
+    # modify to find the string anywhere in the func
+    uses_gdrive_func <- any(grepl(gd_search_string, processing_func_text))
     is_passive_kernel <- any(grepl(pattern = 'Nothing to do',
                                    x = processing_func_text,
                                    ignore.case = TRUE)) &&
@@ -14529,24 +14570,39 @@ download_from_googledrive <- function(set_details, network, domain){
     #retrieve_versionless_product()
     download_from_googledrive_function_indicator <- TRUE
 
+    sitechar = 'sitecode_NA'
+    if('site_code' %in% names(set_details)) {
+      if(set_details$site_code == 'sitename_NA') {
+        sitechar <- set_details$site_code
+      }
+    }
+
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitecode_NA',
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = set_details$prodname_ms)
+                          p = set_details$prodname_ms,
+                          s = sitechar)
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
 
     network_id <- gd_files %>%
-        filter(name == !!network)
+      filter(name == !!network)
 
-    network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+    # choose the upper folder if domain == network
+    if(domain == network) {
+      files_options <- rbind(googledrive::drive_ls(googledrive::as_id(network_id[1,]$id)),
+                             googledrive::drive_ls(googledrive::as_id(network_id[2,]$id)))
+      network_files <- files_options[grepl(domain, files_options$name),]
+      domain_files <- files_options[grepl('raw', files_options$name),]
+    } else {
+      network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+      domain_id <- network_files %>%
+          filter(name == !!domain)
 
-    domain_id <- network_files %>%
-        filter(name == !!domain)
-
-    domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+      domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+    }
 
     raw_files <- domain_files %>%
         filter(name == 'raw')
@@ -15826,6 +15882,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
+        # ignore any entries where DL == "NA" or is.na()
+      filter(detection_limit_original != "NA",
+             !is.na(detection_limit_original)) %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
                sigfigs = count_sigfigs(detection_limit_original)) %>%
                # start_date = dmy(start_date),
@@ -15890,6 +15949,8 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
+        # filter for NAs in  dl converted (abs254_cm)
+        filter(!is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
