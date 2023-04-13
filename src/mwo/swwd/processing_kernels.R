@@ -298,26 +298,27 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = '',
-                         var_flagcol_pattern = '#V#_varflag'
+                         var_flagcol_pattern = '#V#_varflag',
+                         convert_to_BDL_flag = '<#*#'
                          )
 
     d <- ms_cast_and_reflag(d,
                             # will turn the *ms_status* column to 1 (e.g. flagged)
                             variable_flags_dirty   = c('~'),
                             # will turn the *ms_status* column to 2 (e.g. below detection limit)
-                            variable_flags_bdl   = c('<'),
+                            variable_flags_bdl   = c('BDL'),
                             )
     # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(ms_status == 2 ~ val/2, TRUE ~ val))
+    ## d <- d %>%
+    ##   mutate(val = case_when(ms_status == 2 ~ val/2, TRUE ~ val))
+    ## d <- d %>%
+    ##   mutate(ms_status = case_when(ms_status == 2 ~ 1, TRUE ~ ms_status))
 
-    d <- d %>%
-      mutate(ms_status = case_when(ms_status == 2 ~ 1, TRUE ~ ms_status))
 
     # apply uncertainty
     # NOTE; check_range breaks if multiple variable entries overlapping
     # NOTE; fix this, then get_hdetlim should also work normally
-    ## d <- ms_check_range(d)
+    d <- ms_check_range(d)
     errors(d$val) <- get_hdetlim_or_uncert(d,
                                            detlims = domain_detection_limits,
                                            prodname_ms = prodname_ms,
