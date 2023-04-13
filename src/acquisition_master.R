@@ -142,7 +142,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/data_processing'), silent=FALSE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-# dmnrow <- which(network_domain$domain == 'suef')
+dmnrow <- which(network_domain$domain == 'loch_vale')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -359,7 +359,7 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    stop here and go to processing_kernels.R to continue
+    #stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
