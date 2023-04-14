@@ -1,0 +1,3 @@
+"attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
+"sample_regimen_code"	"Two capital letters designating the sample regimen of the corresponding variable. These letters appear as the first two characters in the prefix of all time-series variable codes within MacroSheds data files. The prefix is separated from the variable code by an underscore."	"character"				
+"definition"	"The meaning of each two-letter combination. May be used for filtering."	"character"				
