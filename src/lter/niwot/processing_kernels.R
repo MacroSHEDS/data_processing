@@ -994,7 +994,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS'),
-                         convert_to_BDL_flag = c('<#*#' 'u', 'trace'),
+                         convert_to_BDL_flag = c('<#*#', 'u', 'trace'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
@@ -1098,7 +1098,7 @@ process_1_160 <- function(network, domain, prodname_ms, site_code,
                                         'POC' = 'POC'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NP', 'DNS', 'QNS', 'EQCL', 'NV'),
-                         convert_to_BDL_flag = c('<#*#' 'trace', 'u'),
+                         convert_to_BDL_flag = c('<#*#', 'trace', 'u'),
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')

@@ -1,3 +1,4 @@
-MacroSheds dataset version 1
+MacroSheds dataset changelog
 
-See the rest of this documentation to get a full picture of the state of things. Changes from the current condition will be reported with version 2.
+2022-11-23: version 1 is described in the MacroSheds data paper (L&O Letterscitation here) and in the accompanying documentation.
+			Future version changes will be logged here.
