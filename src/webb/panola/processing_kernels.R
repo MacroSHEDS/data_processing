@@ -115,17 +115,10 @@ process_1_VERSIONLESS001 <-function(set_details, network, domain) {
   raw_zip <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
                   c = set_details$component)
-  raw_csv_dest <- glue('{rd}/{c}.csv',
-                       rd = raw_data_dest,
-                       c = set_details$component)
-  
+
   # read and save csv from zip folder
   raw_csv <- read.csv(unz(raw_zip, "3_PMRW_Streamflow_WY86-17.csv"), header = TRUE,
            sep = ",") 
-  
-  # write.csv(raw_csv, raw_data_dest)
-  ## later for reading
-  raw_csv<-read.csv(raw_csv_dest)
   
   raw_csv<- raw_csv%>%
     mutate(site = 'USGS_02203970')
@@ -144,9 +137,9 @@ process_1_VERSIONLESS001 <-function(set_details, network, domain) {
                           summary_flags_dirty = list(Quality_Cd = c('3', '4'))
                           )
   
-  # d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
    
-  # d <- synchronize_timestep(d)
+  d <- synchronize_timestep(d)
   
   sites <- unique(d$site_code)
   
@@ -154,7 +147,6 @@ process_1_VERSIONLESS001 <-function(set_details, network, domain) {
     
     d_site <- d %>%
       filter(site_code == !!sites[s])
-    print(d_site)
     write_ms_file(d = d_site,
                   network = network,
                   domain = domain,
@@ -183,21 +175,15 @@ process_1_VERSIONLESS002 <-function(set_details, network, domain) {
   raw_zip <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
                   c = set_details$component)
-  raw_csv_dest <- glue('{rd}/{c}.csv',
-                       rd = raw_data_dest,
-                       c = set_details$component)
-  
+
   # read and save csv from zip folder
   raw_csv <- read.csv(unz(raw_zip, "4_PMRW_StreamWaterQuality_WY86-17.csv"), header = TRUE,
                       sep = ",") 
-  ## TODO Fix this
-  # write.csv(raw_csv, raw_data_dest)
-  ## later for reading
-  # raw_csv<-read.csv(raw_csv_dest)
+
   df<- raw_csv%>%
     mutate(site = 'USGS_02203970')
 
-  # if NO3_Conc has "<val", threshold and use val/2 
+  # if NO3_Conc has "<val", threshold and use val/2
   df$NO3_Conc <- ifelse(grepl("<", df$NO3_Conc),
                         as.numeric(gsub("<", "", df$NO3_Conc))/2,
                         as.numeric(df$NO3_Conc))
@@ -226,17 +212,49 @@ process_1_VERSIONLESS002 <-function(set_details, network, domain) {
   
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
+  d <- ms_conversions(d,
+                      convert_units_from = c('ANC' = 'ueq/L',
+                                             'Ca' = 'ueq/L',
+                                             'Mg' = 'ueq/l',
+                                             'Na' = 'ueq/l',
+                                             'K' = 'ueq/l',
+                                             'SO4' = 'ueq/l',
+                                             'NO3' = 'ueq/l',
+                                             'Cl' = 'ueq/l',
+                                             'Si' = 'umol/l',
+                                             'DOC' = 'umol/l'
+                      ),
+                      convert_units_to = c('ANC' = 'eq/L',
+                                           'Ca' = 'mg/l',
+                                           'Mg' = 'mg/l',
+                                           'Na' = 'mg/l',
+                                           'K' = 'mg/l',
+                                           'SO4' = 'mg/l',
+                                           'NO3' = 'mg/l',
+                                           'Cl' = 'mg/l',
+                                           'Si' = 'mg/l',
+                                           'DOC' = 'mg/l'
+                      ))
     
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- synchronize_timestep(d)
-  write_ms_file(d = d,
-                network = network,
-                domain = domain,
-                prodname_ms = prodname_ms,
-                site_code = unique(d$site_code),
-                level = 'munged',
-                shapefile = FALSE)
+
+  
+  sites <- unique(d$site_code)
+  
+  for(s in 1:length(sites)){
+    
+    d_site <- d %>%
+      filter(site_code == !!sites[s])
+    write_ms_file(d = d_site,
+                  network = network,
+                  domain = domain,
+                  prodname_ms = prodname_ms,
+                  site_code = sites[s],
+                  level = 'munged',
+                  shapefile = FALSE)
+  }
+  
   }
 
 #derive kernels ####

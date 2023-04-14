@@ -275,7 +275,7 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 # uncomment later
-# #initialize and authorize GEE account
+#initialize and authorize GEE account
 # try(rgee::ee_Initialize(user = gee_login,
 #                         drive = TRUE))
                         
@@ -355,13 +355,14 @@ for(dmnrow in 1:nrow(network_domain)){
                        n = network,
                        d = domain))
 
-    update_product_statuses(network = network,
-                           domain = domain)
 
-    get_all_local_helpers(network = network,
-                          domain = domain)
     # this should only run when you have your products.csv
     # and processing kernels prod information matching
+    update_product_statuses(network = network,
+                            domain = domain)
+    
+    get_all_local_helpers(network = network,
+                          domain = domain)
     
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
