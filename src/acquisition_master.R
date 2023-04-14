@@ -58,10 +58,7 @@ suppressPackageStartupMessages({
 vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300,
-        readr.show_progress = FALSE,
-        readr.show_col_types = FALSE)
-        # googledrive_quiet = TRUE)
+        timeout = 300)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -130,7 +127,6 @@ ms_init <- function(use_gpu = FALSE,
         instance_type <- 'dev'
         machine_status <- '1337'
         op_system <- 'linux'
-        # macrosheds_package_dir <- 'r_package'
     }
 
     res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
@@ -141,11 +137,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-<<<<<<< HEAD
     
-=======
-
->>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
     res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -172,7 +164,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-
+    
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -226,7 +218,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-
+  
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -235,7 +227,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-
+    
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -263,7 +255,7 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -273,8 +265,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -288,9 +280,9 @@ googledrive::drive_auth(email = gee_login)
 
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = conf$gee_login,
+try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
-
+                        
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -306,6 +298,7 @@ if(ms_instance$use_ms_error_handling){
 
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
 load_config_datasets(from_where = ms_instance$config_data_storage)
+
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
@@ -331,17 +324,12 @@ dir.create('logs', showWarnings = FALSE)
 # NOTE: this should be moved I believe, and made to work with the raw data
 # dcumentation of the latest iteration...
 # this function will update the citation sheet with the data and url of raw data download
-## scrape_data_download_urls()
+scrape_data_download_urls()
 
 
 
 ## change string in line below to find row index of your desired domain
-<<<<<<< HEAD
-dmnrow <- which(network_domain$domain == 'trout_lake')
-=======
-# dmnrow <- which(network_domain$domain == 'mces')
-## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
->>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
+#dmnrow <- which(network_domain$domain == 'trout_lake')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -350,19 +338,19 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    # held_data = get_data_tracker(network, domain)
+    held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive')
-    # owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive')
+    ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'CUSTOMprecipitation')
-    # owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -378,18 +366,12 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-<<<<<<< HEAD
     ms_retrieve(network = "webb",
                 # prodname_filter = c('stream_chemistry'),
                 domain = "trout_lake")
-=======
-    ms_retrieve(network = network,
-                ## prodname_filter = c('discharge'),
-                domain = domain)
->>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 
     ms_munge(network = network,
-             ## prodname_filter = c('precip_chemistry'),
+             prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -400,15 +382,13 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     if(domain != 'mcmurdo'){
-
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = FALSE,
-                   general_prod_filter = NULL)
+                   get_missing_only = TRUE)
     }
 
     retain_ms_globals(ms_globals)
@@ -423,9 +403,10 @@ logger_module <- 'ms.module'
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
-                           thin_portal_data_to_interval = NA, #'1 day',
+                           thin_portal_data_to_interval = NA,#'1 day',
                            populate_implicit_missing_values = TRUE,
-                           push_new_version_to_figshare_and_edi = FALSE)
+                           generate_csv_for_each_product = FALSE,
+                           push_new_version_to_figshare = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
@@ -436,4 +417,3 @@ if(length(email_err_msgs)){
 loginfo(msg = 'Run complete',
         logger = logger_module)
 
-# before big merge
