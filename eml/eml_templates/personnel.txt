@@ -1,0 +1,13 @@
+"givenName"	"middleInitial"	"surName"	"organizationName"	"electronicMailAddress"	"userId"	"role"	"projectTitle"	"fundingAgency"	"fundingNumber"
+"Michael"		"Vlah"	"Duke University"	"michael.vlah@duke.edu"	"0000-0002-6260-2416"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Michael"		"Vlah"	"Duke University"	"michael.vlah@duke.edu"	"0000-0002-6260-2416"	"contact"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Spencer"		"Rhea"	"Duke University"	"spencer.rhea@duke.edu"	"0000-0002-0919-2657"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Weston"		"Slaughter"	"Duke University"	"weston.slaughter@duke.edu"	"0000-0003-4675-5786"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Weston"		"Slaughter"	"Duke University"	"weston.slaughter@duke.edu"	"0000-0003-4675-5786"	"contact"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Emily"		"Bernhardt"	"Duke University"	"emily.bernhardt@duke.edu"	"0000-0003-3031-621X"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Emily"		"Bernhardt"	"Duke University"	"emily.bernhardt@duke.edu"	"0000-0003-3031-621X"	"PI"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Nick"		"Gubbins"	"Colorado State University"	"nick.gubbins@colostate.edu"	"0000-0003-0688-3767"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Amanda"		"DelVecchia"	"University of North Carolina"	"amanda.delvecchia@unc.edu"	"0000-0003-4252-5991"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Audrey"		"Thellman"	"Duke University"	"audrey.thellman@duke.edu"	"0000-0003-3716-6664"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Matthew"	"R. V."	"Ross"	"Colorado State University"	"mrvr@rams.colostate.edu"	"0000-0001-9105-4255"	"creator"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420
+"Matthew"	"R. V."	"Ross"	"Colorado State University"	"mrvr@rams.colostate.edu"	"0000-0001-9105-4255"	"PI"	"MacroSheds"	"U.S.A. National Science Foundation"	1926420

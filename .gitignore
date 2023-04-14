@@ -27,5 +27,14 @@ data/general/nhd_hr
 output/
 old_dataset_dirs.tar.gz
 old_logs
+eml/data_links
+eml/eml_out
 vault/*
+<<<<<<< HEAD
 .RData
+=======
+.Rdata
+misc_backups
+eml/data_links_truncated
+eml/data_links_old_justforreference/
+>>>>>>> upstream/devel
