@@ -266,7 +266,7 @@ conf <- jsonlite::fromJSON('config.json',
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Hec', 'Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -329,7 +329,7 @@ scrape_data_download_urls()
 
 
 ## change string in line below to find row index of your desired domain
-#dmnrow <- which(network_domain$domain == 'trout_lake')
+# dmnrow <- which(network_domain$domain == 'trout_lake')
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -354,9 +354,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
-
                                                                                     
-
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
@@ -366,12 +364,12 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = "webb",
+    ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
-                domain = "trout_lake")
+                domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -382,7 +380,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              prodname_filter = c('precip_pchem_pflux'),
+              # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     if(domain != 'mcmurdo'){
