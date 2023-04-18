@@ -197,8 +197,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         quality_varflag = QUALIFIER
       ) %>%
       mutate(
-        ## quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
-        val = case_when(sign_varflag == '<' ~ paste0('<', val), TRUE ~ val)
+        quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+        ## val = case_when(sign_varflag == '<' ~ paste0('<', val), TRUE ~ val)
       )
 
     # data provides units - lets make a quick function to pair each variable with
@@ -261,7 +261,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = 'val_#V#',
                          ## summary_flagcols = 'quality_varflag',
                          var_flagcol_pattern = "quality_varflag_#V#",
-                         convert_to_BDL_flag = "<#*#",
+                         ## convert_to_BDL_flag = "<#*#",
                          is_sensor = FALSE,
                          keep_bdl_values = FALSE)
 
@@ -279,6 +279,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     ## create structure specific to **ms_conversions** units_from and units_to args
     mces_data_conversions_from <- c()
     mces_data_conversions_to <- c()
+
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
       ms_varname <- entry[[1]][3]
