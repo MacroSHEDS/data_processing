@@ -174,7 +174,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    res <- try(setwd('/home/ws184/science/macrosheds/data_processing'), silent=TRUE) # BM2
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
         which_machine <- 'BM2'
@@ -277,8 +277,6 @@ gee_login <- case_when(
 googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
-
-
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
@@ -307,8 +305,6 @@ domain_detection_limits <- standardize_detection_limits(dls = domain_detection_l
 unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
 superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
 
-run_checks()
-
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
@@ -326,10 +322,9 @@ dir.create('logs', showWarnings = FALSE)
 # this function will update the citation sheet with the data and url of raw data download
 scrape_data_download_urls()
 
-
-
 ## change string in line below to find row index of your desired domain
-# dmnrow <- which(network_domain$domain == 'trout_lake')
+dmnrow <- which(network_domain$domain == 'panola')
+
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -376,7 +371,9 @@ for(dmnrow in 1:nrow(network_domain)){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        verbose = TRUE))
+                        ## overwrite_wb_sites = "st-paul-park",
+                        verbose = FALSE
+                        ))
     }
 
     ms_derive(network = network,
@@ -386,7 +383,8 @@ for(dmnrow in 1:nrow(network_domain)){
     if(domain != 'mcmurdo'){
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = TRUE)
+                   get_missing_only = TRUE,
+                   general_prod_filter = NULL)
     }
 
     retain_ms_globals(ms_globals)
