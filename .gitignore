@@ -30,6 +30,7 @@ old_logs
 eml/data_links
 eml/eml_out
 vault/*
+.RData
 .Rdata
 VAULT
 .RData
