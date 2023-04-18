@@ -295,7 +295,8 @@ if(ms_instance$use_ms_error_handling){
 }
 
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-load_config_datasets(from_where = ms_instance$config_data_storage)
+## load_config_datasets(from_where = ms_instance$config_data_storage)
+load_config_datasets(from_where = 'remote')
 
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
@@ -323,7 +324,7 @@ dir.create('logs', showWarnings = FALSE)
 scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'panola')
+dmnrow <- which(network_domain$domain == 'trout_lake')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -374,7 +375,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         ## overwrite_wb_sites = "st-paul-park",
                         verbose = FALSE
                         ))
-    }
+    # }
 
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
