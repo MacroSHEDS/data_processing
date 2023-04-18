@@ -277,8 +277,6 @@ gee_login <- case_when(
 googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
-
-
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = gee_login,
                         drive = TRUE))
@@ -325,7 +323,7 @@ dir.create('logs', showWarnings = FALSE)
 scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'sleepers')
+dmnrow <- which(network_domain$domain == 'panola')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -374,7 +372,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         ## overwrite_wb_sites = "st-paul-park",
-                        verbose = TRUE
+                        verbose = FALSE
                         ))
     }
 
