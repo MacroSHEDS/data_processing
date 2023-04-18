@@ -324,8 +324,6 @@ dir.create('logs', showWarnings = FALSE)
 # this function will update the citation sheet with the data and url of raw data download
 scrape_data_download_urls()
 
-
-
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'sleepers')
 
