@@ -49,6 +49,10 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS003 <- download_from_googledrive
+
 ## #munge kernels ####
 #discharge: STATUS=READY
 #. handle_errors
@@ -86,6 +90,11 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
           }
         }
     }
+
+    d_sheets_combined <- d_sheets_combined %>%
+      mutate(site_code = coalesce(unlist(mces_sitename_preferred)[site_code], site_code))
+
+    # flag "low L" vars as BDL and ocnvert to normal?
 
     q_lps = d_sheets_combined %>%
       select(matches('Discharge')) * 28
@@ -158,18 +167,21 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
+    # read in csv and remove non-data header fluff
     d <- read.csv(rawfile)
     d <- d[5:nrow(d),]
     colnames(d) <- d[1,]
     d <- d[-1,]
     raw.d <- d
 
+    # get all official site codes from site data gsheet
     mces_site_codes <- site_data %>%
       filter(network == !!network,
              domain == !!domain,
              ) %>%
       pull(site_code, full_name)
 
+    # converting csv names (which are full text names) to site codes
     d <- d %>%
       filter(nchar(NAME) > 1) %>%
       mutate(
@@ -186,6 +198,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ) %>%
       mutate(
         quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+        ## val = case_when(sign_varflag == '<' ~ paste0('<', val), TRUE ~ val)
       )
 
     # data provides units - lets make a quick function to pair each variable with
@@ -194,25 +207,21 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     vars_og <- unique(d$var)
     vars <- names(mces_variable_info)
 
+    # doing it this way as it is theoretically dynamic with changes in underlying data units
     for(var in vars) {
-      d_var_units <- d %>%
-        filter(var == !!var)
-
-      if(nrow(d_var_units) > 0) {
-        d_var_units <- d_var_units %>%
-        pull(units) %>%
-        unique()
-      }
-
-      mces_var_units[var] = d_var_units
-      mces_variable_info[var][[1]][1] = d_var_units
+        d_var_units <- d %>%
+          filter(var == !!var)
+        if(nrow(d_var_units) > 0) {
+            d_var_units <- d_var_units %>%
+              pull(units) %>%
+              unique()
+        }
+        # populate variable info objects with original unit data
+        mces_var_units[var] = d_var_units
+        mces_variable_info[var][[1]][1] = d_var_units
     }
 
-    ## mces_variable_info$`Total Phosphorus, Unfiltered`
-    ## mces_variable_info$`Total Kjeldahl Nitrogen, Unfiltered`
-    ## mces_variable_info
-
-    ## create structure specific to ms_read_csv data cols arg
+    ## use variable info object to create structure specific to **ms_read_csv** data cols arg
     mces_data_cols <- c()
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
@@ -221,12 +230,20 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       mces_data_cols[old_varname] = ms_varname
     }
 
+    # remove comma and space from text, and
+    # filter to only variables in mces_data_cols
     d <- d %>%
       mutate(
         var = gsub(" |,","", var)
       ) %>%
       filter(var %in% names(mces_data_cols))
 
+    # NOTE: filtered vs unfiltered versions of most variables in dataset
+    # we decided to keep F and UF seperate for total N and total P, and
+    # otherwise lump F and UF data together, with filtered data taking precedence
+    # in the event two samples overlap on the same site-date-var
+    # NOTE: the way I do this below brings me great shame. I want to fix this, and
+    # preferabl fix it as an addition to ms_read_csv
     d <- d %>%
      pivot_wider(
                  id_cols = c(site_code, date),
@@ -244,30 +261,36 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = 'val_#V#',
                          ## summary_flagcols = 'quality_varflag',
                          var_flagcol_pattern = "quality_varflag_#V#",
-                         is_sensor = FALSE)
+                         ## convert_to_BDL_flag = "<#*#",
+                         is_sensor = FALSE,
+                         keep_bdl_values = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_clean   = c('quality_flag' = 'Valid'),
                             variable_flags_to_drop = c('quality_flag' = 'Estimated'),
                             variable_flags_dirty   = c('quality_flag' = 'Suspect'),
-                            variable_flags_bdl = c('quality_flag' = 'BDL')
-                            )
+                            variable_flags_bdl = c('quality_flag' = 'BDL'))
 
     # apply uncertainty
     d <- ms_check_range(d)
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
     d <- synchronize_timestep(d)
 
-    ## create structure specific to ms_conversions data cols arg
+    ## create structure specific to **ms_conversions** units_from and units_to args
     mces_data_conversions_from <- c()
     mces_data_conversions_to <- c()
+
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
       ms_varname <- entry[[1]][3]
       old_units <- entry[[1]][1]
       ms_units <- entry[[1]][2]
-      mces_data_conversions_from[ms_varname] = old_units
-      mces_data_conversions_to[ms_varname] = ms_units
+      if(ms_varname %in% names(mces_data_conversions_from)) {
+        next
+      } else {
+        mces_data_conversions_from[ms_varname] = old_units
+        mces_data_conversions_to[ms_varname] = ms_units
+      }
     }
 
     d <- ms_conversions(d,
@@ -291,6 +314,52 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     return()
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.shp',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    mces_ws_shp <- sf::read_sf(rawfile)
+
+    mces_site_codes <- site_data %>%
+      filter(network == !!network,
+             domain == !!domain,
+             ) %>%
+      pull(site_code)
+
+    d_ws <- mces_ws_shp %>%
+      filter(Monitored == "Y",
+             MAP_CODE1 %in% mces_site_codes) %>%
+      select(
+        site_code = MAP_CODE1,
+        geometry
+      ) %>%
+      sf::st_transform(4326) %>%
+      mutate(
+        area = units::set_units(sf::st_area(.), "hectares") # meters (m) to hectares (ha)
+      )
+
+    for(i in 1:nrow(d_ws)) {
+        wb <- d_ws[i,]
+        site_code <- wb$site_code
+
+        write_ms_file(d = wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
+    }
 }
 
 #derive kernels ####
