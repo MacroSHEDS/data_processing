@@ -5706,6 +5706,7 @@ calc_inst_flux <- function(chemprod, qprod, site_code){
         chem_chunk <- chem_split[[i]]
 
         chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+
         if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
         #if both chem and flow data are low resolution (grab samples),
