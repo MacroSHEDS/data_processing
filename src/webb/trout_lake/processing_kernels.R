@@ -244,9 +244,10 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     data_cols = c('X_00060_00003'= 'discharge'),
                     data_col_pattern = '#V#',
                     is_sensor = TRUE)
+
     d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-    
     d <- qc_hdetlim_and_uncert(d, prodname_ms)
+    d <- synchronize_timestep(d)
     
     sites <- unique(d$site_code)
     
@@ -268,8 +269,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
-  
-  
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
@@ -290,9 +289,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                        data_cols = c('X_00060_00003'= 'discharge'),
                        data_col_pattern = '#V#',
                        is_sensor = TRUE)
+
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-  
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
+  d <- synchronize_timestep(d)
   
   sites <- unique(d$site_code)
   
@@ -335,8 +335,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                        data_col_pattern = '#V#',
                        is_sensor = TRUE)
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-  
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
+  d <- synchronize_timestep(d)
   
   sites <- unique(d$site_code)
   
@@ -378,9 +378,10 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                        data_cols = c('X_00060_00003'= 'discharge'),
                        data_col_pattern = '#V#',
                        is_sensor = TRUE)
+
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-  
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
+  d <- synchronize_timestep(d)
   
   sites <- unique(d$site_code)
   
@@ -538,12 +539,10 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-
-                     input_prodname_ms = c('stream_chemistry__VERSIONLESS003',
-                                           'stream_chemistry__VERSIONLESS004',
-                                           'stream_chemistry__VERSIONLESS005',
-                                           'stream_chemistry__VERSIONLESS006',
-                                           'stream_chemistry__VERSIONLESS007'))
+                     input_prodname_ms = c('discharge__VERSIONLESS001',
+                                           'discharge__VERSIONLESS002',
+                                           'discharge__VERSIONLESS003',
+                                           'discharge__VERSIONLESS004'))
 
 }
 

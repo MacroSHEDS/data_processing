@@ -261,7 +261,6 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
 
-
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
@@ -298,7 +297,6 @@ if(ms_instance$use_ms_error_handling){
 ## load_config_datasets(from_where = ms_instance$config_data_storage)
 load_config_datasets(from_where = 'remote')
 
-
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
                                                         update_on_gdrive = TRUE)
@@ -321,7 +319,7 @@ dir.create('logs', showWarnings = FALSE)
 # NOTE: this should be moved I believe, and made to work with the raw data
 # dcumentation of the latest iteration...
 # this function will update the citation sheet with the data and url of raw data download
-scrape_data_download_urls()
+## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'trout_lake')
@@ -338,14 +336,14 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## dangerous lines - use at your own risk!    :0
     ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## owrite_tracker(network, domain)
+    ## ## owrite_tracker(network, domain)
     ## held_data = invalidate_tracked_data(network, domain, 'derive')
     ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
     ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -361,11 +359,11 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
+                ## prodname_filter = c('discharge'),
                 domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('discharge'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -375,7 +373,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         ## overwrite_wb_sites = "st-paul-park",
                         verbose = FALSE
                         ))
-    # }
+    }
 
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
