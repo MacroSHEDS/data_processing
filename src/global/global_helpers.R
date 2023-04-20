@@ -625,7 +625,8 @@ ms_read_raw_csv <- function(filepath,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols,
-                            sampling_type = NULL){
+                            sampling_type = NULL,
+                            keep_bdl_values = FALSE){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -737,6 +738,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
+
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -789,13 +791,6 @@ ms_read_raw_csv <- function(filepath,
 
     if(missing(var_flagcol_pattern) && ! missing(alt_varflagcol_pattern)){
         stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
-    }
-
-    dc_dupes <- duplicated(unname(data_cols))
-    if(any(dc_dupes)){
-        stop(paste('duplicate value(s) in data_cols:',
-                   paste(unname(data_cols)[dc_dupes],
-                         collapse = ', ')))
     }
 
     #@spencer: ifelse(dn_dupes == ''... would have evaluated only the first element. this should take care of it
@@ -951,6 +946,24 @@ ms_read_raw_csv <- function(filepath,
 
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
 
+
+    # NOTE: if we want to be able to match multiple input cols to a single
+    # macrosheds var, we need to accept dupes in the data_cols values.
+    # merge any input columns with same end-variable, where the vlaues from whichever
+    # input column is provided first will be used when any overlapping observations
+    dc_dupes <- duplicated(unname(data_cols))
+    if(any(dc_dupes)){
+      warning(paste('duplicate value(s) in data_cols:',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
+      ## warning('combinging duplicates, giving first entry column priority')
+      d <- combine_multiple_input_cols(d, data_cols = data_cols, var_flagcols = var_flagcols)
+
+      # prune base column tracking objects
+      var_flagcols <- var_flagcols[names(var_flagcols) %in% colnames(d)]
+      data_cols <- data_cols[names(data_cols) %in% colnames(d)]
+    }
+
     # Remove any variable flags created by pattern but do not exist in data
     # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
     # classes_all <- classes_all[names(classes_all) %in% names(d)]
@@ -975,6 +988,8 @@ ms_read_raw_csv <- function(filepath,
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
     all_datacols <- c(data_cols, alt_datacols)
+    all_datacols <- all_datacols[!is.na(all_datacols)]
+
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
@@ -987,7 +1002,7 @@ ms_read_raw_csv <- function(filepath,
 
         for(j in seq_along(all_datacols)){
 
-            d_varcode <- unname(all_datacols)[j]
+            d_varcode <- unname(all_datacols)[j][[1]]
             d_colname <- names(all_datacols)[j]
             d_clm <- d[[d_colname]]
 
@@ -1018,9 +1033,17 @@ ms_read_raw_csv <- function(filepath,
                 new_varflag_cols <- c(new_varflag_cols, candidate_flagcol)
             }
 
+            # populate flag column with BDL information,
+            # and set value to NA
             d[bdl_inds, candidate_flagcol] <- 'BDL'
-            d[bdl_inds, d_colname] <- NA_character_
+            if(keep_bdl_values) {
+                d[bdl_inds, d_colname] <- sapply(d[bdl_inds, d_colname], function(x) gsub("[^0-9\\.\\-]*", "", x))
+            } else {
+                d[bdl_inds, d_colname] <- NA_character_
+            }
 
+            # look up DL googlsheet, and see if this site has DL info
+            # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
         }
@@ -1078,6 +1101,7 @@ ms_read_raw_csv <- function(filepath,
                            ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
                 logger = logger_module)
     }
+
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
@@ -5682,6 +5706,7 @@ calc_inst_flux <- function(chemprod, qprod, site_code){
         chem_chunk <- chem_split[[i]]
 
         chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+
         if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
         #if both chem and flow data are low resolution (grab samples),
@@ -16351,4 +16376,93 @@ reformat_camels_for_ms <- function(vsn){
     }
 
     write_feather(all_site_hydro, glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
+}
+
+# helper which goes inside of ms_read_csv, this function allows for the users to assign multiple input columns to
+# a single output column (e.g. filtered and unfiltered data colums for Zinc)
+combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
+    # takes the tibble and data_cols arguments from ms_read_csv
+
+    # find index of all duplicate columns in data_cols input
+    dc_dupes_index <- which(duplicated(data_cols) | duplicated(data_cols, fromLast = TRUE))
+
+    # looping thru these indices
+    for(index in dc_dupes_index) {
+        # find the 'paired' columns - which indices are specifically duplicates of each other
+        # Data
+        pair_cols <- match(data_cols, data_cols[index])
+        pair_colnames <- names(data_cols[!is.na(pair_cols)])
+        # Flag
+        if(!all(is.na(var_flagcols))) {
+            pair_cols_flg <- match(var_flagcols, var_flagcols[index])
+            pair_colnames_flg <- names(var_flagcols[!is.na(pair_cols)])
+        }
+
+        ms_var <- unique(unname(data_cols[!is.na(pair_cols)]))[[1]]
+        warning('merging multiple input columns:', pair_colnames, '\n',
+                'into ms var:', ms_var)
+
+        # if input column names aren't in dataframe, move on
+        if(!all(pair_colnames %in% colnames(d))) {
+            next
+        }
+
+        # create a dummy vector
+        covector <- c(rep(NA, nrow(d)))
+        # for each paired input data column
+        for(paircol in pair_colnames) {
+            # pull just this column data as a vector
+            d_pair <- d %>%
+                pull(paircol) %>%
+                as.vector()
+            # coalesce will merge them, and where both vectors have data
+            # at the saeme index, data from the the first vector argument
+            # will be used
+            # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+            covector = coalesce(d_pair, covector)
+
+        }
+
+        if(!all(is.na(var_flagcols))) {
+            # create a dummy vector
+            covector_flg <- c(rep(NA, nrow(d)))
+
+            # for each paired input data column
+            for(paircol_flg in pair_colnames_flg) {
+                # pull just this column data as a vector
+                d_pair_flg <- d %>%
+                    pull(paircol_flg) %>%
+                    as.vector()
+                # coalesce will merge them, and where both vectors have data
+                # at the saeme index, data from the the first vector argument
+                # will be used
+                # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+                covector_flg = coalesce(d_pair_flg, covector_flg)
+
+            }
+
+            # assign all variable flag data to merged data
+            for(paircol_flg in pair_colnames_flg) {
+                d[,which(colnames(d) == paircol_flg)] <- covector_flg
+            }
+        }
+
+        # assign all variable data to merged data
+        for(paircol in pair_colnames) {
+            d[,which(colnames(d) == paircol)] <- covector
+        }
+
+
+        # keep only first pair data and flag colnames
+        prefix_remove <- gsub("val_", "", pair_colnames[-1])
+        try(
+            d <- d %>%
+            select(
+                -!!pair_colnames[-1],
+                -contains(prefix_remove)
+            )
+        )
+    }
+
+    return(d)
 }

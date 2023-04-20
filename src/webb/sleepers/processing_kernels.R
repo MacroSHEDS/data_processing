@@ -988,14 +988,10 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms) {
-
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('discharge__VERSIONLESS001',
-                                           'discharge__VERSIONLESS002',
-                                           'discharge__VERSIONLESS003'
-                                           ))
+                     input_prodname_ms = c('discharge__VERSIONLESS003', 'discharge__VERSIONLESS004', 'discharge__VERSIONLESS005'))
     return()
 }
 

@@ -182,10 +182,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     raw_xlsx <- readxl::read_xlsx(rawfile) %>%
       mutate(
         site_code = !!site_code
-      ) %>%
-      rename(
-        discharge = 'Discharge (cfs)...8'
       )
+
+    # standardize discharge column names
+    q_names <- names(raw_xlsx)[grepl('Discharge \\(cfs\\)', names(raw_xlsx))]
+    if(length(q_names) == 2) {
+      names(raw_xlsx)[grepl('Discharge \\(cfs\\)', names(raw_xlsx))] <- c('discharge', 'discharge_flag')
+    } else if(length(q_names) == 1) {
+      names(raw_xlsx)[grepl('Discharge \\(cfs\\)', names(raw_xlsx))] <- c('discharge')
+    } else {
+      warning('too many discharge columns in raw SWWD data')
+    }
+
 
     # hey! if this kernel is being run again, make sure to check the flag columns
     # in the original data, as there may be new flag info
@@ -216,16 +224,11 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     # conforming time interval to daily
     d <- synchronize_timestep(d)
 
-    sites <- unique(d$site_code)
-
-    d_site <- d %>%
-        filter(site_code == !!sites[s])
-
-    write_ms_file(d = d_site,
+    write_ms_file(d = d,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_code = sites[s],
+                      site_code = site_code,
                       level = 'munged',
                       shapefile = FALSE)
     return()
