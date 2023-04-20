@@ -256,7 +256,7 @@ ms_init <- function(use_gpu = FALSE,
 
 ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
-                       config_storage_location = 'remote')
+                       config_storage_location = 'local')
 
 #load authorization file for macrosheds google sheets
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
@@ -309,10 +309,10 @@ site_data <- filter(site_data,
                     as.logical(in_workflow))
 
 # for run 2023_04_03
-site_data_bk <- site_data
+# site_data_bk <- site_data
 site_data <- site_data %>%
   filter(
-    !domain %in% c("loch_vale", "panola", "trout_lake", "ecnhc")
+    domain %in% c("panola", "trout_lake")
   )
 
 network_domain <- site_data %>%
