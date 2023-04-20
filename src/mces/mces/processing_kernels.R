@@ -198,6 +198,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       ) %>%
       mutate(
         quality_varflag = case_when(sign_varflag == '<' ~ 'BDL', TRUE ~ quality_varflag)
+        ## val = case_when(sign_varflag == '<' ~ paste0('<', val), TRUE ~ val)
       )
 
     # data provides units - lets make a quick function to pair each variable with
@@ -243,91 +244,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # in the event two samples overlap on the same site-date-var
     # NOTE: the way I do this below brings me great shame. I want to fix this, and
     # preferabl fix it as an addition to ms_read_csv
-
-    # seperating and re-merging filtered and unfiltered vars,
-    # keeping filtered version when both filter and unfilter
-    # samples from same site/date
-    # rename few vars where filtered matters a lot
-    d <- d %>%
-      mutate(
-        var = case_when(var == 'TotalKjeldahlNitrogenFiltered' ~ 'TKN',
-                        var == 'TotalKjeldahlNitrogenUnfiltered' ~ 'UTKN',
-                        var == 'Total Phosphorus, Filtered' ~ 'TDP',
-                        TRUE ~ var)
-      )
-
-    # all unfiltered vars
-    d_unfiltered <- d %>%
-      filter(grepl('Unfiltered', var)) %>%
-      mutate(
-        var = gsub('Unfiltered', '', var)
-      )
-
-    # all filtered vars
-    d_filtered <- d %>%
-      filter(!grepl('Unfiltered', var)) %>%
-      mutate(
-        var = gsub('Filtered', '', var)
-      )
-
-    d <- d_filtered %>%
-      full_join(d_unfiltered, by = c('site_code', 'date', 'var'))
-
-    d <- d %>%
-      mutate(
-        val = case_when(
-          is.numeric(val.y) & is.numeric(val.x) ~ val.x,
-          is.numeric(val.y) & is.na(val.x)      ~ val.y,
-          is.na(val.y) & is.numeric(val.x)      ~ val.x,
-          TRUE                                  ~ val.x
-        ),
-        sign_varflag = case_when(
-          is.numeric(val.y) & is.numeric(val.x) ~ sign_varflag.x,
-          is.numeric(val.y) & is.na(val.x)      ~ sign_varflag.y,
-          is.na(val.y) & is.numeric(val.x)      ~ sign_varflag.x,
-          TRUE                                  ~ sign_varflag.x
-        ),
-        units = case_when(
-          is.numeric(val.y) & is.numeric(val.x) ~ units.x,
-          is.numeric(val.y) & is.na(val.x)      ~ units.y,
-          is.na(val.y) & is.numeric(val.x)      ~ units.x,
-          TRUE                                  ~ units.x
-        ),
-        quality_varflag = case_when(
-          is.numeric(val.y) & is.numeric(val.x) ~ quality_varflag.x,
-          is.numeric(val.y) & is.na(val.x)      ~ quality_varflag.y,
-          is.na(val.y) & is.numeric(val.x)      ~ quality_varflag.x,
-          TRUE                                  ~ quality_varflag.x
-        )) %>%
-      select(site_code, date, var, sign_varflag, val, units, quality_varflag)
-
-    d <- d[!duplicated(d),]
-
-    # rename for ease of assignment from mces_var_info
-    d <- d %>%
-      mutate(
-        var = case_when(var ==  'TKN' ~ 'TotalKjeldahlNitrogenFiltered',
-                        var ==  'UTKN' ~ 'TotalKjeldahlNitrogenUnfiltered',
-                        var ==  'TDP' ~ 'Total Phosphorus, Filtered',
-                        TRUE ~ var)
-      )
-
-    # reflect new var names (NO filtered, unfiltered distinction)
-    mces_data_cols <- c()
-    for(i in 1:length(mces_variable_info)) {
-      entry <- mces_variable_info[i]
-      old_varname <- gsub(" |,","",names(entry))
-      old_varname <- gsub("Filtered","",old_varname)
-      old_varname <- gsub("Unfiltered","",old_varname)
-      ms_varname <- entry[[1]][3]
-      mces_data_cols[old_varname] = ms_varname
-    }
-
-    # correcting Total N and P vars which do retain this info
-    mces_data_cols['TotalKjeldahlNitrogenFiltered'] = 'TKN'
-    mces_data_cols['TotalKjeldahlNitrogenUnfiltered'] = 'UTKN'
-    mces_data_cols = mces_data_cols[names(mces_data_cols) %in% 'TotalKjeldahlNitrogen' == FALSE]
-
     d <- d %>%
      pivot_wider(
                  id_cols = c(site_code, date),
@@ -345,14 +261,15 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = 'val_#V#',
                          ## summary_flagcols = 'quality_varflag',
                          var_flagcol_pattern = "quality_varflag_#V#",
-                         is_sensor = FALSE)
+                         ## convert_to_BDL_flag = "<#*#",
+                         is_sensor = FALSE,
+                         keep_bdl_values = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_clean   = c('quality_flag' = 'Valid'),
                             variable_flags_to_drop = c('quality_flag' = 'Estimated'),
                             variable_flags_dirty   = c('quality_flag' = 'Suspect'),
-                            variable_flags_bdl = c('quality_flag' = 'BDL')
-                            )
+                            variable_flags_bdl = c('quality_flag' = 'BDL'))
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -362,13 +279,18 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     ## create structure specific to **ms_conversions** units_from and units_to args
     mces_data_conversions_from <- c()
     mces_data_conversions_to <- c()
+
     for(i in 1:length(mces_variable_info)) {
       entry <- mces_variable_info[i]
       ms_varname <- entry[[1]][3]
       old_units <- entry[[1]][1]
       ms_units <- entry[[1]][2]
-      mces_data_conversions_from[ms_varname] = old_units
-      mces_data_conversions_to[ms_varname] = ms_units
+      if(ms_varname %in% names(mces_data_conversions_from)) {
+        next
+      } else {
+        mces_data_conversions_from[ms_varname] = old_units
+        mces_data_conversions_to[ms_varname] = ms_units
+      }
     }
 
     d <- ms_conversions(d,
