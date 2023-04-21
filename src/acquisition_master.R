@@ -58,10 +58,7 @@ suppressPackageStartupMessages({
 vsn <- 1.0
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300,
-        readr.show_progress = FALSE,
-        readr.show_col_types = FALSE)
-        # googledrive_quiet = TRUE)
+        timeout = 300)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -130,7 +127,6 @@ ms_init <- function(use_gpu = FALSE,
         instance_type <- 'dev'
         machine_status <- '1337'
         op_system <- 'linux'
-        # macrosheds_package_dir <- 'r_package'
     }
 
     res <- try(setwd('C:/Users/sr446/Desktop/macrosheds/data_processing'), silent=TRUE) #BM0
@@ -141,8 +137,13 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
+<<<<<<< HEAD
 
     res <- try(setwd('/Users/hectorontiveros/data_processing'), silent=FALSE) #Hector
+=======
+    
+    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
+>>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -160,7 +161,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'mac'
     }
 
-    res <- try(setwd('~/Desktop/MacroSheds/data_processing/src/data_acquisition'), silent=TRUE) #pranavi
+    res <- try(setwd('/Users/pranavireddi/Desktop/MacroSheds/data_processing'), silent=TRUE) #pranavi
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'Pranavi'
@@ -168,7 +169,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-
+    
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -178,7 +179,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/home/sr446/git/macrosheds/data_processing'), silent=TRUE) #Nick
+    res <- try(setwd('/home/ws184/science/macrosheds/data_processing'), silent=TRUE) # BM2
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
         which_machine <- 'BM2'
@@ -222,7 +223,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-
+  
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -231,7 +232,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-
+    
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -259,29 +260,40 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
                        config_storage_location = 'remote')
 
 #load authorization file for macrosheds google sheets
-googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
+## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
 
-
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
+<<<<<<< HEAD
     ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
     ms_instance$which_machine %in% c('Hector','hec', 'bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
+=======
+    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hec', 'Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+>>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
 #same account must have GEE and GDrive access
+#googlesheets4::gs4_deauth()
+#googledrive::drive_deauth()
+
 googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
+<<<<<<< HEAD
 try(rgee::ee_Initialize(user = conf$gee_login_ms,
+=======
+try(rgee::ee_Initialize(user = gee_login,
+>>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
                         drive = TRUE))
-
+                        
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -296,7 +308,8 @@ if(ms_instance$use_ms_error_handling){
 }
 
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-load_config_datasets(from_where = ms_instance$config_data_storage)
+## load_config_datasets(from_where = ms_instance$config_data_storage)
+load_config_datasets(from_where = 'remote')
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
@@ -304,8 +317,6 @@ domain_detection_limits <- standardize_detection_limits(dls = domain_detection_l
 
 unknown_detlim_prec_lookup <- make_hdetlim_prec_lookup_table(domain_detection_limits)
 superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation')) #temperature?
-
-run_checks()
 
 site_data <- filter(site_data,
                     as.logical(in_workflow))
@@ -325,7 +336,12 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
+<<<<<<< HEAD
 dmnrow <- which(network_domain$domain == 'loch_vale')
+=======
+dmnrow <- which(network_domain$domain == 'trout_lake')
+
+>>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -334,28 +350,23 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    # held_data = get_data_tracker(network, domain)
+    held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive')
-    # owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'munge')
+    ## ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive')
+    ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'CUSTOMprecipitation')
-    # owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    ## owrite_tracker(network, domain)
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
+    ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
-
-    loginfo(logger = logger_module,
-            msg = glue('Processing network: {n}, domain: {d}',
-                       n = network,
-                       d = domain))
-
+                                                                                    
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
@@ -370,25 +381,26 @@ for(dmnrow in 1:nrow(network_domain)){
                 domain = domain)
 
     ms_munge(network = network,
-             ## prodname_filter = c('precip_chemistry'),
+             prodname_filter = c('discharge'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        verbose = TRUE))
+                        ## overwrite_wb_sites = "st-paul-park",
+                        verbose = FALSE
+                        ))
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('stream_chemistry'),
+              # prodname_filter = c('precip_pchem_pflux'),
               domain = domain)
 
     if(domain != 'mcmurdo'){
-
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = FALSE,
+                   get_missing_only = TRUE,
                    general_prod_filter = NULL)
     }
 
@@ -404,9 +416,10 @@ logger_module <- 'ms.module'
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
                            dataset_version = vsn,
-                           thin_portal_data_to_interval = NA, #'1 day',
+                           thin_portal_data_to_interval = NA, # '1 day',
                            populate_implicit_missing_values = TRUE,
-                           push_new_version_to_figshare_and_edi = FALSE)
+                           generate_csv_for_each_product = FALSE,
+                           push_new_version_to_figshare = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,
@@ -417,4 +430,3 @@ if(length(email_err_msgs)){
 loginfo(msg = 'Run complete',
         logger = logger_module)
 
-# before big merge
