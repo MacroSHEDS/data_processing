@@ -12,6 +12,7 @@ retrieve_panola_product <- function(network,
                                  site_code,
                                  tracker,
                                  url){
+
     # creating a string which matches the names of processing kernels
     processing_func <- get(paste0('process_0_',
                                   # these names or based off of prod names in products.csv
@@ -46,6 +47,7 @@ retrieve_panola_product <- function(network,
                                     domain = domain,
                                     prodname_ms = prodname_ms,
                                     site_code = site_code,
+                                    component = rt$component,
                                     url = url
                                     ))
 
