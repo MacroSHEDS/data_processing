@@ -270,7 +270,7 @@ conf <- jsonlite::fromJSON('config.json',
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
     ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Hector','hec', 'bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -279,7 +279,7 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = conf$gee_login,
+try(rgee::ee_Initialize(user = conf$gee_login_ms,
                         drive = TRUE))
 
 #set up global logger. network-domain loggers are set up later
@@ -325,12 +325,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-<<<<<<< HEAD
 dmnrow <- which(network_domain$domain == 'loch_vale')
-=======
-# dmnrow <- which(network_domain$domain == 'mces')
-## network_domain=filter(network_domain, ! network %in% c('lter', 'webb', 'mwo', 'neon'))
->>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
@@ -369,11 +364,7 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-<<<<<<< HEAD
     #stop here and go to processing_kernels.R to continue
-=======
-    # stop here and go to processing_kernels.R to continue
->>>>>>> 3c31a30a55d25f0dc889179e51d065fc5f0e18c6
     ms_retrieve(network = network,
                 ## prodname_filter = c('discharge'),
                 domain = domain)
