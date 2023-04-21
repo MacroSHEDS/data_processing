@@ -12,7 +12,7 @@ domain = "loch_vale"
 
 #retrieval kernels ####
 
-#precipitation: STATUS=Ready
+#precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   # START OF BLOCK YOU DONT CHANGE #
@@ -422,7 +422,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
-
+    component = "loch_vale_ppt"
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
