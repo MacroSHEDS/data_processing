@@ -6,7 +6,7 @@ library(purrr)
 #webb_setup()
 # get pkernel deets
 
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS002")
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS003")
 network = "webb"
 domain = "loch_vale"
 
@@ -447,13 +447,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code,
+                    s = set_details$site_code,
                     c = component)
     
     #Loch Vales siteID is CO98
     
     d <- read.delim(rawfile, sep = ',') %>%
-
         filter(siteID == 'CO98') %>%
         filter(!is.na(dateon)) %>%
         as_tibble()
@@ -527,8 +526,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code,
-                    c = component)
+                    s = set_details$site_code,
+                    c = set_details$component)
 
     d <- read.delim(rawfile, sep = ',') %>%
       filter(siteID == 'CO98') %>%
@@ -605,14 +604,15 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code,
-                    c = component)
+                    s = set_details$site_code,
+                    c = set_details$component)
 
  
-     d <- read.delim(rawfile, sep = ',') %>%
+    d <- read.delim(rawfile, sep = ',') %>%
       filter(site_no == '401723105400000') %>%
       filter(X_00060_00003_cd == "A") %>%
-      as_tibble()
+      as_tibble() %>%
+      mutate(site_no = 'andrews_creek')
     
    
     
@@ -664,14 +664,15 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_code,
-                  c = component)
+                  s = set_details$site_code,
+                  c = set_details$component)
   
   
   d <- read.delim(rawfile, sep = ',') %>%
     filter(site_no == '401707105395000') %>%
     filter(X_00060_00003_cd == "A") %>%
-    as_tibble()
+    as_tibble() %>%
+    mutate(site_no = 'icy_brook')
   
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('Date' = '%Y-%m-%d'), 
@@ -721,14 +722,15 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_code,
-                  c = component)
+                  s = set_details$site_code,
+                  c = set_details$component)
   
   
   d <- read.delim(rawfile, sep = ',') %>%
     filter(site_no == '401733105392404') %>%
     filter(X_00060_00003_cd == "A") %>%
-    as_tibble()
+    as_tibble() %>%
+    mutate(site_no = 'the_loch_outlet')
   
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('Date' = '%Y-%m-%d'), 
@@ -780,8 +782,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code,
-                    c = component)
+                    s = set_details$site_code,
+                    c = set_details$component)
     
     d <- read.delim(rawfile, sep = ',') %>%
       as_tibble()
@@ -879,20 +881,12 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
   
-  prodcode = "VERSIONLESS007"
-  network = "webb"
-  domain = "loch_vale"
-  site_code <- "sitename_NA"
-  component <- "loch_vale_chem_icy_brook"
-  prodname_ms <- paste("stream_chemistry" ,"__", prodcode, sep = "")
-  url <- "https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401707105395000&agency_cd=USGS&format=separated_wide_rdb"
-  
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_code,
-                  c = component)
+                  s = set_details$site_code,
+                  c = set_details$component)
   
   d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
@@ -988,20 +982,12 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
   
-  prodcode = "VERSIONLESS008"
-  network = "webb"
-  domain = "loch_vale"
-  site_code <- "sitename_NA"
-  component <- "loch_vale_chem_loch_outlet"
-  prodname_ms <- paste("stream_chemistry" ,"__", prodcode, sep = "")
-  url <- "https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401733105392404&agency_cd=USGS&format=separated_wide_rdb"
-  
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = site_code,
-                  c = component)
+                  s = set_details$site_code,
+                  c = set_details$component)
   
   d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
