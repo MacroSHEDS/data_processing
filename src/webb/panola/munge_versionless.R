@@ -1,4 +1,3 @@
-
 loginfo('Beginning munge (versionless products)',
         logger = logger_module)
 
@@ -15,13 +14,6 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-## i = 1
-
-swwd_sites <- site_data %>%
-    filter(network == !!network,
-            domain == !!domain) %>%
-    pull(site_code)
-
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -31,35 +23,35 @@ for(i in seq_len(nrow(prod_info))){
     if(! product_is_tracked(held_data, prodname_ms)){
 
         logwarn(glue('Product {p} is not yet tracked. Retrieve ',
-                    'it before munging it.',
-                    p = prodname_ms),
+                     'it before munging it.',
+                     p = prodname_ms),
                 logger = logger_module)
         next
     }
 
     sites <- names(held_data[[prodname_ms]])
-    sites <- sites[sites %in% swwd_sites]
 
+    # j = 1
     for(j in 1:length(sites)){
 
         site_code <- sites[j]
 
         munge_status <- get_munge_status(tracker = held_data,
-                                        prodname_ms = prodname_ms,
-                                        site_code = site_code)
+                                         prodname_ms = prodname_ms,
+                                         site_code = site_code)
 
         if(munge_status == 'ok'){
 
             loginfo(glue('Nothing to do for {s} {p}',
-                        s = site_code,
-                        p = prodname_ms),
+                         s = site_code,
+                         p = prodname_ms),
                     logger = logger_module)
             next
 
         } else {
             loginfo(glue('Munging {s} {p}',
-                        s = site_code,
-                        p = prodname_ms),
+                         s = site_code,
+                         p = prodname_ms),
                     logger = logger_module)
         }
 
@@ -72,11 +64,11 @@ for(i in seq_len(nrow(prod_info))){
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network = network,
-                                domain = domain,
-                                tracker_name = 'held_data',
-                                prodname_ms = prodname_ms,
-                                site_code = sites[j],
-                                new_status = 'error')
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_code = sites[j],
+                                  new_status = 'error')
 
         } else {
             invalidate_derived_products(successor_string = prod_info$precursor_of[i])
