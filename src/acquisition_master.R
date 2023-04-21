@@ -277,7 +277,7 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = gee_login,
+try(rgee::ee_Initialize(user = conf$gee_login_ms,
                         drive = TRUE))
                         
 #set up global logger. network-domain loggers are set up later
@@ -307,7 +307,6 @@ superunknowns <- get_superunknowns(special_vars = c('discharge', 'precipitation'
 site_data <- filter(site_data,
                     as.logical(in_workflow))
 
-<<<<<<< HEAD
 # for run 2023_04_03
 # site_data_bk <- site_data
 site_data <- site_data %>%
@@ -315,8 +314,6 @@ site_data <- site_data %>%
     domain %in% c("panola", "trout_lake")
   )
 
-=======
->>>>>>> 231797cc5bb72b42404b6a765b7dc82d69cb30e4
 network_domain <- site_data %>%
     select(network, domain) %>%
     distinct() %>%
@@ -345,8 +342,8 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## ## owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
     ## held_data = invalidate_tracked_data(network, domain, 'derive')
     ## owrite_tracker(network, domain)
 
