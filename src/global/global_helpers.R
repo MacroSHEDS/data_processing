@@ -10018,7 +10018,8 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
                        site_data = site_data)
-
+    
+    # portal_config <- jsonlite::read_json('./portal_config.json')
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets(portal_config)
 
