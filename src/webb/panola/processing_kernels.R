@@ -3,14 +3,14 @@ source('src/webb/network_helpers.R')
 #retrieval kernels ####
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network, domain) {
+process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network, domain, url) {
 
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
   
   # this creates that directory, if it doesn't already exist
   dir.create(path = raw_data_dest,
@@ -20,16 +20,16 @@ process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network,
   # create documentation file
   rawfile <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
-                  c = set_details$component)
+                  c = component)
   
   # download the data form the download link!
-  R.utils::downloadFile(url = set_details$url,
+  R.utils::downloadFile(url = url,
                         filename = rawfile,
                         skip = FALSE,
                         overwrite = TRUE)
   
   # this code records metadat about the date, time, and other details
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
   
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
@@ -37,7 +37,7 @@ process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network,
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
   
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -47,13 +47,13 @@ process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network, domain) {
+process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network, domain, url) {
   
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
   
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
@@ -61,14 +61,14 @@ process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network,
   
   rawfile <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
-                  c = set_details$component)
+                  c = component)
   
-  R.utils::downloadFile(url = set_details$url,
+  R.utils::downloadFile(url = url,
                         filename = rawfile,
                         skip = FALSE,
                         overwrite = TRUE)
   
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
   
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
@@ -76,7 +76,7 @@ process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network,
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
   
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -94,13 +94,13 @@ process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, 
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
   
   # END OF BLOCK YOU DONT CHANGE #
   
   raw_zip <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
-                  c = set_details$component)
+                  c = component)
 
   # read and save csv from zip folder
   raw_csv <- read.csv(unz(raw_zip, "3_PMRW_Streamflow_WY86-17.csv"), header = TRUE, sep = ",") %>%
@@ -154,11 +154,11 @@ process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, 
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
   
   raw_zip <- glue('{rd}/{c}.zip',
                   rd = raw_data_dest,
-                  c = set_details$component)
+                  c = component)
 
   # read and save csv from zip folder
   raw_csv <- read.csv(unz(raw_zip, "4_PMRW_StreamWaterQuality_WY86-17.csv"), header = TRUE, sep = ",")

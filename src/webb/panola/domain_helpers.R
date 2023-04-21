@@ -6,7 +6,7 @@
 ## tracker = held_data
 ## url = prod_info$url[i]
 
-retrieve_sleepers_product <- function(network,
+retrieve_panola_product <- function(network,
                                  domain,
                                  prodname_ms,
                                  site_code,
@@ -41,9 +41,13 @@ retrieve_sleepers_product <- function(network,
     ## domain = domain
 
     result <- do.call(processing_func,
-                      args = list(set_details = deets,
-                                  network = network,
-                                  domain = domain))
+                      args = list(
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms,
+                                    site_code = site_code,
+                                    url = url
+                                    ))
 
 
     new_status <- evaluate_result_status(result)
