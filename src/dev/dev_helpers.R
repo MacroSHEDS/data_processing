@@ -1485,3 +1485,33 @@ get_nonnumerics <- function(d){
 
     return(nonnumerics)
 }
+
+ms_dl_history <- function(z) {
+
+  z <- z %>%
+    filter(ms_status == 2,
+           is.numeric(val))
+
+  if(nrow(z) == 0) {
+    return()
+  }
+
+  # should do var by var
+  z.sum <- z %>%
+    arrange(site_code, var, datetime) %>%
+    mutate(changes = val != lag(val)) %>%
+    mutate(changes = case_when(is.na(changes) ~ TRUE, TRUE ~ changes)) %>%
+    filter(changes)
+
+  z.dl_history <- domain_detection_limits[0,]
+  z.dl_history$domain <- domain
+  z.dl_history$prodcode <- prodcode_from_prodname_ms(prodname_ms)
+  z.dl_history$variable_converted <- drop_var_prefix(z.sum$var)
+  z.dl_history$detection_limit_original <- z.sum$val # NOTE: this may actually be converted, and OG is unknown
+  z.dl_history$start_date <- z.sum$datetime
+
+  # once whole df filled, look back and make some improvments
+  #     - make end date of any prod day before start date of next entry, if there is a next entry
+  #     - compile all prodcode DLs with same DL and start/end date (will be need to be fuzzy)
+
+}

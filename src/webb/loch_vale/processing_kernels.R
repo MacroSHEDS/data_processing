@@ -6,7 +6,7 @@ library(purrr)
 #webb_setup()
 # get pkernel deets
 
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS001")
+set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS002")
 network = "webb"
 domain = "loch_vale"
 
@@ -15,6 +15,7 @@ domain = "loch_vale"
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
+  component = "loch_vale_ppt"
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -26,23 +27,23 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
-  
+
   # END OF BLOCK YOU DONT CHANGE #
-  
+
   # create documentation file
   rawfile <- glue('{rd}/{c}.csv',
                   rd = raw_data_dest,
-                  c = set_details$component)
-  
+                  c = component)
+
   # download the data form the download link!
-  R.utils::downloadFile(url = set_details$url,
+  R.utils::downloadFile(url = url,
                         filename = rawfile,
                         skip = FALSE,
                         overwrite = TRUE)
-  
-  #bigFILE <- read_csv(rawfile)     //
-  
-  
+
+  #bigFILE <- read_csv(rawfile)     
+
+
   # this code records metadat about the date, time, and other details
   res <- httr::HEAD(set_details$url)
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
@@ -64,35 +65,33 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
-  network = "webb"
-  domain = "loch_vale"
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
                         s = set_details$site_code)
-  
+
   # this creates that directory, if it doesn't already exist
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
 
   # END OF BLOCK YOU DONT CHANGE #
-  
+
   # create documentation file
   rawfile <- glue('{rd}/{c}.csv',
                   rd = raw_data_dest,
-                  c = set_details$component)
-  
+                  c = component)
+
   # download the data form the download link!
-  R.utils::downloadFile(url = set_details$url,
+  R.utils::downloadFile(url = url,
                         filename = rawfile,
                         skip = FALSE,
                         overwrite = TRUE)
-  
-  ##bigFILE2 <- read_csv(rawfile)     
 
-  
+  ##bigFILE2 <- read_csv(rawfile)
+
+
   # this code records metadat about the date, time, and other details
   res <- httr::HEAD(set_details$url)
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
@@ -111,7 +110,6 @@ process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS003 <- function(set_details, network, domain) {
-  
     # START OF BLOCK YOU DONT CHANGE #
     # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -136,6 +134,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = component)
 
+
     test<- write_csv(siteINFO, file = rawfile)
     
     #R.utils::downloadFile(url = url,
@@ -143,8 +142,9 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     #                      skip = FALSE,
     #                      overwrite = TRUE)
 
+
     # this code records metadat about the date, time, and other details
-    res <- httr::HEAD(set_details$url)
+    res <- httr::HEAD(url)
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                        start = 1,
@@ -152,7 +152,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(url, '(requires authentication)'),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -164,6 +164,14 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
+
+    # prodcode = "VERSIONLESS002"
+    # network = "webb"
+    # domain = "loch_vale"
+    # site_code <- "sitename_NA"
+    # component <- "loch_vale_discharge_icy_brook"
+    # prodname_ms <- paste("discharge" ,"__", prodcode, sep = "")
+    # url <- "https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000"
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -183,7 +191,6 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = component)
 
-
    test <-write_csv(siteINFO, file = rawfile)
     
     #R.utils::downloadFile(url = url,
@@ -199,7 +206,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(url, '(requires authentication)'),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -212,11 +219,12 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 #loch outlet
 #. handle_errors
 process_0_VERSIONLESS005 <- function(set_details, network, domain) {
+
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_code)
+                          s = site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -227,13 +235,13 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     #serv = "dv"
     siteINFO <- readNWISdv(siteNumb,parameterCD)
 
+
     siteAvailable <- whatNWISdata(siteNumber = siteNumb)
     parmsAvailable <- unique(siteAvailable$parm_cd)
-    
+
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = component)
-
 
     test<- write_csv(siteINFO, file = rawfile)
     
@@ -263,16 +271,24 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS006 <- function(set_details, network, domain) {
+    prodcode = "VERSIONLESS006"
+    network = "webb"
+    domain = "loch_vale"
+    site_code <- "sitename_NA"
+    component <- "loch_vale_chem_andrews_creek"
+    prodname_ms <- paste("stream_chemistry" ,"__", prodcode, sep = "")
+    url <- "https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401723105400000&agency_cd=USGS&format=separated_wide_rdb"
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_code)
+                          s = site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
+
     siteNumb <- "401723105400000"
     siteN <- "USGS-401723105400000"
     #serv = "dv"
@@ -288,7 +304,6 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = component)
 
-
     test <-write_csv(siteWQ, file = rawfile)
     
     #R.utils::downloadFile(url = url,
@@ -296,7 +311,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
     #                      skip = FALSE,
     #                      overwrite = TRUE)
 
-    res <- httr::HEAD(set_details$url)
+    res <- httr::HEAD(url)
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                        start = 1,
@@ -317,13 +332,12 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS007 <- function(set_details, network, domain) {
-
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
-  
+                        s = site_code)
+
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
@@ -333,6 +347,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
   #serv = "dv"
   siteAvailable <- whatNWISdata(siteNumber = siteNumb)
   siteAvailable <- filter(siteAvailable, siteAvailable$count_nu>5)
+
   parmsAvailable <- unique(siteAvailable$parm_cd)
   parmsAvailable <- parmsAvailable[!is.na(parmsAvailable)]
 
@@ -357,10 +372,12 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
+
   deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
+
   return(deets_out)
 }
 
@@ -377,6 +394,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                         s = set_details$site_code)
 
     dir.create(path = raw_data_dest,
+
              showWarnings = FALSE,
              recursive = TRUE)
 
@@ -395,11 +413,12 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                   c = component)
 
   test <- write_csv(siteWQ, rawfile)
+
   
-  R.utils::downloadFile(url = set_details$url,
-                        filename = rawfile,
-                        skip = FALSE,
-                        overwrite = TRUE)
+  #R.utils::downloadFile(url = set_details$url,
+  #                      filename = rawfile,
+  #                      skip = FALSE,
+  #                      overwrite = TRUE)
 
   res <- httr::HEAD(set_details$url)
 
@@ -408,6 +427,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
+
   deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
@@ -433,6 +453,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     #Loch Vales siteID is CO98
     
     d <- read.delim(rawfile, sep = ',') %>%
+
         filter(siteID == 'CO98') %>%
         filter(!is.na(dateon)) %>%
         as_tibble()

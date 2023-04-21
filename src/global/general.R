@@ -49,11 +49,15 @@ boundaries <- boundaries %>%
     rename(area = ws_area_ha)
 
 too_small_wb <- boundaries$area < 15
+
 # reupload <- FALSE
 # if(any(too_small_wb)) reupload <- TRUE
-boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
-    mutate(geometry = st_buffer(st_centroid(geometry),
-                                dist = sqrt(10000 * 15 / pi)))
+if(FALSE %in% is.na(too_small_wb)) {
+    
+    boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
+        mutate(geometry = st_buffer(st_centroid(geometry),
+                                    dist = sqrt(10000 * 15 / pi)))
+}
 
 if(any(!sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),
