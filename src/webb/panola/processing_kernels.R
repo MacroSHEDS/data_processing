@@ -104,7 +104,7 @@ process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, 
 
   # read and save csv from zip folder
   raw_csv <- read.csv(unz(raw_zip, "3_PMRW_Streamflow_WY86-17.csv"), header = TRUE, sep = ",") %>%
-    mutate(site = 'USGS_02203970')
+    mutate(site = 'mountain_creek_tributary')
 
   d <- ms_read_raw_csv(preprocessed_tibble = raw_csv,
                        datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
@@ -164,7 +164,7 @@ process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, 
   raw_csv <- read.csv(unz(raw_zip, "4_PMRW_StreamWaterQuality_WY86-17.csv"), header = TRUE, sep = ",")
 
   d <- raw_csv %>%
-    mutate(site = 'USGS_02203970')
+    mutate(site = 'mountain_creek_tributary')
 
   # if NO3_Conc has "<val", threshold and use val/2
   d$NO3_Conc <- ifelse(grepl("<", df$NO3_Conc),
