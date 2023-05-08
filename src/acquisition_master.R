@@ -137,7 +137,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-    
+   
     res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -264,8 +264,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hec', 'Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
+    ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
+    ms_instance$which_machine %in% c('Hector', 'hec', 'Biniam', 'bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -277,7 +277,7 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = gee_login,
+try(rgee::ee_Initialize(user = conf$gee_login_ms,
                         drive = TRUE))
                         
 #set up global logger. network-domain loggers are set up later
@@ -322,7 +322,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'panola')
+## dmnrow <- which(network_domain$domain == 'loch_vale')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -357,7 +357,7 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    # stop here and go to processing_kernels.R to continue
+    #stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 ## prodname_filter = c('discharge'),
                 domain = domain)
