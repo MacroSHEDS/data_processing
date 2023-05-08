@@ -137,13 +137,8 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-<<<<<<< HEAD
-
-    res <- try(setwd('/Users/hectorontiveros/data_processing'), silent=FALSE) #Hector
-=======
-    
+   
     res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
->>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -269,13 +264,8 @@ conf <- jsonlite::fromJSON('config.json',
 #connect rgee to earth engine and python
 gee_login <- case_when(
     ms_instance$which_machine %in% c('Mike', 'BM1') ~ conf$gee_login_mike,
-<<<<<<< HEAD
     ms_instance$which_machine %in% c('Spencer', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hector','hec', 'bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
-=======
-    ms_instance$which_machine %in% c('Spencer', 'BM0', 'BM2', 'Nick') ~ conf$gee_login_spencer,
-    ms_instance$which_machine %in% c('Hec', 'Hector','Biniam','Pranavi', 'Wes') ~conf$gee_login_ms,
->>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
+    ms_instance$which_machine %in% c('Hector', 'hec', 'Biniam', 'bini', 'BM0', 'Pranavi', 'Wes') ~conf$gee_login_ms,
     TRUE ~ 'UNKNOWN')
 
 #load authorization file for macrosheds google sheets and drive
@@ -287,11 +277,7 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-<<<<<<< HEAD
 try(rgee::ee_Initialize(user = conf$gee_login_ms,
-=======
-try(rgee::ee_Initialize(user = gee_login,
->>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
                         drive = TRUE))
                         
 #set up global logger. network-domain loggers are set up later
@@ -336,12 +322,8 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-<<<<<<< HEAD
-dmnrow <- which(network_domain$domain == 'loch_vale')
-=======
-dmnrow <- which(network_domain$domain == 'trout_lake')
+## dmnrow <- which(network_domain$domain == 'loch_vale')
 
->>>>>>> b3febabdc18de3d28daa323b6535a1c99a330482
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
