@@ -311,7 +311,7 @@ site_data <- filter(site_data,
 # site_data_bk <- site_data
 site_data <- site_data %>%
   filter(
-    domain %in% c("panola", "trout_lake")
+    domain %in% c("panola")
   )
 
 network_domain <- site_data %>%
@@ -370,7 +370,7 @@ for(dmnrow in 1:nrow(network_domain)){
                 domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('discharge'),
+             # prodname_filter = c('discharge'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
