@@ -1,13 +1,3 @@
-installing timescaledb:
-    install ppa vsns of postgres and timescale
-    use the timescale repo that includes only apache-2 licensed parts
-
-setting up timescaledb:
-    ignore next two. just use default postgres superuser.
-        see digitalocean bookmark instead of link for setting up postgres superuser
-        the superuser should have the same name as an existing linux user, so long as auth is ident based
-    connect to console with sudo -u postgres psql; not the 
-
 rgdal must be installed for derive kernels to work
 
 WHEN WE MOVE PROCESSING TO SERVER
@@ -16,3 +6,44 @@ will need to set up credentials for:
     gee
     figshare
     
+---- STEPS FOR (re)BUILDING PORTAL/DATA FROM https://macrosheds.org/data/data_processing_out/ -------
+
+PREP
+
+make sure you have porta/data built
+    i think you already got it from https://macrosheds.org/data/portal_data/
+    if your local version of this shows modification times from feb of this year, you're good
+run acquisition_master.R to just before the main loop.
+skip the loop.
+run logger_module <- 'ms.module' on approx line 393
+manually set the input args to postprocess_entire_dataset, then step into that function
+
+POSTPROCESSING
+
+[key for the following]
+Y = yes, run this
+Y_ = yes, run this, though note that it's only tangentially necessary for building the portal dataset
+N = no, don't run this
+
+[okay, for reals]
+Y   scale_flux_by_area
+    this should modify only the new stuff and leave previously modified stuff alone
+Y   write_portal_config_datasets
+Y   combine_ws_boundaries
+Y   thin_portal_data
+Y_  ms_complete_all_cases
+Y   insert_gap_border_NAs
+N   generate_product_csvs
+Y_  generate_output_dataset
+Y_  insert_unknown_uncertainties(path = paste0('macrosheds_dataset_v', dataset_version))
+Y   insert_unknown_uncertainties(path = '../portal/data')
+Y_  NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
+Y   NaN_to_NA(path = '../portal/data')
+Y   catalog_held_data
+Y   list_domains_with_discharge
+Y   generate_watershed_summaries
+Y   generate_watershed_raw_spatial_dataset
+Y   compute_yearly_summary
+Y   compute_yearly_summary_ws
+N   everything else (figshare/edi stuff)
+
