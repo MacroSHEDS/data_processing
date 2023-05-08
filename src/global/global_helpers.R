@@ -621,6 +621,7 @@ ms_read_raw_csv <- function(filepath,
                             is_sensor,
                             set_to_NA,
                             convert_to_BDL_flag,
+                            numeric_dl_col_pattern,
                             set_to_0,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
@@ -645,6 +646,9 @@ ms_read_raw_csv <- function(filepath,
     #site_code_col should eventually work like datetime_cols (in case site_code is
     #   separated into multiple components)
     #can't deal with missing sitecode column as is
+    #implement pivot_wider_names_from and pivot_wider_values_from. they should
+    #   produce a cascade of default values supplied to data_cols, (data_cols_pattern),
+    #   flagcol patterns. numeric_dl_column and other params will also be updated
 
     #filepath: string
     #preprocessed_tibble: a tibble with all character columns. Supply this
@@ -707,7 +711,16 @@ ms_read_raw_csv <- function(filepath,
     #   This parameter is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
     #   corresponding to each data variable. Variable-flag columns will be created
-    #   as necessary. See ms_cast_and_reflag for the next step in handling BDL data.
+    #   as necessary. See also numeric_dl_col_pattern.
+    #   See ms_cast_and_reflag for the next step in handling BDL data.
+    #numeric_dl_col_pattern: as opposed to convert_to_BDL_flag, which can handle e.g.
+    #   "<0.04" within a data column, this parameter is for when there's a whole
+    #   separate column of numeric detection limit values for each variable (probably
+    #   this will only be true if you had to use pivot_wider on a long-format table). DL
+    #   values will be converted to "BDL" flags, which will be merged
+    #   with any other flag information. Note that convert_to_BDL_flag is not
+    #   necessary when numeric_dl_col_pattern is used. If you find a situation
+    #   where both are needed, we probably have work to do.
     #set_to_0: For values that we want to set to zero. We're setting BDLs to
     #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
@@ -810,7 +823,7 @@ ms_read_raw_csv <- function(filepath,
     datetime_colnames <- names(datetime_cols)
     datetime_formats <- unname(datetime_cols)
 
-    alt_datacols <- var_flagcols <- alt_varflagcols <- NA
+    alt_datacols <- var_flagcols <- alt_varflagcols <- dl_cols <- NA
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
@@ -822,6 +835,10 @@ ms_read_raw_csv <- function(filepath,
 
     if(missing(convert_to_BDL_flag)) {
         convert_to_BDL_flag <- NULL
+    }
+
+    if(missing(numeric_dl_col_pattern)) {
+        numeric_dl_col_pattern <- NULL
     }
 
     if(missing(set_to_0)) {
@@ -872,16 +889,26 @@ ms_read_raw_csv <- function(filepath,
         names(alt_varflagcols) <- alt_varflagcol_names
     }
 
+    #expand DL columnname wildcards and populate dl_cols
+    if(! missing(numeric_dl_col_pattern) && ! is.null(numeric_dl_col_pattern)){
+        dl_cols <- data_cols
+        numeric_dl_col_names <- gsub_v(pattern = '#V#',
+                                       replacement_vec = datacol_names0,
+                                       x = numeric_dl_col_pattern)
+        names(dl_cols) <- numeric_dl_col_names
+    }
+
     #combine all available column name mappings; assemble new name vector
-    colnames_all <- c(data_cols, alt_datacols, var_flagcols, alt_varflagcols)
+    colnames_all <- c(data_cols, alt_datacols, var_flagcols, alt_varflagcols)#, dl_cols)
     na_inds <- is.na(colnames_all)
     colnames_all <- colnames_all[! na_inds]
 
-    suffixes <- rep(c('__|dat', '__|dat', '__|flg', '__|flg'),
+    suffixes <- rep(c('__|dat', '__|dat', '__|flg', '__|flg'),#, '__|dl'),
                     times = c(length(data_cols),
                               length(alt_datacols),
                               length(var_flagcols),
                               length(alt_varflagcols)))
+                              # length(dl_cols)))
 
     suffixes <- suffixes[! na_inds]
     colnames_new <- paste0(colnames_all, suffixes)
@@ -941,7 +968,9 @@ ms_read_raw_csv <- function(filepath,
                across(everything(), as.character))
     }
 
-    d <- sw(select(d, any_of(c(names(colnames_all), 'NA.')))) %>% #for NA meaning "sodium"
+    d <- sw(select(d, any_of(c(names(colnames_all),
+                               names(dl_cols),
+                               'NA.')))) %>% #for NA meaning "sodium"
         as_tibble()
 
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
@@ -983,8 +1012,20 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    #extract numeric DL column information into data columns
+    if(! is.null(numeric_dl_col_pattern)){
+        for(i in seq_along(numeric_dl_col_names)){
+            dl_col <- d[[numeric_dl_col_names[i]]]
+            d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
+        }
+
+        convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
+        d <- select(d, -all_of(numeric_dl_col_names))
+    }
+
     #move BDL flags from data columns into flag columns. Replace with NA,
     #which will be converted to 1/2 detlim downstream
+
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
     all_datacols <- c(data_cols, alt_datacols)
@@ -1158,7 +1199,7 @@ ms_read_raw_csv <- function(filepath,
     bdl_cols_do_not_drop2 <- c(bdl_cols_do_not_drop2,
                                sub(pattern = '__\\|flg',
                                    replacement = '__|dat',
-                                   bdl_cols_do_not_drop2))
+                                   bdl_cols_do_not_drop2)) %>% unique()
 
     #identify columns that are all-NA and should be dropped, unless
     #   BDLs within. if any BDLs in summary columns, don't drop columns.
@@ -1205,13 +1246,20 @@ ms_read_raw_csv <- function(filepath,
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA
     #   values. We could instead do something more sophisticated.
+    #20230406 CHANGE: taking mean by variable
+    # d <- d %>%
+    #     rowwise(one_of(c('datetime', 'site_code'))) %>%
+    #     mutate(NAsum = sum(is.na(c_across(ends_with('__|dat'))))) %>%
+    #     ungroup() %>%
+    #     arrange(datetime, site_code, NAsum) %>%
+    #     select(-NAsum) %>%
+    #     distinct(datetime, site_code, .keep_all = TRUE) %>%
+    #     arrange(site_code, datetime)
     d <- d %>%
-        rowwise(one_of(c('datetime', 'site_code'))) %>%
-        mutate(NAsum = sum(is.na(c_across(ends_with('__|dat'))))) %>%
+        group_by(datetime, site_code) %>%
+        summarize(across(ends_with('__|dat'), mean, na.rm = TRUE),
+                  across(! ends_with('__|dat'), ~(na.omit(.)[1]))) %>%
         ungroup() %>%
-        arrange(datetime, site_code, NAsum) %>%
-        select(-NAsum) %>%
-        distinct(datetime, site_code, .keep_all = TRUE) %>%
         arrange(site_code, datetime)
 
     #convert NaNs to NAs, just in case.
@@ -10216,7 +10264,7 @@ postprocess_entire_dataset <- function(site_data,
     }
 
     if(push_new_version_to_figshare_and_edi){
-        log_with_indent('Adding a CAMELS data to Figshare (yes, this should happen earlier)',
+        log_with_indent('Adding CAMELS data to Figshare (yes, this should happen earlier)',
                         logger = logger_module)
         add_a_few_more_things_to_figshare(vsn = dataset_version)
     }
@@ -10286,13 +10334,13 @@ add_a_few_more_things_to_figshare <- function(){
                 fls <- figshare_list_article_files(fsid_,
                                                    token = token)
 
-                if(length(fls) >= 1){
-                    for(j in seq_along(fls)){
-                        figshare_delete_article_file(fsid_,
-                                                     file_id = fls[[j]]$id,
-                                                     token = token)
-                    }
+                # if(length(fls) >= 1){
+                for(j in seq_along(fls)){
+                    figshare_delete_article_file(fsid_,
+                                                 file_id = fls[[j]]$id,
+                                                 token = token)
                 }
+                # }
             }
         }
 
@@ -12085,13 +12133,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                                    token = token)
 
                 # if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-                if(length(fls) >= 1){
-                    for(k in seq_along(fls)){
-                        figshare_delete_article_file(fs_id,
-                                                     file_id = fls[[k]]$id,
-                                                     token = token)
-                    }
+                # if(length(fls) >= 1){
+                for(k in seq_along(fls)){
+                    figshare_delete_article_file(fs_id,
+                                                 file_id = fls[[k]]$id,
+                                                 token = token)
                 }
+                # }
             }
 
             #upload new/updated domain zip to that article
@@ -12166,6 +12214,19 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     ms_var_catalog <- read_csv(paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
     save(ms_var_catalog, file = '../r_package/data/ms_var_catalog.RData')
 
+    #mad TEMP
+    ws_attr_sets = c('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/climate.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/hydrology.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/landcover.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/parentmaterial.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/terrain.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/vegetation.feather',
+                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_summaries.feather')
+    rm_sites_ = c('MC_ FLUME', 'NHC', 'UNHC', 'w101')
+    for(f in ws_attr_sets){
+        read_feather(f) %>% filter(! site_code %in% rm_sites_) %>% write_feather(f)
+    }
+
     file_ids_for_r_package2 <- tibble()
     for(i in seq_along(other_uploads)){
 
@@ -12193,13 +12254,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                 fls <- figshare_list_article_files(fsid_,
                                                    token = token)
 
-                if(length(fls) >= 1){
-                    for(j in seq_along(fls)){
-                        figshare_delete_article_file(fsid_,
-                                                     file_id = fls[[j]]$id,
-                                                     token = token)
-                    }
+                # if(length(fls) >= 1){
+                for(j in seq_along(fls)){
+                    figshare_delete_article_file(fsid_,
+                                                 file_id = fls[[j]]$id,
+                                                 token = token)
                 }
+                # }
             }
         }
 
@@ -12257,7 +12318,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     }
 
     save(file_ids_for_r_package2,
-         file = '../r_package/data/sysdata2.RData')
+         file = '../r_package/data/sysdata2.RData') #don't forget to add CAMELS ids in add_a_few_more_things_to_figshare()
     readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
          file = '../r_package/data/figshare_id_check.txt')
 }
@@ -15503,7 +15564,6 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                         select(-count) %>%
                         mutate(var = 'precip') %>%
                         mutate(domain = dom)
-
                 }
 
                 all_sites <- rbind(all_sites, site_precip)
@@ -15610,19 +15670,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     dir.create('../portal/data/general/biplot',
                showWarnings = FALSE)
 
-    if(filter_ms_interp && filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_interp0_status0.feather')
-    }
-
-    if(filter_ms_interp && !filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_interp0.feather')
-    }
-
-    if(!filter_ms_interp && filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year_status0.feather')
-    }
-
-    if(!filter_ms_interp && ! filter_ms_status){
+    if(! filter_ms_interp && ! filter_ms_status){
         write_feather(all_domain, '../portal/data/general/biplot/year.feather')
     }
 }
@@ -15654,7 +15702,7 @@ compute_yearly_summary_ws <- function(){
                                  recursive = TRUE)
 
         prod_files <- prod_files[! grepl('raw_', prod_files)]
-        # REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
+        # TODO: REMOVE IF WE ADD DAYMET TO NORMAL PRODUCTS
         prod_files <- prod_files[! grepl('daymet', prod_files)]
 
         all_prods <- tibble()
@@ -15805,7 +15853,7 @@ run_checks <- function(){
     dupe_vars <- ms_vars %>%
         filter(duplicated(.$variable_code))
 
-    if(any(dupe_vars)){
+    if(nrow(dupe_vars)){
         stop(glue('duplicated variable(s) in ms_vars:\n{dv}',
                   dv = paste(dupe_vars$variable_code,
                              collapse = ', ')))
