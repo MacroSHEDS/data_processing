@@ -208,6 +208,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     vars <- names(mces_variable_info)
 
     # doing it this way as it is theoretically dynamic with changes in underlying data units
+    # this pulls the units as reported in hte raw data, and compiles a list of variable names = unit
     for(var in vars) {
         d_var_units <- d %>%
           filter(var == !!var)
@@ -242,8 +243,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # we decided to keep F and UF seperate for total N and total P, and
     # otherwise lump F and UF data together, with filtered data taking precedence
     # in the event two samples overlap on the same site-date-var
-    # NOTE: the way I do this below brings me great shame. I want to fix this, and
-    # preferabl fix it as an addition to ms_read_csv
     d <- d %>%
      pivot_wider(
                  id_cols = c(site_code, date),
