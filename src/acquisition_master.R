@@ -322,7 +322,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'trout_lake')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -341,9 +341,9 @@ for(dmnrow in 1:nrow(network_domain)){
     ## owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
+    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     ## owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -359,18 +359,18 @@ for(dmnrow in 1:nrow(network_domain)){
 
     #stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                ## prodname_filter = c('discharge'),
+                prodname_filter = c('ws_boundary'),
                 domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('discharge'),
+             prodname_filter = c('ws_boundary'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        ## overwrite_wb_sites = "st-paul-park",
+                        # overwrite_wb_sites = "trout_river",
                         verbose = FALSE
                         ))
     }

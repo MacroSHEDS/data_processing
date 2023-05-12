@@ -1,15 +1,3 @@
-source("/Users/hectorontiveros/data_processing/src/webb/loch_vale/domain_helpers.R")
-source('/Users/hectorontiveros/data_processing/src/webb/network_helpers.R')
-library(dataRetrieval)
-library(purrr)
-# run webb_setup() in interpreter!)
-#webb_setup()
-# get pkernel deets
-
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS003")
-network = "webb"
-domain = "loch_vale"
-
 #retrieval kernels ####
 
 #precipitation: STATUS=READY
@@ -60,7 +48,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 }
 
 
-#precip_chem: STATUS = READY
+#precip_chem: STATUS=READY
 #. handle_errors
 process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
   # START OF BLOCK YOU DONT CHANGE #
@@ -216,7 +204,6 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
 #loch outlet
 #discharge: STATUS=READY
-#loch outlet
 #. handle_errors
 process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
