@@ -14643,9 +14643,9 @@ download_from_googledrive <- function(set_details, network, domain){
     if('site_code' %in% names(set_details)) {
         sitechar <- set_details$site_code
 
-        if(sitechar == 'sitename_NA') {
-            sitechar = 'sitecode_NA'
-        }
+        ## if(sitechar == 'sitename_NA') {
+        ##     sitechar = 'sitecode_NA'
+        ## }
     }
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
@@ -14657,8 +14657,6 @@ download_from_googledrive <- function(set_details, network, domain){
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
-
-    print('status: 0000011')
 
     network_id <- gd_files %>%
       filter(name == !!network)
@@ -14687,7 +14685,7 @@ download_from_googledrive <- function(set_details, network, domain){
 
     prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
 
-    if(sitechar != 'sitecode_NA') {
+    if(sitechar != 'sitename_NA') {
 
         site_files <- prod_files
 

@@ -4,6 +4,7 @@ VERSIONLESS002,discharge,ready,ready,NA,discharge__ms001,USGS_05357230,trout_dis
 VERSIONLESS003,discharge,ready,ready,NA,discharge__ms001,USGS_05357225,trout_discharge_w3,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357225&agency_cd=USGS,NA,ready,NA
 VERSIONLESS004,discharge,ready,ready,NA,discharge__ms001,USGS_05357245,trout_discharge_w4,https://waterdata.usgs.gov/monitoring-location/05357245/,NA,ready,NA
 VERSIONLESS005,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,For all trout_lake creeks,trout_lake_chem,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947,NA,ready,NA
+VERSIONLESS006,ws_boundary,ready,,,ws_boundary__ms000,trout river needs stream stat ws version,trout_river_streamstat_wb,,,ready,
 ms001,discharge,NA,NA,ready,stream_flux_inst__ms002,NA,NA,NA,NA,NA,ready
 ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA,NA,NA,ready
 ms003,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA,NA,NA,ready
