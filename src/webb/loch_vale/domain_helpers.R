@@ -1,4 +1,4 @@
-retrieve_sleepers_product <- function(network,
+retrieve_loch_vale_product <- function(network,
                                  domain,
                                  prodname_ms,
                                  site_code,
