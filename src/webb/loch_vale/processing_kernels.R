@@ -55,7 +55,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 }
 
 
-#precip_chem: STATUS=READY
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS002 <-  function(set_details, network, domain) {
    
@@ -666,7 +666,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     
     # d$site_code <- paste("USGS-", d$site_code, sep = "")  
     
-    d <- ms_cast_and_reflag(d)
+    d <- ms_cast_and_reflag(d,
+                          varflag_col_pattern = NA)
     
     #NOTE manually converting discharge from cubic feet per second to liter per second
     d$val <- d$val * 28.3168
