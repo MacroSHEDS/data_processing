@@ -252,7 +252,7 @@ ms_init <- function(use_gpu = FALSE,
 
 ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
-                       config_storage_location = 'remote')
+                       config_storage_location = 'local')
 
 #load authorization file for macrosheds google sheets
 ## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
@@ -322,7 +322,7 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-## dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'trout_lake')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -335,16 +335,16 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    ## held_data = invalidate_tracked_data(network, domain, 'munge')
-    ## ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive')
-    ## owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive')
+    # owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    ## held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
-    ## owrite_tracker(network, domain)
-    ## held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
-    ## owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -359,24 +359,24 @@ for(dmnrow in 1:nrow(network_domain)){
 
     #stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                ## prodname_filter = c('discharge'),
+                prodname_filter = c('precipitation'),
                 domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('discharge'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        ## overwrite_wb_sites = "st-paul-park",
+                        # overwrite_wb_sites = "trout_river",
                         verbose = FALSE
                         ))
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
+              # prodname_filter = c('stream_flux_inst'),
               domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -394,6 +394,10 @@ logger_module <- 'ms.module'
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,
 #                                           backup = TRUE)
+
+# network_domain_backup <- network_domain
+# network_domain <- network_domain %>%
+#   filter(domain %in% c('loch_vale'))
 
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,

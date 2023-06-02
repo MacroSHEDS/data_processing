@@ -1,21 +1,16 @@
-source("/Users/hectorontiveros/data_processing/src/webb/loch_vale/domain_helpers.R")
-source('/Users/hectorontiveros/data_processing/src/webb/network_helpers.R')
-library(dataRetrieval)
-library(purrr)
-# run webb_setup() in interpreter!)
-#webb_setup()
-# get pkernel deets
-
-set_details <- webb_pkernel_setup(prodcode = "VERSIONLESS003")
-network = "webb"
-domain = "loch_vale"
-
 #retrieval kernels ####
+library(dataRetrieval)
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
-  component = "loch_vale_ppt"
+      
+  prodname_ms = set_details$prodname_ms
+  site_code   = set_details$site_code
+  component   = set_details$component 
+  last_mod_dt = set_details$held_dt
+  url         = set_details$url
+  
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -60,16 +55,23 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 }
 
 
-#precip_chem: STATUS = READY
+#precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
+process_0_VERSIONLESS002 <-  function(set_details, network, domain) {
+   
+  prodname_ms = set_details$prodname_ms
+  site_code   = set_details$site_code
+  component   = set_details$component 
+  last_mod_dt = set_details$held_dt
+  url         = set_details$url
+  
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
 
   # this creates that directory, if it doesn't already exist
   dir.create(path = raw_data_dest,
@@ -110,6 +112,13 @@ process_0_VERSIONIONLESS002 <-  function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS003 <- function(set_details, network, domain) {
+  
+    prodname_ms = set_details$prodname_ms
+    site_code   = set_details$site_code
+    component   = set_details$component 
+    last_mod_dt = set_details$held_dt
+    url         = set_details$url
+  
     # START OF BLOCK YOU DONT CHANGE #
     # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -164,6 +173,12 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
+  
+    prodname_ms = set_details$prodname_ms
+    site_code   = set_details$site_code
+    component   = set_details$component 
+    last_mod_dt = set_details$held_dt
+    url         = set_details$url
 
     # prodcode = "VERSIONLESS002"
     # network = "webb"
@@ -216,9 +231,14 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
 #loch outlet
 #discharge: STATUS=READY
-#loch outlet
 #. handle_errors
 process_0_VERSIONLESS005 <- function(set_details, network, domain) {
+  
+    prodname_ms = set_details$prodname_ms
+    site_code   = set_details$site_code
+    component   = set_details$component 
+    last_mod_dt = set_details$held_dt
+    url         = set_details$url
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -271,6 +291,13 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS006 <- function(set_details, network, domain) {
+  
+    prodname_ms = set_details$prodname_ms
+    site_code   = set_details$site_code
+    component   = set_details$component 
+    last_mod_dt = set_details$held_dt
+    url         = set_details$url
+  
     prodcode = "VERSIONLESS006"
     network = "webb"
     domain = "loch_vale"
@@ -332,6 +359,13 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS007 <- function(set_details, network, domain) {
+  
+  prodname_ms = set_details$prodname_ms
+  site_code   = set_details$site_code
+  component   = set_details$component 
+  last_mod_dt = set_details$held_dt
+  url         = set_details$url
+    
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
@@ -387,6 +421,12 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 #. handle_errors
 process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 
+    prodname_ms = set_details$prodname_ms
+    site_code   = set_details$site_code
+    component   = set_details$component 
+    last_mod_dt = set_details$held_dt
+    url         = set_details$url
+    
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
@@ -447,7 +487,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = set_details$site_code,
+                    s = site_code,
                     c = component)
     
     #Loch Vales siteID is CO98
@@ -518,16 +558,15 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#precip_chem: STATUS=READY
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
-
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = set_details$site_code,
-                    c = set_details$component)
+                    s = site_code,
+                    c = component)
 
     d <- read.delim(rawfile, sep = ',') %>%
       filter(siteID == 'CO98') %>%
@@ -548,8 +587,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       #"Br"     = c("mg/L", "mg/L", "Br")
     )
     
-    loch_vale_pchem_var= c()
-    for(i in 1:length(loch_vale_pchem_var_info)){
+    loch_vale_pchem_var = c()
+    
+    for(i in 1:length(loch_vale_pchem_var_info)) {
       og_name <- names(loch_vale_pchem_var_info[i])
       ms_name <-loch_vale_pchem_var_info[[i]][3]
       
@@ -558,6 +598,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     
     d$dON <- as.Date(as.character(d$dateon), format = "%Y-%m-%d %H:%M")
     d$invalcode <- gsub("\\s+", "", d$invalcode)
+    
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('dON' = '%Y-%m-%d'),
                          datetime_tz = 'US/Mountain',
@@ -570,7 +611,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          set_to_NA = "-9")
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
                             variable_flags_bdl = '<')
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
@@ -604,8 +644,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = set_details$site_code,
-                    c = set_details$component)
+                    s = site_code,
+                    c = component)
 
  
     d <- read.delim(rawfile, sep = ',') %>%
@@ -624,10 +664,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                               data_col_pattern = '#V#',
                               is_sensor = TRUE)
     
-    d$site_code <- paste("USGS-", d$site_code, sep = "")  
+    # d$site_code <- paste("USGS-", d$site_code, sep = "")  
     
     d <- ms_cast_and_reflag(d,
-                              varflag_col_pattern = NA)
+                          varflag_col_pattern = NA)
     
     #NOTE manually converting discharge from cubic feet per second to liter per second
     d$val <- d$val * 28.3168
@@ -652,8 +692,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                       shapefile = FALSE)
     }
 
-    unlink(temp_dir, recursive = TRUE)
-
     return()
 }
 
@@ -664,8 +702,8 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = set_details$site_code,
-                  c = set_details$component)
+                  s = site_code,
+                  c = component)
   
   
   d <- read.delim(rawfile, sep = ',') %>%
@@ -682,7 +720,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                        data_col_pattern = '#V#',
                        is_sensor = TRUE)
   
-  d$site_code <- paste("USGS-", d$site_code, sep = "")  
+  # d$site_code <- paste("USGS-", d$site_code, sep = "")  
   
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
@@ -710,8 +748,6 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                   shapefile = FALSE)
   }
   
-  unlink(temp_dir, recursive = TRUE)
-  
   return()
 
 }
@@ -722,8 +758,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = set_details$site_code,
-                  c = set_details$component)
+                  s = site_code,
+                  c = component)
   
   
   d <- read.delim(rawfile, sep = ',') %>%
@@ -740,7 +776,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                        data_col_pattern = '#V#',
                        is_sensor = TRUE)
   
-  d$site_code <- paste("USGS-", d$site_code, sep = "")  
+  # d$site_code <- paste("USGS-", d$site_code, sep = "")  
   
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
@@ -748,7 +784,6 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
   #NOTE manually converting discharge from cubic feet per second to liter per second
   
   d$val <- d$val * 28.3168
-  
   
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
   
@@ -770,20 +805,18 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                   shapefile = FALSE)
   }
   
-  unlink(temp_dir, recursive = TRUE)
-  
   return()
 }
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
-
+  
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = set_details$site_code,
-                    c = set_details$component)
+                    s = site_code,
+                    c = component)
     
     d <- read.delim(rawfile, sep = ',') %>%
       as_tibble()
@@ -795,10 +828,11 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     #manually applying MS Detection Limit (when below dl, take half of dl)
     #for this USGS data, whenever there is NA for the measure, 
     #a detection limit is reported, if not below, no detection limit reported
-    
-    #d <-filter(DetectionQuantitationLimitMeasure.MeasureValue == "NA") %>%
-    #  mutate(ResultMeasureValue = DetectionQuantitationLimitMeasure.MeasureValue / 2)
-    
+    d <- d %>%
+      rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
+      mutate(
+        ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
+        )
     
     loch_vale_andrews_creek_var_info <- list(
       "pH" = c('unitless', 'unitless', "pH"),
@@ -831,6 +865,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       "UV 254"=c("units/cm","AU/cm","abs254"), 
       "Oxygen"=c("mg/l","mg/L","DO") #dissolved
     )
+    
     loch_vale_stream_chem_var <- list()
     
     for (i in seq_along(loch_vale_andrews_creek_var_info)) {
@@ -839,18 +874,24 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       loch_vale_stream_chem_var[[og_name]] <- ms_name
     }
     
-    d <-pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, DetectionQuantitationLimitMeasure.MeasureValue))
-    
+    d <-pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
 
+    # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
+    d$MonitoringLocationIdentifier = 'andrews_creek'
+    
+    # NOTE: must fix detection limit application below
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'), 
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'MonitoringLocationIdentifier',
                          data_cols =  loch_vale_stream_chem_var,
                          data_col_pattern = 'ResultMeasureValue_#V#',
-                         is_sensor = FALSE,
-                         numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#")
+                         is_sensor = FALSE
+                         # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
+                         )
     
+    # NOTE: there must be USGS edit codes which contain QC information?
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
     
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -872,8 +913,6 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                       shapefile = FALSE)
     }
 
-    unlink(temp_dir, recursive = TRUE)
-
     return()
 }
 
@@ -885,8 +924,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = set_details$site_code,
-                  c = set_details$component)
+                  s = site_code,
+                  c = component)
   
   d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
@@ -894,8 +933,11 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
   #manually applying MS Detection Limit (when below dl, take half of dl)
   #for this USGS data, whenever there is NA for the measure, 
   #a detection limit is reported, if not below, no detection limit reported
-  d <-filter(DetectionQuantitationLimitMeasure.MeasureValue == "NA") %>%
-    mutate(ResultMeasureValue = DetectionQuantitationLimitMeasure.MeasureValue / 2)
+  d <- d %>%
+    rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
+    mutate(
+      ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
+      )
   
   #for UV 254, two different units reported, only using the one that matches variables sheet
   d <- d %>% 
@@ -935,13 +977,16 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
  
   loch_vale_stream_chem_var <- list()
   
-  for (i in seq_along(loch_vale_andrews_creek_var_info)) {
-    og_name <- names(loch_vale_andrews_creek_var_info[i])
-    ms_name <- loch_vale_andrews_creek_var_info[[i]][[3]]
+  for (i in seq_along(loch_vale_icy_brook_var_info)) {
+    og_name <- names(loch_vale_icy_brook_var_info[i])
+    ms_name <- loch_vale_icy_brook_var_info[[i]][[3]]
     loch_vale_stream_chem_var[[og_name]] <- ms_name
   }
   
-  d <-pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, DetectionQuantitationLimitMeasure.MeasureValue))
+  # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
+  d$MonitoringLocationIdentifier = 'icy_brook'
+  
+  d <- pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
   
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'), 
@@ -949,8 +994,12 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                        site_code_col = 'MonitoringLocationIdentifier',
                        data_cols =  loch_vale_stream_chem_var,
                        data_col_pattern = 'ResultMeasureValue_#V#',
-                       is_sensor = FALSE,
-                       numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#")
+                       is_sensor = FALSE
+                       # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
+                       )
+  
+  # NOTE: there must be USGS edit codes which contain QC information?
+  d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
   
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
   
@@ -972,8 +1021,6 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                   shapefile = FALSE)
   }
   
-  unlink(temp_dir, recursive = TRUE)
-  
   return()
 }  
 
@@ -986,8 +1033,8 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
                   n = network,
                   d = domain,
                   p = prodname_ms,
-                  s = set_details$site_code,
-                  c = set_details$component)
+                  s = site_code,
+                  c = component)
   
   d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
@@ -995,14 +1042,15 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
   #manually applying MS Detection Limit (when below dl, take half of dl)
   #for this USGS data, whenever there is NA for the measure, 
   #a detection limit is reported, if not below, no detection limit reported
-  
-  #d <-filter(DetectionQuantitationLimitMeasure.MeasureValue == "NA") %>%
-  #  mutate(ResultMeasureValue = DetectionQuantitationLimitMeasure.MeasureValue / 2)
+  d <- d %>%
+    rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
+    mutate(
+      ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
+      )
   
   #for UV 254, two different units reported, only using the one that matches variables sheet
   d <- d %>% 
     subset(!(ResultMeasure.MeasureUnitCode == "L/mgDOC*m" & grepl("UV 254", CharacteristicName)))
-  
 
   loch_vale_loch_outlet_var_info <- list(
     "pH" = c("unitless", "unitless", "pH"),
@@ -1039,22 +1087,29 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
   
   loch_vale_stream_chem_var <- list()
   
-  for (i in seq_along(loch_vale_andrews_creek_var_info)) {
-    og_name <- names(loch_vale_andrews_creek_var_info[i])
-    ms_name <- loch_vale_andrews_creek_var_info[[i]][[3]]
+  for (i in seq_along(loch_vale_loch_outlet_var_info)) {
+    og_name <- names(loch_vale_loch_outlet_var_info[i])
+    ms_name <- loch_vale_loch_outlet_var_info[[i]][[3]]
     loch_vale_stream_chem_var[[og_name]] <- ms_name
   }
   
-  d <-pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, DetectionQuantitationLimitMeasure.MeasureValue))
+  d <- pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
   
+  # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
+  d$MonitoringLocationIdentifier = 'the_loch_outlet'
+    
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'), 
                        datetime_tz = 'US/Mountain',
                        site_code_col = 'MonitoringLocationIdentifier',
                        data_cols =  loch_vale_stream_chem_var,
                        data_col_pattern = 'ResultMeasureValue_#V#',
-                       is_sensor = FALSE,
-                       numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#")
+                       is_sensor = FALSE
+                       # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
+                       )
+  
+  # NOTE: there must be USGS edit codes which contain QC information?
+  d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
   
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
   
@@ -1076,8 +1131,6 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
                   shapefile = FALSE)
   }
   
-  unlink(temp_dir, recursive = TRUE)
-  
   return()
 }
 
@@ -1090,8 +1143,9 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('discharge__VERSIONLESS002',
-                                           'discharge__VERSIONLESS009'))
+                     input_prodname_ms = c('discharge__VERSIONLESS003',
+                                           'discharge__VERSIONLESS004',
+                                           'discharge__VERSIONLESS005'))
     return()
 }
 
@@ -1102,13 +1156,21 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_chemistry__VERSIONLESS003',
-                                           'stream_chemistry__VERSIONLESS004',
-                                           'stream_chemistry__VERSIONLESS005',
+                     input_prodname_ms = c(
                                            'stream_chemistry__VERSIONLESS006',
-                                           'stream_chemistry__VERSIONLESS007'))
+                                           'stream_chemistry__VERSIONLESS007',
+                                           'stream_chemistry__VERSIONLESS008'))
 
 }
+
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms005 <- precip_gauge_from_site_data
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors

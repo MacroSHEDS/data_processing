@@ -107,7 +107,7 @@ retrieve_mces_product <- function(network,
 }
 
 # general notes:
-# NOTE: "filtered" vs "unfiltered"
+# NOTE: "filtered" vs "unfiltered": sending most filtered and unfiltered variables to same variable in macorsheds
 # NOTE: turbidity unit ocnversions NTU vs FTU vs NRTU
 # NOTE: "low" "low L" ?
 
