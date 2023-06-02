@@ -9,14 +9,14 @@ turboplotblaster <- function(prodname_ms){
     today_date = format(Sys.Date(), format='%Y%m%d')
 
     vars = colnames(zz)
-    vars = vars[! vars %in% c('datetime', 'site_name', 'ms_status', 'ms_interp')]
+    vars = vars[! vars %in% c('datetime', 'site_code', 'ms_status', 'ms_interp')]
 
     for(v in vars){
 
         spc = zz %>%
-            select(site_name, datetime, !!v)
+            select(site_code, datetime, !!v)
 
-        sites = sort(unique(spc$site_name))
+        sites = sort(unique(spc$site_code))
         rc = ceiling(sqrt(length(sites)))
 
         png(width=8, height=8, units='in', type='cairo', res=300,
@@ -27,7 +27,7 @@ turboplotblaster <- function(prodname_ms){
         xlims = range(spc$datetime)
 
         for(s in sites){
-            spc_ = filter(spc, site_name == s) %>% arrange()
+            spc_ = filter(spc, site_code == s) %>% arrange()
             plot(spc_$datetime, spc_[[v]], type='p', xlab='', ylab='',
                 yaxt='n', bty='l', col='cadetblue', pch='.', xaxt='n',
                 xlim=xlims)
@@ -66,9 +66,9 @@ get_siteyear_coverage = function(){
                                    prodname_ms = p)
 
         vars = colnames(zz)
-        vars = vars[! vars %in% c('datetime', 'site_name', 'ms_status', 'ms_interp')]
+        vars = vars[! vars %in% c('datetime', 'site_code', 'ms_status', 'ms_interp')]
 
-        sites = unique(zz$site_name)
+        sites = unique(zz$site_code)
 
         grabvars = c()
         big_tb = tibble()
@@ -78,8 +78,8 @@ get_siteyear_coverage = function(){
             for(s in sites){
 
                 wee_tb <- zz %>%
-                    select(site_name, datetime, !!v) %>%
-                    filter(site_name == s) %>%
+                    select(site_code, datetime, !!v) %>%
+                    filter(site_code == s) %>%
                     group_by(year = year(datetime)) %>%
                     summarize(
                         mode_interval_sec = Mode(diff(as.numeric(datetime))),

@@ -3,10 +3,13 @@
 #discharge: STATUS=READY
 #. handle_errors
 process_0_1 <- function(set_details, network, domain){
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
+
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
+
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
@@ -17,13 +20,25 @@ process_0_1 <- function(set_details, network, domain){
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_13 <- function(set_details, network, domain){
-    raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
-    dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
-    download.file(url=set_details$url,
-        destfile=glue(raw_data_dest, '/', set_details$component, '.csv'),
-        cacheOK=FALSE, method='curl')
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                          wd = getwd(),
+                          n = network,
+                          d = domain,
+                          p = set_details$prodname_ms,
+                          s = set_details$site_code)
+
+    dir.create(raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    download.file(url = set_details$url,
+                  destfile = glue(raw_data_dest,
+                                  '/',
+                                  set_details$component,
+                                  '.csv'),
+                  cacheOK = FALSE,
+                  method = 'curl')
 
     return()
 }
@@ -34,7 +49,7 @@ process_0_208 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
     if(set_details$component == 'Analytical Methods'){
@@ -61,10 +76,13 @@ process_0_208 <- function(set_details, network, domain){
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_0_107 <- function(set_details, network, domain){
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
+
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
+
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
@@ -75,10 +93,13 @@ process_0_107 <- function(set_details, network, domain){
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
 process_0_100 <- function(set_details, network, domain){
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_name)
+        s=set_details$site_code)
+
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
+
     download.file(url=set_details$url,
         destfile=glue(raw_data_dest, '/', set_details$component),
         cacheOK=FALSE, method='curl')
@@ -95,7 +116,7 @@ process_0_94 <- function(set_details, network, domain) {
                          n = network,
                          d = domain,
                          p = set_details$prodname_ms,
-                         s = set_details$site_name)
+                         s = set_details$site_code)
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
     rawfile=glue(raw_data_dest, '/', set_details$component)
@@ -111,220 +132,156 @@ process_0_94 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_name,
+process_1_1 <- function(network, domain, prodname_ms, site_code,
     component){
-    # site_name=site_name; component=in_comp
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-    
-    # SAMPLE: Sensor 
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
-    d <- ue(ms_read_raw_csv(filepath = rawfile,
-                       datetime_col = list(name = 'DATETIME',
-                                           format = '%Y-%m-%d %H:%M:%S',
-                                           tz = 'US/Eastern'),
-                       site_name_col = 'WS',
-                       data_cols = c(Discharge_ls = 'discharge'),
-                       data_col_pattern = '#V#'))
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = c(DATETIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'WS',
+                         alt_site_code = list('w1' = c('1', 'W1'),
+                                              'w2' = c('2', 'W2'),
+                                              'w3' = c('3', 'W3'),
+                                              'w4' = c('4', 'W4'),
+                                              'w5' = c('5', 'W5'),
+                                              'w6' = c('6', 'W6'),
+                                              'w7' = c('7', 'W7'),
+                                              'w8' = c('8', 'W8'),
+                                              'w9' = c('9', 'W9')),
+                         data_cols = c(Discharge_ls = 'discharge'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE)
 
-    #Would use ms_cast_and_reflag but there is only one data column and no flags
-    d <- d %>%
-        rename(val = 3) %>%
-        mutate(var = 'discharge_a',
-               ms_status = 0)
-
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
-
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
-
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
 
     return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_13 <- function(network, domain, prodname_ms, site_name,
+process_1_13 <- function(network, domain, prodname_ms, site_code,
     component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-    
+    if(component == 'site info'){
+        loginfo('Blacklisting superfluous data component')
+        return(generate_blacklist_indicator())
+    }
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = c(DATE = '%Y-%m-%d'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'rainGage',
+                         data_cols = c(Precip = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
 
-    d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            date_col = list(name = 'DATE',
-                                                format = '%Y-%m-%d',
-                                                tz = 'US/Eastern'),
-                            site_name_col = 'rainGage',
-                            data_cols = c(Precip = 'precipitation'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE))
-
-    #Would use ms_cast_and_reflag but there is only one data column and no flags
-    d <- d %>%
-        rename(val = 3) %>%
-        mutate(var = strsplit(colnames(d)[3], '__\\|')[[1]][1],
-               ms_status = 0)
-
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
-
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
-
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
 
     return(d)
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_208 <- function(network, domain, prodname_ms, site_name,
+process_1_208 <- function(network, domain, prodname_ms, site_code,
     component){
 
-    #this product includes precip chem and stream chem, which have the same
-    #data structure. so for now, the component argument governs which one is
-    #processed herein. once we work out rain interpolation, we might have to
-    #add a conditional and some divergent processing here.
+    if(component == 'Analytical Methods'){
+        loginfo('Blacklisting superfluous data component')
+        return(generate_blacklist_indicator())
+    }
 
-    if(component == 'Analytical Methods') return()
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-        n=network, d=domain, p=prodname_ms, s=site_name, c=component)
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = c(date = '%Y-%m-%d',
+                                           timeEST = '%H:%M'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site',
+                         alt_site_code = list('w1' = c('1', 'W1'),
+                                              'w2' = c('2', 'W2'),
+                                              'w3' = c('3', 'W3'),
+                                              'w4' = c('4', 'W4'),
+                                              'w5' = c('5', 'W5'),
+                                              'w6' = c('6', 'W6'),
+                                              'w7' = c('7', 'W7'),
+                                              'w8' = c('8', 'W8'),
+                                              'w9' = c('9', 'W9')),
+                         data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                       'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
+                                       'Na', 'TMAl', 'OMAl', 'Al_ICP', 'Al_ferron',
+                                       'NH4', 'SO4', 'NO3', 'Cl',
+                                       'PO4', 'DOC', 'TDN', 'DON',
+                                       'SiO2', 'Mn', 'Fe', 'F',
+                                       'cationCharge', 'anionCharge',
+                                       'theoryCond', 'ionError', 'ionBalance',
+                                       'pHmetrohm'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         set_to_NA = -999.9, #also -3, but that can be a real value in other columns. will get dropped in postprocessing
+                         summary_flagcols = 'fieldCode')
 
+    d <- ms_cast_and_reflag(d,
+                            summary_flags_to_drop = list(fieldCode = 9999), #not a real code
+                            summary_flags_dirty = list(fieldCode = c(969, 970)),
+                            varflag_col_pattern = NA)
 
-    # Need to fix issues of when there is a NA time col but not NA date col
-    # and the whole row gets removed
-
-    # Also would be ideal to not hve to name the data_cols as their names are
-    # all macrosheds var names
-
-    # Also identify_sampling is writing sites names as 1 not w1
-    
-    # SAMPLE: analytical 
-    d <- ue(ms_read_raw_csv(filepath = rawfile,
-                            date_col = list(name = 'date',
-                                                format = '%Y-%m-%d',
-                                                tz = 'US/Eastern'),
-                            time_col = list(name = 'timeEST',
-                                            tz = 'US/Eastern'),
-                            site_name_col = 'site',
-                            data_cols =  c('pH', 'DIC', 'spCond', 'temp', 'ANC960', 'ANCMet',
-                                           'Ca', 'Mg', 'K', 'Na', 'TMAl', 'OMAl', 'Al_ICP', 'NH4',
-                                           'SO4', 'NO3', 'Cl', 'PO4', 'DOC', 'TDN', 'DON', 'SiO2',
-                                           'Mn', 'Fe', 'F', 'cationCharge', 'anionCharge',
-                                           'theoryCond', 'ionError', 'ionBalance',
-                                           'pHmetrohm'),
-                            data_col_pattern = '#V#',
-                            is_sensor = FALSE,
-                            summary_flagcols = 'fieldCode'))
-
-    d <- ue(ms_cast_and_reflag(d,
-                               variable_flags_clean = list(
-                                   fieldCode = NA)))
-
-    d <- ue(carry_uncertainty(d,
-                              network = network,
-                              domain = domain,
-                              prodname_ms = prodname_ms))
-
-    d <- ue(synchronize_timestep(d,
-                                 desired_interval = '1 day', #set to '15 min' when we have server
-                                 impute_limit = 30))
-
-    d <- ue(apply_detection_limit_t(d, network, domain, prodname_ms))
+    d <- ms_conversions(d,
+                        convert_units_from = c(DIC = 'umol/l'),
+                        convert_units_to = c(DIC = 'mg/l'))
 
     return(d)
-
-    # ### OLD CODE
-    # d <- sw(read_csv(rawfile, col_types=readr::cols_only(
-    #         site='c', date='c', timeEST='c', pH='n', DIC='n', spCond='n',
-    #         temp='n', ANC960='n', ANCMet='n', precipCatch='n', flowGageHt='n',
-    #         Ca='n', Mg='n', K='n', Na='n', TMAl='n', OMAl='n',
-    #         Al_ICP='n', NH4='n', SO4='n', NO3='n', Cl='n', PO4='n',
-    #         DOC='n', TDN='n', DON='n', SiO2='n', Mn='n', Fe='n',# notes='c',
-    #         `F`='n', cationCharge='n', fieldCode='c', anionCharge='n',
-    #         theoryCond='n', ionError='n', ionBalance='n'))) %>%
-    #     rename(site_name = site) %>%
-    #     rename_all(dplyr::recode, #essentially rename_if_exists
-    #                precipCatch='precipitation_ns',
-    #                flowGageHt='discharge_ns') %>%
-    #     mutate(
-    #         site_name = ifelse(grepl('W[0-9]', site_name), #harmonize sitename conventions
-    #                               tolower(site_name), site_name),
-    #         timeEST = ifelse(is.na(timeEST), '12:00', timeEST),
-    #         datetime = lubridate::ymd_hm(paste(date, timeEST), tz = 'UTC'))
-    #
-    # ue(identify_detection_limit_t(d,
-    #                               network = network,
-    #                               domain = domain))
-    #
-    # d <- d %>%
-    #     mutate(
-    #         ms_status = ifelse(is.na(fieldCode), FALSE, TRUE), #see summarize
-    #         DIC = ue(convert_unit(DIC, 'uM', 'mM')),
-    #         NH4_N = ue(convert_molecule(NH4, 'NH4', 'N')),
-    #         NO3_N = ue(convert_molecule(NO3, 'NO3', 'N')),
-    #         PO4_P = ue(convert_molecule(PO4, 'PO4', 'P'))) %>%
-    #     select(-date, -timeEST, -PO4, -NH4, -NO3, -fieldCode) %>%
-    #     filter_at(vars(-site_name, -datetime),
-    #               any_vars(! is.na(.))) %>%
-    #     group_by(datetime, site_name) %>%
-    #     summarize_all(~ if(is.numeric(.)) mean(., na.rm=TRUE) else any(.)) %>%
-    #     ungroup() %>%
-    #     mutate(ms_status = as.numeric(ms_status)) %>%
-    #     select(-ms_status, everything())
-    #
-    # d[is.na(d)] = NA #replaces NaNs. is there a clean, pipey way to do this?
-    #
-    # intv <- ifelse(grepl('precip', prodname_ms),
-    #                '1 day',
-    #                '1 hour')
-    # d <- ue(synchronize_timestep(ms_df = d,
-    #                              desired_interval = intv,
-    #                              impute_limit = 30))
-    #
-    # d <- ue(apply_detection_limit_t(d, network, domain))
-    #
-    # return(d)
 }
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_94 <- function(network, domain, prodname_ms, site_name,
+process_1_94 <- function(network, domain, prodname_ms, site_code,
                          component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
+
     rawfile <- glue(rawdir, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- ue(choose_projection(unprojected = TRUE))
+    projstring <- choose_projection(unprojected = TRUE)
 
     wb <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                       quiet = TRUE) %>%
         # mutate(WSHEDS0_ID = ifelse(is.na(WSHEDS0_ID), 0, WSHEDS0_ID)) %>%
-        filter(!is.na(WS)) %>% #ignore encompassing, non-experimental watershed
-        select(site_name = WSHEDS0_ID,
+        filter(! is.na(WS), #ignore encompassing, non-experimental watershed
+               WS != 'WS101') %>% #and ungauged w101
+        select(site_code = WSHEDS0_ID,
                area = AREA,
                perimeter = PERIMETER,
                geometry = geometry) %>%
-        mutate(site_name = paste0('w', site_name)) %>%
+        mutate(site_code = paste0('w', site_code)) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -332,17 +289,17 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
 
         new_wb <- wb[i,]
 
-        site_name <- as_tibble(new_wb) %>%
-            pull(site_name)
+        site_code <- as_tibble(new_wb) %>%
+            pull(site_code)
 
-        ue(write_ms_file(d = new_wb,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = site_name,
-                         level = 'munged',
-                         shapefile = TRUE,
-                         link_to_portal = TRUE))
+        write_ms_file(d = new_wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
     }
 
     return()
@@ -350,26 +307,26 @@ process_1_94 <- function(network, domain, prodname_ms, site_name,
 
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_100 <- function(network, domain, prodname_ms, site_name,
+process_1_100 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
     rawfile <- glue(rawdir, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- ue(choose_projection(unprojected = TRUE))
+    projstring <- choose_projection(unprojected = TRUE)
 
     rg_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                           quiet = TRUE) %>%
         filter(! is.na(GAGE_NUM)) %>%
-        select(site_name = ID,
+        select(site_code = ID,
                geometry = geometry) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -378,14 +335,14 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
         rg <- rg_all[i,] %>%
             sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        ue(write_ms_file(d = rg,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = rg$site_name,
-                         level = 'munged',
-                         shapefile = TRUE,
-                         link_to_portal = TRUE))
+        write_ms_file(d = rg,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = rg$site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
     }
 
     return()
@@ -393,27 +350,27 @@ process_1_100 <- function(network, domain, prodname_ms, site_name,
 
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_107 <- function(network, domain, prodname_ms, site_name,
+process_1_107 <- function(network, domain, prodname_ms, site_code,
                           component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
-                   n=network, d=domain, p=prodname_ms, s=site_name)
+                   n=network, d=domain, p=prodname_ms, s=site_code)
     rawfile <- glue(rawdir, '/', component)
 
     zipped_files <- unzip(zipfile = rawfile,
                           exdir = rawdir,
                           overwrite = TRUE)
 
-    projstring <- ue(choose_projection(unprojected = TRUE))
+    projstring <- choose_projection(unprojected = TRUE)
 
     weirs_all <- sf::st_read(rawdir, stringsAsFactors = FALSE,
                              quiet = TRUE) %>%
         filter(! is.na(WEIR_NUM)) %>%
-        select(site_name = WEIR_NUM,
+        select(site_code = WEIR_NUM,
                geometry = geometry) %>%
-        mutate(site_name = paste0('w', site_name)) %>%
+        mutate(site_code = paste0('w', site_code)) %>%
         sf::st_transform(projstring) %>%
-        arrange(site_name)
+        arrange(site_code)
 
     unlink(zipped_files)
 
@@ -422,14 +379,14 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
         w <- weirs_all[i,] %>%
              sf::st_zm(drop=TRUE, what='ZM') #drop Z dimension
 
-        ue(write_ms_file(d = w,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = w$site_name,
-                         level = 'munged',
-                         shapefile = TRUE,
-                         link_to_portal = TRUE))
+        write_ms_file(d = w,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = w$site_code,
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
     }
 
     return()
@@ -437,78 +394,22 @@ process_1_107 <- function(network, domain, prodname_ms, site_name,
 
 #derive kernels ####
 
-#precipitation: STATUS=READY
-#. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms){ #13
-
-    ue(precip_idw(precip_prodname = 'precipitation__13',
-                  wb_prodname = 'ws_boundary__94',
-                  pgauge_prodname = 'precip_gauge_locations__100',
-                  precip_prodname_out = prodname_ms))
-
-    return()
-}
-
-#precip_chemistry: STATUS=READY
-#. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){ #208
-
-    ue(pchem_idw(pchem_prodname = 'precip_chemistry__208',
-                 precip_prodname = 'precipitation__13',
-                 wb_prodname = 'ws_boundary__94',
-                 pgauge_prodname = 'precip_gauge_locations__100',
-                 pchem_prodname_out = prodname_ms))
-
-    return()
-}
+# #precipitation: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+#
+# #precip_chemistry: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms002 <- derive_precip_chem
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms){
+process_2_ms001 <- derive_stream_flux
 
-    chemprod <- 'stream_chemistry__208'
-    qprod <- 'discharge__1'
+# #precip_flux_inst: STATUS=PAUSED
+# #. handle_errors
+# process_2_ms004 <- derive_precip_flux
 
-    chemfiles <- ue(list_munged_files(network = network,
-                                      domain = domain,
-                                      prodname_ms = chemprod))
-    qfiles <- ue(list_munged_files(network = network,
-                                   domain = domain,
-                                   prodname_ms = qprod))
-
-    flux_sites <- generics::intersect(
-        ue(fname_from_fpath(qfiles, include_fext = FALSE)),
-        ue(fname_from_fpath(chemfiles, include_fext = FALSE)))
-
-    for(s in flux_sites){
-
-        flux <- sw(ue(calc_inst_flux(chemprod = chemprod,
-                                     qprod = qprod,
-                                     site_name = s)))
-                                     # dt_round_interv = 'hours')))
-
-        ue(write_ms_file(d = flux,
-                         network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_name = s,
-                         level = 'derived',
-                         shapefile = FALSE,
-                         link_to_portal = TRUE))
-    }
-
-    return()
-}
-
-#precip_flux_inst: STATUS=READY
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
-process_2_ms004 <- function(network, domain, prodname_ms){
-
-    ue(flux_idw(pchem_prodname = 'precip_chemistry__208',
-                precip_prodname = 'precipitation__13',
-                wb_prodname = 'ws_boundary__94',
-                pgauge_prodname = 'precip_gauge_locations__100',
-                flux_prodname_out = prodname_ms))
-
-    return()
-}
+process_2_ms002 <- derive_precip_pchem_pflux

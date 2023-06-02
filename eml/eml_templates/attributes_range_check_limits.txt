@@ -1,0 +1,6 @@
+"attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
+"variable_code"	"MacroSheds variable short name"	"character"				
+"variable_name"	"Full name of MacroSheds variable"	"character"				
+"unit"	"The standard unit of the variable within the MacroSheds dataset"	"character"				
+"range_check_minimum"	"The minimum value that is allowed through the range filter"	"numeric"	"variable_unit"			
+"range_check_maximum"	"The maximum value that is allowed through the range filter"	"numeric"	"variable_unit"			

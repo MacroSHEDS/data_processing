@@ -1,0 +1,7 @@
+"attributeName"	"code"	"definition"
+"disturbance_source"	"anthropogenic"	"The disturbance was intentionally carried out by humans."
+"disturbance_source"	"natural"	"The disturbance was an act of nature."
+"pulse_or_chronic"	"chronic"	"The action of disturbance was continual over a relatively long span."
+"pulse_or_chronic"	"pulse"	"The action of disturbance was relatively short-lived."
+"ws_status"	"exp"	"This watershed has been used for experimental purposes."
+"ws_status"	"non_exp"	"Reference or unmodified watershed. Not subject to watershed-scale experimentation."
