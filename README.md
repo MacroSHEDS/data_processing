@@ -1,3 +1,6 @@
+
+[![DOI](https://zenodo.org/badge/209650104.svg)](https://zenodo.org/badge/latestdoi/209650104)
+
 # data_acquisition directory structure
 
 + macrosheds sites are organized by network (e.g. LTER), domain (e.g. HBEF), and site (e.g. W1)
@@ -70,7 +73,7 @@ So, for example, the 1 in process_1_20093 means this is a munge kernel.
         + make sure datetime is converted to UTC (lubridate::with_tz and lubridate::force_tz are great for this)
         + make sure variable units are converted to those specified in data/general/variables.csv
         + make sure column names are converted to the ones we use in ms
-            + "site_name"
+            + "site_code"
             + "datetime"
             + e.g. "spCond" (again, consult variables.csv for variable names)
         + if necessary, separate one site into multiple sites. we have to do this for some neon "sites", where there's secretly an upstream sensor array and a downstream sensor array.
