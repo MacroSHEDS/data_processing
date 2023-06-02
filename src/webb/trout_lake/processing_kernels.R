@@ -216,6 +216,9 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS006 <- download_from_googledrive
 
 #munge kernels ####
 
@@ -529,6 +532,47 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
   }
 }
 
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
+    # creating a temporary directory to unzip the folder in
+    temp_dir <- tempdir()
+    dir.create(temp_dir,
+               showWarnings = FALSE,
+               recursive = TRUE)
+    unzip(rawfile,
+          exdir = temp_dir)
+
+    # reading in the contents of the extracted folder
+    file_names <- list.files(temp_dir, recursive = TRUE)
+    file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    
+    # read in watershed boundary
+    wb <- sf::read_sf(file_paths[grepl('globalwatershed.shp', file_paths)]) %>%
+      select(
+        site_code = Name,
+        geometry
+      ) %>%
+      mutate(site_code = 'trout_river')
+    
+      write_ms_file(d = wb,
+                    network = network,
+                    domain = domain,
+                    prodname_ms = prodname_ms,
+                    site_code = 'trout_river',
+                    level = 'munged',
+                    shapefile = TRUE)
+
+    unlink(temp_dir, recursive = TRUE)
+}
 
 #derive kernels ####
 
