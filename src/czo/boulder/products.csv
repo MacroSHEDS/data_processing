@@ -1,0 +1,23 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,hydroshare_id,component
+2918,discharge,ready,ready,NA,discharge__ms005,Gordon Gulch: Lower,c2384bd1743a4276a88a5110b1964ce0,ggl-sw-0-dis-111001-190930.csv__|GGL_SW_0_Dis.meta.txt
+2919,discharge,ready,ready,NA,discharge__ms005,Gordon Gulch: Upper,0efce710d2d24fab9542730522843a32,ggu-sw-0-dis-toWY2014.csv__|GGU_SW_0_Dis.meta.txt
+2783,stream_chemistry,ready,ready,,stream_chemistry__ms004,boulder creek,6938ed69fb704022b40b194426cc8302,!!SEARCH(CONTAINS(bc-sw-array|.csv))
+3064,stream_chemistry,ready,ready,,stream_chemistry__ms004,Betasso ,3aa9c239e24f44a68469a2c34b88eced,!!SEARCH(CONTAINS(bt-sw-0|.csv))
+3065,stream_chemistry,ready,ready,NA,stream_chemistry__ms004,Gordon Gulch,4bb6710317c445cf996793ac1f5d7149,!!SEARCH(CONTAINS(gg-sw-array|.csv))
+7241,stream_chemistry,ready,ready,NA,stream_chemistry__ms004,Electrical Conductivity Gordon,70176872f4c74ee09ddb56d1cc7e8472,ggl-sw-0-Cond_All_ProjectEnd2019.csv
+3639,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms008,Betasso & Gordon Gulch,cf49999ccc734c268f2ef001cdbc2c16,!!SEARCH(CONTAINS(bt-ggu-p-canopy-open|.csv))
+2435,precipitation,ready,ready,NA,precipitation__ms006,Betasso met station,6bf3e44b9de344749d8f665e139e7311,bt_Met_090204-200930.csv
+2888,precipitation,ready,ready,NA,precipitation__ms006,Gordon Gulch: Lower North Facing,d30b44383d154225b3c99e557d124b7d,ggl-nf-met-120608-WY2020.csv
+2889,precipitation,ready,ready,NA,precipitation__ms006,Gordon Gulch: Lower South Facing,d66f1f3239a94c7682c71217b1a94e0b,ggl-sf-met-120620-WY2020.csv
+ms001,cdnr_discharge,NA,NA,ready,discharge__ms005,NA,NA,NA
+ms002,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
+ms003,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms004,stream_chemistry,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
+ms005,discharge,NA,NA,ready,stream_flux_inst__ms007,NA,NA,NA
+ms006,precipitation,NA,NA,ready,precip_pchem_pflux__ms008,NA,NA,NA
+ms007,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms008,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms008,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA,NA

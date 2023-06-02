@@ -1,0 +1,565 @@
+calhoun - weir_3:
+    calculated_area: 4.7392
+    area from shapefile column: 4.7392
+    area from site_data: 7.7353
+calhoun - weir_4:
+    calculated_area: 6.531
+    area from shapefile column: 6.531
+    area from site_data: 5.908
+catalina_jemez - Bigelow:
+    calculated_area: 3.9684
+    area from shapefile column: 3.9684
+    area from site_data: 3.333
+catalina_jemez - FLUME_MCZOB:
+    calculated_area: 37.1917
+    area from shapefile column: 37.1917
+    area from site_data: 43.6679
+catalina_jemez - MarshallGulch:
+    calculated_area: 159.6935
+    area from shapefile column: 159.6935
+    area from site_data: 154.9809
+catalina_jemez - MC_ FLUME:
+    calculated_area: 37.1917
+    area from shapefile column: 37.1917
+    area from site_data: 43.6679
+catalina_jemez - OracleRidge:
+    calculated_area: 88.0054
+    area from shapefile column: 88.0054
+    area from site_data: 86.0261
+catalina_jemez - UpperJaramillo:
+    calculated_area: 741.5448
+    area from shapefile column: 741.5448
+    area from site_data: 786.532
+catalina_jemez - UpperLaJara:
+    calculated_area: 351.1923
+    area from shapefile column: 351.1923
+    area from site_data: 352.168
+east_river - Avery:
+    calculated_area: 59.7617
+    area from shapefile column: 59.76
+    area from site_data: 59.7617
+east_river - Bradley:
+    calculated_area: 382.3001
+    area from shapefile column: 382.27
+    area from site_data: 382.3001
+east_river - Copper:
+    calculated_area: 2366.8564
+    area from shapefile column: 2366.62
+    area from site_data: 2366.8564
+east_river - Gothic:
+    calculated_area: 89.6695
+    area from shapefile column: 89.66
+    area from site_data: 89.6695
+east_river - Marmot:
+    calculated_area: 37.7361
+    area from shapefile column: 37.73
+    area from site_data: 37.7361
+east_river - Quigley:
+    calculated_area: 255.0334
+    area from shapefile column: 255.02
+    area from site_data: 255.0334
+east_river - Rock:
+    calculated_area: 357.0097
+    area from shapefile column: 357
+    area from site_data: 357.0097
+east_river - Rustlers:
+    calculated_area: 1478.4805
+    area from shapefile column: 1478.38
+    area from site_data: 1478.4805
+krycklan - Site1:
+    calculated_area: 47.8754
+    area from shapefile column: NA
+    area from site_data: 47.8754
+krycklan - Site10:
+    calculated_area: 335.3401
+    area from shapefile column: NA
+    area from site_data: 335.3401
+krycklan - Site12:
+    calculated_area: 543.437
+    area from shapefile column: NA
+    area from site_data: 543.437
+krycklan - Site13:
+    calculated_area: 411.5455
+    area from shapefile column: NA
+    area from site_data: 411.5455
+krycklan - Site14:
+    calculated_area: 1409.0116
+    area from shapefile column: NA
+    area from site_data: 1409.0116
+krycklan - Site15:
+    calculated_area: 1910.7371
+    area from shapefile column: NA
+    area from site_data: 1910.7371
+krycklan - Site16:
+    calculated_area: 6783.6871
+    area from shapefile column: NA
+    area from site_data: 6783.6871
+krycklan - Site2:
+    calculated_area: 11.8741
+    area from shapefile column: NA
+    area from site_data: 11.8741
+krycklan - Site4:
+    calculated_area: 17.7488
+    area from shapefile column: NA
+    area from site_data: 17.7488
+krycklan - Site5:
+    calculated_area: 65.3107
+    area from shapefile column: NA
+    area from site_data: 65.3107
+krycklan - Site6:
+    calculated_area: 109.6827
+    area from shapefile column: NA
+    area from site_data: 109.6827
+krycklan - Site7:
+    calculated_area: 46.6972
+    area from shapefile column: NA
+    area from site_data: 46.6972
+krycklan - Site9:
+    calculated_area: 287.7988
+    area from shapefile column: NA
+    area from site_data: 287.7988
+arctic - Kuparuk_River_-0.47:
+    calculated_area: 11224.9846
+    area from shapefile column: 11224.9846
+    area from site_data: 13062.5558
+arctic - Kuparuk_River_-0.7:
+    calculated_area: 11183.3686
+    area from shapefile column: 11183.3686
+    area from site_data: 12953.1974
+arctic - Kuparuk_River_0.3:
+    calculated_area: 4.7702
+    area from shapefile column: 4.7702
+    area from site_data: 13198.2076
+arctic - Kuparuk_River_0.74:
+    calculated_area: 0.2994
+    area from shapefile column: 0.2994
+    area from site_data: 13197.5957
+arctic - Kuparuk_River_1:
+    calculated_area: 4.1768
+    area from shapefile column: 4.1768
+    area from site_data: 13270.3701
+arctic - Kuparuk_River_1.39:
+    calculated_area: 2.3878
+    area from shapefile column: 2.3878
+    area from site_data: 14504.2496
+arctic - Kuparuk_River_1.8:
+    calculated_area: 0.5978
+    area from shapefile column: 0.5978
+    area from site_data: 14490.6424
+arctic - Kuparuk_River_2.5:
+    calculated_area: 14103.4298
+    area from shapefile column: 14103.4298
+    area from site_data: 14693.8177
+arctic - Kuparuk_River_3:
+    calculated_area: 4.768
+    area from shapefile column: 4.768
+    area from site_data: 14452.001
+arctic - Kuparuk_River_4:
+    calculated_area: 14182.5014
+    area from shapefile column: 14182.5014
+    area from site_data: 14832.2648
+arctic - Kuparuk_River_4.1:
+    calculated_area: 14201.8225
+    area from shapefile column: 14201.8225
+    area from site_data: 14805.8942
+arctic - Oksrukuyik_Creek_-0.1:
+    calculated_area: 7018.686
+    area from shapefile column: 7018.686
+    area from site_data: 7011.0347
+arctic - Oksrukuyik_Creek_-0.3:
+    calculated_area: 6863.012
+    area from shapefile column: 6863.012
+    area from site_data: 6120.8406
+arctic - Oksrukuyik_Creek_-0.7:
+    calculated_area: 6785.458
+    area from shapefile column: 6785.458
+    area from site_data: 5888.1126
+arctic - Oksrukuyik_Creek_-1.2:
+    calculated_area: 5755.386
+    area from shapefile column: 5755.386
+    area from site_data: 5790.8099
+arctic - Oksrukuyik_Creek_0.23:
+    calculated_area: 7435.2411
+    area from shapefile column: 7435.2411
+    area from site_data: 6910.8842
+arctic - Oksrukuyik_Creek_0.48:
+    calculated_area: 7436.7268
+    area from shapefile column: 7436.7268
+    area from site_data: 7125.1075
+arctic - Oksrukuyik_Creek_1.06:
+    calculated_area: 7536.5473
+    area from shapefile column: 7536.5473
+    area from site_data: 7105.6929
+arctic - Oksrukuyik_Creek_1.37:
+    calculated_area: 7577.543
+    area from shapefile column: 7577.543
+    area from site_data: 7094.0848
+arctic - Oksrukuyik_Creek_1.7:
+    calculated_area: 7605.7652
+    area from shapefile column: 7605.7652
+    area from site_data: 7143.6644
+arctic - Oksrukuyik_Creek_2.5:
+    calculated_area: 8288.9112
+    area from shapefile column: 8288.9112
+    area from site_data: 7292.2583
+arctic - Oksrukuyik_Creek_2.7:
+    calculated_area: 8288.9112
+    area from shapefile column: 8288.9112
+    area from site_data: 7345.0715
+arctic - Roche_Moutonnee_Creek_Main:
+    calculated_area: 8498.2632
+    area from shapefile column: 8498.2632
+    area from site_data: 8410.8634
+arctic - Toolik_Inlet_Main:
+    calculated_area: 4472.633
+    area from shapefile column: 4472.633
+    area from site_data: 4821.12
+baltimore - BARN:
+    calculated_area: 382.3955
+    area from shapefile column: 382.29
+    area from site_data: 382.3951
+baltimore - DRKR:
+    calculated_area: 1411.3838
+    area from shapefile column: 1411.04
+    area from site_data: 1411.3832
+baltimore - GFCP:
+    calculated_area: 16317.4586
+    area from shapefile column: 16313.5
+    area from site_data: 16317.4479
+baltimore - GFGB:
+    calculated_area: 1052.8239
+    area from shapefile column: 1052.61
+    area from site_data: 1052.8234
+baltimore - GFGL:
+    calculated_area: 85.4461
+    area from shapefile column: 85.4295
+    area from site_data: 85.4461
+baltimore - GFVN:
+    calculated_area: 8295.1074
+    area from shapefile column: 8293.3
+    area from site_data: 8295.1028
+baltimore - MCDN:
+    calculated_area: 5.6145
+    area from shapefile column: 5.6132
+    area from site_data: 5.6145
+baltimore - POBR:
+    calculated_area: 35.7976
+    area from shapefile column: 35.7875
+    area from site_data: 35.7976
+bonanza - C2:
+    calculated_area: 360.2449
+    area from shapefile column: 360.2449
+    area from site_data: 516.2527
+bonanza - C3:
+    calculated_area: 483.7773
+    area from shapefile column: 483.7773
+    area from site_data: 527.4539
+hbef - w1:
+    calculated_area: 14.0897
+    area from shapefile column: 140953.2969
+    area from site_data: 14.0897
+hbef - w2:
+    calculated_area: 17.9266
+    area from shapefile column: 179336.7578
+    area from site_data: 17.9266
+hbef - w3:
+    calculated_area: 40.245
+    area from shapefile column: 402606.5469
+    area from site_data: 40.245
+hbef - w4:
+    calculated_area: 38.8278
+    area from shapefile column: 388433.0547
+    area from site_data: 38.8278
+hbef - w5:
+    calculated_area: 20.7826
+    area from shapefile column: 207909.8438
+    area from site_data: 20.7826
+hbef - w6:
+    calculated_area: 14.9645
+    area from shapefile column: 149705.9453
+    area from site_data: 14.9645
+hbef - w7:
+    calculated_area: 76.5979
+    area from shapefile column: 766309.5625
+    area from site_data: 76.5979
+hbef - w8:
+    calculated_area: 61.0434
+    area from shapefile column: 610693.2578
+    area from site_data: 61.0434
+hbef - w9:
+    calculated_area: 70.2631
+    area from shapefile column: 702923.5703
+    area from site_data: 70.2631
+hjandrews - GSMACK:
+    calculated_area: 579.0496
+    area from shapefile column: 5786634.141
+    area from site_data: 579.0612
+hjandrews - GSWS01:
+    calculated_area: 98.178
+    area from shapefile column: 981100.9864
+    area from site_data: 98.1799
+hjandrews - GSWS02:
+    calculated_area: 59.1752
+    area from shapefile column: 591345.5663
+    area from site_data: 59.1765
+hjandrews - GSWS03:
+    calculated_area: 93.0102
+    area from shapefile column: 929464.53
+    area from site_data: 93.0123
+hjandrews - GSWS06:
+    calculated_area: 12.016
+    area from shapefile column: 120078.1298
+    area from site_data: 12.0162
+hjandrews - GSWS07:
+    calculated_area: 12.4287
+    area from shapefile column: 124203.1339
+    area from site_data: 12.4289
+hjandrews - GSWS08:
+    calculated_area: 16.043
+    area from shapefile column: 160321.4636
+    area from site_data: 16.0432
+hjandrews - GSWS09:
+    calculated_area: 7.1681
+    area from shapefile column: 71630.8727
+    area from site_data: 7.1682
+hjandrews - GSWS10:
+    calculated_area: 11.4554
+    area from shapefile column: 114473.7093
+    area from site_data: 11.4555
+konza - N01B:
+    calculated_area: 119.1633
+    area from shapefile column: 119.1633
+    area from site_data: 120.3558
+konza - N02B:
+    calculated_area: 85.807
+    area from shapefile column: 85.807
+    area from site_data: 95.6295
+konza - N04D:
+    calculated_area: 121.5492
+    area from shapefile column: 121.5492
+    area from site_data: 126.4447
+konza - N20B:
+    calculated_area: 74.6907
+    area from shapefile column: 74.6907
+    area from site_data: 200.6672
+luquillo - MPR:
+    calculated_area: 1784.9138
+    area from shapefile column: 1784.9138
+    area from site_data: 1783.3909
+luquillo - Q1:
+    calculated_area: 6.8523
+    area from shapefile column: 6.8523
+    area from site_data: 5.7633
+luquillo - QS:
+    calculated_area: 150.5243
+    area from shapefile column: 150.5243
+    area from site_data: 164.795
+niwot - ALBION:
+    calculated_area: 719.532
+    area from shapefile column: 719.532
+    area from site_data: 715.1067
+niwot - GREEN4:
+    calculated_area: 5.1103
+    area from shapefile column: 5.1103
+    area from site_data: 228.789
+niwot - MARTINELLI:
+    calculated_area: 3.9361
+    area from shapefile column: 3.9361
+    area from site_data: 16.17
+niwot - NAVAJO:
+    calculated_area: 47.3994
+    area from shapefile column: 47.3994
+    area from site_data: 47.4239
+niwot - SADDLE:
+    calculated_area: 14.1442
+    area from shapefile column: 14.1442
+    area from site_data: 19.9509
+neon - ARIK:
+    calculated_area: 263229.7226
+    area from shapefile column: NA
+    area from site_data: 263229.7226
+neon - BIGC:
+    calculated_area: 1090.0922
+    area from shapefile column: NA
+    area from site_data: 1090.0922
+neon - BLDE:
+    calculated_area: 3783.9005
+    area from shapefile column: NA
+    area from site_data: 3783.9005
+neon - BLUE:
+    calculated_area: 32215.0462
+    area from shapefile column: NA
+    area from site_data: 32215.0462
+neon - BLWA:
+    calculated_area: 1617163.6994
+    area from shapefile column: NA
+    area from site_data: 1617163.6994
+neon - CARI:
+    calculated_area: 3104.7389
+    area from shapefile column: NA
+    area from site_data: 3104.7389
+neon - COMO:
+    calculated_area: 356.6286
+    area from shapefile column: NA
+    area from site_data: 356.6286
+neon - CUPE:
+    calculated_area: 425.807
+    area from shapefile column: NA
+    area from site_data: 425.807
+neon - FLNT:
+    calculated_area: 1498666.0886
+    area from shapefile column: NA
+    area from site_data: 1498666.0886
+neon - GUIL:
+    calculated_area: 955.2949
+    area from shapefile column: NA
+    area from site_data: 955.2949
+neon - HOPB:
+    calculated_area: 1188.2011
+    area from shapefile column: NA
+    area from site_data: 1188.2011
+neon - KING:
+    calculated_area: 1304.1253
+    area from shapefile column: NA
+    area from site_data: 1304.1253
+neon - LECO:
+    calculated_area: 912.0994
+    area from shapefile column: NA
+    area from site_data: 912.0994
+neon - LEWI:
+    calculated_area: 1190.8576
+    area from shapefile column: NA
+    area from site_data: 1190.8576
+neon - MART:
+    calculated_area: 634.773
+    area from shapefile column: NA
+    area from site_data: 634.773
+neon - MAYF:
+    calculated_area: 1436.2116
+    area from shapefile column: NA
+    area from site_data: 1436.2116
+neon - MCDI:
+    calculated_area: 2257.9588
+    area from shapefile column: NA
+    area from site_data: 2257.9588
+neon - MCRA:
+    calculated_area: 393.2217
+    area from shapefile column: NA
+    area from site_data: 393.2217
+neon - OKSR:
+    calculated_area: 5781.4568
+    area from shapefile column: NA
+    area from site_data: 5781.4568
+neon - POSE:
+    calculated_area: 202.7315
+    area from shapefile column: NA
+    area from site_data: 202.7315
+neon - PRIN:
+    calculated_area: 4891.1387
+    area from shapefile column: NA
+    area from site_data: 4891.1387
+neon - REDB:
+    calculated_area: 1671.4827
+    area from shapefile column: NA
+    area from site_data: 1671.4827
+neon - SYCA:
+    calculated_area: 28047.5053
+    area from shapefile column: NA
+    area from site_data: 28047.5053
+neon - TECR:
+    calculated_area: 297.478
+    area from shapefile column: NA
+    area from site_data: 297.478
+neon - TOMB:
+    calculated_area: 4710989.004
+    area from shapefile column: NA
+    area from site_data: 4710989.004
+neon - WALK:
+    calculated_area: 108.9961
+    area from shapefile column: NA
+    area from site_data: 108.9961
+neon - WLOU:
+    calculated_area: 490.3478
+    area from shapefile column: NA
+    area from site_data: 490.3478
+fernow - WS-1:
+    calculated_area: 29.7559
+    area from shapefile column: 29.7559
+    area from site_data: 29.8618
+fernow - WS-10:
+    calculated_area: 15.6406
+    area from shapefile column: 15.6406
+    area from site_data: 15.7824
+fernow - WS-13:
+    calculated_area: 1.3499
+    area from shapefile column: 1.3499
+    area from site_data: 14.0898
+fernow - WS-14:
+    calculated_area: 132.0136
+    area from shapefile column: 132.0136
+    area from site_data: 130.8789
+fernow - WS-2:
+    calculated_area: 14.8455
+    area from shapefile column: 14.8455
+    area from site_data: 15.7842
+fernow - WS-3:
+    calculated_area: 33.7897
+    area from shapefile column: 33.7897
+    area from site_data: 35.2322
+fernow - WS-4:
+    calculated_area: 0.1011
+    area from shapefile column: 0.1011
+    area from site_data: 36.9036
+fernow - WS-5:
+    calculated_area: 35.7804
+    area from shapefile column: 35.7804
+    area from site_data: 35.8255
+fernow - WS-6:
+    calculated_area: 21.3424
+    area from shapefile column: 21.3424
+    area from site_data: 22.4035
+fernow - WS-7:
+    calculated_area: 27.3716
+    area from shapefile column: 27.3716
+    area from site_data: 26.0171
+krew - B200:
+    calculated_area: 473.961
+    area from shapefile column: 474
+    area from site_data: 473.9469
+krew - B201:
+    calculated_area: 52.9798
+    area from shapefile column: 53
+    area from site_data: 52.9782
+krew - B203:
+    calculated_area: 138.3598
+    area from shapefile column: 138
+    area from site_data: 138.3556
+krew - B204:
+    calculated_area: 166.9197
+    area from shapefile column: 167
+    area from site_data: 166.9148
+krew - D102:
+    calculated_area: 120.7619
+    area from shapefile column: 121
+    area from site_data: 120.7592
+krew - P300:
+    calculated_area: 460.9987
+    area from shapefile column: 461
+    area from site_data: 460.9889
+krew - P301:
+    calculated_area: 99.1586
+    area from shapefile column: 99
+    area from site_data: 99.1565
+krew - P303:
+    calculated_area: 132.326
+    area from shapefile column: 132
+    area from site_data: 132.3231
+krew - P304:
+    calculated_area: 48.7327
+    area from shapefile column: 49
+    area from site_data: 48.7317
+krew - T003:
+    calculated_area: 227.7356
+    area from shapefile column: 228
+    area from site_data: 227.7289
+

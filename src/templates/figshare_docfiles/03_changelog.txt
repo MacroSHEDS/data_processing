@@ -1,0 +1,4 @@
+MacroSheds dataset changelog
+
+2022-11-23: version 1 is described in the MacroSheds data paper (L&O Letterscitation here) and in the accompanying documentation.
+			Future version changes will be logged here.

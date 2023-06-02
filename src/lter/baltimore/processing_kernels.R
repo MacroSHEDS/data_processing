@@ -1,150 +1,340 @@
 #retrieval kernels ####
 
-#stream_chemistry_gwynns: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_700 <- function(set_details, network, domain){
-  
-  download_raw_file(network = network, 
-                    domain = domain, 
-                    set_details = set_details, 
-                    file_type = '.csv')
-  
-  return()
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = '.csv')
+
+    return()
 }
 
-
-#stream_chemistry_club: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_900 <- function(set_details, network, domain){
-  
-  download_raw_file(network = network, 
-                    domain = domain, 
-                    set_details = set_details, 
-                    file_type = '.csv')
-  
-  return()
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = '.csv')
+
+    return()
 }
 
-#stream_chemistry_gwynns_up: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_800 <- function(set_details, network, domain){
-  
-  download_raw_file(network = network, 
-                    domain = domain, 
-                    set_details = set_details, 
-                    file_type = '.csv')
-  
-  return()
-}
 
-#stream_chemistry_263: STATUS=READY
-#. handle_errors
-process_0_950 <- function(set_details, network, domain){
-  
-  download_raw_file(network = network, 
-                    domain = domain, 
-                    set_details = set_details, 
-                    file_type = '.csv')
-  
-  return()
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = '.csv')
+
+    return()
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_3110 <- function(set_details, network, domain){
-  
-  download_raw_file(network = network, 
-                    domain = domain, 
-                    set_details = set_details, 
-                    file_type = '.csv')
-  
+
+    download_raw_file(network = network,
+                      domain = domain,
+                      set_details = set_details,
+                      file_type = '.csv')
+
+    return()
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_0_3200 <- function(set_details, network, domain){
+
+  download_raw_file(network = network,
+                    domain = domain,
+                    set_details = set_details,
+                    file_type = '.zip')
+
   return()
 }
 
 #munge kernels ####
 
-#stream_chemistry_gwynns: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_700 <- function(network, domain, prodname_ms, site_name,
+process_1_700 <- function(network, domain, prodname_ms, site_code,
                           component) {
-  # site_name=site_name; component=in_comp
-  
-  rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
-  look <- read_csv(rawfile)
-  
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          date_col = list(name = 'Date',
-                                          format = '%Y-%m-%d',
-                                          tz = 'US/Eastern'),
-                          time_col = list(name = 'time',
-                                          tz = 'US/Eastern'),
-                          site_name_col = 'Site',
-                          data_cols = c('Cl', 'NO3_N'='NO3', 'PO4_P'='PO4', 'SO4', 'TN', 'TP', 
-                                        'temperature'='temp', 'dox'='DO', 'pH', 
-                                        'Turbidity'='turbid', 'Ecoli', 
-                                        'conductivity'='spCond', 'Ca', 'HCO3', 
-                                        'K', 'Mg', 'Na'),
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE))
-  
-  #Temporary but remove when ms_read_raw_csv can handed alternate NA values 
-  d[d==-999.99] <- NA
-  
-  #P04_P in micrograms/L 
-  #SO4 in micrograms/L
-  #TP in micrograms 
-  #DO (dox) in mg/l and micrograms/liter
-  #Turbidity in NTU
-  #ecoli in CFU/100ml 
-  # Ca probably mirograms says Mg/l but also micrograms per liter 
-  # HCO3 in micrograms and mg/l
-  # K says ng/L and micrograms
-  # Mg says ng/L and micrograms/L 
-  # Na says ng/L and micrograms/L 
-  
-  
+    # site_code=site_code; component=in_comp
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('Date' = '%Y-%m-%d',
+                                              'time' = '%H:%M'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Site',
+                         alt_site_code = list('GFCP' = 'GFCPisco',
+                                              'GFGL' = 'GFGLisco',
+                                              'GFVN' = 'GFVNisco',
+                                              'GRGF' = 'grgf',
+                                              'RGHT' = 'RGHTisco'),
+                         data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
+                                       'temperature'='temp', 'dox'='DO', 'pH',
+                                       'Turbidity'='turbid', 'Ecoli',
+                                       'conductivity'='spCond', 'Ca', 'HCO3',
+                                       'K', 'Mg', 'Na'),
+                         set_to_NA = -999.99,
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
+
+    #pH values greater than 100, removing here
+    d <- mutate(d,
+                val = ifelse(var == 'GN_pH' & val > 14, NA, val))
+
+    # Turbidity is in NTU the ms_vars is in FNU, not sure these are comparable
+    d <- ms_conversions(d,
+                        convert_units_from = c(PO4_P = 'ug/l'),
+                        convert_units_to = c(PO4_P = 'mg/l'))
+
+    return(d)
 }
 
-#stream_chemistry_club: STATUS=READY
+#stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_900 <- function(network, domain, prodname_ms, site_name,
+process_1_900 <- function(network, domain, prodname_ms, site_code,
                           component) {
-  # site_name=site_name; component=in_comp
-  
-  rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                 n=network, d=domain, p=prodname_ms, s=site_name, c=component)
-  
-  look <- read_csv(rawfile)
-  
-  d <- ue(ms_read_raw_csv(filepath = rawfile,
-                          date_col = list(name = 'Date',
-                                          format = '%Y-%m-%d',
-                                          tz = 'US/Eastern'),
-                          time_col = list(name = 'time',
-                                          tz = 'US/Eastern'),
-                          site_name_col = 'Site',
-                          data_cols = c('Cl', 'NO3_N'='NO3', 'PO4_P'='PO4', 'SO4', 'TN', 'TP', 
-                                        'temperature'='temp', 'dox'='DO', 'ph'='pH', 
-                                        'Turbidity'='turbid', 'Ecoli'),
-                          data_col_pattern = '#V#',
-                          is_sensor = FALSE))
-  
-  #Temporary but remove when ms_read_raw_csv can handed alternate NA values 
-  d[d==-999.99] <- NA
-  
-  #P04_P in micrograms/L 
-  #SO4 in micrograms/L
-  #TP in micrograms 
-  #DO (dox) in mg/l and micrograms/liter
-  #Turbidity in NTU
-  #ecoli in CFU/100ml 
-  # Ca probably mirograms says Mg/l but also micrograms per liter 
-  # HCO3 in micrograms and mg/l
-  # K says ng/L and micrograms
-  # Mg says ng/L and micrograms/L 
-  # Na says ng/L and micrograms/L 
-  
-  
+    # site_code=site_code; component=in_comp
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('Date' = '%Y-%m-%d',
+                                              'time' = '%H:%M'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Site',
+                         data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
+                                       'temperature'='temp', 'dox'='DO', 'ph'='pH',
+                                       'Turbidity'='turbid', 'Ecoli'),
+                         set_to_NA = c(-999.990, -999.99, -999),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
+
+    d <- ms_conversions(d,
+                        convert_units_from = c(PO4_P = 'ug/l'),
+                        convert_units_to = c(PO4_P = 'mg/l'))
+
+    return(d)
 }
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_1_800 <- function(network, domain, prodname_ms, site_code,
+                          component) {
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site',
+                         data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
+                                       'sulfate'='SO4', 'nitrogen_total'='TN',
+                                       'phosphorus_total'='TP'),
+                         set_to_NA = c(-999.990, -999.99, -999),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
+
+    d <- ms_conversions(d,
+                        convert_units_from = c(PO4_P = 'ug/l',
+                                               TP = 'ug/l'),
+                        convert_units_to = c(PO4_P = 'mg/l',
+                                             TP = 'mg/l'))
+
+      return(d)
+}
+
+#precipitation: STATUS=READY
+#. handle_errors
+process_1_3110 <- function(network, domain, prodname_ms, site_code,
+                           component) {
+
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'Rain_Gauge_ID',
+                         data_cols = c('Precipitation_mm'='precipitation'),
+                         data_col_pattern = '#V#',
+                         is_sensor = TRUE)
+
+
+    # Baltimore precip is recorded at 8 sites where there are two tipping-bucket
+    # rain gauges each. It appears that only rain events are reported, as the
+    # dataset has no 0 values (waiting on response from BES). To correct for this
+    # both gauges at each site are averaged and 0 values are filled in for all
+    # minutes where there is not a record.
+
+
+    d <- d %>%
+      rename(val = 3) %>%
+      mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[,1]) %>%
+      group_by(datetime, site_code) %>%
+      summarise(val = mean(val, na.rm = TRUE))
+
+    rain_gauges <- unique(d$site_code)
+
+    final <- tibble()
+    for(i in 1:length(rain_gauges)) {
+
+      onesite <- d %>%
+        filter(site_code == rain_gauges[i])
+
+      dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
+
+      with_0s <- tibble(datetime = dates)
+
+      fin <- full_join(with_0s, onesite, by = 'datetime') %>%
+        mutate(val = ifelse(is.na(val), 0, val)) %>%
+        mutate(site_code = rain_gauges[i])
+
+      final <- rbind(final, fin)
+    }
+
+    d <- final %>%
+      mutate(var = 'IS_precipitation',
+             ms_status = 0)
+
+    return(d)
+}
+
+#ws_boundary: STATUS=READY
+#. handle_errors
+process_1_3200 <- function(network, domain, prodname_ms, site_code, component){
+
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}',
+                   n=network, d=domain, p=prodname_ms)
+
+    zipped_files <- unzip(zipfile = rawfile,
+                          exdir = rawdir,
+                          overwrite = TRUE)
+
+    projstring <- choose_projection(unprojected = TRUE)
+
+    shape_paths <- glue('{d}/01m/{s}',
+                       d = rawdir,
+                       s = 'BES Watershed Boundary Shapefiles')
+
+    files <- list.files(shape_paths, full.names = T)
+
+    shp_files <- grep('.shp', files, value = T)
+
+    shp_files <- shp_files[!grepl('.shp.xml', shp_files)]
+
+    full_site_code <- str_split_fixed(shp_files, '[/]', n = Inf)[,8]
+    full_site_code <- str_split_fixed(full_site_code, '[.]', n = Inf)[,1]
+
+    for(i in 1:length(shp_files)){
+
+        site_code <- case_when(full_site_code == 'Baisman_Run' ~ 'BARN',
+                               full_site_code == 'Carroll_Park' ~ 'GFCP',
+                               full_site_code == 'Dead_Run' ~ 'DRKR',
+                               full_site_code == 'Glyndon' ~ 'GFGL',
+                               full_site_code == 'Gwynnbrook' ~ 'GFGB',
+                               full_site_code == 'McDonogh' ~ 'MCDN',
+                               full_site_code == 'Pond_Branch' ~ 'POBR',
+                               full_site_code == 'Villa_Nova' ~ 'GFVN')
+
+        wb <- st_read(shp_files[i]) %>%
+          mutate(site_code = !!site_code[i],
+                 area = Area_m2/10000) %>%
+          select(-Area_m2) %>%
+          sf::st_transform(4326)
+
+        write_ms_file(d = wb,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code[i],
+                      level = 'munged',
+                      shapefile = TRUE,
+                      link_to_portal = FALSE)
+    }
+
+    unlink(zipped_files)
+
+    return()
+}
+
+#derive kernels ####
+
+#precip_gauge_locations
+#. handle_errors
+process_2_ms013 <- precip_gauge_from_site_data
+
+#stream_gauge_locations
+#. handle_errors
+process_2_ms014 <- stream_gauge_from_site_data
+
+#stream_chemistry: STATUS=READY
+#. handle_errors
+process_2_ms012 <- function(network, domain, prodname_ms) {
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('stream_chemistry__700',
+                                           'stream_chemistry__900',
+                                           'stream_chemistry__800'))
+
+    return()
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms011 <- function(network, domain, prodname_ms) {
+
+    pull_usgs_discharge(network = network,
+                        domain = domain,
+                        prodname_ms = prodname_ms,
+                        sites = c('GFCP' = '01589352', 'GFGB' = '01589197',
+                                  'GFGL' = '01589180', 'GFVN' = '01589300',
+                                  'POBR' = '01583570', 'DRKR' = '01589330',
+                                  'BARN' = '01583580', 'MCDN' = '01589238',
+                                  'MAWI' = '01589351'),
+                        time_step = c('daily', 'daily', 'daily',
+                                      'daily', 'daily', 'daily',
+                                      'daily', 'daily', 'daily'))
+
+  return()
+}
+
+#stream_flux_inst: STATUS=READY
+#. handle_errors
+process_2_ms003 <- derive_stream_flux
+
+# #precipitation: STATUS=OBSOLETE
+# #. handle_errors
+# process_2_ms001 <- derive_precip
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms001 <- derive_precip_pchem_pflux

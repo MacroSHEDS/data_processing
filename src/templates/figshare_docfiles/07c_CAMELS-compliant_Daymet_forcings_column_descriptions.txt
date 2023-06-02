@@ -1,0 +1,10 @@
+MacroSheds CAMELS-compliant Daymet climate forcings
+
+The Daymet forcings accompanying the core MacroSheds dataset represent watershed averages of published, gridded Daymet products (Thornton et al. 2020). Note that our format is a little different from what CAMELS provides. Our Daymet files are CSVs with a single datetime column and only one header. For site locations and elevations (and lots of other site information) see 04_site_documentation.
+
+We've included timeseries of potential evapotranspiration (pet) in this dataset, though pet is not a Daymet variable per se. The pet product was also computed differently for MacroSheds watersheds than for CAMELS in that we solved the Priestly-Taylor formulation by using a gridded 𝛼 product (Aschonitis et al. 2017), rather than calibrating 𝛼 ourselves.
+
+References:
+Aschonitis, V. G., Papamichail, D., Demertzi, K., Colombani, N., Mastrocicco, M., Ghirardini, A., Castaldelli, G., & Fano, E.-A. (2017). High resolution global grids of revised Priestley-Taylor and Hargreaves-Samani coefficients for assessing ASCE-standardized reference crop evapotranspiration and solar radiation, links to ESRI-grid files [Data set].
+Thornton, M. M., Shrestha, R., Wei, Y., Thornton, P. E., Kao, S., & Wilson, B. E. (2020). DaymetDaymet: Daily Surface Weather Data on a 1-km Grid for North America, Version 4 [NetCDF]. 0 MB. https://doi.org/10.3334/ORNLDAAC/1840
+

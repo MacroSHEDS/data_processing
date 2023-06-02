@@ -1,0 +1,19 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,hosted on gdrive,loch_vale_ppt,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-All-w.csv
+VERSIONLESS002,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,hosted on gdrive,loch_vale_pchem,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-All-w.csv
+VERSIONLESS003,discharge,ready,ready,NA,discharge__ms001,NA,loch_vale_discharge_andrews_creek,https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401723105400000
+VERSIONLESS004,discharge,ready,ready,NA,discharge__ms001,NA,loch_vale_discharge_icy_brook,https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000
+VERSIONLESS005,discharge,ready,ready,NA,discharge__ms001,NA,loch_vale_discharge_loch_outlet,https://waterdata.usgs.gov/co/nwis/uv/?site_no=401733105392404
+VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_andrews_creek,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401723105400000&agency_cd=USGS&format=separated_wide_rdb
+VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_icy_brook,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401707105395000&agency_cd=USGS&format=separated_wide_rdb
+VERSIONLESS008,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_loch_outlet,https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401733105392404&agency_cd=USGS&format=separated_wide_rdb
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms004,automated entry,NA,NA
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
+ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
+ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
+ms005,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms005,NA,NA,NA
+ms006,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA,NA
