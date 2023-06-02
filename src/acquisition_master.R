@@ -256,7 +256,7 @@ ms_init <- function(use_gpu = FALSE,
 
 ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
-                       config_storage_location = 'remote')
+                       config_storage_location = 'remote')#
 
 #load authorization file for macrosheds google sheets
 googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
