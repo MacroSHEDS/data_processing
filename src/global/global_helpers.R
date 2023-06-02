@@ -10066,7 +10066,8 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
                        site_data = site_data)
-
+    
+    # portal_config <- jsonlite::read_json('./portal_config.json')
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets(portal_config)
 
@@ -14643,9 +14644,9 @@ download_from_googledrive <- function(set_details, network, domain){
     if('site_code' %in% names(set_details)) {
         sitechar <- set_details$site_code
 
-        if(sitechar == 'sitename_NA') {
-            sitechar = 'sitecode_NA'
-        }
+        ## if(sitechar == 'sitename_NA') {
+        ##     sitechar = 'sitecode_NA'
+        ## }
     }
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
@@ -14657,8 +14658,6 @@ download_from_googledrive <- function(set_details, network, domain){
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
-
-    print('status: 0000011')
 
     network_id <- gd_files %>%
       filter(name == !!network)
@@ -14687,7 +14686,7 @@ download_from_googledrive <- function(set_details, network, domain){
 
     prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
 
-    if(sitechar != 'sitecode_NA') {
+    if(sitechar != 'sitename_NA') {
 
         site_files <- prod_files
 
@@ -16513,4 +16512,23 @@ combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
     }
 
     return(d)
+}
+
+# rename site ws traits
+ws_traits_dir = list.files('vault/panola/ws_traits/', 
+                           recursive =  TRUE,
+                           full.names = TRUE, 
+                           pattern = '.feather')
+old_site_code = 'USGS_02203970'
+new_site_code = 'mountain_creek_tributary'
+
+for(file in ws_traits_dir) {
+  if(grepl('feather', file)) {
+    file_data = feather::read_feather(file)
+    
+    file_name = gsub(old_site_code, new_site_code, file)
+    file_data$site_code = new_site_code
+    
+    feather::write_feather(file_data, file_name)
+  } 
 }
