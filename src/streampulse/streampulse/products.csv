@@ -1,0 +1,12 @@
+prodcode,prodname,retrieve_status,retrieve_status.1,retrieve_status.2,precursor_of,notes,components,url,NA_status,munge_status,derive_status
+VERSIONLESS001,discharge,ready,ready,NA,discharge__ms001,USGS_05357215,trout_discharge_w1,https://waterdata.usgs.gov/usa/nwis/uv?05357215,NA,ready,NA
+VERSIONLESS002,discharge,ready,ready,NA,discharge__ms001,USGS_05357230,trout_discharge_w2,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357230&agency_cd=USGS,NA,ready,NA
+VERSIONLESS003,discharge,ready,ready,NA,discharge__ms001,USGS_05357225,trout_discharge_w3,https://waterdata.usgs.gov/nwis/inventory/?site_no=05357225&agency_cd=USGS,NA,ready,NA
+VERSIONLESS004,discharge,ready,ready,NA,discharge__ms001,USGS_05357245,trout_discharge_w4,https://waterdata.usgs.gov/monitoring-location/05357245/,NA,ready,NA
+VERSIONLESS005,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,For all trout_lake creeks,trout_lake_chem,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947,NA,ready,NA
+VERSIONLESS006,ws_boundary,ready,,,ws_boundary__ms000,trout river needs stream stat ws version,trout_river_streamstat_wb,,,ready,
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms002,NA,NA,NA,NA,NA,ready
+ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA,NA,NA,ready
+ms003,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA,NA,NA,ready
+ms000,ws_boundary,NA,NA,NA,NA,automated entry,NA,NA,NA,NA,NA
+ms004,stream_chemistry,NA,NA,NA,NA,automated entry,NA,NA,NA,NA,linked

@@ -1,23 +1,18 @@
 #retrieval kernels ####
 library(dataRetrieval)
 
+#set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS001")
+
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- function(set_details, network, domain) {
-      
-  prodname_ms = set_details$prodname_ms
-  site_code   = set_details$site_code
-  component   = set_details$component 
-  last_mod_dt = set_details$held_dt
-  url         = set_details$url
-  
+process_0_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
   # this creates that directory, if it doesn't already exist
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
@@ -40,14 +35,14 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
 
   # this code records metadat about the date, time, and other details
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
 
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -57,14 +52,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <-  function(set_details, network, domain) {
-   
-  prodname_ms = set_details$prodname_ms
-  site_code   = set_details$site_code
-  component   = set_details$component 
-  last_mod_dt = set_details$held_dt
-  url         = set_details$url
-  
+process_0_VERSIONLESS002 <-  function(network, domain, prodname_ms, site_code, component) {
   # START OF BLOCK YOU DONT CHANGE #
   # this sets the file path of the raw data, should always be this same format
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -95,13 +83,13 @@ process_0_VERSIONLESS002 <-  function(set_details, network, domain) {
 
 
   # this code records metadat about the date, time, and other details
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -111,21 +99,14 @@ process_0_VERSIONLESS002 <-  function(set_details, network, domain) {
 #andrews_creek
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS003 <- function(set_details, network, domain) {
-  
-    prodname_ms = set_details$prodname_ms
-    site_code   = set_details$site_code
-    component   = set_details$component 
-    last_mod_dt = set_details$held_dt
-    url         = set_details$url
-  
+process_0_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
     # START OF BLOCK YOU DONT CHANGE #
     # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_code)
+                          s = site_code)
 
     # this creates that directory, if it doesn't already exist
     dir.create(path = raw_data_dest,
@@ -172,27 +153,14 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #icy brook
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS004 <- function(set_details, network, domain) {
-  
-    prodname_ms = set_details$prodname_ms
-    site_code   = set_details$site_code
-    component   = set_details$component 
-    last_mod_dt = set_details$held_dt
-    url         = set_details$url
-
-    # prodcode = "VERSIONLESS002"
-    # network = "webb"
-    # domain = "loch_vale"
-    # site_code <- "sitename_NA"
-    # component <- "loch_vale_discharge_icy_brook"
-    # prodname_ms <- paste("discharge" ,"__", prodcode, sep = "")
-    # url <- "https://waterdata.usgs.gov/co/nwis/dv?referred_module=sw&site_no=401707105395000"
-
+process_0_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
+    # START OF BLOCK YOU DONT CHANGE #
+    # this sets the file path of the raw data, should always be this same format
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
                           p = prodname_ms,
-                          s = set_details$site_code)
+                          s = site_code)
 
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
@@ -213,7 +181,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
     #                      skip = FALSE,
     #                      overwrite = TRUE)
     
-    res <- httr::HEAD(set_details$url)
+    res <- httr::HEAD(url)
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                        start = 1,
@@ -232,14 +200,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 #loch outlet
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS005 <- function(set_details, network, domain) {
-  
-    prodname_ms = set_details$prodname_ms
-    site_code   = set_details$site_code
-    component   = set_details$component 
-    last_mod_dt = set_details$held_dt
-    url         = set_details$url
-
+process_0_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
@@ -270,7 +231,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     #                      skip = FALSE,
     #                      overwrite = TRUE)
 
-    res <- httr::HEAD(set_details$url)
+    res <- httr::HEAD(url)
 
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
@@ -279,7 +240,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(url, '(requires authentication)'),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -290,22 +251,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 #andrews_creek
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS006 <- function(set_details, network, domain) {
-  
-    prodname_ms = set_details$prodname_ms
-    site_code   = set_details$site_code
-    component   = set_details$component 
-    last_mod_dt = set_details$held_dt
-    url         = set_details$url
-  
-    prodcode = "VERSIONLESS006"
-    network = "webb"
-    domain = "loch_vale"
-    site_code <- "sitename_NA"
-    component <- "loch_vale_chem_andrews_creek"
-    prodname_ms <- paste("stream_chemistry" ,"__", prodcode, sep = "")
-    url <- "https://nwis.waterdata.usgs.gov/co/nwis/qwdata?pm_cd_compare=Greater%20than&radio_parm_cds=all_parm_cds&site_no=401723105400000&agency_cd=USGS&format=separated_wide_rdb"
-
+process_0_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
@@ -346,7 +292,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = paste(url, '(requires authentication)'),
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -358,14 +304,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
 #icy brook
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS007 <- function(set_details, network, domain) {
-  
-  prodname_ms = set_details$prodname_ms
-  site_code   = set_details$site_code
-  component   = set_details$component 
-  last_mod_dt = set_details$held_dt
-  url         = set_details$url
-    
+process_0_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
@@ -398,7 +337,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
   #                      skip = FALSE,
   #                      overwrite = TRUE)
 
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
 
 
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
@@ -407,7 +346,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
 
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -419,19 +358,12 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
 #loch outlet
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS008 <- function(set_details, network, domain) {
-
-    prodname_ms = set_details$prodname_ms
-    site_code   = set_details$site_code
-    component   = set_details$component 
-    last_mod_dt = set_details$held_dt
-    url         = set_details$url
-    
+process_0_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
-                        s = set_details$site_code)
+                        s = site_code)
 
     dir.create(path = raw_data_dest,
 
@@ -455,12 +387,12 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
   test <- write_csv(siteWQ, rawfile)
 
   
-  #R.utils::downloadFile(url = set_details$url,
+  #R.utils::downloadFile(url = url,
   #                      filename = rawfile,
   #                      skip = FALSE,
   #                      overwrite = TRUE)
 
-  res <- httr::HEAD(set_details$url)
+  res <- httr::HEAD(url)
 
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
@@ -468,7 +400,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
 
-  deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+  deets_out <- list(url = paste(url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
@@ -482,7 +414,6 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
-    component = "loch_vale_ppt"
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -639,7 +570,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
-
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -810,7 +740,6 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
-  
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -818,21 +747,14 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
     
-    d <- read.delim(rawfile, sep = ',') %>%
+    temp_raw <- 'data/webb/loch_vale/raw/stream_chemistry__VERSIONLESS006/sitename_NA/loch_vale_chem_andrews_creek.csv'
+    
+    d <- read.delim(temp_raw, sep = ',') %>%
       as_tibble()
     
     #for UV 254, two different units reported, only using the one that matches variables sheet
     d <- d %>% 
-      subset(!(ResultMeasure.MeasureUnitCode == "L/mgDOC*m" & grepl("UV 254", CharacteristicName)))
-    
-    #manually applying MS Detection Limit (when below dl, take half of dl)
-    #for this USGS data, whenever there is NA for the measure, 
-    #a detection limit is reported, if not below, no detection limit reported
-    d <- d %>%
-      rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
-      mutate(
-        ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
-        )
+        subset(!(ResultMeasure.MeasureUnitCode == "L/mgDOC*m" & grepl("UV 254", CharacteristicName)))
     
     loch_vale_andrews_creek_var_info <- list(
       "pH" = c('unitless', 'unitless', "pH"),
@@ -843,8 +765,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       "Chloride"=c("mg/l", "mg/L", "Cl"),
       "Sulfate"=c("mg/l", "mg/L", "SO4"),
       "Silica"=c("mg/l", "mg/L", "SiO2"),
-      "Total Dissolved Solids"=c("mg/l", "mg/L", "TDS"),   
-      "Specific Conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
+      "Total dissolved solids"=c("mg/l", "mg/L", "TDS"),   
+      "Specific conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
       "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","d87Sr_d86Sr"),
       "Strontium"=c("mg/l","mg/L","Sr"),
       "Temperature, water"=c("deg C", "degrees C", "temp"),
@@ -861,7 +783,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       "Sulfur-34/Sulfur-32 ratio" =c("unitless","unitless", "d34S_d32S"),
       "Organic carbon"=c("mg/l","mg/L","DOC"),  #dissolved
       "Carbon"=c("mg/l","mg/L","TPC"), #total particulate carbon
-      "Phosporus"=c("mg/l as p", "mg/L", "TP"), #total
+      "Phosphorus"=c("mg/l as p", "mg/L", "TP"), #total
       "UV 254"=c("units/cm","AU/cm","abs254"), 
       "Oxygen"=c("mg/l","mg/L","DO") #dissolved
     )
@@ -874,24 +796,59 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       loch_vale_stream_chem_var[[og_name]] <- ms_name
     }
     
+    name_map <- unlist(loch_vale_stream_chem_var)
+    pivoted_name_map <- loch_vale_stream_chem_var
+    names(pivoted_name_map) <- unlist(loch_vale_stream_chem_var)
+    
+    d <- d %>%
+      mutate(CharacteristicName = name_map[CharacteristicName]) %>%
+      filter(!is.na(CharacteristicName)) %>%
+      distinct()
+    
+    d <- d %>%
+      rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
+      mutate(dl_col = as.numeric(dl_col))
+    
     d <-pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
-
+    
     # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
     d$MonitoringLocationIdentifier = 'andrews_creek'
     
+    #browser()
     # NOTE: must fix detection limit application below
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'), 
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'MonitoringLocationIdentifier',
-                         data_cols =  loch_vale_stream_chem_var,
+                         data_cols =  pivoted_name_map,
                          data_col_pattern = 'ResultMeasureValue_#V#',
-                         is_sensor = FALSE
-                         # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
+                         is_sensor = FALSE,
+                         numeric_dl_col_pattern = "dl_col_#V#",
+                         summary_flagcols = c('ResultValueTypeName')
                          )
     
     # NOTE: there must be USGS edit codes which contain QC information?
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(ResultValueTypeName = c('Actual')),
+                            summary_flags_dirty = list(ResultValueTypeName = c('Estimated')))
+    
+    andrews_creek_aq_chem_units_old = c()
+    andrews_creek_aq_chem_units_new = c()
+    
+    for(i in 1:length(loch_vale_andrews_creek_var_info)) {
+      og_name <- names(loch_vale_andrews_creek_var_info[i])
+      og_units <- loch_vale_andrews_creek_var_info[[i]][1]
+      ms_name <- loch_vale_andrews_creek_var_info[[i]][3]
+      ms_units <-loch_vale_andrews_creek_var_info[[i]][2]
+      andrews_creek_aq_chem_units_old[ms_name] = og_units
+      andrews_creek_aq_chem_units_new[ms_name] = ms_units
+    }
+    
+    sd <- ms_conversions(d,
+                        convert_units_from = andrews_creek_aq_chem_units_old,
+                        convert_units_to = andrews_creek_aq_chem_units_new
+    )
     
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -912,7 +869,6 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-
     return()
 }
 
@@ -926,8 +882,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                   p = prodname_ms,
                   s = site_code,
                   c = component)
-  
-  d <- read.delim(rawfile, sep = ',') %>%
+
+    d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
   
   #manually applying MS Detection Limit (when below dl, take half of dl)
