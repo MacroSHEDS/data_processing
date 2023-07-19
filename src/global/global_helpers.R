@@ -3050,7 +3050,7 @@ ms_delineate <- function(network,
     for(i in 1:nrow(site_locations)){
 
         site <- site_locations$site_code[i]
-        
+
         if(length(overwrite_wb_sites) > 0) {
           if(!site %in% overwrite_wb_sites) {
             warning('only working on overwrite sites, skipping')
@@ -3168,7 +3168,6 @@ ms_delineate <- function(network,
                             s = site))
               }
             }
-          
 
             tmp <- tempdir()
 
@@ -9450,7 +9449,7 @@ write_portal_config_datasets <- function(portal_config = NULL){
     if(!is.null(portal_config)) {
       conf <- portal_config
     }
-  
+
     #so we don't have to read these from gdrive when running the app in
     #production. also, nice to report download sizes this way and avoid some
     #real-time calculation.
@@ -10067,8 +10066,9 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
                        site_data = site_data)
-    
+
     # portal_config <- jsonlite::read_json('./portal_config.json')
+
     log_with_indent('writing config datasets to local dir', logger = logger_module)
     write_portal_config_datasets(portal_config)
 
@@ -13325,7 +13325,7 @@ catalog_held_data <- function(network_domain, site_data){
                         var = drop_var_prefix(var)) %>%
                     group_by(var, sample_regimen, site_code) %>%
                     summarize(
-                        n_observations = n(),
+                        n_observations = length(na.omit(val)),
                         first_record_UTC = min(datetime,
                                                na.rm = TRUE),
                         last_record_UTC = max(datetime,
@@ -16526,10 +16526,9 @@ new_site_code = 'mountain_creek_tributary'
 for(file in ws_traits_dir) {
   if(grepl('feather', file)) {
     file_data = feather::read_feather(file)
-    
     file_name = gsub(old_site_code, new_site_code, file)
     file_data$site_code = new_site_code
-    
+
     feather::write_feather(file_data, file_name)
-  } 
+  }
 }
