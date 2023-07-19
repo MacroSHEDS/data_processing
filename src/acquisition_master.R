@@ -322,7 +322,8 @@ dir.create('logs', showWarnings = FALSE)
 ## scrape_data_download_urls()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'trout_lake')
+
+dmnrow <- which(network_domain$domain == 'loch_vale')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -341,14 +342,20 @@ for(dmnrow in 1:nrow(network_domain)){
     # owrite_tracker(network, domain)
 
     ## less dangerous version below, clears tracker for just a specified product
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
+
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
-                                                                                    
+
+    loginfo(logger = logger_module,
+            msg = glue('Processing network: {n}, domain: {d}',
+                       n = network,
+                       d = domain))
+
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
@@ -359,11 +366,11 @@ for(dmnrow in 1:nrow(network_domain)){
 
     #stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                prodname_filter = c('precipitation'),
+                prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('discharge'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
