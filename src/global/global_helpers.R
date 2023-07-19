@@ -751,7 +751,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
-
+    
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -1011,18 +1011,19 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_0[i]] <- '0'
         }
     }
-
+    
     #extract numeric DL column information into data columns
     if(! is.null(numeric_dl_col_pattern)){
-        for(i in seq_along(numeric_dl_col_names)){
-            dl_col <- d[[numeric_dl_col_names[i]]]
-            d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
+      for(i in seq_along(numeric_dl_col_names)){
+        dl_col <- d[[numeric_dl_col_names[i]]]
+        if(any(!is.na(dl_col))) {
+          d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
         }
-
-        convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
-        d <- select(d, -all_of(numeric_dl_col_names))
+      }
+      
+      convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
+      d <- select(d, -all_of(numeric_dl_col_names))
     }
-
     #move BDL flags from data columns into flag columns. Replace with NA,
     #which will be converted to 1/2 detlim downstream
 
@@ -1087,9 +1088,9 @@ ms_read_raw_csv <- function(filepath,
             # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
+         
         }
     }
-
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
     new_varflag_cols <- unique(new_varflag_cols)
 

@@ -138,7 +138,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
    
-    res <- try(setwd('/Users/hectorontiveros/Applications/data_processing'), silent=TRUE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=FALSE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -323,7 +323,7 @@ dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
 
-dmnrow <- which(network_domain$domain == 'loch_vale')
+dmnrow <- which(network_domain$domain == 'streampulse')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -343,8 +343,9 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
-    # owrite_tracker(network, domain)
+     #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+     #owrite_tracker(network, domain)
+
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
 
@@ -370,7 +371,7 @@ for(dmnrow in 1:nrow(network_domain)){
                 domain = domain)
 
     ms_munge(network = network,
-             prodname_filter = c('discharge'),
+             prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
