@@ -13211,7 +13211,7 @@ catalog_held_data <- function(network_domain, site_data){
                         var = drop_var_prefix(var)) %>%
                     group_by(var, sample_regimen, site_code) %>%
                     summarize(
-                        n_observations = n(),
+                        n_observations = length(na.omit(val)),
                         first_record_UTC = min(datetime,
                                                na.rm = TRUE),
                         last_record_UTC = max(datetime,
