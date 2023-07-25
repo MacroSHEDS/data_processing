@@ -56,7 +56,7 @@ CAMELS_compliant_Daymet_forcings.csv
 
 CAMELS_compliant_ws_attr_summaries.csv
 
-⠀⠀⠀⠀Watershed attribute data, temporally explicit, for all domains, and
+⠀⠀⠀⠀Watershed attribute data, for all domains, and
 
 ⠀⠀⠀⠀interoperable with the CAMELS dataset
 
