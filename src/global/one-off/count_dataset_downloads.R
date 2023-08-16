@@ -1,6 +1,6 @@
 library(httr)
 # library(jsonlite)
-# library(tidyverse)
+library(tidyverse)
 
 # options(timeout = 300)
 
@@ -39,4 +39,21 @@ for(i in 1:nrow(counts)){
         content()
 }
 
+
+## entity IDs are going to change every time EDI dataset is updated
+## to get a proper audit on a per-item basis, can either visually cross reference
+## downloads from the webpage with the figshare dataframe above, or could web scrape
+## entity titles. or could just bag individual reads, which is what i've done previously.
+## see below for that
+
+library(xml2)
+edi_report <- GET('https://pasta.lternet.edu/audit/reads/edi/1262') %>%
+    content()
+# edi_report <- GET('https://pasta.lternet.edu/audit/csv?resourceId=edi/1262/1')
+# xx = as_list(read_xml(edi_report))
+xx = as_list(edi_report)
+# ls.str(xx)
+# ls.str(xx[[1]])
+xx$resourceReads[[49]]
+sapply(xx$resourceReads, function(z) z$totalReads[[1]])
 
