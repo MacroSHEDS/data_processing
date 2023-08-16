@@ -42,6 +42,7 @@ suppressPackageStartupMessages({
     library(googledrive)
     library(rgee) #requires geojsonio package
     library(osmdata)
+    library(RCurl)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
@@ -359,7 +360,7 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    stop here and go to processing_kernels.R to continue
+    # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
                 # prodname_filter = c('stream_chemistry'),
                 domain = domain)
