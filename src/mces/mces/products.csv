@@ -1,0 +1,9 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms002,NA,mces_discharge,https://docs.google.com/spreadsheets/d/1FUVrhyxrPjsWdmmJV6Y-mUCTvQCj_BAE/edit?usp=share_link&ouid=116436357746257286081&rtpof=true&sd=true
+VERSIONLESS002,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,NA,mces_streamchem,http://eims.metc.state.mn.us/Download?startDate=01-01-0001&endDate=12-31-9999&siteIds=FC0002;EA0008;SA0082;VA0010;RI0013;VR0020;BA0022;BS0019;BR0003;SI0001;CR0009;CA0017;BL0035;BE0020;NM0018;PU0039&excludeParameterIds=2191;2196;2194;2273;2197;2208;2093;2147;2199;2236;2251;2253;2255;2257;2259;2261;2274;2263;2265;2266;2268;2270&format=csv
+VERSIONLESS003,ws_boundary,ready,ready,,ws_boundary__ms000,NA,mces_ws,personal communicaiton
+ms001,stream_gauge_locations,NA,NA,ready,NA,NA,NA,NA
+ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms003,discharge,NA,NA,linked,NA,automated entry,NA,NA
+ms004,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
+ms000,ws_boundary,NA,NA,NA,,automated entry,NA,NA

@@ -1,4 +1,4 @@
-retrieve_sleepers_product <- function(network,
+retrieve_loch_vale_product <- function(network,
                                  domain,
                                  prodname_ms,
                                  site_code,
@@ -60,7 +60,7 @@ retrieve_sleepers_product <- function(network,
 
 }
 
-retrieve_usgs_sleeper_daily_q <- function(set_details) {
+retrieve_usgs_sleepers_daily_q <- function(set_details) {
   if(grepl("w5", set_details$component) == TRUE) {
     q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
                                    parameterCd = "00060")
