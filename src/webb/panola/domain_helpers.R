@@ -6,12 +6,13 @@
 ## tracker = held_data
 ## url = prod_info$url[i]
 
-retrieve_sleepers_product <- function(network,
+retrieve_panola_product <- function(network,
                                  domain,
                                  prodname_ms,
                                  site_code,
                                  tracker,
                                  url){
+
     # creating a string which matches the names of processing kernels
     processing_func <- get(paste0('process_0_',
                                   # these names or based off of prod names in products.csv
@@ -41,9 +42,14 @@ retrieve_sleepers_product <- function(network,
     ## domain = domain
 
     result <- do.call(processing_func,
-                      args = list(set_details = deets,
-                                  network = network,
-                                  domain = domain))
+                      args = list(
+                                    network = network,
+                                    domain = domain,
+                                    prodname_ms = prodname_ms,
+                                    site_code = site_code,
+                                    component = rt$component,
+                                    url = url
+                                    ))
 
 
     new_status <- evaluate_result_status(result)
@@ -68,7 +74,7 @@ retrieve_sleepers_product <- function(network,
 
 }
 
-retrieve_usgs_sleeper_daily_q <- function(set_details) {
+retrieve_usgs_sleepers_daily_q <- function(set_details) {
   if(grepl("w5", set_details$component) == TRUE) {
     q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
                                    parameterCd = "00060")

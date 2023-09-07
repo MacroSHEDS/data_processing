@@ -626,7 +626,8 @@ ms_read_raw_csv <- function(filepath,
                             var_flagcol_pattern,
                             alt_varflagcol_pattern,
                             summary_flagcols,
-                            sampling_type = NULL){
+                            sampling_type = NULL,
+                            keep_bdl_values = FALSE){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -738,8 +739,7 @@ ms_read_raw_csv <- function(filepath,
     #   single value of G or I and is applied to all variables in product
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
-    #   from the original file that do not contain data, flag/qaqc information,
-    #   datetime, or site_code. All-NA data columns and their corresponding
+    #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
     #   flag columns will also be omitted, as will rows where all data values
     #   are NA. Rows with NA in the datetime or site_code column are dropped.
     #   data columns are given type double. all other
@@ -751,6 +751,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
+    
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -803,13 +804,6 @@ ms_read_raw_csv <- function(filepath,
 
     if(missing(var_flagcol_pattern) && ! missing(alt_varflagcol_pattern)){
         stop('alt_varflagcol_pattern supplied but var_flagcol_pattern missing. Use var_flagcol_pattern.')
-    }
-
-    dc_dupes <- duplicated(unname(data_cols))
-    if(any(dc_dupes)){
-        stop(paste('duplicate value(s) in data_cols:',
-                   paste(unname(data_cols)[dc_dupes],
-                         collapse = ', ')))
     }
 
     #@spencer: ifelse(dn_dupes == ''... would have evaluated only the first element. this should take care of it
@@ -981,6 +975,24 @@ ms_read_raw_csv <- function(filepath,
 
     if('NA.' %in% colnames(d)) class(d$NA.) = 'character'
 
+
+    # NOTE: if we want to be able to match multiple input cols to a single
+    # macrosheds var, we need to accept dupes in the data_cols values.
+    # merge any input columns with same end-variable, where the vlaues from whichever
+    # input column is provided first will be used when any overlapping observations
+    dc_dupes <- duplicated(unname(data_cols))
+    if(any(dc_dupes)){
+      warning(paste('duplicate value(s) in data_cols:',
+                   paste(unname(data_cols)[dc_dupes],
+                         collapse = ', ')))
+      ## warning('combinging duplicates, giving first entry column priority')
+      d <- combine_multiple_input_cols(d, data_cols = data_cols, var_flagcols = var_flagcols)
+
+      # prune base column tracking objects
+      var_flagcols <- var_flagcols[names(var_flagcols) %in% colnames(d)]
+      data_cols <- data_cols[names(data_cols) %in% colnames(d)]
+    }
+
     # Remove any variable flags created by pattern but do not exist in data
     # colnames_all <- colnames_all[names(colnames_all) %in% names(d)]
     # classes_all <- classes_all[names(classes_all) %in% names(d)]
@@ -999,24 +1011,27 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_0[i]] <- '0'
         }
     }
-
+    
     #extract numeric DL column information into data columns
     if(! is.null(numeric_dl_col_pattern)){
-        for(i in seq_along(numeric_dl_col_names)){
-            dl_col <- d[[numeric_dl_col_names[i]]]
-            d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
+      for(i in seq_along(numeric_dl_col_names)){
+        dl_col <- d[[numeric_dl_col_names[i]]]
+        if(any(!is.na(dl_col))) {
+          d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
         }
-
-        convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
-        d <- select(d, -all_of(numeric_dl_col_names))
+      }
+      
+      convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
+      d <- select(d, -all_of(numeric_dl_col_names))
     }
-
     #move BDL flags from data columns into flag columns. Replace with NA,
     #which will be converted to 1/2 detlim downstream
 
     bdl_cols_do_not_drop <- c()
     new_varflag_cols <- c()
     all_datacols <- c(data_cols, alt_datacols)
+    all_datacols <- all_datacols[!is.na(all_datacols)]
+
     for(i in seq_along(convert_to_BDL_flag)){
 
         bdl_flag <- convert_to_BDL_flag[i]
@@ -1029,9 +1044,10 @@ ms_read_raw_csv <- function(filepath,
 
         for(j in seq_along(all_datacols)){
 
-            d_varcode <- unname(all_datacols)[j]
+            d_varcode <- unname(all_datacols)[j][[1]]
             d_colname <- names(all_datacols)[j]
             d_clm <- d[[d_colname]]
+
             if(is.null(d_clm)) next #column doesn't exist
 
             if(has_wildcard){
@@ -1042,7 +1058,7 @@ ms_read_raw_csv <- function(filepath,
 
             if(! any(bdl_inds)) next #this bdl code doesn't exist in this column
 
-            if(! (length(var_flagcols) == 1 && is.na(var_flagcols))){
+            if(!(length(var_flagcols) == 1 && is.na(var_flagcols))){
                 candidate_flagcol <- names(var_flagcols)[var_flagcols == d_varcode][1]
                 var_flagcol_already_exists <- ! is.null(candidate_flagcol) && candidate_flagcol %in% colnames(d)
             } else {
@@ -1059,14 +1075,22 @@ ms_read_raw_csv <- function(filepath,
                 new_varflag_cols <- c(new_varflag_cols, candidate_flagcol)
             }
 
+            # populate flag column with BDL information,
+            # and set value to NA
             d[bdl_inds, candidate_flagcol] <- 'BDL'
-            d[bdl_inds, d_colname] <- NA_character_
+            if(keep_bdl_values) {
+                d[bdl_inds, d_colname] <- sapply(d[bdl_inds, d_colname], function(x) gsub("[^0-9\\.\\-]*", "", x))
+            } else {
+                d[bdl_inds, d_colname] <- NA_character_
+            }
 
+            # look up DL googlsheet, and see if this site has DL info
+            # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
+         
         }
     }
-
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
     new_varflag_cols <- unique(new_varflag_cols)
 
@@ -1119,6 +1143,7 @@ ms_read_raw_csv <- function(filepath,
                            ill = paste0('"', paste(illegal_chars, collapse = '", "')), '"'),
                 logger = logger_module)
     }
+
 
     #rename cols to canonical names
     for(i in 1:ncol(d)){
@@ -1289,6 +1314,17 @@ ms_read_raw_csv <- function(filepath,
         }
     }
 
+    ## # final check that if there is only one data column and a supplied summary flag column
+    ## # that the summary flag column has correct name
+    ## if(length(data_cols) == 1 && !is.na(summary_flagcols)){
+    ##   datcol = paste0(data_cols[[1]], "__\\|dat")
+    ##   sumcol = paste0(data_cols[[1]], "__|flg")
+    ##   full.datcol = names(d)[grepl(datcol, names(d))]
+    ##   full.sumcol = stringr::str_replace(full.datcol, '__\\|dat', '__|flg')
+
+    ##   names(d)[names(d) == summary_flagcols] <- full.sumcol
+    ## }
+
     return(d)
 }
 
@@ -1411,7 +1447,7 @@ dt_format_to_regex <- function(fmt, optional){
                             h = '([a-zA-Z]+)?',
                             m = '([0-9]{1,2})?',
                             e = '([0-9]{1,2})?',
-                            d = '([0-9]{2})?',
+                            d = '([0-9]{1,2})?',
                             j = '([0-9]{3})?',
                             A = '([a-zA-Z]+)?',
                             a = '([a-zA-Z]+)?',
@@ -2011,6 +2047,11 @@ ms_conversions <- function(d,
                                                output_unit = unitto,
                                                molecule = v,
                                                g_conver = g_conver)
+        }
+
+        #Convert to #/mL from #/100mL
+        if(grepl('#\\/ml', unitto) && grepl('#\\/100ml', unitfrom)) {
+            d$val[d_subset] <- d$val[d_subset]/100
         }
     }
 
@@ -2932,12 +2973,14 @@ ms_general <- function(network = domain,
 ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
-                         verbose = FALSE){
+                         verbose = FALSE,
+                         overwrite_wb_sites = c() ){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
     #   accordingly. passed to delineate_watershed_apriori
     #verbose: logical. determines the amount of informative messaging during run
+    # overwrite_wb_sites: vector of sitenames to overwrite
 
     loginfo(msg = 'Beginning watershed delineation',
             logger = logger_module)
@@ -3008,6 +3051,13 @@ ms_delineate <- function(network,
 
         site <- site_locations$site_code[i]
 
+        if(length(overwrite_wb_sites) > 0) {
+          if(!site %in% overwrite_wb_sites) {
+            warning('only working on overwrite sites, skipping')
+            next
+          }
+        }
+
         if(verbose){
             print(glue('delineating {n}-{d}-{s} (site {sti} of {sl})',
                        n = network,
@@ -3024,7 +3074,10 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        if(dir.exists(site_dir) && length(dir(site_dir))){
+        print(site)
+        if(site %in% overwrite_wb_sites) {
+          warning('site in overwrite vector, launching new delineation')
+        } else if(dir.exists(site_dir) && length(dir(site_dir))){
             message(glue('{s} already delineated ({d})',
                          s = site,
                          d = site_dir))
@@ -3042,11 +3095,15 @@ ms_delineate <- function(network,
         dir.create(site_dir,
                    showWarnings = FALSE)
 
-        specs <- ws_delin_specs %>%
-            filter(
-                network == !!network,
-                domain == !!domain,
-                site_code == !!site)
+        if(site %in% overwrite_wb_sites) {
+          specs <- data.frame(matrix(ncol = 1, nrow = 0))
+        } else {
+          specs <- ws_delin_specs %>%
+              filter(
+                  network == !!network,
+                  domain == !!domain,
+                  site_code == !!site)
+        }
 
         if(nrow(specs) == 1){
 
@@ -3092,13 +3149,24 @@ ms_delineate <- function(network,
             #appropriate delineation
 
         } else if(nrow(specs) == 0){
-
-            if(ms_instance$instance_type != 'dev'){
-                stop(glue('Missing delineation specs for {n}-{d}-{s}. ',
+            if(site %in% overwrite_wb_sites) {
+              operation <- 'overwriting'
+              warning(glue('{o} delineation specs for {n}-{d}-{s}. ',
                           'Delineate locally and push changes.',
+                          o = operation,
                           n = network,
                           d = domain,
                           s = site))
+            } else {
+              operation <- 'missing'
+              if(ms_instance$instance_type != 'dev'){
+                  stop(glue('{o} delineation specs for {n}-{d}-{s}. ',
+                            'Delineate locally and push changes.',
+                            o = operation,
+                            n = network,
+                            d = domain,
+                            s = site))
+              }
             }
 
             tmp <- tempdir()
@@ -5129,6 +5197,9 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
     #   per liter or equivalents per liter. It does not assume input units are
     #   g/L, but rather any metric mass unit per liter. Specify the input units
     #   with input_unit.
+    if(input_unit == output_unit) {
+      return(x)
+    }
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%
@@ -5195,6 +5266,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(old_fraction) == 2) {
         old_bottom <- as.vector(str_split_fixed(old_fraction[2], "", n = Inf))
+    } else {
+        old_bottom <- NULL
     }
 
     new_fraction <- as.vector(str_split_fixed(output_unit, "/", n = Inf))
@@ -5202,6 +5275,8 @@ convert_unit <- function(x, input_unit, output_unit){
 
     if(length(new_fraction == 2)) {
         new_bottom <- as.vector(str_split_fixed(new_fraction[2], "", n = Inf))
+    } else {
+        new_bottom <- NULL
     }
 
     old_top_unit <- tolower(str_split_fixed(old_top, "", 2)[1])
@@ -5212,25 +5287,40 @@ convert_unit <- function(x, input_unit, output_unit){
         old_top_conver <- as.numeric(filter(units, prefix == old_top_unit)[,2])
     }
 
-    old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    if(length(old_fraction) == 2) {
+      old_bottom_unit <- tolower(str_split_fixed(old_bottom, "", 2)[1])
+    }
 
-    if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
+    if(is.na(old_fraction[2])) {
+        old_bottom_conver <- NULL
+    } else if(old_bottom_unit %in% c('g', 'e', 'q', 'l') || old_fraction[2] == 'mol') {
         old_bottom_conver <- 1
     } else {
         old_bottom_conver <- as.numeric(filter(units, prefix == old_bottom_unit)[,2])
     }
 
-    new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
-
-    if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
-        new_top_conver <- 1
-    } else {
-        new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
-    }
+  # debug
+    tryCatch(
+      expr = {
+          new_top_unit <- tolower(str_split_fixed(new_top, "", 2)[1])
+          if(new_top_unit %in% c('g', 'e', 'q', 'l') || new_fraction[1] == 'mol') {
+              new_top_conver <- 1
+          } else {
+              new_top_conver <- as.numeric(filter(units, prefix == new_top_unit)[,2])
+          }
+      },
+      error = function(e) {
+        print(input_unit)
+        print(output_unit)
+        print(new_top_unit)
+      }
+    )
+  # end debug
 
     new_bottom_unit <- tolower(str_split_fixed(new_bottom, "", 2)[1])
-
-    if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
+    if(is.na(new_fraction[2])) {
+        new_bottom_conver <- NULL
+    } else if(new_bottom_unit %in% c('g', 'e', 'q', 'l') || new_fraction[2] == 'mol') {
         new_bottom_conver <- 1
     } else {
         new_bottom_conver <- as.numeric(filter(units, prefix == new_bottom_unit)[,2])
@@ -5239,8 +5329,14 @@ convert_unit <- function(x, input_unit, output_unit){
     new_val <- x*old_top_conver
     new_val <- new_val/new_top_conver
 
-    new_val <- new_val/old_bottom_conver
-    new_val <- new_val*new_bottom_conver
+    # some vars do not have a bottom unit
+    if(!is.null(old_bottom_conver)) {
+      new_val <- new_val/old_bottom_conver
+    }
+
+    if(!is.null(new_bottom_conver)) {
+      new_val <- new_val*new_bottom_conver
+    }
 
     return(new_val)
 }
@@ -5658,6 +5754,7 @@ calc_inst_flux <- function(chemprod, qprod, site_code){
         chem_chunk <- chem_split[[i]]
 
         chem_is_highres <- Mode(diff(as.numeric(chem_chunk$datetime))) <= 15 * 60
+
         if(is.na(chem_is_highres)) chem_is_highres <- FALSE
 
         #if both chem and flow data are low resolution (grab samples),
@@ -8509,6 +8606,8 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
+            # NOTE: here I believe that this function is creating overlaps in detlim
+            # and also seems to not catch all overlap completely (WS, 2023-01-30, see github issue)
             dlsub <- dlsub %>%
                 mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
                        end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
@@ -8545,7 +8644,6 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
             }
 
         } else { #CASE 1 with no dates specified
-
             if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
 
             out <- d %>%
@@ -9280,9 +9378,14 @@ load_config_datasets <- function(from_where){
             col_types = 'cccncnnccl'
         ))
 
+        ws_appendix <- sm(googlesheets4::read_sheet(
+            conf$ws_boundary_appendix_gsheet,
+            na = c('', 'NA'),
+            col_types = 'ccccccccnnnlcnnnnnc'
+        ))
+
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
-
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
@@ -9328,6 +9431,10 @@ load_config_datasets <- function(from_where){
            ws_delin_specs,
            pos = .GlobalEnv)
 
+    assign('ws_appendix',
+           ws_appendix,
+           pos = .GlobalEnv)
+
     assign('univ_products',
            univ_products,
            pos = .GlobalEnv)
@@ -9337,7 +9444,11 @@ load_config_datasets <- function(from_where){
            pos = .GlobalEnv)
 }
 
-write_portal_config_datasets <- function(){
+write_portal_config_datasets <- function(portal_config = NULL){
+
+    if(!is.null(portal_config)) {
+      conf <- portal_config
+    }
 
     #so we don't have to read these from gdrive when running the app in
     #production. also, nice to report download sizes this way and avoid some
@@ -9931,7 +10042,8 @@ postprocess_entire_dataset <- function(site_data,
                                        thin_portal_data_to_interval = NA,
                                        populate_implicit_missing_values,
                                        generate_csv_for_each_product = FALSE,
-                                       push_new_version_to_figshare_and_edi = FALSE){
+                                       push_new_version_to_figshare_and_edi = FALSE,
+                                       portal_config = NULL){
                                        # filter_ungauged_sites = TRUE){
 
     #thin_portal_data_to_interval: passed to the "unit" parameter of lubridate::floor_date
@@ -9955,8 +10067,10 @@ postprocess_entire_dataset <- function(site_data,
     scale_flux_by_area(network_domain = network_domain,
                        site_data = site_data)
 
+    # portal_config <- jsonlite::read_json('./portal_config.json')
+
     log_with_indent('writing config datasets to local dir', logger = logger_module)
-    write_portal_config_datasets()
+    write_portal_config_datasets(portal_config)
 
     log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
@@ -12450,7 +12564,6 @@ thin_portal_data <- function(network_domain, thin_interval){
                 needs_thin <- ! is.na(interval_min) && interval_min <= 24 * 60
 
                 if(needs_thin){
-
                     d <- read_feather(stf) %>%
                         mutate(
                             datetime = lubridate::floor_date(
@@ -12555,7 +12668,6 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #the original engine of this function, which still only converts portal data
     engine_for_portal <- function(flux_var, domains, ws_areas){
-
         for(dmn in domains){
 
             files <- try(
@@ -12629,7 +12741,6 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #the new engine, for scaling flux data within data_acquisition/data
     engine_for_data_acquis <- function(flux_var, network_domain, ws_areas){
-
         for(i in 1:nrow(network_domain)){
 
             ntw <- network_domain$network[i]
@@ -12647,6 +12758,10 @@ scale_flux_by_area <- function(network_domain, site_data){
 
                     ff <- ff[! grepl(pattern = 'inst_scaled',
                                      x = ff)]
+                    
+                    # remove custom precip prods
+                    ff <- ff[! grepl(pattern = 'CUSTOM',
+                                     x = ff)]
                 },
                 silent = TRUE
             )
@@ -12654,7 +12769,6 @@ scale_flux_by_area <- function(network_domain, site_data){
             if('try-error' %in% class(flux_var_dir) || length(flux_var_dir) == 0) next
 
             prodcode <- prodcode_from_prodname_ms(flux_var_dir)
-
             dir.create(path = glue('data/{n}/{d}/derived/{v}_scaled__{pc}',
                                    n = ntw,
                                    d = dmn,
@@ -13036,7 +13150,8 @@ get_source_urls <- function(result_obj, processing_func){
     #find out if the processing func is an alias for download_from_googledrive()
     gd_search_string <- '\\s*download_from_googledrive_function_indicator <- TRUE'
     processing_func_text <- deparse(processing_func)
-    uses_gdrive_func <- grepl(gd_search_string, processing_func_text[3])
+    # modify to find the string anywhere in the func
+    uses_gdrive_func <- any(grepl(gd_search_string, processing_func_text))
     is_passive_kernel <- any(grepl(pattern = 'Nothing to do',
                                    x = processing_func_text,
                                    ignore.case = TRUE)) &&
@@ -13057,7 +13172,6 @@ get_source_urls <- function(result_obj, processing_func){
                 logger = logger_module)
 
         return('NA')
-
     } else {
         stop('investigate this. do we need to scrape the URL from products.csv?')
     }
@@ -14523,30 +14637,45 @@ ms_check_range <- function(d){
 }
 
 download_from_googledrive <- function(set_details, network, domain){
-
     #WARNING: any modification of the following line,
     #or insertion of code lines before it, will break
     #retrieve_versionless_product()
     download_from_googledrive_function_indicator <- TRUE
 
+    if('site_code' %in% names(set_details)) {
+        sitechar <- set_details$site_code
+
+        ## if(sitechar == 'sitename_NA') {
+        ##     sitechar = 'sitecode_NA'
+        ## }
+    }
+
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/sitecode_NA',
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
                           d = domain,
-                          p = set_details$prodname_ms)
+                          p = set_details$prodname_ms,
+                          s = sitechar)
 
     id <- googledrive::as_id('1gugTmDybtMTbmKRq2WQvw2K1WkJjcmJr')
     gd_files <- googledrive::drive_ls(id, recursive = TRUE)
 
     network_id <- gd_files %>%
-        filter(name == !!network)
+      filter(name == !!network)
 
-    network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+    # choose the upper folder if domain == network
+    if(domain == network) {
+      files_options <- rbind(googledrive::drive_ls(googledrive::as_id(network_id[1,]$id)),
+                             googledrive::drive_ls(googledrive::as_id(network_id[2,]$id)))
+      network_files <- files_options[grepl(domain, files_options$name),]
+      domain_files <- files_options[grepl('raw', files_options$name),]
+    } else {
+      network_files <- googledrive::drive_ls(googledrive::as_id(network_id$id))
+      domain_id <- network_files %>%
+          filter(name == !!domain)
 
-    domain_id <- network_files %>%
-        filter(name == !!domain)
-
-    domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+      domain_files <- googledrive::drive_ls(googledrive::as_id(domain_id$id))
+    }
 
     raw_files <- domain_files %>%
         filter(name == 'raw')
@@ -14558,6 +14687,26 @@ download_from_googledrive <- function(set_details, network, domain){
 
     prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
 
+    if(sitechar != 'sitename_NA') {
+
+        site_files <- prod_files
+
+        prod_folder <- site_files %>%
+            filter(name == !!set_details$site_code)
+
+        # most sites won't have ws_boundaries in gdrive
+        if(nrow(prod_folder) == 0) {
+            loginfo(glue('Nothing to do for {p}',
+                     p = set_details$prodname_ms),
+                logger = logger_module)
+            return()
+        }
+
+        # but for those that do
+        prod_files <- googledrive::drive_ls(googledrive::as_id(prod_folder$id))
+
+    }
+
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
@@ -14566,7 +14715,7 @@ download_from_googledrive <- function(set_details, network, domain){
 
     drive_files <- prod_files$name
 
-    if(any(! drive_files %in% held_files)) {
+    if(any(!drive_files %in% held_files)) {
 
         loginfo(glue('Retrieving {p}',
                      p = set_details$prodname_ms),
@@ -15826,6 +15975,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
+        # ignore any entries where DL == "NA" or is.na()
+      filter(detection_limit_original != "NA",
+             !is.na(detection_limit_original)) %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
                sigfigs = count_sigfigs(detection_limit_original)) %>%
                # start_date = dmy(start_date),
@@ -15890,6 +16042,8 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
+        # filter for NAs in  dl converted (abs254_cm)
+        filter(!is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
@@ -16270,4 +16424,111 @@ reformat_camels_for_ms <- function(vsn){
     }
 
     write_feather(all_site_hydro, glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
+}
+
+# helper which goes inside of ms_read_csv, this function allows for the users to assign multiple input columns to
+# a single output column (e.g. filtered and unfiltered data colums for Zinc)
+combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
+    # takes the tibble and data_cols arguments from ms_read_csv
+
+    # find index of all duplicate columns in data_cols input
+    dc_dupes_index <- which(duplicated(data_cols) | duplicated(data_cols, fromLast = TRUE))
+
+    # looping thru these indices
+    for(index in dc_dupes_index) {
+        # find the 'paired' columns - which indices are specifically duplicates of each other
+        # Data
+        pair_cols <- match(data_cols, data_cols[index])
+        pair_colnames <- names(data_cols[!is.na(pair_cols)])
+        # Flag
+        if(!all(is.na(var_flagcols))) {
+            pair_cols_flg <- match(var_flagcols, var_flagcols[index])
+            pair_colnames_flg <- names(var_flagcols[!is.na(pair_cols)])
+        }
+
+        ms_var <- unique(unname(data_cols[!is.na(pair_cols)]))[[1]]
+        warning('merging multiple input columns:', pair_colnames, '\n',
+                'into ms var:', ms_var)
+
+        # if input column names aren't in dataframe, move on
+        if(!all(pair_colnames %in% colnames(d))) {
+            next
+        }
+
+        # create a dummy vector
+        covector <- c(rep(NA, nrow(d)))
+        # for each paired input data column
+        for(paircol in pair_colnames) {
+            # pull just this column data as a vector
+            d_pair <- d %>%
+                pull(paircol) %>%
+                as.vector()
+            # coalesce will merge them, and where both vectors have data
+            # at the saeme index, data from the the first vector argument
+            # will be used
+            # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+            covector = coalesce(d_pair, covector)
+
+        }
+
+        if(!all(is.na(var_flagcols))) {
+            # create a dummy vector
+            covector_flg <- c(rep(NA, nrow(d)))
+
+            # for each paired input data column
+            for(paircol_flg in pair_colnames_flg) {
+                # pull just this column data as a vector
+                d_pair_flg <- d %>%
+                    pull(paircol_flg) %>%
+                    as.vector()
+                # coalesce will merge them, and where both vectors have data
+                # at the saeme index, data from the the first vector argument
+                # will be used
+                # NOTE: replace with mean one day -- must figure out workaround on BDLs ("<0.03", etc.)
+                covector_flg = coalesce(d_pair_flg, covector_flg)
+
+            }
+
+            # assign all variable flag data to merged data
+            for(paircol_flg in pair_colnames_flg) {
+                d[,which(colnames(d) == paircol_flg)] <- covector_flg
+            }
+        }
+
+        # assign all variable data to merged data
+        for(paircol in pair_colnames) {
+            d[,which(colnames(d) == paircol)] <- covector
+        }
+
+
+        # keep only first pair data and flag colnames
+        prefix_remove <- gsub("val_", "", pair_colnames[-1])
+        try(
+            d <- d %>%
+            select(
+                -!!pair_colnames[-1],
+                -contains(prefix_remove)
+            )
+        )
+    }
+
+    return(d)
+}
+
+# rename site ws traits
+ws_traits_dir = list.files('vault/panola/ws_traits/', 
+                           recursive =  TRUE,
+                           full.names = TRUE, 
+                           pattern = '.feather')
+old_site_code = 'USGS_02203970'
+new_site_code = 'mountain_creek_tributary'
+
+for(file in ws_traits_dir) {
+  if(grepl('feather', file)) {
+    file_data = feather::read_feather(file)
+    file_name = gsub(old_site_code, new_site_code, file)
+    file_data$site_code = new_site_code
+
+    feather::write_feather(file_data, file_name)
+  }
 }

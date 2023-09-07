@@ -9,7 +9,7 @@ prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'retrieve',
                               get_statuses = 'ready') %>%
-    filter(grepl(pattern = '^VERSIONLESS',
+  filter(grepl(pattern = '^VERSIONLESS',
                  x = prodcode))
 
 if(! is.null(prodname_filter)){
@@ -77,7 +77,7 @@ for(i in seq_len(nrow(prod_info))){
                      s=site_code, p=prodname_ms), logger=logger_module)
     }
 
-    retrieve_sleepers_product(network = network,
+    retrieve_loch_vale_product(network = network,
                          domain = domain,
                          prodname_ms = prodname_ms,
                          site_code = site_code,
