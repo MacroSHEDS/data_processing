@@ -751,7 +751,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
-    
+
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -1011,7 +1011,7 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_0[i]] <- '0'
         }
     }
-    
+
     #extract numeric DL column information into data columns
     if(! is.null(numeric_dl_col_pattern)){
       for(i in seq_along(numeric_dl_col_names)){
@@ -1020,7 +1020,7 @@ ms_read_raw_csv <- function(filepath,
           d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
         }
       }
-      
+
       convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
       d <- select(d, -all_of(numeric_dl_col_names))
     }
@@ -1088,7 +1088,7 @@ ms_read_raw_csv <- function(filepath,
             # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
-         
+
         }
     }
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
@@ -12758,7 +12758,7 @@ scale_flux_by_area <- function(network_domain, site_data){
 
                     ff <- ff[! grepl(pattern = 'inst_scaled',
                                      x = ff)]
-                    
+
                     # remove custom precip prods
                     ff <- ff[! grepl(pattern = 'CUSTOM',
                                      x = ff)]
@@ -16516,9 +16516,9 @@ combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
 }
 
 # rename site ws traits
-ws_traits_dir = list.files('vault/panola/ws_traits/', 
+ws_traits_dir = list.files('vault/panola/ws_traits/',
                            recursive =  TRUE,
-                           full.names = TRUE, 
+                           full.names = TRUE,
                            pattern = '.feather')
 old_site_code = 'USGS_02203970'
 new_site_code = 'mountain_creek_tributary'
@@ -16532,3 +16532,4 @@ for(file in ws_traits_dir) {
     feather::write_feather(file_data, file_name)
   }
 }
+

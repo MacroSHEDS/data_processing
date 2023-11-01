@@ -1,7 +1,5 @@
 suppressPackageStartupMessages({
 
-    #we should be able to avoid librarying most or all of these,
-    #since we're referring to their functions directly with ::
 
     # #spatial packages
     # library(terra)  #must load before gstat package (which isn't currently needed)
@@ -138,7 +136,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-   
+
     res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=FALSE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -165,7 +163,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-    
+
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -219,7 +217,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-  
+
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -228,7 +226,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-    
+
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -280,7 +278,7 @@ googledrive::drive_auth(email = gee_login)
 #initialize and authorize GEE account
 try(rgee::ee_Initialize(user = conf$gee_login_ms,
                         drive = TRUE))
-                        
+
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -294,7 +292,8 @@ if(ms_instance$use_ms_error_handling){
     source_decoratees('src/global/global_helpers.R') #parse decorators
 }
 
-#puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
+#puts google sheets into the global environment: ms_vars, site_data, ws_delin_specs, univ_products.
+#if this hangs on "Selection:", enter 1 and authenticate tidyverse. should open your browser.
 ## load_config_datasets(from_where = ms_instance$config_data_storage)
 load_config_datasets(from_where = 'remote')
 
@@ -317,14 +316,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# NOTE: this should be moved I believe, and made to work with the raw data
-# dcumentation of the latest iteration...
-# this function will update the citation sheet with the data and url of raw data download
-## scrape_data_download_urls()
-
 ## change string in line below to find row index of your desired domain
-
-dmnrow <- which(network_domain$domain == 'streampulse')
+# dmnrow <- which(network_domain$domain == 'bear') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -334,7 +327,7 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    held_data = get_data_tracker(network, domain)
+    held_data <- get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
     # held_data = invalidate_tracked_data(network, domain, 'munge')
