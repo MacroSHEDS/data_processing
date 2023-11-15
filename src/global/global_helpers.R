@@ -4516,21 +4516,6 @@ ms_derive <- function(network = domain,
                 d = domain),
            local = TRUE)
 
-
-    # ws_bound_prod <- list.files(glue('data/{n}/{d}/derived',
-    #                                  n = network,
-    #                                  d = domain),
-    #                             pattern = '^ws_boundary__ms',
-    #                             include.dirs = TRUE) %>%
-    #     sort(decreasing = TRUE) %>%
-    #     {.[1]}
-    #
-    # if(length(ws_bound_prod) && ! is.na(ws_bound_prod)){
-    #     write_metadata_d(network = network,
-    #                      domain = domain,
-    #                      prodname_ms = ws_bound_prod)
-    # }
-
     #link all derived products to the data portal directory
     create_portal_links(network = network,
                         domain = domain)
@@ -8054,7 +8039,39 @@ invalidate_derived_products <- function(successor_string){
                                        new_status = 'pending')
     }
 
-    #return()
+    #the above relies on accurate bookkeeping in products.csv, but that is
+    #unnecessary. now invalidating all discharge, special discharge, and
+    #stream flux derive kernels when discharge is munged. same for precip, etc.
+
+    derive_prods <- get_product_info(network = network,
+                                     domain = domain,
+                                     status_level = 'derive',
+                                     get_statuses = 'ready')
+
+    invalidate_bulk <- function(munge_cause, derive_effect){
+
+        if(grepl(munge_cause, prodname_ms)){
+
+            updt <- derive_prods %>%
+                filter(grepl(derive_effect, prodname)) %>%
+                mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+                pull(prodname_ms)
+
+            for(item in updt){
+                catch <- update_data_tracker_d(network = network,
+                                               domain = domain,
+                                               tracker_name = 'held_data',
+                                               prodname_ms = item,
+                                               site_code = 'sitename_NA',
+                                               new_status = 'pending')
+            }
+        }
+    }
+
+    invalidate_bulk('discharge', 'discharge|stream_flux')
+    invalidate_bulk('stream_chemistry', 'stream_chem|stream_flux')
+    invalidate_bulk('precipitation', 'precipit|precip_pchem')
+    invalidate_bulk('precip_chemistry', 'precip_pchem')
 }
 
 write_metadata_r <- function(murl, network, domain, prodname_ms){
@@ -16533,3 +16550,38 @@ for(file in ws_traits_dir) {
   }
 }
 
+check_for_derelicts <- function(network, domain){
+
+    all_raw <- list.files('data/czo/catalina_jemez/raw',
+                          full.names = TRUE,
+                          recursive = TRUE)
+    base_raw <- basename(all_raw)
+    all_filt <- all_raw[duplicated(base_raw) | duplicated(base_raw, fromLast = TRUE)]
+    all_filt <- all_filt[order(basename(all_filt))]
+
+    if(length(all_filt) %% 2 != 0) stop('error in identifying duplicate filenames')
+
+    pair_list <- split(all_filt, ceiling(seq_along(all_filt) / 2))
+    pair_list <- Filter(function(x) length(unique(str_extract(x, '(?<=raw/)[^\\/]+'))) == 1,
+                        pair_list)
+
+    if(! length(pair_list)){
+        return()
+    } else {
+        message('identically named files detected within a raw product. ',
+                'this might be fine, but could indicate derelict files from an ',
+                'old run sticking around:')
+    }
+
+    all_filt <- unlist(pair_list, use.names = FALSE)
+    all_trunc <- str_extract(all_filt, '(?<=raw/).*')
+
+    for(i in seq_along(all_filt)){
+        item <- all_filt[i]
+        if(i %% 2 == 1 && i > 2) cat('\n')
+        cat('\n',
+            all_trunc[i],
+            ' (', str_sub(file.mtime(item), 1, 10), ')',
+            sep = '')
+    }
+}

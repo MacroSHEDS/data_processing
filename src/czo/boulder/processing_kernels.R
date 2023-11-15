@@ -314,7 +314,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                                         'DOC.mg.C.L' = 'DOC',
                                         'TN..umol.L.' = 'TN',
                                         'PN..umol.L.' = 'TPN',
-                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Chl.a..ug.L.' = 'Chl',
                                         'Phaeophytin.ug.L.' = 'pheophy',
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
@@ -357,7 +357,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                                                'TIP' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
-                                               'CHL' = 'ug/l',
+                                               'Chl' = 'ug/l',
                                                'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
@@ -376,7 +376,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                                              'TIP' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
-                                             'CHL' = 'mg/l',
+                                             'Chl' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
     return(d)
@@ -435,7 +435,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                                         'DOC.mg.C.L' = 'DOC',
                                         'TN..umol.L.' = 'TN',
                                         'PN..umol.L.' = 'TPN',
-                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Chl.a..ug.L.' = 'Chl',
                                         'Phaeophytin.ug.L.' = 'pheophy',
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
@@ -473,7 +473,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                                                'TIP' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
-                                               'CHL' = 'ug/l',
+                                               'Chl' = 'ug/l',
                                                'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
@@ -492,7 +492,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                                              'TIP' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
-                                             'CHL' = 'mg/l',
+                                             'Chl' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
     return(d)
@@ -555,7 +555,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                         'DOC.mg.C.L' = 'DOC',
                                         'TN..umol.L.' = 'TN',
                                         'PN..umol.L.' = 'TPN',
-                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Chl.a..ug.L.' = 'Chl',
                                         'Phaeophytin.ug.L.' = 'pheophy',
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
@@ -593,7 +593,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                                'TIP' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
-                                               'CHL' = 'ug/l',
+                                               'Chl' = 'ug/l',
                                                'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
@@ -612,7 +612,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                              'TIP' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
-                                             'CHL' = 'mg/l',
+                                             'Chl' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
     return(d)
@@ -705,7 +705,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                                         'DOC.mg.C.L' = 'DOC',
                                         'TN..umol.L.' = 'TN',
                                         'PN..umol.L.' = 'TPN',
-                                        'Chl.a..ug.L.' = 'CHL',
+                                        'Chl.a..ug.L.' = 'Chl',
                                         'Phaeophytin.ug.L.' = 'pheophy',
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
@@ -743,7 +743,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                                                'TIP' = 'umol/l',
                                                'TN' = 'umol/l',
                                                'TPN' = 'umol/l',
-                                               'CHL' = 'ug/l',
+                                               'Chl' = 'ug/l',
                                                'pheophy' = 'ug/l'),
                         convert_units_to = c('H' = 'mg/l',
                                              'NH4' = 'mg/l',
@@ -762,7 +762,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                                              'TIP' = 'mg/l',
                                              'TN' = 'mg/l',
                                              'TPN' = 'mg/l',
-                                             'CHL' = 'mg/l',
+                                             'Chl' = 'mg/l',
                                              'pheophy' = 'mg/l'))
 
     return(d)

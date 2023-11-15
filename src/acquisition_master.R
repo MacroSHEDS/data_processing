@@ -54,7 +54,7 @@ suppressPackageStartupMessages({
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
 #(or after each run that results in a change)
-vsn <- 1.0
+vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,
         timeout = 300)
@@ -137,7 +137,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
 
-    res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -317,7 +317,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-# dmnrow <- which(network_domain$domain == 'bear') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'catalina_jemez') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -361,11 +361,14 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                prodname_filter = c('stream_chemistry'),
+                # prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
+    check_for_derelicts(network = network,
+                        domain = domain)
+
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
