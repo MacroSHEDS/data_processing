@@ -368,7 +368,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('precipitation'),
              domain = domain)
 
     if(domain != 'mcmurdo'){

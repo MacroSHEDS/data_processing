@@ -16566,7 +16566,7 @@ check_for_derelicts <- function(network, domain){
                         pair_list)
 
     if(! length(pair_list)){
-        return()
+        return(invisible())
     } else {
         message('identically named files detected within a raw product. ',
                 'this might be fine, but could indicate derelict files from an ',
