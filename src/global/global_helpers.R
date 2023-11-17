@@ -16588,3 +16588,44 @@ check_for_derelicts <- function(network, domain){
             sep = '')
     }
 }
+
+generate_retrieval_details <- function(url,
+                                       access_note = NULL,
+                                       last_mod_dt = NULL){
+
+    #url: the url of a static file OR the page on which download queries
+    #     are entered, such as http://www.czo.psu.edu/data_time_series.html
+    #access_note: the only note we ever really need is "requires authentication".
+    #     Otherwise, keep it NULL
+    #last_mod_dt: the last-modified time of a static file, if you needed to
+    #     precompute it for some reason. if NULL, it will be computed
+    #     from the given url
+
+    #returns: a list with the url and any notes appended, access time,
+    #and last-modified datetime
+
+    res <- httr::HEAD(url)
+
+    if(is.null(last_mod_dt)){
+        last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                           start = 1,
+                                           stop = 19),
+                                format = '%Y-%m-%dT%H:%M:%S') %>%
+            with_tz(tzone = 'UTC')
+    }
+
+    if(! length(last_mod_dt)){
+        last_mod_dt <- NA_character_
+    }
+
+    if(! is.null(access_note)){
+        access_note <- paste0('(', access_note, ')')
+    }
+
+    deets_out <- list(url = stringr::str_trim(paste(url, access_note)),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
+}

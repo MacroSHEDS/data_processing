@@ -49,6 +49,10 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
     response <- POST(url, body = params)
     writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/export.csv')
+
+    deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
+
+    return(deets_out)
 }
 
 #precipitation: STATUS=READY
@@ -73,7 +77,9 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain){
     response <- POST(url, body = params)
     writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/SP_Thru_Precip_Daily_L1.csv')
 
-    return()
+    deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
+
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
@@ -103,7 +109,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
     relevant_files <- relevant_files[! relevant_files %in% known_files]
 
     logwarn(logger = logger_module,
-            paste('new shale hills chemistry detected:',
+            paste('new shale hills chemistry detected (not retrieving):',
                   paste(relevant_files, sep = ', ')))
 
     for(f in known_files){
@@ -111,7 +117,9 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
                       glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/{f}'))
     }
 
-    return()
+    deets_out <- generate_retrieval_details('http://www.czo.psu.edu/downloads/')
+
+    return(deets_out)
 }
 
 #munge kernels ####
@@ -428,6 +436,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                          'Zn (\u03bcmol L-1)' = 'Zn'),
                           data_col_pattern = '#V#',
                           is_sensor = FALSE,
+                          set_to_NA = c('n/a', 'DOI'),
                           convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
 
     # For some reason a few flag columns are being created as "character" columns

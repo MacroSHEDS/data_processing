@@ -2,6 +2,26 @@ library(rvest)
 library(stringr)
 library(googlesheets4)
 library(tidyverse)
+library(glue)
+
+forthcoming_dataset_version <- 2
+
+outdir <- glue('logs/v{vv}_prerun_housekeeping', vv = forthcoming_dataset_version)
+dir.create(outdir, showWarnings = FALSE)
+
+system(glue('tree data > {outdir}/data_structure_beginning_v{vv}.txt',
+            vv = forthcoming_dataset_version),
+       wait = TRUE)
+tree_text <- system2('tree', 'data', stdout = TRUE)
+
+# strip ANSI escape codes
+ansi_escape_regex <- '\033\\[[0-9;]*m'
+tree_text <- gsub(ansi_escape_regex, '', tree_text, perl = TRUE)
+
+writeLines(tree_text, glue('{outdir}/data_structure_beginning_v{vv}.txt',
+                           vv = forthcoming_dataset_version))
+
+stop('check_for_updates_edi only returns the query string, so prepend the edi url to that, and then the output dataset will have newlinks in the right column')
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
 
@@ -19,16 +39,29 @@ site_doi_license <- googlesheets4::read_sheet(
 ) %>%
     mutate(new_url = NA_character_)
 
+out <- matrix(NA, nrow = nrow(site_doi_license), ncol = 6,
+              dimnames = list(NULL, c('domain', 'prodcode', 'status',
+                                      'oldlink', 'newlink', 'last_dl')))
+
 for(i in seq_along(site_doi_license$link)){
 
-    print(paste(i, site_doi_license$domain[i], site_doi_license$macrosheds_prodcode[i]))
+    dmn <- site_doi_license$domain[i]
+    prodcode <- site_doi_license$macrosheds_prodcode[i]
+
+    print(paste(i, dmn, prodcode))
+    out[i, 'domain'] <- dmn
+    out[i, 'prodcode'] <- prodcode
 
     oldlink <- site_doi_license$link[i]
     last_dl <- site_doi_license$link_download_datetime[i]
 
+    out[i, 'oldlink'] <- oldlink
+    out[i, 'last_dl'] <- last_dl
+
     if(is.na(last_dl)){
         print('never downloaded before')
         site_doi_license$new_url[i] <- 'new'
+        out[i, 'status'] <- 'new'
         next
     }
 
@@ -39,7 +72,16 @@ for(i in seq_along(site_doi_license$link)){
     } else {
         print('not on hydroshare or EDI. skipping')
     }
+
+    if(grepl('^htt', site_doi_license$new_url[i])){
+        out[i, 'newlink'] <- site_doi_license$new_url[i]
+        out[i, 'status'] <- 'link changed'
+    } else {
+        out[i, 'status'] <- site_doi_license$new_url[i]
+    }
 }
+
+write_csv(as_tibble(out), glue('{outdir}/product_update_statuses.csv'))
 
 #get last download dates for the rest. manually follow links in
 #conf$site_doi_license_gsheet and cross-reference
