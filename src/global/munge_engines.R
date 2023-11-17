@@ -1,3 +1,7 @@
+#everything here is embarrassingly parallel. make it happen by 2015.
+#will need to abandon blacklist indicators in favor of products.csv
+#"component" column expressions
+
 #. handle_errors
 munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
                           spatial_regex = '(location|boundary)',
@@ -365,11 +369,11 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
 munge_time_component <-  function(network, domain, site_code, prodname_ms, tracker,
                                   silent = TRUE){
 
-    # Used when a data product is a subset of the entire record, such as individual 
+    # Used when a data product is a subset of the entire record, such as individual
     # data product of each year of a hydrology record. When this is used, a derive
-    # kernel is necessary to both combine data products and also perform 
-    # qc_hdetlim_and_uncert() and synchronize_timestep(), which are notmally run 
-    # in the other munge engines 
+    # kernel is necessary to both combine data products and also perform
+    # qc_hdetlim_and_uncert() and synchronize_timestep(), which are notmally run
+    # in the other munge engines
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
                                            site_code)

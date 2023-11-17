@@ -3,15 +3,116 @@
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- download_from_googledrive
+process_0_VERSIONLESS001 <- function(set_details, network, domain){
+
+    url <- 'http://www.czo.psu.edu/SQL_Query_UTC.php'
+
+    today_date <- Sys.Date()
+    params <- list(
+        SubmitCheck = 'sent',
+        tableName = 'SH_Discharge_Level_1',
+        fileName = 'SH_Discharge_Level_1',
+        startDate = '2010-01-01',
+        endDate = as.character(today_date)
+    )
+
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SH_Discharge_Level_1.csv')
+
+    params$tableName <- params$fileName <- 'SCAL_Discharge_Level_1'
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCAL_Discharge_Level_1.csv')
+
+    params$tableName <- params$fileName <- 'SC_outlet'
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SC_outlet.csv')
+
+    params$tableName <- params$fileName <- 'SCCF_Q_ec'
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCCF_Q_ec.csv')
+
+    params$tableName <- params$fileName <- 'GR_Discharge_Level_1'
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/GR_Discharge_Level_1.csv')
+
+    url <- 'http://www.czo.psu.edu/data_strmflw-sh.php'
+
+    #different endpoint for historic data
+    params <- list(
+        startDay = '01',
+        startMonth = '01',
+        startYear = '2006',
+        endDay = day(today_date),
+        endMonth = month(today_date),
+        endYear = year(today_date)
+    )
+
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/export.csv')
+}
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <- download_from_googledrive
+process_0_VERSIONLESS002 <- function(set_details, network, domain){
+
+    url <- 'http://www.czo.psu.edu/SQL_Query3.php'
+
+    today_date <- Sys.Date()
+    params <- list(
+        SubmitCheck = 'sent',
+        tableName = 'Level1_Precip_Daily',
+        fileName = 'Level1_Precip_Daily',
+        startDate = '2006-01-01',
+        endDate = as.character(today_date)
+    )
+
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/Level1_Precip_Daily.csv')
+
+    params$tableName <- params$fileName <- 'SP_Thru_Precip_Daily_L1'
+    response <- POST(url, body = params)
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/SP_Thru_Precip_Daily_L1.csv')
+
+    return()
+}
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS003 <- download_from_googledrive
+process_0_VERSIONLESS003 <- function(set_details, network, domain){
+
+    page <- httr::GET('http://www.czo.psu.edu/downloads/')
+    html_content <- rvest::read_html(page)
+    links <- html_content %>%
+        rvest::html_nodes('a') %>%
+        rvest::html_attr('href')
+
+    known_files <- c('H6_hydro_2013_2014.xlsx',
+                     'SC_2014StreamwaterChemistry_DOI.xlsx',
+                     'SC_2015StreamwaterChemistry_DOI.xlsx',
+                     'Stream_Water_Data_2006wDOI.xlsx',
+                     'Stream_Water_Data_2007wDOI.xlsx',
+                     'Stream_Water_Data_2008wDOI.xlsx',
+                     'Stream_Water_Data_2009wDOI.xlsx',
+                     'Stream_Water_Data_2010wDOI.xlsx')
+
+    relevant_files <- grep('hydro_|streamwater|stream_water',
+                           links,
+                           value = TRUE,
+                           ignore.case = TRUE)
+
+    relevant_files <- relevant_files[! relevant_files %in% known_files]
+
+    logwarn(logger = logger_module,
+            paste('new shale hills chemistry detected:',
+                  paste(relevant_files, sep = ', ')))
+
+    for(f in known_files){
+        download.file(glue('http://www.czo.psu.edu/downloads/{f}'),
+                      glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/{f}'))
+    }
+
+    return()
+}
 
 #munge kernels ####
 
@@ -27,113 +128,150 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     all_q_files <- list.files(rawfile, full.names = TRUE)
 
-    # Shale Hills Stream
-    #    1
-    shs1_f <- grep('export', all_q_files, value = TRUE)
+    munge_shs <- function(){
 
-    shs1 <- read.csv(shs1_f, colClasses = 'character') %>%
-        mutate(site = 'SH_weir')
+        # Shale Hills Stream
+        shs1_f <- grep('export', all_q_files, value = TRUE)
 
-    shs1 <- ms_read_raw_csv(preprocessed_tibble = shs1,
-                         datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'America/New_York',
-                         site_code_col = 'site',
-                         data_cols =  c('Discharge' = 'discharge'),
-                         data_col_pattern = '#V#',
-                         set_to_NA = '-999.0',
-                         summary_flagcols = 'QualCode',
-                         is_sensor = TRUE)
+        shs1 <- read.csv(shs1_f, colClasses = 'character') %>%
+            mutate(site = 'SH_weir')
 
-    shs1 <- ms_cast_and_reflag(shs1,
-                            varflag_col_pattern = NA,
-                            summary_flags_dirty = list('QualCode' = 'E'),
-                            summary_flags_to_drop = list('QualCode' = 'DROP'))
+        shs1 <- ms_read_raw_csv(preprocessed_tibble = shs1,
+                                datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_tz = 'America/New_York',
+                                site_code_col = 'site',
+                                data_cols =  c('Discharge' = 'discharge'),
+                                data_col_pattern = '#V#',
+                                set_to_NA = '-999.0',
+                                summary_flagcols = 'QualCode',
+                                is_sensor = TRUE)
 
-    # meters3 per day to meters3 per second
-    shs1 <- shs1 %>%
-        mutate(val = val/86400) %>%
-        # This day look proplomatic
-        filter(datetime < ymd_hm('2012-06-29 00:00') | datetime > ymd_hm('2012-06-29 23:50'))
+        shs1 <- ms_cast_and_reflag(shs1,
+                                varflag_col_pattern = NA,
+                                summary_flags_dirty = list('QualCode' = 'E'),
+                                summary_flags_to_drop = list('QualCode' = 'DROP'))
 
-    #    2
-    shs2_f <- grep('SH_Discharge_Level_1', all_q_files, value = TRUE)
+        # meters3 per day to meters3 per second
+        shs1 %>%
+            mutate(val = val/86400) %>%
+            # This day look proplomatic
+            filter(datetime < ymd_hm('2012-06-29 00:00') | datetime > ymd_hm('2012-06-29 23:50'))
+    }
 
-    shs2 <- read.csv(shs2_f, colClasses = 'character') %>%
-        mutate(site = 'SH_weir')
+    munge_shs2 <- function(){
 
-    shs2 <- ms_read_raw_csv(preprocessed_tibble = shs2,
-                            datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'UTC',
-                            site_code_col = 'site',
-                            data_cols =  c('dischg_m3s' = 'discharge'),
-                            data_col_pattern = '#V#',
-                            set_to_NA = '-9999.0',
-                            is_sensor = TRUE)
+        # SH weir
+        shs2_f <- grep('SH_Discharge_Level_1', all_q_files, value = TRUE)
 
-    shs2 <- ms_cast_and_reflag(shs2,
-                               varflag_col_pattern = NA)
+        shs2 <- read.csv(shs2_f, colClasses = 'character') %>%
+            mutate(site = 'SH_weir')
 
-    shs2 <- shs2 %>%
-        # 2018 data looks like it has issues
-        filter(datetime < '2018-01-01')
+        shs2 <- ms_read_raw_csv(preprocessed_tibble = shs2,
+                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_tz = 'UTC',
+                                site_code_col = 'site',
+                                data_cols =  c('dischg_m3s' = 'discharge'),
+                                data_col_pattern = '#V#',
+                                set_to_NA = '-9999.0',
+                                is_sensor = TRUE)
 
-    # Shavers Creek Above Lake
-    sc_ablake_f <- grep('SCAL_Discharge', all_q_files, value = TRUE)
+        ms_cast_and_reflag(shs2,
+                           varflag_col_pattern = NA)
 
-    sc_ablake <- read.csv(sc_ablake_f, colClasses = 'character') %>%
-        mutate(site = 'SCAL')
+        # shs2 %>%
+        #     # 2018 data looks like it has issues
+        #     filter(datetime < '2018-01-01')
+    }
 
-    sc_ablake <- ms_read_raw_csv(preprocessed_tibble = sc_ablake,
-                            datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'UTC',
-                            site_code_col = 'site',
-                            data_cols =  c('dischg_m3s' = 'discharge'),
-                            data_col_pattern = '#V#',
-                            set_to_NA = '-9999.0',
-                            is_sensor = TRUE)
+    munge_scal <- function(){
 
-    sc_ablake <- ms_cast_and_reflag(sc_ablake,
-                               varflag_col_pattern = NA)
+        # Shavers Creek Above Lake
+        sc_ablake_f <- grep('SCAL_Discharge', all_q_files, value = TRUE)
 
-    # Shavers Creek Outlet
-    sc_outlet_f <- grep('SC_outlet', all_q_files, value = TRUE)
+        sc_ablake <- read.csv(sc_ablake_f, colClasses = 'character') %>%
+            mutate(site = 'SCAL')
 
-    sc_outlet <- read.csv(sc_outlet_f, colClasses = 'character') %>%
-        mutate(site = 'SCO')
+        sc_ablake <- ms_read_raw_csv(preprocessed_tibble = sc_ablake,
+                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_tz = 'UTC',
+                                site_code_col = 'site',
+                                data_cols =  c('dischg_m3s' = 'discharge'),
+                                data_col_pattern = '#V#',
+                                set_to_NA = '-9999.0',
+                                is_sensor = TRUE)
 
-    sc_outlet <- ms_read_raw_csv(preprocessed_tibble = sc_outlet,
-                                 datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
-                                 datetime_tz = 'UTC',
-                                 site_code_col = 'site',
-                                 data_cols =  c('dischg_m3s' = 'discharge'),
-                                 data_col_pattern = '#V#',
-                                 set_to_NA = '-9999.0',
-                                 is_sensor = TRUE)
+        ms_cast_and_reflag(sc_ablake,
+                           varflag_col_pattern = NA)
+    }
 
-    sc_outlet <- ms_cast_and_reflag(sc_outlet,
-                                    varflag_col_pattern = NA)
+    munge_sco <- function(){
 
-    # Garner Run Outlet
-    gr_f <- grep('GR_Discharge', all_q_files, value = TRUE)
+        # Shavers Creek Outlet
+        sc_outlet_f <- grep('SC_outlet', all_q_files, value = TRUE)
 
-    gr <- read.csv(gr_f, colClasses = 'character') %>%
-        mutate(site = 'GRO')
+        sc_outlet <- read.csv(sc_outlet_f, colClasses = 'character') %>%
+            mutate(site = 'SCO')
 
-    gr <- ms_read_raw_csv(preprocessed_tibble = gr,
-                                 datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
-                                 datetime_tz = 'UTC',
-                                 site_code_col = 'site',
-                                 data_cols =  c('dischg_m3s' = 'discharge'),
-                                 data_col_pattern = '#V#',
-                                 set_to_NA = '-9999.0',
-                                 is_sensor = TRUE)
+        sc_outlet <- ms_read_raw_csv(preprocessed_tibble = sc_outlet,
+                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_tz = 'UTC',
+                                     site_code_col = 'site',
+                                     data_cols =  c('dischg_m3s' = 'discharge'),
+                                     data_col_pattern = '#V#',
+                                     set_to_NA = '-9999.0',
+                                     is_sensor = TRUE)
 
-    gr <- ms_cast_and_reflag(gr,
-                             varflag_col_pattern = NA)
+        ms_cast_and_reflag(sc_outlet,
+                           varflag_col_pattern = NA)
+    }
 
-    d <- rbind(shs1, shs2, sc_ablake, sc_outlet, gr) %>%
-        # m3/s to L/s
-        mutate(val = val*1000)
+    munge_gro <- function(){
+
+        # Garner Run Outlet
+        gr_f <- grep('GR_Discharge', all_q_files, value = TRUE)
+
+        gr <- read.csv(gr_f, colClasses = 'character') %>%
+            mutate(site = 'GRO')
+
+        gr <- ms_read_raw_csv(preprocessed_tibble = gr,
+                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_tz = 'UTC',
+                                     site_code_col = 'site',
+                                     data_cols =  c('dischg_m3s' = 'discharge'),
+                                     data_col_pattern = '#V#',
+                                     set_to_NA = '-9999.0',
+                                     is_sensor = TRUE)
+
+        ms_cast_and_reflag(gr,
+                           varflag_col_pattern = NA)
+    }
+
+    munge_sccf <- function(){
+
+        # Shaver's Creek Cole Farm
+        sccf_f <- grep('SCCF', all_q_files, value = TRUE)
+
+        sccf <- read.csv(sccf_f, colClasses = 'character') %>%
+            mutate(site = 'SCCF')
+
+        sccf <- ms_read_raw_csv(preprocessed_tibble = sccf,
+                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_tz = 'UTC',
+                                site_code_col = 'site',
+                                data_cols =  c('dischg_m3s' = 'discharge'),
+                                data_col_pattern = '#V#',
+                                set_to_NA = '-9999.0',
+                                is_sensor = TRUE)
+
+        ms_cast_and_reflag(sccf,
+                           varflag_col_pattern = NA)
+    }
+
+    results <- mclapply(list(munge_shs, munge_shs2, munge_scal, munge_sco, munge_gro, munge_sccf),
+                        function(f) f(), mc.cores = 6)
+
+    d <- do.call(bind_rows, results) %>%
+        mutate(val = val * 1000) # m3/s to L/s
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -170,37 +308,75 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     all_p_files <- list.files(rawfile, full.names = TRUE)
 
-    SSHCZO_f <- grep('SSHCZOHourPrecipSH', all_p_files, value = TRUE)
+    #North Ridge Top
+    # SSHCZO_f <- grep('SSHCZOHourPrecipSH', all_p_files, value = TRUE)
+    f <- grep('Level1_Precip', all_p_files, value = TRUE)
 
-    d <- read.csv(SSHCZO_f, colClasses = 'character') %>%
-        mutate(site = 'Shale_Hills_precip')
+    d <- read.csv(f, colClasses = 'character') %>%
+        mutate(site = 'NRT')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                            datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
-                            datetime_tz = 'America/New_York',
-                            site_code_col = 'site',
-                            data_cols =  c('Total_Precip_mm' = 'precipitation'),
-                            data_col_pattern = '#V#',
-                            is_sensor = TRUE)
+                         datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'America/New_York',
+                         site_code_col = 'site',
+                         data_cols =  c('Total_Precip_mm' = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'Comment',
+                         is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(Comment = ''),
+                            summary_flags_to_drop = list(Comment = c('Device data missing',
+                                                                     'value removed - cleaned')))
+
+    #South Planar (3 sites)
+    f <- grep('SP_Thru', all_p_files, value = TRUE)
+
+    d2 <- read.csv(f, colClasses = 'character') %>%
+        as_tibble() %>%
+        rename_with(~sub('Main', 'main', .)) %>%
+        rename_with(~sub('Alt', 'alt', .)) %>%
+        pivot_longer(cols = -TmStamp,
+                     names_to = c('site', '.value'),
+                     names_pattern = '^(.+)_(mm|flag)$')
+
+    if(any(d2$flag != '')){
+        logwarn(logger = logger_module,
+                msg = 'new flag value(s) detected in shale hills precip. these will be dropped for now')
+    }
+
+    d2 <- ms_read_raw_csv(preprocessed_tibble = d2,
+                          datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                          datetime_tz = 'America/New_York',
+                          site_code_col = 'site',
+                          data_cols =  c('mm' = 'precipitation'),
+                          data_col_pattern = '#V#',
+                          summary_flagcols = 'flag',
+                          is_sensor = TRUE)
+
+    d2 <- ms_cast_and_reflag(d2,
+                             varflag_col_pattern = NA,
+                             summary_flags_clean = list(flag = ''),
+                             summary_flags_to_drop = list(flag = '#*#'))
+
+    #combine and write
+    d <- bind_rows(d, d2)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     d <- synchronize_timestep(d)
 
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
+    for(s in unique(d$site_code)){
 
         d_site <- d %>%
-            filter(site_code == !!sites[s])
+            filter(site_code == !!s)
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_code = sites[s],
+                      site_code = s,
                       level = 'munged',
                       shapefile = FALSE)
     }

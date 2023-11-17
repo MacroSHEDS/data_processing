@@ -288,7 +288,8 @@ identify_sampling <- function(df,
         #     select(datetime, !!var_name := .data[[data_cols[p]]], site_code)
 
         all_sites <- tibble()
-        for(i in 1:length(site_codes)){
+
+        for(i in seq_along(site_codes)){
 
             # df_site <- df_var %>%
             df_site <- df %>%
@@ -1294,12 +1295,14 @@ ms_read_raw_csv <- function(filepath,
 
     #prepend two-letter code to each variable representing sample regimen and
     #record sample regimen metadata
-    d <- sm(identify_sampling(df = d,
-                              is_sensor = is_sensor,
-                              domain = domain,
-                              network = network,
-                              prodname_ms = prodname_ms,
-                              sampling_type = sampling_type))
+    if(nrow(d)){
+        d <- sm(identify_sampling(df = d,
+                                  is_sensor = is_sensor,
+                                  domain = domain,
+                                  network = network,
+                                  prodname_ms = prodname_ms,
+                                  sampling_type = sampling_type))
+    }
 
     #Check if all sites are in site file
     unq_sites <- unique(d$site_code)
@@ -1783,7 +1786,7 @@ ms_cast_and_reflag <- function(d,
                     d <- filter(d, (!!sym(names(smtd))) %in%
                                     summary_flags_clean[[i]])
                 } else {
-                    d <- filter(d, ! (!!sym(names(smtd))) %in% smtd)
+                    d <- filter(d, ! (!!sym(names(smtd))) %in% unlist(smtd))
                 }
             }
 

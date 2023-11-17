@@ -3,3 +3,7 @@ for watersheds smaller than 10 ha, GEE reducers sometimes fail to produce a valu
 
 20230406
 previously, if there were duplicate datetime-site_code pairs in a raw data file, we would keep the row with the fewest missing values. now we take the mean across each variable, omitting NAs.
+
+20231116
+fixed a QC-code assimilation bug that was allowing a small number of bad data values into the final product. These may have appeared as outliers in v1. 
+ 

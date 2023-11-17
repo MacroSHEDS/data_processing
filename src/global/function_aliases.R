@@ -56,3 +56,6 @@ pivot_wider = tidyr::pivot_wider
 pivot_longer = tidyr::pivot_longer
 rename = dplyr::rename
 where = tidyselect:::where
+day = lubridate::day
+month = lubridate::month
+year = lubridate::year

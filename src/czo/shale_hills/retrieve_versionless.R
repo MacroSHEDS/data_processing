@@ -2,7 +2,7 @@
 #sites). we could turn this into a function, and make a separate function for
 #versionless data that's separated into several files.
 
-loginfo('Beginning retrieve (versionless products)',
+loginfo('Beginning shale_hills retrieve. always runs, as no clean way to check for updates',
         logger = logger_module)
 
 prod_info <- get_product_info(network = network,
@@ -27,6 +27,9 @@ for(i in seq_len(nrow(prod_info))){
     prodname_ms <<- paste0(prod_info$prodname[i],
                            '__',
                            prodcode)
+
+    loginfo(glue('Retrieving {s} {p}',
+                 s=site_code, p=prodname_ms), logger=logger_module)
 
     held_data <<- get_data_tracker(network = network,
                                    domain = domain)

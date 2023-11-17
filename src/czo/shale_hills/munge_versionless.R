@@ -58,6 +58,7 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
+        #don't parallelize this. handled inside kernels
         munge_rtn <- munge_versionless_product(
             network = network,
             domain = domain,
