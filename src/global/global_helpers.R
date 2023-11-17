@@ -9412,12 +9412,21 @@ load_config_datasets <- function(from_where){
             col_types = 'ccccnnnnccDDl'
         ))
 
+        site_doi_license <- googlesheets4::read_sheet(
+            conf$site_doi_license_gsheet,
+            skip = 4,
+            na = c('', 'NA'),
+            col_types = 'c'
+        )
+
     } else if(from_where == 'local'){
 
         ms_vars <- sm(read_csv('data/general/variables.csv'))
         site_data <- sm(read_csv('data/general/site_data.csv'))
         univ_products <- sm(read_csv('data/general/universal_products.csv'))
         domain_detection_limits <- sm(read_csv('data/general/domain_detection_limits.csv'))
+        ws_appendix <- sm(read_csv('data/general/ws_appendix.csv'))
+        site_doi_license <- sm(read_csv('data/general/site_doi_license.csv'))
 
         ws_delin_specs <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
                                    error = function(e){
@@ -9462,6 +9471,14 @@ load_config_datasets <- function(from_where){
     assign('domain_detection_limits',
            domain_detection_limits,
            pos = .GlobalEnv)
+
+    assign('ws_appendix',
+           ws_appendix,
+           pos = .GlobalEnv)
+
+    assign('site_doi_license',
+           site_doi_license,
+           pos = .GlobalEnv)
 }
 
 write_portal_config_datasets <- function(portal_config = NULL){
@@ -9482,7 +9499,7 @@ write_portal_config_datasets <- function(portal_config = NULL){
 
     site_doi_license <- sm(googlesheets4::read_sheet(
         conf$site_doi_license_gsheet,
-        skip = 5,
+        skip = 4,
         na = c('', 'NA'),
         col_types = 'c'
     ))
@@ -9549,16 +9566,13 @@ ms_write_confdata <- function(x,
 
     #x: a tibble or data.frame
     #which_dataset: string. either "ms_vars", "site_data", "univ_products",
-    #   "name_variants", or "ws_delin_specs"
+    #   "ws_delin_specs", "domain_detection_limits", "site_doi_license", or "ws_appendix"
     #to_where: string. either "remote", meaning write this file to a google
     #   sheets connection defined in data_acquisition/config.json and
     #   data_acquisition/googlesheet_service_accnt.json, or "local", meaning
     #   write this file locally to data_acquisition/data/general/<which_dataset>.csv
     #overwrite: logical; If FALSE, x will be appended to which_dataset
 
-    #this writes our "configuration" datasets to their appropriate locations.
-    #as of 10/27/20 those datasets include site_data, ms_vars, universal_products,
-    #name_variants, and ws_delin_specs
     #depending on the type of instance (remote/local),
     #those datasets are either written to local CSVs or to google sheets. for ms
     #developers, this will always be "remote". for future users, it'll be a
@@ -9566,8 +9580,8 @@ ms_write_confdata <- function(x,
 
     #which_dataset will also be updated in memory
 
-    known_datasets <- c('ms_vars', 'site_data', 'ws_delin_specs',
-                        'univ_products', 'name_variants')
+    known_datasets <- c('ms_vars', 'site_data', 'ws_delin_specs', 'domain_detection_limits',
+                        'univ_products', 'site_doi_license', 'ws_appendix')
 
     if(! which_dataset %in% known_datasets){
         stop(glue('which_dataset must be one of: "{kd}"',
@@ -9578,9 +9592,12 @@ ms_write_confdata <- function(x,
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
         which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
+        which_dataset == 'ws_appendix' ~ 'ccccccccnnnlcnnnnnc',
+        which_dataset == 'domain_detection_limits' ~ 'ccccnnnnccDDl',
+        which_dataset == 'site_doi_license' ~ 'c',
         TRUE ~ 'placeholder')
 
-    if(which_dataset %in% c('univ_products', 'name_variants')){
+    if(which_dataset %in% c('univ_products')){
         type_string <- NULL
     }
 
@@ -9590,14 +9607,13 @@ ms_write_confdata <- function(x,
             which_dataset == 'ms_vars' ~ conf$variables_gsheet,
             which_dataset == 'site_data' ~ conf$site_data_gsheet,
             which_dataset == 'univ_products' ~ conf$univ_prods_gsheet,
-            which_dataset == 'name_variants' ~ conf$name_variant_gsheet,
-            which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
+            which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet,
+            which_dataset == 'ws_appendix' ~ conf$ws_boundary_appendix_gsheet,
+            which_dataset == 'site_doi_license' ~ conf$site_doi_license_gsheet,
+            which_dataset == 'domain_detection_limits' ~ conf$dl_sheet)
 
         if(overwrite){
 
-            # sm(googlesheets4::write_sheet(data = x,
-            #                               ss = write_loc,
-            #                               sheet = 1))
             catch <- expo_backoff(
                 expr = {
                     sm(googlesheets4::write_sheet(data = x,
@@ -9635,8 +9651,10 @@ ms_write_confdata <- function(x,
             which_dataset == 'ms_vars' ~ 'variables.csv',
             which_dataset == 'site_data' ~ 'site_data.csv',
             which_dataset == 'univ_products' ~ 'universal_products.csv',
-            which_dataset == 'name_variants' ~ 'name_variants.csv',
-            which_dataset == 'ws_delin_specs' ~ 'watershed_delineation_specs.csv')
+            which_dataset == 'ws_delin_specs' ~ 'watershed_delineation_specs.csv',
+            which_dataset == 'ws_appendix' ~ 'ws_boundary_appendix.csv',
+            which_dataset == 'site_doi_license' ~ 'site_doi_license.csv',
+            which_dataset == 'domain_detection_limits' ~ 'domain_detection_limits.csv')
 
         if(overwrite){
 
@@ -10040,7 +10058,7 @@ postprocess_attribution_ts <- function(){
 
     attrib_d <- googlesheets4::read_sheet(
         conf$site_doi_license_gsheet,
-        skip = 5,
+        skip = 4,
         na = c('', 'NA'),
         col_types = 'c'
     )

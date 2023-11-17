@@ -6,6 +6,8 @@ library(glue)
 
 forthcoming_dataset_version <- 2
 
+setwd('/home/mike/git/macrosheds/data_acquisition')
+
 outdir <- glue('logs/v{vv}_prerun_housekeeping', vv = forthcoming_dataset_version)
 dir.create(outdir, showWarnings = FALSE)
 
@@ -22,8 +24,7 @@ writeLines(tree_text, glue('{outdir}/data_structure_beginning_v{vv}.txt',
                            vv = forthcoming_dataset_version))
 
 stop('check_for_updates_edi only returns the query string, so prepend the edi url to that, and then the output dataset will have newlinks in the right column')
-
-setwd('/home/mike/git/macrosheds/data_acquisition')
+stop('also, for "new" products, put their urls in the "newlink" column')
 
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
@@ -38,6 +39,8 @@ site_doi_license <- googlesheets4::read_sheet(
     col_names = TRUE
 ) %>%
     mutate(new_url = NA_character_)
+
+write_csv(site_doi_license, file.path(outdir, 'old_doi_license.csv'))
 
 out <- matrix(NA, nrow = nrow(site_doi_license), ncol = 6,
               dimnames = list(NULL, c('domain', 'prodcode', 'status',
