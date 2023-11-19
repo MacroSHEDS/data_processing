@@ -4,6 +4,9 @@ library(googlesheets4)
 library(tidyverse)
 library(glue)
 
+stop('check_for_updates_edi only returns the query string, so prepend the edi url to that, and then the output dataset will have newlinks in the right column')
+stop('also, for "new" products, put their urls in the "newlink" column')
+
 forthcoming_dataset_version <- 2
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
@@ -22,9 +25,6 @@ tree_text <- gsub(ansi_escape_regex, '', tree_text, perl = TRUE)
 
 writeLines(tree_text, glue('{outdir}/data_structure_beginning_v{vv}.txt',
                            vv = forthcoming_dataset_version))
-
-stop('check_for_updates_edi only returns the query string, so prepend the edi url to that, and then the output dataset will have newlinks in the right column')
-stop('also, for "new" products, put their urls in the "newlink" column')
 
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)

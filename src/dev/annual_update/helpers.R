@@ -1,3 +1,5 @@
+#these were added to global_helpers.R on 2023-11-18
+
 check_for_updates_hydroshare <- function(oldlink, last_download_dt){
 
     page <- read_html(oldlink)
