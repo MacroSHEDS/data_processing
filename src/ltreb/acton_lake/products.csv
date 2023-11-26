@@ -1,0 +1,6 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
+VERSIONLESS1,discharge,ready,ready,,discharge__ms001,Four Mile Stream,acton_discharge_w1,https://portal.edirepository.org/nis/dataviewer?packageid=edi.256.2&entityid=7bc5a642e46c2b1abfed0c300da69d09
+VERSIONLESS2,stream_chemistry,ready,ready,,stream_flux_inst__ms002,For all trout_lake creeks,acton_lake_chem,https://portal.edirepository.org/nis/dataviewer?packageid=edi.256.2&entityid=63e0c10806e01e21740377650b89fa0d
+ms001,discharge,,,ready,stream_flux_inst__ms002,NA,NA,NA
+ms002,stream_flux_inst,,,ready,NA,NA,NA,NA
+ms003,stream_gauge_locations,,,ready,NA,NA,NA,https://portal.edirepository.org/nis/dataviewer?packageid=edi.256.1&entityid=0c8f547bcc59b4daade296479381d40e
