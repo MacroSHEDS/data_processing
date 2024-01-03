@@ -80,8 +80,7 @@ for(i in seq_len(nrow(prod_info))){
                          p = prodcode_from_prodname_ms(prodname_ms),
                          v = latest_vsn)
 
-    write_metadata_r(murl = metadata_url,
-                     network = network,
+    write_metadata_r(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
 

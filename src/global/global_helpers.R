@@ -8077,7 +8077,7 @@ invalidate_derived_products <- function(successor_string){
     invalidate_bulk('precip_chemistry', 'precip_pchem')
 }
 
-write_metadata_r <- function(network, domain, prodname_ms){
+write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
     #this writes the metadata file for retrieved macrosheds data
     #see write_metadata_m for munged macrosheds data and write_metadata_d
@@ -8085,11 +8085,15 @@ write_metadata_r <- function(network, domain, prodname_ms){
 
     #also see read_metadata_r and read_metadata_m
 
-    source_url <- site_doi_license %>%
-        filter(network == !!network,
-               domain == !!domain,
-               macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms)) %>%
-        pull(link)
+    #murl might not be a url per se, but a note like "this came from our google drive"
+    if(is.null(murl)){
+
+        murl <- site_doi_license %>%
+            filter(network == !!network,
+                   domain == !!domain,
+                   macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms)) %>%
+            pull(link)
+    }
 
     #create raw directory if necessary
 
@@ -8107,14 +8111,14 @@ write_metadata_r <- function(network, domain, prodname_ms){
 
     download_dt <- lubridate::with_tz(Sys.time(), 'UTC')
 
-    readr::write_file(paste0(source_url, ' (retrieved ',
+    readr::write_file(paste0(murl, ' (retrieved ',
                              download_dt,
                              ')'),
                       file = data_acq_file)
 
     dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
 
-    update_provenance(source_url, dt_web_format)
+    update_provenance(murl, dt_web_format)
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
