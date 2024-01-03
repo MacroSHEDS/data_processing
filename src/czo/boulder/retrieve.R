@@ -91,9 +91,6 @@ for(i in seq_len(nrow(prod_info))){
         }
     }
 
-    metadata_url <- glue('https://www.hydroshare.org/resource/{v}',
-                         v = hydroshare_code)
-
     write_metadata_r(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)

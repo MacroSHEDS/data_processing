@@ -85,7 +85,8 @@ for(i in seq_len(nrow(prod_info))){
 
     metadata_url <- 'https://waterdata.usgs.gov/nwis'
 
-    write_metadata_r(network = network,
+    write_metadata_r(murl = metadata_url,
+					 network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
 

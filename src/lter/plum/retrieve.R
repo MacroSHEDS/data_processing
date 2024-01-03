@@ -82,15 +82,6 @@ for(i in seq_len(nrow(prod_info))){
     write_metadata_r(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
-    # metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
-    #                      'packageid=knb-lter-and.{p}.{v}',
-    #                      p = prodcode_from_prodname_ms(prodname_ms),
-    #                      v = latest_vsn)
-    #
-    # write_metadata_r(murl = metadata_url,
-    #                  network = network,
-    #                  domain = domain,
-    #                  prodname_ms = prodname_ms)
 
     gc()
 }
