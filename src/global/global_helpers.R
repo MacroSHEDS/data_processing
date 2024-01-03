@@ -8103,6 +8103,8 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                              lubridate::with_tz(Sys.time(), 'UTC'),
                              ')'),
                       file = data_acq_file)
+
+
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -9117,19 +9119,6 @@ get_gee_standard <- function(network,
     }
 
     return(fin)
-}
-
-err_df_to_matrix <- function(df){
-
-    if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
-        stop('all columns of df must be of class "errors" or "numeric"')
-    }
-
-    errmat <- as.matrix(as.data.frame(lapply(df, errors)))
-    M <- as.matrix(df)
-    errors(M) <- errmat
-
-    return(M)
 }
 
 get_relative_uncert <- function(x){
@@ -16703,6 +16692,8 @@ check_for_updates_edi <- function(oldlink, last_download_dt){
 
     #if there's a link to a new version, look no further
     if(! is.na(newlink)){
+        newlink <- paste0('https://portal.edirepository.org/nis/',
+                          newlink)
         print(paste('New link:', newlink))
         return(newlink)
     }
