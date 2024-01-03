@@ -31,11 +31,10 @@ for(i in seq_len(nrow(prod_info))){
     if(is_ms_err(avail_sets)) next
 
     avail_sets <- avail_sets %>%
-        filter(!grepl('xlx|xls', component))
+        filter(! grepl('xlsx?', component))
 
     avail_sites <- unique(avail_sets$site_code)
 
-    # j=1
     for(j in 1:length(avail_sites)){
 
         site_code <- avail_sites[j]
@@ -80,15 +79,18 @@ for(i in seq_len(nrow(prod_info))){
         }
     }
 
-    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
-                         'packageid=knb-lter-and.{p}.{v}',
-                         p = prodcode_from_prodname_ms(prodname_ms),
-                         v = latest_vsn)
-
-    write_metadata_r(murl = metadata_url,
-                     network = network,
+    write_metadata_r(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
+    # metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
+    #                      'packageid=knb-lter-and.{p}.{v}',
+    #                      p = prodcode_from_prodname_ms(prodname_ms),
+    #                      v = latest_vsn)
+    #
+    # write_metadata_r(murl = metadata_url,
+    #                  network = network,
+    #                  domain = domain,
+    #                  prodname_ms = prodname_ms)
 
     gc()
 }

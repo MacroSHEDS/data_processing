@@ -4,6 +4,9 @@ library(googlesheets4)
 library(tidyverse)
 library(glue)
 
+#can't remember if i need to copy/paste the output of this into the gsheet,
+#or if that is automated during retrieval. examine in 2025
+
 #don't run this again after starting into the main acquisition loop.
 #will overwrite files pertaining to this year's provenance
 forthcoming_dataset_version <- 2

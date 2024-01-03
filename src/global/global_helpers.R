@@ -8077,13 +8077,19 @@ invalidate_derived_products <- function(successor_string){
     invalidate_bulk('precip_chemistry', 'precip_pchem')
 }
 
-write_metadata_r <- function(murl, network, domain, prodname_ms){
+write_metadata_r <- function(network, domain, prodname_ms){
 
     #this writes the metadata file for retrieved macrosheds data
     #see write_metadata_m for munged macrosheds data and write_metadata_d
     #for derived macrosheds data
 
     #also see read_metadata_r and read_metadata_m
+
+    source_url <- site_doi_license %>%
+        filter(network == !!network,
+               domain == !!domain,
+               macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms)) %>%
+        pull(link)
 
     #create raw directory if necessary
 
@@ -8099,12 +8105,16 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                           rd = raw_dir,
                           p = prodname_ms)
 
-    readr::write_file(paste0(murl, ' (retrieved ',
-                             lubridate::with_tz(Sys.time(), 'UTC'),
+    download_dt <- lubridate::with_tz(Sys.time(), 'UTC')
+
+    readr::write_file(paste0(source_url, ' (retrieved ',
+                             download_dt,
                              ')'),
                       file = data_acq_file)
 
+    dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
 
+    update_provenance(source_url, dt_web_format)
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -16637,6 +16647,66 @@ generate_retrieval_details <- function(url,
     return(deets_out)
 }
 
+reverse_vector_pairs <- function(x){
+    as.vector(matrix(x, nrow = 2)[2:1, ])
+}
+
+convert_EDI_to_APA <- function(citation, provenance_row){
+
+    title <- find_resource_title(citation)
+
+    format_authors <- function(authors){
+
+        authors <- gsub("^, ", "", authors)
+        authors <- strsplit(authors, ", and ") %>% unlist()
+
+        if(length(authors) %% 2 == 0) stop('error parsing citation authors')
+
+        #reorder author components
+        firstauthor <- authors[1]
+        notfirst <- reverse_vector_pairs(authors[-1])
+        notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+            map(~paste(., collapse = ', ')) %>%
+            paste0(., '.')
+        notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+        notfirst <- paste(notfirst, collapse = ', ')
+        authors <- paste0(firstauthor, '., ', notfirst)
+
+        return(authors)
+    }
+
+    parts <- str_split(citation, "[\\.]", simplify = TRUE) %>%
+        map(str_trim) %>%
+        unlist()
+    titleind <- which(parts == title)
+    title <- sub('( ver [0-9]+)$', '.\\1', title)
+    author <- format_authors(parts[1:(titleind - 2)])
+    vsn <- parts[titleind + 1]
+    if(! grepl('ver ', vsn)) vsn <- ''
+    # publisher <- parts[titleind + 2]
+    publisher <- 'Environmental Data Initiative'
+    url <- str_extract(citation, "https?://[^ ]+")
+
+    ## get the letter for the publication year
+
+    title_old <- provenance_row %>%
+        pull(citation) %>%
+        find_resource_title()
+
+    parts <- str_split(docrow$citation, "[\\.]", simplify = TRUE) %>%
+        map(str_trim) %>%
+        unlist()
+    titleind <- which(parts == title_old)
+    yearletter <- str_extract(parts[titleind - 1], "\\d{4}[a-z]?")
+
+    #combine
+    apa_citation <- paste0(author, " (", yearletter, "). ", title, ". ", vsn, ". ",
+                           publisher, ". ", url) %>%
+        str_replace_all('\\. \\.', '.')
+
+    return(apa_citation)
+}
+
 check_for_updates_hydroshare <- function(oldlink, last_download_dt){
 
     page <- read_html(oldlink)
@@ -16683,41 +16753,36 @@ check_for_updates_hydroshare <- function(oldlink, last_download_dt){
     }
 }
 
-check_for_updates_edi <- function(oldlink, last_download_dt){
+update_provenance <- function(url, last_download_dt){
 
-    page <- read_html(oldlink)
-    node <- html_node(page, 'div h2 font[color="darkorange"] a')
+    rowind <- which(
+        site_doi_license$network == network &
+        site_doi_license$domain == domain &
+        site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
+    )
 
-    newlink <- if(!is.null(node)) html_attr(node, 'href') else NA
+    if(length(rowind) != 1) stop('something wrong with provenance for this product')
 
-    #if there's a link to a new version, look no further
-    if(! is.na(newlink)){
-        newlink <- paste0('https://portal.edirepository.org/nis/',
-                          newlink)
-        print(paste('New link:', newlink))
-        return(newlink)
-    }
+    prov <- site_doi_license[rowind, ]
 
-    #otherwise check the last modified date and see if we already have it
-    lastmod <- page %>%
-        html_node('div.table-cell > ul > li > em') %>%
-        html_text() %>%
-        str_trim() %>%
-        str_extract('\\d{4}-\\d{2}-\\d{2}') %>%
-        ymd()
+    page <- read_html(url)
 
-    if(! length(lastmod) | is.na(lastmod)){
-        warning('"Updated" date was not provided or could not be scraped for ', i)
-        next
-    }
+    doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
+    citation_text <- page %>% html_node("#citation") %>% html_text()
 
-    if(lastmod > as_date(last_download_dt)){
-        print(paste('Update:', oldlink))
-        return('old resource updated')
-    } else if(lastmod == as_date(last_download_dt)){
-        print(paste('Maybe update:', oldlink))
-        return(paste('old resource updated? updated and last retrieved on', lastmod))
+    browser()
+
+    if(network %in% c('lter', 'bear')){
+        citation_text <- convert_EDI_to_APA(citation_text, prov)
     } else {
-        return('up to date')
+        #still need this
+        citation_text <- convert_CZO_to_APA(citation_text, prov)
     }
+
+    site_doi_license$citation[rowind] <- citation_text
+    site_doi_license$doi[rowind] <- doi
+    site_doi_license$link[rowind] <- url
+    site_doi_license$link_download_datetime <- last_download_dt
+
+    ms_write_confdata(site_doi_license, 'site_doi_license', 'remote', overwrite = TRUE)
 }
