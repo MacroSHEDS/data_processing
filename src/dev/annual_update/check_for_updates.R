@@ -4,8 +4,10 @@ library(googlesheets4)
 library(tidyverse)
 library(glue)
 
-#can't remember if i need to copy/paste the output of this into the gsheet,
-#or if that is automated during retrieval. examine in 2025
+#A lot of this same code runs in the pipeline now. provenance updating is
+#automated for EDI and hydroshare domains. This script is still useful
+#for getting an idea of all that will be updated during a run. essential for
+#record keeping and documenting as you go (makes a nice TODO itinerary)
 
 #don't run this again after starting into the main acquisition loop.
 #will overwrite files pertaining to this year's provenance

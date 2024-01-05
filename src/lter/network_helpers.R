@@ -216,6 +216,7 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 }
 
 download_raw_file <- function(network, domain, set_details, file_type = '.csv') {
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,

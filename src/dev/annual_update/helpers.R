@@ -1,5 +1,4 @@
-#these were added to global_helpers.R on 2023-11-18
-#modified 2024-01-02
+#these were added to global_helpers.R on 2024-01-05
 
 check_for_updates_hydroshare <- function(oldlink, last_download_dt){
 

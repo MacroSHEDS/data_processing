@@ -8085,14 +8085,28 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
     #also see read_metadata_r and read_metadata_m
 
+    component_row <- site_doi_license %>%
+        filter(network == !!network,
+               domain == !!domain,
+               macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms))
+
     #murl might not be a url per se, but a note like "this came from our google drive"
     if(is.null(murl)){
+        murl <- component_row$link
+    }
 
-        murl <- site_doi_license %>%
-            filter(network == !!network,
-                   domain == !!domain,
-                   macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms)) %>%
-            pull(link)
+    last_dl <- component_row$link_download_datetime
+
+    currency_check <- 'placeholder'
+    if(grepl('hydroshare\\.org', murl)){
+        currency_check <- check_for_updates_hydroshare(murl, last_dl)
+    } else if(grepl('portal\\.edirepository', murl)){
+        currency_check <- check_for_updates_edi(murl, last_dl)
+    }
+
+    if(grepl('^http', currency_check)){
+        #new resource location
+        murl <- currency_check
     }
 
     #create raw directory if necessary
@@ -9615,7 +9629,22 @@ ms_write_confdata <- function(x,
             which_dataset == 'site_doi_license' ~ conf$site_doi_license_gsheet,
             which_dataset == 'domain_detection_limits' ~ conf$dl_sheet)
 
-        if(overwrite){
+        ## write updates
+
+        if(which_dataset == 'site_doi_license'){
+
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::range_write(ss = write_loc,
+                                                  data = x,
+                                                  sheet = 1,
+                                                  range = 'A6',
+                                                  col_names = FALSE))
+                },
+                max_attempts = 4
+            )
+
+        } else if(overwrite){
 
             catch <- expo_backoff(
                 expr = {
@@ -9639,14 +9668,31 @@ ms_write_confdata <- function(x,
 
         }
 
-        catch <- expo_backoff(
-            expr = {
-                dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                                     na = c('', 'NA'),
-                                                     col_types = type_string))
-            },
-            max_attempts = 4
-        )
+        ## read back and update locally (probably unnecessary, but also harmless and maybe this is here for a reason)
+
+        if(which_dataset == 'site_doi_license'){
+
+            catch <- expo_backoff(
+                expr = {
+                    dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                         na = c('', 'NA'),
+                                                         skip = 4,
+                                                         col_types = type_string))
+                },
+                max_attempts = 4
+            )
+
+        } else {
+
+            catch <- expo_backoff(
+                expr = {
+                    dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                         na = c('', 'NA'),
+                                                         col_types = type_string))
+                },
+                max_attempts = 4
+            )
+        }
 
     } else if(to_where == 'local'){
 
@@ -16557,6 +16603,9 @@ combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
 }
 
 # rename site ws traits
+warning('OI')
+warning('this is mega wonky. when you get to panola, figure out whats going on')
+warning('srsly')
 ws_traits_dir = list.files('vault/panola/ws_traits/',
                            recursive =  TRUE,
                            full.names = TRUE,
@@ -16667,14 +16716,16 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         if(length(authors) %% 2 == 0) stop('error parsing citation authors')
 
         #reorder author components
-        firstauthor <- authors[1]
-        notfirst <- reverse_vector_pairs(authors[-1])
-        notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
-            map(~paste(., collapse = ', ')) %>%
-            paste0(., '.')
-        notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
-        notfirst <- paste(notfirst, collapse = ', ')
-        authors <- paste0(firstauthor, '., ', notfirst)
+        if(length(authors) != 1){
+            firstauthor <- authors[1]
+            notfirst <- reverse_vector_pairs(authors[-1])
+            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+                map(~paste(., collapse = ', ')) %>%
+                paste0(., '.')
+            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            notfirst <- paste(notfirst, collapse = ', ')
+            authors <- paste0(firstauthor, '., ', notfirst)
+        }
 
         return(authors)
     }
@@ -16683,6 +16734,10 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         map(str_trim) %>%
         unlist()
     titleind <- which(parts == title)
+    if(! length(titleind)){
+        #there's a period in the title
+        stop('dang, we need to handle periods in titles')
+    }
     title <- sub('( ver [0-9]+)$', '.\\1', title)
     author <- format_authors(parts[1:(titleind - 2)])
     vsn <- parts[titleind + 1]
@@ -16693,22 +16748,124 @@ convert_EDI_to_APA <- function(citation, provenance_row){
 
     ## get the letter for the publication year
 
-    title_old <- provenance_row %>%
-        pull(citation) %>%
-        find_resource_title()
-
-    parts <- str_split(docrow$citation, "[\\.]", simplify = TRUE) %>%
+    parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
         map(str_trim) %>%
         unlist()
-    titleind <- which(parts == title_old)
-    yearletter <- str_extract(parts[titleind - 1], "\\d{4}[a-z]?")
+
+    yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
+    if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
+        stop('parsing error when determining former publication year')
+    }
 
     #combine
-    apa_citation <- paste0(author, " (", yearletter, "). ", title, ". ", vsn, ". ",
+    apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
                            publisher, ". ", url) %>%
         str_replace_all('\\. \\.', '.')
 
     return(apa_citation)
+}
+
+convert_hydroshare_to_APA <- function(citation, provenance_row){
+
+    title <- find_resource_title(citation)
+
+    format_authors <- function(authors){
+
+        authors <- gsub("^, ", "", authors)
+        authors <- strsplit(authors, ", and ") %>% unlist()
+
+        if(length(authors) %% 2 == 0) stop('error parsing citation authors')
+
+        #reorder author components
+        if(length(authors) != 1){
+            firstauthor <- authors[1]
+            notfirst <- reverse_vector_pairs(authors[-1])
+            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+                map(~paste(., collapse = ', ')) %>%
+                paste0(., '.')
+            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            notfirst <- paste(notfirst, collapse = ', ')
+            authors <- paste0(firstauthor, '., ', notfirst)
+        }
+
+        return(authors)
+    }
+
+    parts <- str_match(citation, '^(.+?)\\(([0-9]{4})\\)\\.(.+)$')[, 2:4] %>%
+        map(str_trim) %>%
+        unlist()
+
+    author <- str_split(parts[1], "[\\.]", simplify = TRUE) %>%
+        map(str_trim) %>%
+        unlist() %>%
+        format_authors()
+
+    title_etc <- sub(', HydroShare, http', '. HydroShare. http', parts[3])
+    title_etc <- sub('http:', 'https:', title_etc)
+
+    ## get the letter for the publication year
+
+    parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
+        map(str_trim) %>%
+        unlist()
+
+    yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
+    if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
+        stop('parsing error when determining former publication year')
+    }
+
+    #combine
+    apa_citation <- paste0(author, " (", yearletter, "). ", title_etc)
+
+    return(apa_citation)
+}
+
+update_provenance <- function(url, last_download_dt){
+
+    rowind <- which(
+        site_doi_license$network == network &
+        site_doi_license$domain == domain &
+        site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
+    )
+
+    if(length(rowind) != 1) stop('something wrong with provenance for this product')
+
+    prov <- site_doi_license[rowind, ]
+
+    page <- read_html(url)
+
+    browser()
+    if(grepl('portal.edirepository', url)){
+
+        doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
+        citation_text <- page %>% html_node("#citation") %>% html_text()
+        citation_text <- convert_EDI_to_APA(citation_text, prov)
+
+    } else if(grepl('hydroshare.org', url)){
+
+        doi <- site_doi_license$doi[rowind]
+        citation_text <- page %>% html_node('#citation-text') %>% html_text()
+        citation_text <- convert_hydroshare_to_APA(citation_text, prov)
+
+    } else {
+        warning('Provenance update required (citation_and_intellectual_rights googlesheet')
+    }
+
+    cat('old citation:\n', site_doi_license$citation[rowind])
+    cat('new citation:\n', citation_text)
+
+    if(citation_text == site_doi_license$citation[rowind] &&
+       doi == site_doi_license$doi[rowind] &&
+       url == site_doi_license$link[rowind]){
+        return()
+    }
+
+    site_doi_license$citation[rowind] <- citation_text
+    site_doi_license$doi[rowind] <- doi
+    site_doi_license$link[rowind] <- url
+    site_doi_license$link_download_datetime <- last_download_dt
+
+    ms_write_confdata(site_doi_license, 'site_doi_license', 'remote', overwrite = TRUE)
 }
 
 check_for_updates_hydroshare <- function(oldlink, last_download_dt){
@@ -16745,48 +16902,48 @@ check_for_updates_hydroshare <- function(oldlink, last_download_dt){
     }
 
     if(! length(lastmod)){
-        warning('"Last updated" date was not provided or could not be scraped for ', i)
-        next
+        stop('"Last updated" date was not provided or could not be scraped for ', i)
     }
 
     if(lastmod > as_datetime(last_download_dt)){
-        print(paste('Update:', oldlink))
-        return('old resource updated')
-    } else {
-        return('up to date')
+        print('old resource updated')
     }
+
+    return('all good')
 }
 
-update_provenance <- function(url, last_download_dt){
+check_for_updates_edi <- function(oldlink, last_download_dt){
 
-    rowind <- which(
-        site_doi_license$network == network &
-        site_doi_license$domain == domain &
-        site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
-    )
+    page <- read_html(oldlink)
+    node <- html_node(page, 'div h2 font[color="darkorange"] a')
 
-    if(length(rowind) != 1) stop('something wrong with provenance for this product')
+    newlink <- if(!is.null(node)) html_attr(node, 'href') else NA
 
-    prov <- site_doi_license[rowind, ]
-
-    page <- read_html(url)
-
-    doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
-    citation_text <- page %>% html_node("#citation") %>% html_text()
-
-    browser()
-
-    if(network %in% c('lter', 'bear')){
-        citation_text <- convert_EDI_to_APA(citation_text, prov)
-    } else {
-        #still need this
-        citation_text <- convert_CZO_to_APA(citation_text, prov)
+    #if there's a link to a new version, look no further
+    if(! is.na(newlink)){
+        newlink <- paste0('https://portal.edirepository.org/nis/',
+                          newlink)
+        print(paste('New link:', newlink))
+        return(newlink)
     }
 
-    site_doi_license$citation[rowind] <- citation_text
-    site_doi_license$doi[rowind] <- doi
-    site_doi_license$link[rowind] <- url
-    site_doi_license$link_download_datetime <- last_download_dt
+    #otherwise check the last modified date and see if we already have it
+    lastmod <- page %>%
+        html_node('div.table-cell > ul > li > em') %>%
+        html_text() %>%
+        str_trim() %>%
+        str_extract('\\d{4}-\\d{2}-\\d{2}') %>%
+        ymd()
 
-    ms_write_confdata(site_doi_license, 'site_doi_license', 'remote', overwrite = TRUE)
+    if(! length(lastmod) | is.na(lastmod)){
+        stop('"Updated" date was not provided or could not be scraped for ', i)
+    }
+
+    if(lastmod > as_date(last_download_dt)){
+        print('old resource updated')
+    } else if(lastmod == as_date(last_download_dt)){
+        stop(paste('old resource updated? updated and last retrieved on', lastmod))
+    }
+
+    return('all good')
 }
