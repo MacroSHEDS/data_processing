@@ -16740,25 +16740,27 @@ convert_EDI_to_APA <- function(citation, provenance_row){
     }
     title <- sub('( ver [0-9]+)$', '.\\1', title)
     author <- format_authors(parts[1:(titleind - 2)])
+    year <- parts[titleind - 1]
     vsn <- parts[titleind + 1]
     if(! grepl('ver ', vsn)) vsn <- ''
     # publisher <- parts[titleind + 2]
     publisher <- 'Environmental Data Initiative'
     url <- str_extract(citation, "https?://[^ ]+")
 
-    ## get the letter for the publication year
-
-    parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
-        map(str_trim) %>%
-        unlist()
-
-    yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
-    if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
-        stop('parsing error when determining former publication year')
-    }
+    # ## get the letter for the publication year
+    #
+    # parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
+    #     map(str_trim) %>%
+    #     unlist()
+    #
+    # yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
+    # if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
+    #     stop('parsing error when determining former publication year')
+    # }
 
     #combine
-    apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
+    # apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
+    apa_citation <- paste0(author, ". (", year, "). ", title, ". ", vsn, ". ",
                            publisher, ". ", url) %>%
         str_replace_all('\\. \\.', '.')
 
@@ -16774,7 +16776,9 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
         authors <- gsub("^, ", "", authors)
         authors <- strsplit(authors, ", and ") %>% unlist()
 
-        if(length(authors) %% 2 == 0) stop('error parsing citation authors')
+        if(length(authors) %% 2 == 0){
+            authors <- c(authors[1], unlist(strsplit(authors[-1], ", ")))
+        }
 
         #reorder author components
         if(length(authors) != 1){
@@ -16805,17 +16809,18 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
 
     ## get the letter for the publication year
 
-    parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
-        map(str_trim) %>%
-        unlist()
-
-    yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
-    if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
-        stop('parsing error when determining former publication year')
-    }
+    # parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
+    #     map(str_trim) %>%
+    #     unlist()
+    #
+    # yearletter <- na.omit(str_match(parts, '^\\([0-9]{4}([a-z]+?)\\)$')[, 2])
+    # if(! length(yearletter) || is.na(yearletter) || ! grepl('^[a-z]+$', yearletter)){
+    #     stop('parsing error when determining former publication year')
+    # }
 
     #combine
-    apa_citation <- paste0(author, " (", yearletter, "). ", title_etc)
+    apa_citation <- paste0(author, " (", parts[2], "). ", title_etc)
+    # apa_citation <- paste0(author, " (", parts[2], yearletter, "). ", title_etc)
 
     return(apa_citation)
 }
@@ -16834,7 +16839,6 @@ update_provenance <- function(url, last_download_dt){
 
     page <- read_html(url)
 
-    browser()
     if(grepl('portal.edirepository', url)){
 
         doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
@@ -16851,11 +16855,14 @@ update_provenance <- function(url, last_download_dt){
         warning('Provenance update required (citation_and_intellectual_rights googlesheet')
     }
 
-    cat('old citation:\n', site_doi_license$citation[rowind])
-    cat('new citation:\n', citation_text)
+    cat('old citation:\n', site_doi_license$citation[rowind], '\n')
+    cat('new citation:\n', citation_text, '\n\n')
 
     if(citation_text == site_doi_license$citation[rowind] &&
-       doi == site_doi_license$doi[rowind] &&
+
+       ((is.na(doi) && is.na(site_doi_license$doi[rowind])) ||
+        doi == site_doi_license$doi[rowind]) &&
+
        url == site_doi_license$link[rowind]){
         return()
     }
@@ -16863,7 +16870,7 @@ update_provenance <- function(url, last_download_dt){
     site_doi_license$citation[rowind] <- citation_text
     site_doi_license$doi[rowind] <- doi
     site_doi_license$link[rowind] <- url
-    site_doi_license$link_download_datetime <- last_download_dt
+    site_doi_license$link_download_datetime[rowind] <- last_download_dt
 
     ms_write_confdata(site_doi_license, 'site_doi_license', 'remote', overwrite = TRUE)
 }
