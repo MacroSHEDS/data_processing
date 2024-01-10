@@ -11497,6 +11497,8 @@ find_resource_title <- function(x){
         xspl <- xspl[! grepl('Susquehanna', xspl)]
         xspl <- xspl[! grepl('Dataset accessed from', xspl)]
         xspl <- xspl[! grepl('Williams', xspl)]
+        xspl <- xspl[! grepl('^http', xspl)]
+        xspl <- xspl[! grepl('Environmental Data Initiative', xspl)]
 
         xspl <- gsub('\\.$', '', xspl)
 
@@ -16704,14 +16706,73 @@ reverse_vector_pairs <- function(x){
     as.vector(matrix(x, nrow = 2)[2:1, ])
 }
 
+# subset_successive <- function(v){
+#     diff_v <- diff(v)
+#     splits <- which(diff_v != 1)
+#     split_list <- split(v, cumsum(c(1, diff_v != 1)))
+#     successive_subsets <- split_list[sapply(split_list, length) > 1]
+#     return(successive_subsets)
+# }
+successive_ints <- function(v){
+    diff_v <- c(1, diff(v))
+    group_ids <- cumsum(diff_v != 1)
+    grouped_list <- split(v, group_ids)
+    return(grouped_list)
+}
+
 convert_EDI_to_APA <- function(citation, provenance_row){
 
     title <- find_resource_title(citation)
 
     format_authors <- function(authors){
+        # authors = parts[1:(titleind - 2)]
+        if(length(authors) == 1){
+            return(authors[[1]])
+        }
+
+        last_auth <- which(grepl(', and', authors))
+        if(length(last_auth)){
+            authors <- strsplit(authors, ", and ") %>% unlist()
+            authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
+        }
+
+        authors <- as.list(authors)
+
+        new_initial <- grep('^, [A-Z]$', authors)
+        extra_initial <- grep('^[A-Z]$', authors)
+
+        initial_groups <- successive_ints(extra_initial)
+        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+        if(only_single_initials){
+            first_auth_inits <- NULL
+        } else {
+            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+        }
+
+        if(is.null(first_auth_inits)){
+            first_auth <- authors[[1]]
+        } else {
+            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+        }
+
+
+        if(! only_single_initials){
+            for(init in rev(new_initial)){
+                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+                if(! is.null(ig_)){
+                    authors[[init]] <- paste(authors[init],
+                                             paste(authors[ig_], collapse = '. '),
+                                             sep = '. ')
+                    authors[ig_] <- NULL
+                }
+            }
+        }
+
+        authors[[1]] <- first_auth
+        authors[first_auth_inits] <- NULL
 
         authors <- gsub("^, ", "", authors)
-        authors <- strsplit(authors, ", and ") %>% unlist()
+        # authors <- strsplit(authors, ", and ") %>% unlist()
 
         if(length(authors) %% 2 == 0) stop('error parsing citation authors')
 
@@ -16769,12 +16830,46 @@ convert_EDI_to_APA <- function(citation, provenance_row){
 
 convert_hydroshare_to_APA <- function(citation, provenance_row){
 
-    title <- find_resource_title(citation)
-
     format_authors <- function(authors){
 
+        if(length(authors) == 1){
+            return(authors[[1]])
+        }
+
+        new_initial <- grep('^, [A-Z]$', authors)
+        extra_initial <- grep('^[A-Z]$', authors)
+
+        initial_groups <- successive_ints(extra_initial)
+        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+        if(only_single_initials){
+            first_auth_inits <- NULL
+        } else {
+            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+        }
+
+        if(is.null(first_auth_inits)){
+            first_auth <- authors[[1]]
+        } else {
+            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+        }
+
+        if(! only_single_initials){
+            for(init in rev(new_initial)){
+                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+                if(! is.null(ig_)){
+                    authors[[init]] <- paste(authors[init],
+                                             paste(authors[ig_], collapse = '. '),
+                                             sep = '. ')
+                    authors[ig_] <- NULL
+                }
+            }
+        }
+
+        authors[[1]] <- first_auth
+        authors[first_auth_inits] <- NULL
+
         authors <- gsub("^, ", "", authors)
-        authors <- strsplit(authors, ", and ") %>% unlist()
+        # authors <- strsplit(authors, ", and ") %>% unlist()
 
         if(length(authors) %% 2 == 0){
             authors <- c(authors[1], unlist(strsplit(authors[-1], ", ")))
@@ -16799,10 +16894,11 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
         map(str_trim) %>%
         unlist()
 
-    author <- str_split(parts[1], "[\\.]", simplify = TRUE) %>%
-        map(str_trim) %>%
-        unlist() %>%
-        format_authors()
+    author_bits <- str_split(parts[1], "[\\.]", simplify = TRUE) %>%
+        discard(~. == '') %>%
+        map(str_trim)
+
+    author <- format_authors(author_bits)
 
     title_etc <- sub(', HydroShare, http', '. HydroShare. http', parts[3])
     title_etc <- sub('http:', 'https:', title_etc)
