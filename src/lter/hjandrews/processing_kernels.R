@@ -25,6 +25,7 @@ process_0_4341 <- function(set_details, network, domain){
                                   set_details$component,
                                   '.csv'),
                   cacheOK = FALSE,
+                  extra = "-C -", #resume download if it gets interrupted
                   method = 'curl')
 
     return()

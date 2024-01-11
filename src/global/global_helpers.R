@@ -8092,7 +8092,12 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
     #murl might not be a url per se, but a note like "this came from our google drive"
     if(is.null(murl)){
+
         murl <- component_row$link
+
+        if(! length(murl)){
+            stop('missing provenance for ', prodname_ms)
+        }
     }
 
     last_dl <- component_row$link_download_datetime
@@ -16703,6 +16708,7 @@ generate_retrieval_details <- function(url,
 }
 
 reverse_vector_pairs <- function(x){
+    if(length(x) == 1) return(x)
     as.vector(matrix(x, nrow = 2)[2:1, ])
 }
 
@@ -16738,6 +16744,9 @@ convert_EDI_to_APA <- function(citation, provenance_row){
 
         authors <- as.list(authors)
 
+        authors <- lapply(authors, function(x){
+            if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+        })
         new_initial <- grep('^, [A-Z]$', authors)
         extra_initial <- grep('^[A-Z]$', authors)
 
@@ -16830,12 +16839,44 @@ convert_EDI_to_APA <- function(citation, provenance_row){
 
 convert_hydroshare_to_APA <- function(citation, provenance_row){
 
+    # authors = author_bits
+    # citation_text->citation
+    # citation = 'Anderson, S., N. Rock, D. Ragar (2023). BCCZO -- Meteorology, Air Temperature -- (BT_Met) -- Betasso -- (2009-2020), HydroShare, http://www.hydroshare.org/resource/6bf3e44b9de344749d8f665e139e7311'
+    # citation = 'Chorover, J., P. Troch, A. B. McIntosh, E. F. G. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J., P. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J., A. B. C. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. C., A. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. C. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B., F. Donkey. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # authors = author_bits
+
     format_authors <- function(authors){
 
         if(length(authors) == 1){
+
+            if(! grepl('\\.$', authors[[1]])){
+                authors[[1]] <- paste0(authors[[1]], '.')
+            }
             return(authors[[1]])
         }
 
+        for(i in 2:(length(authors) - 1)){
+            current_element <- authors[[i]][1]
+            if(grepl("[A-Za-z]+, [A-Z]$", current_element)){
+                # initial <- sub(".*,( [A-Z])$", "\\1", current_element)
+                # authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+                initial <- sub(".*(, [A-Z])$", "\\1", current_element)
+                authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+                authors <- c(authors[1:i], initial, authors[(i + 1):length(authors)])
+                # authors[[i + 1]][1] <- paste(initial, authors[[i + 1]][1], sep = '. ')
+            }
+        }
+
+        authors <- lapply(authors, function(x){
+                if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+            })
         new_initial <- grep('^, [A-Z]$', authors)
         extra_initial <- grep('^[A-Z]$', authors)
 
@@ -16882,9 +16923,19 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
             notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
                 map(~paste(., collapse = ', ')) %>%
                 paste0(., '.')
-            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+                notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            }
             notfirst <- paste(notfirst, collapse = ', ')
-            authors <- paste0(firstauthor, '., ', notfirst)
+            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+                authors <- paste0(firstauthor, '., ', notfirst)
+            } else {
+                authors <- paste0(firstauthor, ', ', notfirst)
+            }
+        }
+
+        if(! grepl('\\.$', authors)){
+            authors <- paste0(authors, '.')
         }
 
         return(authors)
@@ -16899,6 +16950,7 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
         map(str_trim)
 
     author <- format_authors(author_bits)
+    # print(author)
 
     title_etc <- sub(', HydroShare, http', '. HydroShare. http', parts[3])
     title_etc <- sub('http:', 'https:', title_etc)
@@ -16938,28 +16990,30 @@ update_provenance <- function(url, last_download_dt){
     if(grepl('portal.edirepository', url)){
 
         doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
-        citation_text <- page %>% html_node("#citation") %>% html_text()
-        citation_text <- convert_EDI_to_APA(citation_text, prov)
+        citation_text_ <- page %>% html_node("#citation") %>% html_text()
+        citation_text <- convert_EDI_to_APA(citation_text_, prov)
 
     } else if(grepl('hydroshare.org', url)){
 
         doi <- site_doi_license$doi[rowind]
-        citation_text <- page %>% html_node('#citation-text') %>% html_text()
-        citation_text <- convert_hydroshare_to_APA(citation_text, prov)
+        citation_text_ <- page %>% html_node('#citation-text') %>% html_text()
+        citation_text <- convert_hydroshare_to_APA(citation_text_, prov)
 
     } else {
         warning('Provenance update required (citation_and_intellectual_rights googlesheet')
     }
 
-    cat('old citation:\n', site_doi_license$citation[rowind], '\n')
+    cat('old citation:\n', citation_text_, '\n')
     cat('new citation:\n', citation_text, '\n\n')
 
-    if(citation_text == site_doi_license$citation[rowind] &&
+    cites_match <- ! is.na(site_doi_license$citation[rowind]) &&
+        citation_text == site_doi_license$citation[rowind]
+    doi_match_or_missing <-
+        ((is.na(doi) && is.na(site_doi_license$doi[rowind])) ||
+             doi == site_doi_license$doi[rowind])
+    url_match <- url == site_doi_license$link[rowind]
 
-       ((is.na(doi) && is.na(site_doi_license$doi[rowind])) ||
-        doi == site_doi_license$doi[rowind]) &&
-
-       url == site_doi_license$link[rowind]){
+    if(cites_match && doi_match_or_missing && url_match){
         return()
     }
 
@@ -17008,7 +17062,7 @@ check_for_updates_hydroshare <- function(oldlink, last_download_dt){
         stop('"Last updated" date was not provided or could not be scraped for ', i)
     }
 
-    if(lastmod > as_datetime(last_download_dt)){
+    if(! is.na(last_download_dt) && lastmod > as_datetime(last_download_dt)){
         print('old resource updated')
     }
 
@@ -17042,10 +17096,12 @@ check_for_updates_edi <- function(oldlink, last_download_dt){
         stop('"Updated" date was not provided or could not be scraped for ', i)
     }
 
-    if(lastmod > as_date(last_download_dt)){
-        print('old resource updated')
-    } else if(lastmod == as_date(last_download_dt)){
-        stop(paste('old resource updated? updated and last retrieved on', lastmod))
+    if(! is.na(last_download_dt)){
+        if(lastmod > as_date(last_download_dt)){
+            print('old resource updated')
+        } else if(lastmod == as_date(last_download_dt)){
+            stop(paste('old resource updated? updated AND last retrieved on same date:', lastmod))
+        }
     }
 
     return('all good')

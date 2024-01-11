@@ -58,7 +58,7 @@ suppressPackageStartupMessages({
 vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300)
+        timeout = 12000)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -250,7 +250,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -318,7 +318,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'shale_hills') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'hbef') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 

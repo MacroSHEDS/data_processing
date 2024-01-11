@@ -165,9 +165,6 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail,
             components <- unique(email_update$component)
             components <- paste(components, collapse = ', ')
 
-            logwarn(msg = glue('The domain had updated product: {p}',
-                               p = prodname_ms))
-
             update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
                                'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
                                ' Check meta data to ensure munge and retrival code is ',
