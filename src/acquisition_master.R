@@ -318,7 +318,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'hbef') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'plum') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 

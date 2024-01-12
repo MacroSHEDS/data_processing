@@ -16736,10 +16736,16 @@ convert_EDI_to_APA <- function(citation, provenance_row){
             return(authors[[1]])
         }
 
-        last_auth <- which(grepl(', and', authors))
+        # last_auth <- which(grepl('^(?:, )?and ', authors))
+        # if(! grepl('^[,a]', authors[last_auth])) message('!!!!!!!!!!!!!!does this case still work?!!!!!!!!!!')
+        last_auth <- which(grepl('^(?:.*, )?and [A-Z]$', authors))
         if(length(last_auth)){
-            authors <- strsplit(authors, ", and ") %>% unlist()
-            authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
+            if(grepl(', and ', authors[last_auth])){
+                authors <- strsplit(authors, ", and ") %>% unlist()
+                authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
+            } else {
+                authors[last_auth] <- sub('and ', ', ', authors[last_auth])
+            }
         }
 
         authors <- as.list(authors)
@@ -16802,11 +16808,29 @@ convert_EDI_to_APA <- function(citation, provenance_row){
 
     parts <- str_split(citation, "[\\.]", simplify = TRUE) %>%
         map(str_trim) %>%
+        discard(~. == '') %>%
         unlist()
+
+    if(! title %in% parts){
+
+        ergh <- sapply(parts, function(x) grep(x, title, fixed = TRUE)) %>%
+            as.list()
+
+        replace_inds <- sapply(ergh, length) %>% as.logical %>% which
+
+        parts[replace_inds[1]] <- ergh %>%
+            discard(~!length(.)) %>%
+            names() %>%
+            reduce(paste, sep = '.')
+
+        parts <- as.list(parts)
+        parts[replace_inds[-1]] <- NULL
+        parts <- unlist(parts)
+    }
+
     titleind <- which(parts == title)
     if(! length(titleind)){
-        #there's a period in the title
-        stop('dang, we need to handle periods in titles')
+        stop('dang, we need to handle periods in titles... still?')
     }
     title <- sub('( ver [0-9]+)$', '.\\1', title)
     author <- format_authors(parts[1:(titleind - 2)])
@@ -16832,7 +16856,7 @@ convert_EDI_to_APA <- function(citation, provenance_row){
     # apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
     apa_citation <- paste0(author, ". (", year, "). ", title, ". ", vsn, ". ",
                            publisher, ". ", url) %>%
-        str_replace_all('\\. \\.', '.')
+        str_replace_all('\\. ?\\.', '.')
 
     return(apa_citation)
 }

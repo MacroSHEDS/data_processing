@@ -9,6 +9,9 @@ library(glue)
 #for getting an idea of all that will be updated during a run. essential for
 #record keeping and documenting as you go (makes a nice TODO itinerary)
 
+#remember to copy the data folder over to an external drive, to
+#keep a record of raw and munged products if people ever want them
+
 #don't run this again after starting into the main acquisition loop.
 #will overwrite files pertaining to this year's provenance
 forthcoming_dataset_version <- 2
