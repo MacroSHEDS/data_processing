@@ -11496,6 +11496,8 @@ find_resource_title <- function(x){
 
         xx <- gsub('Mt. ', 'Mt ', xx)
 
+        is_edi <- grepl('Environmental Data Initiative', xx)
+
         xspl <- strsplit(xx, '\\. ')[[1]]
         xspl <- xspl[! grepl('National Ecological Observatory Network', xspl)]
         xspl <- xspl[! grepl('Forest Service', xspl)]
@@ -11504,6 +11506,15 @@ find_resource_title <- function(x){
         xspl <- xspl[! grepl('Williams', xspl)]
         xspl <- xspl[! grepl('^http', xspl)]
         xspl <- xspl[! grepl('Environmental Data Initiative', xspl)]
+
+        if(is_edi){
+            xspl <- xspl[! grepl('ver [0-9]+', xspl)]
+            xspl <- xspl[-(1:which(grepl('^[0-9]{4}$', xspl)))]
+            xspl <- paste(xspl, collapse = '. ')
+        }
+        #probs safe to build this. i feel like there's inconsistency in hydroshare
+        #citations though. check on it first.
+        # if(is_hydroshare)...
 
         xspl <- gsub('\\.$', '', xspl)
 
@@ -16816,12 +16827,16 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         ergh <- sapply(parts, function(x) grep(x, title, fixed = TRUE)) %>%
             as.list()
 
+        ergh[[which(grepl('^[0-9]{4}$', names(ergh)))]] <- integer()
+
         replace_inds <- sapply(ergh, length) %>% as.logical %>% which
 
         parts[replace_inds[1]] <- ergh %>%
             discard(~!length(.)) %>%
             names() %>%
             reduce(paste, sep = '.')
+
+        parts[replace_inds[1]] <- sub('^[0-9]{4}\\.', '', parts[replace_inds[1]])
 
         parts <- as.list(parts)
         parts[replace_inds[-1]] <- NULL
