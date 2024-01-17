@@ -11500,7 +11500,7 @@ find_resource_title <- function(x){
 
         xspl <- strsplit(xx, '\\. ')[[1]]
         xspl <- xspl[! grepl('National Ecological Observatory Network', xspl)]
-        xspl <- xspl[! grepl('Forest Service', xspl)]
+        xspl <- xspl[! grepl('USDA Forest Service', xspl)]
         xspl <- xspl[! grepl('Susquehanna', xspl)]
         xspl <- xspl[! grepl('Dataset accessed from', xspl)]
         xspl <- xspl[! grepl('Williams', xspl)]
@@ -11508,7 +11508,7 @@ find_resource_title <- function(x){
         xspl <- xspl[! grepl('Environmental Data Initiative', xspl)]
 
         if(is_edi){
-            xspl <- xspl[! grepl('ver [0-9]+', xspl)]
+            xspl <- xspl[! grepl('^ver [0-9]+$', xspl)]
             xspl <- xspl[-(1:which(grepl('^[0-9]{4}$', xspl)))]
             xspl <- paste(xspl, collapse = '. ')
         }
@@ -16719,8 +16719,18 @@ generate_retrieval_details <- function(url,
 }
 
 reverse_vector_pairs <- function(x){
+
     if(length(x) == 1) return(x)
-    as.vector(matrix(x, nrow = 2)[2:1, ])
+
+    x_ <- tryCatch({
+        x_ <- as.vector(matrix(x, nrow = 2)[2:1, ])
+    }, warning = function(w){
+        x <- strsplit(x, ', ') %>% unlist()
+        x_ <- as.vector(matrix(x, nrow = 2)[2:1, ])
+        return(x_)
+    })
+
+    return(x_)
 }
 
 # subset_successive <- function(v){
@@ -16739,17 +16749,46 @@ successive_ints <- function(v){
 
 convert_EDI_to_APA <- function(citation, provenance_row){
 
+    # citation = 'Caine, N., J. Morse, and Niwot Ridge LTER. 2023. Streamflow data for Albion camp, 1981 - ongoing. ver 18. Environmental Data Initiative. https://doi.org/10.6073/pasta/cc7e183b27383d894709fcc3e2e8cc74 (Accessed 2024-01-15).'
+    # citation = 'Wollheim, W. and Plum Island Ecosystems LTER. 2019. PIE LTER time series of nutrient grab samples from Ipswich River and Parker River watershed catchments, Masachusetts, with frequency ranging from weekly to monthly between 2001 and 2019. ver 9. Environmental Data Initiative. https://doi.org/10.6073/pasta/465825142c5393363c707b1243dd4016 (Accessed 2024-01-15).'
+    # citation = 'Gooseff, M. and D. McKnight. 2021. Seasonal high-frequency measurements of discharge, water temperature, and specific conductivity from Commonwealth Stream at C1, McMurdo Dry Valleys, Antarctica (1993-2020, ongoing) ver 9. Environmental Data Initiative. https://doi.org/10.6073/pasta/f77f93be497f540ae7e262866e13970e (Accessed 2024-01-15).'
+    # citation = 'Santa Barbara Coastal LTER and J. Melack. 2019. SBC LTER: Land: Hydrology: Santa Barbara County Flood Control District - Precipitation at KTYD (KTYD227) ver 8. Environmental Data Initiative. https://doi.org/10.6073/pasta/6c6ceaab7c189afc85abb893280492a8 (Accessed 2024-01-16).'
+    # citation = 'Santa Barbara Coastal LTER and J. Q. Melack. 2019. SBC LTER: Land: Hydrology: Santa Barbara County Flood Control District - Precipitation at KTYD (KTYD227) ver 8. Environmental Data Initiative. https://doi.org/10.6073/pasta/6c6ceaab7c189afc85abb893280492a8 (Accessed 2024-01-16).'
+    # authors <- parts[1:(titleind - 2)]
     title <- find_resource_title(citation)
 
     format_authors <- function(authors){
-        # authors = parts[1:(titleind - 2)]
+
         if(length(authors) == 1){
             return(authors[[1]])
         }
 
-        # last_auth <- which(grepl('^(?:, )?and ', authors))
-        # if(! grepl('^[,a]', authors[last_auth])) message('!!!!!!!!!!!!!!does this case still work?!!!!!!!!!!')
         last_auth <- which(grepl('^(?:.*, )?and [A-Z]$', authors))
+        organizational_author <- FALSE
+        #omg so far past point of diminishing returns. just hard code the weird ones
+        override <- ifelse(any(grepl('Cary Institute Of Ecosystem Studies', authors)), TRUE, FALSE)
+        if(! length(last_auth) || override){
+            if(any(grepl(' and ', authors[-length(authors)]))){
+                case3 <- domain == 'baltimore' && authors[length(authors)] == 'Welty'
+                if(case3 && all(c('Lagrosa, and C', 'Welty') %in% authors)){
+                    return('Cary Institute Of Ecosystem Studies, Lagrosa, J., & Welty, C')
+                }
+                if(! grepl(' and ', authors[1])) stop('probably need to adjust for this')
+                case1 <- domain == 'santa_barbara' && authors[length(authors)] == 'Melack'
+                case2 <- domain == 'niwot' && authors[length(authors)] == 'Caine'
+                if(case1 || case2){
+                   authors <- strsplit(authors, " and ") %>% unlist()
+                   inits <- unlist(authors[-c(1, length(authors))])
+                   if(! length(inits) %in% 1:2) stop('has been e.g. J Q or just J for santa b')
+                   out <- paste0(authors[1], ', & ', authors[length(authors)], ', ',
+                                 paste(inits, collapse = '. '))
+                   return(out)
+                }
+                stop('ugh. just hardcoding this for santa barbara. if it comes up again, deal with it properly')
+            }
+            last_auth <- which(grepl('^(?:.*, )?and [A-Za-z ]+$', authors))
+            organizational_author <- TRUE
+        }
         if(length(last_auth)){
             if(grepl(', and ', authors[last_auth])){
                 authors <- strsplit(authors, ", and ") %>% unlist()
@@ -16781,7 +16820,6 @@ convert_EDI_to_APA <- function(citation, provenance_row){
             first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
         }
 
-
         if(! only_single_initials){
             for(init in rev(new_initial)){
                 ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
@@ -16800,10 +16838,18 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         authors <- gsub("^, ", "", authors)
         # authors <- strsplit(authors, ", and ") %>% unlist()
 
-        if(length(authors) %% 2 == 0) stop('error parsing citation authors')
+        if(length(authors) %% 2 == 0 && ! organizational_author){
+            stop('error parsing citation authors')
+        }
+
+        if(organizational_author){
+            last_author <- authors[length(authors)]
+            authors <- authors[-length(authors)]
+        }
 
         #reorder author components
         if(length(authors) != 1){
+
             firstauthor <- authors[1]
             notfirst <- reverse_vector_pairs(authors[-1])
             notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
@@ -16812,6 +16858,16 @@ convert_EDI_to_APA <- function(citation, provenance_row){
             notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
             notfirst <- paste(notfirst, collapse = ', ')
             authors <- paste0(firstauthor, '., ', notfirst)
+        }
+
+        if(organizational_author){
+            authors <- sub(' &', '', authors)
+            if(str_count(authors, ',') > 1){
+                authors <- paste0(authors, ',')
+            } else {
+                authors <- paste0(authors, '.,')
+            }
+            authors <- paste(authors, last_author, sep = ' & ')
         }
 
         return(authors)
@@ -16834,7 +16890,8 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         parts[replace_inds[1]] <- ergh %>%
             discard(~!length(.)) %>%
             names() %>%
-            reduce(paste, sep = '.')
+            reduce(paste, sep = '. ') %>%
+            map(~sub('\\. ,', '.,', .))
 
         parts[replace_inds[1]] <- sub('^[0-9]{4}\\.', '', parts[replace_inds[1]])
 

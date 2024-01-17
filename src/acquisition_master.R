@@ -318,7 +318,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'plum') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'fernow') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -338,8 +338,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-     #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-     #owrite_tracker(network, domain)
+    #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    #owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
@@ -355,7 +355,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
-                           domain = domain)
+                            domain = domain)
 
     get_all_local_helpers(network = network,
                           domain = domain)
