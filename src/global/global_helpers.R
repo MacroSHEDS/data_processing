@@ -8135,6 +8135,17 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
                              ')'),
                       file = data_acq_file)
 
+    if(is.character(murl) && murl == 'NA'){
+        logwarn(msg = paste('manually verify provenance for', prodname_ms),
+                logger = logger_module)
+        return()
+    }
+    if(is.character(murl) && grepl('MacroSheds drive', murl)){
+        logwarn(msg = paste('MacroSheds gdrive file; manually verify provenenace for', prodname_ms),
+                logger = logger_module)
+        return()
+    }
+
     dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
 
     update_provenance(murl, dt_web_format)
