@@ -8135,7 +8135,9 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
                              ')'),
                       file = data_acq_file)
 
-    if(is.character(murl) && murl == 'NA'){
+    manual_prov_check <- murl == 'NA' ||
+        grepl('www.czo.psu.edu', murl)
+    if(is.character(murl) && any(manual_prov_check)){
         logwarn(msg = paste('manually verify provenance for', prodname_ms),
                 logger = logger_module)
         return()
@@ -17212,4 +17214,30 @@ check_for_updates_edi <- function(oldlink, last_download_dt){
     }
 
     return('all good')
+}
+
+selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
+
+    if(! require('RSelenium')){
+        stop('RSelenium is required to use this function')
+    }
+
+    # Start a Selenium Server and open a browser
+    driver <- rsDriver(browser = web_browser, ...)
+    remote_driver <- driver$client
+
+    remote_driver$navigate(url)
+    Sys.sleep(7)
+
+    page_source <- remote_driver$getPageSource()[[1]]
+
+    # Use rvest to parse the HTML
+    page <- rvest::read_html(page_source)
+    string_out <- page %>%
+        rvest::html_element(css_selector) %>%
+        rvest::html_text()
+
+    remote_driver$close()
+
+    return(string_out)
 }
