@@ -8103,9 +8103,12 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
     last_dl <- component_row$link_download_datetime
 
     currency_check <- 'placeholder'
-    if(grepl('hydroshare\\.org', murl)){
+    is_hydroshare <- grepl('hydroshare\\.org', murl)
+    is_edi <- grepl('portal\\.edirepository', murl)
+    #is_essdive <-
+    if(is_hydroshare){
         currency_check <- check_for_updates_hydroshare(murl, last_dl)
-    } else if(grepl('portal\\.edirepository', murl)){
+    } else if(is_edi){
         currency_check <- check_for_updates_edi(murl, last_dl)
     }
 
@@ -8136,7 +8139,8 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
                       file = data_acq_file)
 
     manual_prov_check <- murl == 'NA' ||
-        grepl('www.czo.psu.edu', murl)
+        (! is_hydroshare && ! is_edi)
+
     if(is.character(murl) && any(manual_prov_check)){
         logwarn(msg = paste('manually verify provenance for', prodname_ms),
                 logger = logger_module)

@@ -50,7 +50,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -107,7 +107,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -164,7 +164,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -221,7 +221,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -278,7 +278,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -335,7 +335,7 @@ process_0_VERSIONLESS006 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -392,7 +392,7 @@ process_0_VERSIONLESS007 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -449,7 +449,7 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
@@ -506,7 +506,7 @@ process_0_VERSIONLESS009 <- function(set_details, network, domain) {
                             format = '%Y-%m-%dT%H:%M:%S') %>%
         with_tz(tzone = 'UTC')
 
-    deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
+    deets_out <- list(url = set_details$url,
                       access_time = as.character(with_tz(Sys.time(),
                                                          tzone = 'UTC')),
                       last_mod_dt = last_mod_dt)
