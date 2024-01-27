@@ -3,19 +3,19 @@
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- download_from_googledrive
+process_0_VERSIONLESS001 <- retrieve_krycklan
 
-#precip_chemistry: STATUS=READY
+#precip_chemistry: STATUS=PAUSED
 #. handle_errors
-process_0_VERSIONLESS002 <- download_from_googledrive
+process_0_VERSIONLESS002 <- retrieve_krycklan
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS003 <- download_from_googledrive
+process_0_VERSIONLESS003 <- retrieve_krycklan
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
-process_0_VERSIONLESS004 <- download_from_googledrive
+process_0_VERSIONLESS004 <- retrieve_krycklan
 
 #ws_boundary: STATUS=READY
 #. handle_errors
@@ -23,7 +23,7 @@ process_0_VERSIONLESS005 <- download_from_googledrive
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS006 <- download_from_googledrive
+process_0_VERSIONLESS006 <- retrieve_krycklan
 
 #munge kernels ####
 
@@ -90,7 +90,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#precip_chemistry: STATUS=READY
+#precip_chemistry: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -748,7 +748,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-#stream_temperature: STATUS=READY
+#stream_temperature: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
