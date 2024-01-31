@@ -318,7 +318,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'krycklan') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'usgs') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -362,14 +362,14 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('ws_boundary'),
+                prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
     check_for_derelicts(network = network,
                         domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('precipitation'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){

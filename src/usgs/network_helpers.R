@@ -21,7 +21,11 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
         if(file.exists(file_path[l])){
             file <- read_feather(file_path[l])
 
-            datetime_col <- grep('dateTime|startDateTime', names(file), value = TRUE)
+            datetime_col <- grep('date', names(file), value = TRUE, ignore.case = TRUE)
+            # datetime_col <- grep('dateTime|startDateTime', names(file), value = TRUE)
+            if(length(datetime_col) != 1){
+                stop('find a happy medium string match for date/datetime')
+            }
 
             last_record <- max(file[[datetime_col]])
 

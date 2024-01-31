@@ -16656,7 +16656,7 @@ for(file in ws_traits_dir) {
 
 check_for_derelicts <- function(network, domain){
 
-    all_raw <- list.files('data/czo/catalina_jemez/raw',
+    all_raw <- list.files(glue('data/{network}/{domain}/raw'),
                           full.names = TRUE,
                           recursive = TRUE)
     base_raw <- basename(all_raw)
