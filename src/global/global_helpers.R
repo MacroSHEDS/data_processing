@@ -969,6 +969,13 @@ ms_read_raw_csv <- function(filepath,
                across(everything(), as.character))
     }
 
+    missing_colnames <- setdiff(names(colnames_all), colnames(d))
+    if(length(missing_colnames)){
+        logwarn(paste0('These columns missing from dataframe. Probably there has been a modification by primary source:\n',
+                       paste(missing_colnames, collapse = ', ')),
+                logger = logger_module)
+    }
+
     d <- sw(select(d, any_of(c(names(colnames_all),
                                names(dl_cols),
                                'NA.')))) %>% #for NA meaning "sodium"
@@ -1259,7 +1266,7 @@ ms_read_raw_csv <- function(filepath,
     #     arrange(site_code, datetime)
     d <- d %>%
         group_by(datetime, site_code) %>%
-        summarize(across(ends_with('__|dat'), mean, na.rm = TRUE),
+        summarize(across(ends_with('__|dat'), ~mean(., na.rm = TRUE)),
                   across(! ends_with('__|dat'), ~(na.omit(.)[1]))) %>%
         ungroup() %>%
         arrange(site_code, datetime)
@@ -8813,7 +8820,8 @@ qc_hdetlim_and_uncert <- function(d, prodname_ms){
 
     #d: a tibble in MacroSheds format
 
-    #returns the same tibble, with quality control, 1/2 detection limit inserted
+    #returns the same tibble, with quality control (only range check as of 2024),
+    #1/2 detection limit inserted
     #for any instance of ms_status == 2, any ms_status == 2 set back to 1,
     #and uncertainty attached to the val column
 
