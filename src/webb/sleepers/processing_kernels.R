@@ -320,26 +320,23 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
     # the original file has encoding isssues, and connot be read directly
     # here I use a readr function which "guesses" the most likely encodings
     # which is good to know but I ultimately didnt use
-    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
+    # d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
 
-    # read in the csv ignoring column name encoding issues
-    d <- read.csv(chem_fp, check.names = FALSE)
+    d <- read.csv(chem_fp, check.names = FALSE, fileEncoding = 'latin1')
     d_old_names <- names(d)
 
-    ## NOTE: special character was microgram symbol
-    ## replacing with "u"
-    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('µ', "u", x)))
     d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
-
-    # then rename all columns with these new names
     colnames(d) <- d_new_names
 
     # filter to only precipitation site type
     d <- d %>%
-      filter(Sample_Type %in% c("PW"),
-             # what do about W-9 big bucket?
-             Sample_Name == "R-29 (PPT@W-9)") %>%
-      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+        filter(#Sample_Type %in% c("PW"), #xml metadata instruct about how to select a series
+               # what do about W-9 big bucket?
+               Sample_Name == "R-29 (PPT@W-9)",
+               Precip_Type == 'USFS Durham') %>%
+        arrange(Precip_Start) %>%
+        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -348,11 +345,11 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                          site_code_col = 'Sample_Name',
                          data_cols =  c('Precip_Depth_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            )
+                            varflag_col_pattern = NA)
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -385,7 +382,6 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
     return()
 }
 
-
 #CUSTOMprecipitation: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
@@ -417,9 +413,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = FALSE)
 
 
-    d <- ms_cast_and_reflag(d,
-                           varflag_col_pattern = NA
-                           )
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     # apply uncertainty (no detlim for water volume)
     d <- ms_check_range(d)
@@ -480,26 +474,22 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # the original file has encoding isssues, and connot be read directly
     # here I use a readr function which "guesses" the most likely encodings
     # which is good to know but I ultimately didnt use
-    d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
+    # d_encoding <- readr::guess_encoding(chem_fp)[[1,1]]
 
-    # read in the csv ignoring column name encoding issues
-    d <- read.csv(chem_fp, check.names = FALSE)
+    d <- read.csv(chem_fp, check.names = FALSE, fileEncoding = 'latin1')
     d_old_names <- names(d)
 
-    ## NOTE: special character was microgram symbol
-    ## replacing with "u"
-    d_new_names <- unname(sapply(d_old_names, function(x) gsub('\\\xb5', "u", x)))
+    d_new_names <- unname(sapply(d_old_names, function(x) gsub('µ', "u", x)))
     d_new_names <- unname(sapply(d_new_names, function(x) gsub('<', "", x)))
-
-    # then rename all columns with these new names
     colnames(d) <- d_new_names
 
     # filter to only precipitation site type
     d <- d %>%
-      filter(Sample_Type %in% c("PW"),
-             # what do about W-9 big bucket?
-             Sample_Name == "R-29 (PPT@W-9)") %>%
-      mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+        filter(#Sample_Type %in% c("PW"), #xml metadata instruct about how to select a series
+            # what do about W-9 big bucket?
+            Sample_Name == "R-29 (PPT@W-9)",
+            Precip_Type == 'USFS Durham') %>%
+        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here to be just the old_var = new_var structure
@@ -518,15 +508,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # flag column named it in a particular observation. one added issue is this "summary" column
     # has potential for mulitple variables at a time.
 
-    # start by making new column for each chemistry variable
-    last_col <- colnames(d)[ncol(d)]
-
     # re-distribute flags to corresponding variable
     d <- d %>%
-      dplyr::mutate(
-               across(Chemistry_Flag:all_of(!!last_col) & !ends_with("_Lab"),
+        select(-ends_with("_Lab")) %>%
+        mutate(across(Chemistry_Flag:last_col(),
                       .fns = list(
-                        varflag = ~ case_when(grepl(stringr::str_match(cur_column(), "[^.]+"), Chemistry_Flag) ~ 1, TRUE ~ 0)),
+                          varflag = ~ case_when(grepl(stringr::str_match(cur_column(), "[^.]+"),
+                                                      Chemistry_Flag) ~ 1,
+                                                TRUE ~ 0)),
                       .names = "{fn}_{col}"))
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
@@ -543,31 +532,53 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            # will turn the *ms_status* column to 1 (e.g. flagged)
-                            variable_flags_dirty   = c(1),
+                            variable_flags_dirty = 1,
+                            variable_flags_clean = 0)
 
-                            # will turn the *ms_status* column to 0 (e.g. clean)
-                            variable_flags_clean   = c(0),
-                            )
-
-    # manual turn ms_status = 2 for all negative numbers (not in temp, ANC, or isotopes)
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
-                  "GN_d13C", "GN_NO3_d15N")
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    # give ms_status = 1 to all BDL observations
-    d <- d %>%
-      mutate(ms_status = case_when(!var %in% no_bdl_vars & val < 0 ~ 1, TRUE ~ ms_status))
-    # replace all BDL observations with half DL value
-    d <- d %>%
-      mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+                  "GN_d13C", "GN_NO3_d15N", 'GN_ANC')
 
-    # apply uncertainty
-    d <- ms_check_range(d)
-    errors(d$val) <- get_hdetlim_or_uncert(d,
-                                           detlims = domain_detection_limits,
-                                           prodname_ms = prodname_ms,
-                                           which_ = 'uncertainty')
+    # #
+    # # d_<- d #%>%
+    #     # mutate(val = case_when(!var %in% no_bdl_vars & val < 0 ~ val/2, TRUE ~ val))
+    # #
+    # # filter(d_, ! var %in% !!no_bdl_vars & val < 0) %>% pull(val) %>% sum
+    # qqq = which(! d$var %in% no_bdl_vars & d$val < 0)
+    # # sum(d_$val[qqq])
+    # # drop_errors(sum(dq$val[qqq]))
+    # # drop_errors(sum(d0$val[qqq]))
+    # zzz = d[qqq,]
+    # zzz$val = abs(zzz$val)
+    # ggg = d[qqq,]
+    # # sum(ggg$val)
+    #
+    # zzz <- ms_conversions(zzz,
+    #                     convert_units_from = sleepers_aq_chem_units_old,
+    #                     convert_units_to = sleepers_aq_chem_units_new)
+    # zzz$val=zzz$val / 2
+    # sum(zzz$val)
+    #
+    # ggg$ms_status <- 2
+    # ggg$val <- NA
+    # ggg=qc_hdetlim_and_uncert(ggg, prodname_ms)
+    # sum(ggg$val)
+    # ggg=mutate(ggg, val = drop_errors(val))
+    #
+    # filter(zzz, as.Date(datetime)==as.Date('1998-11-03 21:35:00'), var == 'GN_Ca') %>% pull(val)
+    # filter(ggg, as.Date(datetime)==as.Date('1998-11-03 21:35:00'), var == 'GN_Ca') %>% pull(val)
+    #
+    # zzz$val == ggg$val
+    # rrr = compare::compare(zzz$val, ggg$val, round = T)
+    # rrr$result
+
+    #extract and record detection limits
+    update_sleepers_detlims(sleepers_stream_chem_var_info, no_bdl_vars)
+
+    #designate BDL values the way ms_cast_and_reflag normally would
+    d$ms_status[! d$var %in% no_bdl_vars & d$val < 0] <- 2
+    d$val[! d$var %in% no_bdl_vars & d$val < 0] <- NA
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here as var = old_units and var = new_units lists
@@ -585,9 +596,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       sleepers_aq_chem_units_new[ms_name] = ms_units
     }
 
+    sleepers_aq_chem_units_old <- sleepers_aq_chem_units_old[names(sleepers_aq_chem_units_old) %in% drop_var_prefix(d$var)]
+    sleepers_aq_chem_units_new <- sleepers_aq_chem_units_new[names(sleepers_aq_chem_units_new) %in% drop_var_prefix(d$var)]
+
     d <- ms_conversions(d,
                         convert_units_from = sleepers_aq_chem_units_old,
                         convert_units_to = sleepers_aq_chem_units_new)
+
+    qc_hdetlim_and_uncert(d, prodname_ms)
+    d <- ms_check_range(d)
+    errors(d$val) <- get_hdetlim_or_uncert(d,
+                                           detlims = domain_detection_limits,
+                                           prodname_ms = prodname_ms,
+                                           which_ = 'uncertainty')
 
 
     d <- synchronize_timestep(d)
@@ -828,6 +849,9 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
 
+    ###MAKE SURE DETLIM UPDATE IS WORKING HERE. CHECK GITHUB ISSUE AGAIN####
+
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -983,6 +1007,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     return()
 }
+
 #derive kernels ####
 
 #discharge: STATUS=READY

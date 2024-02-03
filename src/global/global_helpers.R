@@ -8672,6 +8672,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     out <- rep(NA_real_, nrow(d))
 
     d$var <- drop_var_prefix(d$var)
+    d$datetime <- as.Date(d$datetime)
 
     #checks for cases 1-3
     got_domain <- half_detlims_all$domain == domain
@@ -8685,8 +8686,6 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
-            # NOTE: here I believe that this function is creating overlaps in detlim
-            # and also seems to not catch all overlap completely (WS, 2023-01-30, see github issue)
             dlsub <- dlsub %>%
                 mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
                        end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
