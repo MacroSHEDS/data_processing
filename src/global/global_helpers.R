@@ -1653,11 +1653,17 @@ ms_cast_and_reflag <- function(d,
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
         }
+        if(! inherits(summary_flags_clean, 'list')){
+            stop('summary_flags_clean must be a list')
+        }
     }
     if(sumdirt){
         if(any(sapply(summary_flags_dirty, function(x) '#*#' %in% x))){
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
+        }
+        if(! inherits(summary_flags_dirty, 'list')){
+            stop('summary_flags_dirty must be a list')
         }
     }
 
@@ -1674,6 +1680,10 @@ ms_cast_and_reflag <- function(d,
             stop(glue('if #*# wildcard is supplied as part of summary_flags_to_drop,',
                       ' it must be in a character vector of length 1'))
         }
+
+        if(! inherits(summary_flags_to_drop, 'list')){
+            stop('summary_flags_to_drop must be a list')
+        }
     }
 
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
@@ -1688,7 +1698,19 @@ ms_cast_and_reflag <- function(d,
                     'varflag_col_pattern = NA)'))
     }
 
+    if(varclen && ! mode(variable_flags_clean) == 'character'){
+        stop('variable_flags_clean must be a character vector')
+    }
+
+    if(vardirt && ! mode(variable_flags_dirty) == 'character'){
+        stop('variable_flags_dirty must be a character vector')
+    }
+
     if(vardrop){
+
+        if(! mode(variable_flags_to_drop) == 'character'){
+            stop('variable_flags_to_drop must be a character vector')
+        }
 
         if('#*#' %in% variable_flags_to_drop && length(variable_flags_to_drop) > 1){
             stop(glue('if #*# wildcard is used in variable_flags_to_drop,',
