@@ -3006,7 +3006,7 @@ ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
                          verbose = FALSE,
-                         overwrite_wb_sites = c() ){
+                         overwrite_wb_sites = c()){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
@@ -3024,7 +3024,7 @@ ms_delineate <- function(network,
             # ! is.na(latitude),
             # ! is.na(longitude),
             site_type == 'stream_gauge') %>%
-        select(site_code, latitude, longitude, CRS)
+        select(site_code, latitude, longitude, CRS, colocated_gauge_id)
 
     #checks
     if(any(is.na(site_locations$latitude) | is.na(site_locations$longitude))){
@@ -3083,11 +3083,11 @@ ms_delineate <- function(network,
 
         site <- site_locations$site_code[i]
 
-        if(length(overwrite_wb_sites) > 0) {
-          if(!site %in% overwrite_wb_sites) {
-            warning('only working on overwrite sites, skipping')
-            next
-          }
+        if(length(overwrite_wb_sites)){
+            if(! site %in% overwrite_wb_sites){
+                message('only working on overwrite sites, skipping')
+                next
+            }
         }
 
         if(verbose){
@@ -3106,9 +3106,9 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        print(site)
+        # print(site)
         if(site %in% overwrite_wb_sites) {
-          warning('site in overwrite vector, launching new delineation')
+            message('site in overwrite vector, launching new delineation')
         } else if(dir.exists(site_dir) && length(dir(site_dir))){
             message(glue('{s} already delineated ({d})',
                          s = site,
@@ -3128,13 +3128,12 @@ ms_delineate <- function(network,
                    showWarnings = FALSE)
 
         if(site %in% overwrite_wb_sites) {
-          specs <- data.frame(matrix(ncol = 1, nrow = 0))
+            specs <- data.frame(matrix(ncol = 1, nrow = 0))
         } else {
-          specs <- ws_delin_specs %>%
-              filter(
-                  network == !!network,
-                  domain == !!domain,
-                  site_code == !!site)
+            specs <- ws_delin_specs %>%
+                filter(network == !!network,
+                       domain == !!domain,
+                       site_code == !!site)
         }
 
         if(nrow(specs) == 1){
@@ -3181,68 +3180,76 @@ ms_delineate <- function(network,
             #appropriate delineation
 
         } else if(nrow(specs) == 0){
-            if(site %in% overwrite_wb_sites) {
-              operation <- 'overwriting'
-              warning(glue('{o} delineation specs for {n}-{d}-{s}. ',
-                          'Delineate locally and push changes.',
-                          o = operation,
-                          n = network,
-                          d = domain,
-                          s = site))
-            } else {
-              operation <- 'missing'
-              if(ms_instance$instance_type != 'dev'){
-                  stop(glue('{o} delineation specs for {n}-{d}-{s}. ',
-                            'Delineate locally and push changes.',
-                            o = operation,
-                            n = network,
-                            d = domain,
-                            s = site))
-              }
+
+            if(! site %in% overwrite_wb_sites){
+                if(ms_instance$instance_type != 'dev'){
+                    stop(glue('Missing delineation specs for {n}-{d}-{s}. ',
+                              'Delineate locally and push changes.',
+                              n = network,
+                              d = domain,
+                              s = site))
+                }
             }
 
-            tmp <- tempdir()
+            coloc_gauge <- site_locations$colocated_gauge_id[i]
+            if(! is.na(coloc_gauge)){
 
-            selection <- delineate_watershed_apriori_recurse(
-                lat = site_locations$latitude[i],
-                long = site_locations$longitude[i],
-                crs = site_locations$CRS[i],
-                site_code = site,
-                buffer_radius = NULL,
-                snap_dist = NULL,
-                snap_method = NULL,
-                dem_resolution = NULL,
-                flat_increment = NULL,
-                breach_method = 'basic',
-                burn_streams = FALSE,
-                scratch_dir = tmp,
-                write_dir = site_dir,
-                dev_machine_status = dev_machine_status,
-                verbose = verbose)
+                coloc_gauge_ <- str_split(coloc_gauge, ':')[[1]]
 
-            if(is.numeric(selection) && selection == 1) next
-            if(is.numeric(selection) && selection == 2) return(invisible(NULL))
+                if(! coloc_gauge_[1] == 'usgs') stop('alternative delineation routine only built for usgs gauges atm')
+
+                delineate_watershed_nhd(site_code = site_locations$site_code[i],
+                                        nwis_gauge_id = coloc_gauge_[2],
+                                        write_dir = site_dir)
+
+            } else {
+
+                tmp <- tempdir()
+
+                selection <- delineate_watershed_apriori_recurse(
+                    lat = site_locations$latitude[i],
+                    long = site_locations$longitude[i],
+                    crs = site_locations$CRS[i],
+                    site_code = site,
+                    buffer_radius = NULL,
+                    snap_dist = NULL,
+                    snap_method = NULL,
+                    dem_resolution = NULL,
+                    flat_increment = NULL,
+                    breach_method = 'basic',
+                    burn_streams = FALSE,
+                    scratch_dir = tmp,
+                    write_dir = site_dir,
+                    dev_machine_status = dev_machine_status,
+                    verbose = verbose)
+
+                if(is.numeric(selection) && selection == 1) next
+                if(is.numeric(selection) && selection == 2) return(invisible(NULL))
+            }
 
         } else {
             stop('Multiple entries for same network/domain/site in site_data')
         }
 
-        #write the specifications of the correctly delineated watershed
-        rgx <- str_match(selection,
-                         paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
-                                'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
-                                'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
+        if(is.na(coloc_gauge)){
 
-        write_wb_delin_specs(network = network,
-                             domain = domain,
-                             site_code = site,
-                             buffer_radius = as.numeric(rgx[, 2]),
-                             snap_method = rgx[, 3],
-                             snap_distance = as.numeric(rgx[, 4]),
-                             dem_resolution = as.numeric(rgx[, 5]),
-                             flat_increment = rgx[, 6],
-                             breach_method = rgx[, 7],
-                             burn_streams = rgx[, 8])
+            #write the specifications of the correctly delineated watershed
+            rgx <- str_match(selection,
+                             paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
+                                    'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
+                                    'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
+
+            write_wb_delin_specs(network = network,
+                                 domain = domain,
+                                 site_code = site,
+                                 buffer_radius = as.numeric(rgx[, 2]),
+                                 snap_method = rgx[, 3],
+                                 snap_distance = as.numeric(rgx[, 4]),
+                                 dem_resolution = as.numeric(rgx[, 5]),
+                                 flat_increment = rgx[, 6],
+                                 breach_method = rgx[, 7],
+                                 burn_streams = rgx[, 8])
+        }
 
         #calculate watershed area and write it to site_data gsheet
         catch <- ms_calc_watershed_area(network = network,
@@ -3281,6 +3288,36 @@ ms_delineate <- function(network,
 
     loginfo(msg = 'Delineations complete',
             logger = logger_module)
+}
+
+delineate_watershed_nhd <- function(site_code, nwis_gauge_id, write_dir){
+
+    library(nhdplusTools)
+
+    loginfo(paste('Retrieving watershed boundary from nhd for site:', site_code),
+            logger = logger_module)
+
+    nldi_nwis <- list(featureSource = "nwissite",
+                      featureID = paste('USGS',
+                                        as.character(nwis_gauge_id),
+                                        sep = '-'))
+
+    wb_sf <- nhdplusTools::get_nldi_basin(nldi_feature = nldi_nwis,
+                                          simplify = FALSE,
+                                          split = TRUE)
+
+    ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
+
+    wb_sf <- wb_sf %>%
+        mutate(site_code = !!site_code) %>%
+        mutate(area = !!ws_area_ha)
+
+    sw(sf::st_write(obj = wb_sf,
+                    dsn = glue('{d}/{s}.shp',
+                               d = write_dir,
+                               s = site_code),
+                    delete_dsn = TRUE,
+                    quiet = TRUE))
 }
 
 choose_dem_resolution <- function(dev_machine_status, buffer_radius){
@@ -9461,7 +9498,7 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnnccccc'
+            col_types = 'ccccccccnnnnncccccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
@@ -9662,7 +9699,7 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         which_dataset == 'ws_appendix' ~ 'ccccccccnnnlcnnnnnc',
         which_dataset == 'domain_detection_limits' ~ 'ccccnnnnccDDl',

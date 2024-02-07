@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
     # library(rgee)
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
-    # library(nhdplusTools)
+    library(nhdplusTools)
 
     #everything else
     library(httr)
@@ -42,6 +42,7 @@ suppressPackageStartupMessages({
     library(osmdata)
     library(RCurl)
     library(rvest)
+    # library(streamstats)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
@@ -318,7 +319,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'sleepers') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'trout_lake') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -377,8 +378,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         # overwrite_wb_sites = "trout_river",
-                        verbose = FALSE
-                        ))
+                        verbose = FALSE))
     }
 
     ms_derive(network = network,

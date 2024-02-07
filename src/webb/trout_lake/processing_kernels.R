@@ -1,4 +1,4 @@
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
@@ -39,7 +39,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
@@ -80,7 +80,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
@@ -120,7 +120,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
 
@@ -208,7 +208,7 @@ process_0_VERSIONLESS006 <- download_from_googledrive
 
 #munge kernels ####
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -254,7 +254,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     }
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -299,7 +299,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   }
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -343,7 +343,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   }
 }
 
-#discharge: STATUS=READY
+#discharge: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -566,14 +566,22 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
-    combine_products(network = network,
-                     domain = domain,
-                     prodname_ms = prodname_ms,
-                     input_prodname_ms = c('discharge__VERSIONLESS001',
-                                           'discharge__VERSIONLESS002',
-                                           'discharge__VERSIONLESS003',
-                                           'discharge__VERSIONLESS004'))
+    # combine_products(network = network,
+    #                  domain = domain,
+    #                  prodname_ms = prodname_ms,
+    #                  input_prodname_ms = c('discharge__VERSIONLESS001',
+    #                                        'discharge__VERSIONLESS002',
+    #                                        'discharge__VERSIONLESS003',
+    #                                        'discharge__VERSIONLESS004'))
 
+    pull_usgs_discharge(network = network,
+                        domain = domain,
+                        prodname_ms = prodname_ms,
+                        sites = c('allequash_creek' = '05357215',
+                                  'north_creek' = '05357230',
+                                  'stevenson_creek' = '05357225',
+                                  'trout_river' = '05357245'),
+                        time_step = c('daily', 'daily', 'daily', 'daily'))
 }
 
 #stream_flux_inst: STATUS=READY
