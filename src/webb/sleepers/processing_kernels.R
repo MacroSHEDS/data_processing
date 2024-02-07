@@ -1,11 +1,3 @@
-## #retrieval kernels ####
-
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS000")
-## prodname_ms <- set_details$prodname_ms
-## site_code <- set_details$site_code
-## component <- set_details$component
-## url <- set_details$url
-
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS000 <- function(set_details, network, domain) {
@@ -188,7 +180,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                     c = set_details$component)
 
     # call our dataRetrieval function
-    q <- retrieve_usgs_sleepers_daily_q(set_details)
+    q <- retrieve_usgs_webb_daily_q(set_details)
 
     # download it to the raw file locatin
     write_csv(q, file = rawfile)
@@ -228,7 +220,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                     c = set_details$component)
 
     # call our dataRetrieval function
-    q <- retrieve_usgs_sleepers_daily_q(set_details)
+    q <- retrieve_usgs_webb_daily_q(set_details)
 
     # download it to the raw file locatin
     write_csv(q, file = rawfile)

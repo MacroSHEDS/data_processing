@@ -1,17 +1,11 @@
-## run these before working inside retrieve_product func
-## network = network
-## domain = domain
-## prodname_ms = prodname_ms
-## site_code = site_code
-## tracker = held_data
-## url = prod_info$url[i]
-
 retrieve_panola_product <- function(network,
                                  domain,
                                  prodname_ms,
                                  site_code,
                                  tracker,
                                  url){
+
+	warning('this func should be retrieve_webb_product')
 
     # creating a string which matches the names of processing kernels
     processing_func <- get(paste0('process_0_',
@@ -41,6 +35,7 @@ retrieve_panola_product <- function(network,
     ## network = network
     ## domain = domain
 
+	###why no set_details here? otherwise this func identical to retrieve_webb_product
     result <- do.call(processing_func,
                       args = list(
                                     network = network,
@@ -72,16 +67,4 @@ retrieve_panola_product <- function(network,
                      domain = domain,
                      prodname_ms = prodname_ms)
 
-}
-
-retrieve_usgs_sleepers_daily_q <- function(set_details) {
-  if(grepl("w5", set_details$component) == TRUE) {
-    q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
-                                   parameterCd = "00060")
-  } else if(grepl("w3", set_details$component) == TRUE) {
-    q <- dataRetrieval::readNWISdv(siteNumbers = "01135150",
-                                   parameterCd = "00060")
-  }
-
-  return(q)
 }

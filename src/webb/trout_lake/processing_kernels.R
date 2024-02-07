@@ -1,97 +1,83 @@
-source('src/webb/network_helpers.R')
-
-#retrieval kernels ####
-## network = 'webb'
-## domain = 'trout_lake'
-
-
-## set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS005")
-## prodname_ms <- set_details$prodname_ms
-## site_code <- set_details$site_code
-## component <- set_details$component
-## url <- set_details$url
-
 #discharge: STATUS=READY
 #. handle_errors
-
 process_0_VERSIONLESS001 <- function(set_details, network, domain) {
-  
+
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
                         s = set_details$site_code)
-  
+
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
-  
+
   rawfile <- glue('{rd}/{c}.csv',
                   rd = raw_data_dest,
                   c = set_details$component)
-  
+
   # call our dataRetrieval function
   q <- dataRetrieval::readNWISdv(siteNumber="05357215", parameterCd = "00060")
-  
+
   # download it to the raw file locatin
   write_csv(q, file = rawfile)
-  
+
   res <- httr::HEAD(set_details$url)
-  
+
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
-  
+
   deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
-  
+
   return(deets_out)
-  
+
 }
 
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS002 <- function(set_details, network, domain) {
-  
+
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
                         s = set_details$site_code)
-  
+
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
-  
+
   rawfile <- glue('{rd}/{c}.csv',
                   rd = raw_data_dest,
                   c = set_details$component)
-  
+
   # call our dataRetrieval function
   q <- dataRetrieval::readNWISdv(siteNumber="05357230", parameterCd = "00060")
-  
+
   # download it to the raw file locatin
   write_csv(q, file = rawfile)
-  
+
   res <- httr::HEAD(set_details$url)
-  
+
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
-  
+
   deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
-  
+
   return(deets_out)
-  
+
 }
 
 #discharge: STATUS=READY
@@ -137,40 +123,40 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #discharge: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS004 <- function(set_details, network, domain) {
-  
+
   raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                         n = network,
                         d = domain,
                         p = prodname_ms,
                         s = set_details$site_code)
-  
+
   dir.create(path = raw_data_dest,
              showWarnings = FALSE,
              recursive = TRUE)
-  
+
   rawfile <- glue('{rd}/{c}.csv',
                   rd = raw_data_dest,
                   c = set_details$component)
-  
+
   # call our dataRetrieval function
   q <- dataRetrieval::readNWISdv(siteNumber="05357245", parameterCd = "00060")
-  
+
   # download it to the raw file location
   write_csv(q, file = rawfile)
-  
+
   res <- httr::HEAD(set_details$url)
-  
+
   last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                      start = 1,
                                      stop = 19),
                           format = '%Y-%m-%dT%H:%M:%S') %>%
     with_tz(tzone = 'UTC')
-  
+
   deets_out <- list(url = paste(set_details$url, '(requires authentication)'),
                     access_time = as.character(with_tz(Sys.time(),
                                                        tzone = 'UTC')),
                     last_mod_dt = last_mod_dt)
-  
+
   return(deets_out)
 }
 
@@ -187,7 +173,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     dir.create(path = raw_data_dest,
                showWarnings = FALSE,
                recursive = TRUE)
-    
+
     rawfile <- glue('{rd}/{c}.csv',
                     rd = raw_data_dest,
                     c = set_details$component)
@@ -233,7 +219,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- read.delim(rawfile, sep = ',') %>%
          mutate(site_name = 'allequash_creek') %>%
          as_tibble()
@@ -251,19 +237,19 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
     d <- qc_hdetlim_and_uncert(d, prodname_ms)
     d <- synchronize_timestep(d)
-    
+
     sites <- unique(d$site_code)
-    
+
     for(s in 1:length(sites)){
       d_site <- d %>%
         filter(site_code == !!sites[s])
-      
+
       write_ms_file(d = d_site,
                     network = network,
                     domain = domain,
                     prodname_ms = prodname_ms,
                     site_code = sites[s],
-                    level = 'munged', 
+                    level = 'munged',
                     shapefile = FALSE)
     }
 }
@@ -278,13 +264,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                   p = prodname_ms,
                   s = site_code,
                   c = component)
-  
+
   d <- read.delim(rawfile, sep = ',') %>%
     mutate(site_name = 'north_creek') %>%
     as_tibble()
 
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
-  
+
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('Date' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
@@ -296,19 +282,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
   d <- synchronize_timestep(d)
-  
+
   sites <- unique(d$site_code)
-  
+
   for(s in 1:length(sites)){
     d_site <- d %>%
       filter(site_code == !!sites[s])
-    
+
     write_ms_file(d = d_site,
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
                   site_code = sites[s],
-                  level = 'munged', 
+                  level = 'munged',
                   shapefile = FALSE)
   }
 }
@@ -316,20 +302,20 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
-  
+
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
                   s = site_code,
                   c = component)
-  
+
   d <- read.delim(rawfile, sep = ',') %>%
     mutate(site_name = 'stevenson_creek') %>%
     as_tibble()
 
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
-  
+
   d <- ms_read_raw_csv(preprocessed_tibble = d,
                        datetime_cols = list('Date' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
@@ -340,19 +326,19 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
   d <- synchronize_timestep(d)
-  
+
   sites <- unique(d$site_code)
-  
+
   for(s in 1:length(sites)){
     d_site <- d %>%
       filter(site_code == !!sites[s])
-    
+
     write_ms_file(d = d_site,
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
                   site_code = sites[s],
-                  level = 'munged', 
+                  level = 'munged',
                   shapefile = FALSE)
   }
 }
@@ -360,18 +346,18 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 #discharge: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
-  
+
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
                   d = domain,
                   p = prodname_ms,
                   s = site_code,
                   c = component)
-  
+
   d <- read.delim(rawfile, sep = ',') %>%
     mutate(site_name = 'trout_river') %>%
     as_tibble()
-  
+
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -385,19 +371,19 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
   d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
   d <- qc_hdetlim_and_uncert(d, prodname_ms)
   d <- synchronize_timestep(d)
-  
+
   sites <- unique(d$site_code)
-  
+
   for(s in 1:length(sites)){
     d_site <- d %>%
       filter(site_code == !!sites[s])
-    
+
     write_ms_file(d = d_site,
                   network = network,
                   domain = domain,
                   prodname_ms = prodname_ms,
                   site_code = sites[s],
-                  level = 'munged', 
+                  level = 'munged',
                   shapefile = FALSE)
   }
 }
@@ -412,10 +398,10 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                   p = prodname_ms,
                   s = site_code,
                   c = component)
-  
+
   d <- read.delim(rawfile, sep = ',') %>%
     as_tibble()
-  
+
   d <- d %>% mutate(
                date_time = paste(sampledate, sample_time, sep = " "),
                site_name = gsub(' ', '_', tolower(site_name))
@@ -554,7 +540,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # reading in the contents of the extracted folder
     file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
-    
+
     # read in watershed boundary
     wb <- sf::read_sf(file_paths[grepl('globalwatershed.shp', file_paths)]) %>%
       select(
@@ -562,7 +548,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
         geometry
       ) %>%
       mutate(site_code = 'trout_river')
-    
+
       write_ms_file(d = wb,
                     network = network,
                     domain = domain,

@@ -5153,6 +5153,10 @@ update_product_statuses <- function(network, domain){
     func_codes = stringr::str_match(funcname_lines,
                                     'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
 
+    if(any(is.na(func_codes))){
+        stop('error updating product statuses. probable extraneous lines in processing_kernels.R')
+    }
+
     func_lvls = func_codes[, 1, drop=TRUE]
     prodcodes = func_codes[, 2, drop=TRUE]
 

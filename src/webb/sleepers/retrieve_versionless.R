@@ -77,7 +77,7 @@ for(i in seq_len(nrow(prod_info))){
                      s=site_code, p=prodname_ms), logger=logger_module)
     }
 
-    retrieve_sleepers_product(network = network,
+    retrieve_webb_product(network = network,
                          domain = domain,
                          prodname_ms = prodname_ms,
                          site_code = site_code,
