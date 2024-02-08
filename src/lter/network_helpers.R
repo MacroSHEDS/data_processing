@@ -93,7 +93,7 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail,
             prodcode_id = prodcode,
             prodname_ms = prodname_ms) %>%
         full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blacklist' | is.na(status)) %>%
+        # filter(status != 'blocklist' | is.na(status)) %>%
         mutate(
             held_version = as.numeric(held_version),
             needed = avail_version - held_version > 0)

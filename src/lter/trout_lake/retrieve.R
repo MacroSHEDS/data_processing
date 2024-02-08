@@ -30,7 +30,7 @@ for(i in seq_len(nrow(prod_info))){
                                               domain = domain,
                                               data_tracker = held_data)
 
-    #alternative to blacklisting, but consider how to do this next time it comes up
+    #alternative to blocklisting, but consider how to do this next time it comes up
     # needed_components <- pull(prod_info[i, 'components'])
     # if(! is.na(needed_components)) {
     #     needed_components <- str_split_fixed(needed_components, ',', n = Inf)[1,]

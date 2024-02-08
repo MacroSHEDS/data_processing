@@ -2281,9 +2281,9 @@ generate_ms_exception = function(text=1){
     return(excobj)
 }
 
-generate_blacklist_indicator = function(text=1){
+generate_blocklist_indicator = function(text=1){
     indobj = text
-    class(indobj) = 'blacklist_indicator'
+    class(indobj) = 'blocklist_indicator'
     return(indobj)
 }
 
@@ -2295,16 +2295,16 @@ is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-is_blacklist_indicator <- function(x){
-    return('blacklist_indicator' %in% class(x))
+is_blocklist_indicator <- function(x){
+    return('blocklist_indicator' %in% class(x))
 }
 
 evaluate_result_status <- function(r){
 
     if(is_ms_err(r) || is_ms_exception(r)){
         status <- 'error'
-    } else if(is_blacklist_indicator(r)){
-        status <- 'blacklist'
+    } else if(is_blocklist_indicator(r)){
+        status <- 'blocklist'
     } else {
         status <- 'ok'
     }
@@ -2479,7 +2479,7 @@ track_new_site_components <- function(tracker, prodname_ms, site_code, avail){
 filter_unneeded_sets <- function(tracker_with_details){
 
     new_sets = tracker_with_details %>%
-        filter(status != 'blacklist' | is.na(status)) %>%
+        filter(status != 'blocklist' | is.na(status)) %>%
         filter(needed == TRUE | is.na(needed))
 
     if(any(is.na(new_sets$needed))){

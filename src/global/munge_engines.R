@@ -1,5 +1,5 @@
 #everything here is embarrassingly parallel. make it happen by 2015.
-#will need to abandon blacklist indicators in favor of products.csv
+#will need to abandon blocklist indicators in favor of products.csv
 #"component" column expressions
 
 #. handle_errors
@@ -168,7 +168,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
 
         if(is.null(out_comp)) next
 
-        if(is_blacklist_indicator(out_comp)){
+        if(is_blocklist_indicator(out_comp)){
 
             update_data_tracker_r(network = network,
                                   domain = domain,
@@ -176,7 +176,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
                                   set_details = list(prodname_ms = prodname_ms,
                                                      site_code = site_code,
                                                      component = in_comp),
-                                  new_status = 'blacklist')
+                                  new_status = 'blocklist')
             next
         }
 
@@ -305,7 +305,7 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
         return(out_comp)
     }
 
-    if(is_blacklist_indicator(out_comp)){
+    if(is_blocklist_indicator(out_comp)){
         logwarn(glue('Skipping product {p} (for now?)',
                      p = prodname_ms))
         return(out_comp)
@@ -399,14 +399,14 @@ munge_time_component <-  function(network, domain, site_code, prodname_ms, track
 
         if(is.null(out_comp)) next
 
-        if(is_blacklist_indicator(out_comp)){
+        if(is_blocklist_indicator(out_comp)){
             update_data_tracker_r(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   set_details = list(prodname_ms = prodname_ms,
                                                      site_code = site_code,
                                                      component = in_comp),
-                                  new_status = 'blacklist')
+                                  new_status = 'blocklist')
             next
         }
 

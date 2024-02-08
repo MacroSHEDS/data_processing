@@ -55,7 +55,7 @@ process_0_5482 <- function(set_details, network, domain){
         if(! set_details$component %in% c('MS00402', 'MS00403', 'MS00404')){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
 
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precip_gauge_locations'){
@@ -63,7 +63,7 @@ process_0_5482 <- function(set_details, network, domain){
         if(! set_details$component == 'MS00401'){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
     }
 
@@ -101,7 +101,7 @@ process_0_4021 <- function(set_details, network, domain){
         if(! set_details$component %in% c('CF00201', 'CF00202', 'CF00203', 'CF00206')){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
 
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'stream_flux_inst'){
@@ -109,7 +109,7 @@ process_0_4021 <- function(set_details, network, domain){
         if(! set_details$component %in% c('CF00204', 'CF00205', 'CF00206')){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
     }
 
@@ -147,7 +147,7 @@ process_0_4022 <- function(set_details, network, domain){
         if(! set_details$component %in% c('CP00201', 'CP00203', 'CP00206')){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
 
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'precip_flux_inst'){
@@ -155,7 +155,7 @@ process_0_4022 <- function(set_details, network, domain){
         if(! set_details$component %in% c('CP00202', 'CP00206')){
             logwarn('Skipping redundant download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
     }
 
@@ -187,7 +187,7 @@ process_0_3239 <- function(set_details, network, domain) {
         if(! set_details$component %in% c('hf01402', 'hf01404')){
             logwarn('Skipping redundant or unneeded download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
 
     } else if(prodname_from_prodname_ms(set_details$prodname_ms) == 'stream_gauge_locations'){
@@ -195,7 +195,7 @@ process_0_3239 <- function(set_details, network, domain) {
         if(! set_details$component == 'hf01403'){
             logwarn('Skipping redundant or unneeded download',
                     logger = logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
     }
 
@@ -364,13 +364,13 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code,
 process_1_4021 <- function(network, domain, prodname_ms, site_code,
                            components){
 
-    #note: blacklisting of components has been superseded by the "component"
+    #note: blocklisting of components has been superseded by the "component"
     #   column in products.csv. don't copy this chunk.
     if(grepl('chemistry', prodname_ms)){
         component <- 'CF00201'
     } else {
         logwarn('Blacklisting stream flux product CF00204 (for now)')
-        return(generate_blacklist_indicator())
+        return(generate_blocklist_indicator())
     }
 
     rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
@@ -421,13 +421,13 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
 process_1_4022 <- function(network, domain, prodname_ms, site_code,
                            components){
 
-    #note: blacklisting of components has been superseded by the "component"
+    #note: blocklisting of components has been superseded by the "component"
     #   column in products.csv. don't copy this chunk.
     if(grepl('chemistry', prodname_ms)){
         component <- 'CP00201'
     } else {
         logwarn('Blacklisting precip flux product CP00202 (for now)')
-        return(generate_blacklist_indicator())
+        return(generate_blocklist_indicator())
     }
 
     rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',

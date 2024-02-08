@@ -60,7 +60,7 @@ for(i in seq_len(nrow(prod_info))){
                                   site_code = site_code,
                                   new_status = 'error')
 
-        } else if(is_blacklist_indicator(munge_rtn)){
+        } else if(is_blocklist_indicator(munge_rtn)){
             next
         } else {
             invalidate_derived_products(

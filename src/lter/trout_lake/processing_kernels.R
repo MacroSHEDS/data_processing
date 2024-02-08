@@ -3,8 +3,8 @@
 process_0_276 <- function(set_details, network, domain){
 
     if(grepl('Site Information', set_details$component)){
-        loginfo('This component is blacklisted', logger = logger_module)
-        return(generate_blacklist_indicator())
+        loginfo('This component is blocklisted', logger = logger_module)
+        return(generate_blocklist_indicator())
     }
 
     download_raw_file(network = network,
