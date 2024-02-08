@@ -178,15 +178,14 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    print(set_details$url)
+    # print(set_details$url)
     url = "http://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947"
     R.utils::downloadFile(url = url,
                           filename = rawfile,
                           skip = FALSE,
-                          overwrite = TRUE,
-                          )
+                          overwrite = TRUE)
 
-    res <- httr::HEAD(set_details$url)
+    res <- httr::HEAD(url)
 
     last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
                                        start = 1,
@@ -202,7 +201,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS006 <- download_from_googledrive
 
@@ -518,7 +517,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
   }
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
 
@@ -573,6 +572,12 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     #                                        'discharge__VERSIONLESS002',
     #                                        'discharge__VERSIONLESS003',
     #                                        'discharge__VERSIONLESS004'))
+
+    site_data %>%
+        filter(network == !!network,
+               domain == !!domain,
+               site_type == 'stream_gauge') %>%
+        select(site_code, colocated_gauge_id)
 
     pull_usgs_discharge(network = network,
                         domain = domain,

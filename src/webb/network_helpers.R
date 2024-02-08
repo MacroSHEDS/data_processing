@@ -138,6 +138,10 @@ retrieve_webb_product <- function(network,
                                   tracker,
                                   url){
 
+    ##
+    ##not needed. switching back to retrieve_versionless_product
+    ##
+
     # creating a string which matches the names of processing kernels
     processing_func <- get(paste0('process_0_',
                                   # these names or based off of prod names in products.csv
