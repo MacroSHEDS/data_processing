@@ -8,7 +8,7 @@ network = 'ltreb'
 domain = 'acton_lake'
 
 
-set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS1")
+set_details <- webb_pkernel_setup(network = network, domain = domain, prodcode = "VERSIONLESS2")
 prodname_ms <- set_details$prodname_ms
 site_code <- set_details$site_code
 component <- set_details$component

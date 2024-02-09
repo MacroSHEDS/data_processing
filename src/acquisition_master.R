@@ -139,7 +139,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- 'windows'
     }
    
-    res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=FALSE) #Hector
+    res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
       which_machine <- 'hec'
@@ -255,9 +255,6 @@ ms_instance <- ms_init(use_ms_error_handling = TRUE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
-#load authorization file for macrosheds google sheets
-## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
-
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
                            simplifyDataFrame = FALSE)
@@ -278,8 +275,8 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-try(rgee::ee_Initialize(user = conf$gee_login_ms,
-                        drive = TRUE))
+#try(rgee::ee_Initialize(user = conf$gee_login_ms,
+                       # drive = TRUE))
                         
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
@@ -295,8 +292,7 @@ if(ms_instance$use_ms_error_handling){
 }
 
 #puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-## load_config_datasets(from_where = ms_instance$config_data_storage)
-load_config_datasets(from_where = 'remote')
+load_config_datasets(from_where = ms_instance$config_data_storage)
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,

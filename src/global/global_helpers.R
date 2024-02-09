@@ -9369,7 +9369,8 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            col_types = 'ccccccccnnnnnccccc'
+            #changes have been added
+            col_types = 'ccccccccnnnnncccccc'
         ))
 
         ws_delin_specs <- sm(googlesheets4::read_sheet(
