@@ -9,7 +9,10 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
 
     #for when a data product is organized with one site per file
     #(neon and konza have this arrangement). if not all components
-    #will be munged, use the "components" column in products.csv
+    #will be munged, use the blocklist. an example of how to do this is given
+    #by src/lter/trout_lake/processing_kernels.R:process_0_276. In some cases,
+    #we've built tools to allow the "components" column in products.csv to
+    #serve as a blocklist. this will not work in most cases and has been deprecated.
 
     #site_code is either the true name of a site, like "watershed1", or
     #   the standin "sitename_NA" that we use elsewhere. If the latter,
