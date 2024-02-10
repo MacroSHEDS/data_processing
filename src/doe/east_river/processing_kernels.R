@@ -769,7 +769,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                site != 'er_plm1',
                site != 'er_plm4',
                site != 'er_plm6') %>%
-        mutate(var = case_when(site_var == 'deltad' ~ 'deuterium',
+        mutate(var = case_when(site_var == 'deltad' ~ 'dD',
                                site_var == 'deltao18' ~ 'd18O')) %>%
         mutate(site_code = case_when(site == 'avery' ~ 'Avery',
                                      site == 'benthette' ~ 'Benthette',

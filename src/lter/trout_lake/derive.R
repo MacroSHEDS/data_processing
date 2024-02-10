@@ -79,12 +79,12 @@ for(i in seq_len(nrow(prod_info))){
                           new_status = stts)
 
     if(stts == 'ok'){
-      msg = glue('Derived {p} ({n}/{d}/{s})',
-                 p = prodname_ms,
-                 n = network,
-                 d = domain,
-                 s = site_code)
-      loginfo(msg, logger = logger_module)
+        msg = glue('Derived {p} ({n}/{d}/{s})',
+                   p = prodname_ms,
+                   n = network,
+                   d = domain,
+                   s = site_code)
+        loginfo(msg, logger = logger_module)
     }
 
     write_metadata_d(network = network,

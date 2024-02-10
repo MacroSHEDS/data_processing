@@ -767,7 +767,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       "Silica"=c("mg/l", "mg/L", "SiO2"),
       "Total dissolved solids"=c("mg/l", "mg/L", "TDS"),   
       "Specific conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
-      "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","d87Sr_d86Sr"),
+      "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","87Sr_86Sr"),
       "Strontium"=c("mg/l","mg/L","Sr"),
       "Temperature, water"=c("deg C", "degrees C", "temp"),
       "Mercury"=c("ng/l", "mg/L", "Hg"), # watch units 
@@ -777,10 +777,11 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
       "Nitrogen"=c("mg/l","mg/L","TPN"), #total particulate nitrogen
       "Inorganic nitrogen (nitrate and nitrite)"=c("mg/l as N","mg/L","DIN"),  #dissolved
       "Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)"=c("mg/l", "mg/L", "TDN"),  #dissolved
-      "Deuterium/Hydrogen ratio"  =c("unitless","unitless","dH2_H"),  
-      "Oxygen-18/Oxygen-16 ratio" =c("unitless", "unitless", "d18O_d16O"),
-      "Nitrogen-15/14 ratio"      =c("unitless","unitless", "d15N_d14N"),
-      "Sulfur-34/Sulfur-32 ratio" =c("unitless","unitless", "d34S_d32S"),
+      "Deuterium/Hydrogen ratio"  =c("unitless","unitless","dH2_H"),  #is that really what this is? or is it dD?
+      "Oxygen-18/Oxygen-16 ratio" =c("unitless", "unitless", "d18O_d16O"), ##this is of nitrate and separately sulfate
+      "Nitrogen-15/14 ratio"      =c("unitless","unitless", "d15N_d14N"), ##this is of nitrate
+      "Sulfur-34/Sulfur-32 ratio" =c("unitless","unitless", "d34S_d32S"), ##this is of sulfate
+		##somewhere around here they also have d18O_NO3
       "Organic carbon"=c("mg/l","mg/L","DOC"),  #dissolved
       "Carbon"=c("mg/l","mg/L","TPC"), #total particulate carbon
       "Phosphorus"=c("mg/l as p", "mg/L", "TP"), #total
@@ -910,7 +911,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
     "Silica"=c("mg/l", "mg/L", "SiO2"),
     "Total Dissolved Solids"=c("mg/l", "mg/L", "TDS"),   
     "Specific Conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
-    "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","d87Sr_d86Sr"),
+    "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","87Sr_86Sr"),
     "Strontium"=c("mg/l","mg/L","Sr"),
     "Temperature, water"=c("deg C", "degrees C", "temp"),
     "Mercury"=c("ng/l", "mg/L", "Hg"), # watch units 
@@ -1020,7 +1021,7 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
     "Silica"=c("mg/l", "mg/L", "SiO2"),
     "Total Dissolved Solids"=c("mg/l", "mg/L", "TDS"),   
     "Specific Conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
-    "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","d87Sr_d86Sr"),
+    "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","87Sr_86Sr"),
     "Strontium"=c("mg/l","mg/L","Sr"),
     "Temperature, water"=c("deg C", "degrees C", "temp"),
     "Mercury"=c("ng/l", "mg/L", "Hg"), # watch units 

@@ -528,7 +528,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_87Sr_86Sr", "GN_dD",
                   "GN_d13C", "GN_NO3_d15N", 'GN_ANC')
 
     # #
@@ -909,7 +909,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_d87Sr_d86Sr", "GN_deuterium",
+    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_87Sr_86Sr", "GN_dD",
                     "GN_d13C", "GN_NO3_d15N")
 
     #extract and record detection limits

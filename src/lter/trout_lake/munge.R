@@ -9,7 +9,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i = 23
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -47,7 +46,7 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
-        munge_rtn <- munge_by_site(network = network,
+        munge_rtn <- munge_combined(network = network,
                                    domain = domain,
                                    site_code = site_code,
                                    prodname_ms = prodname_ms,
