@@ -2,7 +2,7 @@ suppressPackageStartupMessages({
 
 
     # #spatial packages
-    # library(terra)  #must load before gstat package (which isn't currently needed)
+    library(terra)  #must load before gstat package (which isn't currently needed)
     # # library(gstat) #must load before raster package (not needed)
     # library(raster)
     # # library(stars) #not needed (yet)
@@ -10,7 +10,8 @@ suppressPackageStartupMessages({
     # library(sp)
     # library(mapview)
     # library(elevatr)
-    # library(rgee)
+    # library(rgee) #requires system installation of gcloud (https://cloud.google.com/sdk/docs/install)
+    #also requires geojsonio
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
     library(nhdplusTools)

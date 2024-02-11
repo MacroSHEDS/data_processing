@@ -108,7 +108,7 @@ process_1_276 <- function(network, domain, prodname_ms, site_code, component) {
 
 #derive kernels ####
 
-#usgs_discharge: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
 
@@ -125,6 +125,8 @@ process_2_ms001 <- function(network, domain, prodname_ms){
                         prodname_ms = prodname_ms,
                         sites = nwis_codes,
                         time_step = rep('daily', length(nwis_codes)))
+
+    return()
 }
 
 #stream_flux_inst: STATUS=READY

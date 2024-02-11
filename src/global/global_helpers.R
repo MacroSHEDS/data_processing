@@ -4290,12 +4290,12 @@ get_derive_ingredient <- function(network,
     #   ms9XX prodcode.
     #accept_multiple: logical. should more than one ingredient be returned?
 
-     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain))) %>%
-         filter( (! is.na(munge_status) & munge_status == 'ready') |
-                     (! is.na(derive_status) & derive_status %in% c('ready', 'linked')) |
-                     (prodname == 'ws_boundary' & ! is.na(notes) & notes == 'automated entry') )
+        filter( (! is.na(munge_status) & munge_status == 'ready') |
+                    (! is.na(derive_status) & derive_status %in% c('ready', 'linked')) |
+                    (prodname == 'ws_boundary' & ! is.na(notes) & notes == 'automated entry') )
 
     if(ignore_derprod){
 
@@ -13274,7 +13274,6 @@ retrieve_versionless_product <- function(network,
 
     rt <- tracker[[prodname_ms]][[site_code]]$retrieve
 
-    ## i = 1
     for(i in 1:nrow(rt)){
 
         held_dt <- as.POSIXct(rt$held_version[i],
@@ -14471,7 +14470,8 @@ get_nrcs_soils <- function(network,
                                           s = site)))
     }
 
-    mukey_values <- unique(soil@data@values)
+    # mukey_values <- unique(soil@data@values)
+    mukey_values <- values(soil)
 
     #### Grab soil vars
 
@@ -14563,12 +14563,13 @@ get_nrcs_soils <- function(network,
 
         soil_masked <- sw(terra::mask(soil, site_boundary_p))
 
-        watershed_mukey_values <- soil_masked@data@values %>%
+        # watershed_mukey_values <- soil_masked@data@values %>%
+        watershed_mukey_values <- values(soil_masked) %>%
             as_tibble() %>%
-            filter(!is.na(value)) %>%
-            group_by(value) %>%
+            filter(! is.na(mukey)) %>%
+            group_by(mukey) %>%
             summarise(n = n()) %>%
-            rename(mukey = value) %>%
+            # rename(mukey = value) %>%
             left_join(mukey_weighted_av, by = 'mukey')
 
 
