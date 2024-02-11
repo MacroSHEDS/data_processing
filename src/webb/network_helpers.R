@@ -197,16 +197,3 @@ retrieve_webb_product <- function(network,
                      prodname_ms = prodname_ms)
 
 }
-
-retrieve_usgs_webb_daily_q <- function(set_details) {
-    if(grepl("w5", set_details$component) == TRUE) {
-        q <- dataRetrieval::readNWISdv(siteNumbers = "01135300",
-                                       parameterCd = "00060")
-
-    } else if(grepl("w3", set_details$component) == TRUE) {
-        q <- dataRetrieval::readNWISdv(siteNumbers = "01135150",
-                                       parameterCd = "00060")
-    }
-
-    return(q)
-}

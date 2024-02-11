@@ -13267,7 +13267,6 @@ retrieve_versionless_product <- function(network,
                                          orcid_pass){
 
     #retrieves products that are served as static files.
-    #IN PROGRESS: records source URIs as local metadata files
 
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
@@ -16702,27 +16701,6 @@ combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
     }
 
     return(d)
-}
-
-# rename site ws traits
-warning('OI')
-warning('this is mega wonky. when you get to panola, figure out whats going on')
-warning('srsly')
-ws_traits_dir = list.files('vault/panola/ws_traits/',
-                           recursive =  TRUE,
-                           full.names = TRUE,
-                           pattern = '.feather')
-old_site_code = 'USGS_02203970'
-new_site_code = 'mountain_creek_tributary'
-
-for(file in ws_traits_dir) {
-  if(grepl('feather', file)) {
-    file_data = feather::read_feather(file)
-    file_name = gsub(old_site_code, new_site_code, file)
-    file_data$site_code = new_site_code
-
-    feather::write_feather(file_data, file_name)
-  }
 }
 
 check_for_derelicts <- function(network, domain){
