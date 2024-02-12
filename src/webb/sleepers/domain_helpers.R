@@ -34,7 +34,8 @@ sleepers_stream_chem_var_info <- list(
     "Alm.ug.L"       = c('ug/L', 'mg/L', 'Al_m')
 )
 
-update_sleepers_detlims <- function(sleepers_stream_chem_var_info,
+update_sleepers_detlims <- function(d,
+                                    sleepers_stream_chem_var_info,
                                     no_bdl_vars){
 
     names_units <- sleepers_stream_chem_var_info %>%

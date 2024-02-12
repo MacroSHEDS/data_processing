@@ -2843,10 +2843,20 @@ get_product_info <- function(network,
         custom_prods <- prods %>%
             filter(grepl('^CUSTOM', prodname))
 
-        atypicals_sorted <- prods %>%
+        atypicals <- prods %>%
             filter(! prodname %in% !!typical_derprods,
                    ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
+
+        #usgs Q and/or cdnr Q must be retrieved before Q is combined
+        external_q_source <- str_match(atypicals$prodname, '(.+)_discharge')[, 2] %>%
+            na.omit()
+        if(any(! external_q_source %in% c('usgs', 'cdnr'))){
+            stop('need to update this for new external discharge source')
+        }
+
+        atypicals_sorted <- bind_rows(filter(atypicals, grepl('(?:usgs|cdnr)_discharge', prodname)),
+                                      filter(atypicals, ! grepl('(?:usgs|cdnr)_discharge', prodname)))
 
         typicals_sorted <- prods %>%
             filter(prodname %in% !!typical_derprods,
@@ -5413,8 +5423,7 @@ write_ms_file <- function(d,
     #network, domain, prodname_ms, site_code, and processing level. If a tibble,
     #write as a feather file (site_code.feather). Uncertainty (error) associated
     #with the val column will be extracted into a separate column called
-    #val_err. Write the file to the appropriate location within the data
-    #acquisition repository.
+    #val_err if sep_errors is TRUE.
 
     #deprecated:
     #if link_to_portal == TRUE, create a hard link to the
@@ -5488,6 +5497,7 @@ write_ms_file <- function(d,
                              p = prodname_ms))
             }
         }
+
         #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
     }
@@ -5500,8 +5510,6 @@ write_ms_file <- function(d,
                            level = level,
                            dir = shapefile)
     }
-
-    #return()
 }
 
 #deprecated (old form of this function is in helper_scrapyard.R)
@@ -9462,7 +9470,8 @@ combine_products <- function(network, domain, prodname_ms,
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
     sites <- unique(str_split_fixed(site_feather, '[.]feather', n = Inf)[,1])
 
-    for(i in 1:length(sites)) {
+    for(i in 1:length(sites)){
+
         site_files <- grep(paste0(sites[i], '.feather'), files, value = TRUE)
 
         site_full <- map_dfr(site_files, read_feather)
@@ -13262,7 +13271,6 @@ retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_code,
-                                         resource_url = NA_character_,
                                          tracker,
                                          orcid_login,
                                          orcid_pass){
@@ -13282,8 +13290,7 @@ retrieve_versionless_product <- function(network,
         deets <- list(prodname_ms = prodname_ms,
                       site_code = site_code,
                       component = rt$component[i],
-                      last_mod_dt = held_dt,
-                      url = resource_url)
+                      last_mod_dt = held_dt)
 
         result <- do.call(processing_func,
                           args = list(set_details = deets,
@@ -17291,25 +17298,4 @@ selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
     remote_driver$close()
 
     return(string_out)
-}
-
-collect_retrieval_details <- function(url){
-
-    headers <- RCurl::getURL(url,
-                             nobody = 1L,
-                             header = 1L,
-                             httpheader = list('Accept-Encoding' = 'identity'))
-
-    last_mod_dt <- str_match(headers, '[lL]ast-[mM]odified: (.*)')[, 2]
-    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>%
-        with_tz('UTC')
-
-    retrieval_details <- list(
-        url = url,
-        access_time = as.character(with_tz(Sys.time(),
-                                           tzone = 'UTC')),
-        last_mod_dt = last_mod_dt
-    )
-
-    return(retrieval_details)
 }

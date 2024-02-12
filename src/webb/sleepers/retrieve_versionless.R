@@ -81,6 +81,7 @@ for(i in seq_len(nrow(prod_info))){
                                  domain = domain,
                                  prodname_ms = prodname_ms,
                                  site_code = site_code,
+                                 resource_url = prod_info$url[i],
                                  tracker = held_data)
 
     if(! is.na(prod_info$munge_status[i])){

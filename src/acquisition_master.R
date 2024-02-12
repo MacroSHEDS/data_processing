@@ -340,8 +340,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    #owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
