@@ -1,48 +1,33 @@
 
 #retrieval kernels ####
 
-#discharge: STATUS=READY
+#discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network, domain, url){
+process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network, domain){
 
-  # this sets the file path of the raw data, should always be this same format
-  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                        n = network,
-                        d = domain,
-                        p = prodname_ms,
-                        s = site_code)
+    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
+                          n = network,
+                          d = domain,
+                          p = set_details$prodname_ms,
+                          s = set_details$site_code)
 
-  # this creates that directory, if it doesn't already exist
-  dir.create(path = raw_data_dest,
-             showWarnings = FALSE,
-             recursive = TRUE)
+    dir.create(path = raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
 
-  # create documentation file
-  rawfile <- glue('{rd}/{c}.zip',
-                  rd = raw_data_dest,
-                  c = component)
+    rawfile <- glue('{rd}/{c}.zip',
+                    rd = raw_data_dest,
+                    c = set_details$component)
 
-  # download the data form the download link!
-  R.utils::downloadFile(url = url,
-                        filename = rawfile,
-                        skip = FALSE,
-                        overwrite = TRUE)
+    url <- 'https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62'
+    R.utils::downloadFile(url = url,
+                          filename = rawfile,
+                          skip = FALSE,
+                          overwrite = TRUE)
 
-  # this code records metadat about the date, time, and other details
-  res <- httr::HEAD(url)
+    deets_out <- collect_retrieval_details(url)
 
-  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                     start = 1,
-                                     stop = 19),
-                          format = '%Y-%m-%dT%H:%M:%S') %>%
-    with_tz(tzone = 'UTC')
-
-  deets_out <- list(url = paste(url, '(requires authentication)'),
-                    access_time = as.character(with_tz(Sys.time(),
-                                                       tzone = 'UTC')),
-                    last_mod_dt = last_mod_dt)
-
-  return(deets_out)
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=PAUSED
@@ -86,7 +71,7 @@ process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network,
 
 #munge kernels ####
 
-#discharge: STATUS=READY
+#discharge; stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, domain){
 
@@ -146,7 +131,7 @@ process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, 
     return()
 }
 
-#stream_chemistry: STATUS=READY
+#stream_chemistry: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, domain){
 

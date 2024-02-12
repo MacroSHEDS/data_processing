@@ -1,3 +1,5 @@
+#retrieval kernels ####
+
 #precipitation: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS000 <- function(set_details, network, domain) {

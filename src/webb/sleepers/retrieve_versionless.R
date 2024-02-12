@@ -77,12 +77,11 @@ for(i in seq_len(nrow(prod_info))){
                      s=site_code, p=prodname_ms), logger=logger_module)
     }
 
-    retrieve_webb_product(network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_code = site_code,
-                         tracker = held_data,
-                         url = prod_info$url[i])
+    retrieve_versionless_product(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms,
+                                 site_code = site_code,
+                                 tracker = held_data)
 
     if(! is.na(prod_info$munge_status[i])){
         update_data_tracker_m(network = network,

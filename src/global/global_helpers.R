@@ -13262,6 +13262,7 @@ retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_code,
+                                         resource_url = NA_character_,
                                          tracker,
                                          orcid_login,
                                          orcid_pass){
@@ -13281,7 +13282,8 @@ retrieve_versionless_product <- function(network,
         deets <- list(prodname_ms = prodname_ms,
                       site_code = site_code,
                       component = rt$component[i],
-                      last_mod_dt = held_dt)
+                      last_mod_dt = held_dt,
+                      url = resource_url)
 
         result <- do.call(processing_func,
                           args = list(set_details = deets,
@@ -17289,4 +17291,25 @@ selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
     remote_driver$close()
 
     return(string_out)
+}
+
+collect_retrieval_details <- function(url){
+
+    headers <- RCurl::getURL(url,
+                             nobody = 1L,
+                             header = 1L,
+                             httpheader = list('Accept-Encoding' = 'identity'))
+
+    last_mod_dt <- str_match(headers, '[lL]ast-[mM]odified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>%
+        with_tz('UTC')
+
+    retrieval_details <- list(
+        url = url,
+        access_time = as.character(with_tz(Sys.time(),
+                                           tzone = 'UTC')),
+        last_mod_dt = last_mod_dt
+    )
+
+    return(retrieval_details)
 }
