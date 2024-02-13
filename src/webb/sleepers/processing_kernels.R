@@ -391,7 +391,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_87Sr_86Sr", "GN_dD",
+    no_bdl_vars = c("GN_temp", "GN_d18O", "GN_NO3_d18O", "GN_87Sr_86Sr", "GN_dD",
                   "GN_d13C", "GN_NO3_d15N", 'GN_ANC')
 
     #extract and record detection limits
@@ -469,29 +469,28 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     # pre-processing
     d <- read.csv(rawfile) %>%
-      mutate(site_code = "W-9",
-             date = as.Date(Date.Time..EST., format = "%m/%d/%y"),
-             Edit.Code = as.character(Edit.Code),
-             # pre-filter edit codes, to retain filtering by original info
-             # turn all "good" and "fair" edit coees to 0, and dirty to 1
-             ## edit_code = case_when(Edit.Code %in% clean_codes ~ 0, Edit.Code %in% dirty_codes ~ 1, TRUE ~ Edit.Code)
-             ) %>%
-      filter(
-        # remove all "poor" data
-        !Edit.Code %in% drop_codes
-        )
+        mutate(site_code = "W-9",
+               date = as.Date(Date.Time..EST., format = "%m/%d/%y"),
+               Edit.Code = as.character(Edit.Code),
+               # pre-filter edit codes, to retain filtering by original info
+               # turn all "good" and "fair" edit coees to 0, and dirty to 1
+               ## edit_code = case_when(Edit.Code %in% clean_codes ~ 0, Edit.Code %in% dirty_codes ~ 1, TRUE ~ Edit.Code)
+        ) %>%
+        filter(
+            # remove all "poor" data
+            !Edit.Code %in% drop_codes)
 
     # pre-filter edit codes, to retain filtering by original info
     # turn all "good" and "fair" edit coees to 0, and dirty to 1
     d$Edit.Code <- ifelse(d$Edit.Code %in% clean_codes, 0, 1)
 
     d <- d %>%
-      group_by(site_code, date) %>%
-      summarise(
-        # convert to L/s
-        discharge = mean(Q..cfs) * 28.316847,
-        Edit.Code = max(Edit.Code)
-      )
+        group_by(site_code, date) %>%
+        summarise(
+            # convert to L/s
+            discharge = mean(Q..cfs) * 28.316847,
+            Edit.Code = max(Edit.Code)
+        )
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = "%Y-%m-%d"),
@@ -613,7 +612,6 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     d[! is.na(d$Chemistry_Flag) & d$Chemistry_Flag == 'All cations',
       paste('varflag', cation_cols, sep = '_')] <- 1
 
-
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
@@ -630,7 +628,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
-    no_bdl_vars = c("GN_temp", "GN_d180", "GN_NO3_d180", "GN_87Sr_86Sr", "GN_dD",
+    no_bdl_vars = c("GN_temp", "GN_d18O", "GN_NO3_d18O", "GN_87Sr_86Sr", "GN_dD",
                     "GN_d13C", "GN_NO3_d15N")
 
     #extract and record detection limits

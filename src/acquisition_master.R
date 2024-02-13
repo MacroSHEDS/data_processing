@@ -56,7 +56,7 @@ suppressPackageStartupMessages({
 
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
-#(or after each run that results in a change)
+#(or after each run that results in a change). Starting in 2015, use decimal versioning.
 vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,

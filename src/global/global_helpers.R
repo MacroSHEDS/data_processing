@@ -14814,7 +14814,7 @@ ms_check_range <- function(d){
         if(length(min_val) == 0){
             min_val <- NA
         }
-        if(!is.na(min_val)){
+        if(! is.na(min_val)){
             d <- d %>%
                 mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) < !!min_val, NA, val))
         }
@@ -14827,14 +14827,15 @@ ms_check_range <- function(d){
             max_val <- NA
         }
 
-        if(!is.na(max_val)){
+        if(! is.na(max_val)){
             d <- d %>%
                 mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) > !!max_val, NA, val))
         }
     }
 
-    d <- filter(d,
-                ! is.na(val) | ms_status == 2)
+    d <- filter(d, ! is.na(val) | ms_status == 2)
+
+    return(d)
 }
 
 download_from_googledrive <- function(set_details, network, domain){
