@@ -738,6 +738,11 @@ ms_read_raw_csv <- function(filepath,
     #sampling_type: optional value to overwrite identify_sampling because in
     #   some case this function is misidentifying sampling type. This must be a
     #   single value of G or I and is applied to all variables in product
+    #keep_bdl_values: logical. if true, data column values indicating the
+    #   detection limit, e.g. "<0.7" will be replaced with that limit, i.e. "0.7".
+    #   Only use this if you are following up with update_detlims().
+    #   If the values recorded in the cells represent half detection limit, or something
+    #   else, we need to write new handling.
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
@@ -13271,6 +13276,7 @@ retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_code,
+                                         resource_url = NA_character_,
                                          tracker,
                                          orcid_login,
                                          orcid_pass){
@@ -13290,7 +13296,8 @@ retrieve_versionless_product <- function(network,
         deets <- list(prodname_ms = prodname_ms,
                       site_code = site_code,
                       component = rt$component[i],
-                      last_mod_dt = held_dt)
+                      last_mod_dt = held_dt,
+                      url = resource_url)
 
         result <- do.call(processing_func,
                           args = list(set_details = deets,
@@ -13385,7 +13392,6 @@ munge_versionless_product <- function(network,
                                       tracker){
 
     #munges products that are served as static files.
-    #IN PROGRESS: records source URIs as local metadata files
 
     processing_func <- get(paste0('process_1_',
                                   prodcode_from_prodname_ms(prodname_ms)))
@@ -17299,4 +17305,100 @@ selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
     remote_driver$close()
 
     return(string_out)
+}
+
+collect_retrieval_details <- function(url){
+
+    ##maybe still try this first?
+    # res <- httr::HEAD(url)
+    #
+    # last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+    #                                    start = 1,
+    #                                    stop = 19),
+    #                         format = '%Y-%m-%dT%H:%M:%S') %>%
+    #     with_tz(tzone = 'UTC')
+    #
+    # deets_out <- list(url = paste(url, '(requires authentication)'),
+    #                   access_time = as.character(with_tz(Sys.time(),
+    #                                                      tzone = 'UTC')),
+    #                   last_mod_dt = last_mod_dt)
+
+    headers <- RCurl::getURL(url,
+                             nobody = 1L,
+                             header = 1L,
+                             httpheader = list('Accept-Encoding' = 'identity'))
+
+    last_mod_dt <- str_match(headers, '[lL]ast-[mM]odified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>%
+        with_tz('UTC')
+
+    retrieval_details <- list(
+        url = url,
+        access_time = as.character(with_tz(Sys.time(),
+                                           tzone = 'UTC')),
+        last_mod_dt = last_mod_dt
+    )
+
+    return(retrieval_details)
+}
+
+update_detlims <- function(d, vars_units){
+
+    #for all ms_status == 2, take the corresponding val and write it to
+    #the detection_limits google sheet
+
+    names_units <- vars_units %>%
+        plyr::ldply() %>%
+        rename(variable_original = 1, unit_original = 2,
+               unit_converted = 3)
+
+    detlim_pre <- d %>%
+        filter(ms_status == 2) %>%
+        distinct(var, val, .keep_all = TRUE) %>%
+        mutate(start_date = as.Date(datetime),
+               var = drop_var_prefix(var)) %>%
+        select(start_date, var, val) %>%
+        arrange(var, start_date) %>%
+        group_by(var) %>%
+        mutate(end_date = lead(start_date) - 1) %>%
+        ungroup() %>%
+        left_join(names_units, by = c('var' = 'variable_original')) %>%
+        rename(detection_limit_original = val,
+               variable_original = var) %>%
+        mutate(domain = !!domain,
+               prodcode = !!prodname_ms,
+               # variable_converted = NA,
+               # variable_original = ,
+               detection_limit_converted = NA,
+               detection_limit_original = abs(detection_limit_original),
+               precision = NA,
+               sigfigs = NA,
+               # unit_converted = ,
+               # unit_original = ,
+               # start_date = ,
+               # end_date = ,
+               added_programmatically = FALSE
+        )
+
+    detlims <- standardize_detection_limits(
+        dls = detlim_pre,
+        vs = ms_vars,
+        update_on_gdrive = FALSE
+    ) %>%
+        mutate(added_programmatically = TRUE)
+
+    detlims_update <- anti_join(
+        detlims, domain_detection_limits,
+        by = c('domain', 'prodcode', 'variable_converted', 'variable_original',
+               'detection_limit_original', 'start_date', 'end_date')
+    )
+
+    if(nrow(detlims_update)){
+        ms_write_confdata(detlims_update,
+                          which_dataset = 'domain_detection_limits',
+                          to_where = 'remote',
+                          overwrite = FALSE) #append
+    }
+
+    return(invisible())
 }

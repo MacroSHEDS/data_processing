@@ -1,9 +1,9 @@
 
 #retrieval kernels ####
 
-#discharge; stream_chemistry: STATUS=READY
+#discharge; stream_chemistry; precipitation; precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network, domain){
+process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -15,86 +15,32 @@ process_0_VERSIONLESS001 <- function(prodname_ms, site_code, component, network,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.zip',
+    rawfile <- glue('{rd}/{c}',
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    url <- 'https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62'
-    R.utils::downloadFile(url = url,
+    R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
                           skip = FALSE,
                           overwrite = TRUE)
 
-    deets_out <- collect_retrieval_details(url)
+    deets_out <- collect_retrieval_details(set_details$url)
 
     return(deets_out)
 }
 
-#stream_chemistry: STATUS=PAUSED
-#. handle_errors
-process_0_VERSIONLESS002 <- function(prodname_ms, site_code, component, network, domain, url){
-
-  raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                        n = network,
-                        d = domain,
-                        p = prodname_ms,
-                        s = site_code)
-
-  dir.create(path = raw_data_dest,
-             showWarnings = FALSE,
-             recursive = TRUE)
-
-  rawfile <- glue('{rd}/{c}.zip',
-                  rd = raw_data_dest,
-                  c = component)
-
-  R.utils::downloadFile(url = url,
-                        filename = rawfile,
-                        skip = FALSE,
-                        overwrite = TRUE)
-
-  res <- httr::HEAD(url)
-
-  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                     start = 1,
-                                     stop = 19),
-                          format = '%Y-%m-%dT%H:%M:%S') %>%
-    with_tz(tzone = 'UTC')
-
-  deets_out <- list(url = paste(url, '(requires authentication)'),
-                    access_time = as.character(with_tz(Sys.time(),
-                                                       tzone = 'UTC')),
-                    last_mod_dt = last_mod_dt)
-
-  return(deets_out)
-}
-
 #munge kernels ####
 
-#discharge; stream_chemistry: STATUS=READY
-#. handle_errors
-process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, domain){
+p1v001_discharge <- function(zipf){
 
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = site_code)
-
-    # END OF BLOCK YOU DONT CHANGE #
-
-    raw_zip <- glue('{rd}/{c}.zip',
-                    rd = raw_data_dest,
-                    c = component)
-
-    # read and save csv from zip folder
-    raw_csv <- read.csv(unz(raw_zip, "3_PMRW_Streamflow_WY86-17.csv"),
+    raw_csv <- read.csv(unz(zipf, "3_PMRW_Streamflow_WY86-17.csv"),
                         header = TRUE, sep = ",") %>%
+        as_tibble() %>%
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = raw_csv,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York',
+                         datetime_tz = 'America/New_York', #assumed. could be utc
                          site_code_col = 'site',
                          data_cols =  c('Streamflow' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -106,61 +52,19 @@ process_1_VERSIONLESS001 <-function(prodname_ms, site_code, component, network, 
                             summary_flags_clean = list(Quality_Cd = c('1', '2')),
                             summary_flags_dirty = list(Quality_Cd = c('3', '4')))
 
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s]) %>%
-            # convert CFS to lps
-            mutate(val = val * 28.3168)
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
-
-    return()
+    return(d)
 }
 
-#stream_chemistry: STATUS=PAUSED
-#. handle_errors
-process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, domain){
+p1v001_stream_chemistry <- function(zipf){
 
-    raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
-                          n = network,
-                          d = domain,
-                          p = prodname_ms,
-                          s = site_code)
-
-    raw_zip <- glue('{rd}/{c}.zip',
-                    rd = raw_data_dest,
-                    c = component)
-
-    # read and save csv from zip folder
-    raw_csv <- read.csv(unz(raw_zip, "4_PMRW_StreamWaterQuality_WY86-17.csv"),
-                        header = TRUE, sep = ",")
-
-    d <- raw_csv %>%
+    d <- read.csv(unz(zipf, '4_PMRW_StreamWaterQuality_WY86-17.csv'),
+                  header = TRUE, sep = ",") %>%
+        as_tibble() %>%
         mutate(site = 'mountain_creek_tributary')
-
-    # if NO3_Conc has "<val", threshold and use val/2
-    d$NO3_Conc <- ifelse(grepl("<", df$NO3_Conc),
-                         as.numeric(gsub("<", "", df$NO3_Conc))/2,
-                         as.numeric(df$NO3_Conc))
-
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York',
+                         datetime_tz = 'America/New_York', #assumed. could be utc
                          site_code_col = 'site',
                          data_cols =  c(
                              "pH"  =  "pH",
@@ -177,33 +81,112 @@ process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, 
                          ),
                          set_to_NA = ".",
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         convert_to_BDL_flag = '<#*#',
+                         is_sensor = FALSE,
+                         keep_bdl_values = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
+
+    var_deets <- list(
+        'ANC' = c('ueq/l', 'eq/l'),
+        'Ca' = c('ueq/l', 'mg/l'),
+        'Mg' = c('ueq/l', 'mg/l'),
+        'Na' = c('ueq/l', 'mg/l'),
+        'K' = c('ueq/l', 'mg/l'),
+        'SO4' = c('ueq/l', 'mg/l'),
+        'NO3' = c('ueq/l', 'mg/l'),
+        'Cl' = c('ueq/l', 'mg/l'),
+        'Si' = c('umol/l', 'mg/l'),
+        'DOC' = c('umol/l', 'mg/l')
+    )
+
+    update_detlims(d, var_deets)
+
     d <- ms_conversions(d,
-                        convert_units_from = c('ANC' = 'ueq/L',
-                                               'Ca' = 'ueq/L',
-                                               'Mg' = 'ueq/l',
-                                               'Na' = 'ueq/l',
-                                               'K' = 'ueq/l',
-                                               'SO4' = 'ueq/l',
-                                               'NO3' = 'ueq/l',
-                                               'Cl' = 'ueq/l',
-                                               'Si' = 'umol/l',
-                                               'DOC' = 'umol/l'
-                        ),
-                        convert_units_to = c('ANC' = 'eq/L',
-                                             'Ca' = 'mg/l',
-                                             'Mg' = 'mg/l',
-                                             'Na' = 'mg/l',
-                                             'K' = 'mg/l',
-                                             'SO4' = 'mg/l',
-                                             'NO3' = 'mg/l',
-                                             'Cl' = 'mg/l',
-                                             'Si' = 'mg/l',
-                                             'DOC' = 'mg/l'
-                        ))
+                        convert_units_from = sapply(var_deets, function(x) x[1]),
+                        convert_units_to = sapply(var_deets, function(x) x[2]))
+
+    return(d)
+}
+
+p1v001_precip_chemistry <- function(zipf){
+
+    d <- read.csv(unz(zipf, '2_PMRW_PrecipitationWaterQuality_WY86-17.csv'),
+                  header = TRUE, sep = ",") %>%
+        as_tibble() %>%
+        # mutate(site = 'mountain_creek_tributary')
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         site_code_col = 'site',
+                         data_cols =  c(
+                             "pH"  =  "pH",
+                             "ANC_Conc" = "ANC",
+                             "Ca_Conc" = "Ca",
+                             "Mg_Conc" = "Mg",
+                             "Na_Conc" = "Na",
+                             "K_Conc" = "K",
+                             "SO4_Conc" = "SO4",
+                             "NO3_Conc" = "NO3",
+                             "Cl_Conc" = "Cl",
+                             "Si_Conc" = "Si",
+                             "DOC_Conc" = "DOC"
+                         ),
+                         set_to_NA = ".",
+                         data_col_pattern = '#V#',
+                         convert_to_BDL_flag = '<#*#',
+                         is_sensor = FALSE,
+                         keep_bdl_values = TRUE)
+
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
+
+    var_deets <- list(
+        'ANC' = c('ueq/l', 'eq/l'),
+        'Ca' = c('ueq/l', 'mg/l'),
+        'Mg' = c('ueq/l', 'mg/l'),
+        'Na' = c('ueq/l', 'mg/l'),
+        'K' = c('ueq/l', 'mg/l'),
+        'SO4' = c('ueq/l', 'mg/l'),
+        'NO3' = c('ueq/l', 'mg/l'),
+        'Cl' = c('ueq/l', 'mg/l'),
+        'Si' = c('umol/l', 'mg/l'),
+        'DOC' = c('umol/l', 'mg/l')
+    )
+
+    update_detlims(d, var_deets)
+
+    d <- ms_conversions(d,
+                        convert_units_from = sapply(var_deets, function(x) x[1]),
+                        convert_units_to = sapply(var_deets, function(x) x[2]))
+
+    return(d)
+}
+
+#discharge; stream_chemistry; precipitation; precip_chemistry: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS001 <-function(network, domain, prodname_ms, site_code, component){
+
+    raw_data_loc <- glue('data/{n}/{d}/raw/{p}/{s}',
+                         n = network,
+                         d = domain,
+                         p = 'discharge__VERSIONLESS001',
+                         s = site_code)
+
+    zipf <- glue('{rd}/{c}',
+                 rd = raw_data_loc,
+                 c = component)
+
+    prodname <- prodname_from_prodname_ms(prodname_ms)
+    if(prodname == 'discharge'){
+        d <- p1v001_discharge(zipf)
+    } else if(prodname == 'stream_chemistry'){
+        d <- p1v001_stream_chemistry(zipf)
+    } else if(prodname == 'precipitation'){
+        d <- p1v001_precipitation(zipf)
+    } else if(prodname == 'precip_chemistry'){
+        d <- p1v001_precip_chemistry(zipf)
+    }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -211,19 +194,20 @@ process_1_VERSIONLESS002 <-function(prodname_ms, site_code, component, network, 
 
     sites <- unique(d$site_code)
 
-    for(s in 1:length(sites)){
+    for(s in sites){
 
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
+        d_site <- filter(d, site_code == !!s)
 
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
                       prodname_ms = prodname_ms,
-                      site_code = sites[s],
+                      site_code = s,
                       level = 'munged',
                       shapefile = FALSE)
     }
+
+    return()
 }
 
 #derive kernels ####
@@ -235,3 +219,11 @@ process_2_ms001 <- derive_stream_flux
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms002 <- stream_gauge_from_site_data
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms003 <- precip_gauge_from_site_data
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_precip_pchem_pflux
