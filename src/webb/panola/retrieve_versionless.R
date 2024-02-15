@@ -55,6 +55,13 @@ for(i in seq_len(nrow(prod_info))){
                           domain = domain,
                           tracker = held_data)
 
+    #this could be handled by retrieve_versionless_product. could use hardlinks
+    if(i > 1){
+        loginfo('one zip for all files. not redownloading',
+                logger = logger_module)
+        next
+    }
+
     dest_dir <- glue('data/{n}/{d}/raw/{p}/{s}',
                      n = network,
                      d = domain,

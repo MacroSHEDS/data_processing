@@ -1157,7 +1157,6 @@ ms_read_raw_csv <- function(filepath,
                 logger = logger_module)
     }
 
-
     #rename cols to canonical names
     for(i in 1:ncol(d)){
 
@@ -1187,6 +1186,7 @@ ms_read_raw_csv <- function(filepath,
 
     if(any(is.na(d$datetime))) {
         pct_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+        if(pct_na == 0) pct_na <- '<1'
 
         logwarn(msg = glue('{pna}% datetimes failed to parse in {n}, {d}, {s}, {p}',
                            pna = pct_na,
