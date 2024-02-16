@@ -1,0 +1,9 @@
+#yeah, this is how we're doin' it
+wqp_codes <- tibble(
+   param_code = c('00010', '00095',  '00300', '00408',    '00413', '00600', '00618', '00631',     '00665', '00681', '00694', '00915', '00925', '00930', '00935', '00940', '00945', '00950', '00955', '01080', '39087', '49570', '50624',     '62854', '00602', '63041',    '70301', '71846', '75978',     '82082',  '82085',  '82086',  '82690',    '01046', '01056', '70507', '00191', '00405', '00613', '01106', '29803', '32209', '71851', '71856', '71870'),
+   ms_varcode = c('temp',  'spCond', 'DO',    'pH',       'ANC',   'TN',    'NH4_N', 'NO3_NO2_N', 'TP',    'DOC',   'TPC',   'Ca',    'Mg',    'Na',    'K',     'Cl',    'SO4',   'F',     'Si',    'Sr',    'Alk',   'TPN',   'Abs254_cm', 'TDN',   'TDN',   'd18O_NO3', 'TDS',   'NH4',   '87Sr_86Sr', 'dD',     'd18O',   'd34S',   'd15N_NO3', 'Fe',    'Mn',    'SRP',   'H',     'CO2',   'NO2_N', 'Al',    'Alk',   'Chla',  'NO3',   'NO2',   'Br'),
+   unit =       c('C',     'uS/cm',  'mg/L',  'unitless', 'mg/L',  'mg/L',  'mg/L',  'mg/L',      'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'ug/L',  'mg/L',  'mg/L',  'AU/cm',     'mg/L',  'mg/L',  'permil',   'mg/L',  'mg/L',  'unitless',  'permil', 'permil', 'permil', 'permil',   'ug/L',  'ug/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'ug/L',  'mg/L',  'ug/L',  'mg/L',  'mg/L',  'mg/L'),
+   priority =   c(NA,      NA,       NA,      NA,         NA,      NA,      NA,      NA,          NA,      NA,      NA,      NA,      NA,      NA,      NA,      NA,      NA,      NA,      NA,      NA,      1,       NA,      NA,          1,       2,       NA,         NA,      NA,      NA,          NA,       NA,       NA,       NA,         NA,      NA,      NA,      NA,      NA,      NA,      NA,      2,       NA,       NA,       NA,      NA)
+)
+
+# table(wqp_codes$ms_varcode)

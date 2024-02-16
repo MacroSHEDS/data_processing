@@ -703,7 +703,7 @@ ms_read_raw_csv <- function(filepath,
     #   measured with a sensor (which may be susceptible to drift and/or fouling),
     #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
-    #set_to_NA: For values such as 9999 that are proxies for NA values.
+    #set_to_NA: character. For values such as '9999' that are proxies for NA values.
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
     #   character representations, i.e. "-888". Accepts '#*#' as a wildcard that
@@ -722,7 +722,7 @@ ms_read_raw_csv <- function(filepath,
     #   with any other flag information. Note that convert_to_BDL_flag is not
     #   necessary when numeric_dl_col_pattern is used. If you find a situation
     #   where both are needed, we probably have work to do.
-    #set_to_0: For values that we want to set to zero. We're setting BDLs to
+    #set_to_0: character. For values that we want to set to zero. We're setting BDLs to
     #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
@@ -833,6 +833,10 @@ ms_read_raw_csv <- function(filepath,
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
+    }
+
+    if(length(summary_flagcols) > 1){
+        warning('ms_cast_and_reflag may misbehave with multiple summary flagcols. usually there is a workaround')
     }
 
     if(missing(set_to_NA)) {
@@ -976,7 +980,7 @@ ms_read_raw_csv <- function(filepath,
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
     if(length(missing_colnames)){
-        logwarn(paste0('These columns missing from dataframe. Probably there has been a modification by primary source:\n',
+        logwarn(paste0('These columns missing from dataframe. Maybe there has been a modification by primary source:\n',
                        paste(missing_colnames, collapse = ', ')),
                 logger = logger_module)
     }
@@ -7157,11 +7161,16 @@ ms_nocb_mean_interpolate <- function(d, interval){
     return(d_interp)
 }
 
-synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
+synchronize_timestep <- function(d,
+                                 precip_interp_method = 'zero',
+                                 prodname_ms_ = get('prodname_ms')){
                                  # desired_interval){
                                  # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_code, var, val, ms_status
+    #precip_interp_method: either "zero" for 0-interpolation, or "mean_nocb", which
+    #   fills gaps assuming that each recorded sample is an aggregate of equal-volume
+    #   samples over the preceding, unobserved days. nocb = "next observation carried backward".
     #desired_interval [HARD DEPRECATED] is a character string that can be parsed by the "by"
     #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
     #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
@@ -7300,25 +7309,6 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 select(-val_err) %>%
                 bind_rows(interp_only_chunk) %>%
                 arrange(datetime)
-
-            # sitevar_chunk <- summary_and_interp_chunk %>%
-            #     group_by(datetime) %>%
-            #         summarize(
-            #             site_code = first(site_code),
-            #             var = first(var),
-            #             val = if(var_is_p)
-            #                 {
-            #                     sum(val, na.rm = TRUE)
-            #                 # } else if(var_is_q){
-            #                 #     max_ind <- which.max(val) #max() removes uncert
-            #                 #     if(max_ind) val[max_ind] else NA_real_
-            #                 } else {
-            #                     mean(val, na.rm = TRUE)
-            #                 },
-            #             ms_status = numeric_any(ms_status)) %>%
-            #         ungroup() %>%
-            #     bind_rows(interp_only_chunk) %>%
-            #     arrange(datetime)
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -7335,12 +7325,17 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
         } else { #precip
-            d_split[[i]] <- ms_zero_interpolate( #so far only needed for konza
-                d = sitevar_chunk,
-                interval = rounding_intervals[i])
-            # d_split[[i]] <- ms_nocb_mean_interpolate( #this might apply in some cases, but not yet.
-            #     d = sitevar_chunk,
-            #     interval = rounding_intervals[i])
+            if(precip_interp_method == 'zero'){
+                d_split[[i]] <- ms_zero_interpolate( #e.g. konza
+                    d = sitevar_chunk,
+                    interval = rounding_intervals[i])
+            } else if(precip_interp_method == 'mean_nocb'){
+                d_split[[i]] <- ms_nocb_mean_interpolate( #e.g. loch_vale
+                    d = sitevar_chunk,
+                    interval = rounding_intervals[i])
+            } else {
+                stop('precip_interp_method must be either "zero" or "mean_nocb"')
+            }
         }
     }
 
@@ -16226,7 +16221,12 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                                'NO3_NO2_N')
 
     #convert detlims to MS canonical units
-    dlout_a <- core_(filter(dls, ! added_programmatically))
+    ap <- dls$added_programmatically
+    conv_var <- dls$variable_original %in% normally_converted_molecules
+    orig_form <- dls$variable_converted == dls$variable_original
+    regenerate_these <- ap & conv_var & orig_form
+
+    dlout_a <- core_(filter(dls, ! regenerate_these))
 
     #update variable names for molecules that have been converted
     dlout_a$variable_converted <- dlout_a$variable_original
@@ -16240,14 +16240,14 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #are allowed to be carried through the ms processing pipeline as-is
     dlout_b <- filter(dls,
                       variable_original %in% normally_converted_molecules,
-                      ! added_programmatically) %>%
+                      ! regenerate_these) %>%
         core_(keep_molecular = normally_converted_molecules) %>%
         mutate(added_programmatically = TRUE,
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
         # filter for NAs in  dl converted (abs254_cm)
-        filter(!is.na(detection_limit_converted)) %>%
+        filter(! is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
