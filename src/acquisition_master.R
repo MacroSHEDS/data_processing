@@ -2,7 +2,7 @@ suppressPackageStartupMessages({
 
 
     # #spatial packages
-    # library(terra)  #must load before gstat package (which isn't currently needed)
+    library(terra)  #must load before gstat package (which isn't currently needed)
     # # library(gstat) #must load before raster package (not needed)
     # library(raster)
     # # library(stars) #not needed (yet)
@@ -10,10 +10,11 @@ suppressPackageStartupMessages({
     # library(sp)
     # library(mapview)
     # library(elevatr)
-    # library(rgee)
+    # library(rgee) #requires system installation of gcloud (https://cloud.google.com/sdk/docs/install)
+    #also requires geojsonio
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
-    # library(nhdplusTools)
+    library(nhdplusTools)
 
     #everything else
     library(httr)
@@ -42,6 +43,7 @@ suppressPackageStartupMessages({
     library(osmdata)
     library(RCurl)
     library(rvest)
+    # library(streamstats)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
@@ -54,11 +56,11 @@ suppressPackageStartupMessages({
 
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
-#(or after each run that results in a change)
+#(or after each run that results in a change). Starting in 2015, use decimal versioning.
 vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300)
+        timeout = 12000)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -250,7 +252,7 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
 
@@ -318,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'shale_hills') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'loch_vale') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -338,8 +340,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-     #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-     #owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
@@ -355,21 +357,21 @@ for(dmnrow in 1:nrow(network_domain)){
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
-                           domain = domain)
+                            domain = domain)
 
     get_all_local_helpers(network = network,
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('precipitation'),
+                # prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
     check_for_derelicts(network = network,
                         domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('precipitation'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -377,8 +379,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         # overwrite_wb_sites = "trout_river",
-                        verbose = FALSE
-                        ))
+                        verbose = FALSE))
     }
 
     ms_derive(network = network,

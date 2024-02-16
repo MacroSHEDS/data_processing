@@ -60,7 +60,7 @@ process_0_208 <- function(set_details, network, domain){
 
         if(! sum(l1, l2)){
             loginfo('Skipping redundant download', logger=logger_module)
-            return(generate_blacklist_indicator())
+            return(generate_blocklist_indicator())
         }
 
         fext <- '.csv'
@@ -172,7 +172,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_code,
 
     if(component == 'site info'){
         loginfo('Blacklisting superfluous data component')
-        return(generate_blacklist_indicator())
+        return(generate_blocklist_indicator())
     }
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
@@ -204,7 +204,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
 
     if(component == 'Analytical Methods'){
         loginfo('Blacklisting superfluous data component')
-        return(generate_blacklist_indicator())
+        return(generate_blocklist_indicator())
     }
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',

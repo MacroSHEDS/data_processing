@@ -21,10 +21,13 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2018-0028/RDS-2018-0028.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -79,10 +82,13 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2020-0082/RDS-2020-0082.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -138,10 +144,13 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2020-0080/RDS-2020-0080.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -207,10 +216,13 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2020-0081/RDS-2020-0081.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,

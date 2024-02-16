@@ -21,8 +21,7 @@ swwd_sites <- site_data %>%
 
 swwd_sites <- c('ms-1')
 
-for(site in unique(swwd_sites)) {
-    site_code <- site
+for(site_code in unique(swwd_sites)){
 
     for(i in seq_len(nrow(prod_info))){
 

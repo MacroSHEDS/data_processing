@@ -1,0 +1,40 @@
+d18O
+	boulder (permil)
+	niwot (permil)
+	east_river (permil)
+	catalina (permil)
+	trout_lake (permil)
+	sleepers (permil)
+	loch_vale (permil)
+	mces? NO
+d13C
+	sleepers (permil)
+	trout_lake (permil)
+	catalina has d13C of DIC. are we using this? (permil?)
+	mces? NO
+d87Sr_d86Sr (RENAMED 87Sr_86Sr)
+	loch_vale (mass ratio)
+	sleepers (mass ratio)
+	mces? NO
+deuterium (RENAMED dD)
+	boulder (permil)
+	niwot (permil)
+	east_river (permil)
+	catalina (permil)
+	sleepers (permil)
+	mces? NO
+dH2_H (REMOVED)
+	loch_vale (permil)
+NO3_d15N (RENAMED d15N_NO3)
+	sleepers (permil)
+	mces? NO
+NO3_d18O (RENAMED likewise)
+	sleepers (permil)
+	mces? NO
+d18O_d16O (of sulfate!)
+	loch_vale (permil)
+	they also have d18O for Nitrate
+d15N_d14N (of nitrate! duplicate)
+	loch_vale (permil)
+d34S_d32S (d34S)
+	loch_vale (permil)

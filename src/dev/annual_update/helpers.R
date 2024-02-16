@@ -1,4 +1,4 @@
-#these were added to global_helpers.R on 2023-11-18
+#these were added to global_helpers.R on 2024-01-05
 
 check_for_updates_hydroshare <- function(oldlink, last_download_dt){
 
@@ -55,6 +55,8 @@ check_for_updates_edi <- function(oldlink, last_download_dt){
 
     #if there's a link to a new version, look no further
     if(! is.na(newlink)){
+        newlink <- paste0('https://portal.edirepository.org/nis/',
+                          newlink)
         print(paste('New link:', newlink))
         return(newlink)
     }

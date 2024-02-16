@@ -2,167 +2,105 @@
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS001 <- function(set_details, network, domain) {
-  prod <- 'discharge'
-  site <- set_details$site_code
-  component <- set_details$component
-  prodname_ms <- set_details$prodname_ms
+process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
-  # discharge data is 10-20 years of 15m sensor data provided as a straight xlsx file
-  # the downloads are tricky, and often 504 timeout or other errors (inconsistently)
-  # TODO fix this, ideas:
-  #   - always can increase timeout
-  #   - change mode to wb, or other mode
-  #   - error out to gdrive download?
-  #   - use different link, example: http://wq.swwdmn.org/downloads/new?opts=100th-st/gauge&site_id=100th-st&site_label=100th%20St
-  #   - increase Sys.sleep() 'pause' between downloads, it does seem first downloads work more often
+    prod <- 'discharge'
+    site <- set_details$site_code
+    component <- set_details$component
+    prodname_ms <- set_details$prodname_ms
 
-  default_to = getOption('timeout')
-  options(timeout=5000000)
+    default_to = getOption('timeout')
+    options(timeout=100000)
 
-  # set interval to sleep after each download (seconds)
-  sleep_time = 360
+    # discharge data is 10-20 years of 15m sensor data provided as a straight xlsx file
+    # the downloads are tricky, and often 504 timeout or other errors (inconsistently)
+    # might be able to use different link, example: http://wq.swwdmn.org/downloads/new?opts=100th-st/gauge&site_id=100th-st&site_label=100th%20St
 
-  # each file loaded into a site folder
-  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+    # set interval to sleep after each download (seconds)
+    sleep_time = 360
+
+    # each file loaded into a site folder
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site,
                     c = component)
 
-  site_download_url <- get_url_swwd_prod(site, prodname = prod)
+    site_download_url <- get_url_swwd_prod(site, prodname = prod)
 
-  tm = Sys.time()
-  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
-                        p = prodname_ms,
-                        s = site,
-                        n = network,
-                        d = domain,
-                        t = tm
-                        )
-  writeLines(wrn_msg)
+    stop('manually downloaded swwd Q in 2024, but it has updated. just note the download takes forever.')
 
-  dl <- tryCatch(
-    expr = {
-      R.utils::downloadFile(
-              url = site_download_url,
-              filename = rawfile,
-              skip = FALSE,
-              overwrite = TRUE,
-              method = 'libcurl')
-    },
-    error = function(e){
-      tm = Sys.time()
-      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
-                            file = rawfile,
-                            s = site,
-                            n = network,
-                            d = domain,
-                            t = tm
-                            )
-      warning(wrn_msg)
-    })
+    dl <- R.utils::downloadFile(
+        url = site_download_url,
+        filename = rawfile,
+        skip = FALSE,
+        overwrite = TRUE,
+        method = 'libcurl')
 
-  if(inherits(dl, "error")) next
+    options(timeout = default_to)
 
-  options(timeout=default_to)
+    # after all is said and done
+    res <- httr::HEAD(site_download_url)
 
-  # after all is said and done
-  res <- httr::HEAD(site_download_url)
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
 
-  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                     start = 1,
-                                     stop = 19),
-                          format = '%Y-%m-%dT%H:%M:%S') %>%
-      with_tz(tzone = 'UTC')
+    deets_out <- list(url = paste(site_download_url, ''),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
 
-  deets_out <- list(url = paste(site_download_url, ''),
-                    access_time = as.character(with_tz(Sys.time(),
-                                                       tzone = 'UTC')),
-                    last_mod_dt = last_mod_dt)
+    # short resting period, avoid issues with swwd site failing downloads bc
+    # too many subsequent requests. seems wiating a short window can help
+    writeLines(glue::glue('   sleeping for {sleep_time} seconds'))
+    Sys.sleep(sleep_time)
 
-  # short resting period, avoid issues with swwd site failing downloads bc
-  # too many subsequent requests. seems wiating a short window can help
-  writeLines(glue::glue('   sleeping for {sleep_time} seconds'))
-  Sys.sleep(sleep_time)
-
-  return(deets_out)
-
+    return(deets_out)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS002 <- function(set_details, network, domain) {
+process_0_VERSIONLESS002 <- function(set_details, network, domain){
 
-  site <- set_details$site_code
-  site <- set_details$site_code
-  component <- set_details$component
-  prodname_ms <- set_details$prodname_ms
+    site <- set_details$site_code
+    component <- set_details$component
+    prodname_ms <- set_details$prodname_ms
 
-  default_to = getOption('timeout')
-  options(timeout=100000)
-
-  # each file loaded into a site folder
-  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
+    # each file loaded into a site folder
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.xlsx',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site,
                     c = component)
 
-  site_download_url <- get_url_swwd_prod(site)
+    site_download_url <- get_url_swwd_prod(site)
 
-  tm = Sys.time()
-  wrn_msg <- glue::glue('{p}: downloading {s} in {n} {d}, time: {t}',
-                        p = prodname_ms,
-                        s = site,
-                        n = network,
-                        d = domain,
-                        t = tm
-                        )
-  writeLines(wrn_msg)
+    dl <- R.utils::downloadFile(
+        url = site_download_url,
+        filename = rawfile,
+        skip = FALSE,
+        overwrite = TRUE,
+        method = 'libcurl')
 
-  dl <- tryCatch(
-    expr = {
-      R.utils::downloadFile(
-              url = site_download_url,
-              filename = rawfile,
-              skip = FALSE,
-              overwrite = TRUE,
-              method = 'libcurl')
-    },
-    error = function(e){
-      tm = Sys.time()
-      wrn_msg <- glue::glue('{file} not downloaded for {s} in {n} {d}, time: {t}. skipping to next site',
-                            file = rawfile,
-                            s = site,
-                            n = network,
-                            d = domain,
-                            t = tm
-                            )
-      warning(wrn_msg)
-      next
-    })
+    res <- httr::HEAD(site_download_url)
 
-  if(inherits(dl, "error")) next
+    last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                       start = 1,
+                                       stop = 19),
+                            format = '%Y-%m-%dT%H:%M:%S') %>%
+        with_tz(tzone = 'UTC')
 
-  options(timeout=default_to)
-  # after all is said and done
-  res <- httr::HEAD(site_download_url)
+    deets_out <- list(url = paste(site_download_url, ''),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
 
-  last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
-                                     start = 1,
-                                     stop = 19),
-                          format = '%Y-%m-%dT%H:%M:%S') %>%
-      with_tz(tzone = 'UTC')
-
-  deets_out <- list(url = paste(site_download_url, ''),
-                    access_time = as.character(with_tz(Sys.time(),
-                                                       tzone = 'UTC')),
-                    last_mod_dt = last_mod_dt)
-
-  return(deets_out)
+    return(deets_out)
 }
 
 #munge kernels ####

@@ -1,5 +1,5 @@
 #everything here is embarrassingly parallel. make it happen by 2015.
-#will need to abandon blacklist indicators in favor of products.csv
+#will need to abandon blocklist indicators in favor of products.csv
 #"component" column expressions
 
 #. handle_errors
@@ -9,7 +9,10 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
 
     #for when a data product is organized with one site per file
     #(neon and konza have this arrangement). if not all components
-    #will be munged, use the "components" column in products.csv
+    #will be munged, use the blocklist. an example of how to do this is given
+    #by src/lter/trout_lake/processing_kernels.R:process_0_276. In some cases,
+    #we've built tools to allow the "components" column in products.csv to
+    #serve as a blocklist. this will not work in most cases and has been deprecated.
 
     #site_code is either the true name of a site, like "watershed1", or
     #   the standin "sitename_NA" that we use elsewhere. If the latter,
@@ -168,7 +171,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
 
         if(is.null(out_comp)) next
 
-        if(is_blacklist_indicator(out_comp)){
+        if(is_blocklist_indicator(out_comp)){
 
             update_data_tracker_r(network = network,
                                   domain = domain,
@@ -176,7 +179,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
                                   set_details = list(prodname_ms = prodname_ms,
                                                      site_code = site_code,
                                                      component = in_comp),
-                                  new_status = 'blacklist')
+                                  new_status = 'blocklist')
             next
         }
 
@@ -305,7 +308,7 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
         return(out_comp)
     }
 
-    if(is_blacklist_indicator(out_comp)){
+    if(is_blocklist_indicator(out_comp)){
         logwarn(glue('Skipping product {p} (for now?)',
                      p = prodname_ms))
         return(out_comp)
@@ -371,9 +374,9 @@ munge_time_component <-  function(network, domain, site_code, prodname_ms, track
 
     # Used when a data product is a subset of the entire record, such as individual
     # data product of each year of a hydrology record. When this is used, a derive
-    # kernel is necessary to both combine data products and also perform
-    # qc_hdetlim_and_uncert() and synchronize_timestep(), which are notmally run
-    # in the other munge engines
+    # kernel is necessary to combine data products and perform
+    # qc_hdetlim_and_uncert() and synchronize_timestep(), which are normally run
+    # in the munge engine
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
                                            site_code)
@@ -399,14 +402,14 @@ munge_time_component <-  function(network, domain, site_code, prodname_ms, track
 
         if(is.null(out_comp)) next
 
-        if(is_blacklist_indicator(out_comp)){
+        if(is_blocklist_indicator(out_comp)){
             update_data_tracker_r(network = network,
                                   domain = domain,
                                   tracker_name = 'held_data',
                                   set_details = list(prodname_ms = prodname_ms,
                                                      site_code = site_code,
                                                      component = in_comp),
-                                  new_status = 'blacklist')
+                                  new_status = 'blocklist')
             next
         }
 

@@ -20,7 +20,6 @@ if(nrow(prod_info) == 0) return()
 
 site_code <- 'sitename_NA'
 
-## i = 4
 for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
@@ -56,6 +55,13 @@ for(i in seq_len(nrow(prod_info))){
                           domain = domain,
                           tracker = held_data)
 
+    #this could be handled by retrieve_versionless_product. could use hardlinks
+    if(i > 1){
+        loginfo('one zip for all files. not redownloading',
+                logger = logger_module)
+        next
+    }
+
     dest_dir <- glue('data/{n}/{d}/raw/{p}/{s}',
                      n = network,
                      d = domain,
@@ -77,12 +83,12 @@ for(i in seq_len(nrow(prod_info))){
                      s=site_code, p=prodname_ms), logger=logger_module)
     }
 
-    retrieve_panola_product(network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_code = site_code,
-                         tracker = held_data,
-                         url = prod_info$url[i])
+    retrieve_versionless_product(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms,
+                                 site_code = site_code,
+                                 resource_url = prod_info$url[i],
+                                 tracker = held_data)
 
     if(! is.na(prod_info$munge_status[i])){
         update_data_tracker_m(network = network,
@@ -92,7 +98,6 @@ for(i in seq_len(nrow(prod_info))){
                               site_code = site_code,
                               new_status = 'pending')
     }
-    # }
 
     gc()
 }

@@ -9,7 +9,9 @@ ms_pasta_domain_refmap = list(
     bonanza = 'knb-lter-bnz',
     mcmurdo = 'knb-lter-mcm',
     plum = 'knb-lter-pie',
-    arctic = 'knb-lter-arc'
+    arctic = 'knb-lter-arc',
+    #bear should be here, even though it's not lter. any edi domain should be handled this way
+    trout_lake = 'knb-lter-ntl'
 )
 
 get_latest_product_version <- function(prodname_ms, domain, data_tracker){
@@ -91,7 +93,7 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail,
             prodcode_id = prodcode,
             prodname_ms = prodname_ms) %>%
         full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blacklist' | is.na(status)) %>%
+        # filter(status != 'blocklist' | is.na(status)) %>%
         mutate(
             held_version = as.numeric(held_version),
             needed = avail_version - held_version > 0)
@@ -165,9 +167,6 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail,
             components <- unique(email_update$component)
             components <- paste(components, collapse = ', ')
 
-            logwarn(msg = glue('The domain had updated product: {p}',
-                               p = prodname_ms))
-
             update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
                                'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
                                ' Check meta data to ensure munge and retrival code is ',
@@ -189,8 +188,7 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail,
     return(retrieval_tracker)
 }
 
-get_lter_data <- function(domain, sets, tracker, silent=TRUE){
-    # sets <- new_sets; tracker <- held_data
+get_lter_data <- function(domain, sets, tracker, silent = TRUE){
 
     if(nrow(sets) == 0) return()
 
@@ -198,24 +196,32 @@ get_lter_data <- function(domain, sets, tracker, silent=TRUE){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
 
-        s = sets[i, ]
+        s <- sets[i, ]
 
-        msg = glue('Retrieving {st}, {p}, {c}',
-            st=s$site_code, p=s$prodname_ms, c=s$component)
-        loginfo(msg, logger=logger_module)
+        msg <- glue('Retrieving {st}, {p}, {c}',
+                    st = s$site_code,
+                    p = s$prodname_ms,
+                    c = s$component)
 
-        processing_func = get(paste0('process_0_', s$prodcode_id))
-        result = do.call(processing_func,
-            args=list(set_details=s, network=network, domain=domain))
-        # process_0_1(set_details=s, network=network, domain=domain)
+        loginfo(msg, logger = logger_module)
+
+        processing_func <- get(paste0('process_0_', s$prodcode_id))
+        result <- do.call(processing_func,
+                          args = list(set_details = s,
+                                      network = network,
+                                      domain = domain))
 
         new_status <- evaluate_result_status(result)
-        update_data_tracker_r(network=network, domain=domain,
-            tracker_name='held_data', set_details=s, new_status=new_status)
+
+        update_data_tracker_r(network = network, domain = domain,
+                              tracker_name = 'held_data',
+                              set_details = s,
+                              new_status = new_status)
     }
 }
 
 download_raw_file <- function(network, domain, set_details, file_type = '.csv') {
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,

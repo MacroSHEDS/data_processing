@@ -8,6 +8,16 @@ prod_info <- get_product_info(network = network,
     filter(grepl(pattern = '^VERSIONLESS',
                  x = prodcode))
 
+#all prods are in one zip for panola, so just one documentation file gets written.
+#this copies that file for each of panola's products. could be a global helper
+for(i in 2:nrow(prod_info)){
+    base <- 'data/webb/panola/raw/documentation'
+    file.copy(file.path(base, 'documentation_discharge__VERSIONLESS001.txt'),
+              file.path(base,
+                        glue('documentation_{p}__VERSIONLESS001.txt',
+                             p = prod_info$prodname[i])))
+}
+
 if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }

@@ -1,0 +1,7 @@
+prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,url
+276,stream_chemistry,ready,ready,NA,stream_flux_inst__ms002,For all trout_lake creeks,https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-ntl.276.13&entityid=9b2ec53c6adcb68db712718ee69de947
+ms001,discharge,NA,NA,ready,stream_flux_inst__ms002,NA,NA
+ms002,stream_flux_inst,NA,NA,ready,NA,NA,NA
+ms003,stream_gauge_locations,NA,NA,ready,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,NA,automated entry,NA
+ms004,stream_chemistry,NA,NA,linked,NA,automated entry,NA

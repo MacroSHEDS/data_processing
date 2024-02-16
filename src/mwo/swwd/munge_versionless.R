@@ -15,8 +15,6 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-## i = 1
-
 swwd_sites <- site_data %>%
     filter(network == !!network,
             domain == !!domain) %>%

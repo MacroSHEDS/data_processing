@@ -79,7 +79,22 @@ for(i in seq_len(nrow(prod_info))){
                showWarnings = FALSE,
                recursive = TRUE)
 
-    retrieval_s <- held_data[[prodname_ms]][['sitename_NA']][['retrieve']][['status']]
+    # retrieval_s <- held_data[[prodname_ms]][['sitename_NA']][['retrieve']][['status']]
+    retrieval_s <- 'no checks in place!! retrieve every time'
+
+    logwarn('automated currency checking not set up for any ESS-DIVE products. manually verify held version is up to date. selenium code is ready to use.',
+            logger=logger_module)
+
+    #prod_info$url[i] points directly to a data file, so we'd have to do the page lookup
+    #by doi, then record the landing page rather than the data object url (could
+    #store this in the provenance google sheet). anyway, then we'd need to scrape
+    #the publication year (full date not available), OR the version string as is
+    #currently demonstrated below. but in this latter case we'd need to store the previous
+    #version string.
+    # held_dt <- held_data[[prodname_ms]]$sitename_NA$retrieve$held_version
+    # avail_vsn <- selenium_scrape(url = prod_info$url[i],
+    #                             css_selector = 'span.id span:nth-child(2)',
+    #                             port = 4444L)
 
     if(retrieval_s == 'ok'){
         loginfo(glue('Nothing to do for {s} {p}',

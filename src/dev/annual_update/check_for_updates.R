@@ -4,9 +4,16 @@ library(googlesheets4)
 library(tidyverse)
 library(glue)
 
-stop('check_for_updates_edi only returns the query string, so prepend the edi url to that, and then the output dataset will have newlinks in the right column')
-stop('also, for "new" products, put their urls in the "newlink" column')
+#A lot of this same code runs in the pipeline now. provenance updating is
+#automated for EDI and hydroshare domains. This script is still useful
+#for getting an idea of all that will be updated during a run. essential for
+#record keeping and documenting as you go (makes a nice TODO itinerary)
 
+#remember to copy the data folder over to an external drive, to
+#keep a record of raw and munged products if people ever want them
+
+#don't run this again after starting into the main acquisition loop.
+#will overwrite files pertaining to this year's provenance
 forthcoming_dataset_version <- 2
 
 setwd('/home/mike/git/macrosheds/data_acquisition')
@@ -63,8 +70,13 @@ for(i in seq_along(site_doi_license$link)){
 
     if(is.na(last_dl)){
         print('never downloaded before')
-        site_doi_license$new_url[i] <- 'new'
-        out[i, 'status'] <- 'new'
+        if(! is.na(oldlink)){
+            site_doi_license$new_url[i] <- oldlink
+            out[i, 'status'] <- oldlink
+        } else {
+            site_doi_license$new_url[i] <- 'new'
+            out[i, 'status'] <- 'new'
+        }
         next
     }
 

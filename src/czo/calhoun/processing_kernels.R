@@ -25,7 +25,7 @@ process_0_6470 <- function(set_details, network, domain) {
     return()
 }
 
-#discharge; precipitation: STATUS=PENDING
+#discharge; precipitation: STATUS=READY
 #. handle_errors
 process_0_4680 <- function(set_details, network, domain) {
 
@@ -130,7 +130,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-#precipitation; discharge: STATUS=PENDING
+#precipitation; discharge: STATUS=READY
 #. handle_errors
 process_1_4680 <- function(network, domain, prodname_ms, site_code,
                            components) {
