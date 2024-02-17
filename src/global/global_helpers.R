@@ -707,7 +707,7 @@ ms_read_raw_csv <- function(filepath,
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
     #   character representations, i.e. "-888". Accepts '#*#' as a wildcard that
-    #   can stand in for any numeral or a decimal. Wildcard is useful for forms like
+    #   can stand in for any numeral or a decimal point. Wildcard is useful for forms like
     #   "<0.03", "<0.05", etc. Instead of listing these, you can just pass "<#*#".
     #   This parameter is only for below-detection-limit flags within data columns.
     #   Codes will be standardized to "BDL" and extracted into the variable-flag column
@@ -793,7 +793,7 @@ ms_read_raw_csv <- function(filepath,
 
         for(i in 1:length(data_cols)) {
             if(!data_cols[i] %in% ms_vars$variable_code) {
-                logerror(msg = paste(unname(data_cols[i]), 'is not in varibles.csv; add'),
+                logerror(msg = paste(unname(data_cols[i]), 'is not in varibles gsheet; add'),
                         logger = logger_module)
             }
         }
@@ -1421,19 +1421,21 @@ resolve_datetime <- function(d,
     }
 
     dt_tb <- dt_tb %>%
-        tidyr::unite(col = 'datetime',
+        tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
                      everything(),
                      sep = ' ',
                      remove = TRUE) %>%
-        mutate(datetime = as_datetime(datetime,
-                                      format = paste(datetime_formats_split[dt_col_order],
-                                                     collapse = ' '),
-                                      tz = datetime_tz) %>%
-                   with_tz(tz = 'UTC'))
+        mutate(datetime___ = as_datetime(
+            datetime___,
+            format = paste(datetime_formats_split[dt_col_order],
+                           collapse = ' '),
+            tz = datetime_tz
+        ) %>%
+            with_tz(tz = 'UTC'))
 
     d <- d %>%
         bind_cols(dt_tb) %>%
-        select(-one_of(datetime_colnames), datetime) %>%#in case 'datetime' is in datetime_colnames
+        select(-one_of(datetime_colnames), datetime = datetime___) %>%
         relocate(datetime)
 
     return(d)

@@ -1,3 +1,5 @@
+#retrieval kernels ####
+
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_276 <- function(set_details, network, domain){
@@ -38,7 +40,7 @@ process_1_276 <- function(network, domain, prodname_ms, site_code, component) {
         "cl" = c('mg/L', '', 'Cl'),
         'co2' = c('mg/L', '', 'CO2'),
         "co3" = c('mg/L', '', 'CO3'),
-        #color as Pt-Co units
+        'color' = c('PCU', '', 'color'),
         'conductance_field' = c('uS/cm', '', 'spCond'),
         'dic' = c('mg/L', '', 'DIC'),
         #DKN
