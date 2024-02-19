@@ -88,7 +88,7 @@ process_0_VERSIONLESS006 <- function(network, domain, set_details){
     #and a more thorough look through the potential codes must be done.
     #!! SEE process_0_VERSIONLESS008 for more thorough handling
     siteparams <- siteparams %>%
-        right_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
+        inner_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
         group_by(ms_varcode) %>%
         filter(priority == min(priority)) %>%
         ungroup() %>%
@@ -102,7 +102,7 @@ process_0_VERSIONLESS006 <- function(network, domain, set_details){
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    test <- write_csv(siteWQ, file = rawfile)
+    write_csv(siteWQ, file = rawfile)
 
     access_time <- with_tz(Sys.time(), tzone = 'UTC')
     deets_out <- list(url = 'retrieved via dataRetrieval::readWQPqw',
@@ -144,7 +144,7 @@ process_0_VERSIONLESS007 <- function(network, domain, set_details){
     #and a more thorough look through the potential codes must be done.
     #!! SEE process_0_VERSIONLESS008 for more thorough handling
     siteparams <- siteparams %>%
-        right_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
+        inner_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
         group_by(ms_varcode) %>%
         filter(priority == min(priority)) %>%
         ungroup() %>%
@@ -158,7 +158,7 @@ process_0_VERSIONLESS007 <- function(network, domain, set_details){
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    test <- write_csv(siteWQ, file = rawfile)
+    write_csv(siteWQ, file = rawfile)
 
     access_time <- with_tz(Sys.time(), tzone = 'UTC')
     deets_out <- list(url = 'retrieved via dataRetrieval::readWQPqw',
@@ -199,7 +199,7 @@ process_0_VERSIONLESS008 <- function(network, domain, set_details){
     #btw, if there is a next time, this whole procedure needs to be encapsulated
     #and a more thorough look through the potential codes must be done
     siteparams <- siteparams %>%
-        right_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
+        inner_join(wqp_codes, by = c(parm_cd = 'param_code')) %>%
         group_by(ms_varcode) %>%
         filter(priority == min(priority)) %>%
         ungroup() %>%
@@ -213,7 +213,7 @@ process_0_VERSIONLESS008 <- function(network, domain, set_details){
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    test <- write_csv(siteWQ, file = rawfile)
+    write_csv(siteWQ, file = rawfile)
 
     access_time <- with_tz(Sys.time(), tzone = 'UTC')
     deets_out <- list(url = 'retrieved via dataRetrieval::readWQPqw',
@@ -340,8 +340,10 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    d <- read.delim(temp_raw, sep = ',', colClasses = 'character') %>%
-        as_tibble()
+    # d <- read.delim(rawfile, sep = ',', colClasses = 'character') %>%
+    #     as_tibble()
+
+    pcodes_present <- unique(d$USGSPCode)
 
     if(! all(na.omit(d$ResultMeasure.MeasureUnitCode == d$DetectionQuantitationLimitMeasure.MeasureUnitCode))){
         stop('need to account for result/dl unit mismatch')
@@ -383,8 +385,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                # datetime = str_extract(ActivityStartDateTime, '^([^\\.]+)')
         ) %>%
         inner_join(wqp_codes, by = c(USGSPCode = 'param_code')) %>%
-        select(ResultDetectionConditionText,
-               ResultMeasureValue,
+        select(ResultMeasureValue,
                ActivityStartDateTime,
                ms_varcode,
                ms_status_,
@@ -409,20 +410,26 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = 'ms_status_')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
                             summary_flags_clean = list(ms_status_ = '0'),
-                            summary_flags_dirty = list(ms_status_ = '1'))
+                            summary_flags_dirty = list(ms_status_ = '1'),
+                            variable_flags_bdl = 'BDL')
 
-    #HERE. SEE NOTES
-    right_join(ms_vars, wqp_codes,
-               by = c('variable_code' = 'ms_varcode'),
-               suffix = c('_ms', '_usgs')) %>%
-        select(variable_code, starts_with('unit')) %>%
+    #ergh. if "-N' form is present, filter out molec form. same for all transformables
+
+    required_conversions <- wqp_codes %>%
+        filter(param_code %in% pcodes_present) %>%
+        left_join(ms_vars,
+                  by = c('ms_varcode' = 'variable_code'),
+                  suffix = c('_usgs', '_ms')) %>%
+        select(ms_varcode, starts_with('unit')) %>%
         filter(unit_ms != unit_usgs)
 
-    sd <- ms_conversions(d,
-                         convert_units_from = wqp_codes,
-                         convert_units_to = andrews_creek_aq_chem_units_new)
+    #still gotta make sure NH4 doesn't convert?
+    d <- ms_conversions(d,
+                        convert_units_from = setNames(required_conversions$unit_usgs,
+                                                      required_conversions$ms_varcode),
+                        convert_units_to = setNames(required_conversions$unit_ms,
+                                                    required_conversions$ms_varcode))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

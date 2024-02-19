@@ -5311,7 +5311,7 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
     if(grepl('mol', output_unit) && grepl('eq', input_unit) && !g_conver) {
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
-        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
+        if(length(valence) == 0) {stop('Varible or valence missing from ms_vars')}
         x = (x * calculate_molar_mass(formula)) / valence
 
         x = x / calculate_molar_mass(formula)
@@ -5324,7 +5324,7 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
         x = x * calculate_molar_mass(formula)
 
         valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
-        if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
+        if(length(valence) == 0) {stop('Varible or valence missing from ms_vars')}
         x = (x * valence)/calculate_molar_mass(formula)
 
         return(x)
