@@ -3,26 +3,17 @@
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_0_DP1.20093 <- function(set_details, network, domain){
-    # set_details=s
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
-    # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
+    if(inherits(result, 'try-error')){
         return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
                                           p = set_details$prodname_ms,
                                           s = set_details$site_code,
                                           c = set_details$component)))
     }
 
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
+    # serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
@@ -31,23 +22,14 @@ process_0_DP1.20093 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20033 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                          p = set_details$prodname_ms,
+                                          s = set_details$site_code,
+                                          c = set_details$component)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
@@ -56,23 +38,14 @@ process_0_DP1.20033 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.20042 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
+                                          p = set_details$prodname_ms,
+                                          s = set_details$site_code,
+                                          c = set_details$component)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
