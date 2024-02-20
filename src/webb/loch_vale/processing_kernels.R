@@ -71,7 +71,7 @@ process_0_VERSIONLESS006 <- function(network, domain, set_details){
                ! is.na(parm_cd))
 
     #use this to cross-reference parameter metadata
-    View(readNWISpCode(unique(siteparams$parm_cd)))
+    # View(readNWISpCode(unique(siteparams$parm_cd)))
 
     retrieve_wqp_chem(nwis_site_code, siteparams, set_details)
 
@@ -98,7 +98,7 @@ process_0_VERSIONLESS007 <- function(network, domain, set_details){
                ! is.na(parm_cd))
 
     #use this to cross-reference parameter metadata
-    View(readNWISpCode(unique(siteparams$parm_cd)))
+    # View(readNWISpCode(unique(siteparams$parm_cd)))
 
     retrieve_wqp_chem(nwis_site_code, siteparams, set_details)
 
@@ -132,7 +132,7 @@ process_0_VERSIONLESS008 <- function(network, domain, set_details){
                ! is.na(parm_cd))
 
     #use this to cross-reference parameter metadata
-    View(readNWISpCode(unique(siteparams$parm_cd)))
+    # View(readNWISpCode(unique(siteparams$parm_cd)))
 
     retrieve_wqp_chem(nwis_site_code, siteparams, set_details)
 
@@ -271,6 +271,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
 
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -278,99 +279,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    d <- read.delim(rawfile, sep = ',') %>%
-        as_tibble()
-
-    #manually applying MS Detection Limit (when below dl, take half of dl)
-    #for this USGS data, whenever there is NA for the measure,
-    #a detection limit is reported, if not below, no detection limit reported
-    d <- d %>%
-        rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
-        mutate(
-            ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
-        )
-
-    #for UV 254, two different units reported, only using the one that matches variables sheet
-    d <- d %>%
-        subset(!(ResultMeasure.MeasureUnitCode == "L/mgDOC*m" & grepl("UV 254", CharacteristicName)))
-
-    loch_vale_icy_brook_var_info <- list(
-        "pH" = c('unitless', 'unitless', "pH"),
-        "Calcium"=c("mg/l", "mg/L", "Ca"),
-        "Magnesium"=c("mg/l", "mg/L", "Mg"),
-        "Sodium"=c("mg/l", "mg/L", "Na"),
-        "Potassium"=c("mg/l", "mg/L", "K"),
-        "Chloride"=c("mg/l", "mg/L", "Cl"),
-        "Sulfate"=c("mg/l", "mg/L", "SO4"),
-        "Silica"=c("mg/l", "mg/L", "SiO2"),
-        "Total Dissolved Solids"=c("mg/l", "mg/L", "TDS"),
-        "Specific Conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
-        "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","87Sr_86Sr"),
-        "Strontium"=c("mg/l","mg/L","Sr"),
-        "Temperature, water"=c("deg C", "degrees C", "temp"),
-        "Mercury"=c("ng/l", "mg/L", "Hg"), # watch units
-        "Carbon dioxide"=c("mg/l","ppm","CO2"), #watch units
-        "Ammonia and ammonium" = c("mg/l as N","mg/L" ,"NH3_NH4_N"),
-        "Nitrate" = c("mg/l as N", "mg/L", "NO3_N" ),
-        "Nitrogen"=c("mg/l","mg/L","TPN"), #total particulate nitrogen
-        "Inorganic nitrogen (nitrate and nitrite)"=c("mg/l as N","mg/L","DIN"),  #dissolved
-        "Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)"=c("mg/l", "mg/L", "TDN"),  #dissolved
-        "Deuterium/Hydrogen ratio"  =c("unitless","unitless","dH2_H"),
-        "Oxygen-18/Oxygen-16 ratio" =c("unitless", "unitless", "d18O_d16O"),
-        "Nitrogen-15/14 ratio"      =c("unitless","unitless", "d15N_d14N"),
-        "Sulfur-34/Sulfur-32 ratio" =c("unitless","unitless", "d34S_d32S"),
-        "Organic carbon"=c("mg/l","mg/L","DOC"),  #dissolved
-        "Carbon"=c("mg/l","mg/L","TPC"), #total particulate carbon
-        "Phosporus"=c("mg/l as p", "mg/L", "TP"), #total
-        "UV 254"=c("units/cm","AU/cm","abs254"),
-        "Oxygen"=c("mg/l","mg/L","DO") #dissolved
-    )
-
-    loch_vale_stream_chem_var <- list()
-
-    for (i in seq_along(loch_vale_icy_brook_var_info)) {
-        og_name <- names(loch_vale_icy_brook_var_info[i])
-        ms_name <- loch_vale_icy_brook_var_info[[i]][[3]]
-        loch_vale_stream_chem_var[[og_name]] <- ms_name
-    }
-
-    # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
-    d$MonitoringLocationIdentifier = 'icy_brook'
-
-    d <- pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
-
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'),
-                         datetime_tz = 'US/Mountain',
-                         site_code_col = 'MonitoringLocationIdentifier',
-                         data_cols =  loch_vale_stream_chem_var,
-                         data_col_pattern = 'ResultMeasureValue_#V#',
-                         is_sensor = FALSE
-                         # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
-    )
-
-    # NOTE: there must be USGS edit codes which contain QC information?
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
+    process_wqp_chem(rawfile = rawfile,
+                     ms_site_code = 'icy_brook')
 
     return()
 }
@@ -386,100 +296,8 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    d <- read.delim(rawfile, sep = ',') %>%
-        as_tibble()
-
-    #manually applying MS Detection Limit (when below dl, take half of dl)
-    #for this USGS data, whenever there is NA for the measure,
-    #a detection limit is reported, if not below, no detection limit reported
-    d <- d %>%
-        rename(dl_col = DetectionQuantitationLimitMeasure.MeasureValue) %>%
-        mutate(
-            ResultMeasureValue =  ifelse(!is.na(dl_col) & is.na(ResultMeasureValue) & ResultDetectionConditionText == 'Not Detected', as.numeric(dl_col)/2, ResultMeasureValue)
-        )
-
-    #for UV 254, two different units reported, only using the one that matches variables sheet
-    d <- d %>%
-        subset(!(ResultMeasure.MeasureUnitCode == "L/mgDOC*m" & grepl("UV 254", CharacteristicName)))
-
-    loch_vale_loch_outlet_var_info <- list(
-        "pH" = c("unitless", "unitless", "pH"),
-        "Alkalinity" = c("mg/l CaCO3", "mg/L", "alk"),
-        "Calcium"=c("mg/l", "mg/L", "Ca"),
-        "Magnesium"=c("mg/l", "mg/L", "Mg"),
-        "Sodium"=c("mg/l", "mg/L", "Na"),
-        "Potassium"=c("mg/l", "mg/L", "K"),
-        "Chloride"=c("mg/l", "mg/L", "Cl"),
-        "Sulfate"=c("mg/l", "mg/L", "SO4"),
-        "Silica"=c("mg/l", "mg/L", "SiO2"),
-        "Total Dissolved Solids"=c("mg/l", "mg/L", "TDS"),
-        "Specific Conductance"=c("uS/cm @25C", "uS/cm", "spCond"),
-        "Strontium-87/Strontium-86, ratio"=c("unitless", "unitless","87Sr_86Sr"),
-        "Strontium"=c("mg/l","mg/L","Sr"),
-        "Temperature, water"=c("deg C", "degrees C", "temp"),
-        "Mercury"=c("ng/l", "mg/L", "Hg"), # watch units
-        "Carbon dioxide"=c("mg/l","ppm","CO2"), #watch units
-        "Ammonia and ammonium" = c("mg/l as N","mg/L" ,"NH3_NH4_N"),
-        "Nitrate" = c("mg/l as N", "mg/L", "NO3_N" ),
-        "Nitrogen"=c("mg/l","mg/L","TPN"), #total particulate nitrogen
-        "Inorganic nitrogen (nitrate and nitrite)"=c("mg/l as N","mg/L","DIN"),  #dissolved
-        "Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)"=c("mg/l", "mg/L", "TDN"),  #dissolved
-        "Deuterium/Hydrogen ratio"  =c("unitless","unitless","dH2_H"),
-        "Oxygen-18/Oxygen-16 ratio" =c("unitless", "unitless", "d18O_d16O"),
-        "Nitrogen-15/14 ratio"      =c("unitless","unitless", "d15N_d14N"),
-        "Sulfur-34/Sulfur-32 ratio" =c("unitless","unitless", "d34S_d32S"),
-        "Organic carbon"=c("mg/l","mg/L","DOC"),  #dissolved
-        "Carbon"=c("mg/l","mg/L","TPC"), #total particulate carbon
-        "Phosporus"=c("mg/l as p", "mg/L", "TP"), #total
-        "UV 254"=c("units/cm","AU/cm","abs254"),
-        "Oxygen"=c("mg/l","mg/L","DO") #dissolved
-    )
-
-    loch_vale_stream_chem_var <- list()
-
-    for (i in seq_along(loch_vale_loch_outlet_var_info)) {
-        og_name <- names(loch_vale_loch_outlet_var_info[i])
-        ms_name <- loch_vale_loch_outlet_var_info[[i]][[3]]
-        loch_vale_stream_chem_var[[og_name]] <- ms_name
-    }
-
-    d <- pivot_wider(d, names_from = CharacteristicName, values_from = c(ResultMeasureValue, dl_col))
-
-    # NOTE: manually changing site code to macrosheds canonical version, i.e. from uSGS numeric code to "amdrews_creek"
-    d$MonitoringLocationIdentifier = 'the_loch_outlet'
-
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('ActivityStartDate' = '%Y-%m-%d'),
-                         datetime_tz = 'US/Mountain',
-                         site_code_col = 'MonitoringLocationIdentifier',
-                         data_cols =  loch_vale_stream_chem_var,
-                         data_col_pattern = 'ResultMeasureValue_#V#',
-                         is_sensor = FALSE
-                         # numeric_dl_col_pattern = "DetectionQuantitationLimitMeasure.MeasureValue_#V#"
-    )
-
-    # NOTE: there must be USGS edit codes which contain QC information?
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
-
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
-    d <- synchronize_timestep(d)
-
-    sites <- unique(d$site_code)
-
-    for(s in 1:length(sites)){
-
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
-
-        write_ms_file(d = d_site,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[s],
-                      level = 'munged',
-                      shapefile = FALSE)
-    }
+    process_wqp_chem(rawfile = rawfile,
+                     ms_site_code = 'the_loch_outlet')
 
     return()
 }
@@ -519,6 +337,7 @@ process_2_ms002 <- function(network, domain, prodname_ms){
                          'stream_chemistry__VERSIONLESS007',
                          'stream_chemistry__VERSIONLESS008'))
 
+    return()
 }
 
 #precip_gauge_locations: STATUS=READY

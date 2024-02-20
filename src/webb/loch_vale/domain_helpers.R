@@ -1,12 +1,28 @@
-#yeah, this is how we're doin' it
-wqp_codes <- tibble(
-   param_code = c('00010',     '00095',  '00300', '00408',    '00413', '00409', '90410', '00600', '00618', '00631',     '00665', '00681', '00694', '00915', '00925', '00930', '00935', '00940', '00945', '00950', '00955', '01080', '39087', '49570', '50624',     '62854', '00602', '63041',    '70301', '71846', '75978',     '82082',  '82085',  '82086',  '82690',    '01046', '01056', '70507', '00191', '00405', '00613', '01106', '29803', '32209', '71851', '71856', '71870', '00080', '00608'),
-   ms_varcode = c('temp',      'spCond', 'DO',    'pH',       'ANC',   'ANC',   'ANC',   'TN',    'NO3_N', 'NO3_NO2_N', 'TP',    'DOC',   'TPC',   'Ca',    'Mg',    'Na',    'K',     'Cl',    'SO4',   'F',     'Si',    'Sr',    'alk',   'TPN',   'abs254_cm', 'TDN',   'TDN',   'd18O_NO3', 'TDS',   'NH4',   '87Sr_86Sr', 'dD',     'd18O',   'd34S',   'd15N_NO3', 'Fe',    'Mn',    'SRP',   'H',     'CO2',   'NO2_N', 'Al',    'alk',   'Chla',  'NO3',   'NO2',   'Br',    'color', 'NH4_N'),
-   unit =       c('degrees C', 'uS/cm',  'mg/L',  'unitless', 'mg/L',  'ueq/L', 'mg/L',  'mg/L',  'mg/L',  'mg/L',      'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'ug/L',  'mg/L',  'mg/L',  'AU/cm',     'mg/L',  'mg/L',  'permil',   'mg/L',  'mg/L',  'unitless',  'permil', 'permil', 'permil', 'permil',   'ug/L',  'ug/L',  'mg/L',  'mg/L',  'mg/L',  'mg/L',  'ug/L',  'mg/L',  'ug/L',  'mg/L',  'mg/L',  'mg/L',  'PCU',   'mg/L'),
-   priority =   c(1 ,          1 ,       1 ,      1 ,         2 ,      1,       3,       1 ,      1 ,      1 ,          1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1,       1 ,      1 ,          1,       2,       1 ,         1 ,      1 ,      1 ,          1 ,       1 ,       1 ,       1 ,         1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      1 ,      2,       1 ,       1 ,       1 ,      1 ,    1,       1)
-)
+
+#next time we encounter wqp data, copy the approch from the loch_vale kernels.
+#collect all sites' available params together and compare to
+#src/webb/loch_vale/wqp_codes_previously_seen.csv. anything new (not in that csv)
+#needs to be carefully evaluated and prioritized in the case of many-to-one,
+#wqp-to-macrosheds mappings. there are many instances where wqp distinguishes
+#between filtered and unfiltered. in some of these cases, more scrutiny may
+#be required once new variants arise "in the wild". at the time of this writing
+#(2024-02-19), we do not distinguish dissolved/particulate nutrients, except for
+#those that can be expressed as acronyms, e.g. "TDN", "POC"
+
+# write_csv(wqp_codes, 'src/webb/loch_vale/wqp_mappings.csv', quote = 'all')
+wqp_codes <- read_csv('src/webb/loch_vale/wqp_mappings.csv') %>%
+    # arrange(ms_varcode, priority)
+    arrange(param_code)
 
 retrieve_wqp_chem <- function(nwis_site_code, siteparams, set_details){
+
+    #also, next time this AND the munger below should be modified
+    #to accommodate multiple sites. then only one kernel is required
+    #for all domain-sites from which wqp data can be pulled
+
+    if(any(duplicated(select(wqp_codes, ms_varcode, priority)))){
+        stop('ambiguous priority values in wqp_mappings.csv')
+    }
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,

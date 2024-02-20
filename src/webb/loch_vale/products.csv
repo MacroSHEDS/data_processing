@@ -8,5 +8,5 @@ ms001,discharge,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
 ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
-ms005,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms005,NA,NA,NA
+ms005,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms004,NA,NA,NA
 ms006,stream_gauge_locations,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
