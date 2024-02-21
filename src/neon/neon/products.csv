@@ -1,26 +1,30 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
-DP1.20093,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA
-DP1.20288,stream_quality,paused,paused,NA,stream_chemistry__ms001,NA
+DP1.20093.001,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA
+DP1.20288.001,stream_quality,paused,paused,NA,stream_chemistry__ms001,NA
 DP?.20267,gageht,paused,pending,NA,NA,verify DP#
 DP?.00133,zqcurve,paused,pending,NA,NA,verify DP#
-DP4.00130,discharge,ready,ready,NA,stream_flux_inst__ms004,NA
+DP4.00130.001,discharge,ready,ready,NA,discharge__ms005,NA
+composite,discharge,,,,discharge__ms005,
 DP?.20048,Qflowmeter,paused,pending,NA,NA,verify DP#
 DP?.20193,Qsalt,paused,pending,NA,NA,verify DP#
 DP?.20008,speccond,unavailiable,unavailiable,NA,NA,verify DP#
 DP1.20016,surfaceElev,paused,pending,NA,NA,NA
 DP?.20008,spec_cond,unavailiable,unavailiable,NA,NA,verify DP#
-DP1.20033,stream_nitrate,paused,paused,NA,stream_chemistry__ms001,NA
+DP1.20033.001,stream_nitrate,paused,paused,NA,stream_chemistry__ms001,NA
 DP1.00004,air_pressure,paused,paused,NA,NA,NA
-DP1.20097,stream_gases,paused,paused,NA,stream_chemistry__ms001,NA
+DP1.20097.001,stream_gases,paused,paused,NA,stream_chemistry__ms001,NA
 DP1.20016,surface_elevation,paused,paused,NA,NA,NA
-DP1.20053,stream_temperature,paused,paused,NA,stream_chemistry__ms001,NA
-DP1.20042,stream_PAR,paused,paused,NA,NA,NA
-DP1.00006,precipitation,ready,ready,NA,precipitation__ms002,NA
-DP1.00013,precip_chemistry,ready,ready,NA,precip_flux_inst__ms003,NA
-VERSIONLESS001,ws_boundary,ready,ready,NA,precip_flux_inst__ms003,NA
+DP1.20053.001,stream_temperature,paused,paused,NA,stream_chemistry__ms001,NA
+DP1.20042.001,stream_PAR,paused,paused,NA,stream_chemistry__ms001,NA
+DP1.00006.001,precipitation,ready,ready,NA,precip_pchem_pflux__ms003,NA
+DP1.00013.001,precip_chemistry,ready,ready,NA,precip_chemistry__ms006,NA
+DP1.20206.001,isotopes,,,,stream_chemistry__ms001,
+DP1.00038.001,precip_isotopes,,,,precip_chemistry__m2006,
+VERSIONLESS001,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms003,NA
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms004,NA
-ms002,precipitation,NA,NA,ready,precip_flux_inst__ms003,NA
-ms003,precip_flux_inst,NA,NA,ready,NA,NA
+ms005,discharge,,,,stream_flux_inst__ms004,
+ms006,precip_chemistry,,,,precip_pchem_pflux__ms003,
+ms003,precip_pchem_pflux,NA,NA,ready,NA,NA
 ms004,stream_flux_inst,NA,NA,ready,NA,NA
-ms005,discharge,NA,NA,linked,NA,automated entry
-ms006,ws_boundary,NA,NA,linked,NA,automated entry
+ms002,stream_gauge_locations,,,,stream_flux_inst__ms004,
+ms007,precip_gauge_locations,,,,precip_pchem_pflux__ms003,

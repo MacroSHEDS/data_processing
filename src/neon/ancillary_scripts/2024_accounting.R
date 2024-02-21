@@ -1,18 +1,27 @@
-# dpID = 'DP1.20093.001'
-dpID = 'DP1.20288.001'
-# dpID =
+# dpID = 'DP1.20093.001' #wchem
+# dpID = 'DP1.20288.001' #wqual
+# dpID = 'DP1.20053.001' #temp
+# dpID = 'DP1.20042.001' #PAR
+# dpID = 'DP1.20033.001' #no3
+# dpID = 'DP1.20097.001' #gas
+# dpID = 'DP1.00006.001' #precip
+# dpID = 'DP4.00130.001' #q
+# dpID = 'DP1.00013.001' #pchem
+# dpID = 'DP1.20206.001' #isotopes
+# dpID = 'DP1.00038.001' #precip isotopes
+
 neonUtilities::getTimeIndex(dpID)
 dd = neonUtilities::loadByProduct(
     dpID = dpID,
-    site = set_details$site_code,
-    startdate = '2023-01',
-    enddate = '2023-01',
+    site = 'MAYF',
+    startdate = '2022-01',
+    enddate = '2022-01',
     package = 'basic',
     release = 'current',
     include.provisional = FALSE,
     # savepath = '/tmp/neon/schem',
-    check.size = FALSE
-    # timeIndex = '100'
+    check.size = FALSE,
+    # timeIndex = '30'
 )
 
 #schem

@@ -50,18 +50,18 @@ neon_retrieve <- function(set_details, network, domain, time_index = NULL){
                           p = set_details$prodname_ms,
                           s = set_details$site_code,
                           c = set_details$component)
-    
+
     dir.create(raw_data_dest,
                recursive = TRUE,
                showWarnings = FALSE)
-    
+
     result <- try({
         # neonUtilities::loadByProduct( #performs zipsByProduct and stackByTable in sequence
         neonUtilities::zipsByProduct(
 			set_details$prodcode_full,
-			site = set_details$site_code, 
+			site = set_details$site_code,
 			startdate = set_details$component,
-			enddate = set_details$component, 
+			enddate = set_details$component,
 			package = 'basic',
 			release = 'current',
 			include.provisional = FALSE,
