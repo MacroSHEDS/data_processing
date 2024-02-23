@@ -19,7 +19,7 @@ get_neon_data <- function(domain,
                 logger = logger_module)
 
         processing_func <- get(paste0('process_0_',
-                                      s$prodcode_id))
+                                      s$prodcode_full))
 
         result <- do.call(processing_func,
                           args = list(set_details = s,
@@ -58,20 +58,20 @@ neon_retrieve <- function(set_details, network, domain, time_index = NULL){
     result <- try({
         # neonUtilities::loadByProduct( #performs zipsByProduct and stackByTable in sequence
         neonUtilities::zipsByProduct(
-			set_details$prodcode_full,
-			site = set_details$site_code,
-			startdate = set_details$component,
-			enddate = set_details$component,
-			package = 'basic',
-			release = 'current',
-			include.provisional = FALSE,
-			savepath = raw_data_dest,
-			check.size = FALSE,
-			timeIndex = if_else(is.null(time_index, 'all', time_index))
-		)
+            set_details$prodcode_full,
+            site = set_details$site_code,
+            startdate = set_details$component,
+            enddate = set_details$component,
+            package = 'basic',
+            release = 'current',
+            include.provisional = FALSE,
+            savepath = raw_data_dest,
+            check.size = FALSE,
+            timeIndex = ifelse(is.null(time_index), 'all', time_index)
+        )
     }, silent = TRUE)
 
-	return(result)
+    return(result)
 }
 
 munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE){

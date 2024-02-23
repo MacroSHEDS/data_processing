@@ -7,6 +7,8 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
+if(nrow(prod_info) == 0) return()
+
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
