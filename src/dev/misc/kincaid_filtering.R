@@ -74,7 +74,7 @@ c2 = all_chem %>%
 #             'IN_TIC', 'IN_NO2', 'IN_PO4_P', 'GN_TC')
 
 ggvars2 = c('DOC', 'Al', 'Ca', 'Cl', 'DON', 'K', 'Mg', 'Na', 'NO3', 'NO3_N',
-            'Si', 'SO4', 'SO4_S', 'NH3', 'NH3_N', 'PO4_P', 'SRP')
+            'Si', 'SO4', 'SO4_S', 'NH3', 'NH3_N', 'PO4_P', 'orthophosphate_P')
 
 xx = read_csv('../../portal/data/general/catalog_files/all_variables.csv') %>%
     mutate(len = (as.Date(LastRecordUTC) - as.Date(FirstRecordUTC)) / 365) %>%

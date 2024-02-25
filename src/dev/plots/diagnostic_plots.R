@@ -1081,7 +1081,7 @@ ignore_vars <- c('NO3_NO2_N', 'NH4_NH3_N', 'PON', 'POC', 'TIP', 'TIN',
                  'Ho', 'Gd157', 'Eu', 'Er', 'Dy', 'Cr', 'Co', 'Ce', 'Be', 'Ba',
                  'B', 'As', 'Ag', 'Tc', 'NO2', 'H', 'Hf', 'Ga', 'Nb', 'Bi',
                  'Au', 'Nd145', 'NH3_N', 'TC', 'Gd', 'Hg', 'I', 'S', 'Al_ICP',
-                 'OMAl', 'TMAl', 'TIC', 'SRP')
+                 'OMAl', 'TMAl', 'TIC', 'orthophosphate_P')
 
 load_entire_product <- function(macrosheds_root,
                                 prodname,
@@ -1257,7 +1257,7 @@ ignore_vars <- c('NO3_NO2_N', 'NH4_NH3_N', 'PON', 'POC', 'TIP', 'TIN',
                  'Ho', 'Gd157', 'Eu', 'Er', 'Dy', 'Cr', 'Co', 'Ce', 'Be', 'Ba',
                  'B', 'As', 'Ag', 'Tc', 'NO2', 'H', 'Hf', 'Ga', 'Nb', 'Bi',
                  'Au', 'Nd145', 'NH3_N', 'TC', 'Gd', 'Hg', 'I', 'S', 'Al_ICP',
-                 'OMAl', 'TMAl', 'TIC', 'SRP')
+                 'OMAl', 'TMAl', 'TIC', 'orthophosphate_P')
 
 load_entire_product <- function(macrosheds_root,
                                 prodname,

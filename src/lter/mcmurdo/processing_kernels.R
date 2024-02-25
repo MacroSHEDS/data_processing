@@ -874,14 +874,14 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                          data_cols =  c('n_no3' = 'NO3_N',
                                         'n_no2' = 'NO2_N',
                                         'n_nh4' = 'NH4_N',
-                                        'srp' = 'SRP'),
+                                        'srp' = 'orthophosphate_P'),
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#_comments',
                          is_sensor = FALSE)
 
     all_comments <- c(unique(d$`GN_NO3_N__|flg`), unique(d$`GN_NO2_N__|flg`),
-                      unique(d$`GN_NH4_N__|flg`), unique(d$`GN_SRP__|flg`))
+                      unique(d$`GN_NH4_N__|flg`), unique(d$`GN_orthophosphate_P__|flg`))
 
     BDL_flags <- grep('ND|below detection limit|non-detect|Not detected|no detect|Not Detected|detection limit =',
                       all_comments, value = T)
@@ -897,11 +897,11 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
                                                'NH4_N' = 'ug/l',
-                                               'SRP' = 'ug/l'),
+                                               'orthophosphate_P' = 'ug/l'),
                         convert_units_to = c('NO3_N' = 'mg/l',
                                              'NO2_N' = 'mg/l',
                                              'NH4_N' = 'mg/l',
-                                             'SRP' = 'mg/l'))
+                                             'orthophosphate_P' = 'mg/l'))
 
     return(d)
 }
@@ -955,11 +955,11 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
                                                'NH4_N' = 'ug/l',
-                                               'SRP' = 'ug/l'),
+                                               'orthophosphate_P' = 'ug/l'),
                         convert_units_to = c('NO3_N' = 'mg/l',
                                              'NO2_N' = 'mg/l',
                                              'NH4_N' = 'mg/l',
-                                             'SRP' = 'mg/l'))
+                                             'orthophosphate_P' = 'mg/l'))
 
     return(d)
 }

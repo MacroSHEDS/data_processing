@@ -765,9 +765,6 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(date = str_split_fixed(DateTime, ' ', n = Inf)[,1]) %>%
         filter(DateTime != 'MST')
 
-    #SRP same as Ortho-P?
-    #Most metals are reported as their isotope, not sure to keep istope form in
-    #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
@@ -894,8 +891,6 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
         return(NULL)
     }
 
-    #SRP same as Ortho-P?
-    #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
@@ -1054,26 +1049,6 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
         return(NULL)
     }
 
-    data_cols <- c('pH', 'EC' = 'spCond',
-                   'TIC', 'TOC', 'TN', 'F.' = 'F', 'Cl.' = 'Cl',
-                   'NO2.' = 'NO2', 'Br.' = 'Br', 'NO3.' = 'NO3',
-                   'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
-                   'Al27' = 'Al', 'Na23' = 'Na', 'Mg24' = 'Mg',
-                   'Si28' = 'Si', 'K39' = 'K', 'Ca40' = 'Ca',
-                   'Ti49', 'V51' = 'V', 'Cr52' = 'Cr',
-                   'Mn55' = 'Mn', 'Fe56' = 'Fe', 'Co59' = 'Co',
-                   'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
-                   'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',
-                   'Ag107' = 'Ag', 'Sr88' = 'Sr', 'Sn118',
-                   'Sb121' = 'Sb', 'Ba138' = 'Ba', 'La139' = 'La',
-                   'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
-                   'Sm147', 'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
-                   'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
-                   'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
-                   'Tl205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                   'NH4.N' = 'NH4_N')
-
-    #SRP same as Ortho-P?
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
