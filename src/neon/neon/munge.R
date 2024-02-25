@@ -1,3 +1,6 @@
+loginfo('Beginning munge',
+        logger = logger_module)
+
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'munge',

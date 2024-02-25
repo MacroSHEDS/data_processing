@@ -16730,7 +16730,14 @@ check_for_derelicts <- function(network, domain){
     all_filt <- all_raw[duplicated(base_raw) | duplicated(base_raw, fromLast = TRUE)]
     all_filt <- all_filt[order(basename(all_filt))]
 
-    if(length(all_filt) %% 2 != 0) stop('error in identifying duplicate filenames')
+    if(length(all_filt) %% 2 != 0){
+        if(domain == 'neon'){
+            warning('check_for_derelicts is not set up for neon')
+            return()
+        } else {
+            stop('error in identifying duplicate filenames')
+        }
+    }
 
     pair_list <- split(all_filt, ceiling(seq_along(all_filt) / 2))
     pair_list <- Filter(function(x) length(unique(str_extract(x, '(?<=raw/)[^\\/]+'))) == 1,

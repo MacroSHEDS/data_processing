@@ -294,7 +294,7 @@ process_0_DP1.00013.001 <- function(set_details, network, domain){
     return()
 }
 
-#spCond: STATUS=READY
+#spCond: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.20008.001 <- function(set_details, network, domain){
 
@@ -366,20 +366,30 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 #. handle_errors
 process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
-    # site_code=site_code; component=in_comp
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code,
+                   c = component)
 
-    rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
+    zip_path <- list.files(glue('{rawdir}/filesToStack{neonprodcode}'),
+                           full.names = TRUE)
 
-    relevant_file1 <- 'swc_domainLabData.feather'
-    relevant_file2 <- 'swc_externalLabDataByAnalyte.feather'
+    rawd <- neonUtilities::stackByTable(zip_path,
+                                        savepath = 'envt',
+                                        saveUnzippedFiles = TRUE)
 
-    if(relevant_file1 %in% rawfiles){
+    relevant_tbl1 <- 'swc_domainLabData'
+    relevant_tbl2 <- 'swc_externalLabDataByAnalyte'
 
-        out_dom <- read_feather(glue(rawdir, '/', relevant_file1)) %>%
+    if(relevant_tbl1 %in% names(rawd)){
+
+        out_dom <- tibble(rawd[[relevant_tbl1]]) %>%
             select(siteID, collectDate, remarks, alkMgPerL,
                    ancMeqPerL) %>%
             mutate(ms_status = ifelse(is.na(remarks), 0, 1)) %>%
@@ -394,20 +404,37 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                    datetime = collectDate) %>%
             mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
             filter(!is.na(val))
-
-
     }
 
-    if(relevant_file2 %in% rawfiles){
+    if(relevant_tbl2 %in% names(rawd)){
 
-        out_lab <- read_feather(glue(rawdir, '/', relevant_file2)) %>%
+        d <- ms_read_raw_csv(preprocessed_tibble = tibble(rawd[[relevant_tbl2]]),
+                             datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(
+                                 'Ortho - P' = 'orthophosphate_P',
+                                 'NO3+NO2 - N' = 'NO3_NO2_N',
+                                 'NO2 - N' = 'NO2_N',
+                                 'NH4 - N' = 'NH4_N',
+                                 'specificConductance' = 'spCond',
+                                 'UV Absorbance (280 nm)' = 'abs280',
+                                 'UV Absorbance (250 nm)' = 'abs250',
+                                 'UV Absorbance (254 nm)' = 'abs254'
+                             ),#HERE. still need to handle BDL, consider all QC cols, verify units
+                             set_to_NA = ".",
+                             data_col_pattern = '#V#',
+                             convert_to_BDL_flag = '<#*#',
+                             is_sensor = FALSE,
+                             keep_bdl_values = TRUE)
+
+        out_lab <- tibble(rawd[[relevant_tbl2]]) %>%
             select(site_code = siteID, datetime = collectDate, var = analyte,
                    val = analyteConcentration, shipmentWarmQF, sampleCondition) %>%
             mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
                                        1, 0)) %>%
             select(-shipmentWarmQF, -sampleCondition) %>%
-            mutate(var = case_when(var == 'Si' ~ 'Si',
-                                   var == 'Ortho - P' ~ 'PO4_P',
+            mutate(var = case_when(var == 'Ortho - P' ~ 'PO4_P',
                                    var == 'NO3+NO2 - N' ~ 'NO3_NO2_N',
                                    var == 'NO2 - N' ~ 'NO2_N',
                                    var == 'NH4 - N' ~ 'NH4_N',
@@ -416,7 +443,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                    var == 'UV Absorbance (250 nm)' ~ 'abs250',
                                    var == 'UV Absorbance (254 nm)' ~ 'abs254',
                                    TRUE ~ var)) %>%
-            mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
+            # mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
             filter(var != 'TSS - Dry Mass') %>%
             mutate(datetime = force_tz(datetime, 'UTC'))
 
@@ -464,7 +491,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
     return(out_sub)
 }
 
-#stream_nitrate: STATUS=PAUSED
+#stream_nitrate: STATUS=READY
 #. handle_errors
 process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
@@ -475,9 +502,9 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles = list.files(rawdir)
 
-    relevant_file1 = 'NSW_15_minute.feather'
-    if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+    relevant_tbl1 = 'NSW_15_minute.feather'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd = tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -501,7 +528,7 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
     return(out_sub)
 }
 
-#stream_PAR: STATUS=PAUSED
+#stream_PAR: STATUS=READY
 #. handle_errors
 process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
@@ -511,10 +538,10 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles <- list.files(rawdir)
 
-    relevant_file1 = 'PARWS_5min.feather'
+    relevant_tbl1 = 'PARWS_5min.feather'
 
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -542,7 +569,7 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     return(out_sub)
 }
 
-#stream_temperature: STATUS=PAUSED
+#stream_temperature: STATUS=READY
 #. handle_errors
 process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
@@ -558,10 +585,10 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-    relevant_file1 <- 'TSW_5min.feather'
+    relevant_tbl1 <- 'TSW_5min.feather'
 
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -600,10 +627,10 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-    relevant_file1 = 'BP_30min.feather'
+    relevant_tbl1 = 'BP_30min.feather'
 
-    if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd = tibble(rawd[[relevant_tbl1]])
         out_sub = sourceflags_to_ms_status(rawd, list(staPresFinalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
@@ -632,7 +659,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
     return(out_sub)
 }
 
-#stream_gases: STATUS=PAUSED
+#stream_gases: STATUS=READY
 #. handle_errors
 process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
@@ -642,7 +669,7 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles = list.files(rawdir)
 
-    relevant_file1 = 'sdg_externalLabData.feather'
+    relevant_tbl1 = 'sdg_externalLabData.feather'
 
     # file_data = read_feather(glue(rawdir, '/', 'sdg_fieldData.feather'))
     # file_data_air = read_feather(glue(rawdir, '/', 'sdg_fieldDataAir.feather'))
@@ -651,9 +678,9 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
     # validation = read_feather(glue(rawdir, '/', 'validation_20097.feather'))
     # variable = read_feather(glue(rawdir, '/', 'variables_20097.feather'))
 
-    if(relevant_file1 %in% rawfiles){
+    if(relevant_tbl1 %in% names(rawd)){
 
-        rawd = read_feather(glue(rawdir, '/', relevant_file1)) %>%
+        rawd = tibble(rawd[[relevant_tbl1]]) %>%
             mutate(sampleCondition = ifelse(is.na(sampleCondition), 1, sampleCondition)) %>%
             mutate(condition = ifelse(sampleCondition == 'OK',
                                       0, 1)) %>%
@@ -698,11 +725,11 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles <- list.files(rawdir)
 
-    relevant_file <- 'EOS_5_min.feather'
+    relevant_tbl <- 'EOS_5_min.feather'
 
-    if(relevant_file %in% rawfiles) {
+    if(relevant_tbl %in% names(rawd)) {
 
-        rawd <- read_feather(glue(rawdir, '/', relevant_file))
+        rawd <- tibble(rawd[[relevant_tbl]])
 
         out_sub <- rawd %>%
             mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
@@ -718,7 +745,7 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
 
 }
 
-#stream_quality: STATUS=PAUSED
+#stream_quality: STATUS=READY
 #. handle_errors
 process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
@@ -727,10 +754,10 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
-    relevant_file1 <- 'waq_instantaneous.feather'
+    relevant_tbl1 <- 'waq_instantaneous.feather'
 
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
@@ -783,11 +810,11 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles <- list.files(rawdir)
 
-    relevant_file1 <- 'PRIPRE_5min.feather'
-    relevant_file2 <- 'SECPRE_1min.feather'
+    relevant_tbl1 <- 'PRIPRE_5min.feather'
+    relevant_tbl2 <- 'SECPRE_1min.feather'
 
-    if(relevant_file2 %in% rawfiles) {
-        rawd2 <- read_feather(glue(rawdir, '/', relevant_file2))
+    if(relevant_tbl2 %in% names(rawd)) {
+        rawd2 <- tibble(rawd[[relevant_tbl2]])
 
         out_sub2 <- rawd2 %>%
             mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
@@ -800,8 +827,8 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
             select(site_code, datetime, var, val = secPrecipBulk, ms_status)
     }
 
-    if(relevant_file1 %in% rawfiles) {
-        rawd1 <- read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)) {
+        rawd1 <- tibble(rawd[[relevant_tbl1]])
 
         out_sub1 <- rawd1 %>%
             mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
@@ -812,17 +839,17 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
             select(site_code, datetime, var, val = priPrecipBulk, ms_status)
     }
 
-    if(!relevant_file1 %in% rawfiles && ! relevant_file2 %in% rawfiles) {
+    if(!relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)) {
         return(generate_ms_exception('Missing precip files'))
     }
 
-    if(relevant_file1 %in% rawfiles && relevant_file2 %in% rawfiles) {
+    if(relevant_tbl1 %in% names(rawd) && relevant_tbl2 %in% names(rawd)) {
 
         out_sub <- rbind(out_sub2, out_sub1)
 
     } else {
-        if(relevant_file1 %in% rawfiles) { out_sub <- out_sub1 }
-        if(relevant_file2 %in% rawfiles) { out_sub <- out_sub2 }
+        if(relevant_tbl1 %in% names(rawd)) { out_sub <- out_sub1 }
+        if(relevant_tbl2 %in% names(rawd)) { out_sub <- out_sub2 }
     }
 
     return(out_sub)
@@ -847,7 +874,7 @@ process_1_DP1.00038.001 <- function(set_details, network, domain){
 
 }
 
-#spCond: STATUS=READY
+#spCond: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20008.001 <- function(set_details, network, domain){
 
@@ -864,14 +891,14 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     rawfiles <- list.files(rawdir)
 
     if(site_code == 'TOMB'){
-        relevant_file <- 'csd_continuousDischargeUSGS.feather'
+        relevant_tbl <- 'csd_continuousDischargeUSGS.feather'
     } else {
-        relevant_file <- 'csd_continuousDischarge.feather'
+        relevant_tbl <- 'csd_continuousDischarge.feather'
     }
 
-    if(relevant_file %in% rawfiles) {
+    if(relevant_tbl %in% names(rawd)) {
 
-        rawd <- read_feather(glue(rawdir, '/', relevant_file))
+        rawd <- tibble(rawd[[relevant_tbl]])
 
         if(site_code == 'TOMB'){
 
@@ -909,13 +936,13 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
 
     rawfiles <- list.files(rawdir)
 
-    relevant_file <- 'wdp_chemLab.feather'
+    relevant_tbl <- 'wdp_chemLab.feather'
 
     # Units all mg/l uS/cm and pH
 
-    if(relevant_file %in% rawfiles){
+    if(relevant_tbl %in% names(rawd)){
 
-        out_sub <- read_feather(glue(rawdir, '/', relevant_file)) %>%
+        out_sub <- tibble(rawd[[relevant_tbl]]) %>%
             rename('Ca__|dat' = precipCalcium,
                    'Mg__|dat' = precipMagnesium,
                    'K__|dat' = precipPotassium,

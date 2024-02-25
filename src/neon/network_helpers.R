@@ -1,3 +1,4 @@
+library(neonUtilities)
 
 get_neon_data <- function(domain,
                           sets,
