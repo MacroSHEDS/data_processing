@@ -52,10 +52,12 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
-        munge_rtn <- munge_neon_site(domain = domain,
-                                     site_code = sites[j],
-                                     prodname_ms = prodname_ms,
-                                     tracker = held_data)
+        # munge_rtn <- munge_neon_site(domain = domain,
+        munge_rtn <- munge_combined_split(network = network,
+                                          domain = domain,
+                                          site_code = sites[j],
+                                          prodname_ms = prodname_ms,
+                                          tracker = held_data)
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network = network,

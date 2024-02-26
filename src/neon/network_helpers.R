@@ -1,29 +1,29 @@
 library(neonUtilities)
 
-get_neon_data <- function(domain,
-                          sets,
-                          tracker,
-                          silent = TRUE){
+get_neon_data <- function(domain, site_code tracker, silent = TRUE){
 
-    for(i in 1:nrow(sets)){
+    # for(i in 1:nrow(sets)){
 
         if(! silent) print(paste0('i=', i, '/', nrow(sets)))
 
-        s <- sets[i, ]
+        # s <- sets[i, ]
 
-        msg <- glue('Retrieving {st}, {p}, {c}',
-                    st = s$site_code,
-                    p = s$prodname_ms,
-                    c = s$component)
+        msg <- glue('Retrieving {p}, {st}',
+                    st = site_code,
+                    p = prodname_ms)
+        # msg <- glue('Retrieving {st}, {p}, {c}',
+        #             st = s$site_code,
+        #             p = prodname_ms,
+        #             c = s$component)
 
-        loginfo(msg,
-                logger = logger_module)
+        loginfo(msg, logger = logger_module)
 
         processing_func <- get(paste0('process_0_',
                                       s$prodcode_full))
 
         result <- do.call(processing_func,
-                          args = list(set_details = s,
+                          args = list(set_details = list(site_code = site_code),
+                          # args = list(set_details = s,
                                       network = network,
                                       domain = domain))
 
@@ -39,18 +39,18 @@ get_neon_data <- function(domain,
                               tracker_name = 'held_data',
                               set_details = s,
                               new_status = new_status)
-    }
+    # }
 }
 
 neon_retrieve <- function(set_details, network, domain, time_index = NULL){
 
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                           wd = getwd(),
                           n = network,
                           d = domain,
-                          p = set_details$prodname_ms,
-                          s = set_details$site_code,
-                          c = set_details$component)
+                          p = prodname_ms,
+                          s = set_details$site_code)
+                          # c = set_details$component)
 
     dir.create(raw_data_dest,
                recursive = TRUE,
@@ -61,9 +61,9 @@ neon_retrieve <- function(set_details, network, domain, time_index = NULL){
         neonUtilities::zipsByProduct(
             set_details$prodcode_full,
             site = set_details$site_code,
-            startdate = set_details$component,
-            enddate = set_details$component,
-            package = 'basic',
+            # startdate = str_split_i(set_details$component, '_', 1),
+            # enddate = str_split_i(set_details$component, '_', 2),
+            package = 'expanded',
             release = 'current',
             include.provisional = FALSE,
             savepath = raw_data_dest,
@@ -73,6 +73,33 @@ neon_retrieve <- function(set_details, network, domain, time_index = NULL){
     }, silent = TRUE)
 
     return(result)
+}
+
+stackByTable_keep_zips <- function(zip_parent){
+
+    #neonUtilities::stackByTable has parameters for keeping zips (or maybe for keeping
+    #unzipped contents), but in any case they don't work as intended. This copies
+    #all zips to tempdir, extracts zips into environment (which removes the original
+    #zip files), and then copies the zips back, as if they were never deleted
+
+    print(paste('stacking zips for', prodname_ms))
+
+    tmpd <- tempdir()
+    file.copy(zip_parent, tmpd, recursive = TRUE)
+
+    sink(null_device())
+    rawd <- neonUtilities::stackByTable(
+        zip_parent,
+        savepath = 'envt',
+        saveUnzippedFiles = FALSE)
+    sink()
+
+    file.remove(zip_parent)
+    file.copy(file.path(tmpd, basename(zip_parent)),
+              dirname(zip_parent),
+              recursive = TRUE)
+
+    return(rawd)
 }
 
 munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE){
@@ -253,23 +280,21 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail){
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
+    retrieval_tracker <- tracker[[prodname_ms]][[site_code]]$retrieve
 
-    rgx = '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
-    rgx_capt = str_match(avail$url, rgx)[, -1, drop = FALSE]
+    rgx <- '/((DP[0-9]\\.[0-9]+)\\.([0-9]+))/[A-Z]{4}/[0-9]{4}\\-[0-9]{2}$'
+    rgx_capt <- str_match(avail$url, rgx)[, -1, drop = FALSE]
 
-    retrieval_tracker = avail %>%
+    retrieval_tracker <- avail %>%
         mutate(
             avail_version = as.numeric(rgx_capt[, 3]),
             prodcode_full = rgx_capt[, 1],
             prodcode_id = rgx_capt[, 2],
             prodname_ms = prodname_ms) %>%
-        full_join(retrieval_tracker, by='component') %>%
-        # filter(status != 'blocklist' | is.na(status)) %>%
+        full_join(retrieval_tracker, by ='component') %>%
         mutate(
             held_version = as.numeric(held_version),
             needed = avail_version - held_version > 0)
-        # filter(needed == TRUE | is.na(needed))
 
     if(any(is.na(retrieval_tracker$needed))){
         stop(glue('Must run `track_new_site_components` before ',
