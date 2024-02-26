@@ -7,3 +7,5 @@ previously, if there were duplicate datetime-site_code pairs in a raw data file,
 20231116
 fixed a QC-code assimilation bug that was allowing a small number of bad data values into the final product. These may have appeared as outliers in v1. 
  
+dates irrelevant...
+neon reports BDL and ND. BDL gets a flag. ND is replaced with DL/2

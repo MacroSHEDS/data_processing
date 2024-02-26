@@ -380,53 +380,83 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
     zip_path <- list.files(glue('{rawdir}/filesToStack{neonprodcode}'),
                            full.names = TRUE)
 
-    rawd <- neonUtilities::stackByTable(zip_path,
-                                        savepath = 'envt',
-                                        saveUnzippedFiles = TRUE)
+    print(paste('unzipping', basename(zip_path)))
+    sink(null_device())
+    rawd <- suppressMessages({
+        neonUtilities::stackByTable(zip_path,
+                                    savepath = 'envt',
+                                    saveUnzippedFiles = TRUE)
+    })
+    sink()
 
     relevant_tbl1 <- 'swc_domainLabData'
     relevant_tbl2 <- 'swc_externalLabDataByAnalyte'
-
+    # if(! relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)) browser()
     if(relevant_tbl1 %in% names(rawd)){
 
         # message('tbl1')
         # browser()
 
-        dd = tibble(rawd[[relevant_tbl1]])
-        knowncols = c('uid', 'domainID', 'siteID', 'namedLocation', 'collectDate', 'titrationDate', 'parentSampleID', 'domainSampleID', 'domainSampleCode', 'remarks', 'measuredBy', 'alkMeqPerL', 'alkMgPerL', 'ancMeqPerL', 'ancMgPerL', 'dataQF', 'publicationDate', 'release')
-        if(! setequal(colnames(dd), knowncols)){
-            newcols = setdiff(colnames(dd), knowncols)
-            print(paste('newcols:', newcols))
-            missingcols = setdiff(knowncols, colnames(dd))
-            print(paste('missingcols:', missingcols))
-        }
-        if(! exists('donkey')) donkey <<- c()
-        if(grepl('-01', component)) message(donkey)
-        if(any(! is.na(dd$dataQF))){
-            # print('dataQF')
-            # print(unique(dd$dataQF))
-            donkey <<- unique(donkey, unique(dd$dataQF))
-        }
+        d <- tibble(rawd[[relevant_tbl1]])
+        # knowncols = c('uid', 'domainID', 'siteID', 'namedLocation', 'collectDate', 'titrationDate', 'parentSampleID', 'domainSampleID', 'domainSampleCode', 'remarks', 'measuredBy', 'alkMeqPerL', 'alkMgPerL', 'ancMeqPerL', 'ancMgPerL', 'dataQF', 'publicationDate', 'release')
+        # if(! setequal(colnames(dd), knowncols)){
+        #     newcols = setdiff(colnames(dd), knowncols)
+        #     print(paste('newcols:', newcols))
+        #     missingcols = setdiff(knowncols, colnames(dd))
+        #     print(paste('missingcols:', missingcols))
+        # }
+
+        #dd$dataQF is always NA, even when dd$remarks suggest something egregious
+        d$actual_quality_flag <- as.numeric(
+            ! is.na(d$release) &
+                ! grepl('replicate|SOP|protocol|cartridge',
+                        d$remarks,
+                        ignore.case = TRUE)
+        )
+
+        # if(! exists('donkey')) donkey <<- c(NA_character_)
+        # if(! exists('donkey2')) donkey2 <<- c(NA_character_)
+        # if(! exists('donkey3')) donkey3 <<- c(NA_character_)
+        # if(any(! is.na(dd$remarks))) message(unique(dd$remarks))
+        # donkey <<- unique(c(donkey, unique(dd$remarks)))
+        # donkey2 <<- unique(c(donkey2, grep('[a-zA-Z<]+', dd$alkMgPerL, value=T)))
+        # donkey3 <<- unique(c(donkey3, grep('[a-zA-Z<]+', dd$ancMeqPerL, value=T)))
+        # if(grepl('-01', component)) message(donkey)
+        # if(! exists('qqg')) qqg <<- tibble()
+        # if(any(! is.na(dd$dataQF))){
+        #     # print('dataQF')
+        #     # print(unique(dd$dataQF))
+        #     qqg <<- bind_rows(qqg, filter(dd, ! is.na(dataQF)))
+        #     # donkey <<- unique(c(donkey, unique(dd$dataQF)))
+        # }
         # readLines(n=1)
         # return(generate_ms_err())
 
         #dataQF is either NA or
 
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(alkMgPerL = 'alk',
+                                            ancMeqPerL = 'ANC'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = 'actual_quality_flag',
+                             # convert_to_BDL_flag = '<#*#',
+                             is_sensor = FALSE,
+                             sampling_type = 'G')
+                             # keep_bdl_values = TRUE)
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                summary_flags_clean = list(actual_quality_flag = '0'),
+                                summary_flags_dirty = list(actual_quality_flag = '1'))
+
+        d <- ms_conversions(d,
+                            convert_units_from = c(ANC = 'meq'),
+                            convert_units_to = c(ANC = 'eq'))
+
         # out_dom <- dd %>%
-        #     select(siteID, collectDate, remarks, alkMgPerL,
-        #            ancMeqPerL) %>%
-        #     mutate(ms_status = ifelse(is.na(remarks), 0, 1)) %>%
-        #     select(-remarks) %>%
-        #     rename(ANC = ancMeqPerL,
-        #            alk = alkMgPerL) %>%
-        #     mutate(ANC = ANC/1000) %>% # convert from meq/l to eq/l
-        #     pivot_longer(cols = c('ANC', 'alk'), names_to = 'var',
-        #                  values_to = 'val') %>%
-        #     filter(!is.na(val)) %>%
-        #     rename(site_code = siteID,
-        #            datetime = collectDate) %>%
-        #     mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
-        #     filter(!is.na(val))
     }
 
     if(relevant_tbl2 %in% names(rawd)){
@@ -435,6 +465,14 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             select(-uid, -domainID, -namedLocation, -sampleID, -sampleCode,
                    -startDate, -laboratoryName, -analysisDate, -coolerTemp,
                    -publicationDate, -release)
+
+        # if(! exists('qqqj')){
+        #     qqqj <<- distinct(dd, analyte, analyteUnits)
+        # } else {
+        #     qqqj <<- bind_rows(qqqj, distinct(dd, analyte, analyteUnits)) %>%
+        #         distinct(analyte, analyteUnits)
+        # }
+
         # if(any(! is.na(dd$belowDetectionQF))){
         #     # print('belowDetectionQF')
         #     # print(unique(dd$belowDetectionQF))
@@ -454,14 +492,14 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
         # }
         # if(any(dd$sampleCondition != 'GOOD')){
 
-        if(! exists('qqqk')){
-            qqqk <<- tibble()
-        } else {
-            if('Other' %in% dd$sampleCondition){
-                qqqk <<- bind_rows(qqqk, filter(dd, sampleCondition == 'Other'))
-            }
-        }
-        if(grepl('-08', component)) print(qqqk)
+        # if(! exists('qqqb')){
+        #     qqqb <<- tibble()
+        # } else {
+        #     if('OK' %in% dd$sampleCondition){
+        #         qqqb <<- bind_rows(qqqb, filter(dd, sampleCondition == 'OK'))
+        #     }
+        # }
+        # if(grepl('-08', component)) print(qqqk)
 
             # seen = select(dd, contains('QF'), sampleCondition, remarks) %>% select(-shipmentWarmQF) %>% distinct()
             # gg = anti_join(seen,
@@ -487,6 +525,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
         # belowDetectionQF %in% "BDL" "ND"
         # formatChange|legacyData is fine
         # sampleCondition 'OK' probably always ms_status = 1, 'GOOD' = 0, 'OTHER'...
+        # everything can be in milligramsPerLiter or microgramsPerLiter, and TPC/TPC can be in just milligram
 
         d <- ms_read_raw_csv(preprocessed_tibble = ,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
@@ -535,22 +574,23 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             filter(!is.na(val))
 
     }
+    return(generate_ms_err())
 
     if(!exists('out_lab') && !exists('out_dom')) {
-        print(paste0('swc_externalLabDataByAnalyte.feather and swc_domainLabData.feather are missing for ', component))
+        print(paste0('swc_externalLabDataByAnalyte and swc_domainLabData are missing for ', component))
 
         out_sub <- tibble()
 
     } else {
 
         if(!exists('out_lab')) {
-            print(paste0('swc_externalLabDataByAnalyte.feather is missing for', component, ', will proceed with Alk and ANC file'))
+            print(paste0('swc_externalLabDataByAnalyte is missing for', component, ', will proceed with Alk and ANC file'))
 
             out_sub <- out_dom
         }
 
         if(!exists('out_dom')) {
-            print(paste0('swc_domainLabData.feather is missing for ', component, ', will proceed with chemisty file file'))
+            print(paste0('swc_domainLabData is missing for ', component, ', will proceed with chemisty file file'))
 
             out_sub <- out_lab
         }
