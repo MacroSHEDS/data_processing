@@ -17,23 +17,23 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SH_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SH_Discharge_Level_1.csv')
 
     params$tableName <- params$fileName <- 'SCAL_Discharge_Level_1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCAL_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SCAL_Discharge_Level_1.csv')
 
     params$tableName <- params$fileName <- 'SC_outlet'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SC_outlet.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SC_outlet.csv')
 
     params$tableName <- params$fileName <- 'SCCF_Q_ec'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCCF_Q_ec.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SCCF_Q_ec.csv')
 
     params$tableName <- params$fileName <- 'GR_Discharge_Level_1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/GR_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/GR_Discharge_Level_1.csv')
 
     url <- 'http://www.czo.psu.edu/data_strmflw-sh.php'
 
@@ -48,7 +48,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/export.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/export.csv')
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
 
@@ -71,11 +71,11 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/Level1_Precip_Daily.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitename_NA/Level1_Precip_Daily.csv')
 
     params$tableName <- params$fileName <- 'SP_Thru_Precip_Daily_L1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/SP_Thru_Precip_Daily_L1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitename_NA/SP_Thru_Precip_Daily_L1.csv')
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
 
@@ -114,7 +114,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
 
     for(f in known_files){
         download.file(glue('http://www.czo.psu.edu/downloads/{f}'),
-                      glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/{f}'))
+                      glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitename_NA/{f}'))
     }
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/downloads/')

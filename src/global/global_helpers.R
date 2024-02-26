@@ -2800,9 +2800,9 @@ backup_tracker <- function(path,
 }
 
 extract_retrieval_log <- function(tracker, prodname_ms, site_code,
-                                  keep_status='ok'){
+                                  keep_status = 'ok'){
 
-    retrieved_data = tracker[[prodname_ms]][[site_code]]$retrieve %>%
+    retrieved_data <- tracker[[prodname_ms]][[site_code]]$retrieve %>%
         tibble::as_tibble() %>%
         filter(status == keep_status)
 
@@ -17410,4 +17410,12 @@ update_detlims <- function(d, vars_units){
     }
 
     return(invisible())
+}
+
+null_device <- function(){
+    if(.Platform$OS.type == 'windows'){
+        return('NUL')
+    } else {
+        return('/dev/null')
+    }
 }

@@ -277,8 +277,6 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
     #   write_ms_file will assume it's writing a spatial object, and not a
     #   standalone file
 
-    # tracker=held_data; k=1
-
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
                                            site_code)
