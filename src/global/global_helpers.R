@@ -737,7 +737,7 @@ ms_read_raw_csv <- function(filepath,
     #   that pertain to all variables
     #sampling_type: optional value to overwrite identify_sampling because in
     #   some case this function is misidentifying sampling type. This must be a
-    #   single value of G or I and is applied to all variables in product
+    #   single value of 'G' or 'I' and is applied to all variables in product
     #keep_bdl_values: logical. if true, data column values indicating the
     #   detection limit, e.g. "<0.7" will be replaced with that limit, i.e. "0.7".
     #   Only use this if you are following up with update_detlims().

@@ -389,26 +389,106 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 
     if(relevant_tbl1 %in% names(rawd)){
 
-        out_dom <- tibble(rawd[[relevant_tbl1]]) %>%
-            select(siteID, collectDate, remarks, alkMgPerL,
-                   ancMeqPerL) %>%
-            mutate(ms_status = ifelse(is.na(remarks), 0, 1)) %>%
-            select(-remarks) %>%
-            rename(ANC = ancMeqPerL,
-                   alk = alkMgPerL) %>%
-            mutate(ANC = ANC/1000) %>% # convert from meq/l to eq/l
-            pivot_longer(cols = c('ANC', 'alk'), names_to = 'var',
-                         values_to = 'val') %>%
-            filter(!is.na(val)) %>%
-            rename(site_code = siteID,
-                   datetime = collectDate) %>%
-            mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
-            filter(!is.na(val))
+        # message('tbl1')
+        # browser()
+
+        dd = tibble(rawd[[relevant_tbl1]])
+        knowncols = c('uid', 'domainID', 'siteID', 'namedLocation', 'collectDate', 'titrationDate', 'parentSampleID', 'domainSampleID', 'domainSampleCode', 'remarks', 'measuredBy', 'alkMeqPerL', 'alkMgPerL', 'ancMeqPerL', 'ancMgPerL', 'dataQF', 'publicationDate', 'release')
+        if(! setequal(colnames(dd), knowncols)){
+            newcols = setdiff(colnames(dd), knowncols)
+            print(paste('newcols:', newcols))
+            missingcols = setdiff(knowncols, colnames(dd))
+            print(paste('missingcols:', missingcols))
+        }
+        if(! exists('donkey')) donkey <<- c()
+        if(grepl('-01', component)) message(donkey)
+        if(any(! is.na(dd$dataQF))){
+            # print('dataQF')
+            # print(unique(dd$dataQF))
+            donkey <<- unique(donkey, unique(dd$dataQF))
+        }
+        # readLines(n=1)
+        # return(generate_ms_err())
+
+        #dataQF is either NA or
+
+        # out_dom <- dd %>%
+        #     select(siteID, collectDate, remarks, alkMgPerL,
+        #            ancMeqPerL) %>%
+        #     mutate(ms_status = ifelse(is.na(remarks), 0, 1)) %>%
+        #     select(-remarks) %>%
+        #     rename(ANC = ancMeqPerL,
+        #            alk = alkMgPerL) %>%
+        #     mutate(ANC = ANC/1000) %>% # convert from meq/l to eq/l
+        #     pivot_longer(cols = c('ANC', 'alk'), names_to = 'var',
+        #                  values_to = 'val') %>%
+        #     filter(!is.na(val)) %>%
+        #     rename(site_code = siteID,
+        #            datetime = collectDate) %>%
+        #     mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
+        #     filter(!is.na(val))
     }
 
     if(relevant_tbl2 %in% names(rawd)){
 
-        d <- ms_read_raw_csv(preprocessed_tibble = tibble(rawd[[relevant_tbl2]]),
+        dd = tibble(rawd[[relevant_tbl2]]) %>%
+            select(-uid, -domainID, -namedLocation, -sampleID, -sampleCode,
+                   -startDate, -laboratoryName, -analysisDate, -coolerTemp,
+                   -publicationDate, -release)
+        # if(any(! is.na(dd$belowDetectionQF))){
+        #     # print('belowDetectionQF')
+        #     # print(unique(dd$belowDetectionQF))
+        #     if('ND' %in% dd$belowDetectionQF) browser()
+        # }
+        # if(any(! is.na(dd$remarks))){
+        #     print('remarks')
+        #     print(unique(dd$remarks))
+        # }
+        # if(any(dd$shipmentWarmQF != 0)){
+        #     print('belowDetectionQF')
+        #     print(unique(dd$belowDetectionQF))
+        # }
+        # if(any(is.na(dd$sampleCondition))){
+        #     print('some sampleCondition NA')
+        #     # print(unique(dd$sampleCondition))
+        # }
+        # if(any(dd$sampleCondition != 'GOOD')){
+
+        if(! exists('qqqk')){
+            qqqk <<- tibble()
+        } else {
+            if('Other' %in% dd$sampleCondition){
+                qqqk <<- bind_rows(qqqk, filter(dd, sampleCondition == 'Other'))
+            }
+        }
+        if(grepl('-08', component)) print(qqqk)
+
+            # seen = select(dd, contains('QF'), sampleCondition, remarks) %>% select(-shipmentWarmQF) %>% distinct()
+            # gg = anti_join(seen,
+            #                tibble(belowDetectionQF = c(NA_character_, NA_character_, 'BDL','ND', NA_character_),
+            #                  # shipmentWarmQF = as.double(c(0, 0, 0, 0, -1)),
+            #                  externalLabDataQF = c(rep('formatChange|legacyData', 4), 'legacyData'),
+            #                  samplecondition = c('GOOD', 'Other', 'GOOD', 'GOOD', 'OK'),
+            #                  remarks = c(NA_character_, 'Unknown reason for no analyte concentration as a result of external lab data format change',
+            #                              NA_character_, NA_character_, NA_character_)))
+            # gg = gg %>%
+            #     filter(!(externalLabDataQF == 'formatChange' & sampleCondition == 'GOOD'))
+            # # semi_join(dd, gg, by = colnames(gg))
+            # if(nrow(gg)){
+            #     print(gg, n = 100)
+            #     # print(gg$remarks)
+            #     # readLines(n=1)
+            #     browser()
+            # }
+        # }
+        return(generate_ms_err())
+            # pivot_wider(
+
+        # belowDetectionQF %in% "BDL" "ND"
+        # formatChange|legacyData is fine
+        # sampleCondition 'OK' probably always ms_status = 1, 'GOOD' = 0, 'OTHER'...
+
+        d <- ms_read_raw_csv(preprocessed_tibble = ,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
@@ -420,13 +500,14 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                  'specificConductance' = 'spCond',
                                  'UV Absorbance (280 nm)' = 'abs280',
                                  'UV Absorbance (250 nm)' = 'abs250',
-                                 'UV Absorbance (254 nm)' = 'abs254'
-                             ),#HERE. still need to handle BDL, consider all QC cols, verify units
-                             set_to_NA = ".",
+                                 'UV Absorbance (254 nm)' = 'abs254'),
                              data_col_pattern = '#V#',
                              convert_to_BDL_flag = '<#*#',
                              is_sensor = FALSE,
+                             sampling_type = 'G',
                              keep_bdl_values = TRUE)
+
+        #HERE. still need to handle BDL, consider all QC cols, verify units
 
         out_lab <- tibble(rawd[[relevant_tbl2]]) %>%
             select(site_code = siteID, datetime = collectDate, var = analyte,
@@ -496,6 +577,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
     # prodname_ms=prodname_ms; site_code=site_code; component=in_comp
+    #prodcode = 'DP1.20093.001'
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)

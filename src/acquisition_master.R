@@ -364,14 +364,14 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('spCond'),
+                # prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
     check_for_derelicts(network = network,
                         domain = domain)
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
