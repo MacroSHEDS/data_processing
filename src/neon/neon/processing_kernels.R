@@ -351,7 +351,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
+                                    components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
@@ -362,27 +362,13 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    # zip_path <- list.files(glue('{rawdir}/filesToStack{neonprodcode}'),
-    #                        full.names = TRUE)
-
     rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
     relevant_tbl1 <- 'swc_domainLabData'
     relevant_tbl2 <- 'swc_externalLabDataByAnalyte'
-    # if(! relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)) browser()
     if(relevant_tbl1 %in% names(rawd)){
 
-        # message('tbl1')
-        # browser()
-
         d <- tibble(rawd[[relevant_tbl1]])
-        # knowncols = c('uid', 'domainID', 'siteID', 'namedLocation', 'collectDate', 'titrationDate', 'parentSampleID', 'domainSampleID', 'domainSampleCode', 'remarks', 'measuredBy', 'alkMeqPerL', 'alkMgPerL', 'ancMeqPerL', 'ancMgPerL', 'dataQF', 'publicationDate', 'release')
-        # if(! setequal(colnames(dd), knowncols)){
-        #     newcols = setdiff(colnames(dd), knowncols)
-        #     print(paste('newcols:', newcols))
-        #     missingcols = setdiff(knowncols, colnames(dd))
-        #     print(paste('missingcols:', missingcols))
-        # }
 
         #dd$dataQF is always NA, even when dd$remarks suggest something egregious
         d$actual_quality_flag <- as.numeric(
@@ -392,26 +378,6 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                         ignore.case = TRUE)
         )
 
-        # if(! exists('donkey')) donkey <<- c(NA_character_)
-        # if(! exists('donkey2')) donkey2 <<- c(NA_character_)
-        # if(! exists('donkey3')) donkey3 <<- c(NA_character_)
-        # if(any(! is.na(dd$remarks))) message(unique(dd$remarks))
-        # donkey <<- unique(c(donkey, unique(dd$remarks)))
-        # donkey2 <<- unique(c(donkey2, grep('[a-zA-Z<]+', dd$alkMgPerL, value=T)))
-        # donkey3 <<- unique(c(donkey3, grep('[a-zA-Z<]+', dd$ancMeqPerL, value=T)))
-        # if(grepl('-01', component)) message(donkey)
-        # if(! exists('qqg')) qqg <<- tibble()
-        # if(any(! is.na(dd$dataQF))){
-        #     # print('dataQF')
-        #     # print(unique(dd$dataQF))
-        #     qqg <<- bind_rows(qqg, filter(dd, ! is.na(dataQF)))
-        #     # donkey <<- unique(c(donkey, unique(dd$dataQF)))
-        # }
-        # readLines(n=1)
-        # return(generate_ms_err())
-
-        #dataQF is either NA or
-
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
@@ -420,85 +386,50 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                             ancMeqPerL = 'ANC'),
                              data_col_pattern = '#V#',
                              summary_flagcols = 'actual_quality_flag',
-                             # convert_to_BDL_flag = '<#*#',
                              is_sensor = FALSE,
                              sampling_type = 'G')
-                             # keep_bdl_values = TRUE)
 
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
                                 summary_flags_clean = list(actual_quality_flag = '0'),
                                 summary_flags_dirty = list(actual_quality_flag = '1'))
 
-        d <- ms_conversions(d,
+        out_dom <- ms_conversions(d,
                             convert_units_from = c(ANC = 'meq'),
                             convert_units_to = c(ANC = 'eq'))
-
-        # out_dom <- dd %>%
     }
 
     if(relevant_tbl2 %in% names(rawd)){
 
-        dd = tibble(rawd[[relevant_tbl2]]) %>%
+        d <- tibble(rawd[[relevant_tbl2]]) %>%
+            mutate(analyteConcentration = as.character(analyteConcentration),
+                   #NEON uses BDL to mean "below quantification limit" and ND to mean "below detection limit"
+                   analyteConcentration = if_else(
+                       ! is.na(belowDetectionQF) & belowDetectionQF == 'ND',
+                       'BDL',
+                       analyteConcentration
+                   )) %>%
             select(-uid, -domainID, -namedLocation, -sampleID, -sampleCode,
                    -startDate, -laboratoryName, -analysisDate, -coolerTemp,
-                   -publicationDate, -release)
+                   -publicationDate, -release, -belowDetectionQF)
 
-        # if(! exists('qqqj')){
-        #     qqqj <<- distinct(dd, analyte, analyteUnits)
-        # } else {
-        #     qqqj <<- bind_rows(qqqj, distinct(dd, analyte, analyteUnits)) %>%
-        #         distinct(analyte, analyteUnits)
-        # }
+        missing_unit <- filter(d, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte))
+        message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(dd), ')'))
 
-        # if(any(! is.na(dd$belowDetectionQF))){
-        #     # print('belowDetectionQF')
-        #     # print(unique(dd$belowDetectionQF))
-        #     if('ND' %in% dd$belowDetectionQF) browser()
-        # }
-        # if(any(! is.na(dd$remarks))){
-        #     print('remarks')
-        #     print(unique(dd$remarks))
-        # }
-        # if(any(dd$shipmentWarmQF != 0)){
-        #     print('belowDetectionQF')
-        #     print(unique(dd$belowDetectionQF))
-        # }
-        # if(any(is.na(dd$sampleCondition))){
-        #     print('some sampleCondition NA')
-        #     # print(unique(dd$sampleCondition))
-        # }
-        # if(any(dd$sampleCondition != 'GOOD')){
+        d <- d %>%
+            filter(! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
 
-        # if(! exists('qqqb')){
-        #     qqqb <<- tibble()
-        # } else {
-        #     if('OK' %in% dd$sampleCondition){
-        #         qqqb <<- bind_rows(qqqb, filter(dd, sampleCondition == 'OK'))
-        #     }
-        # }
-        # if(grepl('-08', component)) print(qqqk)
+        var_unit_pairs <- distinct(d, analyte, analyteUnits) %>%
+            filter(! is.na(analyteUnits)) %>%
+            arrange(analyte)
+        if(any(duplicated(var_unit_pairs))){
+            warning('we need to address this')
+            browser()
+        }
 
-            # seen = select(dd, contains('QF'), sampleCondition, remarks) %>% select(-shipmentWarmQF) %>% distinct()
-            # gg = anti_join(seen,
-            #                tibble(belowDetectionQF = c(NA_character_, NA_character_, 'BDL','ND', NA_character_),
-            #                  # shipmentWarmQF = as.double(c(0, 0, 0, 0, -1)),
-            #                  externalLabDataQF = c(rep('formatChange|legacyData', 4), 'legacyData'),
-            #                  samplecondition = c('GOOD', 'Other', 'GOOD', 'GOOD', 'OK'),
-            #                  remarks = c(NA_character_, 'Unknown reason for no analyte concentration as a result of external lab data format change',
-            #                              NA_character_, NA_character_, NA_character_)))
-            # gg = gg %>%
-            #     filter(!(externalLabDataQF == 'formatChange' & sampleCondition == 'GOOD'))
-            # # semi_join(dd, gg, by = colnames(gg))
-            # if(nrow(gg)){
-            #     print(gg, n = 100)
-            #     # print(gg$remarks)
-            #     # readLines(n=1)
-            #     browser()
-            # }
-        # }
-        return(generate_ms_err())
-            # pivot_wider(
+
+
+        # filter(dd, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte)) %>% print(n=500)
 
         # belowDetectionQF %in% "BDL" "ND"
         # formatChange|legacyData is fine
@@ -554,26 +485,24 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
     }
     return(generate_ms_err())
 
-    if(!exists('out_lab') && !exists('out_dom')) {
-        print(paste0('swc_externalLabDataByAnalyte and swc_domainLabData are missing for ', component))
+    if(! exists('out_lab') && ! exists('out_dom')){
 
+        print(paste0('swc_externalLabDataByAnalyte and swc_domainLabData are missing for ', site_code))
         out_sub <- tibble()
 
     } else {
 
-        if(!exists('out_lab')) {
-            print(paste0('swc_externalLabDataByAnalyte is missing for', component, ', will proceed with Alk and ANC file'))
-
+        if(! exists('out_lab')){
+            print(paste0('swc_externalLabDataByAnalyte is missing for', site_code, ', will proceed with domain data'))
             out_sub <- out_dom
         }
 
-        if(!exists('out_dom')) {
-            print(paste0('swc_domainLabData is missing for ', component, ', will proceed with chemisty file file'))
-
+        if(! exists('out_dom')){
+            print(paste0('swc_domainLabData is missing for ', site_code, ', will proceed with external lab data'))
             out_sub <- out_lab
         }
 
-        if(exists('out_dom') && exists('out_lab')) {
+        if(exists('out_dom') && exists('out_lab')){
             out_sub <- rbind(out_lab, out_dom)
         }
 
@@ -593,12 +522,12 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 #stream_nitrate: STATUS=READY
 #. handle_errors
 process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
-    # prodname_ms=prodname_ms; site_code=site_code; component=in_comp
+                                    components){
+    # prodname_ms=prodname_ms; site_code=site_code; components=in_comp
     #prodcode = 'DP1.20093.001'
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles = list.files(rawdir)
 
@@ -631,10 +560,10 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
 #stream_PAR: STATUS=READY
 #. handle_errors
 process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
+                                    components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles <- list.files(rawdir)
 
@@ -672,14 +601,14 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
 #stream_temperature: STATUS=READY
 #. handle_errors
 process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
+                                    components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_code,
-                   c = component)
+                   c = components)
 
     rawfiles <- list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -719,9 +648,9 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
 #air_pressure: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
-                                component){
+                                components){
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -762,10 +691,10 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
 #stream_gases: STATUS=READY
 #. handle_errors
 process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
+                                    components){
 
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles = list.files(rawdir)
 
@@ -818,10 +747,10 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
 #surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
-                                component){
+                                components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles <- list.files(rawdir)
 
@@ -848,10 +777,10 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
 #stream_quality: STATUS=READY
 #. handle_errors
 process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
-                                    component){
+                                    components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles <- list.files(rawdir)
     relevant_tbl1 <- 'waq_instantaneous.feather'
@@ -903,10 +832,10 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
-                                    component) {
+                                    components) {
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
 
     rawfiles <- list.files(rawdir)
 

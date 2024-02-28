@@ -39,14 +39,14 @@ for(i in seq_len(nrow(prod_info))){
                                         prodname_ms = prodname_ms)
     }
 
-    # avail_sets <- sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
-    # if(is_ms_err(avail_sets)) next
-    #
-    # #retrieve data by site; log acquisitions and revisions
-    # avail_sites <- unique(avail_sets$site_code)
-    #
-    # #filter for only neon stream sites
-    # avail_sites <- avail_sites[avail_sites %in% neon_streams]
+    avail_sets <- sm(get_avail_neon_product_sets(prod_specs$prodcode_full))
+    if(is_ms_err(avail_sets)) next
+
+    #retrieve data by site; log acquisitions and revisions
+    avail_sites <- unique(avail_sets$site_code)
+
+    #filter for only neon stream sites
+    avail_sites <- avail_sites[avail_sites %in% neon_streams]
 
     for(j in 1:length(avail_sites)){
 
@@ -102,29 +102,29 @@ for(i in seq_len(nrow(prod_info))){
         # new_sets <- filter_unneeded_sets(tracker_with_details = retrieval_details)
         #
         # if(nrow(new_sets) == 0){
-        if(nrow(avail_site_sets) == 0){
-            loginfo(glue('Nothing to do for {s} {p}',
-                         s = site_code,
-                         p = prodname_ms),
-                    logger = logger_module)
-            next
-        } else {
-            loginfo(glue('Retrieving {s} {p}',
-                         s = site_code,
-                         p = prodname_ms),
-                    logger = logger_module)
-        }
+        # if(nrow(avail_site_sets) == 0){
+        #     loginfo(glue('Nothing to do for {s} {p}',
+        #                  s = site_code,
+        #                  p = prodname_ms),
+        #             logger = logger_module)
+        #     next
+        # } else {
+        loginfo(glue('Retrieving {s} {p}',
+                     s = site_code,
+                     p = prodname_ms),
+                logger = logger_module)
+        # }
 
         update_data_tracker_r(network = network,
                               domain = domain,
                               tracker = held_data)
 
-        warning('still gotta pass prodcode_full into get_neon_data, and then on to the kernel')
-        browser()
         get_neon_data(domain = domain,
                       # sets = new_sets,
                       # sets = avail_site_sets,
-                      site_code = site_code,
+                      s = list(prodname_ms = prodname_ms,
+                               site_code = site_code,
+                               prodcode_full = prodcode),
                       tracker = held_data)
 
         if(! is.na(prod_info$munge_status[i])){

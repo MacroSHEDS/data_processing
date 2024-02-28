@@ -2519,6 +2519,11 @@ update_data_tracker_r <- function(network = domain,
     #from disk, updated, and then written back to disk. tracker_name, set_details,
     #and new_status must be supplied if tracker is not.
 
+    if(exists('tracker', envir = .GlobalEnv)){
+        warning('there is a "tracker" object defined in the global environment. ',
+                'update_data_tracker_r will not work as intended')
+    }
+
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(set_details) || is.null(new_status)
     )){
@@ -2678,6 +2683,11 @@ update_data_tracker_d <- function(network = domain,
     #if it is omitted or set to NULL, the appropriate tracker will be loaded
     #from disk, updated, and then written back to disk. tracker_name, set_details,
     #and new_status must be supplied if tracker is not.
+
+    if(exists('tracker', envir = .GlobalEnv)){
+        warning('there is a "tracker" object defined in the global environment. ',
+                'update_data_tracker_d will not work as intended')
+    }
 
     if(is.null(tracker) && (
         is.null(tracker_name) || is.null(prodname_ms) ||
@@ -8235,6 +8245,8 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
     dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
 
     update_provenance(murl, dt_web_format)
+
+    return(invisible())
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -8716,6 +8728,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     #   it's precision that we keep track of in unknown_detlim_prec_lookup.
 
     #locates, estimates, or naively generates (as 0 or -Inf) detection limits for any value.
+    #updated 2024-02-27/28 to accommodate different detlims by site (neon). These rules are essentially the same, just with another column to match for neon.
     #order of decisions:
     #   1. if provider reports detlim/prec for same product, domain, variable, and daterange, use it
     #   2. if not for same daterange, use the nearest daterange
@@ -9529,7 +9542,7 @@ load_config_datasets <- function(from_where){
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
-            col_types = 'ccccnnnnccDDl'
+            col_types = 'cccccnnnnccDDl'
         ))
 
         site_doi_license <- googlesheets4::read_sheet(
@@ -9713,7 +9726,7 @@ ms_write_confdata <- function(x,
         which_dataset == 'site_data' ~ 'ccccccccnnnnncccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
         which_dataset == 'ws_appendix' ~ 'ccccccccnnnlcnnnnnc',
-        which_dataset == 'domain_detection_limits' ~ 'ccccnnnnccDDl',
+        which_dataset == 'domain_detection_limits' ~ 'cccccnnnnccDDl',
         which_dataset == 'site_doi_license' ~ 'c',
         TRUE ~ 'placeholder')
 
@@ -16174,15 +16187,14 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #update_on_gdrive: logical. should the domain_detection_limits file
     #   on gdrive be updated?
 
+    dls$site_code[is.na(dls$site_code)] <- 'all'
+
     #fix units, get sigfigs, get canonical units
     dls <- dls %>%
-        # ignore any entries where DL == "NA" or is.na()
-      filter(detection_limit_original != "NA",
-             !is.na(detection_limit_original)) %>%
+      filter(detection_limit_original != 'NA',
+             ! is.na(detection_limit_original)) %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
                sigfigs = count_sigfigs(detection_limit_original)) %>%
-               # start_date = dmy(start_date),
-               # end_date = dmy(end_date)) %>%
         select(-unit_converted) %>%
         left_join(select(vs, variable_code, unit_converted = unit),
                   by = c(variable_original = 'variable_code'))
@@ -16192,7 +16204,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
         #prepare detlim data to be used with ms_conversions
         dls_ms_format <- dl_set %>%
             mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
-                   site_code = 'a',
+                   # site_code = 'a',
                    var = paste0('GN_', variable_original),
                    val = detection_limit_original) %>%
             select(datetime, site_code, var, val)
@@ -16248,10 +16260,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
-        # filter for NAs in  dl converted (abs254_cm)
         filter(! is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
-        select(domain, prodcode, variable_converted,
+        select(domain, prodcode, site_code, variable_converted,
                variable_original, detection_limit_converted,
                detection_limit_original, precision, sigfigs, unit_converted,
                unit_original, start_date, end_date, added_programmatically)
@@ -17355,6 +17366,10 @@ update_detlims <- function(d, vars_units){
 
     #for all ms_status == 2, take the corresponding val and write it to
     #the detection_limits google sheet
+    #
+    #vars_units: a named vector of variables and their units as provided by the primary source.
+    #e.g. c('ANC' = 'ueq/l', ...)
+    #note that in MacroSheds, ANC is given in eq/l. This is determined automatically.
 
     names_units <- vars_units %>%
         plyr::ldply() %>%

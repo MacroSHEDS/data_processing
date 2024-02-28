@@ -1,37 +1,24 @@
 library(neonUtilities)
 
-get_neon_data <- function(domain, site_code tracker, silent = TRUE){
-
-    # for(i in 1:nrow(sets)){
-
-        if(! silent) print(paste0('i=', i, '/', nrow(sets)))
-
-        # s <- sets[i, ]
+get_neon_data <- function(domain, s, tracker, silent = TRUE){
 
         msg <- glue('Retrieving {p}, {st}',
-                    st = site_code,
-                    p = prodname_ms)
-        # msg <- glue('Retrieving {st}, {p}, {c}',
-        #             st = s$site_code,
-        #             p = prodname_ms,
-        #             c = s$component)
-
+                    st = s$site_code,
+                    p = s$prodname_ms)
         loginfo(msg, logger = logger_module)
 
         processing_func <- get(paste0('process_0_',
                                       s$prodcode_full))
 
         result <- do.call(processing_func,
-                          args = list(set_details = list(site_code = site_code),
-                          # args = list(set_details = s,
+                          args = list(set_details = s,
                                       network = network,
                                       domain = domain))
 
         new_status <- evaluate_result_status(result)
 
         if(new_status == 'error'){
-            logging::logwarn(result,
-                         logger = logger_module)
+            logging::logwarn(result, logger = logger_module)
         }
 
         update_data_tracker_r(network = network,
@@ -39,7 +26,6 @@ get_neon_data <- function(domain, site_code tracker, silent = TRUE){
                               tracker_name = 'held_data',
                               set_details = s,
                               new_status = new_status)
-    # }
 }
 
 neon_retrieve <- function(set_details, network, domain, time_index = NULL){
@@ -48,7 +34,7 @@ neon_retrieve <- function(set_details, network, domain, time_index = NULL){
                           wd = getwd(),
                           n = network,
                           d = domain,
-                          p = prodname_ms,
+                          p = set_details$prodname_ms,
                           s = set_details$site_code)
                           # c = set_details$component)
 
