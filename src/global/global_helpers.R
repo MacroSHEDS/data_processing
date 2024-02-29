@@ -8728,7 +8728,8 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     #   it's precision that we keep track of in unknown_detlim_prec_lookup.
 
     #locates, estimates, or naively generates (as 0 or -Inf) detection limits for any value.
-    #updated 2024-02-27/28 to accommodate different detlims by site (neon). These rules are essentially the same, just with another column to match for neon.
+    #does not account for potential deviations in detection limits within a domain, i.e.
+    #different detlims for each site. this has not been encountered yet.
     #order of decisions:
     #   1. if provider reports detlim/prec for same product, domain, variable, and daterange, use it
     #   2. if not for same daterange, use the nearest daterange

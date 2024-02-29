@@ -413,19 +413,24 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                    -startDate, -laboratoryName, -analysisDate, -coolerTemp,
                    -publicationDate, -release, -belowDetectionQF)
 
+        #check for unspecified units
         missing_unit <- filter(d, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte))
         message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(dd), ')'))
 
         d <- d %>%
             filter(! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
 
+        #check for vars reported in more than 1 unit
         var_unit_pairs <- distinct(d, analyte, analyteUnits) %>%
             filter(! is.na(analyteUnits)) %>%
             arrange(analyte)
         if(any(duplicated(var_unit_pairs))){
-            warning('we need to address this')
+            warning('we need to address this: analyte-analyteUnits mapping not 1:1')
             browser()
         }
+
+        update_neon_detlims(rawd$swc_externalLabSummaryData)
+
 
 
 
