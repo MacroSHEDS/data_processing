@@ -1,5 +1,44 @@
 library(neonUtilities)
 
+#neon name = c(macrosheds name, neon unit)
+var_deets <- list(
+    'SO4' = c('SO4', 'mg/l'),
+    'TDN' = c('TDN', 'mg/l'),
+    'NO2 - N' = c('NO2_N', 'mg/l'),
+    'Ca' = c('Ca', 'mg/l'),
+    'Ortho - P' = c('orthophosphate_P', 'mg/l'),
+    'TDP' = c('TDP', 'mg/l'),
+    'DOC' = c('DOC', 'mg/l'),
+    'TN' = c('TN', 'mg/l'),
+    'Mg' = c('Mg', 'mg/l'),
+    'Mn' = c('Mn', 'mg/l'),
+    'NH4 - N' = c('NH4_N', 'mg/l'),
+    'TPN' = c('TPN', 'ug/l'),
+    'DIC' = c('DIC', 'mg/l'),
+    'UV Absorbance (280 nm)' = c('abs280', 'unitless'),
+    'TOC' = c('TOC', 'mg/l'),
+    'Na' = c('Na', 'mg/l'),
+    'NO3+NO2 - N' = c('NO3_NO2_N', 'mg/l'),
+    'UV Absorbance (254 nm)' = c('abs254', 'unitless'),
+    'TSS' = c('TSS', 'mg/l'),
+    'Cl' = c('Cl', 'mg/l'),
+    'Fe' = c('Fe', 'mg/l'),
+    'HCO3' = c('HCO3', 'mg/l'),
+    'specificConductance' = c('spCond', 'uS/cm'),
+    'F' = c('F', 'mg/l'),
+    'Br' = c('Br', 'mg/l'),
+    'TPC' = c('TPC', 'ug/l'),
+    'pH' = c('pH', 'unitless'),
+    'Si' = c('Si', 'mg/l'),
+    # 'TSS - Dry Mass' = c('', ''), #omit
+    'K' = c('K', 'mg/l'),
+    'TP' = c('TP', 'mg/l'),
+    'TDS' = c('TDS', 'mg/l'),
+    'CO3' = c('CO3', 'mg/l'),
+    'NO2 -N' = c('NO2_N', 'mg/l'),
+    'ANC' = c('ANC', 'meq/l')
+)
+
 get_neon_data <- function(domain, s, tracker, silent = TRUE){
 
         msg <- glue('Retrieving {p}, {st}',
@@ -304,4 +343,65 @@ write_neon_variablekey = function(raw_neonfile_dir, dest){
     write_csv(varkey, dest)
 
     return(varkey)
+}
+
+update_neon_detlims <- function(neon_dls){
+
+    # names_units <- vars_units %>%
+    #     plyr::ldply() %>%
+    #     rename(variable_original = 1, unit_original = 2,
+    #            unit_converted = 3)
+
+    detlim_pre <- neon_dls %>%
+        as_tibble() %>%
+        mutate(analyte = if_else(analyte == 'Ortho-P', 'Ortho - P', analyte))
+        # filter(ms_status == 2) %>%
+        # distinct(var, val, .keep_all = TRUE) %>%
+        # mutate(start_date = as.Date(datetime),
+        #        var = drop_var_prefix(var)) %>%
+        # select(start_date, var, val) %>%
+        # arrange(var, start_date) %>%
+        # group_by(var) %>%
+        # mutate(end_date = lead(start_date) - 1) %>%
+        # ungroup() %>%
+        left_join(names_units, by = c('var' = 'variable_original')) %>%
+        rename(detection_limit_original = val,
+               variable_original = var) %>%
+        mutate(domain = !!domain,
+               prodcode = !!prodname_ms,
+               # variable_converted = NA,
+               # variable_original = ,
+               detection_limit_converted = NA,
+               detection_limit_original = abs(detection_limit_original),
+               precision = NA,
+               sigfigs = NA,
+               # unit_converted = ,
+               # unit_original = ,
+               # start_date = ,
+               # end_date = ,
+               added_programmatically = FALSE
+        )
+
+    detlims <- standardize_detection_limits(
+        dls = detlim_pre,
+        vs = ms_vars,
+        update_on_gdrive = FALSE
+    ) %>%
+        mutate(added_programmatically = TRUE)
+
+    detlims_update <- anti_join(
+        detlims, domain_detection_limits,
+        by = c('domain', 'prodcode', 'variable_converted', 'variable_original',
+               'detection_limit_original', 'start_date', 'end_date')
+    )
+
+    if(nrow(detlims_update)){
+        ms_write_confdata(detlims_update,
+                          which_dataset = 'domain_detection_limits',
+                          to_where = 'remote',
+                          overwrite = FALSE) #append
+    }
+
+    return(invisible())
+
 }

@@ -415,7 +415,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 
         #check for unspecified units
         missing_unit <- filter(d, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte))
-        message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(dd), ')'))
+        message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(d), ')'))
 
         d <- d %>%
             filter(! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
@@ -429,7 +429,10 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             browser()
         }
 
-        update_neon_detlims(rawd$swc_externalLabSummaryData)
+
+        rawd$swc_externalLabSummaryData
+
+        update_neon_detlims()
 
 
 
