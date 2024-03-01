@@ -471,10 +471,6 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             pivot_wider(names_from = 'analyte',
                         values_from = c('val', 'flag'))
 
-        #problems: why are there still NAs? (probs chill. just from pivoting)
-        #why are ""s being introduced?
-        #why is val_TPC empty?
-
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
@@ -487,7 +483,11 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                  'specificConductance' = 'spCond',
                                  'UV Absorbance (280 nm)' = 'abs280',
                                  'UV Absorbance (250 nm)' = 'abs250',
-                                 'UV Absorbance (254 nm)' = 'abs254'),
+                                 'UV Absorbance (254 nm)' = 'abs254',
+                                 'SO4', 'TDN', 'Ca', 'TDP', 'DOC', 'TN', 'Mg',
+                                 'Mn', 'TPN', 'DIC', 'TOC', 'Na', 'TSS', 'Cl',
+                                 'Fe', 'HCO3', 'F', 'Br', 'TPC', 'pH', 'Si',
+                                 'K', 'TP', 'TDS', 'CO3', 'ANC'),
                              data_col_pattern = 'val_#V#',
                              convert_to_BDL_flag = 'BDL',
                              is_sensor = FALSE,

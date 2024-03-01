@@ -980,7 +980,7 @@ ms_read_raw_csv <- function(filepath,
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
     if(length(missing_colnames)){
-        logwarn(paste0('These columns missing from dataframe. Maybe there has been a modification by primary source:\n',
+        logwarn(paste0('These columns missing from source data. Can signify an upstream change:\n',
                        paste(missing_colnames, collapse = ', ')),
                 logger = logger_module)
     }
@@ -1574,24 +1574,27 @@ ms_cast_and_reflag <- function(d,
     #variable_flags_to_drop: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are treated as
     #   bad data and are removed. Use '#*#' to refer to all values not
-    #   included in variable_flags_clean. This parameter is optional,
+    #   specified in variable_flags_clean (or variable_flags_bdl). This will also
+    #   keep any variables specified via variable_flags_dirty, but the point of '#*#'
+    #   is that you don't need to specify all of those, if there are lots of them.
+    #   This parameter is optional,
     #   though at least 2 of variable_flags_to_drop, variable_flags_clean,
-    #   and variable_flags_dirty must be supplied if varflag_col_pattern is not
-    #   set to NA AND variable_flags_bdl is not provided.
+    #   and variable_flags_dirty must be supplied if varflag_col_pattern is specified
+    #   (not NA) AND variable_flags_bdl is not provided.
     #   If '#*#' is used, variable_flags_clean must be supplied.
     #variable_flags_clean: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
     #   ms_status of 0, meaning clean. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied if varflag_col_pattern is not
-    #   set to NA AND variable_flags_bdl is not provided.
+    #   must be supplied if varflag_col_pattern is specified
+    #   (not NA) AND variable_flags_bdl is not provided.
     #   This parameter does not use the '#*#' wildcard.
     #variable_flags_dirty: a character vector of values that might appear in
     #   the variable flag columns. Elements of this vector are given an
     #   ms_status of 1, meaning dirty/questionable. This parameter is optional, though at least 2
     #   of variable_flags_to_drop, variable_flags_clean, and variable_flags_dirty
-    #   must be supplied if varflag_col_pattern is not
-    #   set to NA AND variable_flags_bdl is not provided.
+    #   must be supplied if varflag_col_pattern is specified
+    #   (not NA) AND variable_flags_bdl is not provided.
     #   This parameter does not use the '#*#' wildcard.
     #variable_flags_bdl: optional character vector of values that might appear in
     #   the variable flag columns indicating that their corresponding data values are
@@ -1842,16 +1845,26 @@ ms_cast_and_reflag <- function(d,
 
     #filter rows with variable flags indicating bad data (data to drop)
     if(! no_varflags){
+
+        dont_drop_these <- c('variable_flags_clean', 'variable_flags_dirty', 'variable_flags_bdl')
+        dont_drop_these <- unname(unlist(purrr::keep(mget(dont_drop_these), ~ nchar(.) > 0)))
+
         if(vardrop){
 
             if(variable_flags_to_drop == '#*#'){
-                d <- filter(d, flg %in% variable_flags_clean)
+                d <- filter(d, flg %in% dont_drop_these)
             } else {
                 d <- filter(d, ! flg %in% variable_flags_to_drop)
             }
 
         } else if(varclen && vardirt){
-            d <- filter(d, flg %in% c(variable_flags_clean, variable_flags_dirty))
+            # warning('dropping
+            stop('aaaaahh')
+            #need a warning about how many items are being dropped
+            #should NAs be kept? how often are they explicitly kept/discarded?
+            #look through each instance and verify that keeping NAs here will not hurt
+            #and what about below, in the next block?
+            d <- filter(d, flg %in% dont_drop_these)
         }
     }
 
