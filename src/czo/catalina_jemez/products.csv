@@ -12,7 +12,7 @@ prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,
 2494,precipitation,ready,ready,NA,precipitation__ms003,Upper Site -- Jemez 2011 Burned ZOB,1dc7b0975ae2469a96e3458075d3b75c,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv))
 2531,precipitation,ready,ready,NA,precipitation__ms003,Oracle Ridge,172de7fe091f48d98b1d380da5851932,!!SEARCH(CONTAINS(.csv))
 2475,precipitation,ready,ready,NA,precipitation__ms003,South-East Site -- Jemez 2013 Burned ZOB,0ba983afc62647dc8cfbd91058cfc56d,!!SEARCH(CONTAINS(.csv))
-2543,precipitation,ready,ready,NA,precipitation__ms003,Marshall Gulch,f7df7b07ea19477ab7ea701c34bc356b,!!SEARCH(CONTAINS(.csv))
+2543,precipitation,ready,ready,NA,precipitation__ms003,Marshall Gulch,f7df7b07ea19477ab7ea701c34bc356b,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(ites.csv|ethods.csv))
 5491,precip_chemistry,ready,ready,NA,precip_chemistry__ms004,Santa Catalina Mountains,4ab76a12613c493d82b2df57aa970c24,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url|metadata))
 5492,precip_chemistry,ready,ready,NA,precip_chemistry__ms004,Jemez River Basin,38c0e61607e74c329ac798c8001bfa95,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(.url|metadata))
 2415,precipitation,ready,ready,NA,precipitation__ms003,Flux Tower -- Mixed Conifer,5ca1378090884e72a8dcb796d882bb07,!!SEARCH(CONTAINS(.csv)__|EXCLUDE(sites.csv|methods.csv|gapfilled))

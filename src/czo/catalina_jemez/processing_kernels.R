@@ -558,16 +558,16 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     # Could not identify units on isotopes
     if(component == 'Isotopes_Stream_2006_2012.csv') {
         return()
     }
     d <- read.csv(rawfile, colClasses = 'character')
-    
+
     col_names <- colnames(d)
     units <- as.character(d[1,])
-    
+
     names(units) <- col_names
     units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
                                    'Method', 'SampleType', 'SampleMedium', 'pH',
@@ -575,13 +575,13 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                                    'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
                                    'UVA254'),
                                  collapse = '|'), col_names)]
-    
+
     units <- units[! grepl('mg/L|(mg/L)', units)]
-    
+
     d <- d %>%
         mutate(SiteCode = str_replace_all(SiteCode, '[/]', '_')) %>%
         filter(! SiteCode %in% c('missing2', 'missing1', ''))
-    
+
     col_names_to_vars <- c('pH', 'EC' = 'spCond', 'TIC', 'TOC', 'TN',
                            'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2',
                            'NO3.' = 'NO3', 'SO4', 'PO4', 'Na23' = 'Na',
@@ -597,27 +597,27 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                            'Lu175' = 'Lu', 'Pb208' = 'Pb', 'U238' = 'U',
                            'NH4.N' = 'NH4_N', 'Ortho.P' = 'PO4_P',
                            'SUVA254' = 'abs254', 'SUVA280' = 'abs280')
-    
+
     names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
                                        names(col_names_to_vars))
-    
+
     col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
-    
+
     if(any(duplicated(unname(col_names_to_vars)))){
         col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
     }
-    
-    
-    
+
+
+
     # rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
     #                 n = network,
     #                 d = domain,
     #                 p = prodname_ms,
     #                 s = site_code,
     #                 c = component)
-    # 
+    #
     # d <- read.csv(rawfile, colClasses = 'character')
-    # 
+    #
     # if(! c('EC', 'TN', 'TOC') %in% colnames(d)){
     #     return(NULL)
     # }
@@ -639,26 +639,26 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
 
     for(i in 1:length(units)){
         new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
-        
+
         if(length(new_name) == 0) { next }
-        
+
         names(units)[i] <- unname(new_name)
     }
-    
+
     units <- units[names(units) %in% unname(col_names_to_vars)]
-    
+
     units <- tolower(units)
     new_units_names <- names(units)
     units <- str_replace_all(units, 'umoles/l', 'umol/l')
     names(units) <- new_units_names
-    
+
     new_units <- rep('mg/l', length(units))
     names(new_units) <- names(units)
-    
+
     d <- ms_conversions(d,
                         convert_units_from = units,
                         convert_units_to = new_units)
-    
+
     # d <- ms_conversions(d,
     #                     convert_units_from = c('F' = 'umol/L',
     #                                            'Cl' = 'umol/L',
@@ -1047,13 +1047,13 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
                                     SiteCode == 'B2D-PRC' ~ 'B2D_PR',
                                     SiteCode == 'B2D-PSC' ~ 'B2D_PS',
                                     TRUE ~ SiteCode))
-    
+
     d[] <- lapply(d[], function(x) gsub(",", "", x))
-    
+
     if(! 'SO4' %in% names(d)){
         return(NULL)
     }
-    
+
     data_cols <- c('pH', 'EC' = 'spCond',
                    'TIC', 'TOC', 'TN', 'F.' = 'F', 'Cl.' = 'Cl',
                    'NO2.' = 'NO2', 'Br.' = 'Br', 'NO3.' = 'NO3',
@@ -1072,7 +1072,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
                    'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
                    'Tl205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
                    'NH4.N' = 'NH4_N')
-    
+
     #SRP same as Ortho-P?
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
@@ -1240,17 +1240,17 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
     if(nrow(d) == 0){
         return(NULL)
     }
-    
-    
+
+
     names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
                                        names(col_names_to_vars))
-    
+
     col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
-    
+
     if(any(duplicated(unname(col_names_to_vars)))){
         col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
     }
-    
+
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),

@@ -1,8 +1,14 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
-VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,panola_discharge,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
-VERSIONLESS002,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,panola_chem,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
-ms001,stream_flux_inst,ready,ready,ready,NA,NA,NA,NA
+VERSIONLESS001,discharge,ready,ready,NA,stream_flux_inst__ms001,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS001,stream_chemistry,ready,ready,NA,stream_flux_inst__ms001,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS001,CUSTOMprecipitation,ready,ready,NA,NA,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS001,precip_chemistry,ready,ready,NA,NA,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS001,CUSTOMprecip_flux_inst_scaled,ready,ready,NA,NA,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+VERSIONLESS001,CUSTOMstream_flux_inst_scaled,ready,ready,NA,NA,NA,PMRW_Data_for_and_estimates_of_wet_deposition_and_streamwater_solute_fluxes_wy86-16.zip,https://www.sciencebase.gov/catalog/file/get/5c5b0b83e4b070828902ac9b?f=__disk__b4%2F4d%2Fc1%2Fb44dc1405627810cbf6ef48e0a9ad77e7a3d7f62
+ms001,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
+ms002,stream_gauge_locations,NA,NA,ready,stream_flux_inst__ms001,NA,NA,NA
 ms000,ws_boundary,NA,NA,NA,NA,automated entry,NA,NA
-ms002,discharge,NA,NA,linked,NA,automated entry,NA,NA
-ms003,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
-ms004,stream_gauge_locations,NA,NA,ready,NA,,NA,NA
+ms003,discharge,NA,NA,linked,NA,automated entry,NA,NA
+ms004,stream_chemistry,NA,NA,linked,NA,automated entry,NA,NA
+ms005,CUSTOMprecipitation,NA,NA,linked,NA,automated entry,NA,NA
+ms006,CUSTOMprecip_flux_inst_scaled,NA,NA,linked,NA,automated entry,NA,NA

@@ -18,7 +18,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
                     rd = raw_data_dest,
                     c = set_details$component)
 
-    url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014.zip'
+    url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2011-0014/RDS-2011-0014_Data.zip'
 
     res <- httr::HEAD(url)
     last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
@@ -28,7 +28,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
                       last_mod_dt = NA_character_)
-    
+
     if(length(last_mod_dt) == 0){
         last_mod_dt <- NA
     }
@@ -90,7 +90,7 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
     if(length(last_mod_dt) == 0){
         last_mod_dt <- NA
     }
-    
+
     if(is.na(last_mod_dt) || last_mod_dt > set_details$last_mod_dt){
 
         download.file(url = url,
@@ -148,7 +148,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     if(length(last_mod_dt) == 0){
         last_mod_dt <- NA
     }
-    
+
     if(is.na(last_mod_dt) || last_mod_dt > set_details$last_mod_dt){
 
         download.file(url = url,
@@ -206,7 +206,7 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
     if(length(last_mod_dt) == 0){
         last_mod_dt <- NA
     }
-    
+
     if(is.na(last_mod_dt) || last_mod_dt > set_details$last_mod_dt){
 
         download.file(url = url,

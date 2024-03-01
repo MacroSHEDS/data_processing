@@ -5,6 +5,8 @@
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)
 
+library(dataRetrieval)
+
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'retrieve',
@@ -20,7 +22,6 @@ if(nrow(prod_info) == 0) return()
 
 site_code <- 'sitename_NA'
 
-## i = 4
 for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
@@ -77,12 +78,12 @@ for(i in seq_len(nrow(prod_info))){
                      s=site_code, p=prodname_ms), logger=logger_module)
     }
 
-    retrieve_loch_vale_product(network = network,
-                         domain = domain,
-                         prodname_ms = prodname_ms,
-                         site_code = site_code,
-                         tracker = held_data,
-                         url = prod_info$url[i])
+    retrieve_versionless_product(network = network,
+                                 domain = domain,
+                                 prodname_ms = prodname_ms,
+                                 site_code = site_code,
+                                 tracker = held_data,
+                                 resource_url = prod_info$url[i])
 
     if(! is.na(prod_info$munge_status[i])){
         update_data_tracker_m(network = network,
@@ -92,7 +93,6 @@ for(i in seq_len(nrow(prod_info))){
                               site_code = site_code,
                               new_status = 'pending')
     }
-    # }
 
     gc()
 }

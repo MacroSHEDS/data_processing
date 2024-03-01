@@ -100,9 +100,6 @@ populate_set_details <- function(tracker, prodname_ms, site_code, avail){
             components <- unique(email_update$component)
             components <- paste(components, collapse = ', ')
 
-            logwarn(msg = glue('The domain had updated product: {p}',
-                               p = prodname_ms))
-
             update_msg <- glue('PRODUCT UPDATE \n Network : {n} \n Domain : {d} \n ',
                                'Product {p} has been updated for site(s): {s} and component(s): {c}. \n',
                                ' Check meta data to ensure munge and retrival code is ',
@@ -216,7 +213,7 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
                           cacheOK = FALSE,
                           method = 'curl')
 
-            cur_year <- read_csv(temp_csv)
+            cur_year <- sw(read_csv(temp_csv))
 
             if(nrow(cur_year) == 0){
                 cur_year <- tibble()
@@ -241,7 +238,8 @@ pull_cdnr_discharge <- function(network, domain, prodname_ms, sites) {
             filter(!is.na(val)) %>%
             mutate(datetime = paste0(as.character(datetime), ' ', '12:00:00')) %>%
             mutate(datetime = as_datetime(datetime, format = '%Y-%m-%d %H:%M:%S', tz = 'America/Denver')) %>%
-            mutate(datetime = with_tz(datetime, tzone = 'UTC'))
+            mutate(datetime = with_tz(datetime, tzone = 'UTC')) %>%
+            distinct()
 
         d <- identify_sampling_bypass(final,
                                       is_sensor = TRUE,

@@ -1,10 +1,8 @@
 suppressPackageStartupMessages({
 
-    #we should be able to avoid librarying most or all of these,
-    #since we're referring to their functions directly with ::
 
     # #spatial packages
-    # library(terra)  #must load before gstat package (which isn't currently needed)
+    library(terra)  #must load before gstat package (which isn't currently needed)
     # # library(gstat) #must load before raster package (not needed)
     # library(raster)
     # # library(stars) #not needed (yet)
@@ -12,10 +10,11 @@ suppressPackageStartupMessages({
     # library(sp)
     # library(mapview)
     # library(elevatr)
-    # library(rgee)
+    # library(rgee) #requires system installation of gcloud (https://cloud.google.com/sdk/docs/install)
+    #also requires geojsonio
     # remotes::install_github("giswqs/whiteboxR")
     # library(whitebox)
-    # library(nhdplusTools)
+    library(nhdplusTools)
 
     #everything else
     library(httr)
@@ -43,6 +42,8 @@ suppressPackageStartupMessages({
     library(rgee) #requires geojsonio package
     library(osmdata)
     library(RCurl)
+    library(rvest)
+    # library(streamstats)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
@@ -55,11 +56,11 @@ suppressPackageStartupMessages({
 
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
-#(or after each run that results in a change)
-vsn <- 1.0
+#(or after each run that results in a change). Starting in 2015, use decimal versioning.
+vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,
-        timeout = 300)
+        timeout = 12000)
 
 ms_init <- function(use_gpu = FALSE,
                     use_multicore_cpu = TRUE,
@@ -138,7 +139,7 @@ ms_init <- function(use_gpu = FALSE,
         machine_status <- '1337'
         op_system <- 'windows'
     }
-   
+
     res <- try(setwd('/Users/hectorontiveros/Macrosheds/s-data_processing'), silent=TRUE) #Hector
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -165,7 +166,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'n00b'
       op_system <- 'mac'
     }
-    
+
     res <- try(setwd('C:/Users/gubbi/Documents/macrosheds/data_processing'), silent=TRUE) #Nick
     if(! 'try-error' %in% class(res)){
         successes <- successes + 1
@@ -219,7 +220,7 @@ ms_init <- function(use_gpu = FALSE,
         op_system <- NA
     }
 
-  
+
     res <- try(setwd('C:/Users/Dell/Documents/Projects/data_processing'), silent=TRUE) #server
     if(! 'try-error' %in% class(res)){
       successes <- successes + 1
@@ -228,7 +229,7 @@ ms_init <- function(use_gpu = FALSE,
       machine_status <- 'noob'
       op_system <- 'windows'
     }
-    
+
     if(successes > 1){
         stop(glue('more than one working directory was available. must set the ',
                   'correct one manually'))
@@ -251,9 +252,12 @@ ms_init <- function(use_gpu = FALSE,
     return(instance_details)
 }
 
-ms_instance <- ms_init(use_ms_error_handling = TRUE,
+ms_instance <- ms_init(use_ms_error_handling = FALSE,
                     #   force_machine_status = 'n00b',
                        config_storage_location = 'remote')
+
+#load authorization file for macrosheds google sheets
+## googlesheets4::gs4_auth(path = 'googlesheet_service_accnt.json')
 
 #read in secrets
 conf <- jsonlite::fromJSON('config.json',
@@ -275,9 +279,9 @@ googlesheets4::gs4_auth(email = gee_login)
 googledrive::drive_auth(email = gee_login)
 
 #initialize and authorize GEE account
-#try(rgee::ee_Initialize(user = conf$gee_login_ms,
-                       # drive = TRUE))
-                        
+try(rgee::ee_Initialize(user = conf$gee_login_ms,
+                        drive = TRUE))
+
 #set up global logger. network-domain loggers are set up later
 logging::basicConfig()
 logging::addHandler(logging::writeToFile,
@@ -291,8 +295,10 @@ if(ms_instance$use_ms_error_handling){
     source_decoratees('src/global/global_helpers.R') #parse decorators
 }
 
-#puts (google sheets) ms_vars, site_data, ws_delin_specs, univ_products into the global environment
-load_config_datasets(from_where = ms_instance$config_data_storage)
+#puts google sheets into the global environment: ms_vars, site_data, ws_delin_specs, univ_products.
+#if this hangs on "Selection:", enter 1 and authenticate tidyverse. should open your browser.
+## load_config_datasets(from_where = ms_instance$config_data_storage)
+load_config_datasets(from_where = 'remote')
 
 domain_detection_limits <- standardize_detection_limits(dls = domain_detection_limits,
                                                         vs = ms_vars,
@@ -313,14 +319,8 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
-# NOTE: this should be moved I believe, and made to work with the raw data
-# dcumentation of the latest iteration...
-# this function will update the citation sheet with the data and url of raw data download
-## scrape_data_download_urls()
-
 ## change string in line below to find row index of your desired domain
-
-dmnrow <- which(network_domain$domain == 'streampulse')
+dmnrow <- which(network_domain$domain == 'loch_vale') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -330,7 +330,7 @@ for(dmnrow in 1:nrow(network_domain)){
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
 
-    held_data = get_data_tracker(network, domain)
+    held_data <- get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
     # held_data = invalidate_tracked_data(network, domain, 'munge')
@@ -340,8 +340,8 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-     #held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-     #owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
@@ -357,18 +357,21 @@ for(dmnrow in 1:nrow(network_domain)){
     # this should only run when you have your producs.csv
     # and processing kernels prod information matching
     update_product_statuses(network = network,
-                           domain = domain)
+                            domain = domain)
 
     get_all_local_helpers(network = network,
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                prodname_filter = c('stream_chemistry'),
+                # prodname_filter = c('stream_chemistry'),
                 domain = domain)
 
+    check_for_derelicts(network = network,
+                        domain = domain)
+
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -376,8 +379,7 @@ for(dmnrow in 1:nrow(network_domain)){
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
                         # overwrite_wb_sites = "trout_river",
-                        verbose = FALSE
-                        ))
+                        verbose = FALSE))
     }
 
     ms_derive(network = network,

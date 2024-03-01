@@ -21,10 +21,13 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2018-0028/RDS-2018-0028.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -75,10 +78,13 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2017-0037/RDS-2017-0037.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -129,10 +135,13 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 
     url <- 'https://www.fs.usda.gov/rds/archive/products/RDS-2017-0040/RDS-2017-0040.zip'
 
-    res <- httr::HEAD(url)
-    last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
-        as.POSIXct() %>%
-        with_tz('UTC')
+    headers <- RCurl::getURL(url, nobody = 1L, header = 1L, httpheader = list('Accept-Encoding' = 'identity'))
+    last_mod_dt <- str_match(headers, 'last-modified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>% with_tz('UTC')
+    # res <- httr::HEAD(url)
+    # last_mod_dt <- httr::parse_http_date(res$headers$`last-modified`) %>%
+    #     as.POSIXct() %>%
+    #     with_tz('UTC')
 
     deets_out <- list(url = NA_character_,
                       access_time = NA_character_,
@@ -171,7 +180,11 @@ process_0_VERSIONLESS004 <- function(set_details, network, domain) {
                  p = set_details$prodname_ms),
             logger = logger_module)
 
-    return()
+    deets_out <- list(url = NA_character_,
+                      access_time = NA_character_,
+                      last_mod_dt = NA_character_)
+
+    return(deets_out)
 }
 
 #munge kernels ####

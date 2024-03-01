@@ -288,7 +288,8 @@ identify_sampling <- function(df,
         #     select(datetime, !!var_name := .data[[data_cols[p]]], site_code)
 
         all_sites <- tibble()
-        for(i in 1:length(site_codes)){
+
+        for(i in seq_along(site_codes)){
 
             # df_site <- df_var %>%
             df_site <- df %>%
@@ -702,7 +703,7 @@ ms_read_raw_csv <- function(filepath,
     #   measured with a sensor (which may be susceptible to drift and/or fouling),
     #   FALSE means the measurement(s) was/were not recorded by a sensor. This
     #   category includes analytical measurement in a lab, visual recording, etc.
-    #set_to_NA: For values such as 9999 that are proxies for NA values.
+    #set_to_NA: character. For values such as '9999' that are proxies for NA values.
     #convert_to_BDL_flag: character vector of QC flags that should be interpreted
     #   as "below detection limit". For numeric codes, e.g. -888, give their
     #   character representations, i.e. "-888". Accepts '#*#' as a wildcard that
@@ -721,7 +722,7 @@ ms_read_raw_csv <- function(filepath,
     #   with any other flag information. Note that convert_to_BDL_flag is not
     #   necessary when numeric_dl_col_pattern is used. If you find a situation
     #   where both are needed, we probably have work to do.
-    #set_to_0: For values that we want to set to zero. We're setting BDLs to
+    #set_to_0: character. For values that we want to set to zero. We're setting BDLs to
     #   1/2 detlim instead, so this param is probably obsolete
     #var_flagcol_pattern: optional string with same mechanics as the other
     #   pattern parameters. this one is for columns containing flag
@@ -737,6 +738,11 @@ ms_read_raw_csv <- function(filepath,
     #sampling_type: optional value to overwrite identify_sampling because in
     #   some case this function is misidentifying sampling type. This must be a
     #   single value of G or I and is applied to all variables in product
+    #keep_bdl_values: logical. if true, data column values indicating the
+    #   detection limit, e.g. "<0.7" will be replaced with that limit, i.e. "0.7".
+    #   Only use this if you are following up with update_detlims().
+    #   If the values recorded in the cells represent half detection limit, or something
+    #   else, we need to write new handling.
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
@@ -751,7 +757,7 @@ ms_read_raw_csv <- function(filepath,
     #   by ms_cast_and_reflag.
 
     #checks
-    
+
     filepath_supplied <-  ! missing(filepath) && ! is.null(filepath)
     tibble_supplied <-  ! missing(preprocessed_tibble) && ! is.null(preprocessed_tibble)
 
@@ -827,6 +833,10 @@ ms_read_raw_csv <- function(filepath,
     alt_datacol_names <- var_flagcol_names <- alt_varflagcol_names <- NA
     if(missing(summary_flagcols)){
         summary_flagcols <- NULL
+    }
+
+    if(length(summary_flagcols) > 1){
+        warning('ms_cast_and_reflag may misbehave with multiple summary flagcols. usually there is a workaround')
     }
 
     if(missing(set_to_NA)) {
@@ -968,6 +978,13 @@ ms_read_raw_csv <- function(filepath,
                across(everything(), as.character))
     }
 
+    missing_colnames <- setdiff(names(colnames_all), colnames(d))
+    if(length(missing_colnames)){
+        logwarn(paste0('These columns missing from dataframe. Maybe there has been a modification by primary source:\n',
+                       paste(missing_colnames, collapse = ', ')),
+                logger = logger_module)
+    }
+
     d <- sw(select(d, any_of(c(names(colnames_all),
                                names(dl_cols),
                                'NA.')))) %>% #for NA meaning "sodium"
@@ -1011,7 +1028,7 @@ ms_read_raw_csv <- function(filepath,
             d[d == set_to_0[i]] <- '0'
         }
     }
-    
+
     #extract numeric DL column information into data columns
     if(! is.null(numeric_dl_col_pattern)){
       for(i in seq_along(numeric_dl_col_names)){
@@ -1020,7 +1037,7 @@ ms_read_raw_csv <- function(filepath,
           d[! is.na(dl_col), datacol_names[i]] <- paste0('<', dl_col[! is.na(dl_col)])
         }
       }
-      
+
       convert_to_BDL_flag <- c(convert_to_BDL_flag, '<#*#')
       d <- select(d, -all_of(numeric_dl_col_names))
     }
@@ -1088,7 +1105,7 @@ ms_read_raw_csv <- function(filepath,
             # for this variable
             bdl_cols_do_not_drop <- c(bdl_cols_do_not_drop,
                                       paste0(d_colname, '__|dat'))
-         
+
         }
     }
     bdl_cols_do_not_drop <- unique(bdl_cols_do_not_drop)
@@ -1144,7 +1161,6 @@ ms_read_raw_csv <- function(filepath,
                 logger = logger_module)
     }
 
-
     #rename cols to canonical names
     for(i in 1:ncol(d)){
 
@@ -1174,6 +1190,7 @@ ms_read_raw_csv <- function(filepath,
 
     if(any(is.na(d$datetime))) {
         pct_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+        if(pct_na == 0) pct_na <- '<1'
 
         logwarn(msg = glue('{pna}% datetimes failed to parse in {n}, {d}, {s}, {p}',
                            pna = pct_na,
@@ -1258,7 +1275,7 @@ ms_read_raw_csv <- function(filepath,
     #     arrange(site_code, datetime)
     d <- d %>%
         group_by(datetime, site_code) %>%
-        summarize(across(ends_with('__|dat'), mean, na.rm = TRUE),
+        summarize(across(ends_with('__|dat'), ~mean(., na.rm = TRUE)),
                   across(! ends_with('__|dat'), ~(na.omit(.)[1]))) %>%
         ungroup() %>%
         arrange(site_code, datetime)
@@ -1294,12 +1311,14 @@ ms_read_raw_csv <- function(filepath,
 
     #prepend two-letter code to each variable representing sample regimen and
     #record sample regimen metadata
-    d <- sm(identify_sampling(df = d,
-                              is_sensor = is_sensor,
-                              domain = domain,
-                              network = network,
-                              prodname_ms = prodname_ms,
-                              sampling_type = sampling_type))
+    if(nrow(d)){
+        d <- sm(identify_sampling(df = d,
+                                  is_sensor = is_sensor,
+                                  domain = domain,
+                                  network = network,
+                                  prodname_ms = prodname_ms,
+                                  sampling_type = sampling_type))
+    }
 
     #Check if all sites are in site file
     unq_sites <- unique(d$site_code)
@@ -1643,11 +1662,17 @@ ms_cast_and_reflag <- function(d,
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
         }
+        if(! inherits(summary_flags_clean, 'list')){
+            stop('summary_flags_clean must be a list')
+        }
     }
     if(sumdirt){
         if(any(sapply(summary_flags_dirty, function(x) '#*#' %in% x))){
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
+        }
+        if(! inherits(summary_flags_dirty, 'list')){
+            stop('summary_flags_dirty must be a list')
         }
     }
 
@@ -1664,6 +1689,10 @@ ms_cast_and_reflag <- function(d,
             stop(glue('if #*# wildcard is supplied as part of summary_flags_to_drop,',
                       ' it must be in a character vector of length 1'))
         }
+
+        if(! inherits(summary_flags_to_drop, 'list')){
+            stop('summary_flags_to_drop must be a list')
+        }
     }
 
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
@@ -1678,7 +1707,19 @@ ms_cast_and_reflag <- function(d,
                     'varflag_col_pattern = NA)'))
     }
 
+    if(varclen && ! mode(variable_flags_clean) == 'character'){
+        stop('variable_flags_clean must be a character vector')
+    }
+
+    if(vardirt && ! mode(variable_flags_dirty) == 'character'){
+        stop('variable_flags_dirty must be a character vector')
+    }
+
     if(vardrop){
+
+        if(! mode(variable_flags_to_drop) == 'character'){
+            stop('variable_flags_to_drop must be a character vector')
+        }
 
         if('#*#' %in% variable_flags_to_drop && length(variable_flags_to_drop) > 1){
             stop(glue('if #*# wildcard is used in variable_flags_to_drop,',
@@ -1783,7 +1824,7 @@ ms_cast_and_reflag <- function(d,
                     d <- filter(d, (!!sym(names(smtd))) %in%
                                     summary_flags_clean[[i]])
                 } else {
-                    d <- filter(d, ! (!!sym(names(smtd))) %in% smtd)
+                    d <- filter(d, ! (!!sym(names(smtd))) %in% unlist(smtd))
                 }
             }
 
@@ -2249,9 +2290,9 @@ generate_ms_exception = function(text=1){
     return(excobj)
 }
 
-generate_blacklist_indicator = function(text=1){
+generate_blocklist_indicator = function(text=1){
     indobj = text
-    class(indobj) = 'blacklist_indicator'
+    class(indobj) = 'blocklist_indicator'
     return(indobj)
 }
 
@@ -2263,16 +2304,16 @@ is_ms_exception <- function(x){
     return('ms_exception' %in% class(x))
 }
 
-is_blacklist_indicator <- function(x){
-    return('blacklist_indicator' %in% class(x))
+is_blocklist_indicator <- function(x){
+    return('blocklist_indicator' %in% class(x))
 }
 
 evaluate_result_status <- function(r){
 
     if(is_ms_err(r) || is_ms_exception(r)){
         status <- 'error'
-    } else if(is_blacklist_indicator(r)){
-        status <- 'blacklist'
+    } else if(is_blocklist_indicator(r)){
+        status <- 'blocklist'
     } else {
         status <- 'ok'
     }
@@ -2447,7 +2488,7 @@ track_new_site_components <- function(tracker, prodname_ms, site_code, avail){
 filter_unneeded_sets <- function(tracker_with_details){
 
     new_sets = tracker_with_details %>%
-        filter(status != 'blacklist' | is.na(status)) %>%
+        filter(status != 'blocklist' | is.na(status)) %>%
         filter(needed == TRUE | is.na(needed))
 
     if(any(is.na(new_sets$needed))){
@@ -2811,10 +2852,20 @@ get_product_info <- function(network,
         custom_prods <- prods %>%
             filter(grepl('^CUSTOM', prodname))
 
-        atypicals_sorted <- prods %>%
+        atypicals <- prods %>%
             filter(! prodname %in% !!typical_derprods,
                    ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
+
+        #usgs Q and/or cdnr Q must be retrieved before Q is combined
+        external_q_source <- str_match(atypicals$prodname, '(.+)_discharge')[, 2] %>%
+            na.omit()
+        if(any(! external_q_source %in% c('usgs', 'cdnr'))){
+            stop('need to update this for new external discharge source')
+        }
+
+        atypicals_sorted <- bind_rows(filter(atypicals, grepl('(?:usgs|cdnr)_discharge', prodname)),
+                                      filter(atypicals, ! grepl('(?:usgs|cdnr)_discharge', prodname)))
 
         typicals_sorted <- prods %>%
             filter(prodname %in% !!typical_derprods,
@@ -2974,7 +3025,7 @@ ms_delineate <- function(network,
                          domain,
                          dev_machine_status,
                          verbose = FALSE,
-                         overwrite_wb_sites = c() ){
+                         overwrite_wb_sites = c()){
 
     #dev_machine_status: either '1337', indicating that your machine has >= 16 GB
     #   RAM, or 'n00b', indicating < 16 GB RAM. DEM resolution is chosen
@@ -2992,7 +3043,7 @@ ms_delineate <- function(network,
             # ! is.na(latitude),
             # ! is.na(longitude),
             site_type == 'stream_gauge') %>%
-        select(site_code, latitude, longitude, CRS)
+        select(site_code, latitude, longitude, CRS, colocated_gauge_id)
 
     #checks
     if(any(is.na(site_locations$latitude) | is.na(site_locations$longitude))){
@@ -3051,11 +3102,11 @@ ms_delineate <- function(network,
 
         site <- site_locations$site_code[i]
 
-        if(length(overwrite_wb_sites) > 0) {
-          if(!site %in% overwrite_wb_sites) {
-            warning('only working on overwrite sites, skipping')
-            next
-          }
+        if(length(overwrite_wb_sites)){
+            if(! site %in% overwrite_wb_sites){
+                message('only working on overwrite sites, skipping')
+                next
+            }
         }
 
         if(verbose){
@@ -3074,9 +3125,9 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        print(site)
+        # print(site)
         if(site %in% overwrite_wb_sites) {
-          warning('site in overwrite vector, launching new delineation')
+            message('site in overwrite vector, launching new delineation')
         } else if(dir.exists(site_dir) && length(dir(site_dir))){
             message(glue('{s} already delineated ({d})',
                          s = site,
@@ -3096,13 +3147,12 @@ ms_delineate <- function(network,
                    showWarnings = FALSE)
 
         if(site %in% overwrite_wb_sites) {
-          specs <- data.frame(matrix(ncol = 1, nrow = 0))
+            specs <- data.frame(matrix(ncol = 1, nrow = 0))
         } else {
-          specs <- ws_delin_specs %>%
-              filter(
-                  network == !!network,
-                  domain == !!domain,
-                  site_code == !!site)
+            specs <- ws_delin_specs %>%
+                filter(network == !!network,
+                       domain == !!domain,
+                       site_code == !!site)
         }
 
         if(nrow(specs) == 1){
@@ -3149,68 +3199,76 @@ ms_delineate <- function(network,
             #appropriate delineation
 
         } else if(nrow(specs) == 0){
-            if(site %in% overwrite_wb_sites) {
-              operation <- 'overwriting'
-              warning(glue('{o} delineation specs for {n}-{d}-{s}. ',
-                          'Delineate locally and push changes.',
-                          o = operation,
-                          n = network,
-                          d = domain,
-                          s = site))
-            } else {
-              operation <- 'missing'
-              if(ms_instance$instance_type != 'dev'){
-                  stop(glue('{o} delineation specs for {n}-{d}-{s}. ',
-                            'Delineate locally and push changes.',
-                            o = operation,
-                            n = network,
-                            d = domain,
-                            s = site))
-              }
+
+            if(! site %in% overwrite_wb_sites){
+                if(ms_instance$instance_type != 'dev'){
+                    stop(glue('Missing delineation specs for {n}-{d}-{s}. ',
+                              'Delineate locally and push changes.',
+                              n = network,
+                              d = domain,
+                              s = site))
+                }
             }
 
-            tmp <- tempdir()
+            coloc_gauge <- site_locations$colocated_gauge_id[i]
+            if(! is.na(coloc_gauge)){
 
-            selection <- delineate_watershed_apriori_recurse(
-                lat = site_locations$latitude[i],
-                long = site_locations$longitude[i],
-                crs = site_locations$CRS[i],
-                site_code = site,
-                buffer_radius = NULL,
-                snap_dist = NULL,
-                snap_method = NULL,
-                dem_resolution = NULL,
-                flat_increment = NULL,
-                breach_method = 'basic',
-                burn_streams = FALSE,
-                scratch_dir = tmp,
-                write_dir = site_dir,
-                dev_machine_status = dev_machine_status,
-                verbose = verbose)
+                coloc_gauge_ <- str_split(coloc_gauge, ':')[[1]]
 
-            if(is.numeric(selection) && selection == 1) next
-            if(is.numeric(selection) && selection == 2) return(invisible(NULL))
+                if(! coloc_gauge_[1] == 'usgs') stop('alternative delineation routine only built for usgs gauges atm')
+
+                delineate_watershed_nhd(site_code = site_locations$site_code[i],
+                                        nwis_gauge_id = coloc_gauge_[2],
+                                        write_dir = site_dir)
+
+            } else {
+
+                tmp <- tempdir()
+
+                selection <- delineate_watershed_apriori_recurse(
+                    lat = site_locations$latitude[i],
+                    long = site_locations$longitude[i],
+                    crs = site_locations$CRS[i],
+                    site_code = site,
+                    buffer_radius = NULL,
+                    snap_dist = NULL,
+                    snap_method = NULL,
+                    dem_resolution = NULL,
+                    flat_increment = NULL,
+                    breach_method = 'basic',
+                    burn_streams = FALSE,
+                    scratch_dir = tmp,
+                    write_dir = site_dir,
+                    dev_machine_status = dev_machine_status,
+                    verbose = verbose)
+
+                if(is.numeric(selection) && selection == 1) next
+                if(is.numeric(selection) && selection == 2) return(invisible(NULL))
+            }
 
         } else {
             stop('Multiple entries for same network/domain/site in site_data')
         }
 
-        #write the specifications of the correctly delineated watershed
-        rgx <- str_match(selection,
-                         paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
-                                'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
-                                'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
+        if(is.na(coloc_gauge)){
 
-        write_wb_delin_specs(network = network,
-                             domain = domain,
-                             site_code = site,
-                             buffer_radius = as.numeric(rgx[, 2]),
-                             snap_method = rgx[, 3],
-                             snap_distance = as.numeric(rgx[, 4]),
-                             dem_resolution = as.numeric(rgx[, 5]),
-                             flat_increment = rgx[, 6],
-                             breach_method = rgx[, 7],
-                             burn_streams = rgx[, 8])
+            #write the specifications of the correctly delineated watershed
+            rgx <- str_match(selection,
+                             paste0('^wb[0-9]+_BUF([0-9]+)(standard|jenson)',
+                                    'DIST([0-9]+)RES([0-9]+)INC([0-1\\.null]+)',
+                                    'BREACH(basic|lc)BURN(TRUE|FALSE)\\.shp$'))
+
+            write_wb_delin_specs(network = network,
+                                 domain = domain,
+                                 site_code = site,
+                                 buffer_radius = as.numeric(rgx[, 2]),
+                                 snap_method = rgx[, 3],
+                                 snap_distance = as.numeric(rgx[, 4]),
+                                 dem_resolution = as.numeric(rgx[, 5]),
+                                 flat_increment = rgx[, 6],
+                                 breach_method = rgx[, 7],
+                                 burn_streams = rgx[, 8])
+        }
 
         #calculate watershed area and write it to site_data gsheet
         catch <- ms_calc_watershed_area(network = network,
@@ -3249,6 +3307,36 @@ ms_delineate <- function(network,
 
     loginfo(msg = 'Delineations complete',
             logger = logger_module)
+}
+
+delineate_watershed_nhd <- function(site_code, nwis_gauge_id, write_dir){
+
+    library(nhdplusTools)
+
+    loginfo(paste('Retrieving watershed boundary from nhd for site:', site_code),
+            logger = logger_module)
+
+    nldi_nwis <- list(featureSource = "nwissite",
+                      featureID = paste('USGS',
+                                        as.character(nwis_gauge_id),
+                                        sep = '-'))
+
+    wb_sf <- nhdplusTools::get_nldi_basin(nldi_feature = nldi_nwis,
+                                          simplify = FALSE,
+                                          split = TRUE)
+
+    ws_area_ha <- as.numeric(sf::st_area(wb_sf)) / 10000
+
+    wb_sf <- wb_sf %>%
+        mutate(site_code = !!site_code) %>%
+        mutate(area = !!ws_area_ha)
+
+    sw(sf::st_write(obj = wb_sf,
+                    dsn = glue('{d}/{s}.shp',
+                               d = write_dir,
+                               s = site_code),
+                    delete_dsn = TRUE,
+                    quiet = TRUE))
 }
 
 choose_dem_resolution <- function(dev_machine_status, buffer_radius){
@@ -4221,12 +4309,12 @@ get_derive_ingredient <- function(network,
     #   ms9XX prodcode.
     #accept_multiple: logical. should more than one ingredient be returned?
 
-     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
+    prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
                               n = network,
                               d = domain))) %>%
-         filter( (! is.na(munge_status) & munge_status == 'ready') |
-                     (! is.na(derive_status) & derive_status %in% c('ready', 'linked')) |
-                     (prodname == 'ws_boundary' & ! is.na(notes) & notes == 'automated entry') )
+        filter( (! is.na(munge_status) & munge_status == 'ready') |
+                    (! is.na(derive_status) & derive_status %in% c('ready', 'linked')) |
+                    (prodname == 'ws_boundary' & ! is.na(notes) & notes == 'automated entry') )
 
     if(ignore_derprod){
 
@@ -4515,21 +4603,6 @@ ms_derive <- function(network = domain,
                 n = network,
                 d = domain),
            local = TRUE)
-
-
-    # ws_bound_prod <- list.files(glue('data/{n}/{d}/derived',
-    #                                  n = network,
-    #                                  d = domain),
-    #                             pattern = '^ws_boundary__ms',
-    #                             include.dirs = TRUE) %>%
-    #     sort(decreasing = TRUE) %>%
-    #     {.[1]}
-    #
-    # if(length(ws_bound_prod) && ! is.na(ws_bound_prod)){
-    #     write_metadata_d(network = network,
-    #                      domain = domain,
-    #                      prodname_ms = ws_bound_prod)
-    # }
 
     #link all derived products to the data portal directory
     create_portal_links(network = network,
@@ -5136,6 +5209,10 @@ update_product_statuses <- function(network, domain){
     func_codes = stringr::str_match(funcname_lines,
                                     'process_([0-2])_(.+)? <-')[, 2:3, drop=FALSE]
 
+    if(any(is.na(func_codes))){
+        stop('error updating product statuses. probable extraneous lines in processing_kernels.R')
+    }
+
     func_lvls = func_codes[, 1, drop=TRUE]
     prodcodes = func_codes[, 2, drop=TRUE]
 
@@ -5355,8 +5432,7 @@ write_ms_file <- function(d,
     #network, domain, prodname_ms, site_code, and processing level. If a tibble,
     #write as a feather file (site_code.feather). Uncertainty (error) associated
     #with the val column will be extracted into a separate column called
-    #val_err. Write the file to the appropriate location within the data
-    #acquisition repository.
+    #val_err if sep_errors is TRUE.
 
     #deprecated:
     #if link_to_portal == TRUE, create a hard link to the
@@ -5430,6 +5506,7 @@ write_ms_file <- function(d,
                              p = prodname_ms))
             }
         }
+
         #make sure write_feather will omit attrib by def (with no artifacts)
         write_feather(d, site_file)
     }
@@ -5442,8 +5519,6 @@ write_ms_file <- function(d,
                            level = level,
                            dir = shapefile)
     }
-
-    #return()
 }
 
 #deprecated (old form of this function is in helper_scrapyard.R)
@@ -7086,11 +7161,16 @@ ms_nocb_mean_interpolate <- function(d, interval){
     return(d_interp)
 }
 
-synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
+synchronize_timestep <- function(d,
+                                 precip_interp_method = 'zero',
+                                 prodname_ms_ = get('prodname_ms')){
                                  # desired_interval){
                                  # impute_limit = 30){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_code, var, val, ms_status
+    #precip_interp_method: either "zero" for 0-interpolation, or "mean_nocb", which
+    #   fills gaps assuming that each recorded sample is an aggregate of equal-volume
+    #   samples over the preceding, unobserved days. nocb = "next observation carried backward".
     #desired_interval [HARD DEPRECATED] is a character string that can be parsed by the "by"
     #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
     #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
@@ -7229,25 +7309,6 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 select(-val_err) %>%
                 bind_rows(interp_only_chunk) %>%
                 arrange(datetime)
-
-            # sitevar_chunk <- summary_and_interp_chunk %>%
-            #     group_by(datetime) %>%
-            #         summarize(
-            #             site_code = first(site_code),
-            #             var = first(var),
-            #             val = if(var_is_p)
-            #                 {
-            #                     sum(val, na.rm = TRUE)
-            #                 # } else if(var_is_q){
-            #                 #     max_ind <- which.max(val) #max() removes uncert
-            #                 #     if(max_ind) val[max_ind] else NA_real_
-            #                 } else {
-            #                     mean(val, na.rm = TRUE)
-            #                 },
-            #             ms_status = numeric_any(ms_status)) %>%
-            #         ungroup() %>%
-            #     bind_rows(interp_only_chunk) %>%
-            #     arrange(datetime)
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -7264,12 +7325,17 @@ synchronize_timestep <- function(d, prodname_ms_ = get('prodname_ms')){
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
         } else { #precip
-            d_split[[i]] <- ms_zero_interpolate( #so far only needed for konza
-                d = sitevar_chunk,
-                interval = rounding_intervals[i])
-            # d_split[[i]] <- ms_nocb_mean_interpolate( #this might apply in some cases, but not yet.
-            #     d = sitevar_chunk,
-            #     interval = rounding_intervals[i])
+            if(precip_interp_method == 'zero'){
+                d_split[[i]] <- ms_zero_interpolate( #e.g. konza
+                    d = sitevar_chunk,
+                    interval = rounding_intervals[i])
+            } else if(precip_interp_method == 'mean_nocb'){
+                d_split[[i]] <- ms_nocb_mean_interpolate( #e.g. loch_vale
+                    d = sitevar_chunk,
+                    interval = rounding_intervals[i])
+            } else {
+                stop('precip_interp_method must be either "zero" or "mean_nocb"')
+            }
         }
     }
 
@@ -8054,16 +8120,80 @@ invalidate_derived_products <- function(successor_string){
                                        new_status = 'pending')
     }
 
-    #return()
+    #the above relies on accurate bookkeeping in products.csv, but that is
+    #unnecessary. now invalidating all discharge, special discharge, and
+    #stream flux derive kernels when discharge is munged. same for precip, etc.
+
+    derive_prods <- get_product_info(network = network,
+                                     domain = domain,
+                                     status_level = 'derive',
+                                     get_statuses = 'ready')
+
+    invalidate_bulk <- function(munge_cause, derive_effect){
+
+        if(grepl(munge_cause, prodname_ms)){
+
+            updt <- derive_prods %>%
+                filter(grepl(derive_effect, prodname)) %>%
+                mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+                pull(prodname_ms)
+
+            for(item in updt){
+                catch <- update_data_tracker_d(network = network,
+                                               domain = domain,
+                                               tracker_name = 'held_data',
+                                               prodname_ms = item,
+                                               site_code = 'sitename_NA',
+                                               new_status = 'pending')
+            }
+        }
+    }
+
+    invalidate_bulk('discharge', 'discharge|stream_flux')
+    invalidate_bulk('stream_chemistry', 'stream_chem|stream_flux')
+    invalidate_bulk('precipitation', 'precipit|precip_pchem')
+    invalidate_bulk('precip_chemistry', 'precip_pchem')
 }
 
-write_metadata_r <- function(murl, network, domain, prodname_ms){
+write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
     #this writes the metadata file for retrieved macrosheds data
     #see write_metadata_m for munged macrosheds data and write_metadata_d
     #for derived macrosheds data
 
     #also see read_metadata_r and read_metadata_m
+
+    component_row <- site_doi_license %>%
+        filter(network == !!network,
+               domain == !!domain,
+               macrosheds_prodcode == !!prodcode_from_prodname_ms(prodname_ms))
+
+    #murl might not be a url per se, but a note like "this came from our google drive"
+    if(is.null(murl)){
+
+        murl <- component_row$link
+
+        if(! length(murl)){
+            stop('missing provenance for ', prodname_ms)
+        }
+    }
+
+    last_dl <- component_row$link_download_datetime
+
+    currency_check <- 'placeholder'
+    is_hydroshare <- grepl('hydroshare\\.org', murl)
+    is_edi <- grepl('portal\\.edirepository', murl)
+    #is_essdive <-
+    if(is_hydroshare){
+        currency_check <- check_for_updates_hydroshare(murl, last_dl)
+    } else if(is_edi){
+        currency_check <- check_for_updates_edi(murl, last_dl)
+    }
+
+    if(grepl('^http', currency_check)){
+        #new resource location
+        murl <- currency_check
+    }
 
     #create raw directory if necessary
 
@@ -8079,10 +8209,30 @@ write_metadata_r <- function(murl, network, domain, prodname_ms){
                           rd = raw_dir,
                           p = prodname_ms)
 
+    download_dt <- lubridate::with_tz(Sys.time(), 'UTC')
+
     readr::write_file(paste0(murl, ' (retrieved ',
-                             lubridate::with_tz(Sys.time(), 'UTC'),
+                             download_dt,
                              ')'),
                       file = data_acq_file)
+
+    manual_prov_check <- murl == 'NA' ||
+        (! is_hydroshare && ! is_edi)
+
+    if(is.character(murl) && any(manual_prov_check)){
+        logwarn(msg = paste('manually verify provenance for', prodname_ms),
+                logger = logger_module)
+        return()
+    }
+    if(is.character(murl) && grepl('MacroSheds drive', murl)){
+        logwarn(msg = paste('MacroSheds gdrive file; manually verify provenenace for', prodname_ms),
+                logger = logger_module)
+        return()
+    }
+
+    dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
+
+    update_provenance(murl, dt_web_format)
 }
 
 read_metadata_r <- function(network, domain, prodname_ms){
@@ -8593,6 +8743,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     out <- rep(NA_real_, nrow(d))
 
     d$var <- drop_var_prefix(d$var)
+    d$datetime <- as.Date(d$datetime)
 
     #checks for cases 1-3
     got_domain <- half_detlims_all$domain == domain
@@ -8606,8 +8757,6 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
 
-            # NOTE: here I believe that this function is creating overlaps in detlim
-            # and also seems to not catch all overlap completely (WS, 2023-01-30, see github issue)
             dlsub <- dlsub %>%
                 mutate(start_date = data.table::fifelse(is.na(start_date), as.Date('1800-01-01'), start_date),
                        end_date = data.table::fifelse(is.na(end_date), Sys.Date(), end_date)) %>%
@@ -8741,7 +8890,8 @@ qc_hdetlim_and_uncert <- function(d, prodname_ms){
 
     #d: a tibble in MacroSheds format
 
-    #returns the same tibble, with quality control, 1/2 detection limit inserted
+    #returns the same tibble, with quality control (only range check as of 2024),
+    #1/2 detection limit inserted
     #for any instance of ms_status == 2, any ms_status == 2 set back to 1,
     #and uncertainty attached to the val column
 
@@ -9099,19 +9249,6 @@ get_gee_standard <- function(network,
     return(fin)
 }
 
-err_df_to_matrix <- function(df){
-
-    if(! all(sapply(df, class) %in% c('errors', 'numeric'))){
-        stop('all columns of df must be of class "errors" or "numeric"')
-    }
-
-    errmat <- as.matrix(as.data.frame(lapply(df, errors)))
-    M <- as.matrix(df)
-    errors(M) <- errmat
-
-    return(M)
-}
-
 get_relative_uncert <- function(x){
 
     if(any(class(x) %in% c('list', 'data.frame', 'array'))){
@@ -9333,7 +9470,8 @@ combine_products <- function(network, domain, prodname_ms,
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
     sites <- unique(str_split_fixed(site_feather, '[.]feather', n = Inf)[,1])
 
-    for(i in 1:length(sites)) {
+    for(i in 1:length(sites)){
+
         site_files <- grep(paste0(sites[i], '.feather'), files, value = TRUE)
 
         site_full <- map_dfr(site_files, read_feather)
@@ -9369,7 +9507,6 @@ load_config_datasets <- function(from_where){
         site_data <- sm(googlesheets4::read_sheet(
             conf$site_data_gsheet,
             na = c('', 'NA'),
-            #changes have been added
             col_types = 'ccccccccnnnnncccccc'
         ))
 
@@ -9393,12 +9530,21 @@ load_config_datasets <- function(from_where){
             col_types = 'ccccnnnnccDDl'
         ))
 
+        site_doi_license <- googlesheets4::read_sheet(
+            conf$site_doi_license_gsheet,
+            skip = 4,
+            na = c('', 'NA'),
+            col_types = 'c'
+        )
+
     } else if(from_where == 'local'){
 
         ms_vars <- sm(read_csv('data/general/variables.csv'))
         site_data <- sm(read_csv('data/general/site_data.csv'))
         univ_products <- sm(read_csv('data/general/universal_products.csv'))
         domain_detection_limits <- sm(read_csv('data/general/domain_detection_limits.csv'))
+        ws_appendix <- sm(read_csv('data/general/ws_appendix.csv'))
+        site_doi_license <- sm(read_csv('data/general/site_doi_license.csv'))
 
         ws_delin_specs <- tryCatch(sm(read_csv('data/general/watershed_delineation_specs.csv')),
                                    error = function(e){
@@ -9443,6 +9589,14 @@ load_config_datasets <- function(from_where){
     assign('domain_detection_limits',
            domain_detection_limits,
            pos = .GlobalEnv)
+
+    assign('ws_appendix',
+           ws_appendix,
+           pos = .GlobalEnv)
+
+    assign('site_doi_license',
+           site_doi_license,
+           pos = .GlobalEnv)
 }
 
 write_portal_config_datasets <- function(portal_config = NULL){
@@ -9463,7 +9617,7 @@ write_portal_config_datasets <- function(portal_config = NULL){
 
     site_doi_license <- sm(googlesheets4::read_sheet(
         conf$site_doi_license_gsheet,
-        skip = 5,
+        skip = 4,
         na = c('', 'NA'),
         col_types = 'c'
     ))
@@ -9530,16 +9684,13 @@ ms_write_confdata <- function(x,
 
     #x: a tibble or data.frame
     #which_dataset: string. either "ms_vars", "site_data", "univ_products",
-    #   "name_variants", or "ws_delin_specs"
+    #   "ws_delin_specs", "domain_detection_limits", "site_doi_license", or "ws_appendix"
     #to_where: string. either "remote", meaning write this file to a google
     #   sheets connection defined in data_acquisition/config.json and
     #   data_acquisition/googlesheet_service_accnt.json, or "local", meaning
     #   write this file locally to data_acquisition/data/general/<which_dataset>.csv
     #overwrite: logical; If FALSE, x will be appended to which_dataset
 
-    #this writes our "configuration" datasets to their appropriate locations.
-    #as of 10/27/20 those datasets include site_data, ms_vars, universal_products,
-    #name_variants, and ws_delin_specs
     #depending on the type of instance (remote/local),
     #those datasets are either written to local CSVs or to google sheets. for ms
     #developers, this will always be "remote". for future users, it'll be a
@@ -9547,8 +9698,8 @@ ms_write_confdata <- function(x,
 
     #which_dataset will also be updated in memory
 
-    known_datasets <- c('ms_vars', 'site_data', 'ws_delin_specs',
-                        'univ_products', 'name_variants')
+    known_datasets <- c('ms_vars', 'site_data', 'ws_delin_specs', 'domain_detection_limits',
+                        'univ_products', 'site_doi_license', 'ws_appendix')
 
     if(! which_dataset %in% known_datasets){
         stop(glue('which_dataset must be one of: "{kd}"',
@@ -9557,11 +9708,14 @@ ms_write_confdata <- function(x,
 
     type_string <- case_when(
         which_dataset == 'ms_vars' ~ 'cccccccnnccnn',
-        which_dataset == 'site_data' ~ 'ccccccccnnnnnccccc',
+        which_dataset == 'site_data' ~ 'ccccccccnnnnncccccc',
         which_dataset == 'ws_delin_specs' ~ 'cccncnnccl',
+        which_dataset == 'ws_appendix' ~ 'ccccccccnnnlcnnnnnc',
+        which_dataset == 'domain_detection_limits' ~ 'ccccnnnnccDDl',
+        which_dataset == 'site_doi_license' ~ 'c',
         TRUE ~ 'placeholder')
 
-    if(which_dataset %in% c('univ_products', 'name_variants')){
+    if(which_dataset %in% c('univ_products')){
         type_string <- NULL
     }
 
@@ -9571,14 +9725,28 @@ ms_write_confdata <- function(x,
             which_dataset == 'ms_vars' ~ conf$variables_gsheet,
             which_dataset == 'site_data' ~ conf$site_data_gsheet,
             which_dataset == 'univ_products' ~ conf$univ_prods_gsheet,
-            which_dataset == 'name_variants' ~ conf$name_variant_gsheet,
-            which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet)
+            which_dataset == 'ws_delin_specs' ~ conf$delineation_gsheet,
+            which_dataset == 'ws_appendix' ~ conf$ws_boundary_appendix_gsheet,
+            which_dataset == 'site_doi_license' ~ conf$site_doi_license_gsheet,
+            which_dataset == 'domain_detection_limits' ~ conf$dl_sheet)
 
-        if(overwrite){
+        ## write updates
 
-            # sm(googlesheets4::write_sheet(data = x,
-            #                               ss = write_loc,
-            #                               sheet = 1))
+        if(which_dataset == 'site_doi_license'){
+
+            catch <- expo_backoff(
+                expr = {
+                    sm(googlesheets4::range_write(ss = write_loc,
+                                                  data = x,
+                                                  sheet = 1,
+                                                  range = 'A6',
+                                                  col_names = FALSE))
+                },
+                max_attempts = 4
+            )
+
+        } else if(overwrite){
+
             catch <- expo_backoff(
                 expr = {
                     sm(googlesheets4::write_sheet(data = x,
@@ -9601,14 +9769,31 @@ ms_write_confdata <- function(x,
 
         }
 
-        catch <- expo_backoff(
-            expr = {
-                dset <- sm(googlesheets4::read_sheet(ss = write_loc,
-                                                     na = c('', 'NA'),
-                                                     col_types = type_string))
-            },
-            max_attempts = 4
-        )
+        ## read back and update locally (probably unnecessary, but also harmless and maybe this is here for a reason)
+
+        if(which_dataset == 'site_doi_license'){
+
+            catch <- expo_backoff(
+                expr = {
+                    dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                         na = c('', 'NA'),
+                                                         skip = 4,
+                                                         col_types = type_string))
+                },
+                max_attempts = 4
+            )
+
+        } else {
+
+            catch <- expo_backoff(
+                expr = {
+                    dset <- sm(googlesheets4::read_sheet(ss = write_loc,
+                                                         na = c('', 'NA'),
+                                                         col_types = type_string))
+                },
+                max_attempts = 4
+            )
+        }
 
     } else if(to_where == 'local'){
 
@@ -9616,8 +9801,10 @@ ms_write_confdata <- function(x,
             which_dataset == 'ms_vars' ~ 'variables.csv',
             which_dataset == 'site_data' ~ 'site_data.csv',
             which_dataset == 'univ_products' ~ 'universal_products.csv',
-            which_dataset == 'name_variants' ~ 'name_variants.csv',
-            which_dataset == 'ws_delin_specs' ~ 'watershed_delineation_specs.csv')
+            which_dataset == 'ws_delin_specs' ~ 'watershed_delineation_specs.csv',
+            which_dataset == 'ws_appendix' ~ 'ws_boundary_appendix.csv',
+            which_dataset == 'site_doi_license' ~ 'site_doi_license.csv',
+            which_dataset == 'domain_detection_limits' ~ 'domain_detection_limits.csv')
 
         if(overwrite){
 
@@ -10021,7 +10208,7 @@ postprocess_attribution_ts <- function(){
 
     attrib_d <- googlesheets4::read_sheet(
         conf$site_doi_license_gsheet,
-        skip = 5,
+        skip = 4,
         na = c('', 'NA'),
         col_types = 'c'
     )
@@ -11405,12 +11592,25 @@ find_resource_title <- function(x){
 
         xx <- gsub('Mt. ', 'Mt ', xx)
 
+        is_edi <- grepl('Environmental Data Initiative', xx)
+
         xspl <- strsplit(xx, '\\. ')[[1]]
         xspl <- xspl[! grepl('National Ecological Observatory Network', xspl)]
-        xspl <- xspl[! grepl('Forest Service', xspl)]
+        xspl <- xspl[! grepl('USDA Forest Service', xspl)]
         xspl <- xspl[! grepl('Susquehanna', xspl)]
         xspl <- xspl[! grepl('Dataset accessed from', xspl)]
         xspl <- xspl[! grepl('Williams', xspl)]
+        xspl <- xspl[! grepl('^http', xspl)]
+        xspl <- xspl[! grepl('Environmental Data Initiative', xspl)]
+
+        if(is_edi){
+            xspl <- xspl[! grepl('^ver [0-9]+$', xspl)]
+            xspl <- xspl[-(1:which(grepl('^[0-9]{4}$', xspl)))]
+            xspl <- paste(xspl, collapse = '. ')
+        }
+        #probs safe to build this. i feel like there's inconsistency in hydroshare
+        #citations though. check on it first.
+        # if(is_hydroshare)...
 
         xspl <- gsub('\\.$', '', xspl)
 
@@ -12759,7 +12959,7 @@ scale_flux_by_area <- function(network_domain, site_data){
 
                     ff <- ff[! grepl(pattern = 'inst_scaled',
                                      x = ff)]
-                    
+
                     # remove custom precip prods
                     ff <- ff[! grepl(pattern = 'CUSTOM',
                                      x = ff)]
@@ -13071,19 +13271,18 @@ retrieve_versionless_product <- function(network,
                                          domain,
                                          prodname_ms,
                                          site_code,
+                                         resource_url = NA_character_,
                                          tracker,
                                          orcid_login,
                                          orcid_pass){
 
     #retrieves products that are served as static files.
-    #IN PROGRESS: records source URIs as local metadata files
 
     processing_func <- get(paste0('process_0_',
                                   prodcode_from_prodname_ms(prodname_ms)))
 
     rt <- tracker[[prodname_ms]][[site_code]]$retrieve
 
-    ## i = 1
     for(i in 1:nrow(rt)){
 
         held_dt <- as.POSIXct(rt$held_version[i],
@@ -13092,7 +13291,8 @@ retrieve_versionless_product <- function(network,
         deets <- list(prodname_ms = prodname_ms,
                       site_code = site_code,
                       component = rt$component[i],
-                      last_mod_dt = held_dt)
+                      last_mod_dt = held_dt,
+                      url = resource_url)
 
         result <- do.call(processing_func,
                           args = list(set_details = deets,
@@ -13187,7 +13387,6 @@ munge_versionless_product <- function(network,
                                       tracker){
 
     #munges products that are served as static files.
-    #IN PROGRESS: records source URIs as local metadata files
 
     processing_func <- get(paste0('process_1_',
                                   prodcode_from_prodname_ms(prodname_ms)))
@@ -14280,7 +14479,8 @@ get_nrcs_soils <- function(network,
                                           s = site)))
     }
 
-    mukey_values <- unique(soil@data@values)
+    # mukey_values <- unique(soil@data@values)
+    mukey_values <- values(soil)
 
     #### Grab soil vars
 
@@ -14372,12 +14572,13 @@ get_nrcs_soils <- function(network,
 
         soil_masked <- sw(terra::mask(soil, site_boundary_p))
 
-        watershed_mukey_values <- soil_masked@data@values %>%
+        # watershed_mukey_values <- soil_masked@data@values %>%
+        watershed_mukey_values <- values(soil_masked) %>%
             as_tibble() %>%
-            filter(!is.na(value)) %>%
-            group_by(value) %>%
+            filter(! is.na(mukey)) %>%
+            group_by(mukey) %>%
             summarise(n = n()) %>%
-            rename(mukey = value) %>%
+            # rename(mukey = value) %>%
             left_join(mukey_weighted_av, by = 'mukey')
 
 
@@ -14614,7 +14815,7 @@ ms_check_range <- function(d){
         if(length(min_val) == 0){
             min_val <- NA
         }
-        if(!is.na(min_val)){
+        if(! is.na(min_val)){
             d <- d %>%
                 mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) < !!min_val, NA, val))
         }
@@ -14627,14 +14828,15 @@ ms_check_range <- function(d){
             max_val <- NA
         }
 
-        if(!is.na(max_val)){
+        if(! is.na(max_val)){
             d <- d %>%
                 mutate(val = ifelse(var == !!d_vars[c] & as.numeric(val) > !!max_val, NA, val))
         }
     }
 
-    d <- filter(d,
-                ! is.na(val) | ms_status == 2)
+    d <- filter(d, ! is.na(val) | ms_status == 2)
+
+    return(d)
 }
 
 download_from_googledrive <- function(set_details, network, domain){
@@ -14645,10 +14847,6 @@ download_from_googledrive <- function(set_details, network, domain){
 
     if('site_code' %in% names(set_details)) {
         sitechar <- set_details$site_code
-
-        ## if(sitechar == 'sitename_NA') {
-        ##     sitechar = 'sitecode_NA'
-        ## }
     }
 
     prodname <- str_split_fixed(set_details$prodname_ms, '__', n = Inf)[1,1]
@@ -16023,7 +16221,12 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                                'NO3_NO2_N')
 
     #convert detlims to MS canonical units
-    dlout_a <- core_(filter(dls, ! added_programmatically))
+    ap <- dls$added_programmatically
+    conv_var <- dls$variable_original %in% normally_converted_molecules
+    orig_form <- dls$variable_converted == dls$variable_original
+    regenerate_these <- ap & conv_var & orig_form
+
+    dlout_a <- core_(filter(dls, ! regenerate_these))
 
     #update variable names for molecules that have been converted
     dlout_a$variable_converted <- dlout_a$variable_original
@@ -16037,14 +16240,14 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #are allowed to be carried through the ms processing pipeline as-is
     dlout_b <- filter(dls,
                       variable_original %in% normally_converted_molecules,
-                      ! added_programmatically) %>%
+                      ! regenerate_these) %>%
         core_(keep_molecular = normally_converted_molecules) %>%
         mutate(added_programmatically = TRUE,
                variable_converted = variable_original)
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
         # filter for NAs in  dl converted (abs254_cm)
-        filter(!is.na(detection_limit_converted)) %>%
+        filter(! is.na(detection_limit_converted)) %>%
         mutate(precision = get_numeric_precision(detection_limit_converted)) %>%
         select(domain, prodcode, variable_converted,
                variable_original, detection_limit_converted,
@@ -16516,20 +16719,686 @@ combine_multiple_input_cols <- function(d, data_cols, var_flagcols) {
     return(d)
 }
 
-# rename site ws traits
-ws_traits_dir = list.files('vault/panola/ws_traits/', 
-                           recursive =  TRUE,
-                           full.names = TRUE, 
-                           pattern = '.feather')
-old_site_code = 'USGS_02203970'
-new_site_code = 'mountain_creek_tributary'
+check_for_derelicts <- function(network, domain){
 
-for(file in ws_traits_dir) {
-  if(grepl('feather', file)) {
-    file_data = feather::read_feather(file)
-    file_name = gsub(old_site_code, new_site_code, file)
-    file_data$site_code = new_site_code
+    all_raw <- list.files(glue('data/{network}/{domain}/raw'),
+                          full.names = TRUE,
+                          recursive = TRUE)
+    base_raw <- basename(all_raw)
+    all_filt <- all_raw[duplicated(base_raw) | duplicated(base_raw, fromLast = TRUE)]
+    all_filt <- all_filt[order(basename(all_filt))]
 
-    feather::write_feather(file_data, file_name)
-  }
+    if(length(all_filt) %% 2 != 0) stop('error in identifying duplicate filenames')
+
+    pair_list <- split(all_filt, ceiling(seq_along(all_filt) / 2))
+    pair_list <- Filter(function(x) length(unique(str_extract(x, '(?<=raw/)[^\\/]+'))) == 1,
+                        pair_list)
+
+    if(! length(pair_list)){
+        return(invisible())
+    } else {
+        message('identically named files detected within a raw product. ',
+                'this might be fine, but could indicate derelict files from an ',
+                'old run sticking around:')
+    }
+
+    all_filt <- unlist(pair_list, use.names = FALSE)
+    all_trunc <- str_extract(all_filt, '(?<=raw/).*')
+
+    for(i in seq_along(all_filt)){
+        item <- all_filt[i]
+        if(i %% 2 == 1 && i > 2) cat('\n')
+        cat('\n',
+            all_trunc[i],
+            ' (', str_sub(file.mtime(item), 1, 10), ')',
+            sep = '')
+    }
+}
+
+generate_retrieval_details <- function(url,
+                                       access_note = NULL,
+                                       last_mod_dt = NULL){
+
+    #url: the url of a static file OR the page on which download queries
+    #     are entered, such as http://www.czo.psu.edu/data_time_series.html
+    #access_note: the only note we ever really need is "requires authentication".
+    #     Otherwise, keep it NULL
+    #last_mod_dt: the last-modified time of a static file, if you needed to
+    #     precompute it for some reason. if NULL, it will be computed
+    #     from the given url
+
+    #returns: a list with the url and any notes appended, access time,
+    #and last-modified datetime
+
+    res <- httr::HEAD(url)
+
+    if(is.null(last_mod_dt)){
+        last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+                                           start = 1,
+                                           stop = 19),
+                                format = '%Y-%m-%dT%H:%M:%S') %>%
+            with_tz(tzone = 'UTC')
+    }
+
+    if(! length(last_mod_dt)){
+        last_mod_dt <- NA_character_
+    }
+
+    if(! is.null(access_note)){
+        access_note <- paste0('(', access_note, ')')
+    }
+
+    deets_out <- list(url = stringr::str_trim(paste(url, access_note)),
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = last_mod_dt)
+
+    return(deets_out)
+}
+
+reverse_vector_pairs <- function(x){
+
+    if(length(x) == 1) return(x)
+
+    x_ <- tryCatch({
+        x_ <- as.vector(matrix(x, nrow = 2)[2:1, ])
+    }, warning = function(w){
+        x <- strsplit(x, ', ') %>% unlist()
+        x_ <- as.vector(matrix(x, nrow = 2)[2:1, ])
+        return(x_)
+    })
+
+    return(x_)
+}
+
+# subset_successive <- function(v){
+#     diff_v <- diff(v)
+#     splits <- which(diff_v != 1)
+#     split_list <- split(v, cumsum(c(1, diff_v != 1)))
+#     successive_subsets <- split_list[sapply(split_list, length) > 1]
+#     return(successive_subsets)
+# }
+successive_ints <- function(v){
+    diff_v <- c(1, diff(v))
+    group_ids <- cumsum(diff_v != 1)
+    grouped_list <- split(v, group_ids)
+    return(grouped_list)
+}
+
+convert_EDI_to_APA <- function(citation, provenance_row){
+
+    # citation = 'Caine, N., J. Morse, and Niwot Ridge LTER. 2023. Streamflow data for Albion camp, 1981 - ongoing. ver 18. Environmental Data Initiative. https://doi.org/10.6073/pasta/cc7e183b27383d894709fcc3e2e8cc74 (Accessed 2024-01-15).'
+    # citation = 'Wollheim, W. and Plum Island Ecosystems LTER. 2019. PIE LTER time series of nutrient grab samples from Ipswich River and Parker River watershed catchments, Masachusetts, with frequency ranging from weekly to monthly between 2001 and 2019. ver 9. Environmental Data Initiative. https://doi.org/10.6073/pasta/465825142c5393363c707b1243dd4016 (Accessed 2024-01-15).'
+    # citation = 'Gooseff, M. and D. McKnight. 2021. Seasonal high-frequency measurements of discharge, water temperature, and specific conductivity from Commonwealth Stream at C1, McMurdo Dry Valleys, Antarctica (1993-2020, ongoing) ver 9. Environmental Data Initiative. https://doi.org/10.6073/pasta/f77f93be497f540ae7e262866e13970e (Accessed 2024-01-15).'
+    # citation = 'Santa Barbara Coastal LTER and J. Melack. 2019. SBC LTER: Land: Hydrology: Santa Barbara County Flood Control District - Precipitation at KTYD (KTYD227) ver 8. Environmental Data Initiative. https://doi.org/10.6073/pasta/6c6ceaab7c189afc85abb893280492a8 (Accessed 2024-01-16).'
+    # citation = 'Santa Barbara Coastal LTER and J. Q. Melack. 2019. SBC LTER: Land: Hydrology: Santa Barbara County Flood Control District - Precipitation at KTYD (KTYD227) ver 8. Environmental Data Initiative. https://doi.org/10.6073/pasta/6c6ceaab7c189afc85abb893280492a8 (Accessed 2024-01-16).'
+    # authors <- parts[1:(titleind - 2)]
+    title <- find_resource_title(citation)
+
+    format_authors <- function(authors){
+
+        if(length(authors) == 1){
+            return(authors[[1]])
+        }
+
+        last_auth <- which(grepl('^(?:.*, )?and [A-Z]$', authors))
+        organizational_author <- FALSE
+        #omg so far past point of diminishing returns. just hard code the weird ones
+        override <- ifelse(any(grepl('Cary Institute Of Ecosystem Studies', authors)), TRUE, FALSE)
+        if(! length(last_auth) || override){
+            if(any(grepl(' and ', authors[-length(authors)]))){
+                case3 <- domain == 'baltimore' && authors[length(authors)] == 'Welty'
+                if(case3 && all(c('Lagrosa, and C', 'Welty') %in% authors)){
+                    return('Cary Institute Of Ecosystem Studies, Lagrosa, J., & Welty, C')
+                }
+                if(! grepl(' and ', authors[1])) stop('probably need to adjust for this')
+                case1 <- domain == 'santa_barbara' && authors[length(authors)] == 'Melack'
+                case2 <- domain == 'niwot' && authors[length(authors)] == 'Caine'
+                if(case1 || case2){
+                   authors <- strsplit(authors, " and ") %>% unlist()
+                   inits <- unlist(authors[-c(1, length(authors))])
+                   if(! length(inits) %in% 1:2) stop('has been e.g. J Q or just J for santa b')
+                   out <- paste0(authors[1], ', & ', authors[length(authors)], ', ',
+                                 paste(inits, collapse = '. '))
+                   return(out)
+                }
+                stop('ugh. just hardcoding this for santa barbara. if it comes up again, deal with it properly')
+            }
+            last_auth <- which(grepl('^(?:.*, )?and [A-Za-z ]+$', authors))
+            organizational_author <- TRUE
+        }
+        if(length(last_auth)){
+            if(grepl(', and ', authors[last_auth])){
+                authors <- strsplit(authors, ", and ") %>% unlist()
+                authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
+            } else {
+                authors[last_auth] <- sub('and ', ', ', authors[last_auth])
+            }
+        }
+
+        authors <- as.list(authors)
+
+        authors <- lapply(authors, function(x){
+            if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+        })
+        new_initial <- grep('^, [A-Z]$', authors)
+        extra_initial <- grep('^[A-Z]$', authors)
+
+        initial_groups <- successive_ints(extra_initial)
+        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+        if(only_single_initials){
+            first_auth_inits <- NULL
+        } else {
+            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+        }
+
+        if(is.null(first_auth_inits)){
+            first_auth <- authors[[1]]
+        } else {
+            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+        }
+
+        if(! only_single_initials){
+            for(init in rev(new_initial)){
+                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+                if(! is.null(ig_)){
+                    authors[[init]] <- paste(authors[init],
+                                             paste(authors[ig_], collapse = '. '),
+                                             sep = '. ')
+                    authors[ig_] <- NULL
+                }
+            }
+        }
+
+        authors[[1]] <- first_auth
+        authors[first_auth_inits] <- NULL
+
+        authors <- gsub("^, ", "", authors)
+        # authors <- strsplit(authors, ", and ") %>% unlist()
+
+        if(length(authors) %% 2 == 0 && ! organizational_author){
+            stop('error parsing citation authors')
+        }
+
+        if(organizational_author){
+            last_author <- authors[length(authors)]
+            authors <- authors[-length(authors)]
+        }
+
+        #reorder author components
+        if(length(authors) != 1){
+
+            firstauthor <- authors[1]
+            notfirst <- reverse_vector_pairs(authors[-1])
+            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+                map(~paste(., collapse = ', ')) %>%
+                paste0(., '.')
+            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            notfirst <- paste(notfirst, collapse = ', ')
+            authors <- paste0(firstauthor, '., ', notfirst)
+        }
+
+        if(organizational_author){
+            authors <- sub(' &', '', authors)
+            if(str_count(authors, ',') > 1){
+                authors <- paste0(authors, ',')
+            } else {
+                authors <- paste0(authors, '.,')
+            }
+            authors <- paste(authors, last_author, sep = ' & ')
+        }
+
+        return(authors)
+    }
+
+    parts <- str_split(citation, "[\\.]", simplify = TRUE) %>%
+        map(str_trim) %>%
+        discard(~. == '') %>%
+        unlist()
+
+    if(! title %in% parts){
+
+        ergh <- sapply(parts, function(x) grep(x, title, fixed = TRUE)) %>%
+            as.list()
+
+        ergh[[which(grepl('^[0-9]{4}$', names(ergh)))]] <- integer()
+
+        replace_inds <- sapply(ergh, length) %>% as.logical %>% which
+
+        parts[replace_inds[1]] <- ergh %>%
+            discard(~!length(.)) %>%
+            names() %>%
+            reduce(paste, sep = '. ') %>%
+            map(~sub('\\. ,', '.,', .))
+
+        parts[replace_inds[1]] <- sub('^[0-9]{4}\\.', '', parts[replace_inds[1]])
+
+        parts <- as.list(parts)
+        parts[replace_inds[-1]] <- NULL
+        parts <- unlist(parts)
+    }
+
+    titleind <- which(parts == title)
+    if(! length(titleind)){
+        stop('dang, we need to handle periods in titles... still?')
+    }
+    title <- sub('( ver [0-9]+)$', '.\\1', title)
+    author <- format_authors(parts[1:(titleind - 2)])
+    year <- parts[titleind - 1]
+    vsn <- parts[titleind + 1]
+    if(! grepl('ver ', vsn)) vsn <- ''
+    # publisher <- parts[titleind + 2]
+    publisher <- 'Environmental Data Initiative'
+    url <- str_extract(citation, "https?://[^ ]+")
+
+    # ## get the letter for the publication year
+    #
+    # parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
+    #     map(str_trim) %>%
+    #     unlist()
+    #
+    # yearletter <- na.omit(str_match(parts, '^\\(([0-9]{4}[a-z]+?)\\)$')[, 2])
+    # if(! length(yearletter) || is.na(yearletter) || ! grepl('^[0-9]{4}', yearletter)){
+    #     stop('parsing error when determining former publication year')
+    # }
+
+    #combine
+    # apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
+    apa_citation <- paste0(author, ". (", year, "). ", title, ". ", vsn, ". ",
+                           publisher, ". ", url) %>%
+        str_replace_all('\\. ?\\.', '.')
+
+    return(apa_citation)
+}
+
+convert_hydroshare_to_APA <- function(citation, provenance_row){
+
+    # authors = author_bits
+    # citation_text->citation
+    # citation = 'Anderson, S., N. Rock, D. Ragar (2023). BCCZO -- Meteorology, Air Temperature -- (BT_Met) -- Betasso -- (2009-2020), HydroShare, http://www.hydroshare.org/resource/6bf3e44b9de344749d8f665e139e7311'
+    # citation = 'Chorover, J., P. Troch, A. B. McIntosh, E. F. G. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J., P. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J., A. B. C. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. C., A. Troch, A. McIntosh, E. Amistadi. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. C. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. B., F. Donkey. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # citation = 'Chorover, J. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
+    # authors = author_bits
+
+    format_authors <- function(authors){
+
+        if(length(authors) == 1){
+
+            if(! grepl('\\.$', authors[[1]])){
+                authors[[1]] <- paste0(authors[[1]], '.')
+            }
+            return(authors[[1]])
+        }
+
+        for(i in 2:(length(authors) - 1)){
+            current_element <- authors[[i]][1]
+            if(grepl("[A-Za-z]+, [A-Z]$", current_element)){
+                # initial <- sub(".*,( [A-Z])$", "\\1", current_element)
+                # authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+                initial <- sub(".*(, [A-Z])$", "\\1", current_element)
+                authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+                authors <- c(authors[1:i], initial, authors[(i + 1):length(authors)])
+                # authors[[i + 1]][1] <- paste(initial, authors[[i + 1]][1], sep = '. ')
+            }
+        }
+
+        authors <- lapply(authors, function(x){
+                if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+            })
+        new_initial <- grep('^, [A-Z]$', authors)
+        extra_initial <- grep('^[A-Z]$', authors)
+
+        initial_groups <- successive_ints(extra_initial)
+        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+        if(only_single_initials){
+            first_auth_inits <- NULL
+        } else {
+            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+        }
+
+        if(is.null(first_auth_inits)){
+            first_auth <- authors[[1]]
+        } else {
+            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+        }
+
+        if(! only_single_initials){
+            for(init in rev(new_initial)){
+                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+                if(! is.null(ig_)){
+                    authors[[init]] <- paste(authors[init],
+                                             paste(authors[ig_], collapse = '. '),
+                                             sep = '. ')
+                    authors[ig_] <- NULL
+                }
+            }
+        }
+
+        authors[[1]] <- first_auth
+        authors[first_auth_inits] <- NULL
+
+        authors <- gsub("^, ", "", authors)
+        # authors <- strsplit(authors, ", and ") %>% unlist()
+
+        if(length(authors) %% 2 == 0){
+            authors <- c(authors[1], unlist(strsplit(authors[-1], ", ")))
+        }
+
+        #reorder author components
+        if(length(authors) != 1){
+            firstauthor <- authors[1]
+            notfirst <- reverse_vector_pairs(authors[-1])
+            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+                map(~paste(., collapse = ', ')) %>%
+                paste0(., '.')
+            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+                notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+            }
+            notfirst <- paste(notfirst, collapse = ', ')
+            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+                authors <- paste0(firstauthor, '., ', notfirst)
+            } else {
+                authors <- paste0(firstauthor, ', ', notfirst)
+            }
+        }
+
+        if(! grepl('\\.$', authors)){
+            authors <- paste0(authors, '.')
+        }
+
+        return(authors)
+    }
+
+    parts <- str_match(citation, '^(.+?)\\(([0-9]{4})\\)\\.(.+)$')[, 2:4] %>%
+        map(str_trim) %>%
+        unlist()
+
+    author_bits <- str_split(parts[1], "[\\.]", simplify = TRUE) %>%
+        discard(~. == '') %>%
+        map(str_trim)
+
+    author <- format_authors(author_bits)
+    # print(author)
+
+    title_etc <- sub(', HydroShare, http', '. HydroShare. http', parts[3])
+    title_etc <- sub('http:', 'https:', title_etc)
+
+    ## get the letter for the publication year
+
+    # parts <- str_split(provenance_row$citation, "[\\.]", simplify = TRUE) %>%
+    #     map(str_trim) %>%
+    #     unlist()
+    #
+    # yearletter <- na.omit(str_match(parts, '^\\([0-9]{4}([a-z]+?)\\)$')[, 2])
+    # if(! length(yearletter) || is.na(yearletter) || ! grepl('^[a-z]+$', yearletter)){
+    #     stop('parsing error when determining former publication year')
+    # }
+
+    #combine
+    apa_citation <- paste0(author, " (", parts[2], "). ", title_etc)
+    # apa_citation <- paste0(author, " (", parts[2], yearletter, "). ", title_etc)
+
+    return(apa_citation)
+}
+
+update_provenance <- function(url, last_download_dt){
+
+    rowind <- which(
+        site_doi_license$network == network &
+        site_doi_license$domain == domain &
+        site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
+    )
+
+    if(length(rowind) != 1) stop('something wrong with provenance for this product')
+
+    prov <- site_doi_license[rowind, ]
+
+    page <- read_html(url)
+
+    if(grepl('portal.edirepository', url)){
+
+        doi <- page %>% html_text() %>% str_extract("10\\.\\d{4,9}/[-._;()/:A-Za-z0-9]+")
+        citation_text_ <- page %>% html_node("#citation") %>% html_text()
+        citation_text <- convert_EDI_to_APA(citation_text_, prov)
+
+    } else if(grepl('hydroshare.org', url)){
+
+        doi <- site_doi_license$doi[rowind]
+        citation_text_ <- page %>% html_node('#citation-text') %>% html_text()
+        citation_text <- convert_hydroshare_to_APA(citation_text_, prov)
+
+    } else {
+        warning('Provenance update required (citation_and_intellectual_rights googlesheet')
+    }
+
+    cat('old citation:\n', citation_text_, '\n')
+    cat('new citation:\n', citation_text, '\n\n')
+
+    cites_match <- ! is.na(site_doi_license$citation[rowind]) &&
+        citation_text == site_doi_license$citation[rowind]
+    doi_match_or_missing <-
+        ((is.na(doi) && is.na(site_doi_license$doi[rowind])) ||
+             doi == site_doi_license$doi[rowind])
+    url_match <- url == site_doi_license$link[rowind]
+
+    if(cites_match && doi_match_or_missing && url_match){
+        return()
+    }
+
+    site_doi_license$citation[rowind] <- citation_text
+    site_doi_license$doi[rowind] <- doi
+    site_doi_license$link[rowind] <- url
+    site_doi_license$link_download_datetime[rowind] <- last_download_dt
+
+    ms_write_confdata(site_doi_license, 'site_doi_license', 'remote', overwrite = TRUE)
+}
+
+check_for_updates_hydroshare <- function(oldlink, last_download_dt){
+
+    page <- read_html(oldlink)
+    nodes <- html_nodes(page, '.col-xs-12')
+
+    newlink <- NA
+    for(node in nodes){
+        text <- html_text(node)
+        if(str_detect(text, 'A newer version of this resource')){
+            link_node <- html_node(node, 'a')
+            newlink <- html_attr(link_node, 'href')
+            break
+        }
+    }
+
+    #if there's a link to a new version, look no further
+    if(! is.na(newlink)){
+        print(paste('New link:', newlink))
+        return(newlink)
+    }
+
+    #otherwise check the last modified date and see if we already have it
+    lastmod_ <- page %>%
+        html_nodes(xpath = '//th[contains(text(), "Last updated:")]/following-sibling::td[1]') %>%
+        html_text() %>%
+        str_trim() %>%
+        str_extract('\\w+ \\d{1,2}, \\d{4} at \\d{1,2}:?\\d* [ap].m.')
+
+    lastmod <- suppressWarnings(try(mdy_hm(lastmod_), silent = TRUE))
+    if(inherits(lastmod, 'try-error') || is.na(lastmod)){
+        lastmod <- mdy_h(lastmod_)
+    }
+
+    if(! length(lastmod)){
+        stop('"Last updated" date was not provided or could not be scraped for ', i)
+    }
+
+    if(! is.na(last_download_dt) && lastmod > as_datetime(last_download_dt)){
+        print('old resource updated')
+    }
+
+    return('all good')
+}
+
+check_for_updates_edi <- function(oldlink, last_download_dt){
+
+    page <- read_html(oldlink)
+    node <- html_node(page, 'div h2 font[color="darkorange"] a')
+
+    newlink <- if(!is.null(node)) html_attr(node, 'href') else NA
+
+    #if there's a link to a new version, look no further
+    if(! is.na(newlink)){
+        newlink <- paste0('https://portal.edirepository.org/nis/',
+                          newlink)
+        print(paste('New link:', newlink))
+        return(newlink)
+    }
+
+    #otherwise check the last modified date and see if we already have it
+    lastmod <- page %>%
+        html_node('div.table-cell > ul > li > em') %>%
+        html_text() %>%
+        str_trim() %>%
+        str_extract('\\d{4}-\\d{2}-\\d{2}') %>%
+        ymd()
+
+    if(! length(lastmod) | is.na(lastmod)){
+        stop('"Updated" date was not provided or could not be scraped for ', i)
+    }
+
+    if(! is.na(last_download_dt)){
+        if(lastmod > as_date(last_download_dt)){
+            print('old resource updated')
+        } else if(lastmod == as_date(last_download_dt)){
+            stop(paste('old resource updated? updated AND last retrieved on same date:', lastmod))
+        }
+    }
+
+    return('all good')
+}
+
+selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
+
+    if(! require('RSelenium')){
+        stop('RSelenium is required to use this function')
+    }
+
+    # Start a Selenium Server and open a browser
+    driver <- rsDriver(browser = web_browser, ...)
+    remote_driver <- driver$client
+
+    remote_driver$navigate(url)
+    Sys.sleep(7)
+
+    page_source <- remote_driver$getPageSource()[[1]]
+
+    # Use rvest to parse the HTML
+    page <- rvest::read_html(page_source)
+    string_out <- page %>%
+        rvest::html_element(css_selector) %>%
+        rvest::html_text()
+
+    remote_driver$close()
+
+    return(string_out)
+}
+
+collect_retrieval_details <- function(url){
+
+    ##maybe still try this first?
+    # res <- httr::HEAD(url)
+    #
+    # last_mod_dt <- strptime(x = substr(res$headers$`last-modified`,
+    #                                    start = 1,
+    #                                    stop = 19),
+    #                         format = '%Y-%m-%dT%H:%M:%S') %>%
+    #     with_tz(tzone = 'UTC')
+    #
+    # deets_out <- list(url = paste(url, '(requires authentication)'),
+    #                   access_time = as.character(with_tz(Sys.time(),
+    #                                                      tzone = 'UTC')),
+    #                   last_mod_dt = last_mod_dt)
+
+    headers <- RCurl::getURL(url,
+                             nobody = 1L,
+                             header = 1L,
+                             httpheader = list('Accept-Encoding' = 'identity'))
+
+    last_mod_dt <- str_match(headers, '[lL]ast-[mM]odified: (.*)')[, 2]
+    last_mod_dt <- httr::parse_http_date(last_mod_dt) %>%
+        with_tz('UTC')
+
+    retrieval_details <- list(
+        url = url,
+        access_time = as.character(with_tz(Sys.time(),
+                                           tzone = 'UTC')),
+        last_mod_dt = last_mod_dt
+    )
+
+    return(retrieval_details)
+}
+
+update_detlims <- function(d, vars_units){
+
+    #for all ms_status == 2, take the corresponding val and write it to
+    #the detection_limits google sheet
+
+    names_units <- vars_units %>%
+        plyr::ldply() %>%
+        rename(variable_original = 1, unit_original = 2,
+               unit_converted = 3)
+
+    detlim_pre <- d %>%
+        filter(ms_status == 2) %>%
+        distinct(var, val, .keep_all = TRUE) %>%
+        mutate(start_date = as.Date(datetime),
+               var = drop_var_prefix(var)) %>%
+        select(start_date, var, val) %>%
+        arrange(var, start_date) %>%
+        group_by(var) %>%
+        mutate(end_date = lead(start_date) - 1) %>%
+        ungroup() %>%
+        left_join(names_units, by = c('var' = 'variable_original')) %>%
+        rename(detection_limit_original = val,
+               variable_original = var) %>%
+        mutate(domain = !!domain,
+               prodcode = !!prodname_ms,
+               # variable_converted = NA,
+               # variable_original = ,
+               detection_limit_converted = NA,
+               detection_limit_original = abs(detection_limit_original),
+               precision = NA,
+               sigfigs = NA,
+               # unit_converted = ,
+               # unit_original = ,
+               # start_date = ,
+               # end_date = ,
+               added_programmatically = FALSE
+        )
+
+    detlims <- standardize_detection_limits(
+        dls = detlim_pre,
+        vs = ms_vars,
+        update_on_gdrive = FALSE
+    ) %>%
+        mutate(added_programmatically = TRUE)
+
+    detlims_update <- anti_join(
+        detlims, domain_detection_limits,
+        by = c('domain', 'prodcode', 'variable_converted', 'variable_original',
+               'detection_limit_original', 'start_date', 'end_date')
+    )
+
+    if(nrow(detlims_update)){
+        ms_write_confdata(detlims_update,
+                          which_dataset = 'domain_detection_limits',
+                          to_where = 'remote',
+                          overwrite = FALSE) #append
+    }
+
+    return(invisible())
 }

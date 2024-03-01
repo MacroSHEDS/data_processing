@@ -1,3 +1,13 @@
+#leaving this here for if ever i adapt lter helpers to work as general edi helpers
+
+#some bear data are on edi, like most lter data.
+#importing lter network helpers here. might want to rename these
+#to reflect that they are in fact global helpers for edi-hosted data,
+#but this is okay for now.
+# sw(source('src/lter/network_helpers.R'))
+# if(ms_instance$use_ms_error_handling){
+#     sw(source_decoratees(location1))
+# }
 
 loginfo('Beginning retrieve (versionless products)',
         logger = logger_module)

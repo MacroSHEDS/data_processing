@@ -47,3 +47,6 @@ Y   compute_yearly_summary
 Y   compute_yearly_summary_ws
 N   everything else (figshare/edi stuff)
 
+domains with subdaily data:
+shale hills; hourly precip
+

@@ -2,7 +2,7 @@ loginfo('Beginning retrieve', logger=logger_module)
 
 prod_info <- get_product_info(network = network,
                               domain = domain,
-                              status_level = 'retrieve', 
+                              status_level = 'retrieve',
                               get_statuses = 'ready')
 
 if(! is.null(prodname_filter)){
@@ -79,13 +79,7 @@ for(i in seq_len(nrow(prod_info))){
         }
     }
 
-    metadata_url <- glue('https://portal.lternet.edu/nis/mapbrowse?',
-                         'packageid=knb-lter-and.{p}.{v}',
-                         p = prodcode_from_prodname_ms(prodname_ms),
-                         v = latest_vsn)
-
-    write_metadata_r(murl = metadata_url,
-                     network = network,
+    write_metadata_r(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms)
 
