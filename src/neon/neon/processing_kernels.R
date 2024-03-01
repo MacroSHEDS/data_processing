@@ -411,17 +411,16 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                    )) %>%
             select(-uid, -domainID, -namedLocation, -sampleID, -sampleCode,
                    -startDate, -laboratoryName, -analysisDate, -coolerTemp,
-                   -publicationDate, -release, -belowDetectionQF)
+                   -publicationDate, -release)
 
         #check for unspecified units
         missing_unit <- filter(d, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte))
         message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(d), ')'))
-
-        d <- d %>%
-            filter(! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
+        d <- filter(d, ! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
 
         #check for vars reported in more than 1 unit
-        var_unit_pairs <- distinct(d, analyte, analyteUnits) %>%
+        var_unit_pairs <- d %>%
+            distinct(analyte, analyteUnits) %>%
             filter(! is.na(analyteUnits)) %>%
             arrange(analyte)
         if(any(duplicated(var_unit_pairs))){
@@ -429,22 +428,54 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             browser()
         }
 
+        if(any(filter(d, analyte %in% c('TPN', 'TPC'))$analyteUnits == 'milligram')) stop('oi! i thought this was only reported in mg/L')
 
-        rawd$swc_externalLabSummaryData
+        update_neon_detlims(rawd$swc_externalLabSummaryData)
 
-        update_neon_detlims()
+        #consolidate QA info. can't find definitions for externalLabDataQF, and
+        #the values present in that column aren't obviously indicative of ms_status = 1.
+        #probably could be used to identify causes of discontinuities in time series though.
+        d <- d %>%
+            mutate(sampleCondition = if_else(belowDetectionQF %in% c('BDL', 'ND'),
+                                             'OK',
+                                             sampleCondition),
+                   sampleCondition = if_else(shipmentWarmQF == 1,
+                                             'OK',
+                                             sampleCondition))
 
+        #handle replicates; create varflag cols
+        d <- d %>%
+            select(-analyteUnits, -belowDetectionQF, -remarks, -shipmentWarmQF,
+                   -externalLabDataQF) %>%
+            filter(! is.na(analyteConcentration)) %>%
+            group_by(collectDate, analyte) %>%
+            #if any replicates are good, ignore the bad ones. otherwise bad will have to do
+            filter(! (sampleCondition != 'GOOD' & 'GOOD' %in% sampleCondition)) %>%
+            #if any replicates are okay, and none is good, ignore the bad ones. otherwise bad will have to do
+            filter(! (sampleCondition == 'Other' & 'OK' %in% sampleCondition & ! 'GOOD' %in% sampleCondition)) %>%
+            summarize(analyteConcentration = mean(suppressWarnings(as.numeric(analyteConcentration)),
+                                                  na.rm = TRUE), #converts "BDL" to NaN
+                      sampleCondition = if_else(any(sampleCondition %in% c('OK', 'Other')),
+                                                'OK', #OK and Other will be consolidated to ms_status = 1
+                                                'GOOD'),
+                      siteID = first(siteID)) %>%
+            ungroup() %>%
+            #restore "BDL" flags
+            mutate(analyteConcentration = as.character(analyteConcentration),
+                   analyteConcentration = if_else(analyteConcentration == 'NaN',
+                                                  'BDL',
+                                                  analyteConcentration)) %>%
+            #create varflags
+            rename(val = analyteConcentration,
+                   flag = sampleCondition) %>%
+            pivot_wider(names_from = 'analyte',
+                        values_from = c('val', 'flag'))
 
+        #problems: why are there still NAs? (probs chill. just from pivoting)
+        #why are ""s being introduced?
+        #why is val_TPC empty?
 
-
-        # filter(dd, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte)) %>% print(n=500)
-
-        # belowDetectionQF %in% "BDL" "ND"
-        # formatChange|legacyData is fine
-        # sampleCondition 'OK' probably always ms_status = 1, 'GOOD' = 0, 'OTHER'...
-        # everything can be in milligramsPerLiter or microgramsPerLiter, and TPC/TPC can be in just milligram
-
-        d <- ms_read_raw_csv(preprocessed_tibble = ,
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
@@ -457,9 +488,10 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                  'UV Absorbance (280 nm)' = 'abs280',
                                  'UV Absorbance (250 nm)' = 'abs250',
                                  'UV Absorbance (254 nm)' = 'abs254'),
-                             data_col_pattern = '#V#',
-                             convert_to_BDL_flag = '<#*#',
+                             data_col_pattern = 'val_#V#',
+                             convert_to_BDL_flag = 'BDL',
                              is_sensor = FALSE,
+                             var_flagcol_pattern = 'flag_#V#',
                              sampling_type = 'G',
                              keep_bdl_values = TRUE)
 

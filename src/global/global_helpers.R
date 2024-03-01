@@ -16188,6 +16188,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #update_on_gdrive: logical. should the domain_detection_limits file
     #   on gdrive be updated?
 
+    if(! 'site_code' %in% colnames(dls)) dls$site_code <- 'all'
     dls$site_code[is.na(dls$site_code)] <- 'all'
 
     #fix units, get sigfigs, get canonical units
@@ -16196,7 +16197,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
              ! is.na(detection_limit_original)) %>%
         mutate(unit_original = sub('^([a-z]+)/l', '\\1/L', unit_original),
                sigfigs = count_sigfigs(detection_limit_original)) %>%
-        select(-unit_converted) %>%
+        select(-any_of('unit_converted')) %>%
         left_join(select(vs, variable_code, unit_converted = unit),
                   by = c(variable_original = 'variable_code'))
 
@@ -16236,10 +16237,14 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
                                'NO3_NO2_N')
 
     #convert detlims to MS canonical units
-    ap <- dls$added_programmatically
-    conv_var <- dls$variable_original %in% normally_converted_molecules
-    orig_form <- dls$variable_converted == dls$variable_original
-    regenerate_these <- ap & conv_var & orig_form
+    if('variable_converted' %in% names(dls)){
+        ap <- dls$added_programmatically
+        conv_var <- dls$variable_original %in% normally_converted_molecules
+        orig_form <- dls$variable_converted == dls$variable_original
+        regenerate_these <- ap & conv_var & orig_form
+    } else {
+        regenerate_these <- rep(FALSE, nrow(dls))
+    }
 
     dlout_a <- core_(filter(dls, ! regenerate_these))
 
@@ -17372,10 +17377,12 @@ update_detlims <- function(d, vars_units){
     #e.g. c('ANC' = 'ueq/l', ...)
     #note that in MacroSheds, ANC is given in eq/l. This is determined automatically.
 
-    names_units <- vars_units %>%
-        plyr::ldply() %>%
-        rename(variable_original = 1, unit_original = 2,
-               unit_converted = 3)
+    #if start_date and end_date are provided, this function needs to be modified
+
+    names_units <- tibble(variable_original = names(vars_units),
+                          unit_original = unname(vars_units)) %>%
+        left_join(select(ms_vars, variable_code, unit),
+                  by = c(variable_original = 'variable_code'))
 
     detlim_pre <- d %>%
         filter(ms_status == 2) %>%
@@ -17402,8 +17409,7 @@ update_detlims <- function(d, vars_units){
                # unit_original = ,
                # start_date = ,
                # end_date = ,
-               added_programmatically = FALSE
-        )
+               added_programmatically = FALSE)
 
     detlims <- standardize_detection_limits(
         dls = detlim_pre,

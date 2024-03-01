@@ -87,7 +87,6 @@ p1v001_stream_chemistry <- function(zipf){
 
     d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
-    stop('update panola var_deets to no longer require the second unit form')
     var_deets <- list(
         'ANC' = c('ueq/l', 'eq/l'),
         'Ca' = c('ueq/l', 'mg/l'),
@@ -101,7 +100,7 @@ p1v001_stream_chemistry <- function(zipf){
         'DOC' = c('umol/l', 'mg/l')
     )
 
-    update_detlims(d, var_deets)
+    update_detlims(d, sapply(var_deets, function(x) x[1]))
 
     d <- ms_conversions(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),

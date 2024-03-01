@@ -1,7 +1,7 @@
 library(neonUtilities)
 
 #neon name = c(macrosheds name, neon unit)
-var_deets <- list(
+neon_chem_vars <- list(
     'SO4' = c('SO4', 'mg/l'),
     'TDN' = c('TDN', 'mg/l'),
     'NO2 - N' = c('NO2_N', 'mg/l'),
@@ -13,7 +13,7 @@ var_deets <- list(
     'Mg' = c('Mg', 'mg/l'),
     'Mn' = c('Mn', 'mg/l'),
     'NH4 - N' = c('NH4_N', 'mg/l'),
-    'TPN' = c('TPN', 'ug/l'),
+    'TPN' = c('TPN', 'ug/l'), #detlim reported in mg instead
     'DIC' = c('DIC', 'mg/l'),
     'UV Absorbance (280 nm)' = c('abs280', 'unitless'),
     'TOC' = c('TOC', 'mg/l'),
@@ -27,7 +27,7 @@ var_deets <- list(
     'specificConductance' = c('spCond', 'uS/cm'),
     'F' = c('F', 'mg/l'),
     'Br' = c('Br', 'mg/l'),
-    'TPC' = c('TPC', 'ug/l'),
+    'TPC' = c('TPC', 'ug/l'), #detlim reported in mg instead
     'pH' = c('pH', 'unitless'),
     'Si' = c('Si', 'mg/l'),
     # 'TSS - Dry Mass' = c('', ''), #omit
@@ -37,7 +37,9 @@ var_deets <- list(
     'CO3' = c('CO3', 'mg/l'),
     'NO2 -N' = c('NO2_N', 'mg/l'),
     'ANC' = c('ANC', 'meq/l')
-)
+) %>%
+    plyr::ldply() %>%
+    rename(neon_var = `.id`, ms_var = V1, neon_unit = V2)
 
 get_neon_data <- function(domain, s, tracker, silent = TRUE){
 
@@ -119,10 +121,13 @@ stackByTable_keep_zips <- function(zip_parent){
         saveUnzippedFiles = FALSE)
     sink()
 
+    #can't rename cross-device, so copy and remove instead
     file.remove(zip_parent)
     file.copy(file.path(tmpd, basename(zip_parent)),
               dirname(zip_parent),
               recursive = TRUE)
+    unlink(file.path(tmpd, basename(zip_parent)),
+           recursive = TRUE)
 
     return(rawd)
 }
@@ -347,40 +352,31 @@ write_neon_variablekey = function(raw_neonfile_dir, dest){
 
 update_neon_detlims <- function(neon_dls){
 
-    # names_units <- vars_units %>%
-    #     plyr::ldply() %>%
-    #     rename(variable_original = 1, unit_original = 2,
-    #            unit_converted = 3)
-
     detlim_pre <- neon_dls %>%
         as_tibble() %>%
-        mutate(analyte = if_else(analyte == 'Ortho-P', 'Ortho - P', analyte))
-        # filter(ms_status == 2) %>%
-        # distinct(var, val, .keep_all = TRUE) %>%
-        # mutate(start_date = as.Date(datetime),
-        #        var = drop_var_prefix(var)) %>%
-        # select(start_date, var, val) %>%
-        # arrange(var, start_date) %>%
-        # group_by(var) %>%
-        # mutate(end_date = lead(start_date) - 1) %>%
-        # ungroup() %>%
-        left_join(names_units, by = c('var' = 'variable_original')) %>%
-        rename(detection_limit_original = val,
-               variable_original = var) %>%
+        #detlims for TPC, TPN are given in mg, but those analytes are actually
+        #reported in ug/L. So can't use the detlims as-is.
+        filter(! (analyte %in% c('TPC', 'TPN') & analyteUnits == 'milligram'),
+               ! analyte == 'TSS - Dry Mass') %>%
+        mutate(analyte = if_else(analyte == 'Ortho-P', 'Ortho - P', analyte),
+               analyte = if_else(analyte == 'NO2 -N', 'NO2 - N', analyte)) %>%
+        #neon precision not included here, because it's analytical precision,
+        #and we record mathematical precision in the detlim sheet
+        select(analyte, methodDetectionLimit, analyteUnits,
+               starts_with('labSpecific')) %>%
+        left_join(neon_chem_vars, by = c(analyte = 'neon_var')) %>%
+        filter(! neon_unit == 'unitless') %>%
+        rename(detection_limit_original = methodDetectionLimit,
+               variable_original = ms_var,
+               unit_original = neon_unit,
+               start_date = labSpecificStartDate,
+               end_date = labSpecificEndDate) %>%
         mutate(domain = !!domain,
                prodcode = !!prodname_ms,
-               # variable_converted = NA,
-               # variable_original = ,
                detection_limit_converted = NA,
-               detection_limit_original = abs(detection_limit_original),
                precision = NA,
                sigfigs = NA,
-               # unit_converted = ,
-               # unit_original = ,
-               # start_date = ,
-               # end_date = ,
-               added_programmatically = FALSE
-        )
+               added_programmatically = FALSE)
 
     detlims <- standardize_detection_limits(
         dls = detlim_pre,
@@ -403,5 +399,4 @@ update_neon_detlims <- function(neon_dls){
     }
 
     return(invisible())
-
 }
