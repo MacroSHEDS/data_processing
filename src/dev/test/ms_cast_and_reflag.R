@@ -11,10 +11,10 @@ ms_cast_and_reflag(fff,
                    # summary_flags_clean = list(sum_flag=c('1', '2'), sum_flag2 = '3'),
                    # summary_flags_dirty = list(sum_flag=c('3'), sum_flag2 = ''),
                    # summary_flags_to_drop = list(sum_flag=c(''), sum_flag2 = c('1', '2')),
-                   # summary_flags_clean = list(sum_flag='1'),
-                   # summary_flags_dirty = list(sum_flag='2'),
-                   # summary_flags_to_drop = list(sum_flag='3'),
-                   # summary_flags_bdl = list(sum_flag='')
+                   summary_flags_clean = list(sum_flag='1'),
+                   summary_flags_dirty = list(sum_flag='2'),
+                   summary_flags_to_drop = list(sum_flag='3'),
+                   summary_flags_bdl = list(sum_flag='')
 )
 
 ms_cast_and_reflag(fff,

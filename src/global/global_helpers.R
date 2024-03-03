@@ -1709,12 +1709,14 @@ ms_cast_and_reflag <- function(d,
         name_orders[['bdl']] <- names(summary_flags_bdl)
     }
 
-    order_seen <- name_orders[[1]]
-    if(length(name_orders) > 1){
-        for(i in 2:length(name_orders)){
-            nord <- name_orders[[i]]
-            if(! identical(order_seen[order_seen %in% nord], nord[nord %in% order_seen])){
-                stop('sub-elements of summary_flag_* parameters must appear in the same order')
+    if(sumclen || sumdirt || sumdrop || sumbdl){
+        order_seen <- name_orders[[1]]
+        if(length(name_orders) > 1){
+            for(i in 2:length(name_orders)){
+                nord <- name_orders[[i]]
+                if(! identical(order_seen[order_seen %in% nord], nord[nord %in% order_seen])){
+                    stop('sub-elements of summary_flag_* parameters must appear in the same order')
+                }
             }
         }
     }
@@ -1856,6 +1858,7 @@ ms_cast_and_reflag <- function(d,
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
 
+
         smflags <- c('summary_flags_clean', 'summary_flags_dirty', 'summary_flags_bdl', 'summary_flags_to_drop')
         summary_flag_colnames <- mget(smflags) %>%
             map(names) %>%
@@ -1909,7 +1912,7 @@ ms_cast_and_reflag <- function(d,
                 }
 
                 if(sumbdl && length(summary_flags_bdl) >= i){
-                    flags_handled <- c(flags_handled, summary_flags_to_bdl[[i]])
+                    flags_handled <- c(flags_handled, summary_flags_bdl[[i]])
                     flags_seen <- c(flags_seen, unique(d[[names(summary_flags_bdl)[i]]]))
                 } else {
                     passes <- passes + 1
@@ -1979,7 +1982,7 @@ ms_cast_and_reflag <- function(d,
 
                 if(sumclen && length(summary_flags_clean) >= i){
                     flagcol <- d[[names(summary_flags_clean)[i]]]
-                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_clean[[1]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_clean[[i]]
                     drop_rows[accounted_for] <- FALSE
                 } else {
                     passes <- passes + 1
@@ -1987,7 +1990,7 @@ ms_cast_and_reflag <- function(d,
 
                 if(sumdirt && length(summary_flags_dirty) >= i){
                     flagcol <- d[[names(summary_flags_dirty)[i]]]
-                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_dirty[[1]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_dirty[[i]]
                     drop_rows[accounted_for] <- FALSE
                 } else {
                     passes <- passes + 1
@@ -1995,7 +1998,7 @@ ms_cast_and_reflag <- function(d,
 
                 if(sumbdl && length(summary_flags_bdl) >= i){
                     flagcol <- d[[names(summary_flags_bdl)[i]]]
-                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_bdl[[1]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_bdl[[i]]
                     drop_rows[accounted_for] <- FALSE
                 } else {
                     passes <- passes + 1
@@ -2082,18 +2085,23 @@ ms_cast_and_reflag <- function(d,
     }
 
     if(! no_sumflags){
-        if(sumclen){
-            for(i in 1:length(summary_flags_clean)){
-                si <- summary_flags_clean[i]
-                flagcol <- d[[names(si)]]
-                flg_bool <- ! is.na(flagcol) & ! flagcol %in% unlist(si)
-                d$ms_status[flg_bool] <- 1 #dirty prevails
-            }
-        } else {
+
+        if(sumdirt){
+
             for(i in 1:length(summary_flags_dirty)){
                 si <- summary_flags_dirty[i]
                 flg_bool <- d[[names(si)]] %in% unlist(si)
                 d$ms_status[flg_bool] <- 1
+            }
+
+        } else {
+
+            d$ms_status <- 1
+            for(i in 1:length(summary_flags_clean)){
+                si <- summary_flags_clean[i]
+                flagcol <- d[[names(si)]]
+                flg_bool <- is.na(flagcol) | flagcol %in% unlist(si)
+                d$ms_status[flg_bool] <- 0
             }
         }
     }

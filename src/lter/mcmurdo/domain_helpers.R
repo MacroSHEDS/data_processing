@@ -8,7 +8,6 @@ retrieve_mcmurdo <- function(set_details, network, domain) {
     return()
 }
 
-
 munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code,
                                     component){
 
