@@ -1606,13 +1606,11 @@ ms_cast_and_reflag <- function(d,
     #   of values that might appear in
     #   the summary flag/status columns. Associated records are treated as
     #   bad data and are removed. Use '#*#' to refer to all values not
-    #   included in summary_flags_clean. This parameter is optional, though
+    #   included in summary_flags_clean or summary_flags_bdl. This parameter is optional, though
     #   if there are summary flag columns, at least 2
     #   of summary_flags_to_drop, summary_flags_clean, and summary_flags_dirty
     #   must be supplied (omit this argument otherwise).
     #   If '#*#' is used, summary_flags_clean must be supplied.
-    #   make sure list elements for summary flags are in the same order!
-    #   there is currently no check for this.
     #summary_flags_clean: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
     #   of values that might appear in the summary flag/status columns.
@@ -1621,8 +1619,6 @@ ms_cast_and_reflag <- function(d,
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
     #   (omit this argument otherwise).
-    #   make sure list elements for summary flags are in the same order!
-    #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
     #summary_flags_dirty: a named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
@@ -1632,8 +1628,6 @@ ms_cast_and_reflag <- function(d,
     #   if there are summary flag columns, at least 2 of summary_flags_to_drop,
     #   summary_flags_clean, and summary_flags_dirty must be supplied
     #   (omit this argument otherwise).
-    #   make sure list elements for summary flags are in the same order!
-    #   there is currently no check for this.
     #   Note: This parameter does not use the '#*#' wildcard.
     #summary_flags_bdl: optional named list. names correspond to columns in d that
     #   contain summary flag/status information. List elements must be character vectors
@@ -1662,26 +1656,38 @@ ms_cast_and_reflag <- function(d,
                     'summary_flags_clean, summary_flags_dirty'))
     }
 
+    # sumcol_len_lens <- c()
+    name_orders <- list()
+
     if(sumclen){
+        if(! inherits(summary_flags_clean, 'list')){
+            stop('summary_flags_clean must be a list')
+        }
         if(any(sapply(summary_flags_clean, function(x) '#*#' %in% x))){
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
         }
-        if(! inherits(summary_flags_clean, 'list')){
-            stop('summary_flags_clean must be a list')
-        }
+        # sumcol_len_lens <- union(sumcol_len_lens, length(summary_flags_clean))
+        name_orders[['clen']] <- names(summary_flags_clean)
     }
+
     if(sumdirt){
+        if(! inherits(summary_flags_dirty, 'list')){
+            stop('summary_flags_dirty must be a list')
+        }
         if(any(sapply(summary_flags_dirty, function(x) '#*#' %in% x))){
             stop(glue('the #*# wildcard may only be used in ',
                       'summary_flags_to_drop and variable_flags_to_drop'))
         }
-        if(! inherits(summary_flags_dirty, 'list')){
-            stop('summary_flags_dirty must be a list')
-        }
+        # sumcol_len_lens <- union(sumcol_len_lens, length(summary_flags_dirty))
+        name_orders[['dirt']] <- names(summary_flags_dirty)
     }
 
     if(sumdrop){
+
+        if(! inherits(summary_flags_to_drop, 'list')){
+            stop('summary_flags_to_drop must be a list')
+        }
 
         drop_wildcard_bool <- sapply(summary_flags_to_drop, function(x) '#*#' %in% x)
         if(any(drop_wildcard_bool) && ! sumclen){
@@ -1695,16 +1701,41 @@ ms_cast_and_reflag <- function(d,
                       ' it must be in a character vector of length 1'))
         }
 
-        if(! inherits(summary_flags_to_drop, 'list')){
-            stop('summary_flags_to_drop must be a list')
+        # sumcol_len_lens <- union(sumcol_len_lens, length(summary_flags_to_drop))
+        name_orders[['drop']] <- names(summary_flags_to_drop)
+    }
+
+    if(sumbdl){
+        name_orders[['bdl']] <- names(summary_flags_bdl)
+    }
+
+    order_seen <- name_orders[[1]]
+    if(length(name_orders) > 1){
+        for(i in 2:length(name_orders)){
+            nord <- name_orders[[i]]
+            if(! identical(order_seen[order_seen %in% nord], nord[nord %in% order_seen])){
+                stop('sub-elements of summary_flag_* parameters must appear in the same order')
+            }
         }
     }
+
+    # if(length(sumcol_len_lens) > 1) stop('all summary_flags_* arguments must be the same length (the lists themselves, not their elements)')
 
     vardrop <- ! missing(variable_flags_to_drop) && ! is.null(variable_flags_to_drop)
     varclen <- ! missing(variable_flags_clean) && ! is.null(variable_flags_clean)
     vardirt <- ! missing(variable_flags_dirty) && ! is.null(variable_flags_dirty)
     varbdl <- ! missing(variable_flags_bdl) && ! is.null(variable_flags_bdl)
     no_varflags <- is.na(varflag_col_pattern)
+
+    if(varclen && varbdl && ! vardirt){
+        warning('under this specification (variable_flags clean + bdl +/- drop - dirty), all unmatched varflags (except NA) will become ms_status = 1 (dirty)')
+    }
+    if(vardirt && varbdl && ! varclen){
+        warning('under this specification (variable_flags dirty + bdl +/- drop - clean), all unmatched varflags will become ms_status = 0 (clean)')
+    }
+    if(vardrop && varbdl && ! varclen && ! vardirt){
+        stop('illegal specification (variable flags drop + bdl - clean - dirty). Please specify either clean or dirty in addition to drop.')
+    }
 
     if(sum(c(vardrop, varclen, vardirt)) < 2 && ! no_varflags && ! varbdl){
         stop(paste0('Must supply at least 2 of variable_flags_to_drop, ',
@@ -1749,6 +1780,7 @@ ms_cast_and_reflag <- function(d,
             if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
         }
     }
+
     summflgs_c <- c('summary_flags_dirty', 'summary_flags_clean', 'summary_flags_to_drop', 'summary_flags_bdl')
     dupe_flags <- c()
     for(p in summflgs_c){
@@ -1756,8 +1788,11 @@ ms_cast_and_reflag <- function(d,
             if(p == q) next
             pp = try(get(p), silent = TRUE); if(inherits(pp, 'try-error')) next
             qq = try(get(q), silent = TRUE); if(inherits(qq, 'try-error')) next
-            dupe_flags <- intersect(pp, qq)
-            if(length(dupe_flags)) stop(paste('same code used in', p, 'and', q))
+            shared_names <- intersect(names(pp), names(qq))
+            for(s in shared_names){
+                dupe_flags <- intersect(pp[[s]], qq[[s]])
+                if(length(dupe_flags)) stop(paste('same code used corresponding elements of', p, 'and', q))
+            }
         }
     }
 
@@ -1820,26 +1855,161 @@ ms_cast_and_reflag <- function(d,
 
     #filter rows with summary flags indicating bad data (data to drop)
     if(! no_sumflags){
+
+        smflags <- c('summary_flags_clean', 'summary_flags_dirty', 'summary_flags_bdl', 'summary_flags_to_drop')
+        summary_flag_colnames <- mget(smflags) %>%
+            map(names) %>%
+            reduce(union)
+
+        #lots of work to warn user if they don't specify '' as a clean summary flag
+        if(sumclen){
+
+            known_chars <- unname(unlist(purrr::keep(unlist(mget(smflags)),
+                                                     ~ length(.) > 1 ||
+                                                         (inherits(., 'character') && nchar(.) >= 0))))
+
+            for(s in summary_flag_colnames){
+                if('' %in% d[[s]] && ! '' %in% summary_flags_clean[[s]]){
+                    warning('Summary flag "" (empty string) is present in column ',
+                            s, ' but not marked as "clean". are you sure about this?')
+                }
+            }
+        }
+
+        #another elaborate check to see that all possible flags are accounted for
+        if(sumdirt && sumclen && sumdrop){
+
+            flags_handled <- c()
+            flags_seen <- c()
+            i <- 0
+            passes <- 0
+            while(TRUE){
+
+                i <- i + 1
+
+                if(sumclen && length(summary_flags_clean) >= i){
+                    flags_handled <- c(flags_handled, summary_flags_clean[[i]])
+                    flags_seen <- c(flags_seen, unique(d[[names(summary_flags_clean)[i]]]))
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(sumdirt && length(summary_flags_dirty) >= i){
+                    flags_handled <- c(flags_handled, summary_flags_dirty[[i]])
+                    flags_seen <- c(flags_seen, unique(d[[names(summary_flags_dirty)[i]]]))
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(sumdrop && length(summary_flags_to_drop) >= i){
+                    flags_handled <- c(flags_handled, summary_flags_to_drop[[i]])
+                    flags_seen <- c(flags_seen, unique(d[[names(summary_flags_to_drop)[i]]]))
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(sumbdl && length(summary_flags_bdl) >= i){
+                    flags_handled <- c(flags_handled, summary_flags_to_bdl[[i]])
+                    flags_seen <- c(flags_seen, unique(d[[names(summary_flags_bdl)[i]]]))
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(passes == 4) break
+
+                flags_unaccounted_for <- setdiff(flags_seen, flags_handled)
+
+                if(any(is.na(flags_unaccounted_for))){
+                    warning('NA summary flags not explicitly handled. Assuming these are clean')
+                    flags_unaccounted_for <- flags_unaccounted_for[! is.na(flags_unaccounted_for)]
+                }
+
+                if(length(flags_unaccounted_for)){
+                    flags_unaccounted_for[flags_unaccounted_for == ''] <- '[empty string]'
+                    stop('under this specification (summary_flags clean + dirty + drop +/- bdl), ',
+                         'every flag must be explicitly handled. Please specify what to do with ',
+                         'these flags in column "', summary_flag_colnames[i], '": ',
+                         paste(flags_unaccounted_for, collapse = ', '))
+                }
+
+                passes <- 0
+            }
+        }
+
         if(sumdrop){
+
+            drop_rows <- matrix(NA, nrow = nrow(d), ncol = length(summary_flags_to_drop))
             for(i in 1:length(summary_flags_to_drop)){
 
                 smtd <- summary_flags_to_drop[i]
-
                 if(length(smtd[[1]]) == 1 && smtd[[1]] == '#*#'){
-                    d <- filter(d, (!!sym(names(smtd))) %in%
-                                    summary_flags_clean[[i]])
+
+                    if(is.null(unlist(summary_flags_clean[i])) ||
+                       (sumdirt && ! is.null(unlist(summary_flags_dirty[i])))){
+                        stop('if summary_flags_to_drop is "#*#", corresponding summary_flags_clean must be supplied and summary_flags_dirty must not.')
+                    }
+
+                    flagcol <- d[[names(summary_flags_clean)[i]]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_clean[[i]]
+                    drop_rows[accounted_for, i] <- FALSE
+
+                    if(sumbdl && length(summary_flags_bdl) >= i){
+                        flagcol <- d[[names(summary_flags_bdl)[i]]]
+                        accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_bdl[[i]]
+                        drop_rows[accounted_for, i] <- FALSE
+                    }
+
                 } else {
-                    d <- filter(d, ! (!!sym(names(smtd))) %in% unlist(smtd))
+                    drop_rows[d[[names(smtd)]] %in% unlist(smtd), i] <- TRUE
                 }
             }
 
+            drop_rows <- apply(drop_rows, 1, any)
+            drop_rows[is.na(drop_rows)] <- FALSE
+            d <- d[! drop_rows, ]
+
         } else {
 
-            for(i in 1:length(summary_flags_clean)){
-                d <- filter(d, (!!sym(names(summary_flags_clean)[i])) %in%
-                                c(summary_flags_clean[[i]],
-                                  summary_flags_dirty[[i]]))
+            drop_rows <- rep(TRUE, nrow(d))
+            i <- 0
+            passes <- 0
+            while(TRUE){
+
+                i <- i + 1
+
+                if(sumclen && length(summary_flags_clean) >= i){
+                    flagcol <- d[[names(summary_flags_clean)[i]]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_clean[[1]]
+                    drop_rows[accounted_for] <- FALSE
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(sumdirt && length(summary_flags_dirty) >= i){
+                    flagcol <- d[[names(summary_flags_dirty)[i]]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_dirty[[1]]
+                    drop_rows[accounted_for] <- FALSE
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(sumbdl && length(summary_flags_bdl) >= i){
+                    flagcol <- d[[names(summary_flags_bdl)[i]]]
+                    accounted_for <- is.na(flagcol) | flagcol %in% summary_flags_bdl[[1]]
+                    drop_rows[accounted_for] <- FALSE
+                } else {
+                    passes <- passes + 1
+                }
+
+                if(passes == 3) break
+                passes <- 0
             }
+
+            warning('under this specification (summary_flags clean + dirty +/- bdl - drop), ',
+                    'all unmatched sumflags are DROPPED. dropping ', sum(drop_rows), ' of ',
+                    nrow(d), ' records. Note that NA summary flags are never dropped.')
+
+            d <- d[! drop_rows, ]
         }
     }
 
@@ -1847,38 +2017,66 @@ ms_cast_and_reflag <- function(d,
     if(! no_varflags){
 
         dont_drop_these <- c('variable_flags_clean', 'variable_flags_dirty', 'variable_flags_bdl')
-        dont_drop_these <- unname(unlist(purrr::keep(mget(dont_drop_these), ~ nchar(.) > 0)))
+        dont_drop_these <- unname(unlist(purrr::keep(mget(dont_drop_these),
+                                                     ~ length(.) > 1 || nchar(.) > 0)))
 
         if(vardrop){
 
             if(variable_flags_to_drop == '#*#'){
-                d <- filter(d, flg %in% dont_drop_these)
+                warning('the "#*#" flag should probably be deprecated.')
+                d <- filter(d, is.na(flg) | flg %in% dont_drop_these)
             } else {
                 d <- filter(d, ! flg %in% variable_flags_to_drop)
             }
 
         } else if(varclen && vardirt){
-            # warning('dropping
-            stop('aaaaahh')
-            #need a warning about how many items are being dropped
-            #should NAs be kept? how often are they explicitly kept/discarded?
-            #look through each instance and verify that keeping NAs here will not hurt
-            #and what about below, in the next block?
-            d <- filter(d, flg %in% dont_drop_these)
+
+            to_drop <- nrow(filter(d, ! is.na(flg) & ! flg %in% dont_drop_these))
+            warning('under this specification (variable_flags clean + dirty +/- bdl - drop), ',
+                    'all unmatched varflags are DROPPED. dropping ', to_drop, ' of ',
+                    nrow(d), ' records')
+            d <- filter(d, is.na(flg) | flg %in% dont_drop_these)
         }
     }
 
     #binarize remaining flag information (not including BDLs yet; 0 = clean, 1 = questionable)
-    if(! no_varflags && sum(c(varclen, vardirt, vardrop, varbdl)) != 1){
-        if(varclen){
-            d <- mutate(d, ms_status = case_when(
-                flg %in% variable_flags_clean ~ 0,
-                TRUE ~ 1))
-        } else {
-            d <- mutate(d, ms_status = case_when(
-                flg %in% variable_flags_dirty ~ 1,
-                TRUE ~ 0))
+    if(! no_varflags && sum(c(varclen, vardirt, vardrop, varbdl)) != 1){ #i.e. if not only varbdl
+
+        accounted_for <- c('variable_flags_clean', 'variable_flags_dirty', 'variable_flags_bdl', 'variable_flags_to_drop')
+        accounted_for <- unname(unlist(purrr::keep(mget(accounted_for),
+                                                   ~ length(.) > 1 || nchar(.) > 0)))
+
+        if('' %in% d$flg && varclen && ! '' %in% get('variable_flags_clean')){
+            warning('Variable flag "" (empty string) is not marked as "clean". are you sure about this?')
         }
+
+        if(vardirt && varclen && vardrop){
+
+            flags_unaccounted_for <- setdiff(d$flg, accounted_for)
+
+            if(any(is.na(flags_unaccounted_for))){
+                warning('NA variable flags not explicitly handled. Assuming these are clean')
+                flags_unaccounted_for <- flags_unaccounted_for[! is.na(flags_unaccounted_for)]
+            }
+
+            if(length(flags_unaccounted_for)){
+                flags_unaccounted_for[flags_unaccounted_for == ''] <- '[empty string]'
+                stop('under this specification (variable_flags clean + dirty + drop +/- bdl), ',
+                     'every flag must be explicitly handled. Please specify what to do with ',
+                     'these flags: ', paste(flags_unaccounted_for, collapse = ', '))
+            }
+        }
+
+        if(varclen){
+            d <- mutate(d, ms_status = if_else(is.na(flg) | flg %in% variable_flags_clean,
+                                               0,
+                                               1))
+        } else {
+            d <- mutate(d, ms_status = if_else(flg %in% variable_flags_dirty,
+                                               1,
+                                               0))
+        }
+
     } else {
         d$ms_status <- 0
     }
@@ -1887,13 +2085,14 @@ ms_cast_and_reflag <- function(d,
         if(sumclen){
             for(i in 1:length(summary_flags_clean)){
                 si <- summary_flags_clean[i]
-                flg_bool <- ! d[[names(si)]] %in% si[[1]]
-                d$ms_status[flg_bool] <- 1
+                flagcol <- d[[names(si)]]
+                flg_bool <- ! is.na(flagcol) & ! flagcol %in% unlist(si)
+                d$ms_status[flg_bool] <- 1 #dirty prevails
             }
         } else {
             for(i in 1:length(summary_flags_dirty)){
                 si <- summary_flags_dirty[i]
-                flg_bool <- d[[names(si)]] %in% si[[1]]
+                flg_bool <- d[[names(si)]] %in% unlist(si)
                 d$ms_status[flg_bool] <- 1
             }
         }
@@ -1904,15 +2103,13 @@ ms_cast_and_reflag <- function(d,
         #this probably wouldn't happen unless there were only one data column
         for(i in seq_along(summary_flags_bdl)){
             si <- summary_flags_bdl[i]
-            bdl_inds <- d[[names(si)]] %in% si[[1]]
-            # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
+            bdl_inds <- d[[names(si)]] %in% unlist(si)
             d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
         }
     }
 
     if(varbdl){
         bdl_inds <- d$flg %in% variable_flags_bdl
-        # d[bdl_inds, 'dat'] <- half_detlims$detlim[match(d$var[bdl_inds], half_detlims$var)]
         d[bdl_inds, 'ms_status'] <- 2 #this is a temporary flag. will be changed to 1 downstream.
     }
 

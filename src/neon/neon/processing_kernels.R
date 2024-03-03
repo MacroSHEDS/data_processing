@@ -471,7 +471,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             pivot_wider(names_from = 'analyte',
                         values_from = c('val', 'flag'))
 
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
+        d_ <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
@@ -489,38 +489,26 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                  'Fe', 'HCO3', 'F', 'Br', 'TPC', 'pH', 'Si',
                                  'K', 'TP', 'TDS', 'CO3', 'ANC'),
                              data_col_pattern = 'val_#V#',
+                             var_flagcol_pattern = 'flag_#V#',
                              convert_to_BDL_flag = 'BDL',
                              is_sensor = FALSE,
-                             var_flagcol_pattern = 'flag_#V#',
-                             sampling_type = 'G',
-                             keep_bdl_values = TRUE)
+                             sampling_type = 'G')
 
-        #HERE. still need to handle BDL, consider all QC cols, verify units
+        d2 <- ms_cast_and_reflag(d_,
+                                variable_flags_clean = 'GOOD',
+                                variable_flags_dirty = 'OK',
+                                variable_flags_bdl = 'BDL')
 
-        out_lab <- tibble(rawd[[relevant_tbl2]]) %>%
-            select(site_code = siteID, datetime = collectDate, var = analyte,
-                   val = analyteConcentration, shipmentWarmQF, sampleCondition) %>%
-            mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
-                                       1, 0)) %>%
-            select(-shipmentWarmQF, -sampleCondition) %>%
-            mutate(var = case_when(var == 'Ortho - P' ~ 'PO4_P',
-                                   var == 'NO3+NO2 - N' ~ 'NO3_NO2_N',
-                                   var == 'NO2 - N' ~ 'NO2_N',
-                                   var == 'NH4 - N' ~ 'NH4_N',
-                                   var == 'specificConductance' ~ 'spCond',
-                                   var == 'UV Absorbance (280 nm)' ~ 'abs280',
-                                   var == 'UV Absorbance (250 nm)' ~ 'abs250',
-                                   var == 'UV Absorbance (254 nm)' ~ 'abs254',
-                                   TRUE ~ var)) %>%
-            # mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
-            filter(var != 'TSS - Dry Mass') %>%
-            mutate(datetime = force_tz(datetime, 'UTC'))
+        d <- ms_conversions(d,
+                            convert_units_from = sapply(var_deets, function(x) x[1]),
+                            convert_units_to = sapply(var_deets, function(x) x[2]))
 
-        # TEMPORARILY REMOVING NEON NUTRIENT DATA #
-        out_lab <- out_lab %>%
-            filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
-                                'TPN', 'TDN', 'PO4_P')) %>%
-            filter(!is.na(val))
+
+        # # TEMPORARILY REMOVING NEON NUTRIENT DATA #
+        # out_lab <- out_lab %>%
+        #     filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
+        #                         'TPN', 'TDN', 'PO4_P')) %>%
+        #     filter(!is.na(val))
 
     }
     return(generate_ms_err())

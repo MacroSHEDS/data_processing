@@ -1,4 +1,3 @@
-source('src/lter/mcmurdo/domain_helpers.R')
 
 #retrieval kernels ####
 

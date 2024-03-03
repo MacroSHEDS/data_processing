@@ -1,0 +1,125 @@
+VARIABLE FLAG SPECIFICATIONS
+
+accounting:
+
+clean + dirty       [IN PROGRESS]
+	neon [in progress]
+	sleepers [good]
+X	drop + dirty
+X		bear
+X		walker_branch
+X		krew
+X		plum
+all 4 	         	[REVISIT]
+	mces
+	suef
+	hjandrews
+X	bdl + dirty + drop
+X		krycklan
+X		mcmurdo
+X		konza
+X		boulder
+X		shale_hills
+X	bdl
+X		krycklan
+X		panola
+X		luquillo
+X		niwot
+dirty + bdl          [REVISIT]
+	swwd
+dirty + clean + bdl  [REVISIT]
+	loch_vale
+dirty + drop + clean [REVISIT]
+	mcmurdo
+
+----------
+
+Xbdl
+
+0clean + dirty (WARN about drops)
+Xclean + drop
+0clean + bdl (carries dirty - these need a warning)
+Xdirty + drop
+0dirty + bdl (carries clean - these need a warning)
+Xdrop + bdl (illegal)
+
+cln+drt+drp (WRONG, carries dirty, should check all)
+0cln+drt+bdl (WRONG, drops too much, in progress)
+0cln+drp+bdl (carries dirty - these need a warning)
+0drt+drp+bdl (carries clean - these need a warning)
+
+all 4 (WRONG! carries dirty, should check all)
+
+--------------------
+
+
+SUMMARY FLAG SPECIFICATIONS
+
+accounting:
+
+X	bdl
+X		mcmurdo
+cln + dirt 			[uggghhh check these]
+	neon
+	sleepers
+	panola
+	loch_vale
+	suef
+	bonanza
+	luquillo
+	konza
+	hjandrews
+X	cln + drop
+X		panola
+X		loch_vale
+X		konza
+X		shale_hills
+cln + dirt + drop   [check these, big problem]
+	mces
+	suef
+	tenderfoot
+	mcmurdo
+	hjandrews
+X	dirt + drop
+X		walker_branch
+X		krew
+X		hbef
+X		bonanza
+X		plum
+X		mcmurdo
+X		luquillo
+X		konza
+X		arctic
+X		niwot
+X		shale_hills
+X	dirty + drop + bdl
+X		mcmurdo
+
+multiple summary flagcols   [check these]
+	konza (drop+clen)
+	suef (clean+dirt)
+	hjandrews (clean + dirty)
+the only one using '#*#'
+	shale hills
+
+----------------
+
+Xbdl
+
+cln+dirt      WARN about drops
+Xcln+drop
+Xcln+bdl  illegal
+Xdirt+drop
+Xdirt+bdl illegal
+Xdrop+bdl illegal
+
+cln+dirt+drop WRONG - distributes dirty
+cln+dirt+bdl  WRONG, drops bdl, needs warning about drop
+Xcln+drop+bdl
+Xdrt+drop+bdl
+
+all 4         WRONG - distributes dirty
+
+warning about ""
+warning about NA assumption
+
