@@ -263,6 +263,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          alt_site_code = list('GSMACK' = 'GSWSMA'),
                          is_sensor = TRUE,
+                         set_to_NA = '',
                          summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
 
     # In 1995 HJ Andrews put a fish ladder around the GSWSMA (it is also gauged
@@ -281,19 +282,18 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
         filter(datetime >= '1995-09-30 22:00:00') %>%
         mutate(site_code = 'GSMACK')
 
-
     d <- filter(d, ! site_code %in% c('GSWSMA', 'GSWSMC', 'GSWSMF', 'GSMACK'))
 
     d <- rbind(d, GSWSMC, GSMACK)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            summary_flags_clean = list(
-                                ESTCODE = c('A', 'E'),
-                                EVENT_CODE = c(NA, 'WEATHR')),
-                            summary_flags_dirty = list(
-                                ESTCODE = c('Q', 'S', 'P'),
-                                EVENT_CODE = c('INSREM', 'MAINTE')))
+    d <- ms_cast_and_reflag(
+        d,
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(ESTCODE = c('A', 'E'),
+                                   EVENT_CODE = c(NA, 'WEATHR')),
+        summary_flags_dirty = list(ESTCODE = c('Q', 'S', 'P'),
+                                   EVENT_CODE = c('INSREM', 'MAINTE'))
+    )
 
     #convert cfs to liters/s
     d <- d %>%
@@ -342,18 +342,19 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code,
                              data_cols =  c(PRECIP_TOT_DAY = 'precipitation'),
                              data_col_pattern = '#V#',
                              is_sensor = FALSE,
+                             set_to_NA = '',
                              summary_flagcols = c('PRECIP_TOT_FLAG',
                                                   'EVENT_CODE'))
 
-        d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                summary_flags_clean = list(
-                                    PRECIP_TOT_FLAG = c('A', 'E'),
-                                    EVENT_CODE = c(NA, 'METHOD')),
-                                #METHOD indicates when methods change.
-                                summary_flags_dirty = list(
-                                    PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
-                                    EVENT_CODE = c('INSREM', 'MAINTE')))
+        d <- ms_cast_and_reflag(
+            d,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(PRECIP_TOT_FLAG = c('A', 'E'),
+                                       EVENT_CODE = c(NA, 'METHOD')),
+            #METHOD indicates when methods change.
+            summary_flags_dirty = list(PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
+                                       EVENT_CODE = c('INSREM', 'MAINTE'))
+        )
     }
 
     return(d)
@@ -399,19 +400,16 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = '*',
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean = c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_bdl = '*',
+        variable_flags_to_drop = 'N',
+        variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
+        variable_flags_clean = c('A', 'E'),
+        summary_flags_to_drop = list(TYPE = c('N', 'YE')),
+        summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
+        summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+    )
 
     return(d)
 }
@@ -454,20 +452,16 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = '*',
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean =
-                                c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_bdl = '*',
+        variable_flags_to_drop = 'N',
+        variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
+        variable_flags_clean = c('A', 'E'),
+        summary_flags_to_drop = list(TYPE = c('N', 'YE')),
+        summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
+        summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+    )
 
     #HJAndrews does not collect precip and precip chemistry at the same
     #locations, so we here crudely localize pchem data to the nearest precip
@@ -571,14 +565,15 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code,
                          data_cols =  c(WATERTEMP_MEAN_DAY = 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
+                         set_to_NA = '',
                          summary_flagcols = c('WATERTEMP_MEAN_FLAG'))
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            summary_flags_clean = list(
-                                WATERTEMP_MEAN_FLAG = c('A', 'E')),
-                            summary_flags_dirty = list(
-                                WATERTEMP_MEAN_FLAG = c('B', 'M', 'S', 'Q')))
+    d <- ms_cast_and_reflag(
+        d,
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(WATERTEMP_MEAN_FLAG = c('A', 'E')),
+        summary_flags_dirty = list(WATERTEMP_MEAN_FLAG = c('B', 'M', 'S', 'Q'))
+    )
 
     rawfile2 = glue('data/{n}/{d}/raw/{p}/{s}/HT00451.csv',
                     n = network,

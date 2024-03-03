@@ -9,3 +9,10 @@ fixed a QC-code assimilation bug that was allowing a small number of bad data va
  
 dates irrelevant...
 neon reports BDL and ND. BDL gets a flag. ND is replaced with DL/2
+
+20240303
+	fixed ms_cast_and_reflag, resulting in some recoveries:
+	to report: bonanza timezone error (was local, now utc)
+	hjandrews [6825 clean records recovered for precip (3%)]
+	mcmurdo [changelog: too many dirties in stream chem (26% -> 23%)]
+

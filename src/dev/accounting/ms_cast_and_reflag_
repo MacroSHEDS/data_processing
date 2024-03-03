@@ -12,8 +12,8 @@ X		krew
 X		plum
 all 4 	         	[REVISIT]
 	mces
-	suef
-	hjandrews
+	suef            [somehow fine]
+	hjandrews       [fine]
 X	bdl + dirty + drop
 X		krycklan
 X		mcmurdo
@@ -27,10 +27,10 @@ X		luquillo
 X		niwot
 dirty + bdl          [REVISIT]
 	swwd
-dirty + clean + bdl  [REVISIT]
-	loch_vale
+dirty + clean + varbdl  [REVISIT]
+	loch_vale        [fine]
 dirty + drop + clean [REVISIT]
-	mcmurdo
+	mcmurdo [changelog: too many dirties in stream chem (26% -> 23%)]
 
 ----------
 
@@ -60,26 +60,25 @@ accounting:
 X	bdl
 X		mcmurdo
 cln + dirt 			[uggghhh check these]
-	neon
-	sleepers
-	panola
-	loch_vale
-	suef
-	bonanza
-	luquillo
-	konza
-	hjandrews
+	neon [nbd]
+	sleepers [nbd]
+	panola [nbd]
+	loch_vale [fine]
+	suef [fine]
+	bonanza [fine, but fixed tz error]
+	luquillo [fine]
+	konza [fine]
+	hjandrews [6825 clean records recovered for precip (3%)]
 X	cln + drop
 X		panola
 X		loch_vale
 X		konza
 X		shale_hills
-cln + dirt + drop   [check these, big problem]
-	mces
-	suef
-	tenderfoot
-	mcmurdo
-	hjandrews
+cln + dirt + drop   [check these, big problem?]
+	mces [nbd]
+	suef [fine]
+	tenderfoot [nbd]
+	mcmurdo [fine]
 X	dirt + drop
 X		walker_branch
 X		krew
@@ -96,11 +95,11 @@ X	dirty + drop + bdl
 X		mcmurdo
 
 multiple summary flagcols   [check these]
-	konza (drop+clen)
-	suef (clean+dirt)
-	hjandrews (clean + dirty)
+	konza (drop+clen) [checked]
+	suef (clean+dirt) [checked]
+	hjandrews (clean + dirty) [checked]
 the only one using '#*#'
-	shale hills
+	shale hills [checked]
 
 ----------------
 
@@ -120,3 +119,7 @@ Xdrt+drop+bdl
 
 all 4         WRONG - distributes dirty
 
+
+to report: bonanza timezone error (was local, now utc)
+	hjandrews [6825 clean records recovered for precip (3%)]
+	mcmurdo [changelog: too many dirties in stream chem (26% -> 23%)]

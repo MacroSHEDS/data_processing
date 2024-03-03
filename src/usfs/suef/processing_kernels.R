@@ -355,14 +355,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          is_sensor = TRUE,
                          summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            summary_flags_clean = list(
-                                ESTCODE = c('A', 'E'),
-                                EVENT_CODE = c(NA, 'WEATHR')),
-                            summary_flags_dirty = list(
-                                ESTCODE = c('Q', 'S', 'P'),
-                                EVENT_CODE = c('INSREM', 'MAINTE')))
+    d <- ms_cast_and_reflag(
+        d,
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(ESTCODE = c('A', 'E'),
+                                   EVENT_CODE = c(NA, 'WEATHR')),
+        summary_flags_dirty = list(ESTCODE = c('Q', 'S', 'P'),
+                                   EVENT_CODE = c('INSREM', 'MAINTE'))
+    )
 
     #convert cfs to liters/s
     d <- d %>%
@@ -444,20 +444,16 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = '*',
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean =
-                                c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_bdl = '*',
+        variable_flags_to_drop = 'N',
+        variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
+        variable_flags_clean = c('A', 'E'),
+        summary_flags_to_drop = list(TYPE = c('N', 'YE')),
+        summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
+        summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+    )
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -582,19 +578,16 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     unlink(temp_dir, recursive = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = '*',
-                            variable_flags_to_drop = 'N',
-                            variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE',
-                                                     'DQ', 'DC'),
-                            variable_flags_clean = c('A', 'E'),
-                            summary_flags_to_drop = list(
-                                TYPE = c('N', 'YE')),
-                            summary_flags_dirty = list(
-                                TYPE = c('C', 'S', 'A', 'P', 'B')
-                            ),
-                            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL',
-                                                                'QA', 'F', 'G')))
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_bdl = '*',
+        variable_flags_to_drop = 'N',
+        variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
+        variable_flags_clean = c('A', 'E'),
+        summary_flags_to_drop = list(TYPE = c('N', 'YE')),
+        summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
+        summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+    )
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

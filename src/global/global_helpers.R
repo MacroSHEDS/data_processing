@@ -835,10 +835,6 @@ ms_read_raw_csv <- function(filepath,
         summary_flagcols <- NULL
     }
 
-    if(length(summary_flagcols) > 1){
-        warning('ms_cast_and_reflag may misbehave with multiple summary flagcols. usually there is a workaround')
-    }
-
     if(missing(set_to_NA)) {
         set_to_NA <- NULL
     }
@@ -1420,18 +1416,47 @@ resolve_datetime <- function(d,
         dt_tb$P[dt_tb$P == ''] <- 'AM'
     }
 
-    dt_tb <- dt_tb %>%
-        tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
-                     everything(),
-                     sep = ' ',
-                     remove = TRUE) %>%
-        mutate(datetime___ = as_datetime(
-            datetime___,
-            format = paste(datetime_formats_split[dt_col_order],
-                           collapse = ' '),
-            tz = datetime_tz
-        ) %>%
-            with_tz(tz = 'UTC'))
+    dt_tb <- tryCatch({
+        dt_tb %>%
+            tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
+                         everything(),
+                         sep = ' ',
+                         remove = TRUE) %>%
+            mutate(datetime___ = as_datetime(
+                datetime___,
+                format = paste(datetime_formats_split[dt_col_order],
+                               collapse = ' '),
+                tz = datetime_tz
+            ) %>%
+                with_tz(tz = 'UTC'))
+
+    }, warning = function(w){
+
+        if(grepl('failed to parse', names(last.warning))){
+
+            dt_tb_copy <- dt_tb
+
+            #this can't be the only way!! but it returns NULL if i don't repeat the code here.
+            dt_tb <- sw(dt_tb %>%
+                tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
+                             everything(),
+                             sep = ' ',
+                             remove = TRUE) %>%
+                mutate(datetime___ = as_datetime(
+                    datetime___,
+                    format = paste(datetime_formats_split[dt_col_order],
+                                   collapse = ' '),
+                    tz = datetime_tz
+                ) %>%
+                    with_tz(tz = 'UTC')))
+
+            print(dt_tb_copy[is.na(dt_tb), ])
+            w$message = paste(w$message, ' MacroSheds corollary: this often means timezone is misspecified! are the error dates above in march/nov?')
+            warning(w)
+
+            return(dt_tb)
+        }
+    })
 
     d <- d %>%
         bind_cols(dt_tb) %>%
@@ -1867,9 +1892,11 @@ ms_cast_and_reflag <- function(d,
         #lots of work to warn user if they don't specify '' as a clean summary flag
         if(sumclen){
 
-            known_chars <- unname(unlist(purrr::keep(unlist(mget(smflags)),
-                                                     ~ length(.) > 1 ||
-                                                         (inherits(., 'character') && nchar(.) >= 0))))
+            known_chars <- unname(unlist(sw(
+                purrr::keep(unlist(mget(smflags)),
+                            ~ length(.) > 1 ||
+                                is.na(.) ||
+                                (inherits(., 'character') && nchar(.) >= 0)))))
 
             for(s in summary_flag_colnames){
                 if('' %in% d[[s]] && ! '' %in% summary_flags_clean[[s]]){

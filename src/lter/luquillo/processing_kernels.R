@@ -83,7 +83,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                         'LUQ LTER method detection limits')){
         return(tibble())
     }
-    
+
     # look <- read_csv('data/lter/luquillo/raw/stream_chemistry__20/sitename_NA/All Sites Basic Field Stream Chemistry Data.csv')
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
@@ -92,7 +92,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- read.csv(rawfile,
                   colClasses = 'character') %>%
         mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) %>%
@@ -105,7 +105,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                CaCode = CalciumCode,
                NH4.NCode = NH4Code,
                PO4.PCode = PO4Code)
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Sample_Date' = '%Y-%m-%d',
                                               'Sample_Time' = '%H%M'
@@ -281,7 +281,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_code,
     } else{
         p_name <- 'Rainfall.mm.'
     }
-    
+
       d <- read.csv(rawfile,
                     colClasses = 'character')
 
@@ -311,11 +311,13 @@ process_1_14 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '-9999',
                              is_sensor = TRUE)
 
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('Field.Comments' = c('Cuarentena por Pandemia COVID 19')),
-                                summary_flags_to_drop = list('Field.Comments' = c('BAD', 
-                                                                                  'DATA NOT COLLECTED')),
-                                varflag_col_pattern = NA)
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_dirty = list('Field.Comments' = c('Cuarentena por Pandemia COVID 19')),
+            summary_flags_to_drop = list('Field.Comments' = c('BAD',  'DATA NOT COLLECTED')),
+            varflag_col_pattern = NA
+        )
+
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -466,12 +468,12 @@ process_1_182 <- function(network, domain, prodname_ms, site_code,
                            set_to_NA = '-9999',
                            is_sensor = TRUE)
 
-      d <- ms_cast_and_reflag(d,
-                              varflag_col_pattern = NA,
-                              summary_flags_clean = list('code' = c('Checked correct',
-                                                                    'Good')),
-                              summary_flags_dirty = list('code' = c('Sensor error',
-                                                                    'Bad')))
+      d <- ms_cast_and_reflag(
+          d,
+          varflag_col_pattern = NA,
+          summary_flags_clean = list('code' = c('Checked correct', 'Good')),
+          summary_flags_to_drop = list('code' = c('Sensor error', 'Bad'))
+      )
 
     #m3 to liters
     d <- d %>%

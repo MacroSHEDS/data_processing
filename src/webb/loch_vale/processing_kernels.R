@@ -42,7 +42,7 @@ process_0_VERSIONLESS002 <-  function(network, domain, set_details){
                showWarnings = FALSE,
                recursive = TRUE)
 
-    rawfile <- glue('{rd}/{c}.csv',
+    rawfile <- glue('{rd}/{c}',
                     rd = raw_data_dest,
                     c = set_details$component)
 

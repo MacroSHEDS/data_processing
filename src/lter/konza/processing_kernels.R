@@ -345,12 +345,12 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
 process_1_50 <- function(network, domain, prodname_ms, site_code,
                          component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_code,
+                     c = component)
 
     d <- read.csv(rawfile1,
                   colClasses = 'character',
@@ -732,10 +732,12 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
                          # sampling_type = 'I',
                          is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
+    d <- ms_cast_and_reflag(
+        d,
         varflag_col_pattern = NA,
         summary_flags_clean = list(Comments = c('', ' ', '8.0mm due')),
-        summary_flags_to_drop = list(Comments = 'just making sure every other flag ends up as ms_status 1'))
+        summary_flags_to_drop = list(Comments = 'just making sure every other flag ends up as ms_status 1')
+    )
 
     return(d)
 }

@@ -239,7 +239,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          var_flagcol_pattern = '#V#_varflag'
                          )
 
-    d <- ms_cast_and_reflag(d,
+    d <- ms_cast_and_reflag(d, #verify these work as expected (dirty + bdl). carries clean
                             # will turn the *ms_status* column to 1 (e.g. flagged)
                             variable_flags_dirty   = c('~'),
                             # will turn the *ms_status* column to 2 (e.g. below detection limit)

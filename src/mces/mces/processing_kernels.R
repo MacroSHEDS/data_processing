@@ -119,7 +119,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = 'quality_flag',
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
+    d <- ms_cast_and_reflag(d, #verify these work as expected. written before updating ms_cast
                             summary_flags_clean   = c('quality_flag' = 'Valid'),
                             summary_flags_to_drop = c('quality_flag' = 'Estimated'),
                             summary_flags_dirty   = c('quality_flag' = 'Suspect'),

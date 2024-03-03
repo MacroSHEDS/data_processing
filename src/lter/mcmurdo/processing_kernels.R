@@ -168,13 +168,12 @@ process_1_9002 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                         'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -246,13 +245,12 @@ process_1_9003 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                         'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -323,13 +321,12 @@ process_1_9007 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                         'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -408,13 +405,12 @@ process_1_9009 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                         'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -509,13 +505,12 @@ process_1_9022 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                         'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -588,13 +583,12 @@ process_1_9021 <- function(network, domain, prodname_ms, site_code,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                variable_flags_dirty = c('POOR', 'Poor', 'poor','poor',
-                                                         'Qmu','WTmu','SCmu','WTsed',
-                                                         'SCsed','Qsed'),
-                                variable_flags_to_drop = c('UNUSABLE'),
-                                variable_flags_clean = c('GOOD', 'FAIR', 'Fair',
-                                                             'fair', 'Good', 'good'))
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
     }
 
     return(d)
@@ -648,8 +642,8 @@ process_1_9029 <- function(network, domain, prodname_ms, site_code,
                              datetime_tz = 'Antarctica/McMurdo',
                              site_code_col = 'STRMGAGEID',
                              data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DISCHARGE_QLTY',
                              data_col_pattern = '#V#',
+                             var_flagcol_pattern = '#V#_QLTY',
                              is_sensor = TRUE,
                              set_to_NA = '',
                              sampling_type = 'I')
@@ -667,24 +661,20 @@ process_1_9029 <- function(network, domain, prodname_ms, site_code,
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
                              site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp'),
+                             data_cols =  c('WATER_TEMP' = 'temp',
+                                            'CONDUCTIVITY' = 'spCond'),
                              data_col_pattern = '#V#',
-                             summary_flagcols = 'WATER_TEMP_QLTY',
+                             var_flagcol_pattern = '#V#_QLTY',
                              is_sensor = TRUE,
                              set_to_NA = '',
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list(WATER_TEMP_QLTY =
-                                                               c('POOR', 'Poor', 'poor','poor',
-                                                                 'Qmu','WTmu','SCmu','WTsed',
-                                                                 'SCsed','Qsed')),
-                                summary_flags_to_drop = list( WATER_TEMP_QLTY = 'UNUSABLE'),
-                                summary_flags_clean = list(WATER_TEMP_QLTY =
-                                                               c('GOOD', 'FAIR', 'Fair',
-                                                                 'fair', 'Good', 'good')),
-                                varflag_col_pattern = NA)
-        }
+        d <- ms_cast_and_reflag(
+            d,
+            variable_flags_to_drop = 'UNUSABLE',
+            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
+                                     'good', 'good ', 'fair ', 'good; Wtmu')
+        )
 
     return(d)
 }
