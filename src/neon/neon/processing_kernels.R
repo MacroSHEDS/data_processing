@@ -395,8 +395,8 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                 summary_flags_dirty = list(actual_quality_flag = '1'))
 
         out_dom <- ms_conversions(d,
-                            convert_units_from = c(ANC = 'meq'),
-                            convert_units_to = c(ANC = 'eq'))
+                                  convert_units_from = c(ANC = 'meq'),
+                                  convert_units_to = c(ANC = 'eq'))
     }
 
     if(relevant_tbl2 %in% names(rawd)){
@@ -471,7 +471,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             pivot_wider(names_from = 'analyte',
                         values_from = c('val', 'flag'))
 
-        d_ <- ms_read_raw_csv(preprocessed_tibble = d,
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
@@ -494,23 +494,21 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                              is_sensor = FALSE,
                              sampling_type = 'G')
 
-        d2 <- ms_cast_and_reflag(d_,
+        d <- ms_cast_and_reflag(d,
                                 variable_flags_clean = 'GOOD',
                                 variable_flags_dirty = 'OK',
                                 variable_flags_bdl = 'BDL')
 
-        d <- ms_conversions(d,
-                            convert_units_from = sapply(var_deets, function(x) x[1]),
-                            convert_units_to = sapply(var_deets, function(x) x[2]))
+        conv_vars <- neon_chem_vars %>%
+            filter(tolower(neon_unit) != tolower(unit))
 
-
-        # # TEMPORARILY REMOVING NEON NUTRIENT DATA #
-        # out_lab <- out_lab %>%
-        #     filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
-        #                         'TPN', 'TDN', 'PO4_P')) %>%
-        #     filter(!is.na(val))
-
+        out_lab <- ms_conversions(
+            d,
+            convert_units_from = deframe(select(conv_vars, ms_var, neon_unit)),
+            convert_units_to = deframe(select(conv_vars, ms_var, unit))
+        )
     }
+
     return(generate_ms_err())
 
     if(! exists('out_lab') && ! exists('out_dom')){

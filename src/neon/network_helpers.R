@@ -39,7 +39,9 @@ neon_chem_vars <- list(
     'ANC' = c('ANC', 'meq/l')
 ) %>%
     plyr::ldply() %>%
-    rename(neon_var = `.id`, ms_var = V1, neon_unit = V2)
+    rename(neon_var = `.id`, ms_var = V1, neon_unit = V2) %>%
+    left_join(select(ms_vars, variable_code, unit),
+              by = c(ms_var = 'variable_code'))
 
 get_neon_data <- function(domain, s, tracker, silent = TRUE){
 
