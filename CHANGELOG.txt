@@ -16,3 +16,13 @@ neon reports BDL and ND. BDL gets a flag. ND is replaced with DL/2
 	hjandrews [6825 clean records recovered for precip (3%)]
 	mcmurdo [changelog: too many dirties in stream chem (26% -> 23%)]
 
+NEON added
+	where domain lab and external lab data both present, these are averaged
+		e.g. swc_domainLabData and swc_externalLabDataByAnalyte for stream chemistry 20093
+	for domain lab data, 
+		ms_status = 1 given if remarks present and not related to replicate|SOP|protocol|cartridge
+			probs find some examples of these
+	for external lab data
+		shipmentWarmQF =  ms_status 1
+		prioritize sampleCondition == GOOD, else take OK, else settle for Other
+		

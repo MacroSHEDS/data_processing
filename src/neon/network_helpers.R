@@ -125,6 +125,7 @@ stackByTable_keep_zips <- function(zip_parent){
 
     #can't rename cross-device, so copy and remove instead
     file.remove(zip_parent)
+    # suppressWarnings(file.remove(zip_parent))
     file.copy(file.path(tmpd, basename(zip_parent)),
               dirname(zip_parent),
               recursive = TRUE)
