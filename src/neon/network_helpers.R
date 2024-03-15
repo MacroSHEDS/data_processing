@@ -241,13 +241,33 @@ download_sitemonth_details <- function(geturl){
 
 determine_upstream_downstream <- function(d_){
 
-    updown = substr(d_$horizontalPosition, 3, 3)
-    updown[updown == '1'] = '-up' #1 means upstream sensor
+    #returns a vector of empty strings or "-up" indicating whether each
+    #recording came from an upstream (S1) or downstream (S2) sensor array.
 
-    #2 means downstream sensor. 0 means only one sensor? 3 means ???
-    updown[updown %in% c('0', '2', '3')] = ''
+    third_digit <- substr(d_$horizontalPosition, 3, 3)
 
-    if(any(! updown %in% c('-up', ''))){
+    if(any(! third_digit %in% as.character(0:2))){
+        stop('unknown position encountered')
+    }
+
+    if(any(third_digit == '0')){
+        #might need to filter 0s here.
+        stop('deal with staff gauge readings. do they supplement downstream gauge?')
+    }
+
+    if(any(d_$horizontalPosition %in% as.character(seq(130, 160, 10)))){
+        #130 140 = littoral, 150 160 lake inflow/outflow
+        #might need to filter these.
+        stop('weird sensor positions encountered')
+    }
+
+    updown <- rep(NA_character_, length(third_digit))
+    updown[third_digit == '1'] <- 'up' #1 means upstream sensor
+
+    #2 means downstream sensor. 0 means staff gage. does 3 exist?
+    updown[third_digit %in% c('0', '2', '3')] <- 'down'
+
+    if(any(is.na(updown))){
         stop('upstream/downstream indicator error')
     }
 
@@ -402,4 +422,75 @@ update_neon_detlims <- function(neon_dls){
     }
 
     return(invisible())
+}
+
+neon_average_start_end_times <- function(d_){
+
+    #neon sensor data are reported as aggregations over an interval.
+    #the interval is specified by two columns: startDateTime and endDateTime.
+    #This produces a single "datetime" column that is the midpoint of those two.
+
+    if(length(unique(d_$endDateTime - d_$startDateTime)) > 1){
+        stop('variable sample intervals detected')
+    }
+
+    d_ <- as.data.table(d_)
+    d_[, datetime := as.POSIXct((as.numeric(startDateTime) + as.numeric(endDateTime)) / 2,
+                                origin = '1970-01-01',
+                                tz = 'UTC')]
+    d_ <- as_tibble(d_) %>%
+        select(-startDateTime, -endDateTime)
+
+    return(d_)
+}
+
+neon_borrow_from_upstream <- function(d_, updown, relevant_col){
+
+    #every neon stream site has at least two sensor arrays: S1 (upstream)
+    #and S2 (downstream). S2 collects more stuff, so that array is what we
+    #mainly care about, but in case of missing values at S2, this function
+    #will borrow the corresponding value of relevant_col from S1, if
+    #available, and flag it as dirty
+
+    updown <- determine_upstream_downstream(d_)
+
+    if(any(duplicated(d_$datetime[updown == '']))){
+        stop('gotta deal with dupes')
+    }
+    if(any(duplicated(d_$datetime[updown == '-up']))){
+        stop('gotta deal with dupes')
+    }
+
+    flagcol <- grep('inalQF$', colnames(d_), value = TRUE)
+    if(length(flagcol) != 1) stop('flag column disparity detected')
+
+    d_ <- d_ %>%
+        rename(finalQF = !!flagcol) %>%
+        select(datetime, siteID, all_of(relevant_col), finalQF) %>%
+        mutate(updown = !!updown) %>%
+        pivot_wider(names_from = updown,
+                    values_from = !!relevant_col) %>%
+        group_by(datetime) %>%
+        summarize(
+            finalQF = if_else(all(is.na(down)), #if so, we're using the "up" value...
+                              1, #so ms_status will be 1
+                              finalQF[which(! is.na(down))[1]]), #else use the real "down" QF
+            up = mean(up, na.rm = TRUE), #at most one non-NA "up" value
+            down = mean(down, na.rm = TRUE), #at most one non-NA "down" value
+            siteID = first(siteID)
+        ) %>%
+        ungroup() %>%
+        mutate(
+            # finalQF = if_else(is.na(down), 1, finalQF),
+            down = if_else(is.na(down), up, down)
+        ) %>%
+        mutate(down = if_else(is.na(down), NA_real_, down)) %>% #replace NaN with NA
+        rename(!!relevant_col := down) %>%
+        select(-up)
+
+    if(any(duplicated(d_$datetime))){
+        stop('dupes introduced')
+    }
+
+    return(d_)
 }

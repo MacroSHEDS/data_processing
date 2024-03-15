@@ -567,12 +567,15 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    #average start and end datetimes
-    rawd <- as.data.table(rawd)
-    rawd[, datetime := as.POSIXct((as.numeric(startDateTime) + as.numeric(endDateTime)) / 2,
-                                  origin = '1970-01-01',
-                                  tz = 'UTC')]
-    rawd <- as_tibble(rawd)
+    if(all(is.na(rawd$surfWaterNitrateMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
+
+    #just using this to check for weirdness. nitrate is only collected at the
+    #downstream sensor array (S2)
+    updown <- determine_upstream_downstream(rawd)
+
+    rawd <- neon_average_start_end_times(rawd)
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
                          datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
@@ -585,56 +588,15 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_clean = 'GOOD',
-                            variable_flags_dirty = 'OK',
-                            variable_flags_bdl = 'BDL')
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
 
-    conv_vars <- neon_chem_vars %>%
-        filter(tolower(neon_unit) != tolower(unit))
+    d <- ms_conversions(d,
+                        convert_units_from = c(NO3 = 'umol/L'),
+                        convert_units_to = c(NO3 = 'mg/L'))
 
-    out_lab <- ms_conversions(
-        d,
-        convert_units_from = deframe(select(conv_vars, ms_var, neon_unit)),
-        convert_units_to = deframe(select(conv_vars, ms_var, unit))
-    )
-
-    if(! exists('out_lab') && ! exists('out_dom')){
-
-        print(paste0('swc_externalLabDataByAnalyte and swc_domainLabData are missing for ', site_code))
-        out_sub <- tibble()
-
-    } else {
-
-        out_sub <- out_sub %>%
-            group_by(datetime, site_code, var) %>%
-            summarize(
-                ms_status = min(ms_status),
-                val = mean(val[ms_status == min(ms_status)],
-                           na.rm = TRUE)
-            ) %>%
-            ungroup() %>%
-            filter(! is.na(val))
-    }
-
-
-    # if(all(rawd$finalQF == 1)){
-    #     return(generate_ms_exception('All records failed QA'))
-    # }
-
-    # filter(site_data, domain == 'neon') %>% pull(site_code)->ggg
-    # updown <- determine_upstream_downstream(rawd)
-    # N_mass <- calculate_molar_mass('N')
-
-    # out_sub <- rawd %>%
-        # mutate(
-            # site_code = paste0(siteID, updown), #append "-up" to upstream site_codes
-            # datetime = force_tz(startDateTime, 'UTC'), #GMT -> UTC
-            # surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
-        # select(site_code, datetime=startDateTime, val=surfWaterNitrateMean,
-               # ms_status = finalQF) %>%
-        # mutate(var = 'NO3_N')
-
-    return(out_sub)
+    return(d)
 }
 
 #stream_PAR: STATUS=READY
@@ -642,40 +604,47 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
 process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
                                     components){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_tbl1 = 'PARWS_5min.feather'
+    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
+    relevant_tbl1 <- 'PARWS_30min'
     if(relevant_tbl1 %in% names(rawd)){
         rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$PARFinalQF == 1) || all(is.na(rawd$PARMean))){
-        return(generate_ms_exception('All records failed QA or no data in component'))
+    if(all(is.na(rawd$PARMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    updown <- determine_upstream_downstream(rawd) #still need? loop through ggg and table(updown)
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(rawd, relevant_col = 'PARMean')
 
-    out_sub <- rawd %>%
-        mutate(
-            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
-            datetime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        group_by(datetime, site_code) %>%
-        summarize(
-            val = mean(PARMean, na.rm=TRUE),
-            ms_status = numeric_any(PARFinalQF)) %>%
-        ungroup() %>%
-        mutate(var = 'PAR') %>%
-        select(site_code, datetime=datetime, var, val, ms_status)
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(PARMean = 'PAR'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
-    out_sub[is.na(out_sub)] <- NA
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
 
-    return(out_sub)
+    return(d)
 }
 
 #stream_temperature: STATUS=READY

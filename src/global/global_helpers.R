@@ -2232,6 +2232,10 @@ ms_conversions <- function(d,
 
     }
 
+    if(any(grepl('M', c(convert_units_from, convert_units_to)))){
+        stop('specify moles as "mol", rather than "M"')
+    }
+
     convert_units_from <- tolower(convert_units_from)
     convert_units_to <- tolower(convert_units_to)
 
