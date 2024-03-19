@@ -1,4 +1,5 @@
 library(neonUtilities)
+library(neonDissGas)
 
 #neon name = c(macrosheds name, neon unit)
 neon_chem_vars <- list(
@@ -123,19 +124,24 @@ stackByTable_keep_zips <- function(zip_parent){
         saveUnzippedFiles = FALSE)
     sink()
 
-    #can't rename cross-device, so copy and remove instead
-    file.remove(zip_parent)
-    # suppressWarnings(file.remove(zip_parent))
-    file.copy(file.path(tmpd, basename(zip_parent)),
-              dirname(zip_parent),
-              recursive = TRUE)
-    unlink(file.path(tmpd, basename(zip_parent)),
-           recursive = TRUE)
+    #neon zips arranged >= 2 different ways. sometimes this is needed.
+    if(! any(grepl('\\.csv$', list.files(zip_parent)))){
+
+        #can't rename cross-device, so copy and remove instead
+        file.remove(zip_parent)
+        file.copy(file.path(tmpd, basename(zip_parent)),
+                  dirname(zip_parent),
+                  recursive = TRUE)
+        unlink(file.path(tmpd, basename(zip_parent)),
+               recursive = TRUE)
+    }
 
     return(rawd)
 }
 
 munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE){
+
+    #deprecated
 
     retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_code)
 
@@ -152,53 +158,28 @@ munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE
         in_comp <- retrieval_log[k, 'component']
 
         out_comp <- sw(do.call(processing_func,
-                              args=list(network = network,
-                                        domain = domain,
-                                        prodname_ms = prodname_ms,
-                                        site_code = site_code,
-                                        component = in_comp)))
+                              args = list(network = network,
+                                          domain = domain,
+                                          prodname_ms = prodname_ms,
+                                          site_code = site_code,
+                                          component = in_comp)))
 
         if(! is_ms_err(out_comp) && ! is_ms_exception(out_comp)){
             out <- bind_rows(out, out_comp)
         }
     }
 
-    if(nrow(out) == 0) {
-        return(generate_ms_err(paste0('All data failed QA or no data is avalible at ', site_code)))
+    if(nrow(out) == 0){
+        return(generate_ms_err(paste0('All data failed QA or no data is avalible at ',
+                                      site_code)))
     }
-
-    sensor <- case_when(prodname_ms == 'stream_chemistry__DP1.20093' ~ FALSE,
-                        prodname_ms == 'stream_nitrate__DP1.20033' ~ TRUE,
-                        prodname_ms == 'stream_temperature__DP1.20053' ~ TRUE,
-                        prodname_ms == 'stream_PAR__DP1.20042' ~ TRUE,
-                        prodname_ms == 'stream_gases__DP1.20097' ~ FALSE,
-                        prodname_ms == 'stream_quality__DP1.20288' ~ TRUE,
-                        prodname_ms == 'precip_chemistry__DP1.00013' ~ FALSE,
-                        prodname_ms == 'precipitation__DP1.00006' ~ TRUE,
-                        prodname_ms == 'discharge__DP4.00130' ~ TRUE,
-                        prodname_ms == 'surface_elevation__DP1.20016' ~ TRUE)
 
     site_codes <- unique(out$site_code)
     for(y in 1:length(site_codes)) {
 
         d <- out %>%
-            filter(site_code == !!site_codes[y])
-
-        if(sensor){
-            sampling_type <- 'I'
-        } else{
-            sampling_type <- 'G'
-        }
-
-        d <- identify_sampling_bypass(df = d,
-                                      is_sensor =  sensor,
-                                      domain = domain,
-                                      network = network,
-                                      prodname_ms = prodname_ms,
-                                      sampling_type = sampling_type)
-
-        d <- d %>%
-            filter(!is.na(val))
+            filter(site_code == !!site_codes[y]) %>%
+            filter(! is.na(val))
 
         d <- remove_all_na_sites(d)
 
@@ -220,13 +201,19 @@ munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE
                       link_to_portal = FALSE)
     }
 
-    update_data_tracker_m(network=network, domain=domain,
-        tracker_name='held_data', prodname_ms=prodname_ms, site_code=site_code,
-        new_status='ok')
+    update_data_tracker_m(network = network,
+                          domain = domain,
+                          tracker_name = 'held_data',
+                          prodname_ms = prodname_ms,
+                          site_code = site_code,
+                          new_status = 'ok')
 
-    msg = glue('munged {p} ({n}/{d}/{s})',
-            p=prodname_ms, n=network, d=domain, s=site_code)
-    loginfo(msg, logger=logger_module)
+    msg <- glue('munged {p} ({n}/{d}/{s})',
+                p = prodname_ms,
+                n = network,
+                d = domain,
+                s = site_code)
+    loginfo(msg, logger = logger_module)
 
     return('sitemunge complete')
 }

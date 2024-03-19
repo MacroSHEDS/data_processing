@@ -351,7 +351,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
@@ -435,6 +435,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
         #consolidate QA info. can't find definitions for externalLabDataQF, and
         #the values present in that column aren't obviously indicative of ms_status = 1.
         #probably could be used to identify causes of discontinuities in time series though.
+        if(any(is.na(d$sampleCondition))) stop('handle NA sampleCondition')
         d <- d %>%
             mutate(sampleCondition = if_else(belowDetectionQF %in% c('BDL', 'ND'),
                                              'OK',
@@ -547,7 +548,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 #stream_nitrate: STATUS=READY
 #. handle_errors
 process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
@@ -590,7 +591,7 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(finalQF = '0'),
-                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
 
     d <- ms_conversions(d,
                         convert_units_from = c(NO3 = 'umol/L'),
@@ -602,7 +603,7 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
 #stream_PAR: STATUS=READY
 #. handle_errors
 process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
@@ -642,7 +643,7 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(finalQF = '0'),
-                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
 
     return(d)
 }
@@ -650,56 +651,58 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
 #stream_temperature: STATUS=READY
 #. handle_errors
 process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_code,
-                   c = components)
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
-    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
-    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_tbl1 <- 'TSW_5min.feather'
+    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
+    relevant_tbl1 <- 'TSW_30min'
     if(relevant_tbl1 %in% names(rawd)){
         rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$finalQF == 1) || all(is.na(rawd$surfWaterTempMean))){
-        return(generate_ms_exception('All records failed QA or no data in component'))
+    if(all(is.na(rawd$surfWaterTempMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    updown <- determine_upstream_downstream(rawd)#still need? loop through ggg and table(updown)
-    # rawd <- mutate(rawd,
-    #                siteID = paste0(siteID, updown))
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(rawd, relevant_col = 'surfWaterTempMean')
 
-    out_sub <- rawd %>%
-        mutate(site_code = paste0(siteID, updown)) %>%
-        mutate(datetime = force_tz(startDateTime, 'UTC')) %>%
-        group_by(datetime, site_code) %>%
-        summarize(val = mean(surfWaterTempMean, na.rm=TRUE),
-                  ms_status = numeric_any(finalQF)) %>%
-        ungroup() %>%
-        mutate(var = 'temp') %>%
-        select(site_code, datetime, var, val, ms_status)
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(surfWaterTempMean = 'temp'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
-    out_sub[is.na(out_sub)] <- NA
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
 
-    return(out_sub)
+    return(d)
 }
 
 #air_pressure: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
-                                components){
+                                component){
+
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles = list.files(rawdir)
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
@@ -740,66 +743,120 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
 #stream_gases: STATUS=READY
 #. handle_errors
 process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles = list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_tbl1 = 'sdg_externalLabData.feather'
+    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
-    # file_data = read_feather(glue(rawdir, '/', 'sdg_fieldData.feather'))
-    # file_data_air = read_feather(glue(rawdir, '/', 'sdg_fieldDataAir.feather'))
-    # file_data_proc = read_feather(glue(rawdir, '/', 'sdg_fieldDataProc.feather'))
-    # file_data_parent = read_feather(glue(rawdir, '/', 'sdg_fieldSuperParent.feather'))
-    # validation = read_feather(glue(rawdir, '/', 'validation_20097.feather'))
-    # variable = read_feather(glue(rawdir, '/', 'variables_20097.feather'))
+    relevant_tbl1 <- 'sdg_externalLabData'
 
     if(relevant_tbl1 %in% names(rawd)){
 
-        rawd = tibble(rawd[[relevant_tbl1]]) %>%
-            mutate(sampleCondition = ifelse(is.na(sampleCondition), 1, sampleCondition)) %>%
-            mutate(condition = ifelse(sampleCondition == 'OK',
-                                      0, 1)) %>%
-            mutate(gasCheckStandardQF = ifelse(is.na(gasCheckStandardQF), 0,
-                                               gasCheckStandardQF)) %>%
-            mutate(condition_2 = ifelse(gasCheckStandardQF == 1, 1, 0)) %>%
-            mutate(error = ifelse(condition == 1 | condition_2 == 1, 1, 0))
+        d <- rawd$sdg_externalLabData
 
+        ## conversion from ppm by volume to mol/L
+
+        sdgFormatted <- suppressWarnings(neonDissGas::def.format.sdg(
+            externalLabData = d,
+            fieldDataProc = rawd$sdg_fieldDataProc,
+            fieldSuperParent = rawd$sdg_fieldSuperParent
+        ))
+
+        sdgConcentrations <- neonDissGas::def.calc.sdg.conc(inputFile = sdgFormatted)
+
+        #merge computed concentrations for dissolved gases with main df
+        d <- d %>%
+            as_tibble() %>%
+            filter(grepl('WAT', sampleID)) %>%
+            mutate(sampleID = sub('\\.WAT', '', sampleID)) %>%
+            left_join(select(sdgConcentrations,
+                             waterSampleID,
+                             contains('dissolved')),
+                      by = c(sampleID = 'waterSampleID')) %>%
+            #contentrations are not computed for replicates, but that's okay
+            filter(! if_any(contains('dissolved'), is.na))
+
+        ## consolidate QC info
+
+        d <- d %>%
+            mutate(
+                #sampleCondition can be "OK", NA, or assorted specific things
+                stts = if_else(! is.na(sampleCondition) &
+                                   sampleCondition == 'OK',
+                               0, 1),
+                #remarks usually indicate no issue, but whenever the word "inventory"
+                #appears it indicates labeling mishaps
+                stts = if_else(grepl('inventor', externalRemarks),
+                               1, stts),
+                #these quality flags can be -1, 0, 1, or NA. only 0 is okay.
+                N2OCheckStandardQF = if_else(! is.na(N2OCheckStandardQF) &
+                                                 N2OCheckStandardQF == 0,
+                                             0, 1),
+                CO2CheckStandardQF = if_else(! is.na(CO2CheckStandardQF) &
+                                                 CO2CheckStandardQF == 0,
+                                             0, 1),
+                CH4CheckStandardQF = if_else(! is.na(CH4CheckStandardQF) &
+                                                 CH4CheckStandardQF == 0,
+                                             0, 1),
+                #BDL is not directly indicated, but can be determined like so
+                CH4CheckStandardQF = if_else(
+                    ! is.na(concentrationCH4) & concentrationCH4 <= runDetectionLimitCH4,
+                    1, CH4CheckStandardQF
+                ),
+                N2OCheckStandardQF = if_else(
+                    ! is.na(concentrationN2O) & concentrationN2O <= runDetectionLimitN2O,
+                    1, N2OCheckStandardQF
+                ),
+                CO2CheckStandardQF = if_else(
+                    ! is.na(concentrationCO2) & concentrationCO2 <= runDetectionLimitCO2,
+                    1, CO2CheckStandardQF
+                )
+            )
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$error == 1)){
-        return(generate_ms_exception('All records failed QA'))
-    }
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c('CO2', 'N2O', 'CH4'),
+                         data_col_pattern = 'dissolved#V#',
+                         var_flagcol_pattern = '#V#CheckStandardQF',
+                         summary_flagcols = 'stts',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    out_sub <- rawd %>%
-        mutate(
-            datetime = lubridate::force_tz(collectDate, 'UTC'), #GMT -> UTC
-            type =  grepl("AIR", rawd$sampleID)) %>%
-        mutate(type = ifelse(type == TRUE, 'air', 'water')) %>%
-        filter(type == 'water') %>%
-        group_by(datetime, siteID) %>%
-        summarise('CH4' = mean(concentrationCH4, na.rm = TRUE),
-                  'CO2' = mean(concentrationCO2, na.rm = TRUE),
-                  'N2O' = mean(concentrationN2O, na.rm = TRUE),
-                  ms_status = max(error, na.rm = TRUE)) %>%
-        ungroup() %>%
-        rename(site_code = siteID) %>%
-        pivot_longer(cols = c('CH4', 'CO2', 'N2O'), names_to = 'var', values_to = 'val')
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_clean = '0',
+                            variable_flags_to_drop = 'sentinel',
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
 
-    return(out_sub)
+    d <- ms_conversions(d,
+                        convert_units_from = c(CO2 = 'mol/L',
+                                               CH4 = 'mol/L',
+                                               N2O = 'mol/L'),
+                        convert_units_to = c(CO2 = 'mg/L',
+                                             CH4 = 'mg/L',
+                                             N2O = 'mg/L'))
 }
 
 #surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
-                                components){
+                                component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
 
@@ -826,10 +883,10 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
 #stream_quality: STATUS=READY
 #. handle_errors
 process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
-                                    components){
+                                    component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
     relevant_tbl1 <- 'waq_instantaneous.feather'
@@ -881,10 +938,10 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
-                                    components) {
+                                    component) {
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=components)
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     rawfiles <- list.files(rawdir)
 
