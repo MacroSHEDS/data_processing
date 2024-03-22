@@ -463,26 +463,62 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     if(length(relevant_cols) > 1){
 
+        site_ <- d_$siteID[1]
+        qf_cols <- paste0(relevant_cols, 'FinalQF')
+
         d_ <- d_ %>%
             select(datetime, siteID,
-                   all_of(c(relevant_cols, paste0(relevant_cols, 'FinalQF')))) %>%
-            mutate(updown = !!updown) %>%
-            pivot_wider(names_from = updown,
-                        values_from = c(!!relevant_cols, paste0(relevant_cols, 'FinalQF')))
+                   all_of(c(relevant_cols, qf_cols))) %>%
+            mutate(updown = !!updown,
+                   across(ends_with('FinalQF'),
+                          ~if_else(is.na(.), 1, .)))
+
+        setDT(d_)
+
+        #aggregate by daily mean; if any qc val is 1, the whole day inherits that
+        d_[, day := as.IDate(datetime)]
+
+        d_agg <- d_[, lapply(.SD, mean, na.rm = TRUE),
+                    by = .(day, updown),
+                    .SDcols = relevant_cols]
+
+        d_qf <- d_[, lapply(.SD, max),
+                   by = .(day, updown),
+                   .SDcols = qf_cols]
+
+        d_agg <- merge(d_agg,
+                       d_qf,
+                       by = c('day', 'updown'))
+
+        #pivot_wider
+        d_ <- dcast(d_agg,
+                    day ~ updown,
+                    value.var = c(relevant_cols, qf_cols))
 
         for(col in relevant_cols){
 
-            dn <- paste0(col, '_down')
-            up <- paste0(col, '_up')
-            qf <- paste0(col, 'FinalQF')
-            dn_to_fill <- is.na(d_[[dn]])
-            d_[[dn]][dn_to_fill] <- d_[[up]][dn_to_fill]
-            d_[[qf]][dn_to_fill] <- 1
+            down_col <- paste0(col, '_down')
+            up_col <- paste0(col, '_up')
+            down_qf_col <- paste0(col, 'FinalQF_down')
+            up_qf_col <- paste0(col, 'FinalQF_up')
+
+            #replace missing downstream data with upstream data and mark as 'dirty'
+            d_[, (down_qf_col) := fifelse(is.na(get(down_col)), 1, get(down_qf_col))]
+            d_[, (down_col) := fifelse(is.na(get(down_col)), get(up_col), get(down_col))]
+
+            #drop the upstream columns; set downstream colnames back
+            d_[, (up_col) := NULL]
+            d_[, (up_qf_col) := NULL]
+            setnames(d_, down_col, col)
+            setnames(d_, down_qf_col, paste0(col, 'FinalQF'))
         }
+
+        d_[is.na(d_)] <- NA_real_
+        d_$siteID <- site_
+        d_ <- as_tibble(d_)
 
     } else {
 
-        d_->aa
         d_ <- d_ %>%
             rename(finalQF = !!flagcol) %>%
             select(datetime, siteID, all_of(relevant_cols), finalQF) %>%
