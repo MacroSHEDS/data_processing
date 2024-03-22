@@ -628,7 +628,7 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     }
 
     rawd <- neon_average_start_end_times(rawd)
-    rawd <- neon_borrow_from_upstream(rawd, relevant_col = 'PARMean')
+    rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'PARMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
                          datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
@@ -676,7 +676,7 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     }
 
     rawd <- neon_average_start_end_times(rawd)
-    rawd <- neon_borrow_from_upstream(rawd, relevant_col = 'surfWaterTempMean')
+    rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'surfWaterTempMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
                          datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
@@ -885,12 +885,19 @@ process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
 process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
-    relevant_tbl1 <- 'waq_instantaneous.feather'
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
+    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    # rawd->fff
+
+    relevant_tbl1 <- 'waq_instantaneous'
     if(relevant_tbl1 %in% names(rawd)){
         rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
@@ -899,40 +906,50 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
 
     na_test <- rawd %>%
         select(specificConductance, dissolvedOxygen, pH, chlorophyll, turbidity, fDOM) %>%
-        unique() %>%
-        is.na()
+        is.na() %>%
+        all()
 
-    if(all(na_test[1,]) && nrow(na_test) == 1) {
-
-        return(generate_ms_exception('Data file contains all NAs'))
+    if(na_test){
+        return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    updown = determine_upstream_downstream(rawd)#still need? loop through ggg and table(updown)
+    #make column naming consistent
+    rawd <- rename_with(rawd, ~sub('specificConductance', 'specificCond', .))
+    rawd <- rename_with(rawd, ~sub('localDissolvedOxygen', 'localDO', .))
 
-    out_sub <- rawd %>%
-        mutate(site_code=paste0(site_code, updown)) %>%
-        select(site_code,
-               datetime=startDateTime,
-               'spCond__|dat'=specificConductance,
-               'spCond__|flg' = specificCondFinalQF,
-               'DO__|dat'=dissolvedOxygen,
-               'DO__|flg' = dissolvedOxygenFinalQF,
-               'pH__|dat' = pH,
-               'pH__|flg' = pHFinalQF,
-               'CHL__|dat'=chlorophyll,
-               'CHL__|flg' = chlorophyllFinalQF,
-               'turbid__|dat'=turbidity,
-               'turbid__|flg' = turbidityFinalQF,
-               'FDOM__|dat'=fDOM,
-               'FDOM__|flg' = fDOMFinalQF,
-               'DO_sat__|dat' = dissolvedOxygenSaturation,
-               'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(
+        rawd,
+        relevant_cols = c('specificCond', 'dissolvedOxygen', 'localDOSat',
+                          'pH', 'chlorophyll', 'turbidity', 'fDOM')
+    )
 
-    out_sub <- ms_cast_and_reflag(out_sub,
-                                  variable_flags_clean = 0,
-                                  variable_flags_dirty = 1)
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(specificCond = 'spCond',
+                                        dissolvedOxygen = 'DO',
+                                        localDOSat = 'DO_sat',
+                                        pH = 'pH',
+                                        chlorophyll = 'Chla',
+                                        turbidity = 'turbid',
+                                        fDOM = 'FDOM'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
-    return(out_sub)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
+
+    d <- ms_conversions(d,
+                        convert_units_from = c(Chla = 'ug/L'),
+                        convert_units_to = c(Chla = 'mg/L'))
+
+    return(d)
 }
 
 #precipitation: STATUS=READY

@@ -418,7 +418,10 @@ neon_average_start_end_times <- function(d_){
     #This produces a single "datetime" column that is the midpoint of those two.
 
     if(length(unique(d_$endDateTime - d_$startDateTime)) > 1){
-        stop('variable sample intervals detected')
+        vdur <- table(d_$endDateTime - d_$startDateTime)
+        print(paste('variable sample durations:',
+                    paste0(names(vdur), ': ', unname(vdur),
+                          collapse = ', ')))
     }
 
     d_ <- as.data.table(d_)
@@ -431,49 +434,79 @@ neon_average_start_end_times <- function(d_){
     return(d_)
 }
 
-neon_borrow_from_upstream <- function(d_, updown, relevant_col){
+neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     #every neon stream site has at least two sensor arrays: S1 (upstream)
     #and S2 (downstream). S2 collects more stuff, so that array is what we
     #mainly care about, but in case of missing values at S2, this function
-    #will borrow the corresponding value of relevant_col from S1, if
+    #will borrow the corresponding value of relevant_col(s) from S1, if
     #available, and flag it as dirty
 
     updown <- determine_upstream_downstream(d_)
 
-    if(any(duplicated(d_$datetime[updown == '']))){
+    if(any(duplicated(d_$datetime[updown == 'down']))){
         stop('gotta deal with dupes')
     }
-    if(any(duplicated(d_$datetime[updown == '-up']))){
+    if(any(duplicated(d_$datetime[updown == 'up']))){
         stop('gotta deal with dupes')
     }
 
     flagcol <- grep('inalQF$', colnames(d_), value = TRUE)
-    if(length(flagcol) != 1) stop('flag column disparity detected')
 
-    d_ <- d_ %>%
-        rename(finalQF = !!flagcol) %>%
-        select(datetime, siteID, all_of(relevant_col), finalQF) %>%
-        mutate(updown = !!updown) %>%
-        pivot_wider(names_from = updown,
-                    values_from = !!relevant_col) %>%
-        group_by(datetime) %>%
-        summarize(
-            finalQF = if_else(all(is.na(down)), #if so, we're using the "up" value...
-                              1, #so ms_status will be 1
-                              finalQF[which(! is.na(down))[1]]), #else use the real "down" QF
-            up = mean(up, na.rm = TRUE), #at most one non-NA "up" value
-            down = mean(down, na.rm = TRUE), #at most one non-NA "down" value
-            siteID = first(siteID)
-        ) %>%
-        ungroup() %>%
-        mutate(
-            # finalQF = if_else(is.na(down), 1, finalQF),
-            down = if_else(is.na(down), up, down)
-        ) %>%
-        mutate(down = if_else(is.na(down), NA_real_, down)) %>% #replace NaN with NA
-        rename(!!relevant_col := down) %>%
-        select(-up)
+    if(length(relevant_cols) > 1){
+        flagcol <- grep(paste(relevant_cols, collapse = '|'),
+                        flagcol,
+                        value = TRUE)
+    }
+
+    if(length(flagcol) != length(relevant_cols)) stop('flag column disparity detected')
+
+    if(length(relevant_cols) > 1){
+
+        d_ <- d_ %>%
+            select(datetime, siteID,
+                   all_of(c(relevant_cols, paste0(relevant_cols, 'FinalQF')))) %>%
+            mutate(updown = !!updown) %>%
+            pivot_wider(names_from = updown,
+                        values_from = c(!!relevant_cols, paste0(relevant_cols, 'FinalQF')))
+
+        for(col in relevant_cols){
+
+            dn <- paste0(col, '_down')
+            up <- paste0(col, '_up')
+            qf <- paste0(col, 'FinalQF')
+            dn_to_fill <- is.na(d_[[dn]])
+            d_[[dn]][dn_to_fill] <- d_[[up]][dn_to_fill]
+            d_[[qf]][dn_to_fill] <- 1
+        }
+
+    } else {
+
+        d_->aa
+        d_ <- d_ %>%
+            rename(finalQF = !!flagcol) %>%
+            select(datetime, siteID, all_of(relevant_cols), finalQF) %>%
+            mutate(updown = !!updown) %>%
+            pivot_wider(names_from = updown,
+                        values_from = !!relevant_cols) %>%
+            group_by(datetime) %>% #to handle dupes
+            summarize(
+                finalQF = if_else(all(is.na(down)), #if so, we're using the "up" value...
+                                  1, #so ms_status will be 1
+                                  finalQF[which(! is.na(down))[1]]), #else use the real "down" QF
+                up = mean(up, na.rm = TRUE), #at most one non-NA "up" value
+                down = mean(down, na.rm = TRUE), #at most one non-NA "down" value
+                siteID = first(siteID)
+            ) %>%
+            ungroup() %>%
+            mutate(
+                # finalQF = if_else(is.na(down), 1, finalQF),
+                down = if_else(is.na(down), up, down)
+            ) %>%
+            mutate(down = if_else(is.na(down), NA_real_, down)) %>% #replace NaN with NA
+            rename(!!relevant_cols := down) %>%
+            select(-up)
+    }
 
     if(any(duplicated(d_$datetime))){
         stop('dupes introduced')
