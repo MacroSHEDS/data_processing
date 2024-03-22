@@ -12,12 +12,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-neon_streams <- site_data %>%
-    filter(domain == 'neon',
-           site_type == 'stream_gauge',
-           in_workflow == 1) %>%
-    pull(site_code)
-
 for(i in seq_len(nrow(prod_info))){
 
     prodcode <- prod_info$prodcode[i]
@@ -45,8 +39,12 @@ for(i in seq_len(nrow(prod_info))){
     #retrieve data by site; log acquisitions and revisions
     avail_sites <- unique(avail_sets$site_code)
 
-    #filter for only neon stream sites
-    avail_sites <- avail_sites[avail_sites %in% neon_streams]
+    #filter for only neon stream/precip sites
+    if(grepl('^precip', prodname_ms)){
+        avail_sites <- avail_sites[avail_sites %in% neon_pgauges]
+    } else {
+        avail_sites <- avail_sites[avail_sites %in% neon_streams]
+    }
 
     for(j in 1:length(avail_sites)){
 

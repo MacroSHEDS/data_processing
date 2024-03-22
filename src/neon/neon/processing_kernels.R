@@ -430,7 +430,8 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
 
         if(any(filter(d, analyte %in% c('TPN', 'TPC'))$analyteUnits == 'milligram')) stop('oi! i thought this was only reported in mg/L')
 
-        update_neon_detlims(rawd$swc_externalLabSummaryData)
+        update_neon_detlims(rawd$swc_externalLabSummaryData,
+                            set = 'chem')
 
         #consolidate QA info. can't find definitions for externalLabDataQF, and
         #the values present in that column aren't obviously indicative of ms_status = 1.
@@ -631,7 +632,7 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'PARMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(PARMean = 'PAR'),
@@ -679,7 +680,7 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'surfWaterTempMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(surfWaterTempMean = 'temp'),
@@ -759,6 +760,9 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
     relevant_tbl1 <- 'sdg_externalLabData'
 
     if(relevant_tbl1 %in% names(rawd)){
+
+        # update_neon_detlims(rawd$sdg_externalLabSummaryData,
+        #                     set = 'gas')
 
         d <- rawd$sdg_externalLabData
 
@@ -895,7 +899,6 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
         str_split_i('\\.', i = 2)
 
     rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
-    # rawd->fff
 
     relevant_tbl1 <- 'waq_instantaneous'
     if(relevant_tbl1 %in% names(rawd)){
@@ -925,7 +928,7 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
     )
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = list(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(specificCond = 'spCond',
@@ -936,14 +939,13 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
                                         turbidity = 'turbid',
                                         fDOM = 'FDOM'),
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'finalQF',
+                         var_flagcol_pattern = '#V#FinalQF',
                          is_sensor = TRUE,
                          sampling_type = 'I')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA,
-                            summary_flags_clean = list(finalQF = '0'),
-                            summary_flags_to_drop = list(finalQF = 'placeholder to make all else dirty. shouldnt happen'))
+                            variable_flags_clean = '0',
+                            variable_flags_to_drop = 'sentinel')
 
     d <- ms_conversions(d,
                         convert_units_from = c(Chla = 'ug/L'),
@@ -955,12 +957,18 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
-                                    component) {
+                                    component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
+
+    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
     relevant_tbl1 <- 'PRIPRE_5min.feather'
     relevant_tbl2 <- 'SECPRE_1min.feather'

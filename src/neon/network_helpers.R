@@ -1,6 +1,22 @@
 library(neonUtilities)
 library(neonDissGas)
 
+neon_streams <- site_data %>%
+    filter(domain == 'neon',
+           site_type == 'stream_gauge',
+           in_workflow == 1) %>%
+    pull(site_code)
+
+terr_aquat_sitemap <- read_csv('src/neon/terrestrial_aquatic_sitemap.csv') %>%
+    filter(stream_site != 'MCRA') %>%
+    group_by(stream_site) %>%
+    summarize(cc = list(pgauge_name)) %>%
+    ungroup() %>%
+    deframe()
+
+neon_pgauges <- unlist(terr_aquat_sitemap,
+                       use.names = FALSE)
+
 #neon name = c(macrosheds name, neon unit)
 neon_chem_vars <- list(
     'SO4' = c('SO4', 'mg/l'),
@@ -37,7 +53,12 @@ neon_chem_vars <- list(
     'TDS' = c('TDS', 'mg/l'),
     'CO3' = c('CO3', 'mg/l'),
     'NO2 -N' = c('NO2_N', 'mg/l'),
-    'ANC' = c('ANC', 'meq/l')
+    'ANC' = c('ANC', 'meq/l'),
+
+    #gas vars
+    'CO2' = c('CO2', 'mol/l'), #mol/L after conversion via the neonDissGas package
+    'CH4' = c('CH4', 'mol/l'), #mol/L after conversion via the neonDissGas package
+    'N2O' = c('N2O', 'mol/l') #mol/L after conversion via the neonDissGas package
 ) %>%
     plyr::ldply() %>%
     rename(neon_var = `.id`, ms_var = V1, neon_unit = V2) %>%
@@ -117,12 +138,12 @@ stackByTable_keep_zips <- function(zip_parent){
     tmpd <- tempdir()
     file.copy(zip_parent, tmpd, recursive = TRUE)
 
-    sink(null_device())
-    rawd <- neonUtilities::stackByTable(
-        zip_parent,
-        savepath = 'envt',
-        saveUnzippedFiles = FALSE)
-    sink()
+    capture.output({
+        rawd <- neonUtilities::stackByTable(
+            zip_parent,
+            savepath = 'envt',
+            saveUnzippedFiles = FALSE)
+    })
 
     #neon zips arranged >= 2 different ways. sometimes this is needed.
     if(! any(grepl('\\.csv$', list.files(zip_parent)))){
@@ -360,14 +381,45 @@ write_neon_variablekey = function(raw_neonfile_dir, dest){
     return(varkey)
 }
 
-update_neon_detlims <- function(neon_dls){
+update_neon_detlims <- function(neon_dls, set){
+
+    #set is one of "chem", "gas",
+
+    if(! set %in% c('gas', 'chem')){
+        stop('set must be one of: "gas", "chem"')
+    }
+
+    if(set == 'gas'){
+
+        stop('update_neon_detlims not implemented for set = "gas". see comments below')
+
+        neon_dls <- neon_dls %>%
+            filter(! analyte %in% c('SF6', 'Bromide', 'Chloride')) %>%
+            mutate(analyte = case_when(analyte == 'Nitrous Oxide' ~ 'N2O',
+                                       analyte == 'Carbon Dioxide' ~ 'CO2',
+                                       analyte == 'Methane' ~ 'CH4'))
+
+        #rawd$sdg_externalLabSummaryData does not contain all relevant information
+        #for converting detlims to mg/L. Detlim ranges could be inferred from
+        #those reported in sdg_externalLabDatam but that would be a lot
+        #of work for little gain
+        sdgFormatted <- suppressWarnings(neonDissGas::def.format.sdg(
+            externalLabData = d,
+            fieldDataProc = rawd$sdg_fieldDataProc,
+            fieldSuperParent = rawd$sdg_fieldSuperParent
+        ))
+
+        sdgConcentrations <- neonDissGas::def.calc.sdg.conc(inputFile = sdgFormatted)
+    }
 
     detlim_pre <- neon_dls %>%
         as_tibble() %>%
+        #conform column names across datasets
+        rename_with(~sub('methodDetectionLimitUnits', 'analyteUnits', .)) %>%
         #detlims for TPC, TPN are given in mg, but those analytes are actually
         #reported in ug/L. So can't use the detlims as-is.
         filter(! (analyte %in% c('TPC', 'TPN') & analyteUnits == 'milligram'),
-               ! analyte == 'TSS - Dry Mass') %>%
+               ! analyte %in% c('TSS - Dry Mass')) %>%
         mutate(analyte = if_else(analyte == 'Ortho-P', 'Ortho - P', analyte),
                analyte = if_else(analyte == 'NO2 -N', 'NO2 - N', analyte)) %>%
         #neon precision not included here, because it's analytical precision,
@@ -436,6 +488,8 @@ neon_average_start_end_times <- function(d_){
 
 neon_borrow_from_upstream <- function(d_, relevant_cols){
 
+    #this function aggregates neon data by date.
+
     #every neon stream site has at least two sensor arrays: S1 (upstream)
     #and S2 (downstream). S2 collects more stuff, so that array is what we
     #mainly care about, but in case of missing values at S2, this function
@@ -461,90 +515,77 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     if(length(flagcol) != length(relevant_cols)) stop('flag column disparity detected')
 
+    site_ <- d_$siteID[1]
+
     if(length(relevant_cols) > 1){
-
-        site_ <- d_$siteID[1]
         qf_cols <- paste0(relevant_cols, 'FinalQF')
-
-        d_ <- d_ %>%
-            select(datetime, siteID,
-                   all_of(c(relevant_cols, qf_cols))) %>%
-            mutate(updown = !!updown,
-                   across(ends_with('FinalQF'),
-                          ~if_else(is.na(.), 1, .)))
-
-        setDT(d_)
-
-        #aggregate by daily mean; if any qc val is 1, the whole day inherits that
-        d_[, day := as.IDate(datetime)]
-
-        d_agg <- d_[, lapply(.SD, mean, na.rm = TRUE),
-                    by = .(day, updown),
-                    .SDcols = relevant_cols]
-
-        d_qf <- d_[, lapply(.SD, max),
-                   by = .(day, updown),
-                   .SDcols = qf_cols]
-
-        d_agg <- merge(d_agg,
-                       d_qf,
-                       by = c('day', 'updown'))
-
-        #pivot_wider
-        d_ <- dcast(d_agg,
-                    day ~ updown,
-                    value.var = c(relevant_cols, qf_cols))
-
-        for(col in relevant_cols){
-
-            down_col <- paste0(col, '_down')
-            up_col <- paste0(col, '_up')
-            down_qf_col <- paste0(col, 'FinalQF_down')
-            up_qf_col <- paste0(col, 'FinalQF_up')
-
-            #replace missing downstream data with upstream data and mark as 'dirty'
-            d_[, (down_qf_col) := fifelse(is.na(get(down_col)), 1, get(down_qf_col))]
-            d_[, (down_col) := fifelse(is.na(get(down_col)), get(up_col), get(down_col))]
-
-            #drop the upstream columns; set downstream colnames back
-            d_[, (up_col) := NULL]
-            d_[, (up_qf_col) := NULL]
-            setnames(d_, down_col, col)
-            setnames(d_, down_qf_col, paste0(col, 'FinalQF'))
-        }
-
-        d_[is.na(d_)] <- NA_real_
-        d_$siteID <- site_
-        d_ <- as_tibble(d_)
-
     } else {
-
-        d_ <- d_ %>%
-            rename(finalQF = !!flagcol) %>%
-            select(datetime, siteID, all_of(relevant_cols), finalQF) %>%
-            mutate(updown = !!updown) %>%
-            pivot_wider(names_from = updown,
-                        values_from = !!relevant_cols) %>%
-            group_by(datetime) %>% #to handle dupes
-            summarize(
-                finalQF = if_else(all(is.na(down)), #if so, we're using the "up" value...
-                                  1, #so ms_status will be 1
-                                  finalQF[which(! is.na(down))[1]]), #else use the real "down" QF
-                up = mean(up, na.rm = TRUE), #at most one non-NA "up" value
-                down = mean(down, na.rm = TRUE), #at most one non-NA "down" value
-                siteID = first(siteID)
-            ) %>%
-            ungroup() %>%
-            mutate(
-                # finalQF = if_else(is.na(down), 1, finalQF),
-                down = if_else(is.na(down), up, down)
-            ) %>%
-            mutate(down = if_else(is.na(down), NA_real_, down)) %>% #replace NaN with NA
-            rename(!!relevant_cols := down) %>%
-            select(-up)
+        qf_cols <- 'finalQF'
     }
 
-    if(any(duplicated(d_$datetime))){
+    d_ <- d_ %>%
+        select(datetime, siteID,
+               all_of(c(relevant_cols, qf_cols))) %>%
+        mutate(updown = !!updown,
+               across(ends_with('inalQF'),
+                      ~if_else(is.na(.), 1, .)))
+
+    setDT(d_)
+
+    #aggregate by daily mean; if any qc val is 1, the whole day inherits that
+    d_[, date := as.IDate(datetime)]
+
+    d_agg <- d_[, lapply(.SD, mean, na.rm = TRUE),
+                by = .(date, updown),
+                .SDcols = relevant_cols]
+
+    d_qf <- d_[, lapply(.SD, max),
+               by = .(date, updown),
+               .SDcols = qf_cols]
+
+    d_agg <- merge(d_agg,
+                   d_qf,
+                   by = c('date', 'updown'))
+
+    #pivot_wider
+    d_ <- dcast(d_agg,
+                date ~ updown,
+                value.var = c(relevant_cols, qf_cols))
+
+    for(col in relevant_cols){
+
+        down_col <- paste0(col, '_down')
+        up_col <- paste0(col, '_up')
+
+        if(length(relevant_cols) > 1){
+            down_qf_col <- paste0(col, 'FinalQF_down')
+            up_qf_col <- paste0(col, 'FinalQF_up')
+        } else {
+            down_qf_col <- 'finalQF_down'
+            up_qf_col <- 'finalQF_up'
+        }
+
+        #replace missing downstream data with upstream data and mark as 'dirty'
+        d_[, (down_qf_col) := fifelse(is.na(get(down_col)), 1, get(down_qf_col))]
+        d_[, (down_col) := fifelse(is.na(get(down_col)), get(up_col), get(down_col))]
+
+        #drop the upstream columns; set downstream colnames back
+        d_[, (up_col) := NULL]
+        d_[, (up_qf_col) := NULL]
+        setnames(d_, down_col, col)
+
+        if(length(relevant_cols) > 1){
+            setnames(d_, down_qf_col, paste0(col, 'FinalQF'))
+        } else {
+            setnames(d_, down_qf_col, 'finalQF')
+        }
+    }
+
+    d_[is.na(d_)] <- NA_real_
+    d_$siteID <- site_
+    d_ <- as_tibble(d_)
+
+    if(any(duplicated(d_$date))){
         stop('dupes introduced')
     }
 
