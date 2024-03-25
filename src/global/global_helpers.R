@@ -971,7 +971,10 @@ ms_read_raw_csv <- function(filepath,
                       colClasses = "character")
     } else {
         d <- mutate(preprocessed_tibble,
-               across(everything(), as.character))
+               across(where(~is.POSIXct(.)),
+                      ~format(., '%Y-%m-%d %H:%M:%S')),
+               across(where(~! is.POSIXct(.)),
+                      as.character))
     }
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
@@ -3066,7 +3069,7 @@ extract_retrieval_log <- function(tracker, prodname_ms, site_code,
 
     retrieved_data <- tracker[[prodname_ms]][[site_code]]$retrieve %>%
         tibble::as_tibble() %>%
-        filter(status == keep_status)
+        filter(status %in% keep_status)
 
     return(retrieved_data)
 }

@@ -260,6 +260,7 @@ determine_upstream_downstream <- function(d_){
 
     if(any(third_digit == '0')){
         #might need to filter 0s here.
+        #for precip, looks like 900 is to be expected
         stop('deal with staff gauge readings. do they supplement downstream gauge?')
     }
 

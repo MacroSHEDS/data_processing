@@ -16,7 +16,8 @@ for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
-    held_data <<- get_data_tracker(network=network, domain=domain)
+    held_data <<- get_data_tracker(network = network,
+                                   domain = domain)
 
     if(! product_is_tracked(held_data, prodname_ms)){
 
@@ -58,7 +59,8 @@ for(i in seq_len(nrow(prod_info))){
                                    domain = domain,
                                    site_code = sites[j],
                                    prodname_ms = prodname_ms,
-                                   tracker = held_data)
+                                   tracker = held_data,
+                                   keep_status = c('ok', 'pending'))
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network = network,

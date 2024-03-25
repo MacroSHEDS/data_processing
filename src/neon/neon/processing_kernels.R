@@ -176,6 +176,8 @@ process_0_DP1.20288.001 <- function(set_details, network, domain){
 #. handle_errors
 process_0_DP1.00006.001 <- function(set_details, network, domain){
 
+    # pgauge <- terr_aquat_sitemap[[set_details$site_code]]
+
     result <- neon_retrieve(set_details, network, domain, time_index = '30')
 
     if(inherits(result, 'try-error')){
@@ -959,61 +961,114 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
 process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
 
+    # pgauges <- terr_aquat_sitemap[[site_code]]
+
+    # d <- tibble()
+    # for(pgauge in pgauges){
+
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
                    s = site_code)
+                   # s = pgauge)
 
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
     rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
 
-    relevant_tbl1 <- 'PRIPRE_5min.feather'
-    relevant_tbl2 <- 'SECPRE_1min.feather'
+    relevant_tbl1 <- 'PRIPRE_30min' #primary collector
+    relevant_tbl2 <- 'SECPRE_30min' #secondary collector
 
-    if(relevant_tbl2 %in% names(rawd)) {
-        rawd2 <- tibble(rawd[[relevant_tbl2]])
+    if(relevant_tbl1 %in% names(rawd)){
 
-        out_sub2 <- rawd2 %>%
-            mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
-                   datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
-            mutate(secPrecipRangeQF = ifelse(is.na(secPrecipRangeQF), 0, secPrecipRangeQF),
-                   secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
-            mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
-                                      1, 0)) %>%
-            mutate(var = 'precipitation') %>%
-            select(site_code, datetime, var, val = secPrecipBulk, ms_status)
-    }
-
-    if(relevant_tbl1 %in% names(rawd)) {
         rawd1 <- tibble(rawd[[relevant_tbl1]])
 
-        out_sub1 <- rawd1 %>%
-            mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
-                   datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
-            mutate(ms_status = ifelse(priPrecipFinalQF == 1,
-                                      1, 0)) %>%
-            mutate(var = 'precipitation') %>%
-            select(site_code, datetime, var, val = priPrecipBulk, ms_status)
+        d1 <- ms_read_raw_csv(preprocessed_tibble = rawd1,
+                              datetime_cols = list(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_tz = 'UTC',
+                              site_code_col = 'siteID',
+                              data_cols =  c(priPrecipBulk = 'precipitation'),
+                              data_col_pattern = '#V#',
+                              summary_flagcols = 'priPrecipFinalQF',
+                              is_sensor = TRUE,
+                              sampling_type = 'I')
+
+        d1 <- ms_cast_and_reflag(
+            d1,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(priPrecipFinalQF = '0'),
+            summary_flags_to_drop = list(priPrecipFinalQF = 'sentinel')
+        )
     }
 
-    if(!relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)) {
+    if(relevant_tbl2 %in% names(rawd)){
+
+        rawd2 <- tibble(rawd[[relevant_tbl2]])
+
+        d2 <- ms_read_raw_csv(preprocessed_tibble = rawd2,
+                              datetime_cols = list(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_tz = 'UTC',
+                              site_code_col = 'siteID',
+                              data_cols =  c(secPrecipBulk = 'precipitation'),
+                              data_col_pattern = '#V#',
+                              summary_flagcols = c('secPrecipValidCalQF',
+                                                   'secPrecipRangeQF',
+                                                   'secPrecipSciRvwQF'),
+                              is_sensor = TRUE,
+                              sampling_type = 'I')
+
+        d2 <- ms_cast_and_reflag(
+            d2,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(secPrecipValidCalQF = '0',
+                                       secPrecipRangeQF = '0',
+                                       secPrecipSciRvwQF = c('0', NA)),
+            summary_flags_to_drop = list(secPrecipValidCalQF = 'sentinel',
+                                         secPrecipRangeQF = 'sentinel',
+                                         secPrecipSciRvwQF = 'sentinel')
+        )
+    }
+
+    if(! relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)){
         return(generate_ms_exception('Missing precip files'))
     }
 
-    if(relevant_tbl1 %in% names(rawd) && relevant_tbl2 %in% names(rawd)) {
+    if(relevant_tbl1 %in% names(rawd) && relevant_tbl2 %in% names(rawd)){
 
-        out_sub <- rbind(out_sub2, out_sub1)
+        d <- full_join(d1, d2,
+                       by = c('datetime', 'site_code', 'var'),
+                       suffix = c('1', '2'))
+
+        ## borrow secondary precip values wherever:
+        ## primary is questionable and secondary is not (case A), or
+        ## primary is missing and secondary is available (case B).
+        ## borrow status of secondary precip if used.
+
+        d$ms_status1[is.na(d$ms_status1)] <- 1
+        d$ms_status2[is.na(d$ms_status2)] <- 1
+
+        borrow_inds_a <- d$ms_status1 == 1 & d$ms_status2 == 0 & ! is.na(d$val2)
+        borrow_inds_b <- is.na(d$val1)
+        borrow_inds <- borrow_inds_a | borrow_inds_b
+
+        d$val1[borrow_inds] <- d$val2[borrow_inds]
+        d$ms_status1[borrow_inds] <- d$ms_status2[borrow_inds]
+
+        d$val2 <- d$ms_status2 <- NULL
+        d <- rename(d, val = val1, ms_status = ms_status1)
 
     } else {
-        if(relevant_tbl1 %in% names(rawd)) { out_sub <- out_sub1 }
-        if(relevant_tbl2 %in% names(rawd)) { out_sub <- out_sub2 }
+
+        if(relevant_tbl1 %in% names(rawd)) d <- d1
+        if(relevant_tbl2 %in% names(rawd)) d <- d2
     }
 
-    return(out_sub)
+        # d <- bind_rows(d, d_)
+    # }
 
+    return(d)
 }
 
 #discharge: STATUS=READY
@@ -1225,9 +1280,12 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
     return()
 }
 
-#precip_chemistry: STATUS=PAUSED
+#precip_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms002 <- function(network, domain, prodname_ms) {
+
+    #dont forget: need to look up corresponding pgauges
+    #for KING there are two
 
     #probs needs work. built as a precipitation kernel. what does that entail?
 
@@ -1268,9 +1326,13 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
     return()
 }
 
-#precip_pchem_pflux: STATUS=PAUSED
+#precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms003 <- function(network, domain, prodname_ms){
+
+    #dont forget: need to look up corresponding pgauges
+    #for KING there are two
+
     #actually built as a precip_flux_inst kernel. probs change
 
     chemfiles <- ms_list_files(network = network,

@@ -4,6 +4,7 @@
 
 #. handle_errors
 munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
+                          keep_status = 'ok',
                           spatial_regex = '(location|boundary)',
                           silent = TRUE){
 
@@ -19,6 +20,7 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
     #   this munge engine will look inside the munged file to determine
     #   the name of the site. This is necessary when the true site name isn't
     #   included in tracker.
+    #keep_status is passed on to extract_retrieval_log
     #spatial_regex is a regex string that matches one or more prodname_ms
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
@@ -26,7 +28,8 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
-                                           site_code)
+                                           site_code,
+                                           keep_status = keep_status)
 
     if(nrow(retrieval_log) == 0){
         return(generate_ms_err('missing retrieval log'))
@@ -77,7 +80,7 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
         site_code_from_file <- site_code
     }
 
-    if(length(site_code_from_file) > 1) {
+    if(length(site_code_from_file) > 1){
         stop('multiple sites encountered in a dataset that should contain only one')
     }
 

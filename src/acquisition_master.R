@@ -364,9 +364,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                prodname_filter = c('precipitation'),
-                # prodname_filter = c('precip_isotopes'),
-                # prodname_filter = c('precip_chemistry'),
+                # prodname_filter = c('precipitation'),
                 domain = domain)
 
     check_for_derelicts(network = network,
