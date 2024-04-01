@@ -3233,6 +3233,11 @@ ms_munge <- function(network = domain,
                      domain,
                      prodname_filter = NULL){
 
+    if(domain == 'neon'){
+        #ensures that composite neon discharge is munged before official neon discharge
+        source('src/neon/neon/munge_versionless.R', local = TRUE)
+    }
+
     #execute main munge script for this network-domain
     norm_munge <- file.exists(glue('src/{n}/{d}/munge.R',
                                    n = network,
@@ -3246,14 +3251,17 @@ ms_munge <- function(network = domain,
     }
 
     #if there's a script for munging of versionless products, execute it too
-    versionless_product_script <- glue('src/{n}/{d}/munge_versionless.R',
-                                       n = network,
-                                       d = domain)
+    if(domain != 'neon'){
 
-    if(file.exists(versionless_product_script)){
+        versionless_product_script <- glue('src/{n}/{d}/munge_versionless.R',
+                                           n = network,
+                                           d = domain)
 
-        source(versionless_product_script,
-               local = TRUE)
+        if(file.exists(versionless_product_script)){
+
+            source(versionless_product_script,
+                   local = TRUE)
+        }
     }
 
     if(! norm_munge && ! file.exists(versionless_product_script)){

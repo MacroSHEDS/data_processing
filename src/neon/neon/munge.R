@@ -4,7 +4,8 @@ loginfo('Beginning munge',
 prod_info <- get_product_info(network = network,
                               domain = domain,
                               status_level = 'munge',
-                              get_statuses = 'ready')
+                              get_statuses = 'ready') %>%
+    filter(! grepl('^VERSIONLESS', prodcode))
 
 if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)

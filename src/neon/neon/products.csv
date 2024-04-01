@@ -22,7 +22,7 @@ VERSIONLESS001,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms003,NA
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms004,NA
 ms005,discharge,,,,stream_flux_inst__ms004,
 ms006,precip_chemistry,,,,precip_pchem_pflux__ms003,
-ms003,precip_pchem_pflux,NA,NA,paused,NA,NA
+ms003,precip_pchem_pflux,NA,NA,ready,NA,NA
 ms004,stream_flux_inst,NA,NA,ready,NA,NA
 ms002,stream_gauge_locations,,,,stream_flux_inst__ms004,
 ms007,precip_gauge_locations,,,,precip_pchem_pflux__ms003,

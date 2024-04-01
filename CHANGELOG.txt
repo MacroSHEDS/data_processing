@@ -25,5 +25,6 @@ NEON added
 	for external lab data
 		shipmentWarmQF =  ms_status 1
 		prioritize sampleCondition == GOOD, else take OK, else settle for Other
+	composite discharge now included. all simulated values marked by ms_status = 1 and ms_interp = 1. all original NEON values are 0. if kept, assumed clean
 		
 	ignoring upstream sensor array (S1) readings UNLESS value missing from S2. S2 collects all the same stuff and then some. S1 does water qual, temp, PAR, cond. PAR is not borrowed from upstream if downsteram missing

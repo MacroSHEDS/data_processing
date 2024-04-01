@@ -162,7 +162,9 @@ stackByTable_keep_zips <- function(zip_parent){
 
 munge_neon_site <- function(domain, site_code, prodname_ms, tracker, silent=TRUE){
 
-    #deprecated
+    ####
+    #deprecated. using munge_by_site now
+    ####
 
     retrieval_log <- extract_retrieval_log(held_data, prodname_ms, site_code)
 
