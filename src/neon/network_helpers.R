@@ -254,6 +254,10 @@ determine_upstream_downstream <- function(d_){
     #returns a vector of empty strings or "-up" indicating whether each
     #recording came from an upstream (S1) or downstream (S2) sensor array.
 
+    #weird encounters in discharge:
+    #   131 - upstream sensor, littoral
+    #   110 - staff gauge at ? location
+
     third_digit <- substr(d_$horizontalPosition, 3, 3)
 
     if(any(! third_digit %in% as.character(0:2))){

@@ -1255,8 +1255,15 @@ process_1_DP1.20008.001 <- function(network, domain, prodname_ms, site_code,
 process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
                                    component){
 
+    #stationHorizontalID seems to have stabilized as of first publication of composite Q.
+    #only one per site when composite-era data are filtered out.
+
+    # prodname_ms = 'discharge__DP4.00130.001'
+    # site_code = 'SYCA'
     # dd <- tibble()
-    # for(site_code in neon_streams){
+    # turkey_streams = c(#'MCDI', 'HOPB', 'MART', 'BIGC', 'SYCA', 'PRIN', 'MCRA', 'CARI',
+    #     'COMO', 'OKSR', 'GUIL', 'CUPE', 'POSE', 'KING', 'MAYF', 'LECO')
+    # for(site_code in turkey_streams){
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
@@ -1286,44 +1293,98 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    composite_q <- read_feather(glue('data/neon/neon/munged/discharge__VERSIONLESS002/{site_code}.feather'))
-    last_composite_date <- as.Date(max(composite_q$datetime))
+    # # nq = read_feather('~/Desktop/temmmp/neon_q_all.feather')
+    # for(site_code in neon_streams){
+    # #     nqsite = filter(nq, siteID == !!site_code)
+    # #     if(nrow(nqsite)){
+    # #         write_feather(nqsite, glue('~/Desktop/temmmp/{site_code}.feather'))
+    # #     }
+    # # }
+    #     nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
+    #     if(inherits(nqsite, 'try-error')) next
+        composite_q <- read_feather(glue('data/neon/neon/munged/discharge__VERSIONLESS002/{site_code}.feather'))
+        last_composite_date <- as.Date(max(composite_q$datetime))
+        rm(composite_q)
+    #     nq2 <- filter(nqsite, !(siteID == !!site_code & datetime <= !!last_composite_date))
+    #     print(site_code)
+    #     print(table(nqsite$horizontalPosition, useNA = 'ifany'))
+    #     write_feather(nq2, glue('~/Desktop/temmmp/{site_code}_filt.feather'))
+    # }
+    # nq = tibble()
+    # for(site_code in neon_streams){
+    #     nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
+    #     if(inherits(nqsite, 'try-error')) next
+    #     nq = bind_rows(nq, nqsite)
+    # }
+    # write_feather(nq, glue('~/Desktop/temmmp/neon_q_all_filt.feather'))
+    # colnames(nq)
+    # table(nq$finalQF, useNA = 'ifany') #1, 0
+    # table(nq$dischargeFinalQFSciRvw, useNA = 'ifany'), #1, NA
+    # read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))
+
+        # for(site_code in neon_streams){
+            # nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
+            # if(inherits(nqsite, 'try-error')) next
+            # print(site_code)
+            # rawd2 <- rawd %>%
+            #     mutate(endDate = with_tz(endDate, 'UTC')) %>%
+            #     filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
+            # print(table(rawd2$stationHorizontalID, useNA = 'ifany'))
+
+            # ggplot2::ggplot(rawd2) +
+            #     geom_line(aes(x = endDate, y = maxpostDischarge, color = stationHorizontalID))->qq
+            # print(qq)
+            # rawd2 %>%
+            #     filter(stationHorizontalID == '132') %>%
+            #     pull(maxpostDischarge) ->zz
+            # all(is.na(zz))
+            #     ggplot2::ggplot() +
+            #     geom_line(aes(x = endDate, y = maxpostDischarge))
+        # }
 
     # if(site_code == 'TOMB'){
     #
     #
     # } else {
+        rawd <- rawd %>%
+            mutate(endDate = with_tz(endDate, 'UTC')) %>%
+            filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
+        # table(rawd2$stationHorizontalID, useNA = 'ifany')
+        # table(zz$horizontalPosition, useNA = 'ifany')
 
-        rawd <- rename(rawd,
-                       datetime = endDate,
-                       horizontalPosition = stationHorizontalID,
-                       finalQF = dischargeFinalQF)
-        try({neon_borrow_from_upstream(rawd, relevant_col = 'maxpostDischarge')})
-        dd <- bind_rows(dd, rawd)
-        print(paste(site_code, 'gg'))
+        # rawd <- rename(rawd,
+        #                datetime = endDate,
+        #                horizontalPosition = stationHorizontalID,
+        #                finalQF = dischargeFinalQF)
+        # try({neon_borrow_from_upstream(rawd, relevant_col = 'maxpostDischarge')})
+        # dd <- bind_rows(dd, rawd)
+        # print(paste(site_code, 'gg'))
     # }
-    unique(dd$horizontalPosition)
-    filter(dd, siteID == 'KING') %>% distinct(horizontalPosition)
-    filter(dd, siteID == 'KING') %>% pull(horizontalPosition) %>% table()
-    write_feather(dd, '~/Desktop/temmmp/neon_q_all.feather')
+    # unique(dd$horizontalPosition)
+    # filter(dd, siteID == 'KING') %>% distinct(horizontalPosition)
+    # filter(dd, siteID == 'KING') %>% pull(horizontalPosition) %>% table()
+    # write_feather(dd, '~/Desktop/temmmp/neon_q_all.feather')
     # dd %>%
     #     group_by()
 
 
-        # d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-        #                      datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
-        #                      datetime_tz = 'UTC',
-        #                      site_code_col = 'siteID',
-        #                      data_cols =  c( = ''),
-        #                      data_col_pattern = '#V#',
-        #                      summary_flagcols = 'finalQF',
-        #                      is_sensor = TRUE,
-        #                      sampling_type = 'I')
+        d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                             datetime_cols = list(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(maxpostDischarge = 'discharge'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = c('dischargeFinalQF',
+                                                  'dischargeFinalQFSciRvw'),
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
 
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA,
-                                summary_flags_clean = list(finalQF = '0'),
-                                summary_flags_to_drop = list(finalQF = 'sentinel'))
+                                summary_flags_clean = list(dischargeFinalQF = '0',
+                                                           dischargeFinalQFSciRvw = '0'),
+                                summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
+                                                             dischargeFinalQFSciRvw = 'sentinel'))
 
         # d <- ms_conversions(d,
         #                     convert_units_from = c( = 'umol/L'),
@@ -1455,6 +1516,11 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 }
 
 #derive kernels ####
+
+#discharge: STATUS=READY
+#. handle_errors
+# process_2_ms001 <- function(network, domain, prodname_ms){
+#NEED A DISCHARGE COMBINER
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
