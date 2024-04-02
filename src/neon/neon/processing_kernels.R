@@ -1359,8 +1359,6 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
 process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
 
-    # chili = tibble()
-    # for(site_code in neon_pgauges[3:27]){
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
@@ -1379,35 +1377,12 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
     }
 
     d <- tibble(rawd[[relevant_tbl]])
-    # chili=bind_rows(d, chili)
-    # }
-    # }
 
-    # chili %>%
-    #     # filter(sampleCondition == 'i') %>%
-    #     # filter(sampleCondition == 'c') %>%
-    #     # filter(sampleCondition == 'l') %>%
-    #     filter(sampleCondition == 'x') %>%
-    #     select(precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>%
-    #     print(n=100)
-    # chili %>%
-    #     # filter(sampleCondition != 'i' & grepl('volume', externalRemarks)) %>%
-    #     # filter(sampleCondition != 'c' & grepl('dirt|pollen', labConditionRemarks)) %>%
-    #     filter(is.na(sampleCondition) & ! is.na(labConditionRemarks)) %>%
-    #     filter(! grepl('pollen|small|spec|bug|matter|dirt', labConditionRemarks, ignore.case=T)) %>%
-    #     distinct(labConditionRemarks, .keep_all = T) %>%
-    #     select(precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>%
-    #     print(n = 200)
-    # table(chili$labConditionRemarks, useNA = 'ifany') #pollen|small|spec|bug|matter|dirt|leak|only
-    table(chili$sampleCondition, useNA = 'ifany') #NA = clean #i = low vol; c = dirt; v = NA; x = redundant; l = redundant with c and v
-    # table(chili$labCondition, useNA = 'ifany') #all NA!!
-    # table(chili$externalRemarks, useNA = 'ifany') #redundant
-    # select(d, precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>% print(n=100)
-    # table(d$labConditionRemarks, useNA = 'ifany') #use this
-    # table(d$sampleCondition, useNA = 'ifany') #inaccurate
-    # table(d$labCondition, useNA = 'ifany') #recheck
-    # table(d$externalRemarks, useNA = 'ifany') #ugh
+    if(! all(c('precipNitrate', 'pH', 'precipMagnesiumFlag', 'precipConductivity') %in% colnames(d))){
+        stop('Known column names missing. There has been a change')
+    }
 
+    #consolidate free-hand remarks into flag (sampleCondition doesn't capture everything)
     d$actual_quality_flag <- as.numeric(
         ! is.na(d$labConditionRemarks) &
             grepl('pollen|small|spec|bug|matter|dirt|leak|only',
@@ -1415,15 +1390,44 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
                   ignore.case = TRUE)
     )
 
+    #first thought: BDL gets replaced with detection limit even if there are other concerns.
+    #second thought: but rly, this is just for recording, as values are supplied for bdl records.
+    #final thought: ugh, detlims not even supplied.
+    # d <- mutate(
+    #     d,
+    #     across(ends_with('Flag', ignore.case = FALSE),
+    #            ~if_else(grepl('below detection limit', ., ignore.case = TRUE),
+    #                     'Below detection limit',
+    #                     .)
+    #     )
+    # )
+    #
+    # update_neon_detlims(rawd$)
+
+    # pdf('plots/neon_pchem_collection_intervals.pdf')
+    # plot(as.POSIXct('2022-04-12 16:10:00'), 1, type = 'n',
+    #      xlim = as.POSIXct(c('2016-01-01', '2024-01-01')), xlab = '',
+    #      ylim = c(1, 27), ylab = '', yaxt = 'n')
+    # axis(2, 1:27, neon_pgauges, las = 2)
+    # inc <- 0
+    # for(ss in neon_pgauges){
+    #     inc <- inc + 1
+    #     if(! ss %in% chili$siteID) next
+    #     qq = chili %>%
+    #         filter(siteID == ss) %>%
+    #         arrange(setDate) %>%
+    #         select(setDate, collectDate) %>%
+    #         t()
+    #     for(i in 1:ncol(qq)){
+    #         lines(as.POSIXct(qq[, i]), c(inc, inc), type = 'b', pch = 20)
+    #     }
+    # }
+    # dev.off()
+
+    HERE
     #handle setDate!!!
-    # Units all mg/l uS/cm and pH (rly true?)
-    #handle detlims in varflags!
-
-    if(! all(c('precipNitrate', 'pH', 'precipMagnesiumFlag', 'precipConductivity') %in% colnames(d))){
-        stop('Known column names missing. There has been a change')
-    }
-
-    # update_neon_detlims(rawd$swc_externalLabSummaryData)
+    #1. add an NA row at the start that has collectDate = first setDate
+    #2. handle huge gaps during which collector was operating (e.g. BLUE from early 2020 to mid 2021)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
@@ -1452,7 +1456,7 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(
         d,
-        variable_flags_clean = NA,
+        variable_flags_clean = c(NA, 'Analytical dilution'),
         variable_flags_to_drop = 'totally unmatchable sentinel jic',
         variable_flags_bdl = ,
         summary_flags_clean = list(actual_quality_flag = '0',
