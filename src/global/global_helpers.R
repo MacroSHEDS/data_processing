@@ -628,7 +628,8 @@ ms_read_raw_csv <- function(filepath,
                             alt_varflagcol_pattern,
                             summary_flagcols,
                             sampling_type = NULL,
-                            keep_bdl_values = FALSE){
+                            keep_bdl_values = FALSE,
+                            ignore_missing_col_warning = FALSE){
 
     #TODO:
     #add a silent = TRUE option. this would hide all warnings
@@ -695,6 +696,7 @@ ms_read_raw_csv <- function(filepath,
     #alt_datacol_pattern: optional string with same mechanics as
     #   data_col_pattern. use this if there
     #   might be a second way in which column names are generated, e.g.
+    #   outflow_x, outflow_y, outflow_... AND
     #   output_x, output_y, output_....
     #is_sensor: either a single logical value, which will be applied to all
     #   variable columns OR a named logical vector with the same length and names as
@@ -743,6 +745,8 @@ ms_read_raw_csv <- function(filepath,
     #   Only use this if you are following up with update_detlims().
     #   If the values recorded in the cells represent half detection limit, or something
     #   else, we need to write new handling.
+    #ignore_missing_col_warning: logical. if TRUE, do not warn about absence of
+    #   expected column names (probably set to TRUE if using alt_datacol_pattern)
 
     #return value: a tibble of ordered and renamed columns, omitting any columns
     #   from the original file that do not contain data, flaime, or site_code. All-NA data columns and their corresponding
@@ -978,7 +982,7 @@ ms_read_raw_csv <- function(filepath,
     }
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
-    if(length(missing_colnames)){
+    if(length(missing_colnames) && ! ignore_missing_col_warning){
         logwarn(paste0('These columns missing from source data. Can signify an upstream change:\n',
                        paste(missing_colnames, collapse = ', ')),
                 logger = logger_module)
@@ -1773,17 +1777,17 @@ ms_cast_and_reflag <- function(d,
                     'varflag_col_pattern = NA)'))
     }
 
-    if(varclen && ! mode(variable_flags_clean) == 'character'){
+    if(varclen && ! (is.na(variable_flags_clean) || mode(variable_flags_clean) == 'character')){
         stop('variable_flags_clean must be a character vector')
     }
 
-    if(vardirt && ! mode(variable_flags_dirty) == 'character'){
+    if(vardirt && ! (is.na(variable_flags_dirty) || mode(variable_flags_dirty) == 'character')){
         stop('variable_flags_dirty must be a character vector')
     }
 
     if(vardrop){
 
-        if(! mode(variable_flags_to_drop) == 'character'){
+        if(! (is.na(variable_flags_to_drop) || mode(variable_flags_to_drop) == 'character')){
             stop('variable_flags_to_drop must be a character vector')
         }
 
@@ -2051,7 +2055,7 @@ ms_cast_and_reflag <- function(d,
 
         dont_drop_these <- c('variable_flags_clean', 'variable_flags_dirty', 'variable_flags_bdl')
         dont_drop_these <- unname(unlist(purrr::keep(mget(dont_drop_these),
-                                                     ~ length(.) > 1 || nchar(.) > 0)))
+                                                     ~ length(.) > 1 || sw(is.na(.)) || nchar(.) > 0)))
 
         if(vardrop){
 
@@ -2077,7 +2081,7 @@ ms_cast_and_reflag <- function(d,
 
         accounted_for <- c('variable_flags_clean', 'variable_flags_dirty', 'variable_flags_bdl', 'variable_flags_to_drop')
         accounted_for <- unname(unlist(purrr::keep(mget(accounted_for),
-                                                   ~ length(.) > 1 || nchar(.) > 0)))
+                                                   ~ length(.) > 1 || sw(is.na(.)) || nchar(.) > 0)))
 
         if('' %in% d$flg && varclen && ! '' %in% get('variable_flags_clean')){
             warning('Variable flag "" (empty string) is not marked as "clean". are you sure about this?')
@@ -10329,11 +10333,15 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                        val = X_00060_00000)
         }
 
+        message('next time you are here, update 6 lines down so that only "A" codes are marked clean')
+        browser()
         discharge <- discharge %>%
             mutate(site_code =!!names(sites[i])) %>%
             mutate(var = 'discharge',
                    val = val * 28.31685,
                    ms_status = 0) %>%
+                   # ms_status = if_else(?codecolumn == 'A', 0, 1)) %>%
+                   #see https://help.waterdata.usgs.gov/codes-and-parameters/instantaneous-value-qualification-code-uv_rmk_cd
             select(site_code, datetime, val, var, ms_status)
 
         d <- identify_sampling_bypass(discharge,

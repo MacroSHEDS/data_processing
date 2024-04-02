@@ -368,7 +368,8 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'swc_domainLabData'
     relevant_tbl2 <- 'swc_externalLabDataByAnalyte'
@@ -566,7 +567,8 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'NSW_15_minute'
     if(relevant_tbl1 %in% names(rawd)){
@@ -621,7 +623,8 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'PARWS_30min'
     if(relevant_tbl1 %in% names(rawd)){
@@ -669,7 +672,8 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'TSW_30min'
     if(relevant_tbl1 %in% names(rawd)){
@@ -761,7 +765,8 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'sdg_externalLabData'
 
@@ -904,7 +909,8 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'waq_instantaneous'
     if(relevant_tbl1 %in% names(rawd)){
@@ -985,7 +991,8 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'PRIPRE_30min' #primary collector
     relevant_tbl2 <- 'SECPRE_30min' #secondary collector
@@ -1140,7 +1147,8 @@ process_1_DP1.20206.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'asi_externalLabH2OIsotopes'
     if(relevant_tbl1 %in% names(rawd)){
@@ -1199,7 +1207,8 @@ process_1_DP1.00038.001 <- function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     relevant_tbl1 <- 'wdi_isoPerSample'
     if(relevant_tbl1 %in% names(rawd)){
@@ -1258,12 +1267,6 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     #stationHorizontalID seems to have stabilized as of first publication of composite Q.
     #only one per site when composite-era data are filtered out.
 
-    # prodname_ms = 'discharge__DP4.00130.001'
-    # site_code = 'SYCA'
-    # dd <- tibble()
-    # turkey_streams = c(#'MCDI', 'HOPB', 'MART', 'BIGC', 'SYCA', 'PRIN', 'MCRA', 'CARI',
-    #     'COMO', 'OKSR', 'GUIL', 'CUPE', 'POSE', 'KING', 'MAYF', 'LECO')
-    # for(site_code in turkey_streams){
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
@@ -1273,12 +1276,11 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
         str_split_i('\\.', i = 2)
 
-    rawd <- stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
     if(site_code == 'TOMB'){
-        # browser()
         relevant_tbl1 <- 'csd_continuousDischargeUSGS'
-        # next
     } else {
         relevant_tbl1 <- 'csd_continuousDischarge'
     }
@@ -1293,80 +1295,40 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    # # nq = read_feather('~/Desktop/temmmp/neon_q_all.feather')
-    # for(site_code in neon_streams){
-    # #     nqsite = filter(nq, siteID == !!site_code)
-    # #     if(nrow(nqsite)){
-    # #         write_feather(nqsite, glue('~/Desktop/temmmp/{site_code}.feather'))
-    # #     }
-    # # }
-    #     nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
-    #     if(inherits(nqsite, 'try-error')) next
-        composite_q <- read_feather(glue('data/neon/neon/munged/discharge__VERSIONLESS002/{site_code}.feather'))
-        last_composite_date <- as.Date(max(composite_q$datetime))
-        rm(composite_q)
-    #     nq2 <- filter(nqsite, !(siteID == !!site_code & datetime <= !!last_composite_date))
-    #     print(site_code)
-    #     print(table(nqsite$horizontalPosition, useNA = 'ifany'))
-    #     write_feather(nq2, glue('~/Desktop/temmmp/{site_code}_filt.feather'))
-    # }
-    # nq = tibble()
-    # for(site_code in neon_streams){
-    #     nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
-    #     if(inherits(nqsite, 'try-error')) next
-    #     nq = bind_rows(nq, nqsite)
-    # }
-    # write_feather(nq, glue('~/Desktop/temmmp/neon_q_all_filt.feather'))
-    # colnames(nq)
-    # table(nq$finalQF, useNA = 'ifany') #1, 0
-    # table(nq$dischargeFinalQFSciRvw, useNA = 'ifany'), #1, NA
-    # read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))
+    composite_q <- read_feather(glue('data/neon/neon/munged/discharge__VERSIONLESS002/{site_code}.feather'))
+    last_composite_date <- as.Date(max(composite_q$datetime))
+    rm(composite_q)
 
-        # for(site_code in neon_streams){
-            # nqsite = try({read_feather(glue('~/Desktop/temmmp/{site_code}.feather'))}, silent = T)
-            # if(inherits(nqsite, 'try-error')) next
-            # print(site_code)
-            # rawd2 <- rawd %>%
-            #     mutate(endDate = with_tz(endDate, 'UTC')) %>%
-            #     filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
-            # print(table(rawd2$stationHorizontalID, useNA = 'ifany'))
+    rawd <- rawd %>%
+        mutate(endDate = with_tz(endDate, 'UTC')) %>%
+        filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
 
-            # ggplot2::ggplot(rawd2) +
-            #     geom_line(aes(x = endDate, y = maxpostDischarge, color = stationHorizontalID))->qq
-            # print(qq)
-            # rawd2 %>%
-            #     filter(stationHorizontalID == '132') %>%
-            #     pull(maxpostDischarge) ->zz
-            # all(is.na(zz))
-            #     ggplot2::ggplot() +
-            #     geom_line(aes(x = endDate, y = maxpostDischarge))
-        # }
+    if(site_code == 'TOMB'){
 
-    # if(site_code == 'TOMB'){
-    #
-    #
-    # } else {
-        rawd <- rawd %>%
-            mutate(endDate = with_tz(endDate, 'UTC')) %>%
-            filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
-        # table(rawd2$stationHorizontalID, useNA = 'ifany')
-        # table(zz$horizontalPosition, useNA = 'ifany')
+        d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                             datetime_cols = list(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(usgsDischarge = 'discharge'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = c('dischargeFinalQF',
+                                                  'dischargeFinalQFSciRvw',
+                                                  'usgsValueQualCode'),
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
 
-        # rawd <- rename(rawd,
-        #                datetime = endDate,
-        #                horizontalPosition = stationHorizontalID,
-        #                finalQF = dischargeFinalQF)
-        # try({neon_borrow_from_upstream(rawd, relevant_col = 'maxpostDischarge')})
-        # dd <- bind_rows(dd, rawd)
-        # print(paste(site_code, 'gg'))
-    # }
-    # unique(dd$horizontalPosition)
-    # filter(dd, siteID == 'KING') %>% distinct(horizontalPosition)
-    # filter(dd, siteID == 'KING') %>% pull(horizontalPosition) %>% table()
-    # write_feather(dd, '~/Desktop/temmmp/neon_q_all.feather')
-    # dd %>%
-    #     group_by()
+        d <- ms_cast_and_reflag(
+            d,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(dischargeFinalQF = '0',
+                                       dischargeFinalQFSciRvw = '0',
+                                       usgsValueQualCode = 'A'),
+            summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
+                                         dischargeFinalQFSciRvw = 'sentinel',
+                                         usgsValueQualCode = 'sentinel')
+        )
 
+    } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = rawd,
                              datetime_cols = list(endDate = '%Y-%m-%d %H:%M:%S'),
@@ -1379,17 +1341,15 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
-        d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA,
-                                summary_flags_clean = list(dischargeFinalQF = '0',
-                                                           dischargeFinalQFSciRvw = '0'),
-                                summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
-                                                             dischargeFinalQFSciRvw = 'sentinel'))
-
-        # d <- ms_conversions(d,
-        #                     convert_units_from = c( = 'umol/L'),
-        #                     convert_units_to = c( = 'mg/L'))
-    # }
+        d <- ms_cast_and_reflag(
+            d,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(dischargeFinalQF = '0',
+                                       dischargeFinalQFSciRvw = '0'),
+            summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
+                                         dischargeFinalQFSciRvw = 'sentinel')
+        )
+    }
 
     return(d)
 }
@@ -1399,56 +1359,109 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
 process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    # chili = tibble()
+    # for(site_code in neon_pgauges[3:27]){
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_tbl <- 'wdp_chemLab.feather'
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    # Units all mg/l uS/cm and pH
-
-    if(relevant_tbl %in% names(rawd)){
-
-        out_sub <- tibble(rawd[[relevant_tbl]]) %>%
-            rename('Ca__|dat' = precipCalcium,
-                   'Mg__|dat' = precipMagnesium,
-                   'K__|dat' = precipPotassium,
-                   'Na__|dat' = precipSodium,
-                   'NH4__|dat' = precipAmmonium,
-                   'NO3__|dat' =  precipNitrate,
-                   'SO4__|dat' = precipSulfate,
-                   'PO4__|dat' = precipPhosphate,
-                   'Cl__|dat' = precipChloride,
-                   'Br__|dat' = precipBromide,
-                   'pH__|dat' = pH,
-                   'spCond__|dat' = precipConductivity,
-                   'Ca__|flg' = precipCalciumFlag,
-                   'Mg__|flg' = precipMagnesiumFlag,
-                   'K__|flg' = precipPotassiumFlag,
-                   'Na__|flg' = precipSodiumFlag,
-                   'NH4__|flg' = precipAmmoniumFlag,
-                   'NO3__|flg' =  precipNitrateFlag,
-                   'SO4__|flg' = precipSulfateFlag,
-                   'PO4__|flg' = precipPhosphateFlag,
-                   'Cl__|flg' = precipChlorideFlag,
-                   'Br__|flg' = precipBromideFlag) %>%
-            mutate('spCond__|flg' = NA,
-                   'pH__|flg' = NA) %>%
-            select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg')) %>%
-            mutate(across(contains('|flg'), ~ifelse(is.na(.x), 0, 1))) %>%
-            mutate(site_code = !!site_code) %>%
-            select(-namedLocation)
-
-        out_sub <- ms_cast_and_reflag(out_sub,
-                                      variable_flags_clean = 0,
-                                      variable_flags_dirty = 1)
-
-        return(out_sub)
-
-    } else {
-        return(generate_ms_exception('wdp_chemLab.feather file missing'))
+    relevant_tbl <- 'wdp_chemLab'
+    if(! relevant_tbl %in% names(rawd)){
+        return(generate_ms_exception('Relevant file missing'))
     }
+
+    d <- tibble(rawd[[relevant_tbl]])
+    # chili=bind_rows(d, chili)
+    # }
+    # }
+
+    # chili %>%
+    #     # filter(sampleCondition == 'i') %>%
+    #     # filter(sampleCondition == 'c') %>%
+    #     # filter(sampleCondition == 'l') %>%
+    #     filter(sampleCondition == 'x') %>%
+    #     select(precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>%
+    #     print(n=100)
+    # chili %>%
+    #     # filter(sampleCondition != 'i' & grepl('volume', externalRemarks)) %>%
+    #     # filter(sampleCondition != 'c' & grepl('dirt|pollen', labConditionRemarks)) %>%
+    #     filter(is.na(sampleCondition) & ! is.na(labConditionRemarks)) %>%
+    #     filter(! grepl('pollen|small|spec|bug|matter|dirt', labConditionRemarks, ignore.case=T)) %>%
+    #     distinct(labConditionRemarks, .keep_all = T) %>%
+    #     select(precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>%
+    #     print(n = 200)
+    # table(chili$labConditionRemarks, useNA = 'ifany') #pollen|small|spec|bug|matter|dirt|leak|only
+    table(chili$sampleCondition, useNA = 'ifany') #NA = clean #i = low vol; c = dirt; v = NA; x = redundant; l = redundant with c and v
+    # table(chili$labCondition, useNA = 'ifany') #all NA!!
+    # table(chili$externalRemarks, useNA = 'ifany') #redundant
+    # select(d, precipSodium, sampleCondition, externalRemarks, labConditionRemarks) %>% print(n=100)
+    # table(d$labConditionRemarks, useNA = 'ifany') #use this
+    # table(d$sampleCondition, useNA = 'ifany') #inaccurate
+    # table(d$labCondition, useNA = 'ifany') #recheck
+    # table(d$externalRemarks, useNA = 'ifany') #ugh
+
+    d$actual_quality_flag <- as.numeric(
+        ! is.na(d$labConditionRemarks) &
+            grepl('pollen|small|spec|bug|matter|dirt|leak|only',
+                  d$labConditionRemarks,
+                  ignore.case = TRUE)
+    )
+
+    #handle setDate!!!
+    # Units all mg/l uS/cm and pH (rly true?)
+    #handle detlims in varflags!
+
+    if(! all(c('precipNitrate', 'pH', 'precipMagnesiumFlag', 'precipConductivity') %in% colnames(d))){
+        stop('Known column names missing. There has been a change')
+    }
+
+    # update_neon_detlims(rawd$swc_externalLabSummaryData)
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(Calcium = 'Ca',
+                                        Magnesium = 'Mg',
+                                        Potassium = 'K',
+                                        Sodium = 'Na',
+                                        Ammonium = 'NH4',
+                                        Nitrate = 'NO3',
+                                        Sulfate = 'SO4',
+                                        Phosphate = 'PO4',
+                                        Chloride = 'Cl',
+                                        Bromide = 'Br',
+                                        pH = 'pH',
+                                        Conductivity = 'spCond'),
+                         data_col_pattern = 'precip#V#',
+                         alt_datacol_pattern = '#V#',
+                         var_flagcol_pattern = 'precip#V#Flag',
+                         summary_flagcols = c('actual_quality_flag',
+                                              'sampleCondition'),
+                         is_sensor = FALSE,
+                         sampling_type = 'G',
+                         ignore_missing_col_warning = TRUE)
+
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_clean = NA,
+        variable_flags_to_drop = 'totally unmatchable sentinel jic',
+        variable_flags_bdl = ,
+        summary_flags_clean = list(actual_quality_flag = '0',
+                                   sampleCondition = NA),
+        summary_flags_to_drop = list(actual_quality_flag = 'sentinel',
+                                     sampleCondition = 'sentinel')
+    )
+
+    return(d)
 }
 
 #ws_boundary: STATUS=READY
