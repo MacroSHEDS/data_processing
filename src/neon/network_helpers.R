@@ -447,6 +447,60 @@ update_neon_detlims <- function(neon_dls, set){
                sigfigs = NA,
                added_programmatically = FALSE)
 
+    #there are just a few duplicated ranges across the detection limits:
+    # analyte   labSpecificStartDate      labSpecificEndDate
+    # <chr>     <dttm>                    <dttm>
+    # 1 Ortho - P 2019-07-03 00:00:00.000 2020-02-05 00:00:00.000
+    # 2 Ortho - P 2019-07-03 00:00:00.000 2020-02-05 00:00:00.000
+    # 3 TDP       2022-08-01 00:00:00.000 NA
+    # 4 TDP       2022-08-01 00:00:00.000 NA
+    # 5 TP        2022-08-01 00:00:00.000 NA
+    # 6 TP        2022-08-01 00:00:00.000 NA
+    #
+    #for these, just take the first
+    detlim_pre <- detlim_pre %>%
+        group_by(analyte, start_date, end_date) %>%
+        filter(if(n() > 1) row_number() == 1 else TRUE) %>%
+        ungroup()
+
+    #neon has some overlapping detection limit ranges. check for completely
+    #overlapped ranges
+    any_complete_overlaps <- detlim_pre %>%
+        mutate(end_date = if_else(is.na(end_date), as.POSIXct('2039-01-01'), end_date)) %>%
+        group_by(analyte) %>%
+        arrange(start_date) %>%
+        mutate(overlapped = dplyr::lead(start_date) <= start_date &
+                   dplyr::lead(end_date) >= end_date) %>%
+        ungroup() %>%
+        # select(analyte, detection_limit_original, start_date, end_date, overlapped, analyteUnits) %>%
+        # arrange(analyte, start_date) %>%
+        # print(n=300)
+        pull(overlapped) %>%
+        any(na.rm = TRUE)
+
+    if(any_complete_overlaps){
+        stop('completely overlapped detection limit timerange detected')
+    }
+
+    #Assume newer ranges overwrite older ones. This corrects a few true overlaps,
+    #but every end_date needs to be reduced by 1 day, and it fixes that too.
+    detlim_pre <- detlim_pre %>%
+        mutate(start_date = as.Date(start_date),
+               end_date = as.Date(end_date)) %>%
+        # filter(variable_original == 'DOC') %>%
+        # select(start_date, end_date, detection_limit_original) %>%
+        group_by(analyte) %>%
+        arrange(start_date) %>%
+        mutate(overlapped = dplyr::lead(start_date) <= end_date) %>%
+        mutate(end_date = if_else(overlapped,
+                                  dplyr::lead(start_date) - 1,
+                                  end_date)) %>%
+        ungroup() %>%
+        select(-overlapped)
+
+    ###gotta remove even one-day overlap!!
+
+    #format for gsheet
     detlims <- standardize_detection_limits(
         dls = detlim_pre,
         vs = ms_vars,

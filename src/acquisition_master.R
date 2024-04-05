@@ -372,7 +372,8 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    #fix detlim issues in streamchem (ARIK)
+    #stream_chem: uv absorbence name 250 anywhere?, still gotta run FLNT
+    #   need separate detlim entries for FLNT? see untitled3
     #nitrate has sensor position issue (BLWA)
     #par immediate error
     #temperature dupe error (BIGC)
@@ -399,17 +400,18 @@ for(dmnrow in 1:nrow(network_domain)){
     #pchem: some crazy error crashed the whole thing after most of pchem completed.
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('stream_nitrate'),
              # prodname_filter = c('stream_PAR'),
              # prodname_filter = c('stream_temperature'),
-             # prodname_filter = c('stream_gases'),       Success
+             # prodname_filter = c('stream_gases'),       S
              # prodname_filter = c('stream_quality'),
              # prodname_filter = c('precipitation'),      S
              # prodname_filter = c('discharge'),          S
+             # prodname_filter = c('isotopes'), #not tried yet
              # prodname_filter = c('precip_isotopes'),    S
-             prodname_filter = c('precip_chemistry'),
-             # prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('ws_boundary'),        S
              domain = domain)
 
     if(domain != 'mcmurdo'){

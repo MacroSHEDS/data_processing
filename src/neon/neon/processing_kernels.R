@@ -438,7 +438,16 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             browser()
         }
 
-        if(any(filter(d, analyte %in% c('TPN', 'TPC'))$analyteUnits == 'milligram')) stop('oi! i thought this was only reported in mg/L')
+        #sometimes TPN and TPC are reported in milligrams. not sure how to get sample volume,
+        #but so far rare enough that it's probably a mistake (10 total records as of 2024-04-05)
+        weird_unit <- d$analyte %in% c('TPN', 'TPC') & d$analyteUnits != 'microgramsPerLiter'
+        nweird_unit <- sum(weird_unit)
+        if(nweird_unit > 0){
+            message(nweird_unit, ' TPN/TPC observations reported in "',
+                    paste(unique(d[weird_unit, 'analyteUnits']), collapse = ', '),
+                    '". these will be dropped.')
+            d <- d[! weird_unit, ]
+        }
 
         update_neon_detlims(rawd$swc_externalLabSummaryData,
                             set = 'chem')
@@ -1523,8 +1532,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
                       level = 'munged',
                       shapefile = TRUE)
     }
-
-    unlink(zipped_files)
 
     return()
 }

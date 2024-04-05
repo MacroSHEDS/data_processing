@@ -15,6 +15,17 @@ if(nrow(prod_info) == 0) return()
 
 for(i in seq_len(nrow(prod_info))){
 
+    #it's possible that munge errors can cause raw neon data to be lost,
+    #due to the fact that raw zips have to be copied to tempdir for preservation while
+    #neonUtilities compiles them.
+    #this will determine if data loss has happened. will not work on windows though.
+    empty_rawdata_dirs <- system('find data/neon/neon/raw/ -type d -empty',
+                                 intern = TRUE)
+    if(length(empty_rawdata_dirs)){
+        stop('empty dirs detected in data/neon/neon/raw:\n\t',
+             paste(empty_rawdata_dirs, collapse = '\n\t'))
+    }
+
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
     held_data <<- get_data_tracker(network = network,
