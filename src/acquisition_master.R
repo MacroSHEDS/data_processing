@@ -367,11 +367,49 @@ for(dmnrow in 1:nrow(network_domain)){
                 # prodname_filter = c('precipitation'),
                 domain = domain)
 
-    check_for_derelicts(network = network,
-                        domain = domain)
+    if(domain != 'neon'){
+        check_for_derelicts(network = network,
+                            domain = domain)
+    }
+
+    #fix detlim issues in streamchem (ARIK)
+    #nitrate has sensor position issue (BLWA)
+    #par immediate error
+    #temperature dupe error (BIGC)
+    #quality: specificCond_up not found for BLUE
+        #also, what was i checking this for?
+    2024-04-04 16:03:27.644354 INFO:ms.neon.neon.module:Munging ARIK stream_quality__DP1.20288.001
+    [1] "stacking zips for stream_quality__DP1.20288.001"
+    [1] "variable sample durations: 0: 5613563, 60: 2084677"
+    2024-04-04 16:07:52.873265 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/ARIK)
+    2024-04-04 16:07:53.80366 WARNING::Derived product not yet tracked; not updating derive tracker.
+    2024-04-04 16:07:53.882457 INFO:ms.neon.neon.module:Munging BIGC stream_quality__DP1.20288.001
+    [1] "stacking zips for stream_quality__DP1.20288.001"
+    [1] "variable sample durations: 0: 4306208, 13: 3, 60: 1099549"
+    2024-04-04 16:10:53.906313 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/BIGC)
+    2024-04-04 16:10:53.954896 WARNING::Derived product not yet tracked; not updating derive tracker.
+    2024-04-04 16:10:54.03541 INFO:ms.neon.neon.module:Munging BLDE stream_quality__DP1.20288.001
+    [1] "stacking zips for stream_quality__DP1.20288.001"
+    [1] "variable sample durations: 0: 4694588, 28: 1, 58: 107, 60: 319384"
+    2024-04-04 16:13:41.38417 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/BLDE)
+    2024-04-04 16:13:41.432753 WARNING::Derived product not yet tracked; not updating derive tracker.
+    2024-04-04 16:13:41.582626 INFO:ms.neon.neon.module:Munging BLUE stream_quality__DP1.20288.001
+    [1] "stacking zips for stream_quality__DP1.20288.001"
+    [1] "variable sample durations: 0: 1919045, 60: 619675"
+    #pchem: some crazy error crashed the whole thing after most of pchem completed.
 
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_nitrate'),
+             # prodname_filter = c('stream_PAR'),
+             # prodname_filter = c('stream_temperature'),
+             # prodname_filter = c('stream_gases'),       Success
+             # prodname_filter = c('stream_quality'),
+             # prodname_filter = c('precipitation'),      S
+             # prodname_filter = c('discharge'),          S
+             # prodname_filter = c('precip_isotopes'),    S
+             prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
 
     if(domain != 'mcmurdo'){

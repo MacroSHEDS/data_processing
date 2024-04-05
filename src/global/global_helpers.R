@@ -629,6 +629,7 @@ ms_read_raw_csv <- function(filepath,
                             summary_flagcols,
                             sampling_type = NULL,
                             keep_bdl_values = FALSE,
+                            keep_empty_rows = FALSE,
                             ignore_missing_col_warning = FALSE){
 
     #TODO:
@@ -740,11 +741,12 @@ ms_read_raw_csv <- function(filepath,
     #sampling_type: optional value to overwrite identify_sampling because in
     #   some case this function is misidentifying sampling type. This must be a
     #   single value of 'G' or 'I' and is applied to all variables in product
-    #keep_bdl_values: logical. if true, data column values indicating the
+    #keep_bdl_values: logical. if TRUE, data column values indicating the
     #   detection limit, e.g. "<0.7" will be replaced with that limit, i.e. "0.7".
     #   Only use this if you are following up with update_detlims().
     #   If the values recorded in the cells represent half detection limit, or something
     #   else, we need to write new handling.
+    #keep_empty_rows: logical. if FALSE, rows without data values will be dropped.
     #ignore_missing_col_warning: logical. if TRUE, do not warn about absence of
     #   expected column names (probably set to TRUE if using alt_datacol_pattern)
 
@@ -1262,8 +1264,12 @@ ms_read_raw_csv <- function(filepath,
     d <- select(d, -any_of(all_na_cols))
 
     #remove rows with NA for all data columns, except if they have BDLs.
-    keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
-    d <- d[keeper_rows | bdl_rows_do_not_drop, ]
+    if(! keep_empty_rows){
+        keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
+        d <- d[keeper_rows | bdl_rows_do_not_drop, ]
+    } else {
+        warning('need to set keep_empty_rows in ms_cast_and_reflag too')
+    }
 
     #for duplicated datetime-site_code pairs, keep the row with the fewest NA
     #   values. We could instead do something more sophisticated.
@@ -1583,7 +1589,8 @@ ms_cast_and_reflag <- function(d,
                                summary_flags_to_drop,
                                summary_flags_clean,
                                summary_flags_dirty,
-                               summary_flags_bdl){
+                               summary_flags_bdl,
+                               keep_empty_rows = FALSE){
 
     #TODO: add a silent = TRUE option. this would hide all warnings
     #allow for alternative pattern specifications.
@@ -1666,6 +1673,7 @@ ms_cast_and_reflag <- function(d,
     #   of values that might appear in the summary flag/status columns.
     #   Associated data records are assigned ms_status = 2, which is used as an
     #   indicator to insert 1/2 detlims downstream.
+    #keep_empty_rows: logical. if FALSE, rows without data values will be dropped.
 
     #return value: a long-format tibble with 5 columns: datetime, site_code,
     #   var, val, ms_status. Rows with NA in any non-status column are removed,
@@ -1777,17 +1785,24 @@ ms_cast_and_reflag <- function(d,
                     'varflag_col_pattern = NA)'))
     }
 
-    if(varclen && ! (is.na(variable_flags_clean) || mode(variable_flags_clean) == 'character')){
-        stop('variable_flags_clean must be a character vector')
+    if(varclen){
+        justNA <- length(variable_flags_clean) == 1 && is.na(variable_flags_clean)
+        if(! (justNA || mode(variable_flags_clean) == 'character')){
+            stop('variable_flags_clean must be a character vector')
+        }
     }
 
-    if(vardirt && ! (is.na(variable_flags_dirty) || mode(variable_flags_dirty) == 'character')){
-        stop('variable_flags_dirty must be a character vector')
+    if(vardirt){
+        justNA <- length(variable_flags_dirty) == 1 && is.na(variable_flags_dirty)
+        if(! (justNA || mode(variable_flags_dirty) == 'character')){
+            stop('variable_flags_dirty must be a character vector')
+        }
     }
 
     if(vardrop){
 
-        if(! (is.na(variable_flags_to_drop) || mode(variable_flags_to_drop) == 'character')){
+        justNA <- length(variable_flags_to_drop) == 1 && is.na(variable_flags_to_drop)
+        if(! (justNA || mode(variable_flags_to_drop) == 'character')){
             stop('variable_flags_to_drop must be a character vector')
         }
 
@@ -2157,7 +2172,9 @@ ms_cast_and_reflag <- function(d,
 
     #remove rows with NA in the value column and no bdl flag.
     #these take up space and can be reconstructed by casting to wide form
-    d <- filter(d, ! is.na(dat) | ms_status == 2)
+    if(! keep_empty_rows){
+        d <- filter(d, ! is.na(dat) | ms_status == 2)
+    }
 
     #rearrange columns (this also would have to be flexified if we ever want
     #   to pass something other than the default for data_col_pattern or

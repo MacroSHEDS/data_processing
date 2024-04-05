@@ -338,6 +338,9 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
                       cacheOK = FALSE,
                       method = 'curl')
 
+        unzip(rawfile, exdir = dirname(rawfile))
+        file.remove(rawfile)
+
         deets_out$url <- url
         deets_out$access_time <- as.character(with_tz(Sys.time(),
                                                       tzone = 'UTC'))
@@ -1390,9 +1393,10 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
                   ignore.case = TRUE)
     )
 
+    #detection limits...
     #first thought: BDL gets replaced with detection limit even if there are other concerns.
-    #second thought: but rly, this is just for recording, as values are supplied for bdl records.
-    #final thought: ugh, detlims not even supplied.
+    #second thought: but rly, this is just for recording DLs, as values are supplied for bdl records.
+    #final thought: ugh, detlims not even reported.
     # d <- mutate(
     #     d,
     #     across(ends_with('Flag', ignore.case = FALSE),
@@ -1404,61 +1408,70 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
     #
     # update_neon_detlims(rawd$)
 
-    # pdf('plots/neon_pchem_collection_intervals.pdf')
-    # plot(as.POSIXct('2022-04-12 16:10:00'), 1, type = 'n',
-    #      xlim = as.POSIXct(c('2016-01-01', '2024-01-01')), xlab = '',
-    #      ylim = c(1, 27), ylab = '', yaxt = 'n')
-    # axis(2, 1:27, neon_pgauges, las = 2)
-    # inc <- 0
-    # for(ss in neon_pgauges){
-    #     inc <- inc + 1
-    #     if(! ss %in% chili$siteID) next
-    #     qq = chili %>%
-    #         filter(siteID == ss) %>%
-    #         arrange(setDate) %>%
-    #         select(setDate, collectDate) %>%
-    #         t()
-    #     for(i in 1:ncol(qq)){
-    #         lines(as.POSIXct(qq[, i]), c(inc, inc), type = 'b', pch = 20)
-    #     }
-    # }
-    # dev.off()
+    #NOTE: NEON does not necessarily flag samples that sat in the collector for several months
+    #or even a year (see DELA sample with setDate == '2020-03-05 17:00:00').
+    #it's possible that their QA process accounts for this? Anyway, will leave
+    #it to end-user to make assumptions
 
-    HERE
-    #handle setDate!!!
-    #1. add an NA row at the start that has collectDate = first setDate
-    #2. handle huge gaps during which collector was operating (e.g. BLUE from early 2020 to mid 2021)
+    ##next, convert "setDate" and "collectDate" to a single date column
 
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'UTC',
-                         site_code_col = 'siteID',
-                         data_cols =  c(Calcium = 'Ca',
-                                        Magnesium = 'Mg',
-                                        Potassium = 'K',
-                                        Sodium = 'Na',
-                                        Ammonium = 'NH4',
-                                        Nitrate = 'NO3',
-                                        Sulfate = 'SO4',
-                                        Phosphate = 'PO4',
-                                        Chloride = 'Cl',
-                                        Bromide = 'Br',
-                                        pH = 'pH',
-                                        Conductivity = 'spCond'),
-                         data_col_pattern = 'precip#V#',
-                         alt_datacol_pattern = '#V#',
-                         var_flagcol_pattern = 'precip#V#Flag',
-                         summary_flagcols = c('actual_quality_flag',
-                                              'sampleCondition'),
-                         is_sensor = FALSE,
-                         sampling_type = 'G',
-                         ignore_missing_col_warning = TRUE)
+    #cull columns, convert datetimes to dates
+    d <- d %>%
+        select(siteID, setDate, collectDate, starts_with('precip'),
+               pH, actual_quality_flag, sampleCondition) %>%
+        mutate(setDate = as.Date(setDate),
+               collectDate = as.Date(collectDate))
+
+    #fill in days during which collectors were operating
+    d$date <- Map(seq, from = d$setDate, to = d$collectDate, by = 'day')
+
+    #fill in missing days between a collection and the following deployment
+    d <- d %>%
+        unnest(date) %>%
+        relocate(date) %>%
+        arrange(date) %>%
+        tidyr::complete(date = seq(min(.$date), max(.$date), by = 'day')) %>%
+        arrange(date)
+
+    #associate each measurement with its collectionDate, not setDate (collections almost always in evening)
+    d <- d %>%
+        group_by(date) %>%
+        filter(n() == 1 | date == collectDate) %>%
+        ungroup() %>%
+        select(-setDate, -collectDate)
+
+    d <- ms_read_raw_csv(
+        preprocessed_tibble = d,
+        datetime_cols = list('date' = '%Y-%m-%d'),
+        datetime_tz = 'UTC',
+        site_code_col = 'siteID',
+        data_cols =  c(Calcium = 'Ca',
+                       Magnesium = 'Mg',
+                       Potassium = 'K',
+                       Sodium = 'Na',
+                       Ammonium = 'NH4',
+                       Nitrate = 'NO3',
+                       Sulfate = 'SO4',
+                       Phosphate = 'PO4',
+                       Chloride = 'Cl',
+                       Bromide = 'Br',
+                       pH = 'pH',
+                       Conductivity = 'spCond'),
+        data_col_pattern = 'precip#V#',
+        alt_datacol_pattern = '#V#',
+        var_flagcol_pattern = 'precip#V#Flag',
+        summary_flagcols = c('actual_quality_flag',
+                             'sampleCondition'),
+        is_sensor = FALSE,
+        sampling_type = 'G',
+        ignore_missing_col_warning = TRUE
+    )
 
     d <- ms_cast_and_reflag(
         d,
         variable_flags_clean = c(NA, 'Analytical dilution'),
         variable_flags_to_drop = 'totally unmatchable sentinel jic',
-        variable_flags_bdl = ,
+        # variable_flags_bdl = ,
         summary_flags_clean = list(actual_quality_flag = '0',
                                    sampleCondition = NA),
         summary_flags_to_drop = list(actual_quality_flag = 'sentinel',
@@ -1482,9 +1495,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
     rawfile1 <- glue(rawdir1, '/NEONAquaticWatershed.zip')
 
-    zipped_files <- unzip(zipfile = rawfile1,
-                          exdir = rawdir1,
-                          overwrite = TRUE)
+    # zipped_files <- unzip(zipfile = rawfile1,
+    #                       exdir = rawdir1,
+    #                       overwrite = TRUE)
 
     projstring <- choose_projection(unprojected = TRUE)
 
@@ -1500,22 +1513,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
     if(nrow(d) == 0) stop('no rows in sf object')
 
-    # munged_data_dest <- glue('data/{n}/{d}/munged/{p}',
-    #                          n = network,
-    #                          d = domain,
-    #                          p = prodname_ms)
-    #
-    # dir.create(path = munged_data_dest,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-
     for(i in 1:nrow(d)){
-
-        # dir.create(path = glue(munged_data_dest,
-        #                        '/',
-        #                        d$site_code[i]),
-        #            showWarnings = FALSE,
-        #            recursive = TRUE)
 
         write_ms_file(d = d[i, ],
                       network = network,
@@ -1528,7 +1526,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
     unlink(zipped_files)
 
-    # return(d)
     return()
 }
 

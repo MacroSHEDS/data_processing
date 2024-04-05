@@ -6,6 +6,7 @@
 munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
                           keep_status = 'ok',
                           spatial_regex = '(location|boundary)',
+                          interpolate_pchem = TRUE,
                           silent = TRUE){
 
     #for when a data product is organized with no more than one site per file
@@ -25,6 +26,9 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
     #    standalone file
+    #interpolate_pchem: for when precip chemistry interpolation
+    #   is handled within the kernel. This is the case for neon, which reports
+    #   "set" and "collect" dates for each precip chemistry capture.
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
@@ -99,7 +103,11 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
             #_only_ run it here. that will take some investigation though. for one
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
-            out <- synchronize_timestep(out)
+            if(prodname_from_prodname_ms(prodname_ms) != 'precip_chemistry' || interpolate_pchem){
+                out <- synchronize_timestep(out)
+            } else if(! 'ms_interp' %in% colnames(out)){
+                out$ms_interp <- 0
+            }
         }
 
         write_ms_file(d = out,
