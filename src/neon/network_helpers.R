@@ -464,7 +464,7 @@ update_neon_detlims <- function(neon_dls, set){
         ungroup()
 
     #neon has some overlapping detection limit ranges. check for completely
-    #overlapped ranges
+    #overlapped ranges that don't extend to the present
     any_complete_overlaps <- detlim_pre %>%
         mutate(end_date = if_else(is.na(end_date), as.POSIXct('2039-01-01'), end_date)) %>%
         group_by(analyte) %>%
@@ -482,8 +482,33 @@ update_neon_detlims <- function(neon_dls, set){
         stop('completely overlapped detection limit timerange detected')
     }
 
-    #Assume newer ranges overwrite older ones. This corrects a few true overlaps,
-    #but every end_date needs to be reduced by 1 day, and it fixes that too.
+    #now, for overlaps that do extend to the present, the later
+    #start-date should be considered an end-date for the earlier-starting range
+    detlim_pre <- detlim_pre %>%
+        # filter(analyte == 'TDN') %>%
+        # select(start_date, end_date, detection_limit_original) %>%
+        group_by(analyte, end_date) %>%
+        arrange(start_date) %>%
+        mutate(end_date = if_else(is.na(end_date) & lead(is.na(end_date),
+                                                         default = TRUE),
+                                  lead(start_date),
+                                  end_date)) %>%
+        ungroup()
+
+    #consolidate contiguous date ranges for which the detlim doesn't change
+    detlim_pre <- detlim_pre %>%
+        group_by(analyte, unit, detection_limit_original) %>%
+        summarize(
+            start_date = min(start_date),
+            end_date = max(end_date, na.rm = FALSE),
+            across(-any_of(c('start_date', 'end_date')),
+                   first)
+        ) %>%
+        ungroup() %>%
+        arrange(analyte, start_date)
+
+    #assume newer ranges overwrite older ones. This may still correct a few true overlaps,
+    #but every end_date needs to be reduced by 1 day, and it primarily fixes that
     detlim_pre <- detlim_pre %>%
         mutate(start_date = as.Date(start_date),
                end_date = as.Date(end_date)) %>%
@@ -497,8 +522,6 @@ update_neon_detlims <- function(neon_dls, set){
                                   end_date)) %>%
         ungroup() %>%
         select(-overlapped)
-
-    ###gotta remove even one-day overlap!!
 
     #format for gsheet
     detlims <- standardize_detection_limits(

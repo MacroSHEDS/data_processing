@@ -372,7 +372,7 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    #stream_chem: uv absorbence name 250 anywhere?, still gotta run FLNT
+    #stream_chem: uv absorbance name 250 anywhere?, still gotta run FLNT
     #   need separate detlim entries for FLNT? see untitled3
     #nitrate has sensor position issue (BLWA)
     #par immediate error
