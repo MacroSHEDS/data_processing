@@ -634,7 +634,9 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     d_$updown <- determine_upstream_downstream(d_)
 
-    #get names of flagcols, etc.
+    site_ <- d_$siteID[1]
+
+    #this flagcol section is a vestige, but it still performs a useful check
     flagcol <- grep('inalQF$', colnames(d_), value = TRUE)
 
     if(length(relevant_cols) > 1){
@@ -645,8 +647,7 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     if(length(flagcol) != length(relevant_cols)) stop('flag column disparity detected')
 
-    site_ <- d_$siteID[1]
-
+    #flagcol is effectively determined here, and now called qf_cols
     if(length(relevant_cols) > 1){
         qf_cols <- paste0(relevant_cols, 'FinalQF')
     } else {
@@ -657,7 +658,7 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
     d_ <- d_ %>%
         select(datetime, updown,
                all_of(c(relevant_cols, qf_cols))) %>%
-        mutate(across(ends_with('inalQF'),
+        mutate(across(any_of(qf_cols),
                       ~if_else(is.na(.), 1, .)))
 
     #handle dupes (sometimes the full record is split between two horizontal positions)
@@ -694,7 +695,7 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
         d_ <- d_[, .j, by = .(updown, datetime),
            env = list(.j = c(
                lapply(lapply(setNames(nm = relevant_cols), as.name), function(v) call('custom_mean', v)),
-               lapply(lapply(setNames(nm = flagcol), as.name), function(v) call('max', v))
+               lapply(lapply(setNames(nm = qf_cols), as.name), function(v) call('max', v))
            ))]
     }
 

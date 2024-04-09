@@ -650,6 +650,8 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception(paste('No data for', site_code)))
     }
 
+    rawd <- rename(rawd, finalQF = PARFinalQF)
+
     rawd <- neon_average_start_end_times(rawd)
     rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'PARMean')
 

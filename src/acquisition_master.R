@@ -372,14 +372,10 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    #par immediate error
-    #quality: unknown position
-    #   need to invalidate munge for HOPB and KING
-
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),   S
              # prodname_filter = c('stream_nitrate'),     S
-             prodname_filter = c('stream_PAR'),
+             # prodname_filter = c('stream_PAR'),         S
              # prodname_filter = c('stream_temperature'), S
              # prodname_filter = c('stream_gases'),       S
              # prodname_filter = c('stream_quality'),     S
