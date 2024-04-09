@@ -1464,7 +1464,7 @@ resolve_datetime <- function(d,
                     with_tz(tz = 'UTC')))
 
             print(dt_tb_copy[is.na(dt_tb), ])
-            w$message = paste(w$message, ' MacroSheds corollary: this often means timezone is misspecified! are the error dates above in march/nov?')
+            w$message = paste(w$message, ' MacroSheds corollary: this often means timezone is misspecified! are the error dates above in march/april/nov?')
             warning(w)
 
             return(dt_tb)
@@ -8453,7 +8453,7 @@ invalidate_derived_products <- function(successor_string){
 
 write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
-    #this writes the metadata file for retrieved macrosheds data
+    #this writes the metadata file for retrieved macrosheds data.
     #see write_metadata_m for munged macrosheds data and write_metadata_d
     #for derived macrosheds data
 
@@ -8527,8 +8527,7 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
     }
 
     dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
-
-    update_provenance(murl, dt_web_format)
+    update_provenance(dt_web_format)
 
     return(invisible())
 }
@@ -10308,7 +10307,7 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
     }
 }
 
-pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) {
+pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step){
 
     #This function is used in the case when a domain's discharge data is
     #associated with the USGS and is not available through the domain's portal
@@ -10325,24 +10324,25 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
     # and combine the two so as much sub daily data is grabbed but when only daily
     # data is available, that is used.
 
-    if(length(time_step) == 1) {
+    if(length(time_step) == 1){
         time_step <- rep(time_step, length(sites))
     }
 
-    if(!all(time_step %in% c('daily', 'sub_daily'))) {
+    if(!all(time_step %in% c('daily', 'sub_daily'))){
         stop('time_step can only include daily or sub_daily')
     }
 
-    if(!length(time_step) == length(sites)) {
+    if(!length(time_step) == length(sites)){
         stop(paste0('time_step must either be a single chracter of daily or ',
         'sub_daily, or a vector of the same length as sites'))
     }
 
-    for(i in 1:length(sites)) {
+    for(i in 1:length(sites)){
 
-        if(time_step[i] == 'daily') {
+        if(time_step[i] == 'daily'){
             discharge <- dataRetrieval::readNWISdv(sites[i], '00060') %>%
-                mutate(datetime = ymd_hms(paste0(Date, ' ', '12:00:00'), tz = 'UTC')) %>%
+                mutate(datetime = ymd_hms(paste0(Date, ' ', '12:00:00'),
+                                          tz = 'UTC')) %>%
                 mutate(val = X_00060_00003)
         } else {
             discharge <- dataRetrieval::readNWISuv(sites[i], '00060') %>%
@@ -10350,14 +10350,12 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                        val = X_00060_00000)
         }
 
-        message('next time you are here, update 6 lines down so that only "A" codes are marked clean')
-        browser()
         discharge <- discharge %>%
-            mutate(site_code =!!names(sites[i])) %>%
-            mutate(var = 'discharge',
+            as_tibble() %>%
+            mutate(site_code = !!names(sites[i]),
+                   var = 'discharge',
                    val = val * 28.31685,
-                   ms_status = 0) %>%
-                   # ms_status = if_else(?codecolumn == 'A', 0, 1)) %>%
+                   ms_status = if_else(X_00060_00003_cd == 'A', 0, 1)) %>%
                    #see https://help.waterdata.usgs.gov/codes-and-parameters/instantaneous-value-qualification-code-uv_rmk_cd
             select(site_code, datetime, val, var, ms_status)
 
@@ -10374,7 +10372,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
         if(! dir.exists(glue('data/{n}/{d}/derived/{p}',
                              n = network,
                              d = domain,
-                             p = prodname_ms))) {
+                             p = prodname_ms))){
 
             dir.create(glue('data/{n}/{d}/derived/{p}',
                             n = network,
@@ -10391,6 +10389,9 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step) 
                        level = 'derived',
                        shapefile = FALSE,
                        link_to_portal = FALSE)
+
+         update_prov_usgs_dt(sitecd = unname(sites[i]),
+                             dt = Sys.time())
     }
 
     return()
@@ -13061,10 +13062,13 @@ thin_portal_data <- function(network_domain, thin_interval){
                 agg_call <- quote(mean(val, na.rm = TRUE))
             }
 
+            #thin files if necessary
             for(stf in site_files){
 
-                #check whether this file needs to be thinned
-                dtcol <- read_feather(stf, columns = 'datetime')
+                dtcol <- read_feather(stf) %>%
+                    select(datetime, var) %>%
+                    arrange(var, datetime) %>%
+                    select(datetime)
                 interval_min <- Mode(diff(as.numeric(dtcol$datetime)) / 60)
                 needs_thin <- ! is.na(interval_min) && interval_min <= 24 * 60
 
@@ -17461,12 +17465,39 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
     return(apa_citation)
 }
 
+update_prov_usgs_dt <- function(sitecd, dt){
+
+    #a USGS site code
+    #dt: a datetime object
+
+    rowind <- which(
+        site_doi_license$network == network &
+            site_doi_license$domain == domain &
+            site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms) &
+            grepl(sitecd, site_doi_license$link)
+    )
+
+    if(length(rowind) == 0) stop('provenance rows not yet entered?')
+    if(length(rowind) > 1) stop('more than one provenance row selected')
+
+    dt <- paste(format(with_tz(dt, 'UTC'),
+                       '%Y-%m-%d %H:%M:%S'),
+                'UTC')
+
+    site_doi_license$link_download_datetime[rowind] <- dt
+
+    ms_write_confdata(site_doi_license,
+                      which_dataset = 'site_doi_license',
+                      to_where = 'remote',
+                      overwrite = TRUE)
+}
+
 update_provenance <- function(url, last_download_dt){
 
     rowind <- which(
         site_doi_license$network == network &
-        site_doi_license$domain == domain &
-        site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
+            site_doi_license$domain == domain &
+            site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms)
     )
 
     if(length(rowind) != 1) stop('something wrong with provenance for this product')

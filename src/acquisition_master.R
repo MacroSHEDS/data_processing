@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'neon') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'trout_lake') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -364,7 +364,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('precipitation'),
+                # prodname_filter = c('discharge'),
                 domain = domain)
 
     if(domain != 'neon'){
@@ -373,18 +373,18 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),   S
-             # prodname_filter = c('stream_nitrate'),     S
-             # prodname_filter = c('stream_PAR'),         S
-             # prodname_filter = c('stream_temperature'), S
-             # prodname_filter = c('stream_gases'),       S
-             # prodname_filter = c('stream_quality'),     S
-             # prodname_filter = c('precipitation'),      S
-             # prodname_filter = c('discharge'),          S
-             # prodname_filter = c('isotopes'),           S
-             # prodname_filter = c('precip_isotopes'),    S
-             # prodname_filter = c('precip_chemistry'),   S
-             # prodname_filter = c('ws_boundary'),        S
+             # prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_nitrate'),
+             # prodname_filter = c('stream_PAR'),
+             # prodname_filter = c('stream_temperature'),
+             # prodname_filter = c('stream_gases'),
+             # prodname_filter = c('stream_quality'),
+             # prodname_filter = c('precipitation'),
+             prodname_filter = c('discharge'),
+             # prodname_filter = c('isotopes'),
+             # prodname_filter = c('precip_isotopes'),
+             # prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('ws_boundary'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -396,7 +396,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('stream_flux_inst'),
+              # prodname_filter = c('discharge'),
               domain = domain)
 
     if(domain != 'mcmurdo'){

@@ -126,7 +126,8 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
+                                     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -306,7 +307,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
+                                     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -394,7 +396,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
+                                     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,

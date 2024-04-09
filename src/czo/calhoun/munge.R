@@ -9,7 +9,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=5
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -24,7 +23,6 @@ for(i in seq_len(nrow(prod_info))){
 
     sites <- names(held_data[[prodname_ms]])
 
-    # j <- 1
     for(j in 1:length(sites)){
 
         site_code <- sites[j]

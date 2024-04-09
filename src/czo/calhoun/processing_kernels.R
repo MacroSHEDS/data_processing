@@ -3,7 +3,7 @@
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_6421 <- function(set_details, network, domain) {
+process_0_6421 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -15,7 +15,7 @@ process_0_6421 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_6470 <- function(set_details, network, domain) {
+process_0_6470 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -27,7 +27,7 @@ process_0_6470 <- function(set_details, network, domain) {
 
 #discharge; precipitation: STATUS=READY
 #. handle_errors
-process_0_4680 <- function(set_details, network, domain) {
+process_0_4680 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -38,7 +38,7 @@ process_0_4680 <- function(set_details, network, domain) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_2851 <- function(set_details, network, domain) {
+process_0_2851 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -66,7 +66,7 @@ process_0_2851 <- function(set_details, network, domain) {
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_6421 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -99,7 +99,7 @@ process_1_6421 <- function(network, domain, prodname_ms, site_code,
 #discharge: STATUS=READY
 #. handle_errors
 process_1_6470 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -133,7 +133,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
 #precipitation; discharge: STATUS=READY
 #. handle_errors
 process_1_4680 <- function(network, domain, prodname_ms, site_code,
-                           components) {
+                           components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -172,7 +172,8 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
 
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                              datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'UTC',
+                             # datetime_tz = 'US/Eastern',
                              site_code_col = 'site',
                              data_cols =  c('rain' = 'precipitation'),
                              data_col_pattern = '#V#',
@@ -191,31 +192,23 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                               site_raw == 'Stream 3' ~ 'weir_3',
                               site_raw == 'Stream 4' ~ 'weir_4')
 
-            if(p %in% c(16, 24)){
-
-                site <- readxl::read_xlsx(q_files[p]) %>%
-                    rename(date = 3,
-                           q = 2) %>%
-                    mutate(site = !!site_n) %>%
-                    select(date, q, site)
-            } else{
-
-                site <- readxl::read_xlsx(q_files[p]) %>%
-                    rename(date = 1,
-                           q = 3) %>%
-                    mutate(site = !!site_n) %>%
-                    select(date, q, site)
-            }
+            site <- readxl::read_xlsx(q_files[p],
+                                      sheet = 'Sheet2') %>%
+                rename(date = 1,
+                       q = 3) %>%
+                mutate(site = !!site_n) %>%
+                select(date, q, site)
 
             all_sites <- rbind(all_sites, site)
         }
 
         all_sites <- all_sites %>%
-            mutate(q = q*28.317)
+            mutate(q = q * 28.317)
 
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                              datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'US/Eastern',
+                             # datetime_tz = 'US/Eastern',
+                             datetime_tz = 'UTC',
                              site_code_col = 'site',
                              data_cols =  c('q' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -225,9 +218,9 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    unlink(zipped_files, recursive = FALSE)
-
-    unlink('data/czo/calhoun/raw/precipitation__4680/sitename_NA/Stream/Stream 2/', recursive = FALSE)
+    unlink(file.path(rawdir, 'Rainfall'), recursive = TRUE)
+    unlink(file.path(rawdir, 'Stream'), recursive = TRUE)
+    unlink(file.path(rawdir, 'calhoun-hydrology-gps.xlsx'))
 
     return(d)
 }
@@ -235,7 +228,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_2851 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,

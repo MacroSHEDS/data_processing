@@ -4,6 +4,11 @@
 #. handle_errors
 process_0_4341 <- function(set_details, network, domain){
 
+    if(! grepl('^Daily', set_details$component)){
+        loginfo('This component is blocklisted', logger = logger_module)
+        return(generate_blocklist_indicator())
+    }
+
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
                          n = network,
@@ -247,7 +252,7 @@ process_0_4020 <- function(set_details, network, domain){
 process_1_4341 <- function(network, domain, prodname_ms, site_code,
                            components){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HF00401.csv',
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/Daily streamflow summaries.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
@@ -256,15 +261,15 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c(DATE = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
-                         data_cols =  c(INST_Q = 'discharge'),
+                         data_cols =  c(MEAN_Q = 'discharge'),
                          data_col_pattern = '#V#',
                          alt_site_code = list('GSMACK' = 'GSWSMA'),
                          is_sensor = TRUE,
                          set_to_NA = '',
-                         summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
+                         summary_flagcols = 'ESTCODE')
 
     # In 1995 HJ Andrews put a fish ladder around the GSWSMA (it is also gauged
     # called GSWSMF). A new measurment called GSWSMC is a sum of GSWSMF and
@@ -289,15 +294,15 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(
         d,
         varflag_col_pattern = NA,
-        summary_flags_clean = list(ESTCODE = c('A', 'E'),
-                                   EVENT_CODE = c(NA, 'WEATHR')),
-        summary_flags_dirty = list(ESTCODE = c('Q', 'S', 'P'),
-                                   EVENT_CODE = c('INSREM', 'MAINTE'))
+        summary_flags_clean = list(ESTCODE = c('A', 'E')),
+                                   # EVENT_CODE = c(NA, 'WEATHR')),
+        summary_flags_to_drop = list(ESTCODE = 'sentinel')
+        # summary_flags_dirty = list(ESTCODE = c('Q', 'S', 'P'))
+                                   # EVENT_CODE = c('INSREM', 'MAINTE'))
     )
 
     #convert cfs to liters/s
-    d <- d %>%
-        mutate(val = val * 28.317)
+    d <- mutate(d, val = val * 28.317)
 
     return(d)
 }
