@@ -372,45 +372,22 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    #stream_chem: uv absorbance name 250 anywhere?, still gotta run FLNT
-    #   need separate detlim entries for FLNT? see untitled3
-    #nitrate has sensor position issue (BLWA)
     #par immediate error
-    #temperature dupe error (BIGC)
-    #quality: specificCond_up not found for BLUE
-        #also, what was i checking this for?
-    2024-04-04 16:03:27.644354 INFO:ms.neon.neon.module:Munging ARIK stream_quality__DP1.20288.001
-    [1] "stacking zips for stream_quality__DP1.20288.001"
-    [1] "variable sample durations: 0: 5613563, 60: 2084677"
-    2024-04-04 16:07:52.873265 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/ARIK)
-    2024-04-04 16:07:53.80366 WARNING::Derived product not yet tracked; not updating derive tracker.
-    2024-04-04 16:07:53.882457 INFO:ms.neon.neon.module:Munging BIGC stream_quality__DP1.20288.001
-    [1] "stacking zips for stream_quality__DP1.20288.001"
-    [1] "variable sample durations: 0: 4306208, 13: 3, 60: 1099549"
-    2024-04-04 16:10:53.906313 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/BIGC)
-    2024-04-04 16:10:53.954896 WARNING::Derived product not yet tracked; not updating derive tracker.
-    2024-04-04 16:10:54.03541 INFO:ms.neon.neon.module:Munging BLDE stream_quality__DP1.20288.001
-    [1] "stacking zips for stream_quality__DP1.20288.001"
-    [1] "variable sample durations: 0: 4694588, 28: 1, 58: 107, 60: 319384"
-    2024-04-04 16:13:41.38417 INFO:ms.neon.neon.module:munged stream_quality__DP1.20288.001 (neon/neon/BLDE)
-    2024-04-04 16:13:41.432753 WARNING::Derived product not yet tracked; not updating derive tracker.
-    2024-04-04 16:13:41.582626 INFO:ms.neon.neon.module:Munging BLUE stream_quality__DP1.20288.001
-    [1] "stacking zips for stream_quality__DP1.20288.001"
-    [1] "variable sample durations: 0: 1919045, 60: 619675"
-    #pchem: some crazy error crashed the whole thing after most of pchem completed.
+    #quality: unknown position
+    #   need to invalidate munge for HOPB and KING
 
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
-             # prodname_filter = c('stream_nitrate'),
-             # prodname_filter = c('stream_PAR'),
-             # prodname_filter = c('stream_temperature'),
+             # prodname_filter = c('stream_chemistry'),   S
+             # prodname_filter = c('stream_nitrate'),     S
+             prodname_filter = c('stream_PAR'),
+             # prodname_filter = c('stream_temperature'), S
              # prodname_filter = c('stream_gases'),       S
-             # prodname_filter = c('stream_quality'),
+             # prodname_filter = c('stream_quality'),     S
              # prodname_filter = c('precipitation'),      S
              # prodname_filter = c('discharge'),          S
-             # prodname_filter = c('isotopes'), #not tried yet
+             # prodname_filter = c('isotopes'),           S
              # prodname_filter = c('precip_isotopes'),    S
-             # prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('precip_chemistry'),   S
              # prodname_filter = c('ws_boundary'),        S
              domain = domain)
 

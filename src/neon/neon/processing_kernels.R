@@ -362,6 +362,8 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                     component){
 
+    # prodname_ms = 'stream_chemistry__DP1.20093.001'
+    # site_code = 'ARIK'
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
@@ -503,7 +505,6 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                  'NH4 - N' = 'NH4_N',
                                  'specificConductance' = 'spCond',
                                  'UV Absorbance (280 nm)' = 'abs280',
-                                 'UV Absorbance (250 nm)' = 'abs250',
                                  'UV Absorbance (254 nm)' = 'abs254',
                                  'SO4', 'TDN', 'Ca', 'TDP', 'DOC', 'TN', 'Mg',
                                  'Mn', 'TPN', 'DIC', 'TOC', 'Na', 'TSS', 'Cl',

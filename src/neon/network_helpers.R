@@ -256,12 +256,16 @@ determine_upstream_downstream <- function(d_){
 
     #weird encounters in discharge:
     #   131 - upstream sensor, littoral
+    #   112 - staff gauge associated with downstream sensor ("overhang" at BIGC temperature)
     #   110 - staff gauge at ? location
+    #   103 - buoys (is BLWA the only one?)
 
     third_digit <- substr(d_$horizontalPosition, 3, 3)
 
     if(any(! third_digit %in% as.character(0:2))){
-        stop('unknown position encountered')
+        if(! all(d_$horizontalPosition == '103')){
+            stop('unknown position encountered')
+        }
     }
 
     if(any(third_digit == '0')){
@@ -388,6 +392,65 @@ write_neon_variablekey = function(raw_neonfile_dir, dest){
     return(varkey)
 }
 
+neon_detlim_handler_1 <- function(dd){
+
+    #for overlaps that do extend to the present, the later
+    #start-date should be considered an end-date for the earlier-starting range
+
+    dd <- dd %>%
+        # filter(variable_original == 'TDN') %>%
+        # select(start_date, end_date, detection_limit_original) %>%
+        group_by(variable_original, end_date) %>%
+        arrange(start_date) %>%
+        mutate(end_date = if_else(is.na(end_date) & lead(is.na(end_date),
+                                                         default = TRUE),
+                                  lead(start_date),
+                                  end_date)) %>%
+        ungroup()
+
+    return(dd)
+}
+
+neon_detlim_handler_2 <- function(dd){
+
+    #consolidate contiguous date ranges for which the detlim doesn't change
+
+    dd <- dd %>%
+        group_by(variable_original, unit_original, detection_limit_original) %>%
+        summarize(
+            start_date = min(start_date),
+            end_date = max(end_date, na.rm = FALSE),
+            across(-any_of(c('start_date', 'end_date')),
+                   first)
+        ) %>%
+        ungroup() %>%
+        arrange(variable_original, start_date)
+
+    return(dd)
+}
+
+neon_detlim_handler_3 <- function(dd){
+
+    #assume newer ranges overwrite older ones. This may still correct a few true overlaps,
+    #but every end_date needs to be reduced by 1 day, and it primarily fixes that
+
+    dd <- dd %>%
+        mutate(start_date = as.Date(start_date),
+               end_date = as.Date(end_date)) %>%
+        # filter(variable_original == 'DOC') %>%
+        # select(start_date, end_date, detection_limit_original) %>%
+        group_by(variable_original) %>%
+        arrange(start_date) %>%
+        mutate(overlapped = dplyr::lead(start_date) <= end_date) %>%
+        mutate(end_date = if_else(overlapped,
+                                  dplyr::lead(start_date) - 1,
+                                  end_date)) %>%
+        ungroup() %>%
+        select(-overlapped)
+
+    return(dd)
+}
+
 update_neon_detlims <- function(neon_dls, set){
 
     #set is one of "chem", "gas",
@@ -482,46 +545,10 @@ update_neon_detlims <- function(neon_dls, set){
         stop('completely overlapped detection limit timerange detected')
     }
 
-    #now, for overlaps that do extend to the present, the later
-    #start-date should be considered an end-date for the earlier-starting range
-    detlim_pre <- detlim_pre %>%
-        # filter(analyte == 'TDN') %>%
-        # select(start_date, end_date, detection_limit_original) %>%
-        group_by(analyte, end_date) %>%
-        arrange(start_date) %>%
-        mutate(end_date = if_else(is.na(end_date) & lead(is.na(end_date),
-                                                         default = TRUE),
-                                  lead(start_date),
-                                  end_date)) %>%
-        ungroup()
-
-    #consolidate contiguous date ranges for which the detlim doesn't change
-    detlim_pre <- detlim_pre %>%
-        group_by(analyte, unit, detection_limit_original) %>%
-        summarize(
-            start_date = min(start_date),
-            end_date = max(end_date, na.rm = FALSE),
-            across(-any_of(c('start_date', 'end_date')),
-                   first)
-        ) %>%
-        ungroup() %>%
-        arrange(analyte, start_date)
-
-    #assume newer ranges overwrite older ones. This may still correct a few true overlaps,
-    #but every end_date needs to be reduced by 1 day, and it primarily fixes that
-    detlim_pre <- detlim_pre %>%
-        mutate(start_date = as.Date(start_date),
-               end_date = as.Date(end_date)) %>%
-        # filter(variable_original == 'DOC') %>%
-        # select(start_date, end_date, detection_limit_original) %>%
-        group_by(analyte) %>%
-        arrange(start_date) %>%
-        mutate(overlapped = dplyr::lead(start_date) <= end_date) %>%
-        mutate(end_date = if_else(overlapped,
-                                  dplyr::lead(start_date) - 1,
-                                  end_date)) %>%
-        ungroup() %>%
-        select(-overlapped)
+    #see func defs for explanations
+    detlim_pre <- neon_detlim_handler_1(detlim_pre)
+    detlim_pre <- neon_detlim_handler_2(detlim_pre)
+    detlim_pre <- neon_detlim_handler_3(detlim_pre)
 
     #format for gsheet
     detlims <- standardize_detection_limits(
@@ -531,17 +558,36 @@ update_neon_detlims <- function(neon_dls, set){
     ) %>%
         mutate(added_programmatically = TRUE)
 
+    browser()
     detlims_update <- anti_join(
         detlims, domain_detection_limits,
-        by = c('domain', 'prodcode', 'variable_converted', 'variable_original',
-               'detection_limit_original', 'start_date', 'end_date')
+        by = c('domain', 'prodcode', 'variable_converted',
+               'start_date', 'end_date')
     )
 
     if(nrow(detlims_update)){
-        ms_write_confdata(detlims_update,
-                          which_dataset = 'domain_detection_limits',
-                          to_where = 'remote',
-                          overwrite = FALSE) #append
+
+        #assimilate new detection limit records. because they get consolidated in
+        #handler 2, they will be detected again the next time through. but that's
+        #only once a year, so it's all good.
+        detlims_update <- domain_detection_limits %>%
+            filter(domain == 'neon') %>%
+            bind_rows(detlims_update)
+        detlims_update <- neon_detlim_handler_1(detlims_update)
+        detlims_update <- neon_detlim_handler_2(detlims_update)
+        detlims_update <- neon_detlim_handler_3(detlims_update)
+
+        domain_detection_limits <-
+            domain_detection_limits[domain_detection_limits$domain != 'neon', ]
+
+        detlims_update <- bind_rows(domain_detection_limits, detlims_update)
+
+        #do this once more, for molecular conversions and convenient update
+        catch <- standardize_detection_limits(
+            dls = detlims_update,
+            vs = ms_vars,
+            update_on_gdrive = TRUE
+        )
     }
 
     return(invisible())
@@ -553,8 +599,14 @@ neon_average_start_end_times <- function(d_){
     #the interval is specified by two columns: startDateTime and endDateTime.
     #This produces a single "datetime" column that is the midpoint of those two.
 
+    #it seems likely, but not certain, from neon documentation that the 20
+    #measurements comprising a "burst" are all taken near the end of a 15-minute
+    #period (or whatever--sometimes it's 5 or 240 minutes). if that's true
+    #we should just be using the endDateTime. But then why is a startDateTime
+    #provided?
+
     if(length(unique(d_$endDateTime - d_$startDateTime)) > 1){
-        vdur <- table(d_$endDateTime - d_$startDateTime)
+        vdur <- table(difftime(d_$endDateTime, d_$startDateTime, units = 'mins'))
         print(paste('variable sample durations:',
                     paste0(names(vdur), ': ', unname(vdur),
                           collapse = ', ')))
@@ -580,15 +632,9 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
     #will borrow the corresponding value of relevant_col(s) from S1, if
     #available, and flag it as dirty
 
-    updown <- determine_upstream_downstream(d_)
+    d_$updown <- determine_upstream_downstream(d_)
 
-    if(any(duplicated(d_$datetime[updown == 'down']))){
-        stop('gotta deal with dupes')
-    }
-    if(any(duplicated(d_$datetime[updown == 'up']))){
-        stop('gotta deal with dupes')
-    }
-
+    #get names of flagcols, etc.
     flagcol <- grep('inalQF$', colnames(d_), value = TRUE)
 
     if(length(relevant_cols) > 1){
@@ -607,16 +653,54 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
         qf_cols <- 'finalQF'
     }
 
+    #simplify cols; missing flag values are presumed dirty
     d_ <- d_ %>%
-        select(datetime, siteID,
+        select(datetime, updown,
                all_of(c(relevant_cols, qf_cols))) %>%
-        mutate(updown = !!updown,
-               across(ends_with('inalQF'),
+        mutate(across(ends_with('inalQF'),
                       ~if_else(is.na(.), 1, .)))
 
-    setDT(d_)
+    #handle dupes (sometimes the full record is split between two horizontal positions)
+    updupes <- any(duplicated(d_$datetime[d_$updown == 'up']))
+    downdupes <- any(duplicated(d_$datetime[d_$updown == 'down']))
+    if(updupes || downdupes){
+
+        custom_mean <- function(x){
+            #duplicated records are rare, but actual duplicated
+            #data values in those records are super rare. this
+            #is mostly just simplifying c(NA, <numeric>) situations.
+            if(all(is.na(x))){
+                return(NA_real_)
+            }
+            return(mean(x, na.rm = TRUE))
+        }
+
+        #in dplyr-speak, here's what's happening below, even more arcanely
+        #than the usual for data.table
+        # d_ %>%
+        #     group_by(updown, datetime) %>%
+        #     summarize(across(any_of(relevant_cols),
+        #                      custom_mean),
+        #               across(any_of(flagcol),
+        #                      max)) %>%
+        #     ungroup()
+
+        setDT(d_)
+        setkey(d_, updown, datetime)
+
+        #as of 20240408 there's a 3-year outstanding issue in data.table to add
+        #.SDcols2, which would simplify this syntax a bit
+        #https://github.com/Rdatatable/data.table/issues/5020
+        d_ <- d_[, .j, by = .(updown, datetime),
+           env = list(.j = c(
+               lapply(lapply(setNames(nm = relevant_cols), as.name), function(v) call('custom_mean', v)),
+               lapply(lapply(setNames(nm = flagcol), as.name), function(v) call('max', v))
+           ))]
+    }
 
     #aggregate by daily mean; if any qc val is 1, the whole day inherits that
+    setDT(d_)
+
     d_[, date := as.IDate(datetime)]
 
     d_agg <- d_[, lapply(.SD, mean, na.rm = TRUE),
@@ -640,6 +724,8 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
         down_col <- paste0(col, '_down')
         up_col <- paste0(col, '_up')
+
+        if(! all(c(up_col, down_col) %in% colnames(d_))) next
 
         if(length(relevant_cols) > 1){
             down_qf_col <- paste0(col, 'FinalQF_down')
@@ -667,7 +753,8 @@ neon_borrow_from_upstream <- function(d_, relevant_cols){
 
     d_[is.na(d_)] <- NA_real_
     d_$siteID <- site_
-    d_ <- as_tibble(d_)
+    d_ <- as_tibble(d_) %>%
+        rename_with(~sub('_(?:up|down)$', '', .))
 
     if(any(duplicated(d_$date))){
         stop('dupes introduced')
