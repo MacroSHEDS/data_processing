@@ -8516,8 +8516,12 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
         (! is_hydroshare && ! is_edi)
 
     if(is.character(murl) && any(manual_prov_check)){
+
         logwarn(msg = paste('manually verify provenance for', prodname_ms),
                 logger = logger_module)
+
+        update_prov_dt(dt = Sys.time())
+
         return()
     }
     if(is.character(murl) && grepl('MacroSheds drive', murl)){
@@ -8527,7 +8531,7 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
     }
 
     dt_web_format <- paste(format(download_dt, '%Y-%m-%d %H:%M:%S'), 'UTC')
-    update_provenance(dt_web_format)
+    update_provenance(murl, dt_web_format)
 
     return(invisible())
 }
@@ -10390,8 +10394,9 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step){
                        shapefile = FALSE,
                        link_to_portal = FALSE)
 
-         update_prov_usgs_dt(sitecd = unname(sites[i]),
-                             dt = Sys.time())
+         update_prov_dt(sitecd = unname(sites[i]),
+                        dt = Sys.time(),
+                        usgs = TRUE)
     }
 
     return()
@@ -17465,16 +17470,23 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
     return(apa_citation)
 }
 
-update_prov_usgs_dt <- function(sitecd, dt){
+update_prov_dt <- function(sitecd = NULL, dt, usgs = FALSE){
 
-    #a USGS site code
+    #a USGS site code if usgs = TRUE, or leave empty if not
     #dt: a datetime object
+
+    if(usgs){
+        if(is.null(sitecd)) stop('sitecd must be supplied if usgs = TRUE')
+        site_match <- grepl(sitecd, site_doi_license$link)
+    } else {
+        site_match <- TRUE
+    }
 
     rowind <- which(
         site_doi_license$network == network &
             site_doi_license$domain == domain &
             site_doi_license$macrosheds_prodcode == prodcode_from_prodname_ms(prodname_ms) &
-            grepl(sitecd, site_doi_license$link)
+            site_match
     )
 
     if(length(rowind) == 0) stop('provenance rows not yet entered?')

@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'trout_lake') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'loch_vale') #uncomment, run, recomment
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -343,7 +343,7 @@ for(dmnrow in 1:nrow(network_domain)){
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -396,7 +396,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('discharge'),
+              prodname_filter = c('discharge'),
               domain = domain)
 
     if(domain != 'mcmurdo'){

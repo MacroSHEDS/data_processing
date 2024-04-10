@@ -59,7 +59,6 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
 }
 
 get_usgs_data <-  function(sets, silent=TRUE){
-    # sets <- new_sets; tracker <- held_data
 
     if(nrow(sets) == 0) return()
 
@@ -76,7 +75,6 @@ get_usgs_data <-  function(sets, silent=TRUE){
         processing_func = get(paste0('process_0_', str_split_fixed(s$prodname_ms, '__', n = Inf)[1,2]))
         result = do.call(processing_func,
                          args=list(set_details=s, network=network, domain=domain))
-
 
         new_status <- evaluate_result_status(result)
 
