@@ -16557,10 +16557,14 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     #are allowed to be carried through the ms processing pipeline as-is
     dlout_b <- filter(dls,
                       variable_original %in% normally_converted_molecules,
-                      ! regenerate_these) %>%
-        core_(keep_molecular = normally_converted_molecules) %>%
-        mutate(added_programmatically = TRUE,
-               variable_converted = variable_original)
+                      ! regenerate_these)
+
+    if(nrow(dlout_b)){
+        dlout_b <- dlout_b %>%
+            core_(keep_molecular = normally_converted_molecules) %>%
+            mutate(added_programmatically = TRUE,
+                   variable_converted = variable_original)
+    }
 
     dls <- bind_rows(dlout_a, dlout_b) %>%
         filter(! is.na(detection_limit_converted)) %>%
@@ -16579,6 +16583,15 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     }
 
     if(update_on_gdrive){
+
+        ndls <- nrow(domain_detection_limits)
+        nothing_to_do <- sm(nrow(semi_join(domain_detection_limits, dls)) == ndls)
+        if(nothing_to_do) return(dls)
+        if(nrow(dls) > ndls){
+            message('this must be the case that is causing records to drop from the dl gsheet. what is going on?')
+            browser()
+        }
+
         catch <- expo_backoff(
             expr = {
                 sm(googlesheets4::write_sheet(data = dls,

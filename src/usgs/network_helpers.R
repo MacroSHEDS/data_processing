@@ -3,12 +3,14 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
     #must return a tibble with a "needed" column, which indicates which new
     #datasets need to be retrieved
 
-    retrieval_tracker = tracker[[prodname_ms]][[site_code]]$retrieve
+    retrieval_tracker <- tracker[[prodname_ms]][[site_code]]$retrieve
 
     retrieval_tracker <- retrieval_tracker %>%
         mutate(needed = ifelse(held_version == -1, TRUE, FALSE))
 
-    retrieval_tracker <- full_join(retrieval_tracker, latest_vsn, by = 'component')
+    retrieval_tracker <- full_join(retrieval_tracker,
+                                   latest_vsn,
+                                   by = 'component')
 
     file_path <- glue('data/usgs/usgs/raw/{p}/{s}/{c}.feather',
                       p = prodname_ms,
@@ -33,7 +35,6 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
                                         last_record = last_record)
 
             all_com_last_records <- rbind(all_com_last_records, component_records)
-
         }
     }
 
@@ -41,12 +42,22 @@ populate_set_details <- function(tracker, prodname_ms, latest_vsn, site_code){
 
         retrieval_tracker_ <- retrieval_tracker %>%
             filter(! needed) %>%
-            left_join(all_com_last_records, by = 'component') %>%
+            left_join(all_com_last_records,
+                      by = 'component',
+                      relationship = 'many-to-many') %>% #see below
             mutate(needed = ifelse(ymd(end_date) > last_record, TRUE, FALSE))
 
         retrieval_tracker <- retrieval_tracker %>%
             filter(needed) %>%
             rbind(retrieval_tracker_)
+
+        #many-to-many-relationships encountered because dv (daily values) and
+        #uv (unit values, or real-time data) are both present in the retrieval
+        #tracker, which can double the length of the "l" loop above relative to
+        #the number of actual files. So the same file might be read twice when
+        #getting last_record. Rather than attack the source, i'm just removing
+        #the resulting duplications here:
+        retrieval_tracker <- distinct(retrieval_tracker)
     }
 
 

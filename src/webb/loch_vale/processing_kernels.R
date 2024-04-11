@@ -269,7 +269,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component){
 
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
@@ -287,7 +287,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,

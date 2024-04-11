@@ -373,16 +373,9 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
-             # prodname_filter = c('stream_nitrate'),
-             # prodname_filter = c('stream_PAR'),
-             # prodname_filter = c('stream_temperature'),
-             # prodname_filter = c('stream_gases'),
-             # prodname_filter = c('stream_quality'),
+             prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('precipitation'),
-             prodname_filter = c('discharge'),
-             # prodname_filter = c('isotopes'),
-             # prodname_filter = c('precip_isotopes'),
+             # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('ws_boundary'),
              domain = domain)

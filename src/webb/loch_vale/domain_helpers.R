@@ -1,5 +1,5 @@
 
-#next time we encounter wqp data, copy the approch from the loch_vale kernels.
+#next time we encounter wqp data, copy the approach from the loch_vale kernels.
 #collect all sites' available params together and compare to
 #src/webb/loch_vale/wqp_codes_previously_seen.csv. anything new (not in that csv)
 #needs to be carefully evaluated and prioritized in the case of many-to-one,
@@ -102,11 +102,13 @@ process_wqp_chem <- function(rawfile, ms_site_code){
                ActivityStartDateTime,
                ms_varcode,
                ms_status_,
-               site_code)
+               site_code) %>%
+        filter(! is.na(ActivityStartDateTime))
 
     if(any(is.na(d$ms_status_))) stop('oi')
-    z = select(d, ResultMeasureValue) %>% mutate(ResultMeasureValue = sub('<', '', ResultMeasureValue))
-    if(length(get_nonnumerics(z))) stop('codes in data column')
+    z <- select(d, ResultMeasureValue) %>% mutate(ResultMeasureValue = sub('<', '', ResultMeasureValue))
+    nonnum <- get_nonnumerics(z)
+    if(length(na.omit(nonnum))) stop('codes in data column')
 
     d_wide <- pivot_wider(d,
                           names_from = ms_varcode,
@@ -120,6 +122,7 @@ process_wqp_chem <- function(rawfile, ms_site_code){
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          convert_to_BDL_flag = '<#*#',
+                         keep_bdl_values = TRUE,
                          summary_flagcols = 'ms_status_')
 
     d <- ms_cast_and_reflag(d,
@@ -139,7 +142,22 @@ process_wqp_chem <- function(rawfile, ms_site_code){
 
     d <- filter(d, ! drop_var_prefix(var) %in% redundants)
 
-    #handle necessary conversions
+    #record detection limits
+    bdl_vars <- d %>%
+        mutate(var = drop_var_prefix(var)) %>%
+        filter(ms_status == 2) %>%
+        distinct(var) %>%
+        pull()
+
+    detlim_vars <- wqp_codes %>%
+        filter(param_code %in% pcodes_present,
+               ms_varcode %in% bdl_vars) %>%
+        select(ms_varcode, unit_from = unit) %>%
+        deframe()
+
+    update_detlims(d, detlim_vars)
+
+    #determine necessary conversions
     required_conversions <- wqp_codes %>%
         filter(param_code %in% pcodes_present) %>%
         left_join(ms_vars,
