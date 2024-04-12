@@ -950,7 +950,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                site_var_unit == 'magnesium_ppb' ~ 'Mg',
                                site_var_unit == 'molybdenum_ppb' ~ 'Mo',
                                site_var_unit == 'nickel_ppb' ~ 'Ni',
-                               site_var_unit == 'phosphorus_ppb' ~ 'P',
+                               site_var_unit == 'phosphorus_ppb' ~ 'TP',
                                site_var_unit == 'potassium_ppb' ~ 'K',
                                site_var_unit == 'rubidium_ppb' ~ 'Rb',
                                site_var_unit == 'selenium_ppb' ~ 'Se',

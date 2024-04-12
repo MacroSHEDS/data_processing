@@ -365,7 +365,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                               K_mgL = 'K',
                                               Mg_mgL = 'Mg',
                                               Na_mgL = 'Na',
-                                              P_mgL = 'P',
+                                              P_mgL = 'TP',
                                               DOC_mgL = 'DOC',
                                               Br_mgL = 'Br',
                                               SO4_mgL = 'SO4',

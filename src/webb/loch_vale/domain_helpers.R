@@ -9,10 +9,22 @@
 #(2024-02-19), we do not distinguish dissolved/particulate nutrients, except for
 #those that can be expressed as acronyms, e.g. "TDN", "POC"
 
+#here are all the WQP parameter codes:
+# vv = as_tibble(dataRetrieval::parameterCdFile)
+
+#and these are the ones we're using
 # write_csv(wqp_codes, 'src/webb/loch_vale/wqp_mappings.csv', quote = 'all')
 wqp_codes <- read_csv('src/webb/loch_vale/wqp_mappings.csv') %>%
     # arrange(ms_varcode, priority)
     arrange(param_code)
+
+#NOTE: to map from dataRetrieval-speak to macrosheds-speak:
+#"suspended sediment" = "particulate"
+#"unfiltered" = "total"
+#"filtered" = "dissolved"
+#you'll sometimes see the macrosheds terms in the WQP definitions too. i believe
+#there's some redundancy in their naming scheme
+
 
 retrieve_wqp_chem <- function(nwis_site_code, siteparams, set_details){
 

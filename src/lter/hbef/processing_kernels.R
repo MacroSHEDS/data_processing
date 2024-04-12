@@ -230,17 +230,27 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
                                               'w9' = c('9', 'W9')),
                          data_cols = c('pH', 'DIC', 'spCond', 'temp',
                                        'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
-                                       'Na', 'TMAl', 'OMAl', 'Al_ICP', 'Al_ferron',
+                                       'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
                                        'NH4', 'SO4', 'NO3', 'Cl',
                                        'PO4', 'DOC', 'TDN', 'DON',
                                        'SiO2', 'Mn', 'Fe', 'F',
                                        'cationCharge', 'anionCharge',
-                                       'theoryCond', 'ionError', 'ionBalance',
-                                       'pHmetrohm'),
+                                       'ionBalance', 'pHmetrohm'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = -999.9, #also -3, but that can be a real value in other columns. will get dropped in postprocessing
                          summary_flagcols = 'fieldCode')
+
+    #one day we may track methods more closely, but for now (20240412) hbef
+    #is the only domain distinguishing among pH and ANC methods, so consolidate
+    d <- d %>%
+        mutate(`GN_ANC__|dat` = if_else(is.na(`GN_ANCMet__|dat`),
+                                        `GN_ANC960__|dat`,
+                                        `GN_ANCMet__|dat`),
+               `GN_pH__|dat` = if_else(is.na(`GN_pHmetrohm__|dat`),
+                                       `GN_pH__|dat`,
+                                       `GN_pHmetrohm__|dat`)) %>%
+        select(-`GN_ANCMet__|dat`, -`GN_ANC960__|dat`, -`GN_pHmetrohm__|dat`)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_to_drop = list(fieldCode = 9999), #not a real code

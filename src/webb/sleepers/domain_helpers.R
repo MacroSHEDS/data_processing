@@ -30,8 +30,8 @@ sleepers_stream_chem_var_info <- list(
     "ANC.ueq.L"      = c('ueq/l', 'eq/l', 'ANC'),
     "UV254.cm.1"    = c('AU/cm', 'AU/cm', 'abs254'),
     "SUVA.L.mg.m.1" = c('L/mgm', 'L/mgm', 'SUVA'),
-    "Alo.ug.L"       = c('ug/L', 'mg/L', 'Al_om'),
-    "Alm.ug.L"       = c('ug/L', 'mg/L', 'Al_m')
+    "Alo.ug.L"       = c('ug/L', 'mg/L', 'OMAl'),
+    "Alm.ug.L"       = c('ug/L', 'mg/L', 'TMAl')
 )
 
 update_sleepers_detlims <- function(d,

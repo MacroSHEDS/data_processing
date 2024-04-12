@@ -480,7 +480,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
                            'Na23' = 'Na', 'K39' = 'K', 'Sr88' = 'Sr', 'B11' = 'B',
                            'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2', 'Br.' = 'Br',
                            'NO3.' = 'NO3', 'SO4.' = 'SO4', 'PO4.' = 'PO4',
-                           'Zr90' = 'Zr', 'Si', 'P31' = 'P', 'Ortho.P' = 'PO4_P',
+                           'Zr90' = 'Zr', 'Si', 'P31' = 'TP', 'Ortho.P' = 'orthophosphate_P',
                            'Cd111' = 'Cd',
                            'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
                            'Al', 'Ba', 'Hg202' = 'Hg')
@@ -595,7 +595,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                            'Tb159' = 'Tb', 'Dy164' = 'Dy', 'Ho165' = 'Ho',
                            'Er166' = 'Er', 'Tm169' = 'Tm', 'Yb174' = 'Yb',
                            'Lu175' = 'Lu', 'Pb208' = 'Pb', 'U238' = 'U',
-                           'NH4.N' = 'NH4_N', 'Ortho.P' = 'PO4_P',
+                           'NH4.N' = 'NH4_N', 'Ortho.P' = 'orthophosphate_P',
                            'SUVA254' = 'abs254', 'SUVA280' = 'abs280')
 
     names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
@@ -1197,7 +1197,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
     col_names_to_vars <- c('pH', 'EC' = 'spCond', 'Cond' = 'spCond', 'TIC', 'TOC', 'TN', 'F', 'Cl',
                            'NO2', 'Br', 'NO3', 'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
                            'Na23' = 'Na', 'Mg24' = 'Mg', 'Al27' = 'Al', 'Si28' = 'Si',
-                           'P31' = 'P', 'K39' = 'K', 'Ca40' = 'Ca', 'Ti49',
+                           'P31' = 'TP', 'K39' = 'K', 'Ca40' = 'Ca', 'Ti49',
                            'V52' = 'V', 'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
                            'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
                            'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',

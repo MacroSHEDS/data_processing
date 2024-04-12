@@ -558,7 +558,6 @@ update_neon_detlims <- function(neon_dls, set){
     ) %>%
         mutate(added_programmatically = TRUE)
 
-    browser()
     detlims_update <- anti_join(
         detlims, domain_detection_limits,
         by = c('domain', 'prodcode', 'variable_converted',
