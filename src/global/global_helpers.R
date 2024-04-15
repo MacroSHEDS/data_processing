@@ -1429,8 +1429,10 @@ resolve_datetime <- function(d,
         dt_tb$P[dt_tb$P == ''] <- 'AM'
     }
 
-    dt_tb <- tryCatch({
-        dt_tb %>%
+    #parse into datetimes
+    handler <- function(xx){
+
+        xx %>%
             tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
                          everything(),
                          sep = ' ',
@@ -1442,37 +1444,24 @@ resolve_datetime <- function(d,
                 tz = datetime_tz
             ) %>%
                 with_tz(tz = 'UTC'))
+    }
 
+    dt_tb_ <- sw(handler(dt_tb))
+
+    tryCatch({
+        handler(dt_tb)
     }, warning = function(w){
 
-        if(grepl('failed to parse', names(last.warning))){
+        if(grepl('failed to parse', w$message)){
 
-            dt_tb_copy <- dt_tb
-
-            #this can't be the only way!! but it returns NULL if i don't repeat the code here.
-            dt_tb <- sw(dt_tb %>%
-                tidyr::unite(col = 'datetime___', #in case the original column is named "datetime"
-                             everything(),
-                             sep = ' ',
-                             remove = TRUE) %>%
-                mutate(datetime___ = as_datetime(
-                    datetime___,
-                    format = paste(datetime_formats_split[dt_col_order],
-                                   collapse = ' '),
-                    tz = datetime_tz
-                ) %>%
-                    with_tz(tz = 'UTC')))
-
-            print(dt_tb_copy[is.na(dt_tb), ])
-            w$message = paste(w$message, ' MacroSheds corollary: this often means timezone is misspecified! are the error dates above in march/april/nov?')
-            warning(w)
-
-            return(dt_tb)
+            print(dt_tb[is.na(dt_tb_), ])
+            new_message <- paste(w$message, ' MacroSheds corollary: this often means timezone is misspecified! are the error dates above in march/april/nov?')
+            message(new_message)
         }
     })
 
     d <- d %>%
-        bind_cols(dt_tb) %>%
+        bind_cols(dt_tb_) %>%
         select(-one_of(datetime_colnames), datetime = datetime___) %>%
         relocate(datetime)
 
@@ -5686,6 +5675,7 @@ convert_unit <- function(x, input_unit, output_unit){
         print(input_unit)
         print(output_unit)
         print(new_top_unit)
+        print('has a variable code been changed in the variables sheet and not in the DL sheet?')
       }
     )
   # end debug

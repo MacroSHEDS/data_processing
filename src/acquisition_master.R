@@ -340,7 +340,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
@@ -373,9 +373,9 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_munge(network = network,
-             prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('precipitation'),
-             # prodname_filter = c('discharge'),
+             prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('ws_boundary'),
              domain = domain)
