@@ -172,9 +172,9 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=OBSOLETE
 #. handle_errors
-process_0_VERSIONLESS004 <- function(set_details, network, domain) {
+process_0_VERSIONLESS004 <- function(set_details, network, domain){
 
     loginfo(glue('Nothing to do for {p}',
                  p = set_details$prodname_ms),

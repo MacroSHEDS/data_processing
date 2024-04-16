@@ -161,14 +161,31 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                                 'rain_gauge9',
                                 'rain_gauge11')
 
-            site <- readxl::read_xlsx(rain_files[p]) %>%
+            site <- sm(readxl::read_xlsx(rain_files[p]) %>%
                 rename(date = 1,
-                      rain = 2) %>%
-                mutate(site = !!site_code) %>%
-                select(date, rain, site)
+                       rain = 2) %>%
+                mutate(site = !!site_code,
+                       rain = rain * 25.4) %>% #in to mm
+                select(date, rain, site))
 
             all_sites <- rbind(all_sites, site)
         }
+
+        #can't determine gauge locations. there are two probable locations,
+        #the current Research Area 1, which is the modern precip gauge used in
+        #kernel 6421 above, and "ridge43", which is between two of the research
+        #watersheds. see srv/dev/misc/calhoun_precip_gauge_location_forensics.R
+        #for maps. just going to average the two precip numbers.
+        all_sites <- pivot_wider(all_sites, names_from = site, values_from = rain)
+        all_sites %>%
+            mutate(date = as.Date(date)) %>%
+            group_by(date) %>%
+            summarize(rain_gauge11 = sum(rain_gauge11, na.rm = TRUE),
+                      rain_gauge9 = sum(rain_gauge9, na.rm = TRUE)) %>%
+            ungroup() %>%
+            rowwise() %>%
+            mutate(rain = mean(c(rain_gauge11, rain_gauge9), na.rm = TRUE)) %>%
+            ungroup()
 
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                              datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
@@ -192,12 +209,12 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                               site_raw == 'Stream 3' ~ 'weir_3',
                               site_raw == 'Stream 4' ~ 'weir_4')
 
-            site <- readxl::read_xlsx(q_files[p],
-                                      sheet = 'Sheet2') %>%
+            site <- sm(readxl::read_xlsx(q_files[p],
+                                         sheet = 'Sheet2') %>%
                 rename(date = 1,
                        q = 3) %>%
                 mutate(site = !!site_n) %>%
-                select(date, q, site)
+                select(date, q, site))
 
             all_sites <- rbind(all_sites, site)
         }

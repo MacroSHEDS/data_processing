@@ -165,7 +165,8 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date_time' = '%m/%d/%y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         # datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('DISCHARGE.m.3.10..3..s' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -195,7 +196,7 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
 #discharge: STATUS=READY
 #. handle_errors
 process_1_2919 <- function(network, domain, prodname_ms, site_code,
-                           components) {
+                           components){
 
     csv_file <- grep('.csv', components, value = TRUE)
     metadata_file <- grep('.txt', components, value = TRUE)
@@ -233,7 +234,7 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date_time' = '%m/%d/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('DISCHARGE.m.3.10..3..s' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -262,7 +263,7 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2783 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -277,16 +278,27 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                               'BT_SW_0'))
 
     d <- d %>%
-        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
-        mutate(Si = as.character(Si))
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.) * 28.0855) / 1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                           Si..umol.L.,
+                           Si.ICP..ppm.),
+               Si.CTS = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                               Si..umol.L..CTS,
+                               Si.ICP..ppm..CTS),
+               Si = as.character(Si)) %>%
+        mutate(across(ends_with('CTS'),
+                      ~ifelse(grepl('<0\\.[0-9]+', .),
+                              'DL',
+                              .))) %>%
+        rename(Water.Temp.C..CTS = Water.Temp.CTS,
+               SUM..1.CTS = SUM..CTS.1,
+               Tritium.TU..CTS = Tritium.CTS)
 
     #Assuming IN means TIN
-    #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
                          data_cols =  c('Lab.pH' = 'pH',
                                         'Water.Temp.C.' = 'temp',
@@ -319,25 +331,29 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
                                         'Al..ppm.' = 'Al',
-                                        'd180.mill' = 'd18O'),
+                                        'd180.mill' = 'd18O',
+                                        #2024 additions
+                                        'SiO2.ICP..ppm.' = 'SiO2',
+                                        'SUM.' = 'cationCharge',
+                                        'SUM..1' = 'anionCharge',
+                                        'dD.mill' = 'dD',
+                                        'Tritium.TU.' = 'tritium'),
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
-    #mike: what about "U" and all the less-thans? 1/2 detlims might be appropriate for those to.
-    #   their extended metadata link appears to be broken though, so maybe we can't resolve
-    # u = Undetected
-    # DL = below detection limit
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('charge balance difference > 10%',
-                                                     'EQCL', 'NP',
-                                                     'NV', 'QNS', 'T ERR'),
-                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
-                                                   '<0.145', '<0.364', 'DL',
-                                                   '<0.009', '<0.06', '<0.02',
-                                                   '<0.03'),
-                            variable_flags_to_drop = 'DROP')
+                            # variable_flags_dirty = c('charge balance difference > 10%',
+                            #                          'EQCL', 'NP',
+                            #                          'NV', 'QNS', 'T ERR'),
+                            variable_flags_clean = 'NS',
+                            # variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
+                            #                        '<0.145', '<0.364', 'DL',
+                            #                        '<0.009', '<0.06', '<0.02',
+                            #                        '<0.03'),
+                            variable_flags_bdl = c('u', 'U', 'DL'),
+                            variable_flags_to_drop = 'sentinel')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
@@ -384,7 +400,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_3064 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -397,16 +413,27 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
         filter(Location %in% c('BT_SW_0', 'BT_SW_O', 'BT_SW_o'))
 
     d <- d %>%
-        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
-        mutate(Si = as.character(Si))
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.) * 28.0855) / 1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                           Si..umol.L.,
+                           Si.ICP..ppm.),
+               Si.CTS = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                               Si..umol.L..CTS,
+                               Si.ICP..ppm..CTS),
+               Si = as.character(Si)) %>%
+        mutate(across(ends_with('CTS'),
+                      ~ifelse(grepl('<0\\.[0-9]+', .),
+                              'DL',
+                              .))) %>%
+        rename(Water.Temp.C..CTS = Water.Temp.CTS,
+               SUM..1.CTS = SUM..CTS.1,
+               Tritium.TU..CTS = Tritium.CTS)
 
     #Assuming IN means TIN
-    #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
                          alt_site_code = list('BT_SW_0' = c('BT_SW_0', 'BT_SW_O', 'BT_SW_o')),
                          data_cols =  c('Lab.pH' = 'pH',
@@ -440,20 +467,22 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
                                         'Al..ppm.' = 'Al',
-                                        'd180.mill' = 'd18O'),
+                                        'd180.mill' = 'd18O',
+                                        #2024 additions
+                                        'SiO2.ICP..ppm.' = 'SiO2',
+                                        'SUM.' = 'cationCharge',
+                                        'SUM..1' = 'anionCharge',
+                                        'dD.mill' = 'dD',
+                                        'Tritium.TU.' = 'tritium'),
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('charge balance difference > 10%',
-                                                     'EQCL', 'NP',
-                                                     'NV', 'QNS', 'T ERR'),
-                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
-                                                   '<0.145', '<0.364', 'DL', '<0.02',
-                                                   '<0.72', '<0.06', '<0.009'),
-                            variable_flags_to_drop = 'DROP')
+                            variable_flags_clean = 'NS',
+                            variable_flags_bdl = c('u', 'U', 'DL'),
+                            variable_flags_to_drop = 'sentinel')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
@@ -500,7 +529,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_3065 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -514,16 +543,27 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                'GGU_SPW_1', 'GGU_SPW_2', 'GGL_SW_0'))
 
     d <- d %>%
-        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.)*28.0855)/1000)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP..ppm.)|Si.ICP..ppm.=='', Si..umol.L., Si.ICP..ppm.)) %>%
-        mutate(Si = as.character(Si))
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.) * 28.0855) / 1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                           Si..umol.L.,
+                           Si.ICP..ppm.),
+               Si.CTS = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                               Si..umol.L..CTS,
+                               Si.ICP..ppm..CTS),
+               Si = as.character(Si)) %>%
+        mutate(across(ends_with('CTS'),
+                      ~ifelse(grepl('<0\\.[0-9]+', .),
+                              'DL',
+                              .))) %>%
+        rename(Water.Temp.C..CTS = Water.Temp.CTS,
+               SUM..1.CTS = SUM..CTS.1,
+               Tritium.TU..CTS = Tritium.CTS)
 
     #Assuming IN means TIN
-    #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
                          alt_site_code = list('GGL' = c('GGL_SW_0_ISCO', 'GGL_SW_0'),
                                               'GGU' = c('GGU_SW_0_ISCO', 'GGU_SW_0'),
@@ -560,20 +600,22 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
                                         'Al..ppm.' = 'Al',
-                                        'd180.mill' = 'd18O'),
+                                        'd180.mill' = 'd18O',
+                                        #2024 additions
+                                        'SiO2.ICP..ppm.' = 'SiO2',
+                                        'SUM.' = 'cationCharge',
+                                        'SUM..1' = 'anionCharge',
+                                        'dD.mill' = 'dD',
+                                        'Tritium.TU.' = 'tritium'),
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('charge balance difference > 10%',
-                                                     'EQCL', 'NP',
-                                                     'NV', 'QNS', 'T ERR'),
-                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
-                                                   '<0.145', '<0.364', 'DL', '<0.02',
-                                                   '<0.72', '<0.06', '<0.009', '<0.03'),
-                            variable_flags_to_drop = 'DROP')
+                            variable_flags_clean = 'NS',
+                            variable_flags_bdl = c('u', 'U', 'DL'),
+                            variable_flags_to_drop = 'sentinel')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
@@ -620,7 +662,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_7241 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -638,7 +680,7 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('GGL_SW_0.Specific.Conductance..uS.cm.' = 'spCond',
                                         'GGL_SW_0.Temp..C.' = 'temp'),
@@ -654,7 +696,7 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_3639 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -670,15 +712,27 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
         filter(!is.na(site))
 
     d <- d %>%
-        mutate(Si..umol.L. = round(((as.numeric(Si..umol.L.)*28.0855)/1000), 3)) %>%
-        mutate(Si = ifelse(is.na(Si.ICP..ppm.), Si..umol.L., Si.ICP..ppm.))
+        mutate(Si..umol.L. = ((as.numeric(Si..umol.L.) * 28.0855) / 1000)) %>%
+        mutate(Si = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                           Si..umol.L.,
+                           Si.ICP..ppm.),
+               Si.CTS = ifelse(is.na(Si.ICP..ppm.) | Si.ICP..ppm. == '',
+                               Si..umol.L..CTS,
+                               Si.ICP..ppm..CTS),
+               Si = as.character(Si)) %>%
+        mutate(across(ends_with('CTS'),
+                      ~ifelse(grepl('<0\\.[0-9]+', .),
+                              'DL',
+                              .))) %>%
+        rename(Water.Temp.C..CTS = Water.Temp.CTS,
+               SUM..1.CTS = SUM..CTS.1,
+               Tritium.TU..CTS = Tritium.CTS)
 
     #Assuming IN means TIN
-    #Skipped d180, not sure unit
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('Lab.pH' = 'pH',
                                         'Lab.Cond..uS.cm.' = 'spCond',
@@ -710,20 +764,22 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
                                         'Mn..ppm.' = 'Mn',
                                         'Fe..ppm.' = 'Fe',
                                         'Al..ppm.' = 'Al',
-                                        'd180.mill' = 'd18O'),
+                                        'd180.mill' = 'd18O',
+                                        #2024 additions
+                                        'SiO2.ICP..ppm.' = 'SiO2',
+                                        'SUM.' = 'cationCharge',
+                                        'SUM..1' = 'anionCharge',
+                                        'dD.mill' = 'dD',
+                                        'Tritium.TU.' = 'tritium'),
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = c('charge balance difference > 10%',
-                                                     'EQCL', 'NP',
-                                                     'NV', 'QNS', 'T ERR'),
-                            variable_flags_bdl = c('u', '<0.63', '<0.09', 'U',
-                                                   '<0.145', '<0.364', 'DL', '<0.02',
-                                                   '<0.72', '<0.06', '<0.009', '<0.03'),
-                            variable_flags_to_drop = 'DROP')
+                            variable_flags_clean = 'NS',
+                            variable_flags_bdl = c('u', 'U', 'DL'),
+                            variable_flags_to_drop = 'sentinel')
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
@@ -770,7 +826,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2435 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2435 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -788,7 +844,7 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -803,7 +859,7 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2888 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2888 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -821,7 +877,7 @@ process_1_2888 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -854,7 +910,7 @@ process_1_2889 <- function(network, domain, prodname_ms, site_code, component) {
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',

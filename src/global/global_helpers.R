@@ -985,6 +985,7 @@ ms_read_raw_csv <- function(filepath,
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
     if(length(missing_colnames) && ! ignore_missing_col_warning){
+        browser()
         logwarn(paste0('These columns missing from source data. Can signify an upstream change:\n',
                        paste(missing_colnames, collapse = ', ')),
                 logger = logger_module)
@@ -1189,15 +1190,18 @@ ms_read_raw_csv <- function(filepath,
                            datetime_tz = datetime_tz,
                            optional = optionalize_nontoken_characters)
 
-    if(all(is.na(d$datetime))) {
+    if(all(is.na(d$datetime))){
         stop('All datetime failed to parse. Check datetime formats used.')
     }
 
-    if(any(is.na(d$datetime))) {
-        pct_na <- round(length(d$datetime[is.na(d$datetime)])/nrow(d) * 100, 2)
+    if(any(is.na(d$datetime))){
+
+        n_na <- sum(is.na(d$datetime))
+        pct_na <- round(n_na / nrow(d) * 100, 2)
         if(pct_na == 0) pct_na <- '<1'
 
-        logwarn(msg = glue('{pna}% datetimes failed to parse in {n}, {d}, {s}, {p}',
+        logwarn(msg = glue('{nna} ({pna}%) datetime(s) failed to parse in {n}, {d}, {s}, {p}',
+                           nna = n_na,
                            pna = pct_na,
                            n = network,
                            d = domain,
@@ -2185,7 +2189,7 @@ ms_conversions <- function(d,
 
     #d: a macrosheds tibble that has already been through ms_cast_and_reflag
     #keep_molecular: a character vector of molecular formulae to be
-    #   left alone. Otherwise these formulae: NO3, SO4, PO4, SiO2, NH4, NH3, NO3_NO2
+    #   left alone. Otherwise these formulae: NO3, SO4, PO4, SiO2, NH4, NH3, NO3_NO2,
     #   will be converted according to the atomic masses of their main
     #   constituents. For example, NO3 should be converted to NO3-N within
     #   macrosheds, but passing 'NO3' to keep_molecular will leave it as NO3.
@@ -2269,7 +2273,7 @@ ms_conversions <- function(d,
     }
 
     convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
-                           'NO3_NO2')
+                           'NO3_NO2', 'NO2', 'orthophosphate', 'NH3_NH4')
 
     if(! missing(keep_molecular)){
         if(any(! keep_molecular %in% convert_molecules)){
@@ -2284,40 +2288,37 @@ ms_conversions <- function(d,
 
     molecular_conversion_map <- list(
         NH4 = 'N',
-        NO3 = 'N',
         NH3 = 'N',
-        SiO2 = 'Si',
+        NH3_NH4 = 'N',
+        NO3 = 'N',
+        NO2 = 'N',
+        NO3_NO2 = 'N',
         SiO3 = 'Si',
+        SiO2 = 'Si',
         SO4 = 'S',
         PO4 = 'P',
-        NO3_NO2 = 'N')
-
-    # if(cm){
-    #     if(! all(convert_molecules %in% names(molecular_conversion_map))){
-    #         miss <- convert_molecules[! convert_molecules %in%
-    #                                       names(molecular_conversion_map)]
-    #         stop(glue('These molecules either need to be added to ',
-    #                   'molecular_conversion_map, or they should not be converted: ',
-    #                   paste(miss, collapse = ', ')))
-    #     }
-    # }
+        orthophosphate = 'P')
 
     #handle molecular conversions, like NO3 -> NO3_N
 
     for(v in convert_molecules){
 
+        v_ <- v
+        if(v == 'orthophosphate') v_ <- 'PO4'
+
         d$val[vars == v] <- convert_molecule(x = d$val[vars == v],
-                                             from = v,
-                                             to = unname(molecular_conversion_map[v]))
+                                             from = v_,
+                                             to = unlist(molecular_conversion_map[v]))
 
-        check_double <- str_split_fixed(unname(molecular_conversion_map[v]), '', n = Inf)[1,]
+        check_double <- str_split_fixed(unname(molecular_conversion_map[v]),
+                                        '',
+                                        n = Inf)[1, ]
 
-        if(length(check_double) > 1 && length(unique(check_double)) == 1) {
+        if(length(check_double) > 1 && length(unique(check_double)) == 1){
             molecular_conversion_map[v] <- unique(check_double)
         }
 
         new_name <- paste0(d$var[vars == v], '_', unname(molecular_conversion_map[v]))
-
         d$var[vars == v] <- new_name
     }
 
@@ -5528,29 +5529,28 @@ convert_to_gl <- function(x, input_unit, molecule){
         filter(variable_code == !!molecule) %>%
         pull(molecule)
 
-    if(!is.na(molecule_real)) {
+    if(!is.na(molecule_real)){
         formula <- molecule_real
     } else {
         formula <- molecule
     }
 
-    if(grepl('eq', input_unit)) {
-        valence = ms_vars$valence[ms_vars$variable_code %in% molecule]
+    if(grepl('eq', input_unit)){
+
+        valence <- ms_vars$valence[ms_vars$variable_code %in% molecule]
 
         if(length(valence) == 0) {stop('Varible is likely missing from ms_vars')}
-        x = (x * calculate_molar_mass(formula)) / valence
+        x <- (x * calculate_molar_mass(formula)) / valence
 
         return(x)
     }
 
-    if(grepl('mol', input_unit)) {
-        x = x * calculate_molar_mass(formula)
-
+    if(grepl('mol', input_unit)){
+        x <- x * calculate_molar_mass(formula)
         return(x)
     }
 
     return(x)
-
 }
 
 convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver){
@@ -7493,6 +7493,7 @@ synchronize_timestep <- function(d,
         mode_intervals_m <= 12 * 60 ~ '1 day') #TODO, TEMPORARY: switch this back
         # mode_intervals_m <= 12 * 60 ~ '15 min')
 
+    already_warned <- FALSE
     for(i in 1:length(d_split)){
 
         sitevar_chunk <- d_split[[i]]
@@ -7504,11 +7505,15 @@ synchronize_timestep <- function(d,
         #average values for duplicate timestamps
         if(n_dupes > 0){
 
-            logwarn(msg = glue('{n} duplicate datetimes found for site: {s}, var: {v}',
-                               n = n_dupes,
-                               s = sitevar_chunk$site_code[1],
-                               v = sitevar_chunk$var[1]),
-                    logger = logger_module)
+            if(! already_warned){
+                logwarn(msg = glue('{n} duplicate datetimes found for site: {s}',
+                                   n = n_dupes,
+                                   s = sitevar_chunk$site_code[1]),
+                                   # v = sitevar_chunk$var[1]),
+                        logger = logger_module)
+            }
+
+            already_warned <- TRUE
 
             sitevar_chunk_dt <- sitevar_chunk %>%
                 mutate(val_err = errors(val),
@@ -16519,9 +16524,9 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
     }
 
     normally_converted_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
-                                      'NO3_NO2')
+                                      'NO3_NO2', 'NH3_NH4', 'NO2', 'orthophosphate')
     normally_converted_to <- c('NO3_N', 'SO4_S', 'PO4_P', 'SiO2_Si', 'SiO3_Si', 'NH4_N', 'NH3_N',
-                               'NO3_NO2_N')
+                               'NO3_NO2_N', 'NH3_NH4_N', 'NO2_N', 'orthophosphate_P')
 
     #convert detlims to MS canonical units
     if('variable_converted' %in% names(dls)){

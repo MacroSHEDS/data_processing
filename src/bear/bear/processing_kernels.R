@@ -178,14 +178,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
+    #all this (except site filtering) can be done with ms_read_raw_csv now
     all_chem <- read.csv(rawfile, colClasses = 'character') %>%
                       rename(Ca = Ca_ueq_L, Mg = Mg_ueq_L, K = K_ueq_L,
                              Na = Na_ueq_L, Cl = Cl_ueq_L, SO4 = SO4_ueq_L, NO3 = NO3_ueq_L,
                              NH4 = NH4_ueq_L, Al = Al_ppb, DOC = DOC_mg_L, DIC = DIC_mg_L,
-                             TN = total_N_ppm, TP = total_P_ppb, Si = Si_mg_L, ANC = ANC_ueq_L,
+                             TN = total_N_ppm, TP = total_P_ppb, Si = Si_mg_L,
+                             ANC = ANC_ueq_L, OAl = Al_org_ppb, color = true_color_PCU,
                              sp = sp_conductance_us_cm, #q = discharge_L_sec,
-                             H = H_ueq_L, HCO3 = HCO3_ueq_L, pH = pH_closed_cell, TN_flag = total_N_flag,
-                             TP_flag = total_P_flag) %>%
+                             H = H_ueq_L, HCO3 = HCO3_ueq_L, pH = pH_closed_cell,
+                             TN_flag = total_N_flag,
+                             TP_flag = total_P_flag,
+                             color_flag = true_color_flag) %>%
                       filter(site != 'EB3') # removing due to low sample numbers
     all_chem[all_chem==''] <- NA
 
@@ -213,13 +217,15 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                         'TN' = 'TN',
                                         'TP' = 'TP',
                                         'sp' = 'spCond',
-                                        'pH' = 'pH'
-                                        ),
+                                        'pH' = 'pH',
+                                        'color',
+                                        'OAl'),
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = '#V#_flag',
                          is_sensor = FALSE)
 
     d$`GN_Al__|dat` <- d$`GN_Al__|dat`/1000 #convert from ppb to ppm
+    d$`GN_OAl__|dat` <- d$`GN_OAl__|dat`/1000 #convert from ppb to ppm
     d$`GN_TP__|dat` <- d$`GN_TP__|dat`/1000 #convert from ppb to ppm
 
     d <- ms_cast_and_reflag(d,
@@ -234,7 +240,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                                 'Na' = 'mg/l', 'Cl' = 'mg/l', 'SO4' = 'mg/l',
                                                 'NO3' = 'mg/l', 'NH4' = 'mg/l', 'ANC' = 'eq/l',
                                                 'HCO3' = 'mg/l'))
-
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

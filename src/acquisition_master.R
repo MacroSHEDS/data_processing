@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'hbef')
+dmnrow <- which(network_domain$domain == 'bear')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -363,22 +363,43 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    ms_retrieve(network = network,
-                # prodname_filter = c('discharge'),
-                domain = domain)
+    # ms_retrieve(network = network,
+    #             prodname_filter = c('ws_boundary'),
+    #             domain = domain)
 
     if(domain != 'neon'){
         check_for_derelicts(network = network,
                             domain = domain)
     }
 
+    load_config_datasets(from_where = 'remote')
+
+    #setup
+    dmnrow = 2
+    network <- network_domain$network[dmnrow]
+    domain <- network_domain$domain[dmnrow]
+    held_data <- get_data_tracker(network, domain)
+    logger_module <- set_up_logger(network = network, domain = domain)
+    update_product_statuses(network = network, domain = domain)
+
+    #helpers
+    source('src/global/global_helpers.R')
+    get_all_local_helpers(network = network, domain = domain)
+
+    #owrite
+    held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    held_data = invalidate_tracked_data(network, domain, 'munge')
+    owrite_tracker(network, domain)
+
     ms_munge(network = network,
              # prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('precipitation'),
-             prodname_filter = c('discharge'),
+             # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('ws_boundary'),
              domain = domain)
+    retain_ms_globals(ms_globals)
+    stop()
 
     if(domain != 'mcmurdo'){
         sw(ms_delineate(network = network,

@@ -9,7 +9,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=1
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -36,12 +35,11 @@ for(i in seq_len(nrow(prod_info))){
 
     avail_sites <- unique(avail_sets$site_code)
 
-    # j=1
     for(j in 1:length(avail_sites)){
 
         site_code <- avail_sites[j]
-        avail_site_sets <- avail_sets[avail_sets$site_code == site_code,
-                                     drop=FALSE]
+        avail_site_sets <- avail_sets[avail_sets$site_code == site_code, ,
+                                     drop = FALSE]
 
         if(! site_is_tracked(held_data, prodname_ms, site_code)){
                 held_data <<- insert_site_skeleton(held_data, prodname_ms, site_code,
