@@ -534,7 +534,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('dateTime' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('PrecipRate' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -646,7 +646,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('q' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -708,8 +708,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    zip_par_dir <- list.files(temp_dir, pattern = 'isotope')
+
+    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
+    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
 
     temp_dir_files_csv <- temp_dir_files[grepl('.csv', temp_dir_files)]
     temp_dir_files_p <- temp_dir_files_p[grepl('.csv', temp_dir_files)]
@@ -759,7 +761,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     # removeing feild blanks
     # EBC_ISCO == East_below_Copper
     # er and er_plm# are pizometers
-    d <- all_sites %>%
+    d <- as_tibble(all_sites) %>%
         filter(site != 'rockcreek',
                site != 'filterblank',
                site != 'filter_blank',
@@ -783,13 +785,12 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                      site == 'rock' ~ 'Rock',
                                      site == 'rustlers' ~ 'Rustlers',
                                      TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
+        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
+        mutate(val = sw(as.numeric(val)),
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble()
+               !is.na(var))
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -808,7 +809,6 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
-
     for(s in 1:length(sites)){
 
         d_site <- d %>%
@@ -839,20 +839,14 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
-
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    zip_par_dir <- list.files(temp_dir, pattern = 'cation')
+
+    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
+    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
 
     removed_depth <- !grepl('depth|well', temp_dir_files)
 
@@ -977,15 +971,13 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                      site == 'rock' ~ 'Rock',
                                      site == 'rustlers' ~ 'Rustlers',
                                      TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
+        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
+        mutate(val = sw(as.numeric(val)),
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
-        as_tibble()
+        as_tibble() %>%
+        filter(! is.na(datetime))
 
-    # look <- d %>%
-    #     group_by(datetime, site_code, var) %>%
-    #     summarise(n = n())
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
 
@@ -999,7 +991,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                   sampling_type = 'G')
 
     # 107482
-    # Units are in ppb, converting to mg/L
+    # Units are in ppb, converting to approx mg/L
     d <- d %>%
         mutate(val = val/1000)
 
@@ -1039,20 +1031,15 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
 
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    zip_par_dir <- list.files(temp_dir, pattern = 'anion')
+
+    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
+    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
 
     removed_depth <- !grepl('depth|well', temp_dir_files)
 
@@ -1071,7 +1058,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         if(length(site_info) == 5){
             site_code <- site_info[1,1]
         } else{
-            site_code <- site_info[1,1:(length(site_info)-4)]
+            site_code <- site_info[1, 1:(length(site_info)-4)]
             site_code <- paste(site_code, collapse = '_')
         }
 
@@ -1127,13 +1114,14 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                                      site == 'rock' ~ 'Rock',
                                      site == 'rustlers' ~ 'Rustlers',
                                      TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
+        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
+        mutate(val = sw(as.numeric(val)),
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var)) %>%
-        as_tibble()
+        as_tibble() %>%
+        filter(! is.na(datetime))
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -1195,20 +1183,15 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
 
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    zip_par_dir <- list.files(temp_dir, pattern = 'carbon')
+
+    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
+    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
 
     removed_depth <- !grepl('depth|well', temp_dir_files)
 
@@ -1280,13 +1263,14 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                                      site == 'rock' ~ 'Rock',
                                      site == 'rustlers' ~ 'Rustlers',
                                      TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
+        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
+        mutate(val = sw(as.numeric(val)),
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),
                !is.na(var)) %>%
-        as_tibble()
+        as_tibble() %>%
+        filter(! is.na(datetime))
 
     # Catch this new site name
     d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
@@ -1339,20 +1323,15 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
 
     unzip(rawfile,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, recursive = TRUE)
-    temp_dir_files_p <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
+    zip_par_dir <- list.files(temp_dir, pattern = 'nitrogen')
+
+    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
+    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
 
     removed_depth <- !grepl('depth|well', temp_dir_files)
 
@@ -1424,8 +1403,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                                      site == 'rock' ~ 'Rock',
                                      site == 'rustlers' ~ 'Rustlers',
                                      TRUE ~ site)) %>%
-        mutate(datetime = as_datetime(utc_time, format = '%Y-%m-%d', tz = 'UTC')) %>%
-        mutate(val = as.numeric(val),
+        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
+        mutate(val = sw(as.numeric(val)),
                ms_status = 0) %>%
         select(datetime, site_code, val, var, ms_status) %>%
         filter(!is.na(val),

@@ -1037,12 +1037,12 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component){
     names(units) <- unit_names
 
     if(any(nchar(units) == 0 | is.na(units))){
-        browser()
         message('unit problem')
+        browser()
     }
     if(any(! grepl('/L$', units))){
-        browser()
         message('maybe unit problem')
+        browser()
     }
 
     ## back to normal
@@ -1162,12 +1162,12 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component){
     names(units) <- unit_names
 
     if(any(nchar(units) == 0 | is.na(units))){
-        browser()
         message('unit problem')
+        browser()
     }
     if(any(! grepl('/L$', units))){
-        browser()
         message('maybe unit problem')
+        browser()
     }
 
     ## back to normal
