@@ -1333,17 +1333,15 @@ ms_read_raw_csv <- function(filepath,
                                   sampling_type = sampling_type))
     }
 
-    #Check if all sites are in site file
+    #Check if all sites are in site gsheet
     unq_sites <- unique(d$site_code)
     if(! all(unq_sites %in% site_data$site_code)){
 
-        for(i in seq_along(unq_sites)) {
-            if(! unq_sites[i] %in% site_data$site_code){
-                logwarn(msg = paste(unname(unq_sites[i]),
-                                    'is not in site_data file; add?'),
-                        logger = logger_module)
-            }
-        }
+        unrecorded_sites <- sort(setdiff(unq_sites, site_data$site_code))
+
+        logwarn(msg = paste0('These sites not recorded in gsheet:\n',
+                            paste(unrecorded_sites, collapse = ', ')),
+                logger = logger_module)
     }
 
     ## # final check that if there is only one data column and a supplied summary flag column
@@ -9069,6 +9067,20 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                 "var==var")][[which_]]
 
             if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
+
+            # this_set <- domain_detection_limits %>%
+            #     filter(domain == 'catalina_jemez',
+            #            prodcode == 'stream_chemistry__4135|precip_chemistry__5492')
+            # dupes <- this_set %>%
+            #     group_by(variable_original, start_date, end_date) %>%
+            #     summarize(n = n()) %>%
+            #     ungroup() %>%
+            #     filter(n != 1) %>%
+            #     print(n = 1000)
+            # this_set <- semi_join(this_set, dupes,
+            #                       by = c('variable_original', 'start_date', 'end_date')) %>%
+            #     arrange(variable_original, start_date, end_date)
+            # View(this_set)
 
             #forward rolling join to start_date; CASE 2
             still_missing <- is.na(out)

@@ -372,10 +372,8 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    load_config_datasets(from_where = 'remote')
-
     #setup
-    dmnrow = 2
+    dmnrow = 4
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)
@@ -386,8 +384,14 @@ for(dmnrow in 1:nrow(network_domain)){
     source('src/global/global_helpers.R')
     get_all_local_helpers(network = network, domain = domain)
 
+    #other
+    retain_ms_globals(ms_globals)
+    load_config_datasets(from_where = 'remote')
+
     #owrite
+    held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
     held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    held_data = invalidate_tracked_data(network, domain, 'munge', 'precip_chemistry')
     held_data = invalidate_tracked_data(network, domain, 'munge')
     owrite_tracker(network, domain)
 
@@ -396,7 +400,7 @@ for(dmnrow in 1:nrow(network_domain)){
              # prodname_filter = c('precipitation'),
              # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
-             # prodname_filter = c('ws_boundary'),
+             prodname_filter = c('ws_boundary'),
              domain = domain)
     retain_ms_globals(ms_globals)
     stop()
