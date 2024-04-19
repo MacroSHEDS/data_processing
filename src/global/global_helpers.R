@@ -985,7 +985,6 @@ ms_read_raw_csv <- function(filepath,
 
     missing_colnames <- setdiff(names(colnames_all), colnames(d))
     if(length(missing_colnames) && ! ignore_missing_col_warning){
-        browser()
         logwarn(paste0('These columns missing from source data. Can signify an upstream change:\n',
                        paste(missing_colnames, collapse = ', ')),
                 logger = logger_module)

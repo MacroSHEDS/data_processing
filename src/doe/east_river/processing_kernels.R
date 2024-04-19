@@ -457,9 +457,11 @@ process_0_VERSIONLESS008 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#discharge: STATUS=READY
+#discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_VERSIONLESS009 <- function(set_details, network, domain) {
+process_0_VERSIONLESS009 <- function(set_details, network, domain){
+
+    if(grepl('chemistry', prodname_ms)) return()
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
                           n = network,
@@ -477,26 +479,8 @@ process_0_VERSIONLESS009 <- function(set_details, network, domain) {
 
     R.utils::downloadFile(url = set_details$url,
                           filename = rawfile,
-                          # username = set_details$orcid_login,
-                          # password = set_details$orcid_pass,
                           skip = FALSE,
                           overwrite = TRUE)
-    #
-    #     login_escape <- sub(pattern = '@',
-    #                         replacement = '%40',
-    #                         x = set_details$orcid_login)
-    #
-    #     url_with_auth <- sub(pattern = '://',
-    #                          replacement = paste0('://', login_escape, ':',
-    #                                               set_details$orcid_pass, '@'),
-    #                          x = set_details$url)
-    #
-    #     download.file(url = url_with_auth,
-    #                   destfile = rawfile,
-    #                   quiet = FALSE,
-    #                   cacheOK = FALSE)
-    #
-    #     res <- httr::HEAD(url_with_auth)
 
     res <- httr::HEAD(set_details$url)
 
@@ -573,7 +557,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -582,14 +566,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
     dir.create(temp_dir,
                showWarnings = FALSE,
                recursive = TRUE)
-
-    # unlink(paste0(temp_dir, '/*'))
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -606,8 +586,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
           exdir = one_site_files)
 
     all_sites_files <- list.files(one_site_files, full.names = TRUE)
-
     all_sites_files <- all_sites_files[grepl('.xlsx', all_sites_files)]
+    all_sites_files <- grep('WG', all_sites_files, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
     for(i in 1:length(all_sites_files)){
@@ -616,6 +596,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                pattern = '([^\\/\\\\]+)_[dD]ischarge.xlsx$')[, 2]
 
         one_site <- readxl::read_excel(all_sites_files[i], sheet = 'Corrected')
+
+        if(is.na(as.POSIXct(pull(one_site[1, 1])))) stop('datetime issue')
+        if(is.na(as.numeric(pull(one_site[1, 2])))) stop('value issue')
+
         time_col <- grep('time|Time', colnames(one_site), value = TRUE)
         q_col <- grep('cms', colnames(one_site), value = TRUE)
         one_site <- one_site %>%
@@ -633,7 +617,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
           exdir = one_site_files)
 
     all_sites_files <- list.files(one_site_files, full.names = TRUE, recursive = TRUE)
-
     all_sites_files <- all_sites_files[grepl('.xlsx', all_sites_files)]
 
     one_site <- readxl::read_excel(all_sites_files, sheet = 'Corrected') %>%
@@ -648,19 +631,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          datetime_cols = list('standard_time' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
+                         alt_site_code = east_river_site_name_map,
                          data_cols =  c('q' = 'discharge'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '-9999',
                          is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     # Discharge is in m^3/s, converting to L/s
     d <- d %>%
-        mutate(val = val*1000)
+        mutate(val = val * 1000)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -684,9 +667,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component){
 
-
+    # rawfile='data/doe/east_river/raw/stream_chemistry__VERSIONLESS003/sitename_NA/east_river_isotopes.zip'
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -694,118 +677,66 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir')
     temp_dir <- tempdir()
-
-    # dir.create(temp_dir,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-    #
-    # unlink(paste0(temp_dir, '/*'),
-    #        recursive = TRUE,
-    #        force = TRUE)
-
     unzip(rawfile,
           exdir = temp_dir)
 
     zip_par_dir <- list.files(temp_dir, pattern = 'isotope')
 
-    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
-    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
-
-    temp_dir_files_csv <- temp_dir_files[grepl('.csv', temp_dir_files)]
-    temp_dir_files_p <- temp_dir_files_p[grepl('.csv', temp_dir_files)]
-
-    removed_depth <- !grepl('depth|well', temp_dir_files_csv)
-
-    file_names <- temp_dir_files_csv[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    fp <- list.files(file.path(temp_dir, zip_par_dir),
+                     recursive = TRUE,
+                     full.names = TRUE)
+    fp <- grep('depth|well', fp, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(file_names)){
+    for(i in seq_along(fp)){
 
-        if(file_names[i] == 'locations.csv') next
+        fn <- basename(fp[i])
 
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
+        if(grepl('splains|evans|blank|locations', fn)) next
 
-        if(length(site_info) == 1) next
+        site_code <- str_extract(fn, '([^_]+_[^_]+)', group = 1)
+        site_var <- str_extract(fn, '[^_]+_[^_]+_(.+)(?=\\.csv$)', group = 1)
 
-        if(length(site_info) == 2){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-1)]
-            site_code <- paste(site_code, collapse = '_')
-        }
+        d_ <- read.csv(fp[i], colClasses = 'character')
 
-        site_var <- site_info[1,length(site_info)]
-        site_var <- paste(site_var, collapse = '_')
-        site_var <- str_remove(site_var, '.csv')
+        if(! colnames(d_)[2] %in% c('deltad', 'deltao18')) stop('var issue')
+        if(is.na(as.Date(d_[2, 1]))) stop('date issue')
+        if(is.na(as.numeric(d_[2, 2]))) stop('value issue')
 
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
+        d_ <- d_ %>%
+            rename(val = 2) %>%
             mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
+                   var = !!site_var)
 
-        all_sites <- rbind(all_sites, site_table)
+        all_sites <- rbind(all_sites, d_)
     }
 
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- as_tibble(all_sites) %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_var == 'deltad' ~ 'dD',
-                               site_var == 'deltao18' ~ 'd18O')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
-        mutate(val = sw(as.numeric(val)),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var))
+    all_sites <- all_sites %>%
+        filter(site %in% east_river_sites_of_interest,
+               ! grepl('Y', date)) %>%
+        mutate(val = as.numeric(val),
+               site = toupper(site)) %>%
+        filter(val > -1000) %>%
+        group_by(date, site, var) %>%
+        summarize(val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        pivot_wider(names_from = var,
+                    values_from = val)
 
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         data_cols =  c(deltad = 'dD',
+                                        deltao18 = 'd18O'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -830,8 +761,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component){
 
+    # rawfile='data/doe/east_river/raw/stream_chemistry__VERSIONLESS004/sitename_NA/east_river_cations.zip'
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -845,158 +777,63 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     zip_par_dir <- list.files(temp_dir, pattern = 'cation')
 
-    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
-    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    fp <- list.files(file.path(temp_dir, zip_par_dir),
+                     recursive = TRUE,
+                     full.names = TRUE)
+    fp <- grep('depth|well', fp, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(file_names)){
+    for(i in seq_along(fp)){
 
-        if(file_names[i] == 'locations.csv') next
+        fn <- basename(fp[i])
 
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
+        if(grepl('splains|evans|blank|locations', fn)) next
 
-        if(length(site_info) == 1) next
+        site_code <- str_extract(fn, '([^_]+_[^_]+)', group = 1)
+        site_var <- str_extract(fn, '[^_]+_[^_]+_(.+)(?=\\.csv$)', group = 1)
 
-        if(grepl('aqlithiumion_aslithium|aqberylliumion_asberyllium', file_names[i])){
+        d_ <- read.csv(fp[i], colClasses = 'character')
 
-            if(length(site_info) == 4){
-                site_code <- site_info[1,1]
-            } else{
-                site_code <- site_info[1,1:(length(site_info)-3)]
-                site_code <- paste(site_code, collapse = '_')
-            }
+        if(! colnames(d_)[2] %in% names(east_river_cations)) stop('var issue')
+        if(! d_[1, 2] %in% c('ppb')) stop('unit issue')
+        if(is.na(as.Date(d_[2, 1]))) stop('date issue')
+        if(is.na(as.numeric(d_[2, 2]))) stop('value issue')
 
-        } else{
-            if(length(site_info) == 3){
-                site_code <- site_info[1,1]
-            } else{
-                 site_code <- site_info[1,1:(length(site_info)-2)]
-                 site_code <- paste(site_code, collapse = '_')
-            }
-        }
-
-        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
-        site_var <- site_info[1,length(site_info)-1]
-        site_unit <- str_remove(site_info[1,length(site_info)], '.csv')
-
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
+        d_ <- d_ %>%
+            rename(val = 2) %>%
             mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
+                   var = !!site_var)
 
-        all_sites <- rbind(all_sites, site_table)
+        all_sites <- rbind(all_sites, d_)
     }
 
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # cp#, er_plm#, and mdp# are all pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'cp1',
-               site != 'cp2',
-               site != 'cp3',
-               site != 'cp4',
-               site != 'cp5',
-               site != 'cp6',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6',
-               site != 'mdp1',
-               site != 'mdp2',
-               site != 'mdp3') %>%
-        mutate(var = case_when(site_var_unit == 'aluminum_ppb' ~ 'Al',
-                               site_var_unit == 'antimony_ppb' ~ 'Sb',
-                               site_var_unit == 'aqberylliumion_asberyllium_ppb' ~ 'Be',
-                               site_var_unit == 'aqlithiumion_aslithium_ppb' ~ 'Li',
-                               site_var_unit == 'arsenic_ppb' ~ 'As',
-                               site_var_unit == 'barium_ppb' ~ 'Ba',
-                               site_var_unit == 'boron_ppb' ~ 'B',
-                               site_var_unit == 'calcium_ppb' ~ 'Ca',
-                               site_var_unit == 'cadmium_ppb' ~ 'Cd',
-                               site_var_unit == 'cesium_ppb' ~ 'Cs',
-                               site_var_unit == 'chromium_ppb' ~ 'Cr',
-                               site_var_unit == 'cobalt_ppb' ~ 'Co',
-                               site_var_unit == 'copper_ppb' ~ 'Cu',
-                               site_var_unit == 'europium_ppb' ~ 'Eu',
-                               site_var_unit == 'germanium_ppb' ~ 'Ge',
-                               site_var_unit == 'iron_ppb' ~ 'Fe',
-                               site_var_unit == 'manganese_ppb' ~ 'Mn',
-                               site_var_unit == 'lead_ppb' ~ 'Pb',
-                               site_var_unit == 'magnesium_ppb' ~ 'Mg',
-                               site_var_unit == 'molybdenum_ppb' ~ 'Mo',
-                               site_var_unit == 'nickel_ppb' ~ 'Ni',
-                               site_var_unit == 'phosphorus_ppb' ~ 'TP',
-                               site_var_unit == 'potassium_ppb' ~ 'K',
-                               site_var_unit == 'rubidium_ppb' ~ 'Rb',
-                               site_var_unit == 'selenium_ppb' ~ 'Se',
-                               site_var_unit == 'silicon_ppb' ~ 'Si',
-                               site_var_unit == 'silver_ppb' ~ 'Ag',
-                               site_var_unit == 'sodium_ppb' ~ 'Na',
-                               site_var_unit == 'strontium_ppb' ~ 'Sr',
-                               site_var_unit == 'thorium_ppb' ~ 'Th',
-                               site_var_unit == 'tin_ppb' ~ 'Sn',
-                               site_var_unit == 'titanium_ppb' ~ 'Ti',
-                               site_var_unit == 'uranium_ppb' ~ 'U',
-                               site_var_unit == 'vanadium_ppb' ~ 'V',
-                               site_var_unit == 'zinc_ppb' ~ 'Zn',
-                               site_var_unit == 'zirconium_ppb' ~ 'Zr')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
-        mutate(val = sw(as.numeric(val)),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        as_tibble() %>%
-        filter(! is.na(datetime))
+    all_sites <- all_sites %>%
+        filter(site %in% east_river_sites_of_interest,
+               ! grepl('Y', date)) %>%
+        mutate(val = as.numeric(val),
+               site = toupper(site)) %>%
+        filter(val > -1000) %>%
+        group_by(date, site, var) %>%
+        summarize(val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        pivot_wider(names_from = var,
+                    values_from = val)
 
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         data_cols =  east_river_cations,
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
-    # 107482
-    # Units are in ppb, converting to approx mg/L
-    d <- d %>%
-        mutate(val = val/1000)
+    # Units are ppb, converting to approx mg/L
+    d <- mutate(d, val = val / 1000)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -1022,8 +859,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component){
 
+    # rawfile='data/doe/east_river/raw/stream_chemistry__VERSIONLESS005/sitename_NA/east_river_anions.zip'
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -1038,117 +876,82 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     zip_par_dir <- list.files(temp_dir, pattern = 'anion')
 
-    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
-    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    fp <- list.files(file.path(temp_dir, zip_par_dir),
+                     recursive = TRUE,
+                     full.names = TRUE)
+    fp <- grep('depth|well', fp, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(file_names)){
+    for(i in seq_along(fp)){
 
-        if(file_names[i] == 'locations.csv') next
+        fn <- basename(fp[i])
 
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
+        if(grepl('splains|evans|blank|locations', fn)) next
 
-        if(length(site_info) == 1) next
+        site_code <- str_extract(fn, '([^_]+_[^_]+)', group = 1)
+        site_var <- str_extract(fn, '[^_]+_[^_]+_(.+)(?=\\.csv$)', group = 1)
 
-        if(length(site_info) == 5){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1, 1:(length(site_info)-4)]
-            site_code <- paste(site_code, collapse = '_')
-        }
+        d_ <- read.csv(fp[i], colClasses = 'character')
 
-        #site_code_alt <- paste(site_info[1,1:2], collapse = '_')
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
+        if(! colnames(d_)[2] %in% east_river_anions) stop('var issue')
+        if(! d_[1, 2] %in% c('µmol/L; µM')) stop('unit issue')
+        if(is.na(as.Date(d_[2, 1]))) stop('date issue')
+        if(is.na(as.numeric(d_[2, 2]))) stop('value issue')
 
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
+        d_ <- d_ %>%
+            rename(val = 2) %>%
             mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
+                   var = !!site_var)
 
-        all_sites <- rbind(all_sites, site_table)
+        all_sites <- rbind(all_sites, d_)
     }
 
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_var == 'chloride' ~ 'Cl',
-                               site_var == 'fluoride' ~ 'F',
-                               site_var == 'nitrate' ~ 'NO3',
-                               site_var == 'phosphate' ~ 'PO4',
-                               site_var == 'sulfate' ~ 'SO4')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
-        mutate(val = sw(as.numeric(val)),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble() %>%
-        filter(! is.na(datetime))
+    all_sites <- all_sites %>%
+        filter(site %in% east_river_sites_of_interest,
+               # var %in% east_river_anions,
+               ! grepl('Y', date)) %>%
+        mutate(val = as.numeric(val),
+               site = toupper(site)) %>%
+        filter(val > -1000) %>%
+        group_by(date, site, var) %>%
+        summarize(val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        pivot_wider(names_from = var,
+                    values_from = val)
 
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
+    if('nitrite' %in% colnames(all_sites)) stop('re-enable nitrate in funcs below')
 
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         data_cols =  c(chloride = 'Cl',
+                                        nitrate = 'NO3',
+                                        # nitrite = 'NO2',
+                                        phosphate = 'PO4',
+                                        fluoride = 'F',
+                                        sulfate = 'SO4'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
+
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
                         convert_units_from = c('Cl' = 'umol/l',
                                                'F' = 'umol/l',
                                                'NO3' = 'umol/l',
+                                               # 'NO2' = 'umol/l',
                                                'PO4' = 'umol/l',
                                                'SO4' = 'umol/l'),
                         convert_units_to = c('Cl' = 'mg/l',
                                              'F' = 'mg/l',
                                              'NO3' = 'mg/l',
+                                             # 'NO2' = 'mg/l',
                                              'PO4' = 'mg/l',
                                              'SO4' = 'mg/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -1174,8 +977,9 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component){
 
+    # rawfile='data/doe/east_river/raw/stream_chemistry__VERSIONLESS006/sitename_NA/east_river_carbon.zip'
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -1188,104 +992,62 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = temp_dir)
 
-    zip_par_dir <- list.files(temp_dir, pattern = 'carbon')
+    zip_par_dir <- list.files(temp_dir, pattern = 'dic')
 
-    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
-    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    fp <- list.files(file.path(temp_dir, zip_par_dir),
+                     recursive = TRUE,
+                     full.names = TRUE)
+    fp <- grep('depth|well', fp, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(file_names)){
+    for(i in seq_along(fp)){
 
-        if(file_names[i] == 'locations.csv') next
+        fn <- basename(fp[i])
 
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
+        if(grepl('splains|evans|blank|locations', fn)) next
 
-        if(length(site_info) == 1) next
+        site_code <- str_extract(fn, '([^_]+_[^_]+)', group = 1)
+        site_var <- str_extract(fn, '[^_]+_[^_]+_(.+)(?=\\.csv$)', group = 1)
 
-        if(length(site_info) == 4){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-3)]
-            site_code <- paste(site_code, collapse = '_')
-        }
+        d_ <- read.csv(fp[i], colClasses = 'character')
 
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
+        if(! colnames(d_)[2] %in% c('dic', 'npoc')) stop('var issue')
+        if(! d_[1, 2] %in% c('mg.L-1')) stop('unit issue')
+        if(is.na(as.Date(d_[2, 1]))) stop('date issue')
+        if(is.na(as.numeric(d_[2, 2]))) stop('value issue')
 
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
+        d_ <- d_ %>%
+            rename(val = 2) %>%
             mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
+                   var = !!site_var)
 
-        all_sites <- rbind(all_sites, site_table)
+        all_sites <- rbind(all_sites, d_)
     }
 
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_unit == 'dic_mg_l' ~ 'DIC',
-                               site_unit == 'npoc_mg_l' ~ 'DOC')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
-        mutate(val = sw(as.numeric(val)),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble() %>%
-        filter(! is.na(datetime))
+    all_sites <- all_sites %>%
+        filter(site %in% east_river_sites_of_interest,
+               ! grepl('Y', date)) %>%
+        mutate(val = as.numeric(val),
+               site = toupper(site)) %>%
+        filter(val > -1000) %>%
+        group_by(date, site, var) %>%
+        summarize(val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        pivot_wider(names_from = var,
+                    values_from = val)
 
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         data_cols =  c(dic = 'DIC',
+                                        npoc = 'DOC'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
-
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -1311,10 +1073,9 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, component){
 
-    # TDN is listed as g/l it appears but comparing to anoth east river
-    # data prod, it looks like (and makes snese) that the unit is ug/l
+    #data/doe/east_river/raw/stream_chemistry__VERSIONLESS007/sitename_NA/east_river_nitrogen.zip
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -1328,107 +1089,67 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = temp_dir)
 
-    zip_par_dir <- list.files(temp_dir, pattern = 'nitrogen')
+    zip_par_dir <- list.files(temp_dir, pattern = 'ammonia')
 
-    temp_dir_files <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE)
-    temp_dir_files_p <- list.files(file.path(temp_dir, zip_par_dir), recursive = TRUE, full.names = TRUE)
-
-    removed_depth <- !grepl('depth|well', temp_dir_files)
-
-    file_names <- temp_dir_files[removed_depth]
-    file_paths <- temp_dir_files_p[removed_depth]
+    fp <- list.files(file.path(temp_dir, zip_par_dir),
+                     recursive = TRUE,
+                     full.names = TRUE)
+    fp <- grep('depth|well', fp, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(file_names)){
+    for(i in seq_along(fp)){
 
-        if(file_names[i] == 'locations.csv') next
+        fn <- basename(fp[i])
 
-        site_info <- str_split_fixed(file_names[i], '_', n = Inf)
+        if(grepl('splains|evans|blank|locations', fn)) next
 
-        if(length(site_info) == 1) next
+        site_code <- str_extract(fn, '([^_]+_[^_]+)', group = 1)
+        site_var <- str_extract(fn, '[^_]+_[^_]+_(.+)(?=\\.csv$)', group = 1)
 
-        if(length(site_info) == 4){
-            site_code <- site_info[1,1]
-        } else{
-            site_code <- site_info[1,1:(length(site_info)-3)]
-            site_code <- paste(site_code, collapse = '_')
-        }
+        d_ <- read.csv(fp[i], colClasses = 'character')
 
-        site_var <- site_info[1,length(site_info)-3]
-        site_unit <- str_remove(site_info[1,(length(site_info)-2):length(site_info)], '.csv')
-        site_unit <- paste(site_unit, collapse = '_')
+        if(! colnames(d_)[2] %in% c('tdn', 'ammonia_n')) stop('var issue')
+        if(! d_[1, 2] %in% c('ug.L-1', 'ppm')) stop('unit issue')
+        if(is.na(as.Date(d_[2, 1]))) stop('date issue')
+        if(is.na(as.numeric(d_[2, 2]))) stop('value issue')
 
-        site_table <- read.csv(file_paths[i], colClasses = 'character')
-
-        colname <- colnames(site_table)[2]
-
-        site_table <- site_table %>%
-            rename(val = !!colname) %>%
+           d_ <- d_ %>%
+            rename(val = 2) %>%
             mutate(site = !!site_code,
-                   site_var = !!site_var,
-                   site_unit = !!site_unit,
-                   site_var_unit = !!colname,
-                   file_name = !!file_names[i])
+                   var = !!site_var)
 
-        all_sites <- rbind(all_sites, site_table)
+        all_sites <- rbind(all_sites, d_)
     }
 
-    # Can't determin for sure where rockcreek is, removing
-    # east_above_rustlers is listed as the same location as rutler, a seprate creek,
-    #    removing for now
-    # removeing feild blanks
-    # EBC_ISCO == East_below_Copper
-    # er and er_plm# are pizometers
-    d <- all_sites %>%
-        filter(site != 'rockcreek',
-               site != 'filterblank',
-               site != 'filter_blank',
-               site != 'fieldblank',
-               site != 'east_above_rustlers',
-               site != 'er',
-               site != 'er_plm1',
-               site != 'er_plm4',
-               site != 'er_plm6') %>%
-        mutate(var = case_when(site_unit == 'tdn_g_l' ~ 'TDN',
-                               site_unit == 'ammonia_n_ppm' ~ 'NH3_N')) %>%
-        mutate(site_code = case_when(site == 'avery' ~ 'Avery',
-                                     site == 'benthette' ~ 'Benthette',
-                                     site == 'bradley' ~ 'Bradley',
-                                     site == 'copper' ~ 'Copper',
-                                     site %in% c('east_below_copper', 'ebc_isco') ~ 'EBC',
-                                     site == 'gothic' ~ 'Gothic',
-                                     site == 'marmot' ~ 'Marmot',
-                                     site == 'ph_isco' ~ 'PH',
-                                     site == 'quigley' ~ 'Quigley',
-                                     site == 'rock' ~ 'Rock',
-                                     site == 'rustlers' ~ 'Rustlers',
-                                     TRUE ~ site)) %>%
-        mutate(datetime = sw(as_datetime(date, format = '%Y-%m-%d', tz = 'UTC'))) %>%
-        mutate(val = sw(as.numeric(val)),
-               ms_status = 0) %>%
-        select(datetime, site_code, val, var, ms_status) %>%
-        filter(!is.na(val),
-               !is.na(var)) %>%
-        as_tibble()
+    all_sites <- all_sites %>%
+        filter(site %in% east_river_sites_of_interest,
+               ! grepl('Y', date)) %>%
+        mutate(val = as.numeric(val),
+               site = toupper(site)) %>%
+        filter(val > -1000) %>%
+        group_by(date, site, var) %>%
+        summarize(val = mean(val, na.rm = TRUE)) %>%
+        ungroup() %>%
+        pivot_wider(names_from = var,
+                    values_from = val)
 
-    # Catch this new site name
-    d$site_code[d$site_code == 'east_above_quigley'] <- 'EAQ'
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         data_cols =  c(tdn = 'TDN',
+                                        ammonia_n = 'NH3_N'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    # need to add overwrite options
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = FALSE,
-                                  date_col = 'datetime',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms,
-                                  sampling_type = 'G')
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
-                   convert_units_from = c('TDN' = 'ug/l'),
-                   convert_units_to = c('TDN' = 'mg/l'))
+                        convert_units_from = c('TDN' = 'ug/l'),
+                        convert_units_to = c('TDN' = 'mg/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
@@ -1454,7 +1175,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -1463,29 +1184,25 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    # temp_dir <- file.path(tempdir(), 'macrosheds_unzip_dir/')
-
     temp_dir <- tempdir()
     dir.create(temp_dir,
                showWarnings = FALSE,
                recursive = TRUE)
 
-    # unlink(paste0(temp_dir, '/*'))
-
     unzip(rawfile,
           exdir = temp_dir)
 
     path <- paste(temp_dir, 'data', sep = '/')
-
     sheds <- sf::st_read(path)
-
     projstring <- choose_projection(unprojected = TRUE)
 
+    sitecodes <- names(east_river_site_name_map)
+    sitenames <- unname(east_river_site_name_map)
     sheds <- sheds %>%
-        filter(NAME %in% c('Copper', 'Marmot', 'Bradley', 'Rustlers', 'Gothic',
-                           'Quigley', 'Rock', 'Avery')) %>%
+        filter(NAME %in% sitenames) %>%
+        mutate(NAME = sitecodes[match(NAME, sitenames)]) %>%
         select(site_code = NAME, area = km2) %>%
-        mutate(area = area*100)
+        mutate(area = area * 100)
 
     sites <- unique(sheds$site_code)
 
@@ -1511,19 +1228,20 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, component){
+
+    is_q_run <- grepl('discharge', prodname_ms)
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
-                    p = prodname_ms,
+                    p = ifelse(is_q_run, prodname_ms, 'discharge__VERSIONLESS009'),
                     s = site_code,
                     c = component)
 
     temp_dir <- tempdir()
 
-    zipped_files <- unzip(rawfile,
-          list = T)
+    zipped_files <- unzip(rawfile, list = TRUE)
 
     files_wanted <- zipped_files$Name[! grepl('Stream_discharge_data_collected_within_the_East_River_Colorado_for_the_Lawrence_Berkeley_National_Laboratory',
                                               zipped_files$Name)]
@@ -1531,79 +1249,83 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
           files = files_wanted,
           exdir = temp_dir)
 
-    temp_dir_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
-    rel_file <- grep('streamflow|Streamflow', temp_dir_files, value = TRUE)
+    temp_dir_files <- list.files(temp_dir, full.names = TRUE)
+    pdir <- grep('stream_discharge_data_wy', temp_dir_files, ignore.case = TRUE, value = TRUE)
+
+    if(! length(pdir)) stop('major filename change')
+
+    qfiles <- list.files(pdir, recursive = TRUE, full.names = TRUE, pattern = 'Daily')
+    qfiles <- grep('NL|Graph', qfiles, value = TRUE, invert = TRUE)
 
     all_sites <- tibble()
-    for(i in 1:length(rel_file)){
+    for(i in seq_along(qfiles)){
 
-        site_code <- str_match(rel_file[i], '.+/(.+)_[sS]treamflow.+\\.xlsx$')[, 2]
+        qf <- qfiles[i]
 
-        if(site_code == 'Pumphouse') site_code <- 'PH'
+        site_code <- str_extract(qf, '([^_]+)(?=_Mean_Daily)')
 
-        sheets <- readxl::excel_sheets(rel_file[i])
+        nrow_header <- read_lines(qf, n_max = 1) %>%
+            str_extract('\\d+') %>%
+            as.numeric()
 
-        if('corrected' %in% sheets){
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'corrected')
-        } else if('Corrected' %in% sheets) {
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'Corrected')
-        } else {
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'flow')
+        d_ <- sm(read_csv(
+            qf,
+            skip = nrow_header - 1,
+            col_select = any_of(c('Date', 'date', 'DateTime', 'Q',
+                                  'mean_daily_Q', 'Daily_Mean_Q', 'Mean_daily_Q',
+                                  'Mean_Daily_Q', 'mean daily Q (m3/s)',
+                                  'Water_Temperature', 'Notes'))
+        ))
+
+        if(ncol(d_) != 3 && ! i %in% c(11, 15, 19, 23, 27, 28, 29)){
+            print(read_lines(qf, n_max = 8))
+            stop('column issue')
         }
 
-        sheet_names <- names(one_site)
+        d_ <- rename_with(d_, tolower)
+        d_ <- rename_with(d_, ~sub('mean daily q \\(m3/s\\)', 'mean_daily_q', .))
+        d_ <- rename_with(d_, ~sub('daily_mean_q|^q$', 'mean_daily_q', .))
+        d_ <- mutate(d_, across(any_of('datetime'), as.Date))
+        d_ <- rename_with(d_, ~sub('date|datetime', 'date', .))
 
-        date_col <- grep('Time|time', sheet_names, value = TRUE)
-        q_col <- sheet_names[str_detect(sheet_names,
-                            regex('(m3/s)|cms', ignore_case = T))]
+        if(! is.Date(d_$date[1])) d_$date <- as.Date(d_$date, format = '%m/%d/%y')
 
-        if(length(q_col) == 0){
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'mean daily')
+        d_$site <- site_code
 
-            sheet_names <- names(one_site)
-
-            date_col <- grep('Time|time|date', sheet_names, value = TRUE)
-            q_col <- sheet_names[str_detect(sheet_names,
-                                            regex('(m3/s)|cms', ignore_case = T))]
-        }
-
-        one_site <- try(one_site %>%
-                            mutate(site_code := !!site_code) %>%
-                            select(date = !!date_col,
-                                   q = !!q_col,
-                                   site_code))
-
-        if(inherits(one_site, 'try-error')) {
-
-            one_site <- readxl::read_xlsx(rel_file[i], sheet = 'mean daily') %>%
-                mutate(site_code = !!site_code) %>%
-                select(date,
-                       q = `mean daily Q (m3/s)`,
-                       site_code)
-        }
-
-        all_sites <- rbind(all_sites, one_site)
+        all_sites <- bind_rows(all_sites, d_)
     }
 
-    all_sites <- all_sites %>%
-        rename(datetime = date,
-               val = q) %>%
-        mutate(var = 'discharge',
-               ms_status = 0)
+    all_sites <- filter(all_sites,
+                        ! is.na(date),
+                        ! site %in% c('EBC', 'GSB'))
 
-    d <- identify_sampling_bypass(all_sites,
-                                  is_sensor = T,
-                                  sampling_type = 'I',
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms)
+    if(is_q_run){
+        target_var <- c(mean_daily_q = 'discharge')
+    } else {
+        target_var <- c(water_temperature = 'temp')
+    }
 
-    # Discharge is in m^3/s, converting to L/s
-    d <- d %>%
-        mutate(val = val*1000)
+    d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
+                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-7',
+                         site_code_col = 'site',
+                         alt_site_code = east_river_site_name_map,
+                         data_cols =  target_var,
+                         data_col_pattern = '#V#',
+                         set_to_NA = '-9999',
+                         summary_flagcols = 'notes',
+                         is_sensor = TRUE)
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(notes = c('N/A')),
+                            summary_flags_to_drop = list(notes = 'sentinel'))
+
+    if(is_q_run){
+        d <- mutate(d, val = val * 1000) #m^3/s -> L/s
+    }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)

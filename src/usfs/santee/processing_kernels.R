@@ -25,7 +25,7 @@ process_0_VERSIONLESS005 <- download_from_googledrive
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -37,14 +37,14 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     temp_dir <- tempdir()
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T, full.names = T)
-    
-    # HQ 
+
+    # HQ
     #    historical
     hq_hist_path <- grep('hq_hist.csv', fils, value = T)
-    
+
     hq_hist_d <- ms_read_raw_csv(filepath = hq_hist_path,
                                  datetime_cols = list('Date_instant' = '%Y-%m-%d'),
-                                 datetime_tz = 'US/Eastern',
+                                 datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'Instr_ID',
                                  data_cols =  c(Rainfall_m = 'precipitation'),
                                  data_col_pattern = '#V#',
@@ -56,42 +56,42 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #    modern (all null values)
     # hq_modern_path <- grep('hq_daily', fils, value = T)
-    # 
+    #
     # hq_modern_path <- ms_read_raw_csv(filepath = hq_modern_path,
     #                              datetime_cols = list('Date' = '%Y-%m-%d'),
-    #                              datetime_tz = 'US/Eastern',
+    #                              datetime_tz = 'Etc/GMT-5',
     #                              site_code_col = 'Instr_ID',
     #                              data_cols =  c(Rainfall_m = 'precipitation'),
     #                              data_col_pattern = '#V#',
     #                              is_sensor = TRUE)
-    # 
+    #
     # hq_hist_d <- ms_cast_and_reflag(hq_hist_d,
     #                                 varflag_col_pattern = NA)
-    # 
+    #
     # HQ pluvio guage
     pluvio_path <- grep('hq_pluvio_highrez', fils, value = T)
     pluvio_d <- read.csv(pluvio_path, colClasses = 'character') %>%
         mutate(site_code = 'SEFHQ_pluvio')
-    
+
     pluvio_d <- ms_read_raw_csv(preprocessed_tibble = pluvio_d,
                                  datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
-                                 datetime_tz = 'US/Eastern',
+                                 datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'site_code',
                                  data_cols =  c(Rainfall_m = 'precipitation'),
                                  data_col_pattern = '#V#',
                                  set_to_NA = 'NULL',
                                  is_sensor = TRUE)
-    
+
     pluvio_d <- ms_cast_and_reflag(pluvio_d,
                                     varflag_col_pattern = NA)
-    
-    # lotti 
+
+    # lotti
     #     high rez
     lotti_highrez_path <- grep('lotti_highrez', fils, value = T)
 
     lotti_highrez_d <- ms_read_raw_csv(filepath = lotti_highrez_path,
                                 datetime_cols = list('Date_time_temp' = '%m/%e/%Y %H:%M'),
-                                datetime_tz = 'US/Eastern',
+                                datetime_tz = 'Etc/GMT-5',
                                 site_code_col = 'Instr_ID',
                                 data_cols =  c(Rainfall_m = 'precipitation'),
                                 data_col_pattern = '#V#',
@@ -107,89 +107,89 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     lotti_hist_d <- ms_read_raw_csv(filepath = lotti_hist_path,
                                        datetime_cols = list('Date_temp' = '%Y-%m-%d'),
-                                       datetime_tz = 'US/Eastern',
+                                       datetime_tz = 'Etc/GMT-5',
                                        site_code_col = 'Instr_ID',
                                        data_cols =  c(Rainfall_m = 'precipitation'),
                                        data_col_pattern = '#V#',
                                        sampling_type = 'I',
                                        set_to_NA = 'NULL',
                                        is_sensor = TRUE)
-    
+
     lotti_hist_d <- ms_cast_and_reflag(lotti_hist_d,
                                        varflag_col_pattern = NA)
-    
+
     # met 25
     #    highrez
     met25_highrez_path <- grep('met25_highrez', fils, value = T)
 
     met25_highrez_d <- ms_read_raw_csv(filepath = met25_highrez_path,
                                     datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
-                                    datetime_tz = 'US/Eastern',
+                                    datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
                                     is_sensor = TRUE)
-    
+
     met25_highrez_d <- ms_cast_and_reflag(met25_highrez_d,
                                        varflag_col_pattern = NA)
-    
-    #    historical 
+
+    #    historical
     met25_hist_path <- grep('met25_hist', fils, value = T)
 
     met25_hist_d <- ms_read_raw_csv(filepath = met25_hist_path,
                                        datetime_cols = list('Date_temp' = '%Y-%m-%d'),
-                                       datetime_tz = 'US/Eastern',
+                                       datetime_tz = 'Etc/GMT-5',
                                        site_code_col = 'Instr_ID',
                                        data_cols =  c(Rainfall_m = 'precipitation'),
                                        data_col_pattern = '#V#',
                                        sampling_type = 'I',
                                        set_to_NA = 'NULL',
                                        is_sensor = TRUE)
-    
+
     met25_hist_d <- ms_cast_and_reflag(met25_hist_d,
                                           varflag_col_pattern = NA)
-    
+
     # met5
     #     highrez
     met5_highrez_path <- grep('met25_highrez', fils, value = T)
     look <- read.csv(met5_highrez_path, colClasses = 'character')
-    
+
     met5_highrez_d <- ms_read_raw_csv(filepath = met5_highrez_path,
                                     datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
-                                    datetime_tz = 'US/Eastern',
+                                    datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
                                     is_sensor = TRUE)
-    
+
     met5_highrez_d <- ms_cast_and_reflag(met5_highrez_d,
                                          varflag_col_pattern = NA)
-    #    historical 
+    #    historical
     met5_hist_path <- grep('met5_hist', fils, value = T)
 
     met5_hist_d <- ms_read_raw_csv(filepath = met5_hist_path,
                                     datetime_cols = list('Date_temp' = '%Y-%m-%d'),
-                                    datetime_tz = 'US/Eastern',
+                                    datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
                                     is_sensor = TRUE)
-    
+
     met5_hist_d <- ms_cast_and_reflag(met5_hist_d,
                                        varflag_col_pattern = NA)
-    
+
     # turkey
     turkey_highrez_path <- grep('turkey_highrez', fils, value = T)
-    
+
     turkey_highrez_d <- ms_read_raw_csv(filepath = turkey_highrez_path,
                                    datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
-                                   datetime_tz = 'US/Eastern',
+                                   datetime_tz = 'Etc/GMT-5',
                                    site_code_col = 'Instr_ID',
                                    alt_site_code = list('TC_Met' = 'TC Met'),
                                    data_cols =  c(Rainfall_m = 'precipitation'),
@@ -197,14 +197,14 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                    sampling_type = 'I',
                                    set_to_NA = 'NULL',
                                    is_sensor = TRUE)
-    
+
     turkey_highrez_d <- ms_cast_and_reflag(turkey_highrez_d,
                                       varflag_col_pattern = NA)
-    
-    # It looks like the highrez files for lotti, met5 and met 25 are missing 
-    # most of the data for every year, SFE was contacted 
-    d <- rbind(hq_hist_d, pluvio_d, lotti_hist_d, lotti_hist_d, met5_hist_d, 
-               turkey_highrez_d)
+
+    # It looks like the highrez files for lotti, met5 and met 25 are missing
+    # most of the data for every year, SFE was contacted
+    d <- rbind(hq_hist_d, pluvio_d, lotti_highrez_d, lotti_hist_d, met25_hist_d,
+               met5_highrez_d, met5_hist_d, turkey_highrez_d)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -243,7 +243,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     temp_dir <- tempdir()
     unzip(rawfile, exdir = temp_dir)
-    
+
     fils <- list.files(paste0(temp_dir, '/', 'santee_q'), full.names = T)
 
     # ws77
@@ -253,34 +253,34 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     for(s in 1:length(hist_paths)){
         d_hist <- ms_read_raw_csv(filepath = hist_paths[s],
                                   datetime_cols = list('Date_' = '%Y-%m-%d'),
-                                  datetime_tz = 'US/Eastern',
+                                  datetime_tz = 'Etc/GMT-5',
                                   site_code_col = 'Location',
                                   data_cols =  c(Dailyflow_ = 'discharge'),
                                   data_col_pattern = '#V#',
                                   set_to_NA = 'NULL',
                                   is_sensor = TRUE)
-        
+
         d_hist <- ms_cast_and_reflag(d_hist,
                                           varflag_col_pattern = NA)
-        
+
         all_historical <- rbind(all_historical, d_hist)
     }
     #    modern
     modern_paths <- grep('10min|15min', fils, value = T)
-    
+
     all_modern <- tibble()
     for(s in 1:length(modern_paths)){
-        
+
         if(!grepl('ws78_15min', modern_paths[s])){
             d_modern <- read.csv(modern_paths[s], colClasses = 'character')
-            
+
             d_modern <- d_modern %>%
                 mutate(time = str_split_fixed(Data_time, ' ', n = Inf)[,2])
-            
+
             d_modern <- ms_read_raw_csv(preprocessed_tibble = d_modern,
                                         datetime_cols = list('Date_' = '%Y-%m-%d',
                                                              'time' = '%H:%M'),
-                                        datetime_tz = 'US/Eastern',
+                                        datetime_tz = 'Etc/GMT-5',
                                         site_code_col = 'Location',
                                         data_cols =  c(Flow_liter = 'discharge'),
                                         data_col_pattern = '#V#',
@@ -289,17 +289,17 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         } else{
             d_modern <- ms_read_raw_csv(filepath = modern_paths[s],
                                         datetime_cols = list('Data_time' = '%m/%e/%Y %H:%M'),
-                                        datetime_tz = 'US/Eastern',
+                                        datetime_tz = 'Etc/GMT-5',
                                         site_code_col = 'Location',
                                         data_cols =  c(Flow_liter = 'discharge'),
                                         data_col_pattern = '#V#',
                                         set_to_NA = 'NULL',
                                         is_sensor = TRUE)
         }
-        
+
         d_modern <- ms_cast_and_reflag(d_modern,
                                        varflag_col_pattern = NA)
-        
+
         all_modern <- rbind(all_modern, d_modern)
     }
 
@@ -334,7 +334,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component){
+
+    #missing conductivity, temp_C: not errors
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/santee_waterqual.zip',
                     n = network,
@@ -344,17 +346,20 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     temp_dir <- tempdir()
     unzip(rawfile, exdir = temp_dir)
-    fils <- list.files(paste0(temp_dir, '/', 'santee_waterqual'), 
+    fils <- list.files(paste0(temp_dir, '/', 'santee_waterqual'),
                        recursive = T, full.names = T)
 
     modern_fils <- grep('mod', fils, value = T)
-    
+
     all_modern <- tibble()
     for(s in 1:length(modern_fils)){
 
-        d_m <- ms_read_raw_csv(filepath = modern_fils[s],
+        d_m <- read.csv(modern_fils[s]) %>%
+            rename(Conductivity = Conductivi)
+
+        d_m <- ms_read_raw_csv(preprocessed_tibble = d_m,
                                datetime_cols = c(Date_time = '%m/%e/%Y %H:%M'),
-                               datetime_tz = 'US/Eastern',
+                               datetime_tz = 'Etc/GMT-5',
                                site_code_col = 'Location',
                                data_cols =  c(TN_mgL = 'TDN',
                                               TP_mgL = 'TDP',
@@ -376,31 +381,32 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                               Conductivity = 'spCond',
                                               DO_mgL = 'DO',
                                               DO_per_sat = 'DO_sat'),
+                               set_to_NA = 'NULL',
                                data_col_pattern = '#V#',
                                is_sensor = FALSE)
-        
+
         d_m <- ms_cast_and_reflag(d_m,
                                   varflag_col_pattern = NA)
-        
+
         all_modern <- rbind(all_modern, d_m)
     }
-    
+
     # spCond ms/cm to us/cm
     all_modern <- all_modern %>%
         mutate(val = ifelse(var == 'spCond', val*1000, val))
-    
+
     all_modern <- ms_conversions(all_modern,
                                      convert_units_from = c(PO4 = 'mg/l'),
                                      convert_units_to = c(PO4 = 'mg/l'))
-    
+
     historical_fils <- grep('hist', fils, value = T)
-    
+
     all_historical <- tibble()
     for(s in 1:length(historical_fils)){
-        
+
         d_h <- ms_read_raw_csv(filepath = historical_fils[s],
                                datetime_cols = c(Date_ = '%Y-%m-%d'),
-                               datetime_tz = 'US/Eastern',
+                               datetime_tz = 'Etc/GMT-5',
                                site_code_col = 'Location',
                                data_cols =  c(pH='pH',
                                               NO3_NO2_N_mgL='NO3_NO2_N',
@@ -421,10 +427,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                data_col_pattern = '#V#',
                                set_to_NA = 'NULL',
                                is_sensor = FALSE)
-        
+
         d_h <- ms_cast_and_reflag(d_h,
                                   varflag_col_pattern = NA)
-        
+
         all_historical <- rbind(all_historical, d_h)
     }
 
@@ -462,14 +468,14 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 #precip_chemistry: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/santee-wetdry_Export.csv',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
+
     d <- read.csv(rawfile) %>%
         mutate(conver_fact = as.numeric(SampleArea)/(as.numeric(SampleWeight)/1e+6)) %>%
         mutate(NH4_N = as.character(as.numeric(NH4_N)*conver_fact),
@@ -484,13 +490,13 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                MG = as.character(as.numeric(MG)*conver_fact),
                TP = as.character(as.numeric(TP)*conver_fact)) %>%
         # This gauge is located near the HQ, the HQ dataset does not
-        # include precip data past 2000. But the SEFHQ_pluvio is located near the 
+        # include precip data past 2000. But the SEFHQ_pluvio is located near the
         # HQ
         mutate(site = 'SEFHQ_pluvio')
-    
+
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                            datetime_cols = c(Date = '%Y-%m-%d'),
-                           datetime_tz = 'US/Eastern',
+                           datetime_tz = 'Etc/GMT-5',
                            site_code_col = 'site',
                            data_cols =  c(NH4_N = 'NH4_N',
                                           CL = 'Cl',
@@ -507,25 +513,25 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                           Conductivity = 'spCond'),
                            data_col_pattern = '#V#',
                            is_sensor = FALSE)
-    
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
-    
+
     d <- ms_conversions(d,
                           convert_units_from = c(PO4 = 'mg/l'),
                           convert_units_to = c(PO4 = 'mg/l'))
-    
+
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-    
+
     d <- synchronize_timestep(d)
-    
+
     sites <- unique(d$site_code)
-    
+
     for(s in 1:length(sites)){
-        
+
         d_site <- d %>%
             filter(site_code == !!sites[s])
-        
+
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
@@ -534,57 +540,57 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
-    
+
     return()
 }
 
 #ws_boundary: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
-    
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
                     d = domain,
                     p = prodname_ms,
                     s = site_code)
-    
+
     # WS79 AND WS80 are miss labeled. Check this if the product is updated
     wb_paths <- list.files(rawfile, full.names = T)
     # wb_paths <- grep('WS79|WS80', wb_paths, value = TRUE)
     temp_dir <- tempdir()
-    
+
     proj <- choose_projection(unprojected = TRUE)
-    
+
     unlink(temp_dir, recursive = T)
     temp_dir <- tempdir()
-    
+
     unzip(wb_paths[1], exdir = temp_dir)
-    
+
     name <- str_split_fixed(wb_paths[1], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
-    
+
     name <- case_when(name == 'WS79' ~ 'WS80',
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
-    
+
     ws1 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_transform(proj)
-    
+
     unlink(temp_dir, recursive = TRUE)
-    
+
     temp_dir <- tempdir()
-    
+
     unzip(wb_paths[2], exdir = temp_dir)
-    
+
     name <- str_split_fixed(wb_paths[2], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
-    
+
     name <- case_when(name == 'WS79' ~ 'WS80',
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
-    
+
     ws2 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
@@ -594,39 +600,39 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         mutate(area = sf::st_area(geometry)) %>%
         filter(as.numeric(area) > 100) %>%
         select(-area)
-    
+
     unlink(temp_dir, recursive = TRUE)
-    
+
     temp_dir <- tempdir()
-    
+
     unzip(wb_paths[3], exdir = temp_dir)
-    
+
     name <- str_split_fixed(wb_paths[3], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
-    
+
     name <- case_when(name == 'WS79' ~ 'WS80',
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
-    
+
     ws3 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
         sf::st_transform(proj)
-    
+
     unlink(temp_dir, recursive = TRUE)
-    
+
     temp_dir <- tempdir()
-    
+
     unzip(wb_paths[4], exdir = temp_dir)
-    
+
     name <- str_split_fixed(wb_paths[4], 'WS', n = Inf)[1,2]
     name <- paste0('WS', str_split_fixed(name, '_| ', n = Inf)[1,1])
-    
+
     name <- case_when(name == 'WS79' ~ 'WS80',
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
-    
+
     ws4 <- st_read(temp_dir) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
@@ -638,12 +644,12 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
         mutate(area = as.numeric(sf::st_area(geometry)/10000))
 
     sites <- unique(d$site_code)
-    
+
     for(s in 1:length(sites)){
-        
+
         d_site <- d %>%
             filter(site_code == !!sites[s])
-        
+
         write_ms_file(d = d_site,
                       network = network,
                       domain = domain,
@@ -652,7 +658,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = TRUE)
     }
-    
+
     return()
 }
 
