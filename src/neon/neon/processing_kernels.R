@@ -1115,7 +1115,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
                         p = prodname_ms,
                         s = site_code_)
 
-        rawd <- read_csv(rawfile) %>%
+        rawd <- read_csv(rawfile, show_col_types = FALSE) %>%
             mutate(site = site_code_)
 
         d <- ms_read_raw_csv(preprocessed_tibble = rawd,

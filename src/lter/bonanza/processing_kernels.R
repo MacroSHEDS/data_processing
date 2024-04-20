@@ -64,8 +64,7 @@ process_0_157 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_152 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_152 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -102,7 +101,7 @@ process_1_152 <- function(network, domain, prodname_ms, site_code,
                                         'Temperature.degC.' = 'temp'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         set_to_NA = '0')
+                         set_to_NA = c('0', ''))
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
@@ -141,8 +140,7 @@ process_1_152 <- function(network, domain, prodname_ms, site_code,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_142 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_142 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -151,10 +149,14 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    # look <- read.csv(rawfile, colClasses = 'character')
+    d <- read.csv(rawfile, colClasses = 'character')
+    just_dates <- nchar(d$dateTime) == 10
+    d$dateTime[just_dates] <- paste(d$dateTime[just_dates], '00:00:00')
 
-    d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(Date.Time = '%Y-%m-%d %H:%M:%S'),
+    if(! any(grepl('^[0-9\\.]{2,}$', d$Flag))) stop('bonanza Q flag column fixed. parse it')
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = c(dateTime = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'UTC',
                          # datetime_tz = 'US/Alaska',
                          site_code_col = 'Watershed',
@@ -162,9 +164,12 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
                          sampling_type = 'I')
+                         # summary_flagcols = 'Flag')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+                            # summary_flags_clean = list(c(Flow = 'G')),
+                            # summary_flags_to_drop = list(c(Flow = 'sentinel')))
 
     return(d)
 
@@ -172,8 +177,7 @@ process_1_142 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_159 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_159 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -222,8 +226,7 @@ process_1_159 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_167 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_167 <- function(network, domain, prodname_ms, site_code, component){
 
     # There is anoth precip product (384) which uses weighing buckets that is
     # better for snow but less accurate for rain
@@ -266,8 +269,7 @@ process_1_167 <- function(network, domain, prodname_ms, site_code,
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_157 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_157 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
                     n = network,

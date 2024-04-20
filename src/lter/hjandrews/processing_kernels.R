@@ -249,8 +249,7 @@ process_0_4020 <- function(set_details, network, domain){
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_4341 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_4341 <- function(network, domain, prodname_ms, site_code, components){
 
     rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/Daily streamflow summaries.csv',
                     n = network,
@@ -309,8 +308,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation; precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_5482 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_5482 <- function(network, domain, prodname_ms, site_code, components){
 
     component <- ifelse(prodname_ms == 'precip_gauge_locations__5482',
                         'MS00401',
@@ -367,8 +365,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_4021 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_4021 <- function(network, domain, prodname_ms, site_code, components){
 
     #note: blocklisting of components has been superseded by the "component"
     #   column in products.csv. don't copy this chunk.
@@ -386,9 +383,12 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
+    d <- read.csv(rawfile1, colClasses = 'character') %>%
+        rename(NA.CODE = NACODE)
+
     #look carefully at warnings from ms_read_raw_csv.
     #they may indicate insufficiencies
-    d <- ms_read_raw_csv(filepath = rawfile1,
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
@@ -396,12 +396,11 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
                              SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
                              PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
                              MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
-                             `NA`='Na', UTP='TP', 'TDP', UTN='TN', 'TDN', 'DON',
+                             NA.='Na', UTP='TP', 'TDP', UTN='TN', 'TDN', 'DON',
                              UTKN='TKN', TKN='TDKN', 'K', 'DOC'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
                          set_to_NA = '',
-                         alt_datacol_pattern = '#V#_OUTPUT',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
@@ -421,8 +420,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code,
 
 #precip_chemistry; precip_flux_inst: STATUS=READY
 #. handle_errors
-process_1_4022 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
 
     #note: blocklisting of components has been superseded by the "component"
     #   column in products.csv. don't copy this chunk.
@@ -440,7 +438,13 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    d <- ms_read_raw_csv(filepath = rawfile1,
+    d <- read.csv(rawfile1, colClasses = 'character') %>%
+        rename(NA.CODE = NACODE)
+
+    #huge list of sites and locations in the first data file here:
+    #https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-and&identifier=5482&revision=3
+    # but RCADMN, RCHI15, RCHIF7, RCHIR7 not listedRCADMN, RCHI15, RCHIF7, RCHIR7
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
@@ -448,12 +452,13 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
                                         SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
                                         PARTN='TPN', NH3N='NH3_N', NO3N='NO3_N', CA='Ca',
                                         MG='Mg', SO4S='SO4_S', CL='Cl', ANCA='AnCaR',
-                                        `NA`='Na', UTP='TP', 'TDP', UTN='TN', 'TDN', 'DON',
+                                        NA.='Na', UTP='TP', 'TDP', UTN='TN', 'TDN', 'DON',
                                         UTKN='TKN', TKN='TDKN', 'K', 'DOC'),
                                         # PRECIP_CM='precip_ns'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         alt_datacol_pattern = '#V#_INPUT',
+                         # alt_datacol_pattern = '#V#_INPUT',
+                         set_to_NA = '',
                          var_flagcol_pattern = '#V#CODE',
                          summary_flagcols = c('TYPE'))
 
@@ -487,8 +492,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code,
 
 #ws_boundary; stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_3239 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_3239 <- function(network, domain, prodname_ms, site_code, components){
 
     component <- ifelse(prodname_ms == 'stream_gauge_locations__3239',
                         'hf01403',
@@ -553,8 +557,7 @@ process_1_3239 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_4020 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_4020 <- function(network, domain, prodname_ms, site_code, components){
 
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/HT00441.csv',

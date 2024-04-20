@@ -374,7 +374,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     print(network_domain, n=100)
     #setup
-    dmnrow = 28
+    dmnrow = 24
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)
@@ -393,6 +393,8 @@ for(dmnrow in 1:nrow(network_domain)){
              # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('precip_gauge_locations'),
+             # prodname_filter = c('stream_gauge_locations'),
              domain = domain)
     retain_ms_globals(ms_globals)
     stop()

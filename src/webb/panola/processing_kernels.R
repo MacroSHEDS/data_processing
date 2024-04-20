@@ -40,7 +40,7 @@ p1v001_discharge <- function(zipf){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('Streamflow' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -64,7 +64,7 @@ p1v001_stream_chemistry <- function(zipf){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c(
                              "pH"  =  "pH",
@@ -118,7 +118,7 @@ p1v001_CUSTOMprecipitation <- function(zipf){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -144,7 +144,7 @@ p1v001_precip_chemistry <- function(zipf){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols = c(
                              "ANC_Conc" = "ANC",
@@ -183,7 +183,7 @@ p1v001_precip_chemistry <- function(zipf){
         'Cl' = c('ueq/l', 'mg/l')
     )
 
-    update_detlims(d, var_deets)
+    update_detlims(d, lapply(var_deets, function(x) x[1]))
 
     d <- ms_conversions(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
@@ -201,7 +201,7 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('H_WetDep' = 'H',
                                         'Ca_WetDep' = 'Ca',
@@ -259,7 +259,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('ANC', 'Ca', 'Mg', 'Na', 'K', 'SO4',
                                         'NO3', 'Cl', 'Si', 'DOC'),

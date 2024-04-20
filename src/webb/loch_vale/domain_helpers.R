@@ -178,11 +178,16 @@ process_wqp_chem <- function(rawfile, ms_site_code){
         select(ms_varcode, starts_with('unit')) %>%
         filter(unit_ms != unit_usgs)
 
+    nonconvs <- normally_converted_molecules
+    vars_present <- drop_var_prefix(unique(d$var))
+    nonconvs <- nonconvs[nonconvs %in% vars_present & normally_converted_to %in% vars_present]
+
     d <- ms_conversions(d,
                         convert_units_from = setNames(required_conversions$unit_usgs,
                                                       required_conversions$ms_varcode),
                         convert_units_to = setNames(required_conversions$unit_ms,
-                                                    required_conversions$ms_varcode))
+                                                    required_conversions$ms_varcode),
+                        keep_molecular = nonconvs)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

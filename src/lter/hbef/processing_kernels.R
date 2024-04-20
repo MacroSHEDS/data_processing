@@ -132,8 +132,7 @@ process_0_94 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_1 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -167,8 +166,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_13 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_13 <- function(network, domain, prodname_ms, site_code, component){
 
     if(component == 'site info'){
         loginfo('Blacklisting superfluous data component')
@@ -199,8 +197,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_208 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_208 <- function(network, domain, prodname_ms, site_code, component){
 
     if(component == 'Analytical Methods'){
         loginfo('Blacklisting superfluous data component')
@@ -214,7 +211,19 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    d <- ms_read_raw_csv(filepath = rawfile,
+    d <- read.csv(rawfile, colClasses = 'character')
+
+    #one day we may track methods more closely, but for now (20240412) hbef
+    #is the only domain distinguishing among pH and ANC methods, so consolidate
+    d <- d %>%
+        mutate(ANC = if_else(is.na(ANCMet), ANC960, ANCMet),
+               pH = if_else(is.na(pHmetrohm), pH, pHmetrohm)) %>%
+        select(-ANCMet, -ANC960, -pHmetrohm) %>%
+        mutate(fieldCode = if_else(grepl('969|955|970|905', fieldCode),
+                                   '969', #sometimes two codes are combined. consolidate here
+                                   fieldCode))
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(date = '%Y-%m-%d',
                                            timeEST = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
@@ -229,33 +238,24 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
                                               'w8' = c('8', 'W8'),
                                               'w9' = c('9', 'W9')),
                          data_cols = c('pH', 'DIC', 'spCond', 'temp',
-                                       'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
+                                       'ANC', 'Ca', 'Mg', 'K',
                                        'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
                                        'NH4', 'SO4', 'NO3', 'Cl',
                                        'PO4', 'DOC', 'TDN', 'DON',
                                        'SiO2', 'Mn', 'Fe', 'F',
                                        'cationCharge', 'anionCharge',
-                                       'ionBalance', 'pHmetrohm'),
+                                       'ionBalance'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         set_to_NA = -999.9, #also -3, but that can be a real value in other columns. will get dropped in postprocessing
+                         set_to_NA = -999.9,
                          summary_flagcols = 'fieldCode')
 
-    #one day we may track methods more closely, but for now (20240412) hbef
-    #is the only domain distinguishing among pH and ANC methods, so consolidate
-    d <- d %>%
-        mutate(`GN_ANC__|dat` = if_else(is.na(`GN_ANCMet__|dat`),
-                                        `GN_ANC960__|dat`,
-                                        `GN_ANCMet__|dat`),
-               `GN_pH__|dat` = if_else(is.na(`GN_pHmetrohm__|dat`),
-                                       `GN_pH__|dat`,
-                                       `GN_pHmetrohm__|dat`)) %>%
-        select(-`GN_ANCMet__|dat`, -`GN_ANC960__|dat`, -`GN_pHmetrohm__|dat`)
-
-    d <- ms_cast_and_reflag(d,
-                            summary_flags_to_drop = list(fieldCode = 9999), #not a real code
-                            summary_flags_dirty = list(fieldCode = c(969, 970)),
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(
+        d,
+        summary_flags_to_drop = list(fieldCode = 'sentinel'),
+        summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
+        varflag_col_pattern = NA
+    )
 
     d <- ms_conversions(d,
                         convert_units_from = c(DIC = 'umol/l'),
@@ -266,8 +266,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_94 <- function(network, domain, prodname_ms, site_code,
-                         component){
+process_1_94 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)
@@ -317,8 +316,7 @@ process_1_94 <- function(network, domain, prodname_ms, site_code,
 
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_100 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_100 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)
@@ -360,8 +358,7 @@ process_1_100 <- function(network, domain, prodname_ms, site_code,
 
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_107 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_107 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)

@@ -135,7 +135,9 @@ stackByTable_keep_zips <- function(zip_parent){
 
     print(paste('stacking zips for', prodname_ms))
 
-    tmpd <- tempdir()
+    tmpd <- file.path(tempdir(), 'neon_temp')
+    dir.create(tmpd, showWarnings = FALSE)
+
     file.copy(zip_parent, tmpd, recursive = TRUE)
 
     capture.output({

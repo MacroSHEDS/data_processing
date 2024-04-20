@@ -98,6 +98,37 @@ assign('canonical_derprods',
                  'stream_chemistry', 'stream_gauge_locations', 'ws_boundary'),
        envir = .GlobalEnv)
 
+molecular_conversion_map <- list(
+    NH4 = 'N',
+    NH3 = 'N',
+    NH3_NH4 = 'N',
+    NO3 = 'N',
+    NO2 = 'N',
+    NO3_NO2 = 'N',
+    SiO3 = 'Si',
+    SiO2 = 'Si',
+    SO4 = 'S',
+    PO4 = 'P',
+    orthophosphate = 'P')
+assign('molecular_conversion_map',
+       value = molecular_conversion_map,
+       envir = .GlobalEnv)
+
+normally_converted_molecules <- names(molecular_conversion_map)
+normally_converted_to <- paste(normally_converted_molecules,
+                               str_extract(normally_converted_molecules, '^([NPS]i?)', group = 0),
+                               sep = '_')
+if(sum(grepl('_NA$', normally_converted_to)) != 1) stop('molecular_conversion_map has changed')
+normally_converted_to <- sub('_NA$', '_P', normally_converted_to)
+
+assign('normally_converted_molecules',
+       value = normally_converted_molecules,
+       envir = .GlobalEnv)
+
+assign('normally_converted_to',
+       value = normally_converted_to,
+       envir = .GlobalEnv)
+
 #exports from an attempt to use socket cluster parallelization;
 # idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
 #                     'tidyverse', 'lubridate', 'feather', 'glue',
@@ -2269,36 +2300,22 @@ ms_conversions <- function(d,
                       'not present in d. did you mean something else?'))
     }
 
-    convert_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
-                           'NO3_NO2', 'NO2', 'orthophosphate', 'NH3_NH4')
+    cmols <- normally_converted_molecules
 
     if(! missing(keep_molecular)){
-        if(any(! keep_molecular %in% convert_molecules)){
+        if(any(! keep_molecular %in% cmols)){
             stop(glue('keep_molecular must be a subset of {cm}',
-                      cm = paste(convert_molecules,
+                      cm = paste(cmols,
                                  collapse = ', ')))
         }
-        convert_molecules <- convert_molecules[! convert_molecules %in% keep_molecular]
+        cmols <- cmols[! cmols %in% keep_molecular]
     }
 
-    convert_molecules <- convert_molecules[convert_molecules %in% unique(vars)]
-
-    molecular_conversion_map <- list(
-        NH4 = 'N',
-        NH3 = 'N',
-        NH3_NH4 = 'N',
-        NO3 = 'N',
-        NO2 = 'N',
-        NO3_NO2 = 'N',
-        SiO3 = 'Si',
-        SiO2 = 'Si',
-        SO4 = 'S',
-        PO4 = 'P',
-        orthophosphate = 'P')
+    cmols <- cmols[cmols %in% unique(vars)]
 
     #handle molecular conversions, like NO3 -> NO3_N
 
-    for(v in convert_molecules){
+    for(v in cmols){
 
         v_ <- v
         if(v == 'orthophosphate') v_ <- 'PO4'
@@ -2331,7 +2348,7 @@ ms_conversions <- function(d,
         # Converts input to grams if the final unit contains grams
         g_conver <- FALSE
         if(grepl('mol|eq', unitfrom) && grepl('g', unitto) ||
-           v %in% convert_molecules){
+           v %in% cmols){
 
             d$val[d_subset] <- convert_to_gl(x = d$val[d_subset],
                                              input_unit = unitfrom,
@@ -9033,7 +9050,11 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     half_detlims_all <- detlims %>%
         mutate(hdetlim = detection_limit_converted / 2) %>%
         select(domain, prodcode, var = variable_converted, hdetlim, precision,
-               start_date, end_date)
+               start_date, end_date) %>%
+        group_by(domain, prodcode, var) %>%
+        #relevant for e.g. loch_vale 008, where NO2 and NO2_N are reported separately
+        summarize(across(everything(), first)) %>%
+        ungroup()
 
     out <- rep(NA_real_, nrow(d))
 
@@ -9059,7 +9080,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                 as.data.table()
 
             #date interval join; CASE 1:
-            #join d rows to dlsub if d's datetime falls within the covered range
+            #join d rows to dlsub if d's date* falls within the covered range
             out <- dlsub[as.data.table(d),
                          on = c("start_date<=datetime",
                                 "end_date>=datetime",
@@ -9067,18 +9088,43 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
             if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
 
+            # d = d0
+            # d$var <- drop_var_prefix(d$var)
+            # d$datetime <- as.Date(d$datetime)
+            # # d[duplicated(d) | duplicated(d, fromLast = TRUE), ] %>%
+            # #     pull(var) %>% unique()
+            #
+            # d = d[duplicated(d) | duplicated(d, fromLast = TRUE), ]
+            # d = filter(d, var == 'NO2_N')
+            # out = dlsub[as.data.table(d),
+            #       on = c("start_date<=datetime",
+            #              "end_date>=datetime",
+            #              "var==var")][[which_]]
+            # length(out); nrow(d)
+            #
+            # filter(dlsub, var == 'NO2_N')
+            # filter(half_detlims_all, var == 'NO2_N') %>% arrange(start_date)
+            # filter(detlims, domain == 'loch_vale', variable_converted == 'NO2_N') %>%
+            #     arrange(start_date) %>%
+            #     as.data.frame()
+
+            # detlim_pre[duplicated(detlim_pre) | duplicated(detlim_pre, fromLast = TRUE), ]
+            # domain_detection_limits[duplicated(domain_detection_limits) | duplicated(domain_detection_limits, fromLast = TRUE), ]
             # this_set <- domain_detection_limits %>%
-            #     filter(domain == 'catalina_jemez',
-            #            prodcode == 'stream_chemistry__4135|precip_chemistry__5492')
+            #     filter(domain == 'loch_vale',
+            #            prodcode == 'stream_chemistry__VERSIONLESS008')
+            # arrange(this_set, variable_original, variable_converted) %>%
+            #     select(starts_with('variable'), ends_with('date')) %>%
+            #     view()
             # dupes <- this_set %>%
-            #     group_by(variable_original, start_date, end_date) %>%
+            #     group_by(variable_converted, start_date, end_date) %>%
             #     summarize(n = n()) %>%
             #     ungroup() %>%
             #     filter(n != 1) %>%
             #     print(n = 1000)
             # this_set <- semi_join(this_set, dupes,
-            #                       by = c('variable_original', 'start_date', 'end_date')) %>%
-            #     arrange(variable_original, start_date, end_date)
+            #                       by = c('variable_converted', 'start_date', 'end_date')) %>%
+            #     arrange(variable_converted, start_date, end_date)
             # View(this_set)
 
             #forward rolling join to start_date; CASE 2
@@ -16533,11 +16579,6 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
         return(dl_set)
     }
-
-    normally_converted_molecules <- c('NO3', 'SO4', 'PO4', 'SiO2', 'SiO3', 'NH4', 'NH3',
-                                      'NO3_NO2', 'NH3_NH4', 'NO2', 'orthophosphate')
-    normally_converted_to <- c('NO3_N', 'SO4_S', 'PO4_P', 'SiO2_Si', 'SiO3_Si', 'NH4_N', 'NH3_N',
-                               'NO3_NO2_N', 'NH3_NH4_N', 'NO2_N', 'orthophosphate_P')
 
     #convert detlims to MS canonical units
     if('variable_converted' %in% names(dls)){

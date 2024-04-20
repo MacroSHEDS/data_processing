@@ -261,7 +261,7 @@ process_0_VERSIONLESS005 <- function(set_details, network, domain) {
 
 #precipitation: STATUS=PENDING
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -293,7 +293,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_met,
                          datetime_cols = list('Date' = '%m/%d/%y'),
-                         datetime_tz = 'America/Los_Angeles',
+                         datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'site',
                          data_cols =  c('PRECIPITATION' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -331,7 +331,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -348,11 +348,12 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('DATE_TIME' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'America/Los_Angeles',
+                         datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
+                         set_to_NA = '',
                          summary_flagcols = c('ESTCODE', 'EVENT_CODE'))
 
     d <- ms_cast_and_reflag(
@@ -396,7 +397,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -413,7 +414,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     relevant_file <- relevant_file[! grepl('attributes', relevant_file)]
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    d <- ms_read_raw_csv(filepath = rel_file_path,
+    d <- read.csv(rel_file_path, colClasses = 'character') %>%
+        rename(NA.CODE = NACODE)
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
@@ -427,13 +431,13 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         PARTP='TPP',
                                         PO4P='PO4_P',
                                         UTKN='TKN',
-										UTN='TN',
+										# UTN='TN',
                                         TKN='TDKN',
                                         PARTN='TPN',
                                         'DON',
                                         NH3N='NH3_N',
                                         NO3N='NO3_N',
-                                        `NA`='Na',
+                                        NA.='Na',
                                         CA='Ca',
                                         MG='Mg',
                                         SO4S='SO4_S',
@@ -483,7 +487,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
 #ws_boundary: STATUS=PENDING
 #. handle_errors
-process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/discharge__VERSIONLESS002/sitename_NA/krew_discharge.zip',
                     n = network,
@@ -529,7 +533,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
@@ -546,7 +550,10 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     relevant_file <- relevant_file[! grepl('attributes', relevant_file)]
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    d <- ms_read_raw_csv(filepath = rel_file_path,
+    d <- read.csv(rel_file_path, colClasses = 'character') %>%
+        rename(NA.CODE = NACODE)
+
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
@@ -560,13 +567,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                                         PARTP='TPP',
                                         PO4P='PO4_P',
                                         UTKN='TKN',
-										UTN='TN',
+										# UTN='TN',
                                         TKN='TDKN',
                                         PARTN='TPN',
                                         'DON',
                                         NH3N='NH3_N',
                                         NO3N='NO3_N',
-                                        `NA`='Na',
+                                        NA.='Na',
                                         CA='Ca',
                                         MG='Mg',
                                         SO4S='SO4_S',

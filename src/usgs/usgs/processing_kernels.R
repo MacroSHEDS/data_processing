@@ -73,35 +73,43 @@ process_0_3 <- function(set_details, network, domain){
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_code,
-                            component){
+process_1_1 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- read_feather(rawfile) %>%
-        rename(datetime = Date,
-               val = X_00060_00003) %>%
-        mutate(site_code = !!site_code) %>%
-        mutate(var = 'discharge',
-               datetime = lubridate::as_datetime(datetime),
-               val = val * 28.31685,
-               ms_status = ifelse(X_00060_00003_cd == 'A', 0, 1)) %>%
-        select(site_code, datetime, val, var, ms_status)
+        mutate(across(everything(), as.character),
+               dateTime = if_else(nchar(dateTime) == 10,
+                                  paste(dateTime, '12:00:00'),
+                                  dateTime))
 
-    d <- identify_sampling_bypass(d,
-                                  is_sensor = TRUE,
-                                  network = network,
-                                  domain = domain,
-                                  prodname_ms = prodname_ms)
+    d <- ms_read_raw_csv(
+        preprocessed_tibble = d,
+        datetime_cols = c(dateTime = '%Y-%m-%d %H:%M:%S'),
+        datetime_tz = 'UTC',
+        site_code_col = 'site_no',
+        alt_site_code = list(black_earth_creek = '05406457'),
+        data_cols = c('X_00060_00000' = 'discharge'),
+        data_col_pattern = '#V#',
+        is_sensor = TRUE,
+        set_to_NA = '',
+        summary_flagcols = 'X_00060_00000_cd'
+    )
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(X_00060_00000_cd = 'A'),
+                            summary_flags_to_drop = list(X_00060_00000_cd = 'sentinel'))
+
+    d$val <- d$val * 28.31685 #cfs -> L/s
 
     return(d)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2 <- function(network, domain, prodname_ms, site_code,
-                            component){
+process_1_2 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
@@ -145,8 +153,7 @@ process_1_2 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_3 <- function(network, domain, prodname_ms, site_code,
-                            component){
+process_1_3 <- function(network, domain, prodname_ms, site_code, component){
 
   rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.feather',
                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
