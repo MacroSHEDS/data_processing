@@ -105,316 +105,19 @@ process_1_9030 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9002 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    if(grepl('discharge', prodname_ms)) {
-
-            d <- ms_read_raw_csv(preprocessed_tibble = d,
-                                 datetime_cols = list('date' = '%d-%m-%Y',
-                                                      'time' = '%H:%M'),
-                                 datetime_tz = 'Antarctica/McMurdo',
-                                 site_code_col = 'STRMGAGEID',
-                                 data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                                 summary_flagcols = 'DISCHARGE_QLTY',
-                                 data_col_pattern = '#V#',
-                                 is_sensor = TRUE,
-                                 set_to_NA = '',
-                                 sampling_type = 'I')
-
-            d <- ms_cast_and_reflag(d,
-                                    summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
-                                                                                    'Qmu',
-                                                                                    'Qsed')),
-                                    summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
-                                    varflag_col_pattern = NA)
-
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9002 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9003 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month),
-               year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DSCHRGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DSCHRGE_QLTY',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DSCHRGE_QLTY' = c('poor',
-                                                                              'Qmu',
-                                                                              'Qsed')),
-                                summary_flags_to_drop = list('DSCHRGE_QLTY' = 'UNUSABLE'),
-                                varflag_col_pattern = NA)
-
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9003 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9007 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DSCHRGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DSCHRGE_QLTY',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DSCHRGE_QLTY' = c('poor',
-                                                                              'Qmu',
-                                                                              'Qsed')),
-                                summary_flags_to_drop = list('DSCHRGE_QLTY' = 'UNUSABLE'),
-                                varflag_col_pattern = NA)
-
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9007 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9009 <- function(network, domain, prodname_ms, site_code,
-                           component) {
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    d <- d %>%
-        rename(CONDUCTIVITY_QLTY = CONDUCTIVITY__QLTY)
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DISCHARGE_QLTY',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
-                                                                                'Qmu',
-                                                                                'WTmu',
-                                                                                'SCmu',
-                                                                                'WTsed',
-                                                                                'SCsed',
-                                                                                'Qsed')),
-                                summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
-                                varflag_col_pattern = NA)
-
-    } else {
-
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9009 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
@@ -442,157 +145,11 @@ process_1_9018 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9022 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DISCHG_COM',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-            d <- ms_cast_and_reflag(d,
-                                    summary_flags_dirty = list('DISCHG_COM' = c('poor',
-                                                                                    'Qmu',
-                                                                                    'Qsed')),
-                                    summary_flags_to_drop = list('DISCHG_COM' = 'UNUSABLE'),
-                                    varflag_col_pattern = NA)
-
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9022 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9021 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-            time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    code <- str_split_fixed(prodname_ms, '__', n=2)[1,2]
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                             summary_flagcols = 'DIS_COMMENTS',
-                             data_col_pattern = '#V#',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DIS_COMMENTS' = c('poor',
-                                                                              'Qmu',
-                                                                              'Qsed')),
-                                summary_flags_to_drop = list('DIS_COMMENTS' = 'UNUSABLE'),
-                                varflag_col_pattern = NA)
-
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QUALITY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-    }
-
-    return(d)
-}
+process_1_9021 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
@@ -604,80 +161,7 @@ process_1_9016 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
-process_1_9029 <- function(network, domain, prodname_ms, site_code,
-                           component){
-
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
-
-    d <- read.csv(rawfile, colClasses = 'character')
-
-    d <- d %>%
-        mutate(month = str_split_fixed(DATE_TIME, '/', n = Inf)[,1],
-               day = str_split_fixed(DATE_TIME, '/', n = Inf)[,2],
-               year_time = str_split_fixed(DATE_TIME, '/', n = Inf)[,3]) %>%
-        mutate(year = str_split_fixed(year_time, ' ', n = Inf)[,1],
-               time = str_split_fixed(year_time, ' ', n = Inf)[,2]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month),
-               year = ifelse(year > 50, paste0(19, year), paste(20, year))) %>%
-        mutate(year = str_replace(year, ' ', '')) %>%
-        mutate(date = paste(day, month, year, sep = '-'))
-
-    col_old <- colnames(d)
-    col_name <- str_replace_all(col_old, '[.]', '_')
-    colnames(d) <- col_name
-
-    code <- str_split_fixed(prodname_ms, '__', n=2)[1,2]
-
-    if(grepl('discharge', prodname_ms)) {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('DISCHARGE_RATE' = 'discharge'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('DISCHARGE_QLTY' = c('poor',
-                                                                              'Qmu',
-                                                                              'Qsed')),
-                                summary_flags_to_drop = list('DISCHARGE_QLTY' = 'UNUSABLE'),
-                                varflag_col_pattern = NA)
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%d-%m-%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'Antarctica/McMurdo',
-                             site_code_col = 'STRMGAGEID',
-                             data_cols =  c('WATER_TEMP' = 'temp',
-                                            'CONDUCTIVITY' = 'spCond'),
-                             data_col_pattern = '#V#',
-                             var_flagcol_pattern = '#V#_QLTY',
-                             is_sensor = TRUE,
-                             set_to_NA = '',
-                             sampling_type = 'I')
-
-        d <- ms_cast_and_reflag(
-            d,
-            variable_flags_to_drop = 'UNUSABLE',
-            variable_flags_clean = c('GOOD', 'FAIR', 'Fair', 'fair', 'Good',
-                                     'good', 'good ', 'fair ', 'good; Wtmu')
-        )
-
-    return(d)
-}
+process_1_9029 <- munge_mcmurdo_discharge
 
 #stream_chemistry; discharge: STATUS=READY
 #. handle_errors
@@ -693,8 +177,7 @@ process_1_9017 <- munge_mcmurdo_discharge
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_24 <- function(network, domain, prodname_ms, site_code,
-                        component) {
+process_1_24 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -707,6 +190,16 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
+                         alt_site_code = list(
+                             anderson_h1 = 'andrsn_h1',
+                             lawson_b3 = 'lawson',
+                             huey_f2 = 'huey',
+                             crescent_f8 = 'crescent', #not certain
+                             garwood_flats = 'garwood', #not certain
+                             vguerard_f6 = 'vguerard'
+                             # onyx_lwright = 'onyx', #not certain
+                             # worm_altran = 'worm', #not certain
+                         ),
                          data_cols =  c('doc_mgl' = 'DOC'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'doc_comments',
@@ -726,26 +219,6 @@ process_1_24 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_bdl = list(doc_comments = smry_flg_grep))
 
     d <- filter_single_samp_sites(d)
-
-    # Code for old version of this data set
-    # d <- read.csv(rawfile, colClasses = 'character') %>%
-    #     rename(DOC=doc_mgl) %>%
-    #     filter(strmgageid != '',
-    #            strmgageid != 'garwood',
-    #            strmgageid != 'miers',
-    #            strmgageid != 'delta_upper',
-    #            strmgageid != 'lizotte_mouth',
-    #            strmgageid != 'vguerard_lower')
-
-    # d <- ms_read_raw_csv(preprocessed_tibble = d,
-    #                      datetime_cols = list('dataset_code' = '%m/%e/%Y %H:%M'),
-    #                      datetime_tz = 'Antarctica/McMurdo',
-    #                      site_code_col = 'strmgageid',
-    #                      data_cols =  c('DOC'),
-    #                      data_col_pattern = '#V#',
-    #                      summary_flagcols = 'doc_comments',
-    #                      set_to_NA = '',
-    #                      is_sensor = FALSE)
 
     return(d)
 }
@@ -784,6 +257,16 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
+                         alt_site_code = list(
+                             anderson_h1 = 'andrsn_h1',
+                             lawson_b3 = 'lawson',
+                             huey_f2 = 'huey',
+                             crescent_f8 = 'crescent', #not certain
+                             garwood_flats = 'garwood', #not certain
+                             vguerard_f6 = 'vguerard'
+                             # onyx_lwright = 'onyx', #not certain
+                             # worm_altran = 'worm', #not certain
+                         ),
                          data_cols =  c('li' = 'Li',
                                         'na' = 'Na',
                                         'k' = 'K',
@@ -860,6 +343,16 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
+                         alt_site_code = list(
+                             anderson_h1 = 'andrsn_h1',
+                             lawson_b3 = 'lawson',
+                             huey_f2 = 'huey',
+                             crescent_f8 = 'crescent', #not certain
+                             garwood_flats = 'garwood', #not certain
+                             vguerard_f6 = 'vguerard'
+                             # onyx_lwright = 'onyx', #not certain
+                             # worm_altran = 'worm', #not certain
+                         ),
                          data_cols =  c('n_no3' = 'NO3_N',
                                         'n_no2' = 'NO2_N',
                                         'n_nh4' = 'NH4_N',

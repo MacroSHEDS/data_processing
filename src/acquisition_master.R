@@ -374,7 +374,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     print(network_domain, n=100)
     #setup
-    dmnrow = 24
+    dmnrow = 16
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)
@@ -388,6 +388,7 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data = invalidate_tracked_data(network, domain, 'munge')
     owrite_tracker(network, domain)
     ms_munge(network = network,
+             # prodname_filter = c('stream_PAR'),
              # prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('precipitation'),
              # prodname_filter = c('discharge'),

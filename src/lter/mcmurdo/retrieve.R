@@ -1,8 +1,8 @@
 loginfo('Beginning retrieve', logger=logger_module)
 
-prod_info <- get_product_info(network = network, 
+prod_info <- get_product_info(network = network,
                              domain = domain,
-                             status_level = 'retrieve', 
+                             status_level = 'retrieve',
                              get_statuses = 'ready')
 
 if(! is.null(prodname_filter)){
@@ -30,7 +30,6 @@ for(i in seq_len(nrow(prod_info))){
 
     avail_sites <- unique(avail_sets$site_code)
 
-    # j=1
     for(j in 1:length(avail_sites)){
 
         site_code <- avail_sites[j]

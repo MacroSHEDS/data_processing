@@ -1,5 +1,6 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes
 9030,discharge,ready,ready,NA,discharge__ms001,NA
+9030,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 9002,discharge,ready,ready,NA,discharge__ms001,NA
 9002,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA
 9003,discharge,ready,ready,NA,discharge__ms001,NA

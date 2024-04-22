@@ -413,7 +413,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
-                         datetime_tz = 'US/Pacific',
+                         datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'site_code',
                          data_cols =  c('nh4_uM' = 'NH4',
                                         'no3_uM' = 'NO3_NO2',
@@ -527,7 +527,7 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
                         domain = domain,
                         prodname_ms = prodname_ms,
                         sites = c('SP02' = '11120520',
-                                  # This site only has gauge height, look at santa data 
+                                  # This site only has gauge height, look at santa data
                                   'MC06' = '11119745'),
                         time_step = c('daily', 'daily'))
 

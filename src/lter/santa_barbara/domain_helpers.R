@@ -83,7 +83,9 @@ munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_cod
     site <- str_split_fixed(site[3], ',', n = Inf)[1,1]
 
     d <- read.csv(rawfile1, colClasses = "character") %>%
-        mutate(site_code = !!site)
+        mutate(site_code = !!site) %>%
+        filter(! grepl('^NaN', timestamp_utc)) %>%
+        mutate(timestamp_utc = stringr::str_trim(timestamp_utc))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),

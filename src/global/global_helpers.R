@@ -16634,7 +16634,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
         ndls <- nrow(domain_detection_limits)
         nothing_to_do <- sm(nrow(semi_join(domain_detection_limits, dls)) == ndls)
         if(nothing_to_do) return(dls)
-        if(nrow(dls) > ndls){
+        if(nrow(dls) < ndls){
             message('this must be the case that is causing records to drop from the dl gsheet. what is going on?')
             browser()
         }
