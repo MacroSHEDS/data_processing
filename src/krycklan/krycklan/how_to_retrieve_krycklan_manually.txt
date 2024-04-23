@@ -56,3 +56,32 @@ where {
 }
 order by desc(?submTime)
 offset 0
+
+
+###########precipitation#############
+#this is pretty custom. ignores kulbackslyden and sub-daily from stortjarn
+note that the files in this system can change with the wind, just like any other domain, despite the fancy database interface
+
+prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
+prefix prov: <http://www.w3.org/ns/prov#>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix geo: <http://www.opengis.net/ont/geosparql#>
+select ?dobj ?hasNextVersion ?spec ?fileName ?size ?submTime ?timeStart ?timeEnd
+where {
+	VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/stationHourlyMeteorological> <https://meta.fieldsites.se/resources/objspecs/stationDailyMeteorological> <https://meta.fieldsites.se/resources/objspecs/waterDailyMeteorological>}
+	?dobj cpmeta:hasObjectSpec ?spec .
+	BIND(EXISTS{[] cpmeta:isNextVersionOf ?dobj} AS ?hasNextVersion)
+	VALUES ?station {<https://meta.fieldsites.se/resources/stations/Svartberget>}
+			?dobj cpmeta:wasAcquiredBy/prov:wasAssociatedWith ?station .
+	VALUES ?site {<https://meta.fieldsites.se/resources/sites/svartberget-forest> <https://meta.fieldsites.se/resources/sites/degero-mire> <https://meta.fieldsites.se/resources/sites/stortjarn-lake>}
+				?dobj cpmeta:wasAcquiredBy/cpmeta:wasPerformedAt ?site .
+	?dobj cpmeta:hasSizeInBytes ?size .
+?dobj cpmeta:hasName ?fileName .
+?dobj cpmeta:wasSubmittedBy/prov:endedAtTime ?submTime .
+?dobj cpmeta:hasStartTime | (cpmeta:wasAcquiredBy / prov:startedAtTime) ?timeStart .
+?dobj cpmeta:hasEndTime | (cpmeta:wasAcquiredBy / prov:endedAtTime) ?timeEnd .
+	FILTER NOT EXISTS {[] cpmeta:isNextVersionOf ?dobj}
+		VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/stationHourlyMeteorological> <https://meta.fieldsites.se/resources/objspecs/stationDailyMeteorological> <https://meta.fieldsites.se/resources/objspecs/waterDailyMeteorological>}
+}
+order by ?fileName
+offset 0
