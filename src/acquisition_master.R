@@ -374,7 +374,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     print(network_domain, n=100)
     #setup
-    dmnrow = 16
+    dmnrow = 14
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)

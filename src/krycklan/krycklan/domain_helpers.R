@@ -1,3 +1,47 @@
+get_actual_dl_url <- function(url, web_browser = 'firefox', port = 4567L, ...){
+
+    if(! require('RSelenium')){
+        stop('RSelenium is required to use this function')
+    }
+
+    #try to connect to an existing server or start a new one
+    if(is_selenium_running(port)){
+
+        remote_driver <- remoteDriver(remoteServerAddr = "localhost",
+                                      port = port,
+                                      browser = web_browser)
+        remote_driver$open()
+
+    } else {
+
+        driver <- rsDriver(browser = web_browser, port = port, ...)
+        remote_driver <- driver$client
+    }
+
+    on.exit({
+        remote_driver$close()
+        if(exists('driver')){
+            driver$server$stop()  #ensure server is stopped when function exits
+        }
+    }, add = TRUE)
+
+    #visit page and wait for it to load
+    remote_driver$navigate(url)
+    Sys.sleep(7)
+
+    #agree to the terms to activate the download button
+    remote_driver$executeScript("document.querySelector('#agreementChkBx').click();")
+    Sys.sleep(0.1)
+
+    #get the link from the download button
+    dl_btn <- remote_driver$findElement(using = 'css selector',
+                                        value = '#downloadBtn')
+
+    href <- dl_btn$getElementAttribute('href')[[1]]
+
+    return(href)
+}
+
 retrieve_krycklan <- function(set_details, network, domain){
 
     raw_data_dest <- glue('data/{n}/{d}/raw/{p}/{s}',
@@ -16,7 +60,7 @@ retrieve_krycklan <- function(set_details, network, domain){
 
     d <- read_csv(glue('src/krycklan/krycklan/file_object_collections/{p}.csv',
                        p = prodname))
-    # d <- read_csv('src/krycklan/krycklan/file_object_collections/stream_chemistry.csv')
+
     prov <- tibble()
     for(i in seq_len(nrow(d))){
 
@@ -79,7 +123,9 @@ retrieve_krycklan <- function(set_details, network, domain){
         download_link <- html_elements(landing_page, xpath = btn_selector) %>%
             html_attr('href')
 
-        download.file(download_link, destfile = file.path(raw_data_dest, d$fileName[i]))
+        download_link <- get_actual_dl_url(download_link)
+        download.file(download_link,
+                      destfile = file.path(raw_data_dest, d$fileName[i]))
     }
 
     provdir <- 'src/krycklan/krycklan/provenance_collections'
@@ -88,6 +134,7 @@ retrieve_krycklan <- function(set_details, network, domain){
                recursive = TRUE)
 
     write_csv(prov, file.path(provdir, paste0(prodname, '.csv')))
+
     logwarn('new provenance details written to src/krycklan/krycklan/provenance_collections. updating gsheet should be automated in 2025',
             logger = logger_module)
 

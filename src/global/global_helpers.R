@@ -8533,6 +8533,7 @@ write_metadata_r <- function(murl = NULL, network, domain, prodname_ms){
 
         return()
     }
+
     if(is.character(murl) && grepl('MacroSheds drive', murl)){
         logwarn(msg = paste('MacroSheds gdrive file; manually verify provenenace for', prodname_ms),
                 logger = logger_module)
@@ -17550,7 +17551,7 @@ update_prov_dt <- function(sitecd = NULL, dt, usgs = FALSE){
     )
 
     if(length(rowind) == 0) stop('provenance rows not yet entered?')
-    if(length(rowind) > 1) stop('more than one provenance row selected')
+    if(length(rowind) > 1 && domain != 'krycklan') stop('more than one provenance row selected')
 
     dt <- paste(format(with_tz(dt, 'UTC'),
                        '%Y-%m-%d %H:%M:%S'),
@@ -17698,6 +17699,18 @@ check_for_updates_edi <- function(oldlink, last_download_dt){
     return('all good')
 }
 
+is_selenium_running <- function(port){
+
+    #check if the Selenium Server is already running
+    res <- try(httr::GET(paste0("http://localhost:", port, '/wd/hub/status')),
+               silent = TRUE)
+
+    running <- ifelse(! inherits(res, 'try-error') && httr::status_code(res) == 200,
+                      TRUE,
+                      FALSE)
+    return(running)
+}
+
 selenium_scrape <- function(url, css_selector, web_browser = 'firefox', ...){
 
     if(! require('RSelenium')){
@@ -17831,4 +17844,23 @@ null_device <- function(){
     } else {
         return('/dev/null')
     }
+}
+
+runoff_to_discharge <- function(x, ws_area_ha){
+
+    #convert from mm/d to L/s
+
+    #x: a vector of runoff in mm/d
+    #ws_area_ha: watershed area in hectares
+
+    ws_area_m2 <- ws_area_ha * 10^4
+
+    # x <- x / 1000 #m/d
+    # x <- x / 86400 #m/s
+    # x <- x * ws_area_m2 #m^3/s
+    # x <- x * 1000 #L/s
+
+    lps <- as.numeric(x) * ws_area_m2 / 86400
+
+    return(lps)
 }

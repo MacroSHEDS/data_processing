@@ -164,7 +164,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N04D' = 'n04d'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -214,7 +214,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N20B' = 'n20b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -264,7 +264,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N01B' = 'n01b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -314,7 +314,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N02B' = 'n02b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -436,7 +436,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N04D' = 'n04d',
                                               'N02B' = 'n02b',
@@ -496,7 +496,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
                                               'RecMonth' = '%m',
                                               'RecDay' = '%d',
                                               'RecTime' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Site',
                          alt_site_code = list('N04D' = 'n04d',
                                               'N02B' = 'n02b',
@@ -516,8 +516,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_code,
-                         component) {
+process_1_20 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -529,23 +528,26 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(Rectime = ifelse(Rectime == '.', 1200, Rectime)) %>%
-      mutate(num_t = nchar(Rectime)) %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', Rectime),
-                              num_t == 2 ~ paste0('01', Rectime),
-                              num_t == 3 ~ paste0('0', Rectime),
-                              num_t == 4 ~ as.character(Rectime),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_t, -Rectime, -num_d, -RecDay)
+        mutate(Rectime = ifelse(Rectime == '.', 1200, Rectime)) %>%
+        mutate(num_t = nchar(Rectime)) %>%
+        mutate(num_d = nchar(RecDay)) %>%
+        mutate(time = case_when(num_t == 1 ~ paste0('010', Rectime),
+                                num_t == 2 ~ paste0('01', Rectime),
+                                num_t == 3 ~ paste0('0', Rectime),
+                                num_t == 4 ~ as.character(Rectime),
+                                is.na(num_t) ~ '1200')) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
+        select(-num_t, -Rectime, -num_d, -RecDay) %>%
+        mutate(Watershed = if_else(Watershed == 'shane',
+                                   'SHAN',
+                                   toupper(Watershed)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('TSS', 'VSS'),
                          data_col_pattern = '#V#',
@@ -555,8 +557,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list(comments = 'ensuring all get ms_status=0'),
-                            summary_flags_dirty = list(comments = 'ensuring all get ms_status = 0'))
+                            summary_flags_to_drop = list(comments = 'sentinel'),
+                            summary_flags_dirty = list(comments = 'sentinel2'))
 
     return(d)
 }
@@ -583,7 +585,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y',
                                               'Time' = '%H:%M:%S'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('SpCond' = 'spCond',
                                         'Temp' = 'temp',
@@ -627,7 +629,7 @@ process_1_16 <- function(network, domain, prodname_ms, site_code,
                        datetime_cols = list('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'RecDay' = '%d'),
-                       datetime_tz = 'US/Central',
+                       datetime_tz = 'Etc/GMT-5',
                        site_code_col = 'Watershed',
                        alt_site_code = list('N04D' = 'n04d',
                                             'N02B' = 'n02b',
@@ -668,7 +670,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                          datetime_cols = list('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          alt_site_code = list('002C' = c('R20B', '001c', 'r20b', '001c'),
                                               '020B' = '020b',
@@ -710,33 +712,37 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_4 <- function(network, domain, prodname_ms, site_code,
-                         component) {
+process_1_4 <- function(network, domain, prodname_ms, site_code, component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_code,
+                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = list('RecDate' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'watershed',
-                         alt_site_code = list('HQ' = 'HQ02'),
+                         alt_site_code = list(#'HQ' = 'HQ02',
+                                              'N01B' = 'n01b',
+                                              'R01A' = 'r01a',
+                                              'N4DF' = 'n4df',
+                                              'K01B' = 'k01b',
+                                              '020B' = '020b'),
                          data_cols =  c('ppt' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
                          set_to_NA = c('.'),
-                         # sampling_type = 'I',
-                         is_sensor = TRUE)
+                         sampling_type = 'I',
+                         is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(
         d,
         varflag_col_pattern = NA,
         summary_flags_clean = list(Comments = c('', ' ', '8.0mm due')),
-        summary_flags_to_drop = list(Comments = 'just making sure every other flag ends up as ms_status 1')
+        summary_flags_to_drop = list(Comments = 'sentinel')
     )
 
     return(d)
