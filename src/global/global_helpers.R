@@ -17550,7 +17550,7 @@ update_prov_dt <- function(sitecd = NULL, dt, usgs = FALSE){
             site_match
     )
 
-    if(length(rowind) == 0) stop('provenance rows not yet entered?')
+    if(length(rowind) == 0 && domain != 'krycklan') stop('provenance rows not yet entered?')
     if(length(rowind) > 1 && domain != 'krycklan') stop('more than one provenance row selected')
 
     dt <- paste(format(with_tz(dt, 'UTC'),

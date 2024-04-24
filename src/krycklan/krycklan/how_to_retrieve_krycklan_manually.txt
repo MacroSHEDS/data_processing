@@ -6,6 +6,7 @@ https://data.fieldsites.se/portal/#%7B%22filterCategories%22%3A%7B%22theme%22%3A
  + click the "run" triangle
  + copy the results (now printed below the query) to a local csv. these are in file_object_collections/
  + read the "dobj" column from the csv and download the files therein. the retrieval system is designed to do this based on the name of the file_object_collections csv
+ + check provenance_collections/ for rows to add to the citation and IR gsheet
 
 ###########discharge#############
 

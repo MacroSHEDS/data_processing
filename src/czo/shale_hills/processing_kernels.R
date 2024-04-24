@@ -396,8 +396,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
-                                     component){
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -442,21 +441,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
                           set_to_NA = c('n/a', 'DOI'),
                           convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
 
-    # For some reason a few flag columns are being created as "character" columns
-    # and the others are "chr". When the tables goes into ms_cast_and_reflag
-    # It causes an error. Mutating them with as.character seems to fix this issue,
-    # should watch at other sites. (RESOLVED in ms_read_raw_csv)
-
-    # h6 <- h6 %>%
-    #     mutate(across(.cols = contains('flg'), ~ as.character(.x)))
-
-    # h6 <- ms_cast_and_reflag(h6,
-    #                          varflag_col_pattern = NA)
-
     h6 <- ms_cast_and_reflag(d = h6,
-                             variable_flags_dirty = 'DIRTY',
-                             variable_flags_bdl = c('BDL'),
-                             variable_flags_to_drop = 'DROP')
+                             variable_flags_bdl = c('BDL'))
 
     h6 <- ms_conversions(h6,
                          convert_units_from = c('F' = 'umol/l',
@@ -493,22 +479,37 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
                                              'Zn' = 'mg/l'))
 
     doi_f2014 <- grep('SC_2014StreamwaterChemistry_DOI', chem_files, value = TRUE)
-    doi2014 <- readxl::read_xlsx(doi_f2014, sheet = '3 Data', skip = 1) %>%
+
+    header <- sm(readxl::read_xlsx(doi_f2014, sheet = '3 Data', skip = 1, n_max = 3))
+    header <- colnames(header)
+    if(header[1] != '...1' || header[12] != 'Alkalinity' || header[7] != 'Temperature'){
+        stop('there has been a change')
+    }
+
+    doi2014 <- sm(readxl::read_xlsx(doi_f2014,
+                                    sheet = '3 Data',
+                                    skip = 1)) %>%
         rename(id = 1)
-    doi_dates <- readxl::read_xlsx(doi_f2014, sheet = '2 Samples', skip = 1) %>%
-        select(id = IDENTIFICATION, date = ...12) %>%
-        mutate(date = as_date(as.numeric(date), origin = '1900-01-01')) %>%
-        filter(!is.na(date))
+
+    header <- sm(readxl::read_xlsx(doi_f2014, sheet = '2 Samples', skip = 1, n_max = 3))
+    header <- colnames(header)
+    if(header[1] != 'IDENTIFICATION' || header[12] != '...12' || header[7] != 'DESCRIPTION'){
+        stop('there has been a change')
+    }
+
+    doi_dates <- sm(readxl::read_xlsx(doi_f2014,
+                                      sheet = '2 Samples',
+                                      skip = 6)) %>%
+        select(id = ...1, date = ...12)
 
     doi_names <- names(doi2014)
-    doi_names <- doi_names[!grepl('[.][.][.]|PARAMETER', doi_names)]
+    doi_names <- doi_names[! grepl('\\.{3}|PARAMETER', doi_names)]
 
-    doi2014 <- doi2014 %>%
-        select(doi_names)
+    doi2014 <- select(doi2014, all_of(doi_names))
 
     doi_com <- full_join(doi_dates, doi2014, by = 'id') %>%
-        mutate(name = str_split_fixed(id, '_', n= Inf)[,1]) %>%
-        filter(!is.na(date))
+        filter(! is.na(date)) %>%
+        mutate(name = str_split_fixed(id, '_', n= Inf)[, 1])
 
     d_2014 <- ms_read_raw_csv(preprocessed_tibble = doi_com,
                               datetime_cols = list('date' = '%Y-%m-%d'),
@@ -539,9 +540,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
                               is_sensor = FALSE)
 
     d_2014 <- ms_cast_and_reflag(d = d_2014,
-                                 variable_flags_dirty = 'DIRTY',
-                                 variable_flags_bdl = c('BDL'),
-                                 variable_flags_to_drop = 'DROP')
+                                 variable_flags_bdl = c('BDL'))
 
     d_2014 <- ms_conversions(d_2014,
                          convert_units_from = c('Cl' = 'umol/l',
@@ -574,8 +573,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
     sw_all <- tibble()
     for(i in 1:length(sw_data_f)){
 
-        sw_data <- readxl::read_xlsx(sw_data_f[i], 'Data',
-                                     col_types = 'text') %>%
+        sw_data <- sm(readxl::read_xlsx(sw_data_f[i], 'Data',
+                                        col_types = 'text')) %>%
             rename(Cl = starts_with('Cl-'),
                    NO3 = starts_with('NO3-'),
                    SO4 = starts_with('SO42-'),
@@ -600,9 +599,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
                                    datetime_cols = list('Sample_Date' = '%Y-%m-%d'),
                                    datetime_tz = 'America/New_York',
                                    site_code_col = 'Sample Name',
-                                   alt_site_code = list('SH_weir' = c('SW', 'SW_ISCO'),
-                                                        'SH_headwaters' = 'SH',
-                                                        'SH_middle' = 'SM'),
+                                   #combining SW and SW_ISCO results in 151 replications that get averaged.
+                                   alt_site_code = list('SH_weir' = c('SW', 'SW_ISCO')),
+                                                        # 'SH_headwaters' = 'SH',
+                                                        # 'SH_middle' = 'SM'),
                                    data_cols =  c('DOC (ppm)' = 'DOC',
                                                   'Water Temp.  (°C)' = 'temp',
                                                   'pH', 'Cl', 'NO3', 'SO4', 'F',
@@ -615,9 +615,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code,
 
         if(any(str_detect('__|flg', colnames(sw_data)))){
             sw_data <- ms_cast_and_reflag(d = sw_data,
-                                          variable_flags_dirty = 'DIRTY',
-                                          variable_flags_bdl = c('BDL'),
-                                          variable_flags_to_drop = 'DROP')
+                                          variable_flags_bdl = c('BDL'))
         } else{
             sw_data <- ms_cast_and_reflag(d = sw_data,
                                           varflag_col_pattern = NA)

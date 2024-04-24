@@ -304,7 +304,14 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
                          FALSE)
 
     processing_func <- get(paste0('process_1_', prodcode))
+
+    if(! 'component' %in% colnames(retrieval_log)){
+        retrieval_log$component <- 'placeholder'
+    }
+
     components <- pull(retrieval_log, component)
+        # rename_with(~sub('^component$', 'components', .)) %>%
+        # pull(components)
 
     out_comp <- sw(do.call(processing_func,
                            args = list(network = network,
@@ -365,14 +372,13 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
                           site_code = site_code,
                           new_status = 'ok')
 
-    msg = glue('munged {p} ({n}/{d}/{s})',
-               p = prodname_ms,
-               n = network,
-               d = domain,
-               s = site_code)
+    msg <- glue('munged {p} ({n}/{d}/{s})',
+                p = prodname_ms,
+                n = network,
+                d = domain,
+                s = site_code)
 
-    loginfo(msg,
-            logger = logger_module)
+    loginfo(msg, logger = logger_module)
 
     return()
 }

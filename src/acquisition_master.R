@@ -340,7 +340,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
@@ -363,18 +363,17 @@ for(dmnrow in 1:nrow(network_domain)){
                           domain = domain)
 
     # stop here and go to processing_kernels.R to continue
-    # ms_retrieve(network = network,
-    #             prodname_filter = c('ws_boundary'),
-    #             domain = domain)
+    ms_retrieve(network = network,
+                # prodname_filter = c('stream_temperature'),
+                domain = domain)
 
     if(domain != 'neon'){
         check_for_derelicts(network = network,
                             domain = domain)
     }
 
-    print(network_domain, n=100)
     #setup
-    dmnrow = 14
+    dmnrow = 5
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)
@@ -389,10 +388,11 @@ for(dmnrow in 1:nrow(network_domain)){
     owrite_tracker(network, domain)
     ms_munge(network = network,
              # prodname_filter = c('stream_PAR'),
-             # prodname_filter = c('stream_chemistry'),
+             prodname_filter = c('stream_chemistry'),
              # prodname_filter = c('precipitation'),
              # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('stream_temperature'),
              # prodname_filter = c('ws_boundary'),
              # prodname_filter = c('precip_gauge_locations'),
              # prodname_filter = c('stream_gauge_locations'),
