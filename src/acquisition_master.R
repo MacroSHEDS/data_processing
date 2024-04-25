@@ -340,7 +340,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precip_chemistry')
     # owrite_tracker(network, domain)
 
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
@@ -372,8 +372,30 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
+    ms_munge(network = network,
+             # prodname_filter = c('stream_PAR'),
+             # prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('precipitation'),
+             # prodname_filter = c('discharge'),
+             # prodname_filter = c('precip_chemistry'),
+             # prodname_filter = c('stream_temperature'),
+             # prodname_filter = c('ws_boundary'),
+             # prodname_filter = c('precip_gauge_locations'),
+             # prodname_filter = c('stream_gauge_locations'),
+             domain = domain)
+
+    if(domain != 'mcmurdo'){
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        # overwrite_wb_sites = "trout_river",
+                        verbose = FALSE))
+    }
+    ###########################################################################
+    #other
+    load_config_datasets(from_where = 'remote')
     #setup
-    dmnrow = 5
+    dmnrow = 31
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)
@@ -384,43 +406,22 @@ for(dmnrow in 1:nrow(network_domain)){
     source('src/global/global_helpers.R')
     get_all_local_helpers(network = network, domain = domain)
 
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
-    ms_munge(network = network,
-             # prodname_filter = c('stream_PAR'),
-             prodname_filter = c('stream_chemistry'),
-             # prodname_filter = c('precipitation'),
-             # prodname_filter = c('discharge'),
-             # prodname_filter = c('precip_chemistry'),
-             # prodname_filter = c('stream_temperature'),
-             # prodname_filter = c('ws_boundary'),
-             # prodname_filter = c('precip_gauge_locations'),
-             # prodname_filter = c('stream_gauge_locations'),
-             domain = domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    ms_derive(network = network,
+              prodname_filter = c('precip_pchem_pflux'),
+              domain = domain)
+
     retain_ms_globals(ms_globals)
     stop()
 
-    #other
-    load_config_datasets(from_where = 'remote')
-
     #owrite
-    held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
-    held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    held_data = invalidate_tracked_data(network, domain, 'munge', 'precip_chemistry')
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
-
-    if(domain != 'mcmurdo'){
-        sw(ms_delineate(network = network,
-                        domain = domain,
-                        dev_machine_status = ms_instance$machine_status,
-                        # overwrite_wb_sites = "trout_river",
-                        verbose = FALSE))
-    }
-
-    ms_derive(network = network,
-              prodname_filter = c('discharge'),
-              domain = domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precip_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
+    ###########################################################################
 
     if(domain != 'mcmurdo'){
         ms_general(network = network,

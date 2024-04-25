@@ -1541,11 +1541,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
 #derive kernels ####
 
-#discharge: STATUS=READY
-#. handle_errors
-# process_2_ms001 <- function(network, domain, prodname_ms){
-#NEED A DISCHARGE COMBINER
-
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_2_ms001 <- function(network, domain, prodname_ms){
@@ -1553,103 +1548,114 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_quality__DP1.20288',
-                                           'stream_gases__DP1.20288',
-                                           'stream_temperature__DP1.20053',
-                                           'stream_nitrate__DP1.20033',
-                                           'stream_chemistry__DP1.20093'))
+                     input_prodname_ms = c('stream_chemistry__20093.001',
+                                           'stream_quality__DP1.20288.001',
+                                           # 'spCond__DP1.20008.001',
+                                           'stream_nitrate__DP1.20033.001',
+                                           'stream_gases__DP1.20297.001',
+                                           'stream_temperature__DP1.20053.001',
+                                           'stream_PAR__DP1.20042.001',
+                                           'isotopes__DP1.20206.001'))
+
+    return()
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms002 <- function(network, domain, prodname_ms){
+
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge__DP4.00130.001',
+                                           'discharge__VERSIONLESS002'))
 
     return()
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms){
-
-    #dont forget: need to look up corresponding pgauges
-    #for KING there are two
-    #for MCRA we need to re-derive the many hjadrews gauges for the MCRA location
-
-    #probs needs work. built as a precipitation kernel. what does that entail?
-
-    #Temporary, NEON only hace 1 precip gauge (usually) per site. Eventuly will
-    #leverage other data to interploate but for now directly linking gauge to
-    #watersheds
-    dir.create('data/neon/neon/derived/precipitation__ms002/', recursive = TRUE)
-
-    dir <- 'data/neon/neon/munged/precipitation__DP1.00006/'
-
-    site_files <- list.files(dir)
-
-    sites <- unique(str_split_fixed(site_files, '_', n = Inf)[,1])
-
-    for(i in 1:length(sites)) {
-
-        file <- grep(sites[i], site_files, value = TRUE)
-
-        if(length(file) == 1) {
-
-            precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_code = !!sites[i]) %>%
-                mutate(var = 'IS_precipitation')
-        } else {
-
-            file <- grep('900', file, value = TRUE)
-
-            precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_code = !!sites[i]) %>%
-                mutate(var = 'IS_precipitation')
-        }
-
-        write_feather(precip, glue('data/neon/neon/derived/precipitation__ms002/{s}.feather',
-                                   s = sites[i]))
-
-    }
-
-    return()
-}
-
-#precip_pchem_pflux: STATUS=READY
-#. handle_errors
 process_2_ms003 <- function(network, domain, prodname_ms){
 
-    #dont forget: need to look up corresponding pgauges
-    #for KING there are two
-    #for MCRA we need to re-derive the many hjadrews gauges for the MCRA location
-
-    #actually built as a precip_flux_inst kernel. probs change
-
-    chemfiles <- ms_list_files(network = network,
-                               domain = domain,
-                               prodname_ms = 'precip_chemistry__DP1.00013')
-
-    qfiles <- ms_list_files(network = network,
-                            domain = domain,
-                            prodname_ms = 'precipitation__ms002')
-
-    flux_sites <- base::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
-
-    for(s in flux_sites){
-
-        flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
-                                  qprod = 'precipitation__ms002',
-                                  site_code = s))
-
-        if(!is.null(flux)){
-
-            write_ms_file(d = flux,
-                          network = network,
-                          domain = domain,
-                          prodname_ms = prodname_ms,
-                          site_code = s,
-                          level = 'derived',
-                          shapefile = FALSE)
-        }
-    }
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('precip_chemistry__DP1.00013.001',
+                              'precip_isotopes__DP1.00038.001')
+    )
 }
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms004 <- stream_gauge_from_site_data
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms005 <- precip_gauge_from_site_data
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms004 <- derive_stream_flux
+process_2_ms006 <- derive_stream_flux
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms007 <- function(network, domain, prodname_ms){
+
+    pchem_prodname_ms <- get_derive_ingredient(network = network,
+                                               domain = domain,
+                                               prodname = 'precip_chemistry')
+
+    precip_prodname_ms <- get_derive_ingredient(network = network,
+                                                domain = domain,
+                                                prodname = 'precipitation')
+
+    wb_prodname_ms <- get_derive_ingredient(network = network,
+                                            domain = domain,
+                                            prodname = 'ws_boundary')
+
+    rg_prodname_ms <- get_derive_ingredient(network = network,
+                                            domain = domain,
+                                            prodname = 'precip_gauge_locations')
+
+    for(site in c('MCRA', names(terr_aquat_sitemap))){
+
+        if(site == 'MCRA'){
+
+            #borrow precip data from hjandrews
+            warning('make sure hjandrews has already been derived in this macrosheds version. precip data needed for NEON-MCRA')
+
+            hj_pchem <- get_derive_ingredient('lter', 'hjandrews', 'precip_chemistry')
+            hj_precip <- get_derive_ingredient('lter', 'hjandrews', 'precipitation')
+            hj_rg <- get_derive_ingredient('lter', 'hjandrews', 'precip_gauge_locations')
+
+            hj_pgauge_ids <- site_data %>%
+                filter(domain == 'hjandrews',
+                       site_type == 'rain_gauge') %>%
+                pull(site_code)
+
+            precip_pchem_pflux_idw(pchem_prodname = hj_pchem,
+                                   precip_prodname = hj_precip,
+                                   wb_prodname = wb_prodname_ms,
+                                   pgauge_prodname = hj_rg,
+                                   prodname_ms = prodname_ms,
+                                   filter_sites = list(precip = hj_pgauge_ids,
+                                                       wb = site),
+                                   donor_domain = c('lter' = 'hjandrews'))
+
+        } else {
+
+            pgauges <- terr_aquat_sitemap[[site]]
+
+            precip_pchem_pflux_idw(pchem_prodname = pchem_prodname_ms,
+                                   precip_prodname = precip_prodname_ms,
+                                   wb_prodname = wb_prodname_ms,
+                                   pgauge_prodname = rg_prodname_ms,
+                                   prodname_ms = prodname_ms,
+                                   filter_sites = list(precip = pgauges,
+                                                       wb = site))
+        }
+    }
+}
+
+

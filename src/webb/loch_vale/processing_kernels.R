@@ -237,7 +237,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d, precip_interp_method = 'mean_nocb')
+    d <- synchronize_timestep(d, precip_interp_method = 'nocb')
 
     write_ms_file(d = d,
                   network = network,

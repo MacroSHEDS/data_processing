@@ -7626,10 +7626,10 @@ synchronize_timestep <- function(d,
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
         } else if(var_is_pchem){
-            d_split[[i]] <- ms_nocb_interpolate(
+            d_split[[i]] <- ms_nocb_interpolate( #pchem, usually
                 d = sitevar_chunk,
                 interval = rounding_intervals[i])
-        } else { #precip
+        } else { #precip, usually
             if(precip_interp_method == 'zero'){
                 d_split[[i]] <- ms_zero_interpolate( #e.g. konza
                     d = sitevar_chunk,
@@ -7905,18 +7905,42 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                    pgauge_prodname,
                                    prodname_ms,
                                    # flux_prodname_out,
-                                   verbose = TRUE){
+                                   verbose = TRUE,
+                                   filter_sites = NULL,
+                                   donor_domain = NULL){
+browser()
+    #filter_sites: useful for e.g. neon where sites are strewn everywhere and
+    #    you wouldn't want to interpolate all gauges together. a list of:
+    #       'precip': character vector of precip gauge ids
+    #       "wb": character vector of site_codes (i.e. names of watershed boundaries)
+    #donor_domain = named character vector of length 1. name is the donor network,
+    #   and value is the donor domain. this applies when gauges for a different
+    #   domain are the source of precip data for the domain being interpolated.
+    #   (primary domain is taken from globally defined `network` and `domain`).
+
+    source_network <- ifelse(is.null(donor_domain),
+                             network,
+                             names(donor_domain))
+    source_domain <- ifelse(is.null(donor_domain),
+                            domain,
+                            unname(donor_domain))
 
     #load watershed boundaries, rain gauge locations, precip and pchem data
     wb <- read_combine_shapefiles(network = network,
                                   domain = domain,
                                   prodname_ms = wb_prodname)
-    rg <- read_combine_shapefiles(network = network,
-                                  domain = domain,
+    rg <- read_combine_shapefiles(network = source_network,
+                                  domain = source_domain,
                                   prodname_ms = pgauge_prodname)
+
+    if(! is.null(filter_sites)){
+        wb <- filter(wb, site_code %in% filter_sites$wb)
+        rg <- filter(rg, site_code %in% filter_sites$precip)
+    }
+
     pchem <- try({
-        read_combine_feathers(network = network,
-                              domain = domain,
+        read_combine_feathers(network = source_network,
+                              domain = source_domain,
                               prodname_ms = pchem_prodname) %>%
             filter(site_code %in% rg$site_code)
     }, silent = TRUE)
@@ -7925,11 +7949,13 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     if('try-error' %in% class(pchem) || nrow(pchem) == 0){
         precip_only <- TRUE
         logging::logwarn('No (or empty) pchem product. IDW-Interpolating precipitation only')
+    } else if(! is.null(filter_sites)){
+        pchem <- filter(pchem, site_code %in% filter_sites$precip)
     }
 
     precip <- try({
-        read_combine_feathers(network = network,
-                              domain = domain,
+        read_combine_feathers(network = source_network,
+                              domain = source_domain,
                               prodname_ms = precip_prodname) %>%
             filter(site_code %in% rg$site_code)
     }, silent = TRUE)
@@ -7939,6 +7965,8 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
         pchem_only <- TRUE
         if(precip_only) stop('Nothing to IDW interpolate. Is this kernel needed?')
         logging::logwarn('No (or empty) precip product. IDW-Interpolating pchem only')
+    } else if(! is.null(filter_sites)){
+        precip <- filter(precip, site_code %in% filter_sites$precip)
     }
 
     #project based on average latlong of watershed boundaries
@@ -9061,6 +9089,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
     d$var <- drop_var_prefix(d$var)
     d$datetime <- as.Date(d$datetime)
+    d$prodname_ms <- prodname_ms
 
     #checks for cases 1-3
     got_domain <- half_detlims_all$domain == domain
@@ -9069,7 +9098,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     }) & got_domain
 
     #CASES 1-2
-    dlsub <- filter(half_detlims_all, got_prodcode_at_domain)
+    dlsub <- filter(half_detlims_all, !!got_prodcode_at_domain)
     if(nrow(dlsub)){
 
         if(any(! is.na(dlsub$start_date) | ! is.na(dlsub$end_date))){
@@ -9085,6 +9114,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
             out <- dlsub[as.data.table(d),
                          on = c("start_date<=datetime",
                                 "end_date>=datetime",
+                                'prodcode==prodname_ms',
                                 "var==var")][[which_]]
 
             if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
@@ -9174,12 +9204,21 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
 
                 #date interval join; CASE 3:
                 #join d rows to dlsub if d's datetime falls within the covered range
-                out[still_missing] <- dlsub[as.data.table(d[still_missing, ]),
-                                            on = c("start_date<=datetime",
-                                                   "end_date>=datetime",
-                                                   "var==var")][[which_]]
+                dl_matches <- dlsub[as.data.table(d[still_missing, ]),
+                                    on = c('start_date<=datetime',
+                                           'end_date>=datetime',
+                                           'var==var')]#[[which_]]
+                #it's possible to have more than one match e.g. if there are different
+                #dls reported across two stream_chem products for the same date range
+                #and var. loch vale is the only known such case as of 20240425.
+                #probably this should be handled such that these overlaps
+                #can't exist in domain_detection_limits in the first place.
+                dl_matches <- dl_matches[, .SD[1], by = .(start_date, end_date, var)]
+                dl_matches <- dl_matches[[which_]]
 
-                if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
+                if(length(dl_matches) != length(out)) stop('overlapping entries in detlim table')
+
+                out[still_missing] <- dl_matches
 
                 #forward rolling join to start_date; CASE 4
                 still_missing <- is.na(out)
@@ -9806,11 +9845,14 @@ remove_all_na_sites <- function(d){
         select(-non_na)
 }
 
-combine_products <- function(network, domain, prodname_ms,
-                                    input_prodname_ms) {
+combine_products <- function(network, domain, prodname_ms, input_prodname_ms,
+                             rtrn = FALSE){
 
     #Used to combine multiple products into one. Used when discharge, chemistry,
     #or other products are split into multiple products and we want them in one.
+
+    #rtrn: logical. if TRUE, return the combined dataset rather than writing
+    #it to disk
 
     files <- ms_list_files(network = network,
                            domain = domain,
@@ -9826,20 +9868,27 @@ combine_products <- function(network, domain, prodname_ms,
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
     sites <- unique(str_split_fixed(site_feather, '[.]feather', n = Inf)[,1])
 
+    cmbn <- tibble()
     for(i in 1:length(sites)){
 
         site_files <- grep(paste0(sites[i], '.feather'), files, value = TRUE)
 
         site_full <- map_dfr(site_files, read_feather)
 
-        write_ms_file(d = site_full,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = sites[i],
-                      level = 'derived',
-                      shapefile = FALSE)
+        if(! rtrn){
+            write_ms_file(d = site_full,
+                          network = network,
+                          domain = domain,
+                          prodname_ms = prodname_ms,
+                          site_code = sites[i],
+                          level = 'derived',
+                          shapefile = FALSE)
+        } else {
+            cmbn <- bind_rows(cmbn, site_full)
+        }
     }
+
+    if(rtrn) return(cmbn)
 }
 
 load_config_datasets <- function(from_where){

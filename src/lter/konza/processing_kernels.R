@@ -745,6 +745,9 @@ process_1_4 <- function(network, domain, prodname_ms, site_code, component){
         summary_flags_to_drop = list(Comments = 'sentinel')
     )
 
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    d <- synchronize_timestep(d, precip_interp_method = 'zero')
+
     return(d)
 }
 
