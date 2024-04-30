@@ -27,7 +27,8 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
     #    write_ms_file will assume it's writing a spatial object, and not a
     #    standalone file
     #interpolate_pchem: for when precip chemistry interpolation
-    #   is handled within the kernel. This is the case for neon, which reports
+    #   is handled within the kernel (i.e. set this to FALSE).
+    #   This is the case for neon, which reports
     #   "set" and "collect" dates for each precip chemistry capture.
 
     retrieval_log <- extract_retrieval_log(tracker,
