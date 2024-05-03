@@ -395,7 +395,7 @@ for(dmnrow in 1:nrow(network_domain)){
     #other
     load_config_datasets(from_where = 'remote')
     #setup
-    dmnrow = 31
+    dmnrow = 18
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
     held_data <- get_data_tracker(network, domain)

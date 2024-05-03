@@ -94,7 +94,7 @@ no_precip <- c('mcmurdo', 'trout_lake', 'acton_lake', 'mces', 'swwd',
 
 # investigate interp method for each domain ####
 
-zz = system('find data/doe/east_river -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/webb/sleepers -type f -name "*.feather" -path "*munged/precipitation*/*"',
             intern = TRUE)
 
 # api_key <- read_lines('~/keys/noaa_climate_api')
@@ -111,11 +111,11 @@ for(f in zz){
     #view first year
     frst = filter(d, year(datetime) == min(year(datetime)) + 1)
     lst = filter(d, year(datetime) == max(year(datetime)) - 1)
-    plot(frst$datetime, frst$val, main = site)
-    plot(lst$datetime, lst$val, main = site)
+    plot(frst$datetime, frst$val, main = site, col = as.factor(frst$ms_interp))
+    plot(lst$datetime, lst$val, main = site, col = as.factor(lst$ms_interp))
     xx = readLines(n=1)
 
-    if(xx == 's') break
+    if(xx == 's') next
     if(xx == 'p'){
         print('middate >'); middt = readLines(n=1)
         pp = get_nldas_precip(middate = middt, lat = site_data$latitude[site_data$domain == domain][1],
@@ -126,11 +126,11 @@ for(f in zz){
     #view second  and penultimate month
     frst = filter(d, floor_date(datetime, "month") == min(floor_date(datetime, "month")) + months(1))
     lst = filter(d, ceiling_date(datetime, "month") == max(ceiling_date(datetime, "month")) - months(1))
-    plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])))
-    plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])))
+    plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])), col = as.factor(frst$ms_interp))
+    plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])), col = as.factor(lst$ms_interp))
     xx = readLines(n=1)
 
-    if(xx == 's') break
+    if(xx == 's') next
     if(xx == 'p'){
         print('middate >'); middt = readLines(n=1)
         pp = get_nldas_precip(middate = middt, lat = site_data$latitude[site_data$domain == domain][1],
@@ -138,17 +138,17 @@ for(f in zz){
         print(pp, n=1000)
     }
 
-    print('any button for next')
+    print('any button for next plot')
     catch <- readLines(n=1)
 
     #view 7th and 7th-to-last month
     frst = filter(d, floor_date(datetime, "month") == min(floor_date(datetime, "month")) + months(6))
     lst = filter(d, ceiling_date(datetime, "month") == max(ceiling_date(datetime, "month")) - months(6))
-    plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])))
-    plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])))
+    plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])), col = as.factor(frst$ms_interp))
+    plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])), col = as.factor(lst$ms_interp))
     xx = readLines(n=1)
 
-    if(xx == 's') break
+    if(xx == 's') next
     if(xx == 'p'){
         print('middate >'); middt = readLines(n=1)
         pp = get_nldas_precip(middate = middt, lat = site_data$latitude[site_data$domain == domain][1],
@@ -156,6 +156,17 @@ for(f in zz){
         print(pp, n=1000)
     }
 
-    print('any button for next')
+    print('any button for next site')
     catch <- readLines(n=1)
 }
+
+# compare pchem ####
+zz=read_feather('data/webb/sleepers/munged/precip_chemistry__VERSIONLESS002/R-29.feather')
+d = filter(zz, year(datetime) == min(year(datetime)) + 1)
+
+frst = filter(d, floor_date(datetime, "month") == min(floor_date(datetime, "month")) + months(1)) %>%
+    filter(var == d$var[1])
+lst = filter(d, ceiling_date(datetime, "month") == max(ceiling_date(datetime, "month")) - months(1)) %>%
+    filter(var == d$var[1])
+plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])), col = as.factor(frst$ms_interp))
+plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])), col = as.factor(lst$ms_interp))
