@@ -292,7 +292,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA)
 
-
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
   d <- synchronize_timestep(d)
@@ -314,7 +313,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   }
 
   return()
-
 }
 
 #precip_chemistry: STATUS=READY
@@ -344,11 +342,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                       'Si_mg_L' = 'Si',
                                       'anc_ueq_L'= 'ANC',
                                       'Al_ppb' = 'Al',
-                                      #'Al_org_ppb' = ,
                                       'spec_conductance_us_cm' = 'spCond',
                                       'pH_air_eqll' = 'pH'
-                                      #'apparent_color_PCU' = ,
-                                      #'true_color_PCU'
                        ),
                        data_col_pattern = '#V#',
                        set_to_NA = '',

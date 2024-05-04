@@ -33,3 +33,6 @@ added variables: color, etc.
 consolidated variables according to note sheet from approx 20240413
 
 fixed incorrect precip totals for calhoun, 
+
+precip overhaul:
+	no longer attempting to fill in daily. precip reported at same interval source provides. if weekly/biweekly/opportunistic, we leave it as such and fill in unreported days with 0 for precip and pchem

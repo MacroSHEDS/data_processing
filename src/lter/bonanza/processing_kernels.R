@@ -301,12 +301,17 @@ process_1_157 <- function(network, domain, prodname_ms, site_code, component){
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            summary_flags_dirty = list('Invalcode' = c('x', 'x           ')),
-                            summary_flags_to_drop = list('Invalcode' = 'placeholder'),
+                            summary_flags_dirty = list('Invalcode' = c('x', 'x           ',
+                                                                       'u', 'u           ',
+                                                                       'f', 'f           ',
+                                                                       'c', 'c           ',
+                                                                       'v', 'v           ',
+                                                                       'l', 'l           ',
+                                                                       'p', 'p           ')),
+                            summary_flags_to_drop = list('Invalcode' = 'sentinel'),
                             varflag_col_pattern = NA)
 
     return(d)
-
 }
 
 #derive kernels ####

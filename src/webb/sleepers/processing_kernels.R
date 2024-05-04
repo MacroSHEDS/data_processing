@@ -194,7 +194,8 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                Sample_Name == "R-29 (PPT@W-9)",
                Precip_Type == 'USFS Durham') %>%
         arrange(Precip_Start) %>%
-        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29",
+                                       TRUE ~ Sample_Name))
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
