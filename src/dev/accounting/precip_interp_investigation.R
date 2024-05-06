@@ -94,7 +94,12 @@ no_precip <- c('mcmurdo', 'trout_lake', 'acton_lake', 'mces', 'swwd',
 
 # investigate interp method for each domain ####
 
+zz = system('find data/bear/bear -type f -name "*.feather" -path "*munged/precipitation*/*"',
 zz = system('find data/webb/sleepers -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/webb/loch_vale -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/usfs/santee -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/lter/plum -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/neon -type f -name "*.feather" -path "*munged/precipitation*/*"',
             intern = TRUE)
 
 # api_key <- read_lines('~/keys/noaa_climate_api')
@@ -111,6 +116,8 @@ for(f in zz){
     #view first year
     frst = filter(d, year(datetime) == min(year(datetime)) + 1)
     lst = filter(d, year(datetime) == max(year(datetime)) - 1)
+    # frst = filter(d, year(datetime) == min(year(datetime)) + 1)
+    # lst = filter(d, year(datetime) == max(year(datetime)) - 1)
     plot(frst$datetime, frst$val, main = site, col = as.factor(frst$ms_interp))
     plot(lst$datetime, lst$val, main = site, col = as.factor(lst$ms_interp))
     xx = readLines(n=1)
@@ -161,12 +168,39 @@ for(f in zz){
 }
 
 # compare pchem ####
-zz=read_feather('data/webb/sleepers/munged/precip_chemistry__VERSIONLESS002/R-29.feather')
-d = filter(zz, year(datetime) == min(year(datetime)) + 1)
 
-frst = filter(d, floor_date(datetime, "month") == min(floor_date(datetime, "month")) + months(1)) %>%
-    filter(var == d$var[1])
-lst = filter(d, ceiling_date(datetime, "month") == max(ceiling_date(datetime, "month")) - months(1)) %>%
-    filter(var == d$var[1])
+# zzz=read_feather('data/webb/sleepers/munged/precip_chemistry__VERSIONLESS002/R-29.feather')
+# zzz=read_feather('data/webb/loch_vale/munged/precip_chemistry__VERSIONLESS002/CO98.feather')
+zzz=read_feather('data/usfs/santee/munged/precip_chemistry__VERSIONLESS004/SEFHQ_pluvio.feather')
+ggyr = min(year(zzz$datetime)) + 1
+ggyrl = max(year(zzz$datetime)) - 1
+ggmo = 4
+ggyearmo = ymd(paste(ggyr, ggmo, '01', sep = '-'))
+ggyearmol = ymd(paste(ggyrl, ggmo, '01', sep = '-'))
+dd = filter(zzz, year(datetime) == ggyr)
+ddl = filter(zzz, year(datetime) == ggyrl)
+
+#precip month view
+frst = filter(d, floor_date(datetime, "month") == ggyearmo)
+lst = filter(d, floor_date(datetime, "month") == ggyearmol)
 plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])), col = as.factor(frst$ms_interp))
 plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])), col = as.factor(lst$ms_interp))
+
+#pchem month view
+frst = filter(dd, floor_date(datetime, "month") == ggyearmo) %>% filter(var == dd$var[1])
+lst = filter(dd, floor_date(datetime, "month") == ggyearmol) %>% filter(var == dd$var[1])
+plot(frst$datetime, frst$val, main = paste(site, year(frst$datetime[1])), col = as.factor(frst$ms_interp))
+plot(lst$datetime, lst$val, main = paste(site, year(lst$datetime[1])), col = as.factor(lst$ms_interp))
+
+#year-view
+#P
+frst = filter(d, year(datetime) == ggyr)
+lst = filter(d, year(datetime) == ggyr)
+plot(frst$datetime, frst$val, main = site, col = as.factor(frst$ms_interp))
+plot(lst$datetime, lst$val, main = site, col = as.factor(lst$ms_interp))
+
+#pchem
+frst = filter(dd, var == dd$var[1])
+lst = filter(dd, var == dd$var[1])
+plot(frst$datetime, frst$val, main = site, col = as.factor(frst$ms_interp))
+plot(lst$datetime, lst$val, main = site, col = as.factor(lst$ms_interp))

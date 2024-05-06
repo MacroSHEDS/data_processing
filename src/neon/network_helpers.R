@@ -1,4 +1,5 @@
 library(neonUtilities)
+# devtools::install_github("NEONScience/NEON-dissolved-gas/neonDissGas", dependencies = TRUE)
 library(neonDissGas)
 
 neon_streams <- site_data %>%
