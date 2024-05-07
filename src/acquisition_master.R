@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'bear')
+dmnrow <- which(network_domain$domain == 'suef')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -364,7 +364,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('stream_temperature'),
+                # prodname_filter = c('precipitation'),
                 domain = domain)
 
     if(domain != 'neon'){
@@ -375,7 +375,7 @@ for(dmnrow in 1:nrow(network_domain)){
     ms_munge(network = network,
              # prodname_filter = c('stream_PAR'),
              # prodname_filter = c('stream_chemistry'),
-             # prodname_filter = c('precipitation'),
+             prodname_filter = c('precipitation'),
              # prodname_filter = c('discharge'),
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('stream_temperature'),

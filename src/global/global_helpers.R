@@ -17251,6 +17251,7 @@ reverse_vector_pairs <- function(x){
 #     successive_subsets <- split_list[sapply(split_list, length) > 1]
 #     return(successive_subsets)
 # }
+
 successive_ints <- function(v){
     diff_v <- c(1, diff(v))
     group_ids <- cumsum(diff_v != 1)
@@ -17912,4 +17913,49 @@ runoff_to_discharge <- function(x, ws_area_ha){
     lps <- as.numeric(x) * ws_area_m2 / 86400
 
     return(lps)
+}
+
+get_nldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
+
+    #lat = numeric latitude, WGS84. negative for southern hemisphere
+    #lon = numeric longitude, WGS84. negative for western hemisphere
+    #startdate = either a date object or a string in YYYY-MM-DD format
+    #enddate = either a date object or a string in YYYY-MM-DD format
+
+    startdate <- as.character(startdate)
+    enddate <- as.character(enddate)
+
+    tmp_dir <- file.path(tempdir(), 'nldas')
+    dir.create(tmp_dir,
+               recursive = TRUE,
+               showWarnings = FALSE)
+
+    tempf <- file.path(tmp_dir,
+                       paste0('precip', as.numeric(Sys.time()), '.dat'))
+
+    param <- 'APCPsfc'
+    req <- paste0(
+        'https://hydro1.gesdisc.eosdis.nasa.gov/daac-bin/access/timeseries.cgi?variable=NLDAS:NLDAS_FORA0125_H.002:',
+        param, '&location=GEOM:POINT(', lon, ',%20', lat,
+        ')&startDate=', startdate, 'T00&endDate=', enddate, 'T23&type=asc2'
+    )
+
+    download.file(url = req,
+                  method = 'curl',
+                  destfile = tempf)
+
+    d <- read_fwf(tempf,
+                  skip = 40,
+                  fwf_cols(datetime = 22, precip_mm = 14),
+                  show_col_types = FALSE) %>%
+        slice(-nrow(.)) %>%
+        mutate(datetime = ymd_h(datetime)) %>%
+        mutate(date = as.Date(datetime)) %>%
+        group_by(date) %>%
+        summarize(precip_mm = sum(precip_mm, na.rm = TRUE),
+                  .groups = 'drop')
+
+    unlink(tempf)
+
+    return(d)
 }

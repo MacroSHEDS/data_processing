@@ -253,10 +253,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -312,7 +311,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Discharge..mm.' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -377,11 +376,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Weather.Station',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',
-                                        # there are to ANC in ms_vars check
                                         'Acid.Neutralizing.Capacity..ueq.L.' = 'ANC',
                                         'Calcium..mg.L.' = 'Ca',
                                         'Magnesium..mg.L.' = 'Mg',
@@ -392,11 +390,16 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'Sulfate..mg.L.' = 'SO4',
                                         'Nitrate..mg.L.' = 'NO3'),
                          data_col_pattern = '#V#',
+                         set_to_NA = c('', '.'),
                          is_sensor = FALSE,
                          sampling_type = 'G')
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
+
+    d <- ms_conversions(d,
+                        convert_units_from = c(ANC = 'ueq/l'),
+                        convert_units_to = c(ANC = 'eq/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -444,12 +447,11 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',
                                         'Alkalinity..mg.CaCO3.L.' = 'alk',
-                                        # there are to ANC in ms_vars check
                                         'Acid.Neutralizing.Capacity..ueq.L.' = 'ANC',
                                         'Calcium..mg.L.' = 'Ca',
                                         'Magnesium..mg.L.' = 'Mg',
@@ -459,14 +461,15 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                         'Sulfate..mg.L.' = 'SO4',
                                         'Nitrate..mg.L.' = 'NO3'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
     d <- ms_conversions(d,
-                        convert_units_from = c('NO3' = 'mg/l'),
-                        convert_units_to = c('NO3' = 'mg/l'))
+                        convert_units_from = c(ANC = 'ueq/l'),
+                        convert_units_to = c(ANC = 'eq/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

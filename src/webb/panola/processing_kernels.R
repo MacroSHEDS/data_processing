@@ -167,7 +167,7 @@ p1v001_precip_chemistry <- function(zipf){
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_clean = list(Notes = ''),
-                            summary_flags_to_drop = list(Notes = 'this string will never match'), #mark any string as "dirty"
+                            summary_flags_to_drop = list(Notes = 'sentinel'),
                             variable_flags_bdl = 'BDL')
 
     var_deets <- list(
@@ -303,7 +303,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
 
 #discharge; stream_chemistry; CUSTOMprecipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <-function(network, domain, prodname_ms, site_code, component){
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
     raw_data_loc <- glue('data/{n}/{d}/raw/{p}/{s}',
                          n = network,
