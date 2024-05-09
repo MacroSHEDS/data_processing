@@ -266,7 +266,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component){
 
   rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                   n = network,
@@ -280,14 +280,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                             'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',
+                       alt_site_code = list(Summit_met = 'AERSU',
+                                            Mid_met = 'AERCA',
+                                            EB_met = 'AEREA'),
                        data_cols =  c('vol_converted_to_depth_mm' = 'precipitation'),
                        data_col_pattern = '#V#',
                        set_to_NA = '',
                        is_sensor = FALSE,
                        keep_empty_rows = TRUE)
-  d$site_code[d$site_code=='AERSU'] <- 'Summit_met'
-  d$site_code[d$site_code=='AERCA'] <- 'Mid_met'
-  d$site_code[d$site_code=='AEREA'] <- 'EB_met'
 
   d <- ms_cast_and_reflag(d,
                           varflag_col_pattern = NA,
@@ -295,6 +295,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
+  synchronize_timestep(d, admit_NAs = TRUE)
   d <- synchronize_timestep(d)
 
   sites <- unique(d$site_code)

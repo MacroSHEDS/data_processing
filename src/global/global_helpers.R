@@ -7027,8 +7027,6 @@ populate_implicit_NAs <- function(d,
         tidyr::complete(datetime = seq(min(datetime),
                                        max(datetime),
                                        by = interval)) %>%
-        # mutate(site_code = .$site_code[1],
-        #        var = .$var[1]) %>%
         ungroup() %>%
         arrange(site_code, var, datetime) %>%
         select(datetime, site_code, var, everything())
@@ -7294,22 +7292,33 @@ ms_mean_nocb_interpolate <- function(d, maxgap){
 
 synchronize_timestep <- function(d,
                                  precip_interp_method = 'zero',
-                                 prodname_ms_ = get('prodname_ms'),
-                                 impute_limit = NULL){
+                                 impute_limit = NULL,
+                                 admit_NAs = FALSE,
+                                 paired_p_and_pchem = FALSE,
+                                 allow_pre_interp = FALSE,
+                                 prodname_ms_ = get('prodname_ms')){
 
     #d is a df/tibble with columns: datetime (POSIXct), site_code, var, val, ms_status
     #precip_interp_method: either "zero" for 0-interpolation, or "mean_nocb", which
     #   fills gaps assuming that each recorded sample is an aggregate of equal-volume
     #   samples over the preceding, unobserved days. nocb = "next observation carried backward".
-    #desired_interval [HARD DEPRECATED] is a character string that can be parsed by the "by"
-    #   parameter to base::seq.POSIXt, e.g. "5 mins" or "1 day". THIS IS NOW
-    #   DETERMINED PROGRAMMATICALLY. WE'RE ONLY GOING TO HAVE 2 INTERVALS,
-    #   ONE FOR GRAB DATA AND ONE FOR SENSOR. IF WE EVER WANT TO CHANGE THEM,
-    #   IT WOULD BE BETTER TO CHANGE THEM JUST ONCE HERE, RATHER THAN IN
-    #   EVERY KERNEL
     #impute_limit: numeric or NULL. the maximum number of consecutive points to
     #   inter/extrapolate. it's passed to imputeTS::na_interpolate. if NULL,
     #   determined programmatically, based on interval and prodname.
+    #admit_NAs: logical. if TRUE, allow NA values in `d`. for precipitation data,
+    #   these will be imputed via get_nldas_precip. For precip_chemistry,
+    #   these will be linearly interpolated. Both imputations occur after
+    #   `d` has been aggregated to daily. If FALSE, the presence of NA
+    #   values in `d` results in an error.
+    #paired_p_and_pchem: logical. if TRUE (e.g. bear, loch_vale, sleepers),
+    #   and pre_interp = TRUE, pre-interpolation will occur before data
+    #   are coerced to daily. see pre_interp.
+    #allow_pre_interp: logical. if TRUE, an initial round of interpolation is allowed
+    #   to occur for select values before full interpolation occurs. this is only
+    #   used for precipitation and precip_chemistry where meaningful NAs
+    #   exist in the raw data and should be filled, either with NLDAS precip data
+    #   or by linear interpolation (pchem) before the typical zero/nocb interpolation
+    #   occurs
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated. This column may already be
@@ -7321,6 +7330,10 @@ synchronize_timestep <- function(d,
 
     if(! precip_interp_method %in% c('zero', 'mean_nocb')){
         stop('precip_interp_method must be either "zero" or "mean_nocb"')
+    }
+
+    if(! admit_NAs && any(is.na(d$val))){
+        stop('NAs present in d and admit_NAs = FALSE')
     }
 
     #for some precip/pchem datasets, ms_interp will already be supplied by now,
@@ -7451,10 +7464,48 @@ synchronize_timestep <- function(d,
                 arrange(datetime)
         }
 
+        nas_present <- any(is.na(sitevar_chunk$val))
+        if(! admit_NAs && nas_present) stop('should never happen')
+        if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
+
+        #fill in missing days. for NAs that existed before this step, replace
+        #them with a sentinel value, so they can be imputed. this logic only pertains to precip and pchem.
+        browser()
+        # meaningful_NA_sentinel <- -13254
+        # sitevar_chunk[is.na(sitevar_chunk)] <- meaningful_NA_sentinel
+
+
+        if(allow_pre_interp && paired_p_and_pchem){
+            na_dates <- get_missing_date_ranges(sitevar_chunk)
+            tudes <- filter(site_data, site_code == sitevar_chunk$site_code[1]) %>%
+                select(ends_with('itude')) %>%
+                unlist()
+            if(length(tudes != 2)) stop('something wrong with site_data')
+
+            for(i in seq_along(na_dates)){
+                na_set <- na_inds[[i]]
+                na_dates <- as.Date(sitevar_chunk[na_set, 'datetime'])
+                precip_fill <- get_nldas_precip(lat = tudes[names(tudes) == 'latitude'],
+                                                lon = tudes[names(tudes) == 'longitude'],
+                                                startdate = min(na_dates),
+                                                enddate = max(na_dates))
+                precip_fill <- sum(precip_fill)
+                sitevar_chunk$val[na_set[length(na_set)]] <- precip_fill
+            }
+            #there will still be NAs after this. they should become 0
+        }
+
         sitevar_chunk <- populate_implicit_NAs(
             d = sitevar_chunk,
             ms_status_fill = NA,
             interval = rounding_intervals[i])
+
+        if(any(sitevar_chunk$val == meaningful_NA_sentinel)){
+            sitevar_chunk <- pre_interp(sitevar_chunk,
+                                        type = ifelse(var_is_pchem,
+                                                      'linear', #for pchem
+                                                      'NLDAS'))
+        }
 
         if(! var_is_p && ! var_is_pchem){
             interp_type <- 'linear'
@@ -7476,6 +7527,26 @@ synchronize_timestep <- function(d,
         purrr::reduce(bind_rows) %>%
         arrange(site_code, var, datetime) %>%
         select(datetime, site_code, var, val, ms_status, ms_interp)
+
+    return(d)
+}
+
+pre_interp <- function(d, type){
+
+    #type: character. either "NLDAS" for precipitation data or "linear" for pchem
+
+    if(! type %in% c('NLDAS', 'linear')){
+        stop('type must be "NLDAS" or "linear"')
+    }
+
+    meaningful_NA_sentinel <- -13254
+    filter(d, val == meaningful_NA_sentinel)
+
+    if(type == 'NLDAS'){
+        get_nldas_precip(lat, lon, startdate = NULL, enddate = NULL)
+    } else {
+        ms_linear_interpolate()
+    }
 
     return(d)
 }
@@ -7735,7 +7806,7 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
                                    verbose = TRUE,
                                    filter_sites = NULL,
                                    donor_domain = NULL){
-browser()
+
     #filter_sites: useful for e.g. neon where sites are strewn everywhere and
     #    you wouldn't want to interpolate all gauges together. a list of:
     #       'precip': character vector of precip gauge ids
@@ -15076,7 +15147,7 @@ ms_check_range <- function(d){
         }
     }
 
-    d <- filter(d, ! is.na(val) | ms_status == 2)
+    # d <- filter(d, ! is.na(val) | ms_status == 2)
 
     return(d)
 }
@@ -17786,3 +17857,52 @@ get_nldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
 
     return(d)
 }
+
+propagate_sentinel <- function(d){
+
+    #d: a macrosheds tibble of DAILY data
+
+    #The sentinel value -13254, within the val column, is recognized as representing
+    #a meaningful NA in the original data (this only pertains to precip and pchem),
+    #soon to be imputed. Whenever -13254 is encountered, all preceding days
+    #(15-m data have been abandoned at the time of this writing) are given the
+    #sentinel value instead of val_fill.
+
+    stnl <- -13254 #a sentinel value that represents meaningful NAs in d.
+
+    sentinel_indices <- which(d$val == stnl)
+
+    for(idx in sentinel_indices){
+        # Find last non-NA and non-sentinel value before the sentinel
+        non_na_before <- max(c(0, na.omit(ifelse(d$val[1:(idx - 1)] != stnl, 1:(idx - 1), NA))))
+        # Fill NAs from last non-NA, non-sentinel to just before the sentinel
+        if(non_na_before > 0 && any(is.na(d$val[(non_na_before + 1):(idx - 1)]))){
+            d$val[(non_na_before + 1):(idx - 1)] <- stnl
+        }
+    }
+
+    return(d)
+}
+
+get_missing_date_ranges <- function(d){
+
+    #not ready yet. starts needs to be starts-1, but not if it's the first value in the series. that needs special handling
+
+    d$datetime <- as.Date(d$datetime)
+    na_indices <- which(is.na(d$val))
+    ranges <- list()
+
+    if(length(na_indices)){
+        breaks <- c(na_indices[which(diff(na_indices) > 1)],
+                    na_indices[length(na_indices)])
+        starts <- c(na_indices[1],
+                    na_indices[which(diff(na_indices) > 1) + 1])
+
+        for(i in seq_along(starts)){
+            ranges[[i]] <- seq(d$datetime[starts[i]], d$datetime[breaks[i]], by = 'day')
+        }
+    }
+
+    return(ranges)
+}
+
