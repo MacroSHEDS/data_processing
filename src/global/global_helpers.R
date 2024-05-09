@@ -7474,19 +7474,19 @@ synchronize_timestep <- function(d,
         # meaningful_NA_sentinel <- -13254
         # sitevar_chunk[is.na(sitevar_chunk)] <- meaningful_NA_sentinel
 
-
         if(allow_pre_interp && paired_p_and_pchem){
+
+            #usghghghgh. here. this was supposed to return inds, not dates
             na_dates <- get_missing_date_ranges(sitevar_chunk)
-            tudes <- filter(site_data, site_code == sitevar_chunk$site_code[1]) %>%
-                select(ends_with('itude')) %>%
-                unlist()
-            if(length(tudes != 2)) stop('something wrong with site_data')
+
+            siterow <- filter(site_data, site_code == sitevar_chunk$site_code[1])
+            if(nrow(siterow != 1)) stop('something wrong with site_data')
 
             for(i in seq_along(na_dates)){
                 na_set <- na_inds[[i]]
                 na_dates <- as.Date(sitevar_chunk[na_set, 'datetime'])
-                precip_fill <- get_nldas_precip(lat = tudes[names(tudes) == 'latitude'],
-                                                lon = tudes[names(tudes) == 'longitude'],
+                precip_fill <- get_nldas_precip(lat = siterow$latitude,
+                                                lon = siterow$longitude,
                                                 startdate = min(na_dates),
                                                 enddate = max(na_dates))
                 precip_fill <- sum(precip_fill)
@@ -17886,20 +17886,35 @@ propagate_sentinel <- function(d){
 
 get_missing_date_ranges <- function(d){
 
-    #not ready yet. starts needs to be starts-1, but not if it's the first value in the series. that needs special handling
-
     d$datetime <- as.Date(d$datetime)
     na_indices <- which(is.na(d$val))
     ranges <- list()
 
     if(length(na_indices)){
-        breaks <- c(na_indices[which(diff(na_indices) > 1)],
-                    na_indices[length(na_indices)])
-        starts <- c(na_indices[1],
-                    na_indices[which(diff(na_indices) > 1) + 1])
 
-        for(i in seq_along(starts)){
-            ranges[[i]] <- seq(d$datetime[starts[i]], d$datetime[breaks[i]], by = 'day')
+        # breaks <- c(na_indices[which(diff(na_indices) > 1)],
+        #             na_indices[length(na_indices)])
+        # starts <- c(na_indices[1],
+        #             na_indices[which(diff(na_indices) > 1) + 1])
+
+        # for(i in seq_along(starts)){
+        for(i in seq_along(na_indices)){
+
+            if(na_indices[i] - 1 > 0){
+                first_unknown_date <- d$datetime[na_indices[i] - 1] + 1
+                ranges[[i]] <- seq(first_unknown_date,
+                                   d$datetime[na_indices[i]],
+                                   by = 'day')
+            } else {
+                ranges[[i]] <- NA_Date_
+            }
+            # if(starts - 1 > 0){
+            #     ranges[[i]] <- seq(d$datetime[starts[i] - 1],
+            #                        d$datetime[breaks[i]],
+            #                        by = 'day')
+            # } else {
+            #     ranges[[i]] <- NA_Date_
+            # }
         }
     }
 
