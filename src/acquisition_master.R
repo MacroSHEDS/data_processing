@@ -372,6 +372,28 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
+    #munge stream gauge locations first, so we can delineate watersheds
+    ms_munge(network = network,
+             domain = domain,
+             prodname_filter = c('stream_gauge_locations'))
+
+    if(domain != 'mcmurdo'){
+
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        # overwrite_wb_sites = "trout_river",
+                        verbose = FALSE))
+
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = TRUE,
+                   general_prod_filter = 'prism_precip')
+                   # general_prod_filter = NULL)
+        stop('remove general prod filter above')
+    }
+
+    #munge the rest
     ms_munge(network = network,
              # prodname_filter = c('stream_PAR'),
              # prodname_filter = c('stream_chemistry'),
@@ -380,17 +402,8 @@ for(dmnrow in 1:nrow(network_domain)){
              # prodname_filter = c('precip_chemistry'),
              # prodname_filter = c('stream_temperature'),
              # prodname_filter = c('ws_boundary'),
-             # prodname_filter = c('precip_gauge_locations'),
-             # prodname_filter = c('stream_gauge_locations'),
              domain = domain)
 
-    if(domain != 'mcmurdo'){
-        sw(ms_delineate(network = network,
-                        domain = domain,
-                        dev_machine_status = ms_instance$machine_status,
-                        # overwrite_wb_sites = "trout_river",
-                        verbose = FALSE))
-    }
     ###########################################################################
     #other
     load_config_datasets(from_where = 'remote')
@@ -422,13 +435,6 @@ for(dmnrow in 1:nrow(network_domain)){
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     ###########################################################################
-
-    if(domain != 'mcmurdo'){
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = TRUE,
-                   general_prod_filter = NULL)
-    }
 
     retain_ms_globals(ms_globals)
 }

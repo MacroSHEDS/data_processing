@@ -3421,7 +3421,6 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        # print(site)
         if(site %in% overwrite_wb_sites) {
             message('site in overwrite vector, launching new delineation')
         } else if(dir.exists(site_dir) && length(dir(site_dir))){
@@ -5282,15 +5281,22 @@ ms_calc_watershed_area <- function(network,
 
     if(update_site_file){
 
-        site_data$ws_area_ha[site_data$domain == domain &
-                                 site_data$network == network &
-                                 site_data$site_code == site_code &
-                                 site_data$site_type != 'rain_gauge'] <- ws_area_ha
+        this_site_ix <- site_data$domain == domain &
+            site_data$network == network &
+            site_data$site_code == site_code &
+            site_data$site_type != 'rain_gauge'
 
-        ms_write_confdata(site_data,
-                          which_dataset = 'site_data',
-                          to_where = ms_instance$config_data_storage,
-                          overwrite = TRUE)
+        current_ws_area <- site_data$ws_area_ha[this_site_ix]
+
+        if(is.na(current_ws_area) || current_ws_area != ws_area_ha){
+
+            site_data$ws_area_ha[this_site_ix] <- ws_area_ha
+
+            ms_write_confdata(site_data,
+                              which_dataset = 'site_data',
+                              to_where = ms_instance$config_data_storage,
+                              overwrite = TRUE)
+        }
     }
 
     return(ws_area_ha)
@@ -7160,7 +7166,8 @@ ms_daily_interpolate <- function(d, type, interval = NULL, maxgap = NULL){
         stop('assigning ms_status of 0 for a non-NA val. investigate')
     }
 
-    d_interp$ms_status[is.na(d_interp$ms_status)] <- 0 #does this accomplish anything?*
+    browser()
+    d_interp$ms_status[is.na(d_interp$ms_status)] <- 0
     d_interp$ms_interp <- as.numeric(ms_interp_bool & ! is.na(d_interp$val))
     d_interp <- filter(d_interp, ! is.na(val)) #*
 
@@ -7238,7 +7245,7 @@ ms_zero_interpolate <- function(d, maxgap){
         mutate(
 
             ms_status = imputeTS::na_replace(ms_status,
-                                             fill = 1,
+                                             fill = 0,
                                              maxgap = maxgap),
 
             val = if(sum(! is.na(val)) > 1){
@@ -7468,31 +7475,35 @@ synchronize_timestep <- function(d,
         if(! admit_NAs && nas_present) stop('should never happen')
         if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
 
-        #fill in missing days. for NAs that existed before this step, replace
-        #them with a sentinel value, so they can be imputed. this logic only pertains to precip and pchem.
         browser()
-        # meaningful_NA_sentinel <- -13254
-        # sitevar_chunk[is.na(sitevar_chunk)] <- meaningful_NA_sentinel
-
+        #pre-impute missing days for paired precip-pchem situations.
         if(allow_pre_interp && paired_p_and_pchem){
 
-            #usghghghgh. here. this was supposed to return inds, not dates
-            na_dates <- get_missing_date_ranges(sitevar_chunk)
+            longest_na_series <- rle2(is.na(sitevar_chunk$val)) %>%
+                filter(values == TRUE) %>%
+                pull(lengths) %>%
+                max()
 
-            siterow <- filter(site_data, site_code == sitevar_chunk$site_code[1])
-            if(nrow(siterow != 1)) stop('something wrong with site_data')
-
-            for(i in seq_along(na_dates)){
-                na_set <- na_inds[[i]]
-                na_dates <- as.Date(sitevar_chunk[na_set, 'datetime'])
-                precip_fill <- get_nldas_precip(lat = siterow$latitude,
-                                                lon = siterow$longitude,
-                                                startdate = min(na_dates),
-                                                enddate = max(na_dates))
-                precip_fill <- sum(precip_fill)
-                sitevar_chunk$val[na_set[length(na_set)]] <- precip_fill
+            if(longest_na_series > 5){
+                logwarn(paste0('longest pre-interpolated NA series is length ',
+                               longest_na_series, '. are we cool with this?'),
+                        logger = logger_module)
             }
-            #there will still be NAs after this. they should become 0
+
+            sitevar_chunk$ms_interp[is.na(sitevar_chunk$val)] <- 1
+
+            if(var_is_p){
+                stop('modify pre_interp_precip to use prism data for pre 1979')
+                stop('is there any way to get historic P outside contig?')
+                stop('if not, probs just dont interp? yeah, not 0 or linear')
+                sitevar_chunk <- pre_interp_precip(sitevar_chunk)
+            } else if(var_is_pchem){
+                sitevar_chunk <- ms_linear_interpolate(sitevar_chunk, maxgap = Inf)
+            } else {
+                stop('allow_pre_interp and paired_p_and_pchem should only be used for precipitation or precip_chemistry data')
+            }
+
+            if(any(is.na(sitevar_chunk$val))) stop('eh?')
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -7500,12 +7511,12 @@ synchronize_timestep <- function(d,
             ms_status_fill = NA,
             interval = rounding_intervals[i])
 
-        if(any(sitevar_chunk$val == meaningful_NA_sentinel)){
-            sitevar_chunk <- pre_interp(sitevar_chunk,
-                                        type = ifelse(var_is_pchem,
-                                                      'linear', #for pchem
-                                                      'NLDAS'))
-        }
+        # if(any(sitevar_chunk$val == meaningful_NA_sentinel)){
+        #     sitevar_chunk <- pre_interp(sitevar_chunk,
+        #                                 type = ifelse(var_is_pchem,
+        #                                               'linear', #for pchem
+        #                                               'NLDAS'))
+        # }
 
         if(! var_is_p && ! var_is_pchem){
             interp_type <- 'linear'
@@ -9329,7 +9340,7 @@ get_gee_standard <- function(network,
                              qa_band = NULL,
                              bit_mask = NULL,
                              contiguous_us = FALSE,
-                             summary_stat = 'median') {
+                             summary_stat = 'median'){
 
     if(! summary_stat %in% c('median', 'mean')){
         stop('summary_stat must be median or mean')
@@ -9414,6 +9425,11 @@ get_gee_standard <- function(network,
             imgcol <- ee$ImageCollection(gee_id)$select(band)
         }
 
+        if(exists('gee_bounding_dates', where = .GlobalEnv)){
+            imgcol <- imgcol$filterDate(gee_bounding_dates[1],
+                                        gee_bounding_dates[2])
+        }
+
         if(summary_stat == 'median'){
 
             flat_img <- imgcol$map(function(image) {
@@ -9429,7 +9445,7 @@ get_gee_standard <- function(network,
             gee <- flat_img$select(propertySelectors = c('site_code', 'imageId',
                                                          'stdDev', 'median'),
                                    retainGeometry = FALSE)
-        } else{
+        } else {
 
             flat_img <- imgcol$map(function(image) {
                 image$reduceRegions(
@@ -9446,16 +9462,15 @@ get_gee_standard <- function(network,
                                    retainGeometry = FALSE)
         }
 
-        ee_description <-  glue('{n}_{d}_{p}',
-                                d = domain,
-                                n = network,
-                                p = prodname)
+        ee_description <-  glue('{network}_{domain}_{prodname}')
 
-        ee_task <- ee$batch$Export$table$toDrive(collection = gee,
-                                              description = ee_description,
-                                              fileFormat = 'CSV',
-                                              folder = 'GEE',
-                                              fileNamePrefix = 'rgee')
+        ee_task <- ee$batch$Export$table$toDrive(
+            collection = gee,
+            description = ee_description,
+            fileFormat = 'CSV',
+            folder = 'GEE',
+            fileNamePrefix = 'rgee'
+        )
 
         ee_task$start()
         ee_monitoring(ee_task, max_attempts = Inf, quiet = TRUE)
@@ -9479,7 +9494,7 @@ get_gee_standard <- function(network,
 
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-        if(!summary_stat %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
+        if(! summary_stat %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
             return(NULL)
         }
 
@@ -9497,11 +9512,19 @@ get_gee_standard <- function(network,
 
     } else {
 
+        if(exists('gee_bounding_dates', where = .GlobalEnv)){
+            gee_startdate <- gee_bounding_dates[1]
+            gee_enddate <- gee_bounding_dates[2]
+        } else {
+            gee_startdate <- '1957-10-25'
+            gee_enddate <- '2040-01-01'
+        }
+
         imgcol <- get_gee_imgcol(gee_id,
                                  band,
                                  prodname,
-                                 '1957-10-25',
-                                 '2040-01-01',
+                                 gee_startdate,
+                                 gee_enddate,
                                  qaqc = qaqc)
 
         ext_median <- try(ee_extract(
@@ -9555,7 +9578,7 @@ get_relative_uncert <- function(x){
     return(ru)
 }
 
-get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
+get_phenology <- function(network, domain, prodname_ms, time, site_boundary,
                           site_code) {
 
     sheds_point <- site_boundary %>%
@@ -9647,8 +9670,6 @@ get_phonology <- function(network, domain, prodname_ms, time, site_boundary,
 
     final <- append_unprod_prefix(final, prodname_ms)
     write_feather(final, final_path)
-
-    #return()
 }
 
 err_df_to_matrix <- function(df){
@@ -17801,6 +17822,8 @@ runoff_to_discharge <- function(x, ws_area_ha){
     #x: a vector of runoff in mm/d
     #ws_area_ha: watershed area in hectares
 
+    if(is.na(ws_area_ha)) stop('ws_area_ha is missing')
+
     ws_area_m2 <- ws_area_ha * 10^4
 
     # x <- x / 1000 #m/d
@@ -17813,17 +17836,22 @@ runoff_to_discharge <- function(x, ws_area_ha){
     return(lps)
 }
 
-get_nldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
+get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
 
     #lat = numeric latitude, WGS84. negative for southern hemisphere
     #lon = numeric longitude, WGS84. negative for western hemisphere
     #startdate = either a date object or a string in YYYY-MM-DD format
     #enddate = either a date object or a string in YYYY-MM-DD format
 
+    #returns data.frame of daily precip
+
+    if(startdate < as.Date('1979-01-01')) stop('need to implement something else')
+
+    ##prep
     startdate <- as.character(startdate)
     enddate <- as.character(enddate)
 
-    tmp_dir <- file.path(tempdir(), 'nldas')
+    tmp_dir <- file.path(tempdir(), 'ldas')
     dir.create(tmp_dir,
                recursive = TRUE,
                showWarnings = FALSE)
@@ -17831,27 +17859,55 @@ get_nldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
     tempf <- file.path(tmp_dir,
                        paste0('precip', as.numeric(Sys.time()), '.dat'))
 
-    param <- 'APCPsfc'
-    req <- paste0(
-        'https://hydro1.gesdisc.eosdis.nasa.gov/daac-bin/access/timeseries.cgi?variable=NLDAS:NLDAS_FORA0125_H.002:',
-        param, '&location=GEOM:POINT(', lon, ',%20', lat,
-        ')&startDate=', startdate, 'T00&endDate=', enddate, 'T23&type=asc2'
-    )
+    ##make NLDAS request
+    endpoint <- 'https://hydro1.gesdisc.eosdis.nasa.gov/daac-bin/access/timeseries.cgi?variable=NLDAS:NLDAS_FORA0125_H.002:'
+    param <- 'APCPsfc' #hourly precip in kg/m^2
+    location <- paste0('&location=GEOM:POINT(', lon, ',%20', lat, ')')
+    daterange <- paste0('&startDate=', startdate, 'T00&endDate=', enddate, 'T23')
+    type = '&type=asc2'
+    req <- paste0(endpoint, param, location, daterange, type)
 
-    download.file(url = req,
-                  method = 'curl',
-                  destfile = tempf)
+    download.file(url = req, method = 'curl', destfile = tempf)
+    contents <- read_fwf(tempf,
+                         skip = 40,
+                         fwf_cols(datetime = 22, precip_mm = 100),
+                         show_col_types = FALSE)
 
-    d <- read_fwf(tempf,
-                  skip = 40,
-                  fwf_cols(datetime = 22, precip_mm = 14),
-                  show_col_types = FALSE) %>%
-        slice(-nrow(.)) %>%
-        mutate(datetime = ymd_h(datetime)) %>%
-        mutate(date = as.Date(datetime)) %>%
-        group_by(date) %>%
-        summarize(precip_mm = sum(precip_mm, na.rm = TRUE),
-                  .groups = 'drop')
+    if(nrow(contents)){
+
+        d <- contents %>%
+            slice(-nrow(.)) %>%
+            mutate(datetime = ymd_h(datetime)) %>%
+            mutate(date = as.Date(datetime)) %>%
+            group_by(date) %>%
+            summarize(precip_mm = sum(precip_mm, na.rm = TRUE),
+                      .groups = 'drop')
+
+    } else {
+
+        oob <- any(grepl('out of data coverage', read_lines(tempf)))
+        if(oob){
+
+            if(startdate < as.Date('2000-01-01')) stop('need to implement something else')
+
+            #use GLDAS instead of NLDAS
+            endpoint <- 'https://hydro1.gesdisc.eosdis.nasa.gov/daac-bin/access/timeseries.cgi?variable=GLDAS2:GLDAS_NOAH025_3H_v2.1:'
+            param <- 'Rainf_f_tavg' #3-hourly precip in kg/m^2/s
+            req <- paste0(endpoint, param, daterange, location, type)
+
+            download.file(url = req, method = 'curl', destfile = tempf)
+            contents <- read_fwf(tempf,
+                                 skip = 13,
+                                 fwf_cols(datetime = 19, precip_mm_s = 100),
+                                 show_col_types = FALSE)
+
+            d <- contents %>%
+                mutate(date = as.Date(datetime)) %>%
+                group_by(date) %>%
+                summarize(precip_mm = sum(precip_mm_s, na.rm = TRUE) * 86400,
+                          .groups = 'drop')
+        }
+    }
 
     unlink(tempf)
 
@@ -17921,3 +17977,73 @@ get_missing_date_ranges <- function(d){
     return(ranges)
 }
 
+pre_interp_precip <- function(d){
+
+    na_dates <- get_missing_date_ranges(d)
+
+    siterow <- filter(site_data, site_code == d$site_code[1])
+    if(nrow(siterow) != 1) stop('something wrong with site_data')
+
+    precip_fill <- get_ldas_precip(lat = siterow$latitude,
+                                   lon = siterow$longitude,
+                                   startdate = min(na_dates[[1]]),
+                                   enddate = max(na_dates[[length(na_dates)]]))
+
+    for(i in seq_along(na_dates)){
+
+        na_set <- na_dates[[i]]
+
+        precip_fill <- sum(precip_fill$precip_mm, na.rm = TRUE)
+        replacement_ind <- which(as.Date(d$datetime) == na_set[length(na_set)])
+
+        if(length(replacement_ind) != 1) stop('is this possible?')
+
+        d$val[replacement_ind] <- precip_fill
+    }
+
+    return(d)
+}
+
+bind_older_ws_traits <- function(d){
+
+    #locate existing ws_traits files and combine them with newly retrieved gee data
+
+    if(setequal(c('datetime', 'site_code', 'var', 'val'), colnames(d))){
+        datecol <- 'datetime'
+        file_pre <- '^raw_'
+    } else if(setequal(c('year', 'site_code', 'var', 'val'), colnames(d))){
+        datecol <- 'year'
+        file_pre <- '^sum_'
+    } else {
+        stop('something is wrong?')
+    }
+
+    fs <- list.files(trait_dir)
+    if(any(grepl('raw_', fs)) && any(grepl('sum_', fs))){
+        fs <- grep(file_pre, fs, value = TRUE)
+    }
+
+    d_old <- map_dfr(file.path(trait_dir, fs), read_feather)
+
+    d_out <- bind_rows(d_old, d) %>%
+        distinct() %>%
+        arrange(site_code, !!datecol, var)
+
+    if(any(duplicated(select(d_out, site_code, !!datecol, var)))){
+
+        logwarn(paste0('updated values in ', prodname_ms,
+                       '. time to fully rerun general for ', domain),
+                logger = logger_module)
+
+        d_out <- anti_join(d_old, d,
+                           by = c(datecol, 'site_code', 'var')) %>%
+            bind_rows(d) %>%
+            arrange(site_code, !!datecol, var)
+    }
+
+    if(nrow(d_out) < nrow(d)) stop('nope')
+    if(nrow(anti_join(d_old, d_out, by = c(datecol, 'site_code', 'var')))) stop('nope')
+    if(! setequal(colnames(d_old), colnames(d_out))) stop('nope')
+
+    return(d_out)
+}

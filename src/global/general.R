@@ -53,7 +53,7 @@ too_small_wb <- boundaries$area < 15
 # reupload <- FALSE
 # if(any(too_small_wb)) reupload <- TRUE
 if(FALSE %in% is.na(too_small_wb)) {
-    
+
     boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
         mutate(geometry = st_buffer(st_centroid(geometry),
                                     dist = sqrt(10000 * 15 / pi)))
@@ -105,14 +105,7 @@ if('try-error' %in% class(ee_shape)){
     }
 }
 
-# } else {
-#     loginfo('ws_boundaries already uploaded to GEE',
-#             logger = logger_module)
-# }
-
-# i = 27
 for(i in 1:nrow(unprod)){
-# for(i in 28:28){
 
     sf::sf_use_s2(TRUE)
 
@@ -153,8 +146,15 @@ for(i in 1:nrow(unprod)){
         trait_dir <- sub('season_length', 'length_season', trait_dir)
         trait_dir <- sub('idbp', 'igbp', trait_dir)
 
-        already_have <- dir.exists(trait_dir) && length(list.files(trait_dir))
-        general_status <- ifelse(already_have, 'ok', 'pending')
+        already_have_dir <- dir.exists(trait_dir) && length(list.files(trait_dir))
+
+        if(already_have_dir){
+            fs <- list.files(trait_dir, full.names = TRUE)
+            last_retrieve <- min(file.mtime(fs))
+            if(is.na(last_retrieve)) stop('oi')
+            already_have_dates <- difftime(Sys.time(), last_retrieve,  units = 'days') < 120
+            general_status <- ifelse(already_have_dir && already_have_dates, 'ok', 'pending')
+        }
 
     } else {
         general_status <- 'pending'
@@ -180,12 +180,22 @@ for(i in 1:nrow(unprod)){
     prodcode <- prodcode_from_prodname_ms(prodname_ms)
     processing_func <- get(paste0('process_3_', prodcode))
 
+    if(exists('last_retrieve')){
+        #so crude, but would be a huge pain to do proper passing at this point
+        last_retrieve_buffer <- as.Date(last_retrieve) - days(365 + 32)
+        gee_bounding_dates <<- as.character(c(last_retrieve_buffer,
+                                              Sys.Date()))
+        trait_dir <<- trait_dir
+    }
+
     general_msg <- sw(do.call(processing_func,
                               args = list(network = network,
                                           domain = domain,
                                           prodname_ms = prodname_ms,
                                           site_code = site_code,
                                           boundaries = boundaries)))
+
+    sw(rm('gee_bounding_dates', 'trait_dir', envir = .GlobalEnv))
 
     if(is_ms_exception(general_msg)){
 
