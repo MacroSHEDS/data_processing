@@ -268,53 +268,57 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component){
 
-  rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                  n = network,
-                  d = domain,
-                  p = prodname_ms,
-                  s = site_code,
-                  c = component)
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
-  d <- ms_read_raw_csv(filepath = rawfile,
-                       datetime_cols = list('year' = '%Y', 'month' = '%m',
-                                            'day' = '%e'),
-                       datetime_tz = 'US/Eastern',
-                       site_code_col = 'site',
-                       alt_site_code = list(Summit_met = 'AERSU',
-                                            Mid_met = 'AERCA',
-                                            EB_met = 'AEREA'),
-                       data_cols =  c('vol_converted_to_depth_mm' = 'precipitation'),
-                       data_col_pattern = '#V#',
-                       set_to_NA = '',
-                       is_sensor = FALSE,
-                       keep_empty_rows = TRUE)
+    d <- ms_read_raw_csv(filepath = rawfile,
+                         datetime_cols = list('year' = '%Y', 'month' = '%m',
+                                              'day' = '%e'),
+                         datetime_tz = 'US/Eastern',
+                         site_code_col = 'site',
+                         alt_site_code = list(Summit_met = 'AERSU',
+                                              Mid_met = 'AERCA',
+                                              EB_met = 'AEREA'),
+                         data_cols =  c('vol_converted_to_depth_mm' = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = '',
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
-  d <- ms_cast_and_reflag(d,
-                          varflag_col_pattern = NA,
-                          keep_empty_rows = TRUE)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
-  d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  synchronize_timestep(d, admit_NAs = TRUE)
-  d <- synchronize_timestep(d)
+    synchronize_timestep(d,
+                         admit_NAs = TRUE,
+                         paired_p_and_pchem = TRUE,
+                         allow_pre_interp = TRUE)
 
-  sites <- unique(d$site_code)
+    d <- synchronize_timestep(d)
 
-  for(s in 1:length(sites)){
+    sites <- unique(d$site_code)
 
-    d_site <- d %>%
-      filter(site_code == !!sites[s])
+    for(s in 1:length(sites)){
 
-    write_ms_file(d = d_site,
-                  network = network,
-                  domain = domain,
-                  prodname_ms = prodname_ms,
-                  site_code = sites[s],
-                  level = 'munged',
-                  shapefile = FALSE)
-  }
+        d_site <- d %>%
+            filter(site_code == !!sites[s])
 
-  return()
+        write_ms_file(d = d_site,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = sites[s],
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+
+    return()
 }
 
 #precip_chemistry: STATUS=READY

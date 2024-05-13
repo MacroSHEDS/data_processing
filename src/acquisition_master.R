@@ -384,13 +384,6 @@ for(dmnrow in 1:nrow(network_domain)){
                         dev_machine_status = ms_instance$machine_status,
                         # overwrite_wb_sites = "trout_river",
                         verbose = FALSE))
-
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = TRUE,
-                   general_prod_filter = 'prism_precip')
-                   # general_prod_filter = NULL)
-        stop('remove general prod filter above')
     }
 
     #munge the rest

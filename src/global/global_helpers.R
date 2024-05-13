@@ -7493,9 +7493,6 @@ synchronize_timestep <- function(d,
             sitevar_chunk$ms_interp[is.na(sitevar_chunk$val)] <- 1
 
             if(var_is_p){
-                stop('modify pre_interp_precip to use prism data for pre 1979')
-                stop('is there any way to get historic P outside contig?')
-                stop('if not, probs just dont interp? yeah, not 0 or linear')
                 sitevar_chunk <- pre_interp_precip(sitevar_chunk)
             } else if(var_is_pchem){
                 sitevar_chunk <- ms_linear_interpolate(sitevar_chunk, maxgap = Inf)
@@ -17845,7 +17842,18 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
 
     #returns data.frame of daily precip
 
-    if(startdate < as.Date('1979-01-01')) stop('need to implement something else')
+    # if(startdate < as.Date('1979-01-01')) stop('use load_prism_precip for this (not yet implemented)')
+    if(enddate < as.Date('1979-01-01')){
+        logwarn('all precip gaps before 1979 (get_ldas_precip no-op)',
+                logger = logger_module)
+        return(tibble())
+    }
+
+    if(startdate < as.Date('1979-01-01')){
+        logwarn('precip gaps before 1979 (get_ldas_precip will leave empty)',
+                logger = logger_module)
+        startdate <- '1979-01-01'
+    }
 
     ##prep
     startdate <- as.character(startdate)
@@ -17888,7 +17896,19 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
         oob <- any(grepl('out of data coverage', read_lines(tempf)))
         if(oob){
 
-            if(startdate < as.Date('2000-01-01')) stop('need to implement something else')
+            # if(startdate < as.Date('2000-01-01')) stop('need to implement something else')
+            if(enddate < as.Date('2000-01-01')){
+                logwarn('non-CONUS and all precip gaps before 2000 (get_ldas_precip no-op)',
+                        logger = logger_module)
+                return(tibble())
+            }
+
+            if(startdate < as.Date('2000-01-01')){
+                logwarn('non-CONUS and precip gaps before 2000 (get_ldas_precip will leave empty)',
+                        logger = logger_module)
+                startdate <- '2000-01-01'
+                daterange <- paste0('&startDate=', startdate, 'T00&endDate=', enddate, 'T23')
+            }
 
             #use GLDAS instead of NLDAS
             endpoint <- 'https://hydro1.gesdisc.eosdis.nasa.gov/daac-bin/access/timeseries.cgi?variable=GLDAS2:GLDAS_NOAH025_3H_v2.1:'
@@ -17910,6 +17930,31 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
     }
 
     unlink(tempf)
+
+    return(d)
+}
+
+load_prism_precip <- function(site, startdate = NULL, enddate = NULL){
+
+    #site: macrosheds site_code
+    #startdate: either a date object or a string in YYYY-MM-DD format
+    #enddate: either a date object or a string in YYYY-MM-DD format
+
+    #returns data.frame of daily precip. ms_general() must have already
+    #retrieved prism_precip for this site.
+
+    #INCOMPLETE. SEE 2025 NOTES
+
+    if(enddate >= as.Date('1979-01-01')) stop('use get_ldas_precip for this')
+
+    ##prep
+    startdate <- as.character(startdate)
+    enddate <- as.character(enddate)
+
+    prism_file <- glue('data/{network}/{domain}/ws_traits/cc_precip/raw_{site}.feather')
+    # if()
+    # read_feather()
+    #...
 
     return(d)
 }
@@ -17977,12 +18022,45 @@ get_missing_date_ranges <- function(d){
     return(ranges)
 }
 
+split_on_date <- function(na_dates, split_date){
+
+    #na_dates: a list of vectors of dates
+    #split_date: character or Date
+
+    #returns three lists containing the elements of na_dates, but split
+    #into pre, post, and spanning the split_date
+
+    split_date <- as.Date(split_date)
+
+    starts_before <- sapply(na_dates, function(x) x[1] < split_date)
+    ends_before <- sapply(na_dates, function(x) x[length(x)] < split_date)
+
+    pre_ <- na_dates[starts_before & ends_before]
+    post_ <- na_dates[! starts_before & ! ends_before]
+
+    spans_ <- na_dates[starts_before & ! ends_before]
+    split_segment <- list()
+    if(length(spans_)){
+        spn <- spans_[[1]]
+        spans_ <- c(list(spn[spn < split_date]),
+                    list(spn[spn >= split_date]))
+    }
+
+    out <- list(pre_ = pre_,
+                post_ = post_,
+                spans_ = spans_)
+
+    return(out)
+}
+
 pre_interp_precip <- function(d){
 
-    na_dates <- get_missing_date_ranges(d)
+    this_site <- d$site_code[1]
 
-    siterow <- filter(site_data, site_code == d$site_code[1])
+    siterow <- filter(site_data, site_code == this_site)
     if(nrow(siterow) != 1) stop('something wrong with site_data')
+
+    na_dates <- get_missing_date_ranges(d)
 
     precip_fill <- get_ldas_precip(lat = siterow$latitude,
                                    lon = siterow$longitude,
@@ -17992,16 +18070,55 @@ pre_interp_precip <- function(d){
     for(i in seq_along(na_dates)){
 
         na_set <- na_dates[[i]]
+        if(na_set[1] < as.Date('1979-01-01')) next #NLDAS doesn't go back this far
 
-        precip_fill <- sum(precip_fill$precip_mm, na.rm = TRUE)
+        precip_sum <- precip_fill %>%
+            filter(date >= na_set[1] & date <= na_set[length(na_set)]) %>%
+            pull(precip_mm) %>%
+            sum(., na.rm = TRUE)
+
         replacement_ind <- which(as.Date(d$datetime) == na_set[length(na_set)])
 
-        if(length(replacement_ind) != 1) stop('is this possible?')
+        if(length(replacement_ind) != 1) stop('should not happen')
 
-        d$val[replacement_ind] <- precip_fill
+        d$val[replacement_ind] <- precip_sum
     }
 
     return(d)
+}
+
+combine_precip_sources <- function(na_dates, site){
+
+    #not finished. prism should be pulled from earth engine for each precip
+    #gauge location. i was setting this up to retrieve prism by watershed from
+    #our ws_traits directories, but that's crude. instead, for now, i'm just
+    #letting historic precip gauge data gaps remain gaps.
+
+    if(length(na_dates$pre_)){
+        precip_pre <- load_prism_precip(site = this_site,
+                                        startdate = min(na_dates$pre_[[1]]),
+                                        enddate = max(na_dates$pre_[[length(na_dates$pre_)]]))
+    }
+
+    if(length(na_dates$post_)){
+        precip_post <- get_ldas_precip(lat = siterow$latitude,
+                                       lon = siterow$longitude,
+                                       startdate = min(na_dates$post_[[1]]),
+                                       enddate = max(na_dates$post_[[length(na_dates$post_)]]))
+    }
+
+    if(length(na_dates$spans_)){
+        precip_span_A <- load_prism_precip(site = this_site,
+                                           startdate = min(na_dates$spans_[[1]]),
+                                           enddate = max(na_dates$spans_[[1]]))
+
+        precip_span_B <- get_ldas_precip(lat = siterow$latitude,
+                                         lon = siterow$longitude,
+                                         startdate = min(na_dates$spans_[[2]]),
+                                         enddate = max(na_dates$spans_[[2]]))
+    }
+
+    #combine etc here.
 }
 
 bind_older_ws_traits <- function(d){
