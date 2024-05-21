@@ -7166,9 +7166,10 @@ ms_daily_interpolate <- function(d, type, interval = NULL, maxgap = NULL){
         stop('assigning ms_status of 0 for a non-NA val. investigate')
     }
 
-    browser()
+    # browser()
     d_interp$ms_status[is.na(d_interp$ms_status)] <- 0
     d_interp$ms_interp <- as.numeric(ms_interp_bool & ! is.na(d_interp$val))
+    if(is.na(d$val[1])) d_interp$val[1] <- NA
     d_interp <- filter(d_interp, ! is.na(val)) #*
 
     return(d_interp)
@@ -7187,13 +7188,13 @@ ms_linear_interpolate <- function(d, maxgap){
 
                val = if(sum(! is.na(val)) > 1){
                    #linear interp NA vals
-                   imputeTS::na_interpolation(val, maxgap = maxgap)
+                   imputeTS::na_interpolation(val, maxgap = maxgap, rule = 1)
                    #unless not enough data in group; then do nothing
                } else val,
 
                val_err = if(sum(! is.na(val_err)) > 1){
                    #do the same for uncertainty
-                   imputeTS::na_interpolation(val_err, maxgap = maxgap)
+                   imputeTS::na_interpolation(val_err, maxgap = maxgap, rule = 1)
                } else val_err
         )
 
@@ -7475,7 +7476,6 @@ synchronize_timestep <- function(d,
         if(! admit_NAs && nas_present) stop('should never happen')
         if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
 
-        browser()
         #pre-impute missing days for paired precip-pchem situations.
         if(allow_pre_interp && paired_p_and_pchem){
 
@@ -7499,8 +7499,6 @@ synchronize_timestep <- function(d,
             } else {
                 stop('allow_pre_interp and paired_p_and_pchem should only be used for precipitation or precip_chemistry data')
             }
-
-            if(any(is.na(sitevar_chunk$val))) stop('eh?')
         }
 
         sitevar_chunk <- populate_implicit_NAs(
@@ -18006,9 +18004,9 @@ get_missing_date_ranges <- function(d){
                 ranges[[i]] <- seq(first_unknown_date,
                                    d$datetime[na_indices[i]],
                                    by = 'day')
-            } else {
-                ranges[[i]] <- NA_Date_
-            }
+            }# else {
+            #    ranges[[i]] <- NA_Date_
+            #}
             # if(starts - 1 > 0){
             #     ranges[[i]] <- seq(d$datetime[starts[i] - 1],
             #                        d$datetime[breaks[i]],
@@ -18017,6 +18015,8 @@ get_missing_date_ranges <- function(d){
             #     ranges[[i]] <- NA_Date_
             # }
         }
+
+        ranges <- Filter(function(x) ! is.null(x), ranges)
     }
 
     return(ranges)

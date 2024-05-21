@@ -179,11 +179,14 @@ process_1_800 <- function(network, domain, prodname_ms, site_code, component){
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_3110 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+process_1_3110 <- function(network, domain, prodname_ms, site_code, component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
@@ -200,33 +203,33 @@ process_1_3110 <- function(network, domain, prodname_ms, site_code,
     # minutes where there is not a record.
 
     d <- d %>%
-      rename(val = 3) %>%
-      mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[,1]) %>%
-      group_by(datetime, site_code) %>%
-      summarise(val = mean(val, na.rm = TRUE))
+        rename(val = 3) %>%
+        mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[, 1]) %>%
+        group_by(datetime, site_code) %>%
+        summarise(val = mean(val, na.rm = TRUE))
 
     rain_gauges <- unique(d$site_code)
 
     final <- tibble()
-    for(i in 1:length(rain_gauges)) {
+    for(i in 1:length(rain_gauges)){
 
-      onesite <- d %>%
-        filter(site_code == rain_gauges[i])
+        onesite <- d %>%
+            filter(site_code == rain_gauges[i])
 
-      dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
+        dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
 
-      with_0s <- tibble(datetime = dates)
+        with_0s <- tibble(datetime = dates)
 
-      fin <- full_join(with_0s, onesite, by = 'datetime') %>%
-        mutate(val = ifelse(is.na(val), 0, val)) %>%
-        mutate(site_code = rain_gauges[i])
+        fin <- full_join(with_0s, onesite, by = 'datetime') %>%
+            mutate(val = ifelse(is.na(val), 0, val)) %>%
+            mutate(site_code = rain_gauges[i])
 
-      final <- rbind(final, fin)
+        final <- rbind(final, fin)
     }
 
     d <- final %>%
-      mutate(var = 'IS_precipitation',
-             ms_status = 0)
+        mutate(var = 'IS_precipitation',
+               ms_status = 0)
 
     return(d)
 }

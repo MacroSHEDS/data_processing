@@ -9,7 +9,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=4
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -19,12 +18,11 @@ for(i in seq_len(nrow(prod_info))){
     if(! product_is_tracked(held_data, prodname_ms)){
         logwarn(glue('Product {p} is not yet tracked. Retrieve ',
                      'it before munging it.', p=prodname_ms), logger=logger_module)
-      next
+        next
     }
 
     sites <- names(held_data[[prodname_ms]])
 
-    # j <- 1
     for(j in 1:length(sites)){
 
         site_code <- sites[j]
@@ -35,15 +33,14 @@ for(i in seq_len(nrow(prod_info))){
 
         if(munge_status == 'ok'){
 
-          loginfo(glue('Nothing to do for {s} {p}',
-                       s=site_code, p=prodname_ms), logger=logger_module)
+            loginfo(glue('Nothing to do for {s} {p}',
+                         s=site_code, p=prodname_ms), logger=logger_module)
+            next
 
-          next
-
-          } else {
+        } else {
             loginfo(glue('Munging {s} {p}',
                          s=site_code, p=prodname_ms), logger=logger_module)
-            }
+        }
 
         munge_rtn <- munge_combined(network = network,
                                     domain = domain,

@@ -295,12 +295,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    synchronize_timestep(d,
-                         admit_NAs = TRUE,
-                         paired_p_and_pchem = TRUE,
-                         allow_pre_interp = TRUE)
-
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
@@ -356,7 +354,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                        is_sensor = FALSE,
                        alt_site_code = list('Summit_met' = 'AERSU',
                                             'Mid_met' = 'AERCA',
-                                            'EB_met' = 'AEREA'))
+                                            'EB_met' = 'AEREA'),
+                       keep_empty_rows = TRUE)
 
   d$`GN_Al__|dat` <- d$`GN_Al__|dat`/1000 #convert from ppb to ppm
 
@@ -365,7 +364,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   # d$site_code[d$site_code=='AEREA'] <- 'EB_met'
 
   d <- ms_cast_and_reflag(d,
-                          varflag_col_pattern = NA)
+                          varflag_col_pattern = NA,
+                          keep_empty_rows = TRUE)
 
   d <- ms_conversions(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l',
                                                 'Na' = 'ueq/l', 'Cl' = 'ueq/l', 'SO4' = 'ueq/l',
@@ -376,7 +376,10 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- synchronize_timestep(d)
+  d <- synchronize_timestep(d,
+                            admit_NAs = TRUE,
+                            paired_p_and_pchem = TRUE,
+                            allow_pre_interp = TRUE)
 
   sites <- unique(d$site_code)
 
