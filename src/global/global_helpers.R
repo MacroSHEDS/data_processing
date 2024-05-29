@@ -7479,23 +7479,27 @@ synchronize_timestep <- function(d,
         #pre-impute missing days for paired precip-pchem situations.
         if(allow_pre_interp && paired_p_and_pchem){
 
-            longest_na_series <- rle2(is.na(sitevar_chunk$val)) %>%
-                filter(values == TRUE) %>%
-                pull(lengths) %>%
-                max()
-
-            if(longest_na_series > 5){
-                logwarn(paste0('longest pre-interpolated NA series is length ',
-                               longest_na_series, '. are we cool with this?'),
-                        logger = logger_module)
-            }
+            # longest_na_series <- rle2(is.na(sitevar_chunk$val)) %>%
+            #     filter(values == TRUE) %>%
+            #     pull(lengths) %>%
+            #     max()
+            #
+            # if(longest_na_series > 5){
+            #     logwarn(paste0('longest pre-interpolated NA series is length ',
+            #                    longest_na_series, '. are we cool with this?'),
+            #             logger = logger_module)
+            # }
 
             sitevar_chunk$ms_interp[is.na(sitevar_chunk$val)] <- 1
+
+            sample_interval_d <- mode_intervals_m[i] / 60 / 24
+            nsamp_to_interp <- 45 %/% sample_interval_d
 
             if(var_is_p){
                 sitevar_chunk <- pre_interp_precip(sitevar_chunk)
             } else if(var_is_pchem){
-                sitevar_chunk <- ms_linear_interpolate(sitevar_chunk, maxgap = Inf)
+                sitevar_chunk <- ms_linear_interpolate(sitevar_chunk,
+                                                       maxgap = nsamp_to_interp)
             } else {
                 stop('allow_pre_interp and paired_p_and_pchem should only be used for precipitation or precip_chemistry data')
             }
@@ -9120,7 +9124,7 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                 dl_matches <- dl_matches[, .SD[1], by = .(start_date, end_date, var)]
                 dl_matches <- dl_matches[[which_]]
 
-                if(length(dl_matches) != length(out)) stop('overlapping entries in detlim table')
+                if(length(dl_matches) != sum(still_missing)) stop('overlapping entries in detlim table?')
 
                 out[still_missing] <- dl_matches
 

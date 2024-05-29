@@ -205,10 +205,12 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  c('Precip_Depth_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -217,7 +219,10 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                                            prodname_ms = prodname_ms,
                                            which_ = 'uncertainty')
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
@@ -270,8 +275,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          ## summary_flagcols = NA,
                          is_sensor = FALSE)
 
-
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
 
     # apply uncertainty (no detlim for water volume)
     d <- ms_check_range(d)
@@ -384,11 +389,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = 'varflag_#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = '1',
-                            variable_flags_clean = '0')
+                            variable_flags_clean = '0',
+                            keep_empty_rows = TRUE)
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
@@ -427,7 +434,10 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
