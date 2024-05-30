@@ -253,12 +253,15 @@ process_1_167 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
                          set_to_NA = c('-9999', '999.00', '-9999.000', '-7999.000',
-                                       '999.000', ''))
+                                       '999.000', ''),
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('flag' = 'Q'),
-                            summary_flags_clean = list('flag' = 'G'),
-                            varflag_col_pattern = NA)
+                            summary_flags_clean = list('flag' = c('G', 'M')),
+                            summary_flags_to_drop = list('flag' = 'sentinel'),
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     if(component == '167_TIPBUCK_CPEAK_1993-2016.txt'){
         d <- filter(d, datetime >= '1998-01-01')
@@ -278,27 +281,26 @@ process_1_157 <- function(network, domain, prodname_ms, site_code, component){
                     s = site_code,
                     c = component)
 
-    raw <- read.delim(rawfile, header = TRUE, colClasses = 'character', skip=3, sep=',')
+    raw <- read.delim(rawfile,
+                      header = TRUE,
+                      colClasses = 'character',
+                      skip = 3,
+                      sep = ',')
 
     d <- ms_read_raw_csv(preprocessed_tibble = raw,
                          datetime_cols = c(Date.Off = '%m/%d/%Y'),
                          datetime_tz = 'UTC',
                          site_code_col = 'SiteID',
                          alt_site_code = list('CRREL' = 'AK01'),
-                         data_cols = c('Ca',
-                                           'Mg',
-                                           'K',
-                                           'Na',
-                                           'NH4',
-                                           'NO3',
-                                           'Cl',
-                                           'SO4',
-                                           'pH.Lab' ='pH',
-                                           'Lab.Cond' = 'spCond'),
+                         data_cols = c('Ca', 'Mg', 'K', 'Na', 'NH4',
+                                       'NO3', 'Cl', 'SO4',
+                                       'pH.Lab' ='pH',
+                                       'Lab.Cond' = 'spCond'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Invalcode',
                          set_to_NA = c('-9.000', '-9.0', '-9.00'),
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_dirty = list('Invalcode' = c('x', 'x           ',
@@ -309,7 +311,8 @@ process_1_157 <- function(network, domain, prodname_ms, site_code, component){
                                                                        'l', 'l           ',
                                                                        'p', 'p           ')),
                             summary_flags_to_drop = list('Invalcode' = 'sentinel'),
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

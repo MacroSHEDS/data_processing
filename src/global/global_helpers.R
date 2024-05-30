@@ -2092,7 +2092,7 @@ ms_cast_and_reflag <- function(d,
         if(vardrop){
 
             if(variable_flags_to_drop == '#*#'){
-                warning('the "#*#" flag should probably be deprecated.')
+                warning('the "#*#" flag should probably be hard-deprecated.')
                 d <- filter(d, is.na(flg) | flg %in% dont_drop_these)
             } else {
                 d <- filter(d, ! flg %in% variable_flags_to_drop)
@@ -7166,7 +7166,6 @@ ms_daily_interpolate <- function(d, type, interval = NULL, maxgap = NULL){
         stop('assigning ms_status of 0 for a non-NA val. investigate')
     }
 
-    # browser()
     d_interp$ms_status[is.na(d_interp$ms_status)] <- 0
     d_interp$ms_interp <- as.numeric(ms_interp_bool & ! is.na(d_interp$val))
     if(is.na(d$val[1])) d_interp$val[1] <- NA
@@ -7299,7 +7298,7 @@ ms_mean_nocb_interpolate <- function(d, maxgap){
 }
 
 synchronize_timestep <- function(d,
-                                 precip_interp_method = 'zero',
+                                 precip_interp_method = NULL,
                                  impute_limit = NULL,
                                  admit_NAs = FALSE,
                                  paired_p_and_pchem = FALSE,
@@ -7336,9 +7335,9 @@ synchronize_timestep <- function(d,
         stop('no data to synchronize. bypassing processing.')
     }
 
-    if(! precip_interp_method %in% c('zero', 'mean_nocb')){
-        stop('precip_interp_method must be either "zero" or "mean_nocb"')
-    }
+    # if(! precip_interp_method %in% c('zero', 'mean_nocb')){
+    #     stop('precip_interp_method must be either "zero" or "mean_nocb"')
+    # }
 
     if(! admit_NAs && any(is.na(d$val))){
         stop('NAs present in d and admit_NAs = FALSE')
@@ -7437,6 +7436,7 @@ synchronize_timestep <- function(d,
         summary_and_interp_chunk <- sitevar_chunk[to_summarize_bool, ]
         interp_only_chunk <- sitevar_chunk[! to_summarize_bool, ]
 
+        #careful (see below) if you ever mess with the following two lines
         var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
         var_is_pchem <- prodname_from_prodname_ms(prodname_ms_) == 'precip_chemistry'
 
@@ -7476,19 +7476,9 @@ synchronize_timestep <- function(d,
         if(! admit_NAs && nas_present) stop('should never happen')
         if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
 
-        #pre-impute missing days for paired precip-pchem situations.
-        if(allow_pre_interp && paired_p_and_pchem){
+        if(allow_pre_interp){
 
-            # longest_na_series <- rle2(is.na(sitevar_chunk$val)) %>%
-            #     filter(values == TRUE) %>%
-            #     pull(lengths) %>%
-            #     max()
-            #
-            # if(longest_na_series > 5){
-            #     logwarn(paste0('longest pre-interpolated NA series is length ',
-            #                    longest_na_series, '. are we cool with this?'),
-            #             logger = logger_module)
-            # }
+            if(! is.null(impute_limit)) stop('custom impute_limit not yet implemented for pre-interp')
 
             sitevar_chunk$ms_interp[is.na(sitevar_chunk$val)] <- 1
 
@@ -7510,16 +7500,11 @@ synchronize_timestep <- function(d,
             ms_status_fill = NA,
             interval = rounding_intervals[i])
 
-        # if(any(sitevar_chunk$val == meaningful_NA_sentinel)){
-        #     sitevar_chunk <- pre_interp(sitevar_chunk,
-        #                                 type = ifelse(var_is_pchem,
-        #                                               'linear', #for pchem
-        #                                               'NLDAS'))
-        # }
-
         if(! var_is_p && ! var_is_pchem){
             interp_type <- 'linear'
-        } else if(var_is_pchem){
+        } else if(var_is_p && is.null(precip_interp_method)){
+            interp_type <- 'zero' #var_is_p and var_is_pchem can both be true. strange, but manageable
+        } else if(var_is_pchem && is.null(precip_interp_method)){
             interp_type <- 'nocb'
         } else {
             interp_type <- precip_interp_method
@@ -7530,6 +7515,9 @@ synchronize_timestep <- function(d,
             d = sitevar_chunk,
             interval = rounding_intervals[i],
             maxgap = impute_limit)
+
+        #set ms_interp back to 0 for any NAs that were not interped
+        d_split[[i]]$ms_interp[is.na(d_split[[i]]$val)] <- 0
     }
 
     #recombine list of tibbles into single tibble
@@ -17854,7 +17842,7 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
     if(startdate < as.Date('1979-01-01')){
         logwarn('precip gaps before 1979 (get_ldas_precip will leave empty)',
                 logger = logger_module)
-        startdate <- '1979-01-01'
+        startdate <- '1979-01-02'
     }
 
     ##prep
@@ -18074,7 +18062,7 @@ pre_interp_precip <- function(d){
     for(i in seq_along(na_dates)){
 
         na_set <- na_dates[[i]]
-        if(na_set[1] < as.Date('1979-01-01')) next #NLDAS doesn't go back this far
+        if(na_set[1] < as.Date('1979-01-02')) next #NLDAS doesn't go back this far
 
         precip_sum <- precip_fill %>%
             filter(date >= na_set[1] & date <= na_set[length(na_set)]) %>%

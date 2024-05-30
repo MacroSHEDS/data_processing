@@ -7,7 +7,8 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
                           keep_status = 'ok',
                           spatial_regex = '(location|boundary)',
                           interpolate_pchem = TRUE,
-                          silent = TRUE){
+                          silent = TRUE,
+                          interp_control = list()){
 
     #for when a data product is organized with no more than one site per file
     #(neon and konza have this arrangement). if not all components
@@ -30,6 +31,7 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
     #   is handled within the kernel (i.e. set this to FALSE).
     #   This is the case for neon, which reports
     #   "set" and "collect" dates for each precip chemistry capture.
+    #interp_control: optional list of arguments to pass to synchronize_timestep
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
@@ -105,7 +107,11 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
             if(prodname_from_prodname_ms(prodname_ms) != 'precip_chemistry' || interpolate_pchem){
-                out <- synchronize_timestep(out)
+
+                out <- do.call(synchronize_timestep,
+                               args = c(list(d = out),
+                                        interp_control))
+
             } else if(! 'ms_interp' %in% colnames(out)){
                 out$ms_interp <- 0
             }
@@ -143,7 +149,8 @@ munge_by_site <- function(network, domain, site_code, prodname_ms, tracker,
 #. handle_errors
 munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
                            spatial_regex = '(location|boundary)',
-                           silent = TRUE){
+                           silent = TRUE,
+                           interp_control = list()){
 
     #for when a data product has multiple sites in each component, and
     #all components will be munged
@@ -152,6 +159,7 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
     #    values. If the prodname_ms being munged matches this string,
     #    write_ms_file will assume it's writing a spatial object, and not a
     #    standalone file
+    #interp_control: optional list of arguments to pass to synchronize_timestep
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
@@ -244,7 +252,9 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
 
-            out_comp_filt <- synchronize_timestep(out_comp_filt)
+            out_comp_filt <- do.call(synchronize_timestep,
+                                     args = c(list(d = out_comp_filt),
+                                              interp_control))
         }
 
         write_ms_file(d = out_comp_filt,
@@ -279,7 +289,8 @@ munge_combined <- function(network, domain, site_code, prodname_ms, tracker,
 #. handle_errors
 munge_combined_split <- function(network, domain, site_code, prodname_ms, tracker,
                                  spatial_regex = '(location|boundary)',
-                                 silent = TRUE){
+                                 silent = TRUE,
+                                 interp_control = list()){
 
     #for when a data product has multiple sites in each component, and
     #logic governing the use of components will be handled within the kernel
@@ -288,6 +299,7 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
     #   values. If the prodname_ms being munged matches this string,
     #   write_ms_file will assume it's writing a spatial object, and not a
     #   standalone file
+    #interp_control: optional list of arguments to pass to synchronize_timestep
 
     retrieval_log <- extract_retrieval_log(tracker,
                                            prodname_ms,
@@ -353,7 +365,9 @@ munge_combined_split <- function(network, domain, site_code, prodname_ms, tracke
             #thing, we'd need to consider giant bind_rows operations above when
             #operating in high-res mode
 
-            out_comp_filt <- synchronize_timestep(out_comp_filt)
+            out_comp_filt <- do.call(synchronize_timestep,
+                                     args = c(list(d = out_comp_filt),
+                                              interp_control))
         }
 
         write_ms_file(d = out_comp_filt,

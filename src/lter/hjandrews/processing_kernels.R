@@ -349,6 +349,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code, components){
                              summary_flagcols = c('PRECIP_TOT_FLAG',
                                                   'EVENT_CODE'))
 
+        stop('dropping "N" flags? dont do that')
         d <- ms_cast_and_reflag(
             d,
             varflag_col_pattern = NA,
@@ -439,7 +440,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
                     c = component)
 
     d <- read.csv(rawfile1, colClasses = 'character') %>%
-        rename(NA.CODE = NACODE)
+        rename(NaCODE = NACODE, Na = NA.)
 
     #huge list of sites and locations in the first data file here:
     #https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-and&identifier=5482&revision=3
@@ -465,12 +466,12 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
     d <- ms_cast_and_reflag(
         d,
         variable_flags_bdl = '*',
-        variable_flags_to_drop = 'N',
+        variable_flags_to_drop = 'sentinel',
         variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
-        variable_flags_clean = c('A', 'E'),
-        summary_flags_to_drop = list(TYPE = c('N', 'YE')),
+        variable_flags_clean = c('A', 'E', 'N'),
+        summary_flags_to_drop = list(TYPE = c('YE')),
         summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
-        summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+        summary_flags_clean = list(TYPE = c('N', 'QB', 'QS', 'QL', 'QA', 'F', 'G'))
     )
 
     #HJAndrews does not collect precip and precip chemistry at the same

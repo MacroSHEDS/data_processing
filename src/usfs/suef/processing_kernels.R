@@ -433,7 +433,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- read.csv(rel_file_path, colClasses = 'character') %>%
-        rename(NA.CODE = NACODE)
+        rename(NaCODE = NACODE, Na = NA.)
 
     if(prodname_ms == 'precip_chemistry__VERSIONLESS005'){
 
@@ -451,13 +451,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                                             PARTP='TPP',
                                             PO4P='PO4_P',
                                             UTKN='TKN',
-    										# UTN='TN',
+                                            # UTN='TN',
                                             TKN='TDKN',
                                             PARTN='TPN',
                                             'DON',
                                             NH3N='NH3_N',
                                             NO3N='NO3_N',
-                                            NA.='Na',
+                                            'Na',
                                             CA='Ca',
                                             MG='Mg',
                                             SO4S='SO4_S',
@@ -467,18 +467,26 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                              is_sensor = FALSE,
                              set_to_NA = '',
                              var_flagcol_pattern = '#V#CODE',
-                             summary_flagcols = c('TYPE'))
+                             summary_flagcols = c('TYPE'),
+                             keep_empty_rows = TRUE)
 
         d <- ms_cast_and_reflag(
             d,
             variable_flags_bdl = '*',
-            variable_flags_to_drop = 'N',
+            variable_flags_to_drop = 'sentinel',
             variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
-            variable_flags_clean = c('A', 'E'),
-            summary_flags_to_drop = list(TYPE = c('N', 'YE', 'S')),
+            variable_flags_clean = c('A', 'E', 'N'),
+            summary_flags_to_drop = list(TYPE = c('YE', 'S')),
             summary_flags_dirty = list(TYPE = c('C', 'A', 'P', 'B')),
-            summary_flags_clean = list(TYPE = c('QB', 'QS', 'QL', 'QA', 'F', 'G'))
+            summary_flags_clean = list(TYPE = c('N', 'QB', 'QS', 'QL', 'QA', 'F', 'G')),
+            keep_empty_rows = TRUE
         )
+
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+        d <- synchronize_timestep(d,
+                                  admit_NAs = TRUE,
+                                  paired_p_and_pchem = TRUE,
+                                  allow_pre_interp = TRUE)
 
     } else { #precip
 
@@ -490,7 +498,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                              data_col_pattern = '#V#',
                              is_sensor = FALSE,
                              set_to_NA = '',
-                             summary_flagcols = c('TYPE', 'PCODE'))
+                             summary_flagcols = c('TYPE', 'PCODE'),
+                             keep_empty_rows = TRUE)
 
         d <- ms_cast_and_reflag(
             d,
@@ -498,15 +507,20 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
             summary_flags_to_drop = list(TYPE = c('YE', 'S'),
                                          PCODE = 'sentinel'),
             summary_flags_dirty = list(TYPE = 'P',
-                                       PCODE = 'E')
+                                       PCODE = 'E'),
+            keep_empty_rows = TRUE
         )
+
+        d$val <- d$val * 10 #cm to mm
+
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+        d <- synchronize_timestep(d,
+                                  admit_NAs = TRUE,
+                                  paired_p_and_pchem = TRUE,
+                                  allow_pre_interp = FALSE)
     }
 
     unlink(temp_dir, recursive = TRUE)
-
-    d$val <- d$val * 10 #cm to mm
-    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-    d <- synchronize_timestep(d)
 
     sites <- unique(d$site_code)
     for(s in 1:length(sites)){

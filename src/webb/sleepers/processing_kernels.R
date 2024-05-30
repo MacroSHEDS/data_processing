@@ -356,13 +356,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here to be just the old_var = new_var structure
-    sleepers_aq_chem = c()
+    sleepers_aq_chem <- c()
 
     for(i in 1:length(sleepers_stream_chem_var_info)) {
-      og_name <- names(sleepers_stream_chem_var_info[i])
-      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+        og_name <- names(sleepers_stream_chem_var_info[i])
+        ms_name <- sleepers_stream_chem_var_info[[i]][3]
 
-      sleepers_aq_chem[og_name] = ms_name
+        sleepers_aq_chem[og_name] = ms_name
     }
 
     # original data has a "summary" flag column, which lists simply a variable name -- meaning
@@ -373,6 +373,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # distribute flags from summary flagcol to variable flagcols
     d <- d %>%
+        as_tibble() %>%
         select(-ends_with("_Lab")) %>%
         mutate(across(Chemistry_Flag:last_col(),
                       .fns = list(
