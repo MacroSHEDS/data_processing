@@ -7326,6 +7326,7 @@ synchronize_timestep <- function(d,
     #   exist in the raw data and should be filled, either with NLDAS precip data
     #   or by linear interpolation (pchem) before the typical zero/nocb interpolation
     #   occurs
+    #prodname_ms_: obsolete? some sort of override
 
     #output will include a numeric binary column called "ms_interp".
     #0 for not interpolated, 1 for interpolated. This column may already be
@@ -7461,7 +7462,7 @@ synchronize_timestep <- function(d,
                         max(sd_or_0(val, na.rm = TRUE) / sqrt(.N),
                             mean(val_err, na.rm = TRUE))
                     },
-                val = if(var_is_p) sum(val, na.rm = TRUE) else mean(val, na.rm = TRUE),
+                val = if(var_is_p) sum(val, na.rm = FALSE) else mean(val, na.rm = TRUE),
                 ms_status = numeric_any(ms_status),
                 ms_interp = numeric_any(ms_interp)
             ), by = datetime] %>%
@@ -7471,6 +7472,8 @@ synchronize_timestep <- function(d,
                 bind_rows(interp_only_chunk) %>%
                 arrange(datetime)
         }
+
+        sitevar_chunk$val[is.nan(sitevar_chunk$val)] <- NA_real_
 
         nas_present <- any(is.na(sitevar_chunk$val))
         if(! admit_NAs && nas_present) stop('should never happen')
@@ -17846,6 +17849,9 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
     }
 
     ##prep
+    startdate <- as.Date(startdate)
+    enddate <- as.Date(enddate)
+    if(startdate == enddate) enddate <- enddate + lubridate::days(1)
     startdate <- as.character(startdate)
     enddate <- as.character(enddate)
 
@@ -17871,7 +17877,8 @@ get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
                          fwf_cols(datetime = 22, precip_mm = 100),
                          show_col_types = FALSE)
 
-    if(nrow(contents)){
+    if(nrow(contents) && !
+       (nrow(contents) == 1 && is.na(contents$datetime[1]))){
 
         d <- contents %>%
             slice(-nrow(.)) %>%

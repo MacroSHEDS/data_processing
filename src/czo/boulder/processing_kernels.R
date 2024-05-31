@@ -774,12 +774,14 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#.CTS',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_clean = 'NS',
                             variable_flags_bdl = c('u', 'U', 'DL'),
-                            variable_flags_to_drop = 'sentinel')
+                            variable_flags_to_drop = 'sentinel',
+                            keep_empty_rows = TRUE)
 
     d <- ms_conversions(d,
                         convert_units_from = c('H' = 'ueq/l',
@@ -849,10 +851,12 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component){
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = 'null',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -882,10 +886,12 @@ process_1_2888 <- function(network, domain, prodname_ms, site_code, component){
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = 'null',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -915,10 +921,12 @@ process_1_2889 <- function(network, domain, prodname_ms, site_code, component) {
                          data_cols =  c('RAIN.GAGE.MM.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = 'null',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

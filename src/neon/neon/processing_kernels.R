@@ -1024,13 +1024,15 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
                               data_col_pattern = '#V#',
                               summary_flagcols = 'priPrecipFinalQF',
                               is_sensor = TRUE,
-                              sampling_type = 'I')
+                              sampling_type = 'I',
+                              keep_empty_rows = TRUE)
 
         d1 <- ms_cast_and_reflag(
             d1,
             varflag_col_pattern = NA,
             summary_flags_clean = list(priPrecipFinalQF = '0'),
-            summary_flags_to_drop = list(priPrecipFinalQF = 'sentinel')
+            summary_flags_to_drop = list(priPrecipFinalQF = 'sentinel'),
+            keep_empty_rows = TRUE
         )
     }
 
@@ -1048,7 +1050,8 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
                                                    'secPrecipRangeQF',
                                                    'secPrecipSciRvwQF'),
                               is_sensor = TRUE,
-                              sampling_type = 'I')
+                              sampling_type = 'I',
+                              keep_empty_rows = TRUE)
 
         d2 <- ms_cast_and_reflag(
             d2,
@@ -1058,7 +1061,8 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
                                        secPrecipSciRvwQF = c('0', NA)),
             summary_flags_to_drop = list(secPrecipValidCalQF = 'sentinel',
                                          secPrecipRangeQF = 'sentinel',
-                                         secPrecipSciRvwQF = 'sentinel')
+                                         secPrecipSciRvwQF = 'sentinel'),
+            keep_empty_rows = TRUE
         )
     }
 
@@ -1253,7 +1257,8 @@ process_1_DP1.00038.001 <- function(network, domain, prodname_ms, site_code,
                          summary_flagcols = c('remark_summary',
                                               'sampleCondition'),
                          is_sensor = FALSE,
-                         sampling_type = 'G')
+                         sampling_type = 'G',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(
         d,
@@ -1261,7 +1266,8 @@ process_1_DP1.00038.001 <- function(network, domain, prodname_ms, site_code,
         summary_flags_clean = list(remark_summary = '0',
                                    sampleCondition = 'OK'),
         summary_flags_to_drop = list(remark_summary = 'sentinel',
-                                     sampleCondition = 'sentinel')
+                                     sampleCondition = 'sentinel'),
+        keep_empty_rows = TRUE
     )
 
     return(d)
@@ -1476,7 +1482,8 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
                              'sampleCondition'),
         is_sensor = FALSE,
         sampling_type = 'G',
-        ignore_missing_col_warning = TRUE
+        ignore_missing_col_warning = TRUE,
+        keep_empty_rows = TRUE
     )
 
     d <- ms_cast_and_reflag(
@@ -1487,7 +1494,8 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
         summary_flags_clean = list(actual_quality_flag = '0',
                                    sampleCondition = NA),
         summary_flags_to_drop = list(actual_quality_flag = 'sentinel',
-                                     sampleCondition = 'sentinel')
+                                     sampleCondition = 'sentinel'),
+        keep_empty_rows = TRUE
     )
 
     return(d)

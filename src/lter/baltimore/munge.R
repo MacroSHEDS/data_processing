@@ -46,7 +46,12 @@ for(i in seq_len(nrow(prod_info))){
                                     domain = domain,
                                     site_code = site_code,
                                     prodname_ms = prodname_ms,
-                                    tracker = held_data)
+                                    tracker = held_data,
+                                    interp_control = list(
+                                        admit_NAs = FALSE,
+                                        paired_p_and_pchem = FALSE,
+                                        allow_pre_interp = FALSE
+                                    ))
 
         if(is_ms_err(munge_rtn)){
 

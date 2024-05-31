@@ -56,7 +56,7 @@ for(i in seq_len(nrow(prod_info))){
                                            allow_pre_interp = TRUE
                                        ))
 
-        } else if(prodname_ms == 'precip_chemistry__157'){
+        } else if(grepl('precip_chemistry', prodname_ms)){
 
             munge_rtn <- munge_combined(network = network,
                                         domain = domain,
