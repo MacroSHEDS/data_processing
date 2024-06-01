@@ -312,16 +312,18 @@ munge_precip <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'site_code',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
 munge_precip_alt <- function(network, domain, prodname_ms, site_code,
-                         component){
+                             component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -345,10 +347,12 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'site_code',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

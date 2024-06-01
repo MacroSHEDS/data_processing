@@ -321,7 +321,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code, components){
                     s = site_code,
                     c = component)
 
-    if(prodname_ms == 'precip_gauge_locations__5482'){
+    if(grepl('precip_gauge_locations', prodname_ms)){
 
         projstring <- choose_projection(unprojected = TRUE)
 
@@ -336,7 +336,7 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code, components){
         d <- sf::st_as_sf(d)
         sf::st_crs(d) <- projstring #assuming. geodetic datum not given by lter
 
-    } else if(prodname_ms == 'precipitation__5482'){
+    } else if(grepl('precipitation', prodname_ms)){
 
         d <- ms_read_raw_csv(filepath = rawfile1,
                              datetime_cols = c(DATE = '%Y-%m-%d'),
@@ -347,17 +347,18 @@ process_1_5482 <- function(network, domain, prodname_ms, site_code, components){
                              is_sensor = FALSE,
                              set_to_NA = '',
                              summary_flagcols = c('PRECIP_TOT_FLAG',
-                                                  'EVENT_CODE'))
+                                                  'EVENT_CODE'),
+                             keep_empty_rows = TRUE)
 
-        stop('dropping "N" flags? dont do that')
         d <- ms_cast_and_reflag(
             d,
             varflag_col_pattern = NA,
-            summary_flags_clean = list(PRECIP_TOT_FLAG = c('A', 'E'),
+            summary_flags_clean = list(PRECIP_TOT_FLAG = c('A', 'E', 'M', 'T'),
                                        EVENT_CODE = c(NA, 'METHOD')),
             #METHOD indicates when methods change.
-            summary_flags_dirty = list(PRECIP_TOT_FLAG = c('Q', 'C', 'U'),
-                                       EVENT_CODE = c('INSREM', 'MAINTE'))
+            summary_flags_dirty = list(PRECIP_TOT_FLAG = c('Q', 'C', 'U', '*'),
+                                       EVENT_CODE = c('INSREM', 'MAINTE')),
+            keep_empty_rows = TRUE
         )
     }
 
@@ -423,12 +424,10 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code, components){
 #. handle_errors
 process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
 
-    #note: blocklisting of components has been superseded by the "component"
-    #   column in products.csv. don't copy this chunk.
     if(grepl('chemistry', prodname_ms)){
         component <- 'CP00201'
     } else {
-        logwarn('Blacklisting precip flux product CP00202 (for now)')
+        # logwarn('Blocklisting precip flux product CP00202 (for now)')
         return(generate_blocklist_indicator())
     }
 
@@ -461,17 +460,19 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
                          # alt_datacol_pattern = '#V#_INPUT',
                          set_to_NA = '',
                          var_flagcol_pattern = '#V#CODE',
-                         summary_flagcols = c('TYPE'))
+                         summary_flagcols = c('TYPE'),
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(
         d,
         variable_flags_bdl = '*',
         variable_flags_to_drop = 'sentinel',
         variable_flags_dirty = c('Q', 'D*', 'C', 'D', 'DE', 'DQ', 'DC'),
-        variable_flags_clean = c('A', 'E', 'N'),
+        variable_flags_clean = c('A', 'E', 'N', NA),
         summary_flags_to_drop = list(TYPE = c('YE')),
         summary_flags_dirty = list(TYPE = c('C', 'S', 'A', 'P', 'B')),
-        summary_flags_clean = list(TYPE = c('N', 'QB', 'QS', 'QL', 'QA', 'F', 'G'))
+        summary_flags_clean = list(TYPE = c('N', 'QB', 'QS', 'QL', 'QA', 'F', 'G')),
+        keep_empty_rows = TRUE
     )
 
     #HJAndrews does not collect precip and precip chemistry at the same

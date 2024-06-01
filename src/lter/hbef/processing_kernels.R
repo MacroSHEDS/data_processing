@@ -187,10 +187,12 @@ process_1_13 <- function(network, domain, prodname_ms, site_code, component){
                          site_code_col = 'rainGage',
                          data_cols = c(Precip = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -223,39 +225,80 @@ process_1_208 <- function(network, domain, prodname_ms, site_code, component){
                                    '969', #sometimes two codes are combined. consolidate here
                                    fieldCode))
 
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = c(date = '%Y-%m-%d',
-                                           timeEST = '%H:%M'),
-                         datetime_tz = 'Etc/GMT-5',
-                         site_code_col = 'site',
-                         alt_site_code = list('w1' = c('1', 'W1'),
-                                              'w2' = c('2', 'W2'),
-                                              'w3' = c('3', 'W3'),
-                                              'w4' = c('4', 'W4'),
-                                              'w5' = c('5', 'W5'),
-                                              'w6' = c('6', 'W6'),
-                                              'w7' = c('7', 'W7'),
-                                              'w8' = c('8', 'W8'),
-                                              'w9' = c('9', 'W9')),
-                         data_cols = c('pH', 'DIC', 'spCond', 'temp',
-                                       'ANC', 'Ca', 'Mg', 'K',
-                                       'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
-                                       'NH4', 'SO4', 'NO3', 'Cl',
-                                       'PO4', 'DOC', 'TDN', 'DON',
-                                       'SiO2', 'Mn', 'Fe', 'F',
-                                       'cationCharge', 'anionCharge',
-                                       'ionBalance'),
-                         data_col_pattern = '#V#',
-                         is_sensor = FALSE,
-                         set_to_NA = -999.9,
-                         summary_flagcols = 'fieldCode')
+    if(grepl('precip', prodname_ms)){
 
-    d <- ms_cast_and_reflag(
-        d,
-        summary_flags_to_drop = list(fieldCode = 'sentinel'),
-        summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
-        varflag_col_pattern = NA
-    )
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c(date = '%Y-%m-%d',
+                                               timeEST = '%H:%M'),
+                             datetime_tz = 'Etc/GMT-5',
+                             site_code_col = 'site',
+                             alt_site_code = list('w1' = c('1', 'W1'),
+                                                  'w2' = c('2', 'W2'),
+                                                  'w3' = c('3', 'W3'),
+                                                  'w4' = c('4', 'W4'),
+                                                  'w5' = c('5', 'W5'),
+                                                  'w6' = c('6', 'W6'),
+                                                  'w7' = c('7', 'W7'),
+                                                  'w8' = c('8', 'W8'),
+                                                  'w9' = c('9', 'W9')),
+                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                           'ANC', 'Ca', 'Mg', 'K',
+                                           'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
+                                           'NH4', 'SO4', 'NO3', 'Cl',
+                                           'PO4', 'DOC', 'TDN', 'DON',
+                                           'SiO2', 'Mn', 'Fe', 'F',
+                                           'cationCharge', 'anionCharge',
+                                           'ionBalance'),
+                             data_col_pattern = '#V#',
+                             is_sensor = FALSE,
+                             set_to_NA = -999.9,
+                             summary_flagcols = 'fieldCode',
+                             keep_empty_rows = TRUE)
+
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_to_drop = list(fieldCode = 'sentinel'),
+            summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
+            varflag_col_pattern = NA,
+            keep_empty_rows = TRUE
+        )
+
+    } else {
+
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c(date = '%Y-%m-%d',
+                                               timeEST = '%H:%M'),
+                             datetime_tz = 'Etc/GMT-5',
+                             site_code_col = 'site',
+                             alt_site_code = list('w1' = c('1', 'W1'),
+                                                  'w2' = c('2', 'W2'),
+                                                  'w3' = c('3', 'W3'),
+                                                  'w4' = c('4', 'W4'),
+                                                  'w5' = c('5', 'W5'),
+                                                  'w6' = c('6', 'W6'),
+                                                  'w7' = c('7', 'W7'),
+                                                  'w8' = c('8', 'W8'),
+                                                  'w9' = c('9', 'W9')),
+                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                           'ANC', 'Ca', 'Mg', 'K',
+                                           'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
+                                           'NH4', 'SO4', 'NO3', 'Cl',
+                                           'PO4', 'DOC', 'TDN', 'DON',
+                                           'SiO2', 'Mn', 'Fe', 'F',
+                                           'cationCharge', 'anionCharge',
+                                           'ionBalance'),
+                             data_col_pattern = '#V#',
+                             is_sensor = FALSE,
+                             set_to_NA = -999.9,
+                             summary_flagcols = 'fieldCode')
+
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_to_drop = list(fieldCode = 'sentinel'),
+            summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
+            varflag_col_pattern = NA
+        )
+    }
 
     d <- ms_conversions(d,
                         convert_units_from = c(DIC = 'umol/l'),

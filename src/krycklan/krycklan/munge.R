@@ -55,12 +55,29 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
-        munge_rtn <- munge_combined_split(
-            network = network,
-            domain = domain,
-            prodname_ms = prodname_ms,
-            site_code = sites[j],
-            tracker = held_data)
+        if(grepl('precip', prodname_ms)){
+
+            munge_rtn <- munge_combined_split(
+                network = network,
+                domain = domain,
+                prodname_ms = prodname_ms,
+                site_code = sites[j],
+                tracker = held_data,
+                interp_control = list(
+                    admit_NAs = TRUE,
+                    paired_p_and_pchem = FALSE,
+                    allow_pre_interp = TRUE
+                ))
+
+        } else {
+
+            munge_rtn <- munge_combined_split(
+                network = network,
+                domain = domain,
+                prodname_ms = prodname_ms,
+                site_code = sites[j],
+                tracker = held_data)
+        }
 
         if(is_ms_err(munge_rtn)){
             update_data_tracker_m(network = network,

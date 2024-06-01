@@ -7309,6 +7309,8 @@ synchronize_timestep <- function(d,
     #precip_interp_method: either "zero" for 0-interpolation, or "mean_nocb", which
     #   fills gaps assuming that each recorded sample is an aggregate of equal-volume
     #   samples over the preceding, unobserved days. nocb = "next observation carried backward".
+    #   20240531: This is actually just a general-purpose override. doesn't apply only to
+    #   precip/pchem and can be used to force any available method.
     #impute_limit: numeric or NULL. the maximum number of consecutive points to
     #   inter/extrapolate. it's passed to imputeTS::na_interpolate. if NULL,
     #   determined programmatically, based on interval and prodname.

@@ -682,7 +682,8 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = c('', '.', ' '),
                          summary_flagcols = 'Comments',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     clean_comments <- is.na(d$Comments) |
         grepl('^(?:rain|snow|cloudy ?=? ?)?[0-9; \\)\\(\\/\\.=\\-]*$', d$Comments)
@@ -693,7 +694,8 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_dirty = list(Comments = 'dirty'),
-                            summary_flags_clean = list(Comments = 'clean'))
+                            summary_flags_clean = list(Comments = 'clean'),
+                            keep_empty_rows = TRUE)
 
     d <- ms_conversions(d,
                         convert_units_from = c(NO3_N = 'ug/l',
@@ -736,17 +738,18 @@ process_1_4 <- function(network, domain, prodname_ms, site_code, component){
                          summary_flagcols = 'Comments',
                          set_to_NA = c('.'),
                          sampling_type = 'I',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(
         d,
         varflag_col_pattern = NA,
         summary_flags_clean = list(Comments = c('', ' ', '8.0mm due')),
-        summary_flags_to_drop = list(Comments = 'sentinel')
+        summary_flags_to_drop = list(Comments = 'sentinel'),
+        keep_empty_rows = TRUE
     )
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-    d <- synchronize_timestep(d, precip_interp_method = 'zero')
 
     return(d)
 }

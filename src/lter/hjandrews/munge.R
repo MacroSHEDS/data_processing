@@ -32,20 +32,31 @@ for(i in seq_len(nrow(prod_info))){
                                          site_code = site_code)
         if(munge_status == 'ok'){
             loginfo(glue('Nothing to do for {s} {p}',
-                         s=site_code, p=prodname_ms), logger=logger_module)
+                         s = site_code,
+                         p = prodname_ms),
+                    logger = logger_module)
             next
         } else {
             loginfo(glue('Munging {s} {p}',
-                         s=site_code, p=prodname_ms), logger=logger_module)
+                         s = site_code,
+                         p = prodname_ms),
+                    logger = logger_module)
         }
 
         if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
                  prodname_ms)){
+
             munge_rtn <- munge_combined_split(network = network,
                                               domain = domain,
                                               site_code = site_code,
                                               prodname_ms = prodname_ms,
-                                              tracker = held_data)
+                                              tracker = held_data,
+                                              interp_control = list(
+                                                  admit_NAs = TRUE,
+                                                  paired_p_and_pchem = FALSE,
+                                                  allow_pre_interp = TRUE
+                                              ))
+
         } else { #probably won't ever use this munge engine for hjandrews
             munge_rtn <- munge_by_site(network, domain, site_code, prodname_ms, held_data)
         }

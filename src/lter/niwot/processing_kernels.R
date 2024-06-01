@@ -1894,8 +1894,7 @@ process_1_170 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_416 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_416 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -1913,22 +1912,25 @@ process_1_416 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = 'NaN',
                          summary_flagcols = c('flag_ppt_tot', 'qdays'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
-    d <- d %>%
-      filter(qdays == 1)
+    d <- filter(d, qdays == 1)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list('flag_ppt_tot' = 'DROP'),
-                            summary_flags_dirty = list('flag_ppt_tot' = c(1,2)))
+                            summary_flags_to_drop = list('flag_ppt_tot' = 'sentinel'),
+                            summary_flags_dirty = list('flag_ppt_tot' = c(1, 2)),
+                            keep_empty_rows = TRUE)
 
     # this correction is suggested by Niwot based on blowing snow over smapling
     # at saddle. Information about the correction factor here: Overestimation of
     # snow depth and inorganic nitrogen wetfall using NADP data, Niwot Ridge, Colorado
     d <- d %>%
         mutate(month = month(datetime)) %>%
-        mutate(val = ifelse(month %in% c(10,11,12,1,2,3,4), val*0.39, val)) %>%
+        mutate(val = ifelse(month %in% c(10, 11, 12, 1, 2, 3, 4),
+                            val * 0.39,
+                            val)) %>%
         select(-month)
 
     return(d)
@@ -1936,8 +1938,7 @@ process_1_416 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_414 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_414 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -1955,21 +1956,21 @@ process_1_414 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = 'NaN',
                          summary_flagcols = 'qdays',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
-    d <- d %>%
-      filter(qdays == 1)
+    d <- filter(d, qdays == 1)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_415 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_415 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -1987,15 +1988,16 @@ process_1_415 <- function(network, domain, prodname_ms, site_code,
                          data_col_pattern = '#V#',
                          set_to_NA = 'NaN',
                          summary_flagcols = c('flag_ppt_tot', 'qdays'),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
-    d <- d %>%
-      filter(qdays == 1)
+    d <- filter(d, qdays == 1)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list('flag_ppt_tot' = 'DROP'),
-                            summary_flags_dirty = list('flag_ppt_tot' = c(1,2)))
+                            summary_flags_to_drop = list('flag_ppt_tot' = 'sentinel'),
+                            summary_flags_dirty = list('flag_ppt_tot' = c(1, 2)),
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

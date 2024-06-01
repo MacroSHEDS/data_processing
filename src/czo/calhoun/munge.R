@@ -41,18 +41,50 @@ for(i in seq_len(nrow(prod_info))){
 
         if(grepl('4680', prodname_ms)){
 
-            munge_rtn <- munge_combined_split(network = network,
-                                              domain = domain,
-                                              site_code = site_code,
-                                              prodname_ms = prodname_ms,
-                                              tracker = held_data)
-        } else{
+            if(grepl('precip', prodname_ms)){
 
-            munge_rtn <- munge_combined(network = network,
-                                        domain = domain,
-                                        site_code = site_code,
-                                        prodname_ms = prodname_ms,
-                                        tracker = held_data)
+                munge_rtn <- munge_combined_split(network = network,
+                                                  domain = domain,
+                                                  site_code = site_code,
+                                                  prodname_ms = prodname_ms,
+                                                  tracker = held_data,
+                                                  interp_control = list(
+                                                      admit_NAs = TRUE,
+                                                      paired_p_and_pchem = FALSE,
+                                                      allow_pre_interp = TRUE
+                                                  ))
+            } else {
+
+                munge_rtn <- munge_combined_split(network = network,
+                                                  domain = domain,
+                                                  site_code = site_code,
+                                                  prodname_ms = prodname_ms,
+                                                  tracker = held_data)
+            }
+
+        } else {
+
+            if(grepl('precip', prodname_ms)){
+
+                munge_rtn <- munge_combined(network = network,
+                                            domain = domain,
+                                            site_code = site_code,
+                                            prodname_ms = prodname_ms,
+                                            tracker = held_data,
+                                            interp_control = list(
+                                                admit_NAs = TRUE,
+                                                paired_p_and_pchem = FALSE,
+                                                allow_pre_interp = TRUE
+                                            ))
+
+            } else {
+
+                munge_rtn <- munge_combined(network = network,
+                                            domain = domain,
+                                            site_code = site_code,
+                                            prodname_ms = prodname_ms,
+                                            tracker = held_data)
+            }
         }
 
 

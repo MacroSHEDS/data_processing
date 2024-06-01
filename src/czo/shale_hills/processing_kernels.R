@@ -332,13 +332,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
                          data_cols =  c('Total_Precip_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comment',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(Comment = ''),
-                            summary_flags_to_drop = list(Comment = c('Device data missing',
-                                                                     'value removed - cleaned')))
+                            summary_flags_to_drop = list(Comment = 'sentinel'),
+                            keep_empty_rows = TRUE)
 
     #South Planar (3 sites)
     f <- grep('SP_Thru', all_p_files, value = TRUE)
@@ -363,19 +364,23 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
                           data_cols =  c('mm' = 'precipitation'),
                           data_col_pattern = '#V#',
                           summary_flagcols = 'flag',
-                          is_sensor = TRUE)
+                          is_sensor = TRUE,
+                          keep_empty_rows = TRUE)
 
     d2 <- ms_cast_and_reflag(d2,
                              varflag_col_pattern = NA,
                              summary_flags_clean = list(flag = ''),
-                             summary_flags_to_drop = list(flag = '#*#'))
+                             summary_flags_to_drop = list(flag = 'sentinel'),
+                             keep_empty_rows = TRUE)
 
     #combine and write
     d <- bind_rows(d, d2)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     for(s in unique(d$site_code)){
 

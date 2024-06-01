@@ -502,7 +502,7 @@ process_0_VERSIONLESS009 <- function(set_details, network, domain){
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.txt',
                     n = network,
@@ -522,10 +522,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          site_code_col = 'site',
                          data_cols =  c('PrecipRate' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     # Precipitation is reported in mm/min, it is a 15 minute time step so must
     # convert
@@ -534,7 +536,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 

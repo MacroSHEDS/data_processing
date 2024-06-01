@@ -229,14 +229,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
                          set_to_NA = c('-9999', ''),
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     unlink(temp_dir, recursive = TRUE)
 

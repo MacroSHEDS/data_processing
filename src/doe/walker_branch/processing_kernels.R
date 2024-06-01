@@ -225,14 +225,18 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  data_col_pattern = '#V#',
-                                 is_sensor = TRUE)
+                                 is_sensor = TRUE,
+                                 keep_empty_rows = TRUE)
 
     daily_dat <- ms_cast_and_reflag(daily_dat,
-                                    varflag_col_pattern = NA)
+                                    varflag_col_pattern = NA,
+                                    keep_empty_rows = TRUE)
 
     daily_dat <- qc_hdetlim_and_uncert(daily_dat, prodname_ms = prodname_ms)
 
-    daily_dat <- synchronize_timestep(daily_dat)
+    daily_dat <- synchronize_timestep(daily_dat,
+                                      admit_NAs = TRUE,
+                                      allow_pre_interp = TRUE)
 
     daily_dat <- daily_dat %>% #??
         filter(datetime > '1997-01-01',
@@ -250,16 +254,20 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                  summary_flagcols = 'FLAG',
                                  data_col_pattern = '#V#',
                                  set_to_NA = '-9999',
-                                 is_sensor = TRUE)
+                                 is_sensor = TRUE,
+                                 keep_empty_rows = TRUE)
 
     hourly_dat <- ms_cast_and_reflag(hourly_dat,
                                      varflag_col_pattern = NA,
-                                     summary_flags_to_drop = list('FLAG' = 'DROP'),
-                                     summary_flags_dirty = list('FLAG' = 'FLAGGED'))
+                                     summary_flags_to_drop = list('FLAG' = 'sentinel'),
+                                     summary_flags_dirty = list('FLAG' = 'FLAGGED'),
+                                     keep_empty_rows = TRUE)
 
     hourly_dat <- qc_hdetlim_and_uncert(hourly_dat, prodname_ms = prodname_ms)
 
-    hourly_dat <- synchronize_timestep(hourly_dat)
+    hourly_dat <- synchronize_timestep(hourly_dat,
+                                       admit_NAs = TRUE,
+                                       allow_pre_interp = TRUE)
 
     d <- rbind(daily_dat, hourly_dat) %>%
         arrange(datetime)
@@ -279,6 +287,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
+
     return()
 }
 

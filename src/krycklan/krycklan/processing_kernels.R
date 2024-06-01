@@ -178,10 +178,12 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                         'Ga.µg.l' = 'Ga'),
                          data_col_pattern = '#V#',
                          convert_to_BDL_flag = '<LOD',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL')
+                            variable_flags_bdl = 'BDL',
+                            keep_empty_rows = TRUE)
 
     d <- ms_conversions(d,
                         convert_units_from = c(#'NO2_N' = 'ug/l',
@@ -358,7 +360,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
@@ -722,12 +726,15 @@ process_1_p06 <- function(network, domain, prodname_ms, site_code, components){
                              data_cols =  c('P' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('NaN', ''),
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
 
         if(! nrow(d)) next
 
         d_collect <- bind_rows(d_collect,
-                               ms_cast_and_reflag(d, varflag_col_pattern = NA))
+                               ms_cast_and_reflag(d,
+                                                  varflag_col_pattern = NA,
+                                                  keep_empty_rows = TRUE))
     }
 
     return(d_collect)

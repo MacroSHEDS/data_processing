@@ -320,7 +320,7 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'baltimore')
+dmnrow <- which(network_domain$domain == 'neon')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -375,7 +375,7 @@ for(dmnrow in 1:nrow(network_domain)){
     #munge stream gauge locations first, so we can delineate watersheds
     ms_munge(network = network,
              domain = domain,
-             prodname_filter = c('stream_gauge_locations'))
+             prodname_filter = c('precip_chemistry'))
 
     if(domain != 'mcmurdo'){
 

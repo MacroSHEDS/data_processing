@@ -700,10 +700,12 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -738,10 +740,12 @@ process_1_2491 <- function(network, domain, prodname_ms, site_code, component){
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        '[mm]'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -777,10 +781,12 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component){
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        '[mm]'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -825,10 +831,12 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -867,10 +875,12 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -930,10 +940,12 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1060,9 +1072,12 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component){
                          data_cols =  vars_encountered,
                          data_col_pattern = '#V#',
                          set_to_NA = errorcode_variants,
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     new_units <- setNames(rep('mg/L',
                               length(units)),
@@ -1184,9 +1199,12 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component){
                          data_cols =  vars_encountered,
                          data_col_pattern = '#V#',
                          set_to_NA = errorcode_variants,
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     new_units <- setNames(rep('mg/L',
                               length(units)),
@@ -1233,10 +1251,12 @@ process_1_2415 <- function(network, domain, prodname_ms, site_code, component){
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        'mm'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1272,10 +1292,12 @@ process_1_2425 <- function(network, domain, prodname_ms, site_code, component){
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        'mm'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1413,7 +1435,10 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = FALSE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1466,7 +1491,10 @@ process_2_ms004 <- function(network, domain, prodname_ms){
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = FALSE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,

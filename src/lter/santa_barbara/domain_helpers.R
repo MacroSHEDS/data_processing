@@ -50,7 +50,8 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA =  c('-999', '-999.00', '-999.0'),
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
     } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
@@ -60,17 +61,19 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
                              data_cols =  c('precipitation_mm' = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-999', '-999.00', '-999.0'),
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
     }
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
 munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_code,
-                           component){
+                                          component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,

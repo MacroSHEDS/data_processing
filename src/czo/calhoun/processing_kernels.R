@@ -88,10 +88,12 @@ process_1_6421 <- function(network, domain, prodname_ms, site_code,
                          site_code_col = 'site',
                          data_cols =  c('precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -178,7 +180,12 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                              site_code_col = 'site',
                              data_cols =  c('rain' = 'precipitation'),
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                keep_empty_rows = TRUE)
 
     } else {
 
@@ -214,10 +221,11 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                              data_cols =  c('q' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE)
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA)
     }
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
 
     unlink(file.path(rawdir, 'Rainfall'), recursive = TRUE)
     unlink(file.path(rawdir, 'Stream'), recursive = TRUE)

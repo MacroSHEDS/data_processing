@@ -45,6 +45,21 @@ for(i in seq_len(nrow(prod_info))){
                                        site_code = site_code,
                                        prodname_ms = prodname_ms,
                                        tracker = held_data)
+        } else if(grepl('precip', prodname_ms)){
+
+            mthd <- ifelse(grepl('precipitation', prodname_ms), 'mean_nocb', 'nocb')
+
+            munge_rtn <- munge_combined(network = network,
+                                        domain = domain,
+                                        site_code = site_code,
+                                        prodname_ms = prodname_ms,
+                                        tracker = held_data,
+                                        interp_control = list(
+                                            admit_NAs = TRUE,
+                                            paired_p_and_pchem = FALSE,
+                                            allow_pre_interp = TRUE
+                                            precip_interp_method = mthd
+                                        ))
         } else {
 
             munge_rtn <- munge_combined(network = network,

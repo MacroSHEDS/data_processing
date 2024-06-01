@@ -497,12 +497,14 @@ process_1_1489 <- function(network, domain, prodname_ms, site_code,
                          is_sensor = TRUE,
                          set_to_NA = '#N/A',
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'Flag_Daily_Precip_Total_mm')
+                         summary_flagcols = 'Flag_Daily_Precip_Total_mm',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_to_drop = list('Flag_Daily_Precip_Total_mm' = 'ensuring any other flag gets ms_status of 0'),
                             summary_flags_dirty = list('Flag_Daily_Precip_Total_mm' = 'E'),
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

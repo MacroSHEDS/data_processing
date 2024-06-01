@@ -167,19 +167,24 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = 'invalcode',
                          is_sensor = FALSE,
                          sampling_type = 'I',
-                         set_to_NA = '-9.990')
+                         set_to_NA = '-9.990',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list(invalcode = 'p           '),
+                            summary_flags_to_drop = list(invalcode = 'sentinel'),
                             summary_flags_clean = list(invalcode = c('            ',
                                                                      'l           ',
                                                                      'v           ',
-                                                                     'n           ')))
+                                                                     'n           ')),
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d, precip_interp_method = 'mean_nocb')
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     write_ms_file(d = d,
                   network = network,
@@ -227,17 +232,22 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          summary_flagcols = "invalcode",
                          is_sensor = FALSE,
                          sampling_type = 'I',
-                         set_to_NA = c("-9", "-9.000"))
+                         set_to_NA = c("-9", "-9.000"),
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = '<',
                             variable_flags_clean = ' ', #technically bdl, but can't find actual DLs, and they're filled in for us
                             summary_flags_dirty = list(invalcode = c('b           ', 'e           ', 'i           ')),
-                            summary_flags_clean = list(invalcode = '            '))
+                            summary_flags_clean = list(invalcode = '            '),
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d, precip_interp_method = 'nocb')
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     write_ms_file(d = d,
                   network = network,

@@ -1336,7 +1336,9 @@ process_2_ms003 <- function(network, domain, prodname_ms){
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,

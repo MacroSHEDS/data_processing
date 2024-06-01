@@ -191,9 +191,12 @@ process_1_174 <- function(network, domain, prodname_ms, site_code, component){
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = '#V#code',
                          set_to_NA = '-9999',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_bdl = 'BDL',
+                            keep_empty_rows = TRUE)
 
     d <- ms_conversions(d,
                         convert_units_from = c(NO3_N = 'ug/l',
@@ -229,9 +232,12 @@ process_1_90 <- function(network, domain, prodname_ms, site_code, component){
                          data_cols =  c(Precipitationmm = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999', '.', ''),
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -271,7 +277,8 @@ process_1_14 <- function(network, domain, prodname_ms, site_code, component){
                              summary_flagcols = 'field.comments',
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999', ''),
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
 
         d <- ms_cast_and_reflag(
             d,
@@ -279,7 +286,8 @@ process_1_14 <- function(network, domain, prodname_ms, site_code, component){
                                                             'Hurricane rain storm event at the Station was 21.40 inches recorded at the Rain Collector at the roof of the Station. All other rain collectors overflowed and did not capture the event correctly.',
                                                             'Inicia Cuarentena por Pandemia COVID 19')),
             summary_flags_to_drop = list('Field.Comments' = c('BAD',  'DATA NOT COLLECTED')),
-            varflag_col_pattern = NA
+            varflag_col_pattern = NA,
+            keep_empty_rows = TRUE
         )
 
     } else {
@@ -291,9 +299,12 @@ process_1_14 <- function(network, domain, prodname_ms, site_code, component){
                              data_cols = c(rainfall_mm = 'precipitation'),
                              data_col_pattern = '#V#',
                              set_to_NA = c('-9999', ''),
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
 
-        d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                keep_empty_rows = TRUE)
     }
 
     return(d)
