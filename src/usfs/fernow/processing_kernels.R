@@ -260,10 +260,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = FALSE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -392,10 +394,12 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                          data_col_pattern = '#V#',
                          set_to_NA = c('', '.'),
                          is_sensor = FALSE,
-                         sampling_type = 'G')
+                         sampling_type = 'G',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- ms_conversions(d,
                         convert_units_from = c(ANC = 'ueq/l'),
@@ -403,7 +407,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     unlink(temp_dir, recursive = TRUE)
 

@@ -38,8 +38,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T, full.names = T)
 
-    # HQ
-    #    historical
+    # HQ historical
     hq_hist_path <- grep('hq_hist.csv', fils, value = T)
 
     hq_hist_d <- ms_read_raw_csv(filepath = hq_hist_path,
@@ -49,10 +48,12 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                  data_cols =  c(Rainfall_m = 'precipitation'),
                                  data_col_pattern = '#V#',
                                  set_to_NA = 'NULL',
-                                 is_sensor = TRUE)
+                                 is_sensor = TRUE,
+                                 keep_empty_rows = FALSE)
 
     hq_hist_d <- ms_cast_and_reflag(hq_hist_d,
-                                    varflag_col_pattern = NA)
+                                    varflag_col_pattern = NA,
+                                    keep_empty_rows = FALSE)
 
     #    modern (all null values)
     # hq_modern_path <- grep('hq_daily', fils, value = T)
@@ -74,19 +75,20 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site_code = 'SEFHQ_pluvio')
 
     pluvio_d <- ms_read_raw_csv(preprocessed_tibble = pluvio_d,
-                                 datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
-                                 datetime_tz = 'Etc/GMT-5',
-                                 site_code_col = 'site_code',
-                                 data_cols =  c(Rainfall_m = 'precipitation'),
-                                 data_col_pattern = '#V#',
-                                 set_to_NA = 'NULL',
-                                 is_sensor = TRUE)
+                                datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
+                                datetime_tz = 'Etc/GMT-5',
+                                site_code_col = 'site_code',
+                                data_cols =  c(Rainfall_m = 'precipitation'),
+                                data_col_pattern = '#V#',
+                                set_to_NA = 'NULL',
+                                is_sensor = TRUE,
+                                keep_empty_rows = FALSE)
 
     pluvio_d <- ms_cast_and_reflag(pluvio_d,
-                                    varflag_col_pattern = NA)
+                                   varflag_col_pattern = NA,
+                                   keep_empty_rows = FALSE)
 
-    # lotti
-    #     high rez
+    # lotti high rez
     lotti_highrez_path <- grep('lotti_highrez', fils, value = T)
 
     lotti_highrez_d <- ms_read_raw_csv(filepath = lotti_highrez_path,
@@ -97,12 +99,14 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                 data_col_pattern = '#V#',
                                 sampling_type = 'I',
                                 set_to_NA = 'NULL',
-                                is_sensor = TRUE)
+                                is_sensor = TRUE,
+                                keep_empty_rows = FALSE)
 
     lotti_highrez_d <- ms_cast_and_reflag(lotti_highrez_d,
-                                          varflag_col_pattern = NA)
+                                          varflag_col_pattern = NA,
+                                          keep_empty_rows = FALSE)
 
-    #    daily
+    # lotti daily
     lotti_hist_path <- grep('lotti_hist', fils, value = T)
 
     lotti_hist_d <- ms_read_raw_csv(filepath = lotti_hist_path,
@@ -113,13 +117,14 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                        data_col_pattern = '#V#',
                                        sampling_type = 'I',
                                        set_to_NA = 'NULL',
-                                       is_sensor = TRUE)
+                                       is_sensor = TRUE,
+                                    keep_empty_rows = FALSE)
 
     lotti_hist_d <- ms_cast_and_reflag(lotti_hist_d,
-                                       varflag_col_pattern = NA)
+                                       varflag_col_pattern = NA,
+                                       keep_empty_rows = FALSE)
 
-    # met 25
-    #    highrez
+    # met 25 highrez
     met25_highrez_path <- grep('met25_highrez', fils, value = T)
 
     met25_highrez_d <- ms_read_raw_csv(filepath = met25_highrez_path,
@@ -130,45 +135,50 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
-                                    is_sensor = TRUE)
+                                    is_sensor = TRUE,
+                                    keep_empty_rows = FALSE)
 
     met25_highrez_d <- ms_cast_and_reflag(met25_highrez_d,
-                                       varflag_col_pattern = NA)
+                                          varflag_col_pattern = NA,
+                                          keep_empty_rows = FALSE)
 
-    #    historical
+    # met 25historical
     met25_hist_path <- grep('met25_hist', fils, value = T)
 
     met25_hist_d <- ms_read_raw_csv(filepath = met25_hist_path,
-                                       datetime_cols = list('Date_temp' = '%Y-%m-%d'),
-                                       datetime_tz = 'Etc/GMT-5',
-                                       site_code_col = 'Instr_ID',
-                                       data_cols =  c(Rainfall_m = 'precipitation'),
-                                       data_col_pattern = '#V#',
-                                       sampling_type = 'I',
-                                       set_to_NA = 'NULL',
-                                       is_sensor = TRUE)
-
-    met25_hist_d <- ms_cast_and_reflag(met25_hist_d,
-                                          varflag_col_pattern = NA)
-
-    # met5
-    #     highrez
-    met5_highrez_path <- grep('met25_highrez', fils, value = T)
-    look <- read.csv(met5_highrez_path, colClasses = 'character')
-
-    met5_highrez_d <- ms_read_raw_csv(filepath = met5_highrez_path,
-                                    datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
+                                    datetime_cols = list('Date_temp' = '%Y-%m-%d'),
                                     datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
-                                    is_sensor = TRUE)
+                                    is_sensor = TRUE,
+                                    keep_empty_rows = FALSE)
+
+    met25_hist_d <- ms_cast_and_reflag(met25_hist_d,
+                                       varflag_col_pattern = NA,
+                                       keep_empty_rows = FALSE)
+
+    # met5 highrez
+    met5_highrez_path <- grep('met25_highrez', fils, value = T)
+    look <- read.csv(met5_highrez_path, colClasses = 'character')
+
+    met5_highrez_d <- ms_read_raw_csv(filepath = met5_highrez_path,
+                                      datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
+                                      datetime_tz = 'Etc/GMT-5',
+                                      site_code_col = 'Instr_ID',
+                                      data_cols =  c(Rainfall_m = 'precipitation'),
+                                      data_col_pattern = '#V#',
+                                      sampling_type = 'I',
+                                      set_to_NA = 'NULL',
+                                      is_sensor = TRUE,
+                                      keep_empty_rows = FALSE)
 
     met5_highrez_d <- ms_cast_and_reflag(met5_highrez_d,
-                                         varflag_col_pattern = NA)
-    #    historical
+                                         varflag_col_pattern = NA,
+                                         keep_empty_rows = FALSE)
+    # met5 historical
     met5_hist_path <- grep('met5_hist', fils, value = T)
 
     met5_hist_d <- ms_read_raw_csv(filepath = met5_hist_path,
@@ -179,27 +189,31 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                     data_col_pattern = '#V#',
                                     sampling_type = 'I',
                                     set_to_NA = 'NULL',
-                                    is_sensor = TRUE)
+                                    is_sensor = TRUE,
+                                   keep_empty_rows = FALSE)
 
     met5_hist_d <- ms_cast_and_reflag(met5_hist_d,
-                                       varflag_col_pattern = NA)
+                                      varflag_col_pattern = NA,
+                                      keep_empty_rows = FALSE)
 
     # turkey
     turkey_highrez_path <- grep('turkey_highrez', fils, value = T)
 
     turkey_highrez_d <- ms_read_raw_csv(filepath = turkey_highrez_path,
-                                   datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
-                                   datetime_tz = 'Etc/GMT-5',
-                                   site_code_col = 'Instr_ID',
-                                   alt_site_code = list('TC_Met' = 'TC Met'),
-                                   data_cols =  c(Rainfall_m = 'precipitation'),
-                                   data_col_pattern = '#V#',
-                                   sampling_type = 'I',
-                                   set_to_NA = 'NULL',
-                                   is_sensor = TRUE)
+                                        datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
+                                        datetime_tz = 'Etc/GMT-5',
+                                        site_code_col = 'Instr_ID',
+                                        alt_site_code = list('TC_Met' = 'TC Met'),
+                                        data_cols =  c(Rainfall_m = 'precipitation'),
+                                        data_col_pattern = '#V#',
+                                        sampling_type = 'I',
+                                        set_to_NA = 'NULL',
+                                        is_sensor = TRUE,
+                                        keep_empty_rows = FALSE)
 
     turkey_highrez_d <- ms_cast_and_reflag(turkey_highrez_d,
-                                      varflag_col_pattern = NA)
+                                           varflag_col_pattern = NA,
+                                           keep_empty_rows = FALSE)
 
     # It looks like the highrez files for lotti, met5 and met 25 are missing
     # most of the data for every year, SFE was contacted
@@ -495,31 +509,33 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'SEFHQ_pluvio')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = c(Date = '%Y-%m-%d'),
-                           datetime_tz = 'Etc/GMT-5',
-                           site_code_col = 'site',
-                           data_cols =  c(NH4_N = 'NH4_N',
-                                          CL = 'Cl',
-                                          Br = 'Br',
-                                          NO3_N = 'NO3_N',
-                                          O_PO4 = 'orthophosphate',
-                                          SO4 = 'SO4',
-                                          K = 'K',
-                                          NA. = 'Na',
-                                          CA = 'Ca',
-                                          MG = 'Mg',
-                                          TP = 'TP',
-                                          PH = 'pH',
-                                          Conductivity = 'spCond'),
-                           data_col_pattern = '#V#',
-                           is_sensor = FALSE)
+                         datetime_cols = c(Date = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT-5',
+                         site_code_col = 'site',
+                         data_cols = c(NH4_N = 'NH4_N',
+                                       CL = 'Cl',
+                                       Br = 'Br',
+                                       NO3_N = 'NO3_N',
+                                       O_PO4 = 'orthophosphate',
+                                       SO4 = 'SO4',
+                                       K = 'K',
+                                       NA. = 'Na',
+                                       CA = 'Ca',
+                                       MG = 'Mg',
+                                       TP = 'TP',
+                                       PH = 'pH',
+                                       Conductivity = 'spCond'),
+                         data_col_pattern = '#V#',
+                         is_sensor = FALSE,
+                         keep_empty_rows = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = FALSE)
 
     d <- ms_conversions(d,
-                          convert_units_from = c(PO4 = 'mg/l'),
-                          convert_units_to = c(PO4 = 'mg/l'))
+                        convert_units_from = c(PO4 = 'mg/l'),
+                        convert_units_to = c(PO4 = 'mg/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

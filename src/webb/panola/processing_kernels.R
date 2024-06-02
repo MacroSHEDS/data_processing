@@ -123,12 +123,14 @@ p1v001_CUSTOMprecipitation <- function(zipf){
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = "Quality_Cd",
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(Quality_Cd = c('1', '2')),
-                            summary_flags_dirty = list(Quality_Cd = c('3', '4')))
+                            summary_flags_dirty = list(Quality_Cd = c('3', '4')),
+                            keep_empty_rows = FALSE)
 
     d$val <- d$val * 10 #cm -> mm
 
@@ -163,12 +165,14 @@ p1v001_precip_chemistry <- function(zipf){
                          convert_to_BDL_flag = '<#*#',
                          summary_flagcols = 'Notes',
                          is_sensor = FALSE,
-                         keep_bdl_values = TRUE)
+                         keep_bdl_values = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_clean = list(Notes = ''),
                             summary_flags_to_drop = list(Notes = 'sentinel'),
-                            variable_flags_bdl = 'BDL')
+                            variable_flags_bdl = 'BDL',
+                            keep_empty_rows = TRUE)
 
     var_deets <- list(
         'ANC' = c('ueq/l', 'eq/l'),
@@ -337,7 +341,13 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    if(prodname == 'precip_chemistry'){
+        d <- synchronize_timestep(d,
+                                  admit_NAs = TRUE,
+                                  allow_pre_interp = TRUE)
+    } else {
+        d <- synchronize_timestep(d)
+    }
 
     sites <- unique(d$site_code)
 
