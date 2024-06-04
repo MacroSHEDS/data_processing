@@ -5,7 +5,7 @@
 #. handle_errors
 process_0_p01 <- retrieve_krycklan
 
-#precip_chemistry: STATUS=READY
+#precip_chemistry: STATUS=PAUSED
 #. handle_errors
 process_0_VERSIONLESS002 <- download_from_googledrive
 
@@ -63,12 +63,12 @@ process_1_p01 <- function(network, domain, prodname_ms, site_code, components){
                                ms_cast_and_reflag(d, varflag_col_pattern = NA))
     }
 
-    d_collect$discharge <- d_collect$discharge * 1000 #cms -> L/s
+    d_collect$val <- d_collect$val * 1000 #cms -> L/s
 
     return(d_collect)
 }
 
-#precip_chemistry: STATUS=READY
+#precip_chemistry: STATUS=PAUSED
 #. handle_errors
 process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, components){
 
@@ -425,6 +425,8 @@ process_1_p03 <- function(network, domain, prodname_ms, site_code, components){
             is_sensor = FALSE
         )
 
+        if(nrow(d) == 0) next
+
         d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
         d <- ms_conversions(
@@ -703,8 +705,8 @@ process_1_p06 <- function(network, domain, prodname_ms, site_code, components){
         #is STO still without a precip column? re-activate in site_data if not
         if(grepl('^Deger', sitecode)) sitecode <- 'Site18'
 
-        header_separator <- which(grepl('^####$',
-                                        read_lines(f, n_max = 100)))
+        header_separator <- sw(which(grepl('^####$',
+                                           read_lines(f, n_max = 100))))
 
         d <- read.csv(f, skip = header_separator, colClasses = 'character') %>%
             mutate(sitecode = !!sitecode)

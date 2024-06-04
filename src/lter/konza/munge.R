@@ -57,7 +57,7 @@ for(i in seq_len(nrow(prod_info))){
                                         interp_control = list(
                                             admit_NAs = TRUE,
                                             paired_p_and_pchem = FALSE,
-                                            allow_pre_interp = TRUE
+                                            allow_pre_interp = TRUE,
                                             precip_interp_method = mthd
                                         ))
         } else {

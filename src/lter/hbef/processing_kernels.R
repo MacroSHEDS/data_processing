@@ -190,6 +190,8 @@ process_1_13 <- function(network, domain, prodname_ms, site_code, component){
                          is_sensor = FALSE,
                          keep_empty_rows = TRUE)
 
+    d <- filter(d, site_code != 'RG18')
+
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             keep_empty_rows = TRUE)

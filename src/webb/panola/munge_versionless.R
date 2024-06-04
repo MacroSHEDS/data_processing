@@ -41,7 +41,6 @@ for(i in seq_len(nrow(prod_info))){
 
     sites <- names(held_data[[prodname_ms]])
 
-    # j = 1
     for(j in 1:length(sites)){
 
         site_code <- sites[j]

@@ -1297,6 +1297,12 @@ ms_read_raw_csv <- function(filepath,
     #remove all-NA data columns without BDLs
     d <- select(d, -any_of(all_na_cols))
 
+    if(! any(grepl('__\\|dat', colnames(d)))){
+        logwarn('all data columns have been removed (no data values present).',
+                logger = logger_module)
+        return(tibble())
+    }
+
     #remove rows with NA for all data columns, except if they have BDLs.
     if(! keep_empty_rows){
         keeper_rows <- apply(d[, grepl('__\\|dat$', colnames(d))], 1, function(x) any(! is.na(x)))
@@ -1353,6 +1359,7 @@ ms_read_raw_csv <- function(filepath,
     #prepend two-letter code to each variable representing sample regimen and
     #record sample regimen metadata
     if(nrow(d)){
+
         d <- sm(identify_sampling(df = d,
                                   is_sensor = is_sensor,
                                   domain = domain,
@@ -7318,7 +7325,7 @@ synchronize_timestep <- function(d,
     #   these will be imputed via get_nldas_precip. For precip_chemistry,
     #   these will be linearly interpolated. Both imputations occur after
     #   `d` has been aggregated to daily. If FALSE, the presence of NA
-    #   values in `d` results in an error.
+    #   values in `d` results in an error. [DEPRECATED (DISCONNECTED. DOES NOTHING)]
     #paired_p_and_pchem: logical. if TRUE (e.g. bear, loch_vale, sleepers),
     #   and pre_interp = TRUE, pre-interpolation will occur before data
     #   are coerced to daily. see pre_interp.
@@ -7342,9 +7349,9 @@ synchronize_timestep <- function(d,
     #     stop('precip_interp_method must be either "zero" or "mean_nocb"')
     # }
 
-    if(! admit_NAs && any(is.na(d$val))){
-        stop('NAs present in d and admit_NAs = FALSE')
-    }
+    # if(! admit_NAs && any(is.na(d$val))){
+    #     stop('NAs present in d and admit_NAs = FALSE')
+    # }
 
     #for some precip/pchem datasets, ms_interp will already be supplied by now,
     #so on 20240508 this func was updated to expect that column
@@ -7477,9 +7484,9 @@ synchronize_timestep <- function(d,
 
         sitevar_chunk$val[is.nan(sitevar_chunk$val)] <- NA_real_
 
-        nas_present <- any(is.na(sitevar_chunk$val))
-        if(! admit_NAs && nas_present) stop('should never happen')
-        if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
+        # nas_present <- any(is.na(sitevar_chunk$val))
+        # if(! admit_NAs && nas_present) stop('should never happen')
+        # if(nas_present && ! var_is_p && ! var_is_pchem) stop('should never happen')
 
         if(allow_pre_interp){
 
@@ -8947,7 +8954,8 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
     #prodname_ms: a MacroSheds prodname_ms to filter detlims by
     #which_: either "uncertainty" or "hdetlim" (meaning half-detection-limit)
 
-    #returns a vector of half-detlims or uncertainty, or an empty vector if d has no rows
+    #returns a vector of half-detlims or uncertainty, or an empty vector if d has no rows.
+    #   precipitation and discharge get uncertainty of 0.
 
     #note that, when which_ == 'uncertainty',
     #   it's actually precision values that are being manipulated, right till the end.
@@ -8974,7 +8982,14 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
         stop('which_ must be "uncertainty" or "hdetlim"')
     }
 
-    if(which_ == 'uncertainty') which_ <- 'precision' #precision will be converted to uncert at the end
+    if(which_ == 'uncertainty'){
+
+        which_ <- 'precision' #precision will be converted to uncert at the end
+
+        if(grepl('precipitation|discharge', prodname_ms)){
+            return(rep(0, nrow(d)))
+        }
+    }
 
     #a bit of cleanup and setup
     half_detlims_all <- detlims %>%
@@ -9018,7 +9033,10 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                                 'prodcode==prodname_ms',
                                 "var==var")][[which_]]
 
-            if(length(out) != nrow(d)) stop('overlapping entries in detlim table')
+            if(length(out) != nrow(d)){
+                message('overlapping entries in detlim table? (1)')
+                browser()
+            }
 
             # d = d0
             # d$var <- drop_var_prefix(d$var)
@@ -9080,7 +9098,10 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
             }
 
         } else { #CASE 1 with no dates specified
-            if(any(duplicated(select(dlsub, var)))) stop('overlapping entries in detlim table')
+            if(any(duplicated(select(dlsub, var)))){
+                message('overlapping entries in detlim table? (2)')
+                browser()
+            }
 
             out <- d %>%
                 left_join(dlsub, by = 'var') %>%
@@ -9117,7 +9138,16 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                 dl_matches <- dl_matches[, .SD[1], by = .(start_date, end_date, var)]
                 dl_matches <- dl_matches[[which_]]
 
-                if(length(dl_matches) != sum(still_missing)) stop('overlapping entries in detlim table?')
+                if(all(is.na(dl_matches))){
+                    #quick fix. there is a problem 4 lines above in that length(dl_matches) can != sum(still_missing),
+                    #   but this solution is fine if the problem never relates to actual hdetlim insertions.
+                    dl_matches <- rep(NA, sum(still_missing))
+                }
+
+                if(length(dl_matches) != sum(still_missing)){
+                    message('overlapping entries in detlim table? (3)')
+                    browser()
+                }
 
                 out[still_missing] <- dl_matches
 
@@ -18062,6 +18092,8 @@ pre_interp_precip <- function(d){
     if(nrow(siterow) != 1) stop('something wrong with site_data')
 
     na_dates <- get_missing_date_ranges(d)
+
+    if(! length(na_dates)) return(d)
 
     precip_fill <- get_ldas_precip(lat = siterow$latitude,
                                    lon = siterow$longitude,

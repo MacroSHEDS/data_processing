@@ -43,7 +43,7 @@ for(i in seq_len(nrow(prod_info))){
                          s=site_code, p=prodname_ms), logger=logger_module)
         }
 
-        if(prodname_ms == 'precipitation__167') {
+        if(grepl('precipitation', prodname_ms)){
 
             munge_rtn <- munge_by_site(network = network,
                                        domain = domain,

@@ -43,8 +43,7 @@ for(i in seq_len(nrow(prod_info))){
                     logger = logger_module)
         }
 
-        if(grepl('(discharge|precip|flux|chemistry|boundary|locations)',
-                 prodname_ms)){
+        if(grepl('precipitation|precip_chemistry', prodname_ms)){
 
             munge_rtn <- munge_combined_split(network = network,
                                               domain = domain,
@@ -57,8 +56,12 @@ for(i in seq_len(nrow(prod_info))){
                                                   allow_pre_interp = TRUE
                                               ))
 
-        } else { #probably won't ever use this munge engine for hjandrews
-            munge_rtn <- munge_by_site(network, domain, site_code, prodname_ms, held_data)
+        } else {
+            munge_rtn <- munge_combined_split(network = network,
+                                              domain = domain,
+                                              site_code = site_code,
+                                              prodname_ms = prodname_ms,
+                                              tracker = held_data)
         }
 
         if(is_ms_err(munge_rtn)){
