@@ -350,8 +350,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     for(s in 1:length(sites)){
 
-        d_site <- d %>%
-            filter(site_code == !!sites[s])
+        d_site <- filter(d, site_code == !!sites[s])
 
         write_ms_file(d = d_site,
                       network = network,

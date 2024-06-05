@@ -2990,8 +2990,8 @@ update_data_tracker_d <- function(network = domain,
         dt <- tracker[[prodname_ms]][[site_code]]$derive
 
         if(is.null(dt)){
-            msg <- 'Derived product not yet tracked; not updating derive tracker.'
-            logging::logwarn(msg)
+            # msg <- 'Derived product not yet tracked; not updating derive tracker.'
+            # logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }
 
@@ -7448,7 +7448,7 @@ synchronize_timestep <- function(d,
 
         #careful (see below) if you ever mess with the following two lines
         var_is_p <- drop_var_prefix(sitevar_chunk$var[1]) == 'precipitation'
-        var_is_pchem <- prodname_from_prodname_ms(prodname_ms_) == 'precip_chemistry'
+        var_is_pchem <- prodname_from_prodname_ms(prodname_ms_) %in% c('precip_chemistry', 'precip_isotopes')
 
         if(nrow(summary_and_interp_chunk)){
 
@@ -9031,7 +9031,8 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                          on = c("start_date<=datetime",
                                 "end_date>=datetime",
                                 'prodcode==prodname_ms',
-                                "var==var")][[which_]]
+                                "var==var"),
+                         mult = 'first'][[which_]]
 
             if(length(out) != nrow(d)){
                 message('overlapping entries in detlim table? (1)')
@@ -9129,17 +9130,11 @@ get_hdetlim_or_uncert <- function(d, detlims, prodname_ms, which_){
                 dl_matches <- dlsub[as.data.table(d[still_missing, ]),
                                     on = c('start_date<=datetime',
                                            'end_date>=datetime',
-                                           'var==var')]#[[which_]]
-                #it's possible to have more than one match e.g. if there are different
-                #dls reported across two stream_chem products for the same date range
-                #and var. loch vale is the only known such case as of 20240425.
-                #probably this should be handled such that these overlaps
-                #can't exist in domain_detection_limits in the first place.
-                dl_matches <- dl_matches[, .SD[1], by = .(start_date, end_date, var)]
-                dl_matches <- dl_matches[[which_]]
+                                           'var==var'),
+                                    mult = 'first'][[which_]]
 
                 if(all(is.na(dl_matches))){
-                    #quick fix. there is a problem 4 lines above in that length(dl_matches) can != sum(still_missing),
+                    #quick fix. i think it's still possible that length(dl_matches) < sum(still_missing),
                     #   but this solution is fine if the problem never relates to actual hdetlim insertions.
                     dl_matches <- rep(NA, sum(still_missing))
                 }
@@ -18088,8 +18083,12 @@ pre_interp_precip <- function(d){
 
     this_site <- d$site_code[1]
 
-    siterow <- filter(site_data, site_code == this_site)
-    if(nrow(siterow) != 1) stop('something wrong with site_data')
+    siterow <- filter(site_data,
+                      site_code == this_site,
+                      site_type == 'rain_gauge')
+
+    if(nrow(siterow) == 0) stop(this_site, ' missing from site data gsheet')
+    if(nrow(siterow) > 1) stop(this_site, ' duplicated in site data gsheet')
 
     na_dates <- get_missing_date_ranges(d)
 

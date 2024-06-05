@@ -235,12 +235,14 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          set_to_NA = c("-9", "-9.000"),
                          keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_dirty = '<',
-                            variable_flags_clean = ' ', #technically bdl, but can't find actual DLs, and they're filled in for us
-                            summary_flags_dirty = list(invalcode = c('b           ', 'e           ', 'i           ')),
-                            summary_flags_clean = list(invalcode = '            '),
-                            keep_empty_rows = TRUE)
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_clean = ' ', #technically bdl, but can't find actual DLs, and they're filled in for us
+        variable_flags_to_drop = 'sentinel',
+        summary_flags_clean = list(invalcode = '            '),
+        summary_flags_to_drop = list(invalcode = 'sentinel'),
+        keep_empty_rows = TRUE
+    )
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

@@ -43,7 +43,7 @@ process_0_5008 <- retrieve_santa_barbara
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_5011<- retrieve_santa_barbara
+process_0_5011 <- retrieve_santa_barbara
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -277,7 +277,7 @@ process_1_5008 <- munge_santa_barbara_precip
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_5011<- munge_santa_barbara_precip
+process_1_5011 <- munge_santa_barbara_precip
 
 #precipitation: STATUS=READY
 #. handle_errors
@@ -401,8 +401,7 @@ process_1_4005 <- munge_santa_barbara_precip
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_6 <- function(network, domain, prodname_ms, site_code,
-                        component){
+process_1_6 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -521,7 +520,7 @@ process_1_3014 <- munge_santa_barbara_discharge
 
 #usgs_discharge: STATUS=READY
 #. handle_errors
-process_2_ms006 <- function(network, domain, prodname_ms) {
+process_2_ms006 <- function(network, domain, prodname_ms){
 
     pull_usgs_discharge(network = network,
                         domain = domain,
@@ -536,7 +535,7 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,
@@ -572,7 +571,7 @@ process_2_ms007 <- stream_gauge_from_site_data
 
 # #precipitation: STATUS=OBSOLETE
 # #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms) {
+process_2_ms002 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,

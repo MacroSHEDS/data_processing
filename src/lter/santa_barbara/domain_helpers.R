@@ -21,49 +21,36 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
     sbc_gauge <- grepl('SBC ', component, fixed = T)
     fc_gauge <- grepl('SBCoFC ', component, fixed = T)
 
-    if(sbc_gauge) {
+    if(sbc_gauge){
         site <- str_split_fixed(component, 'Precipitation SBC', n = Inf)
     }
 
-    if(fc_gauge) {
+    if(fc_gauge){
         site <- str_split_fixed(component, 'Precipitation SBCoFC', n = Inf)
     }
 
-    if(component == 'UCSB 200 daily precipitation, 1951-ongoing') {
+    if(component == 'UCSB 200 daily precipitation, 1951-ongoing'){
         site <- 'UCSB200'
     } else {
-
         site <- str_split_fixed(site[,2], ',', n = Inf)
         site <- str_split_fixed(site[1,1], ' ', n = Inf)
         site <- paste(site[1,],collapse="")
     }
 
     d <- read.csv(rawfile1, colClasses = "character") %>%
-        mutate(site_code = !!site)
+        mutate(site_code = !!site) %>%
+        rename_with(~sub('timestamp_UTC', 'timestamp_utc', .))
 
-    if(sbc_gauge && component != 'Precipitation SBC GV201, all years') {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('timestamp_UTC' = '%Y-%m-%dT%H:%M'),
-                             datetime_tz = 'UTC',
-                             site_code_col = 'site_code',
-                             data_cols =  c('precipitation_mm' = 'precipitation'),
-                             data_col_pattern = '#V#',
-                             set_to_NA =  c('-999', '-999.00', '-999.0'),
-                             is_sensor = TRUE,
-                             keep_empty_rows = TRUE)
-    } else {
-
-        d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
-                             datetime_tz = 'UTC',
-                             site_code_col = 'site_code',
-                             data_cols =  c('precipitation_mm' = 'precipitation'),
-                             data_col_pattern = '#V#',
-                             set_to_NA = c('-999', '-999.00', '-999.0'),
-                             is_sensor = TRUE,
-                             keep_empty_rows = TRUE)
-    }
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'site_code',
+                         alt_site_code = list(BuelltonFS233 = 'BuelltonFireStation233'),
+                         data_cols =  c('precipitation_mm' = 'precipitation'),
+                         data_col_pattern = '#V#',
+                         set_to_NA = c('-999', '-999.00', '-999.0'),
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,

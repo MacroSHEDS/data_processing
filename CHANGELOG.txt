@@ -36,3 +36,6 @@ fixed incorrect precip totals for calhoun,
 
 precip overhaul:
 	no longer attempting to fill in daily. precip reported at same interval source provides. if weekly/biweekly/opportunistic, we leave it as such and fill in unreported days with 0 for precip and pchem
+	not so... consult mstodo for proper language
+
+added missing precip gauge sites at hjandrews, konza, hbef
