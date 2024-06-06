@@ -2990,7 +2990,7 @@ update_data_tracker_d <- function(network = domain,
         dt <- tracker[[prodname_ms]][[site_code]]$derive
 
         if(is.null(dt)){
-            # msg <- 'Derived product not yet tracked; not updating derive tracker.'
+            msg <- 'Derived product not yet tracked; not updating derive tracker.'
             # logging::logwarn(msg)
             return(generate_ms_exception(msg))
         }

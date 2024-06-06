@@ -8,8 +8,7 @@ retrieve_santa_barbara <- function(set_details, network, domain) {
     return()
 }
 
-munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
-         component){
+munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -59,8 +58,7 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_code,
-                                          component){
+munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,

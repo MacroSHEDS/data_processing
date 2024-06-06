@@ -661,7 +661,7 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code, components){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms) {
+process_2_ms003 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,

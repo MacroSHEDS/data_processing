@@ -1,4 +1,4 @@
-retrieve_plum <- function(set_details, network, domain) {
+retrieve_plum <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -21,8 +21,7 @@ ipswich_dam <- c(444, 445, 446, 447, 513, 514, 448, 532, 533, 534)
 governors_academy <- c(68, 69, 70, 140, 141, 142, 143)
 mbl_marshview <- c(67, 179, 180, 181, 239, 359, 385, 417, 423, 496, 542, 162, 343)
 
-munge_plum_combined <- function(network, domain, prodname_ms, site_code,
-                                component){
+munge_plum_combined <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -93,8 +92,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
-                                component){
+munge_plum_temp_q <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -148,8 +146,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
-                              component) {
+munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -191,8 +188,7 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
-                                 component) {
+munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -234,8 +230,7 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
-                                 component) {
+munge_plum_temp_do <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -278,8 +273,7 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_precip <- function(network, domain, prodname_ms, site_code,
-                         component){
+munge_precip <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -322,8 +316,7 @@ munge_precip <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_precip_alt <- function(network, domain, prodname_ms, site_code,
-                             component){
+munge_precip_alt <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,

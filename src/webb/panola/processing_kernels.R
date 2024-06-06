@@ -240,6 +240,7 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
 
     d$val <- d$val * 10000 #m^-2 -> ha^-1
     d$datetime <- floor_date(d$datetime, unit = 'day')
+    d$ms_interp <- 0
     d$val_err <- 0
 
     writedir <- 'data/webb/panola/munged/CUSTOMprecip_flux_inst_scaled__VERSIONLESS001'
@@ -296,6 +297,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
 
     d$val <- d$val * 10000 #m^-2 -> ha^-1
     d$datetime <- floor_date(d$datetime, unit = 'day')
+    d$ms_interp <- 0
     d$val_err <- 0
 
     writedir <- 'data/webb/panola/munged/CUSTOMstream_flux_inst_scaled__VERSIONLESS001'

@@ -233,7 +233,7 @@ process_1_167 <- function(network, domain, prodname_ms, site_code, component){
                     n = network,
                     d = domain,
                     p = prodname_ms,
-                    s = site_code,
+                    s = '167',
                     c = component)
 
     raw <- read.csv(rawfile, colClasses = 'character') %>%

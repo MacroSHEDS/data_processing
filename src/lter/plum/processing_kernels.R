@@ -1162,7 +1162,7 @@ process_2_ms006 <- stream_gauge_from_site_data
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms){
 
     files <- ms_list_files(network = network,
                            domain = domain,
@@ -1226,7 +1226,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms) {
+process_2_ms002 <- function(network, domain, prodname_ms){
 
     files <- ms_list_files(network = network,
                            domain = domain,

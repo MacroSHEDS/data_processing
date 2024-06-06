@@ -100,6 +100,7 @@ zz = system('find data/webb/loch_vale -type f -name "*.feather" -path "*munged/p
 zz = system('find data/usfs/santee -type f -name "*.feather" -path "*munged/precipitation*/*"',
 zz = system('find data/lter/plum -type f -name "*.feather" -path "*munged/precipitation*/*"',
 zz = system('find data/neon -type f -name "*.feather" -path "*munged/precipitation*/*"',
+zz = system('find data/lter/bonanza -type f -name "*.feather" -path "*munged/precipitation*/*"',
             intern = TRUE)
 
 # api_key <- read_lines('~/keys/noaa_climate_api')

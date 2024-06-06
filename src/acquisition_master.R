@@ -320,9 +320,9 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 dir.create('logs', showWarnings = FALSE)
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'suef')
+dmnrow <- which(network_domain$domain == 'panola')
 
-for(dmnrow in 26:nrow(network_domain)){
+for(dmnrow in 27:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
@@ -333,8 +333,8 @@ for(dmnrow in 26:nrow(network_domain)){
     held_data <- get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
-    held_data = invalidate_tracked_data(network, domain, 'munge')
-    owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge')
+    # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
     # owrite_tracker(network, domain)
 
