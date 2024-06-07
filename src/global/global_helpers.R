@@ -3429,9 +3429,9 @@ ms_delineate <- function(network,
                          s = site)
 
         if(site %in% overwrite_wb_sites) {
-            message('site in overwrite vector, launching new delineation')
+            message('site in overwrite vector, launching new delineation (you still need to manually remove the old delin specs from gsheet)')
         } else if(dir.exists(site_dir) && length(dir(site_dir))){
-            message(glue('{s} already delineated ({d})',
+            message(glue('{s} already delineated ({d}). it will be re-linked during derive.',
                          s = site,
                          d = site_dir))
 
@@ -3755,27 +3755,42 @@ delineate_watershed_apriori_recurse <- function(lat,
                            sep = ': ',
                            collapse = '\n')
 
-    helper_code <- glue('{id}.\nmapview::mapviewOptions(fgb = FALSE);',
-                        'mapview::mapview(sf::st_read("{wd}/{f}")) + ',
-                        'mapview::mapview(sf::st_read("{pf}"))',
-                        id = 1:length(files_to_inspect),
-                        wd = inspection_dir,
-                        f = files_to_inspect,
-                        pf = temp_point) %>%
-        paste(collapse = '\n\n')
+    # helper_code <- glue('{id}.\nmapview::mapviewOptions(fgb = FALSE);',
+    #                     'mapview::mapview(sf::st_read("{wd}/{f}")) + ',
+    #                     'mapview::mapview(sf::st_read("{pf}"))',
+    #                     id = 1:length(files_to_inspect),
+    #                     wd = inspection_dir,
+    #                     f = files_to_inspect,
+    #                     pf = temp_point) %>%
+    #     paste(collapse = '\n\n')
 
-    msg <- glue('Visually inspect the watershed boundary candidate shapefiles ',
-                'by pasting the mapview lines below into a separate instance of R.\n\n{hc}\n\n',
-                'Enter the number corresponding to the ',
-                'one that looks most legit, or select one or more tuning ',
-                'options (e.g. "SBRI" without quotes). You usually won\'t ',
-                'need to tune anything. If you aren\'t ',
-                'sure which delineation is correct, get a site manager to verify:\n',
-                'request_site_manager_verification(type=\'wb delin\', ',
-                'network, domain) [function not yet built]\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
-                hc = helper_code,
-                sel = wb_selections)
-                # td = inspection_dir)
+    msg <- glue::glue('\n\nVisually inspect the watershed boundary candidate(s).\n',
+                      # 'by pasting the mapview lines below into a separate instance of R.\n\n{hc}\n\n',
+                      'Enter the number corresponding to the ',
+                      'one that looks best, or select one or more tuning ',
+                      'options (e.g. MDSBUR).\n\nChoices:\n{sel}\n\nEnter choice(s) here > ',
+                      # hc = helper_code,
+                      sel = wb_selections)
+
+    for(i in seq_along(files_to_inspect)){
+
+        mpv <- mapview::mapview(sf::st_read(file.path(inspection_dir,
+                                                      files_to_inspect[i]),
+                                            quiet = TRUE),
+                                layer.name = paste('Candidate watershed', i)) +
+            mapview::mapview(sf::st_read(temp_point, quiet = TRUE),
+                             legend = FALSE,
+                             layer.name = 'Input lat long')
+            # mapview::mapview(sf::st_read(delin_out$unique_snaps_f[i]),
+            #                  legend = FALSE,
+            #                  layer.name = 'Snapped pour point')
+
+        print(mpv)
+        if(i != length(files_to_inspect)){
+            get_response_enter(paste('\nPress [enter/return] to see candidate',
+                                     i + 1))
+        }
+    }
 
     resp <- get_response_mchar(
         msg = msg,
@@ -4017,6 +4032,7 @@ delineate_watershed_apriori <- function(lat,
     #snap site to flowlines 3 different ways. delineate watershed boundaries (wb)
     #for each unique snap. if the delineations get cut off, get more elevation data
     #and try again
+
     while(while_loop_begin || dem_coverage_insufficient){
 
         while_loop_begin <- FALSE
@@ -5065,6 +5081,25 @@ move_shapefiles <- function(shp_files, from_dir, to_dir, new_name_vec = NULL){
     }
 
     #return()
+}
+
+get_response_enter <- function(msg,
+                               response_from_file = NULL){
+
+    #only returns if ENTER is pressed (or if anything is passed by response_from_file
+
+    cat(msg)
+
+    if(! is.null(response_from_file)){
+        ch <- as.character(readLines(con = response_from_file, 1))
+        rsps <- readLines(con = response_from_file)
+        rsps <- rsps[2:length(rsps)]
+        writeLines(rsps, con = response_from_file)
+    } else {
+        ch <- as.character(readLines(con = stdin(), 1))
+    }
+
+    return(invisible(NULL))
 }
 
 get_response_1char <- function(msg,

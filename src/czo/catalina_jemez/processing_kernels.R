@@ -205,6 +205,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
     if(component %in% c('Jemez_Methods.csv', 'Jemez_Sites.csv')) {
         return(NULL)
     }
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -238,7 +239,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
-    } else{
+    } else {
 
         d <- d %>%
             filter(Streamflow != 'cfs') %>%
@@ -1322,11 +1323,10 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1372,11 +1372,10 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1425,11 +1424,10 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1481,11 +1479,9 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
-
+    for(i in 1:length(sites)){
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 

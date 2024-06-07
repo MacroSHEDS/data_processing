@@ -90,13 +90,23 @@ fx <- fx %>%
     group_by(var) %>%
     tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
     ungroup()
+p_pre <- p_pre %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+p_aft <- p_aft %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
 
 scale_fac = 0.01
 ggplot(pc_pre) +
     geom_line(aes(x = datetime, y = val), size = 3) +
     geom_line(data = pc_aft, aes(x = datetime, y = val), color = 'blue', size = 2) +
     geom_line(data = fx, aes(x = datetime, y = val * scale_fac), color = 'red', size = 1) +
+    geom_line(data = p_pre, aes(x = datetime, y = val), color = 'purple', size = 2) +
+    geom_line(data = p_aft, aes(x = datetime, y = val), color = 'orange', size = 1) +
     facet_wrap(~var, scales = "free_y") +
     labs(title = "", x = "Datetime", y = "Value") +
-    # scale_x_datetime(limits = as.POSIXct(c('2002-01-01', '2003-01-01'))) +
+    scale_x_datetime(limits = as.POSIXct(c('2005-01-01', '2006-01-01'))) +
     theme_minimal()
