@@ -270,7 +270,10 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                                        allow_pre_interp = TRUE)
 
     d <- rbind(daily_dat, hourly_dat) %>%
-        arrange(datetime)
+        arrange(datetime) %>%
+        group_by(datetime) %>%
+        filter(n() == 1 | ms_interp == 0) %>%
+        ungroup()
 
     sites <- unique(d$site_code)
 
@@ -578,3 +581,6 @@ process_2_ms002 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms003 <- derive_precip_pchem_pflux
 
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data

@@ -463,10 +463,14 @@ process_2_ms001 <- function(network, domain, prodname_ms){
 #. handle_errors
 process_2_ms002 <- derive_stream_flux
 
-#precip_gauge_locations
+#precip_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms003 <- precip_gauge_from_site_data
 
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms004 <- derive_precip_pchem_pflux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms007 <- stream_gauge_from_site_data

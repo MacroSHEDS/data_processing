@@ -559,7 +559,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, components){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}',
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                   n = network,
                   d = domain,
                   p = prodname_ms,
@@ -768,4 +768,8 @@ process_2_ms003 <- precip_gauge_from_site_data
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms004 <- derive_precip_pchem_pflux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms007 <- stream_gauge_from_site_data
 

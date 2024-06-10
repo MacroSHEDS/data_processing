@@ -453,6 +453,7 @@ identify_sampling_bypass <- function(df,
     is_sensor <- ifelse(is_sensor, 'S', 'N')
 
     #set up directory system to store sample regimen metadata
+    if(is.na(domain)) stop('domain not defined')
     sampling_dir <- glue('data/{n}/{d}',
                          n = network,
                          d = domain)
@@ -3147,8 +3148,11 @@ get_product_info <- function(network,
         custom_prods <- prods %>%
             filter(grepl('^CUSTOM', prodname))
 
+        combiner_for_typical <- prods$prodname %in% c('precipitation', 'precip_chemistry') &
+            ! grepl('^ms[8-9][0-9]{2}$', prods$prodcode)
+
         atypicals <- prods %>%
-            filter(! prodname %in% !!typical_derprods,
+            filter(! prodname %in% !!typical_derprods | combiner_for_typical,
                    ! grepl('^CUSTOM', prodname)) %>%
             arrange(prodcode)
 
@@ -3164,6 +3168,7 @@ get_product_info <- function(network,
 
         typicals_sorted <- prods %>%
             filter(prodname %in% !!typical_derprods,
+                   ! combiner_for_typical,
                    ! grepl('^CUSTOM', prodname)) %>%
             arrange(order(match(prodname, !!typical_derprods)))
 
@@ -3428,7 +3433,7 @@ ms_delineate <- function(network,
                          l = level,
                          s = site)
 
-        if(site %in% overwrite_wb_sites) {
+        if(site %in% overwrite_wb_sites){
             message('site in overwrite vector, launching new delineation (you still need to manually remove the old delin specs from gsheet)')
         } else if(dir.exists(site_dir) && length(dir(site_dir))){
             message(glue('{s} already delineated ({d}). it will be re-linked during derive.',
@@ -4669,6 +4674,11 @@ get_derive_ingredient <- function(network,
         #   so higher msXXX ID.
         if(length(prodname_ms) > 1){
 
+            if(all(! is_derived_product(prodname_ms))){
+                stop('pretty sure we need a combining derive kernel for:\n\t',
+                     paste(prodname_ms, collapse = ', '))
+            }
+
             #ignore munge kernels
             prodname_ms <- prodname_ms[grepl(pattern = 'ms[0-9]{3}$',
                                              x = prodname_ms,
@@ -4698,7 +4708,8 @@ get_derive_ingredient <- function(network,
 
 ms_derive <- function(network = domain,
                       domain,
-                      prodname_filter = NULL){
+                      prodname_filter = NULL,
+                      precip_pchem_pflux_skip_existing = FALSE){
 
     #categorize munged products. some are complete after munging, so they
     #   get hardlinked. some need to be compiled into canonical form (e.g.
@@ -4711,6 +4722,13 @@ ms_derive <- function(network = domain,
     if(! exists('held_data')){
         held_data <<- get_data_tracker(network = network,
                                        domain = domain)
+    }
+
+    #used by precip_pchem_pflux_idw
+    if(precip_pchem_pflux_skip_existing){
+        precip_pchem_pflux_skip_existing <<- TRUE
+    } else {
+        precip_pchem_pflux_skip_existing <<- FALSE
     }
 
     prods <- sm(read_csv(glue('src/{n}/{d}/products.csv',
@@ -4785,6 +4803,12 @@ ms_derive <- function(network = domain,
                                     prods$prodcode[i],
                                     sep = '__')
 
+        qq <- prodname_from_prodname_ms(prodname_ms_source)
+        if(nrow(filter(prods, !!is_being_munged, prodname == qq)) > 1){
+            stop("is this a problem? i think we either need a combining derive kernel for ",
+                 qq, ' or there is a derelict "linked" status in products.csv')
+        }
+
         tryCatch({
             create_derived_links(network = network,
                                  domain = domain,
@@ -4850,6 +4874,11 @@ ms_derive <- function(network = domain,
 
         if(prodname_ms_source == 'ws_boundary__ms000'){
             next
+        }
+
+        qq <- prodname_from_prodname_ms(prodname_ms_source)
+        if(nrow(filter(prods, !!is_being_munged, prodname == qq)) > 1){
+            stop("is this a problem? i think we need a combining derive kernel for ", qq)
         }
 
         newcode <- new_prodcodes[i]
@@ -5321,6 +5350,16 @@ ms_calc_watershed_area <- function(network,
 
     ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
 
+    if(! 'area' %in% colnames(wb)){
+        wb$area <- ws_area_ha
+        wb <- relocate(wb, area, .after = 'site_code')
+        sw(sf::st_write(obj = wb,
+                        dsn = wd_path,
+                        driver = 'ESRI Shapefile',
+                        delete_dsn = TRUE,
+                        quiet = TRUE))
+    }
+
     if(update_site_file){
 
         this_site_ix <- site_data$domain == domain &
@@ -5572,8 +5611,6 @@ update_product_statuses <- function(network, domain){
                         prodcode = prodcodes,
                         status = status_names,
                         prodname = prodnames)
-
-    #return()
 }
 
 convert_to_gl <- function(x, input_unit, molecule){
@@ -5904,6 +5941,56 @@ create_derived_links <- function(network, domain, prodname_ms, new_prodcode){
     dir.create(derive_dir,
                showWarnings = FALSE,
                recursive = TRUE)
+
+    mungefiles <- list.files(dirname(munge_dir),
+                             pattern = basename(munge_dir),
+                             full.names = TRUE)
+
+    if(length(mungefiles) > 1){
+        #weird case. just for panola as of 20240608
+
+        if(domain != 'panola'){
+            logwarn('this chunk was built just for panola and should not run for any other <=2024 domains. could easily cause problems for other domains. it should only run in the case where there are multiple versions of a single CUSTOM prodname_ms, e.g. different flux methods',
+                    logger = logger_module)
+        }
+
+        if(all(is.na(str_match(mungefiles, '__[A-Za-z0-9]+_.*$')[, 1]))){
+            stop('for this condition, the prodname_ms should have extra suffixes after the prodcode, e.g. data/webb/panola/derived/CUSTOMstream_flux_inst_scaled__ms008_Flx_ClmMod')
+        }
+
+        dirs_to_build <- convert_munge_path_to_derive_path(
+            paths = mungefiles,
+            munge_prodname_ms = prodname_ms,
+            derive_prodname_ms = new_prodname_ms)
+
+        dirs_to_build <- sub(paste0(new_prodname_ms, '_'),
+                             paste0(new_prodname_ms, '/'),
+                             dirs_to_build)
+
+        for(dr in dirs_to_build){
+            dir.create(dr,
+                       showWarnings = FALSE,
+                       recursive = TRUE)
+        }
+
+        for(i in seq_along(mungefiles)){
+
+            files_to_link_from <- list.files(path = mungefiles[i],
+                                             recursive = TRUE,
+                                             full.names = TRUE)
+
+            files_to_link_to <- file.path(dirs_to_build[i],
+                                          basename(files_to_link_from))
+
+            for(j in seq_along(files_to_link_from)){
+                unlink(files_to_link_to[j])
+                invisible(sw(file.link(to = files_to_link_to[j],
+                                       from = files_to_link_from[j])))
+            }
+        }
+
+        return(invisible())
+    }
 
     dirs_to_build <- list.dirs(munge_dir,
                                recursive = TRUE)
@@ -6541,8 +6628,10 @@ shortcut_idw <- function(encompassing_dem,
 
             #get weighted mean of both approaches:
             #weight on idw is 1; weight on elev-predicted is R^2
-            rsq <- cor(d_elev$d, mod$fitted.values)^2
-            d_idw <- (d_idw + d_from_elev * rsq) / (1 + rsq)
+            rsq <- sw(cor(d_elev$d, mod$fitted.values)^2)
+            if(! is.na(rsq)){
+                d_idw <- (d_idw + d_from_elev * rsq) / (1 + rsq)
+            }
         }
 
         ws_mean[k] <- mean(d_idw, na.rm=TRUE)
@@ -7425,15 +7514,15 @@ synchronize_timestep <- function(d,
         #average values for duplicate timestamps
         if(n_dupes > 0){
 
-            if(! already_warned){
-                logwarn(msg = glue('{n} duplicate datetimes found for site: {s}',
-                                   n = n_dupes,
-                                   s = sitevar_chunk$site_code[1]),
-                                   # v = sitevar_chunk$var[1]),
-                        logger = logger_module)
-            }
+            # if(! already_warned){
+            logwarn(msg = glue('averaging {n} duplicate datetimes found for site: {s}',
+                               n = n_dupes,
+                               s = sitevar_chunk$site_code[1]),
+                               # v = sitevar_chunk$var[1]),
+                    logger = logger_module)
+            # }
 
-            already_warned <- TRUE
+            # already_warned <- TRUE
 
             sitevar_chunk_dt <- sitevar_chunk %>%
                 mutate(val_err = errors(val),
@@ -7856,10 +7945,17 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #    you wouldn't want to interpolate all gauges together. a list of:
     #       'precip': character vector of precip gauge ids
     #       "wb": character vector of site_codes (i.e. names of watershed boundaries)
-    #donor_domain = named character vector of length 1. name is the donor network,
+    #donor_domain: named character vector of length 1. name is the donor network,
     #   and value is the donor domain. this applies when gauges for a different
     #   domain are the source of precip data for the domain being interpolated.
     #   (primary domain is taken from globally defined `network` and `domain`).
+    #precip_pchem_pflux_skip_existing: logical. if TRUE, don't rebuild files that already exist.
+    #   this parameter is controlled by ms_derive
+
+    # if(! length(pchem_prodname)) stop('missing pchem_prodname')
+    # if(! length(precip_prodname)) stop('missing precip_prodname')
+    if(! length(wb_prodname)) stop('missing wb_prodname')
+    if(! length(pgauge_prodname)) stop('missing pgauge_prodname')
 
     source_network <- ifelse(is.null(donor_domain),
                              network,
@@ -7879,6 +7975,17 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     if(! is.null(filter_sites)){
         wb <- filter(wb, site_code %in% filter_sites$wb)
         rg <- filter(rg, site_code %in% filter_sites$precip)
+    }
+
+    if(exists('precip_pchem_pflux_skip_existing') && precip_pchem_pflux_skip_existing){
+        dd_ <- glue('data/{network}/{domain}/derived')
+        dfs_ <- list.files(dd_, full.names = TRUE)
+        if(grepl('precip_chemistry__ms901', dfs_)){
+            fs_ <- list.files(file.path(dd_, 'precip_chemistry__ms901'))
+            fs_ <- str_extract(fs_, '.+(?=\\.feather$)')
+            message('skipping ', paste(fs_, collapse = ', '), ' because precip_pchem_pflux_skip_existing is TRUE')
+            wb <- filter(wb, ! site_code %in% fs_)
+        }
     }
 
     pchem <- try({
@@ -10337,9 +10444,8 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
 
         site_code <- pull(locations[i,], site_code)
 
-        sf::st_write(locations[i,], glue('{p}/{s}',
-                                         p = path,
-                                         s = site_code),
+        sf::st_write(locations[i,],
+                     glue('{path}/{site_code}'),
                      driver = 'ESRI Shapefile',
                      delete_dsn = TRUE,
                      quiet = TRUE)
@@ -10375,9 +10481,8 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
 
         site_code <- pull(locations[i,], site_code)
 
-        sf::st_write(locations[i,], glue('{p}/{s}',
-                                         p = path,
-                                         s = site_code),
+        sf::st_write(locations[i,],
+                     glue('{path}/{site_code}'),
                      driver = 'ESRI Shapefile',
                      delete_dsn = TRUE,
                      quiet = TRUE)
@@ -16417,7 +16522,7 @@ save_general_files <- function(final_file, raw_file, domain_dir){
     }
 }
 
-run_checks <- function(){
+run_prechecks <- function(){
 
     #dump routines here for checking integrity of config files, etc. Basically,
     #this should identify common issues (like duplicated variables in ms_vars)
@@ -16447,6 +16552,20 @@ run_checks <- function(){
     if(any(domain_detection_limits$precision == 0)){
         stop('precisions of 0 detected in domain_detection_limits')
     }
+}
+
+run_postchecks <- function(){
+
+    warning('these checks will probably not work on Windows. MacOS is possible.')
+
+    domains_without_stream_gauge_locs <- system('find data/ -type d -name "derived" -exec sh -c \'find "$1" -maxdepth 1 -type d -name "stream_gauge_locations*" | grep -q . || echo "$1"\' _ {} \\; | cut -d/ -f 3',
+                                                intern = TRUE)
+    if(length(domains_without_stream_gauge_locs)){
+        message('these domains do not have a stream_gauge_locations product in their derive folder:\n\t',
+                paste(domains_without_stream_gauge_locs, collapse = ', '))
+    }
+
+    message('add more of these checks!')
 }
 
 count_sigfigs <- function(x){

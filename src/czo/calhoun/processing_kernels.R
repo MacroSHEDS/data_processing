@@ -325,6 +325,21 @@ process_2_ms001 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms002 <- stream_gauge_from_site_data
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms){
+
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('precipitation__6421',
+                              'precipitation__4680')
+    )
+
+    return()
+}
+
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_precip_pchem_pflux
@@ -332,3 +347,18 @@ process_2_ms005 <- derive_precip_pchem_pflux
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms004 <- derive_stream_flux
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms){
+
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('discharge__6470',
+                              'discharge__4680')
+    )
+
+    return()
+}

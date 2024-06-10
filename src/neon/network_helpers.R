@@ -584,6 +584,8 @@ update_neon_detlims <- function(neon_dls, set){
 
         detlims_update <- bind_rows(domain_detection_limits, detlims_update)
 
+        if(any(detlims_update$precision == 0)) stop('deal with zero-precisions in neon detlims')
+
         #do this once more, for molecular conversions and convenient update
         catch <- standardize_detection_limits(
             dls = detlims_update,

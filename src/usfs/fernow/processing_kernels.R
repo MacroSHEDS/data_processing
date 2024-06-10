@@ -554,4 +554,6 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     }
 }
 
-
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms008 <- stream_gauge_from_site_data

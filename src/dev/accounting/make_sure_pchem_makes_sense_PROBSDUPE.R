@@ -110,3 +110,66 @@ ggplot(pc_pre) +
     labs(title = "", x = "Datetime", y = "Value") +
     scale_x_datetime(limits = as.POSIXct(c('2005-01-01', '2006-01-01'))) +
     theme_minimal()
+
+
+# CATALINA
+p_pre = read_feather('data/czo/catalina_jemez/derived/precipitation__ms003/MCZOB_met.feather')
+pc_pre = read_feather('data/czo/catalina_jemez/derived/precip_chemistry__ms004/MCZOB_met.feather')
+
+p_aft = read_feather('data/czo/catalina_jemez/derived/precipitation__ms900/FLUME_MCZOB.feather')
+pc_aft = read_feather('data/czo/catalina_jemez/derived/precip_chemistry__ms901/FLUME_MCZOB.feather')
+
+fx = read_feather('data/czo/catalina_jemez/derived/precip_flux_inst__ms902/FLUME_MCZOB.feather')
+
+pc_pre <- pc_pre %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+pc_aft <- pc_aft %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+fx <- fx %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+p_pre <- p_pre %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+p_aft <- p_aft %>%
+    group_by(var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = "day")) %>%
+    ungroup()
+
+scale_fac = 0.1
+
+ggplot(pc_pre) +
+    geom_line(aes(x = datetime, y = val), linewidth = 3) +
+    geom_line(data = pc_aft, aes(x = datetime, y = val), color = 'blue', size = 2) +
+    geom_line(data = fx, aes(x = datetime, y = val * scale_fac), color = 'red', size = 1) +
+    geom_line(data = p_pre, aes(x = datetime, y = val), color = 'purple', size = 2) +
+    geom_line(data = p_aft, aes(x = datetime, y = val), color = 'orange', size = 1) +
+    facet_wrap(~var, scales = "free_y") +
+    labs(title = "", x = "Datetime", y = "Value") +
+    # scale_x_datetime(limits = as.POSIXct(c('2005-01-01', '2006-01-01'))) +
+    theme_minimal()
+
+#look for missing pflux
+for(v in unique(pc_pre$var)){
+    zpc = filter(pc_pre, var == !!v, ! is.na(val)) %>% pull(datetime)
+    zp = filter(p_pre, ! is.na(val)) %>% pull(datetime)
+    should_have_fx = as.POSIXct(intersect(zpc, zp), tz = 'UTC', origin = '1970-01-01')
+    zf = filter(fx, var == !!v, ! is.na(val)) %>% pull(datetime)
+    missing = as.POSIXct(setdiff(should_have_fx, zf), tz = 'UTC', origin = '1970-01-01')
+}
+missing[1] %in% zf
+
+#     zpca = filter(pc_aft, var == !!v, ! is.na(val)) %>% pull(datetime)
+#     zpa = filter(p_aft, ! is.na(val)) %>% pull(datetime)
+#     should_have_fxa = as.POSIXct(intersect(zpca, zpa), tz = 'UTC', origin = '1970-01-01')
+#     zf = filter(fx, var == !!v, ! is.na(val)) %>% pull(datetime)
+#     missing2 = as.POSIXct(setdiff(should_have_fxa, zf), tz = 'UTC', origin = '1970-01-01')
+#
+# missing[1] %in% zpca
+# missing[1] %in% zpa

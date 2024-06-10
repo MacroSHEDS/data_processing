@@ -212,3 +212,7 @@ process_2_ms004 <- function(network, domain, prodname_ms) {
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_stream_flux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms007 <- stream_gauge_from_site_data

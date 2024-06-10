@@ -323,19 +323,23 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
+run_prechecks()
+
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'santa_barbara')
+dmnrow <- which(network_domain$domain == 'calhoun')
 
 retain_ms_globals(ms_globals)
-for(dmnrow in 1:nrow(network_domain)){
+#error in: 3, 7, 8, 9 (arctic) didn't run?
+for(dmnrow in 9:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
-    # donez <- c('bear', 'panola', 'niwot', 'boulder', 'bonanza', 'catalina_jemez')
-    # if(domain %in% donez) next
+    # donez <- c('bear', 'panola', 'niwot', 'boulder', 'bonanza', 'catalina_jemez', 'fernow')
+    donez <- c('catalina_jemez')
+    if(domain %in% donez) next
 
     held_data <- get_data_tracker(network, domain)
 
@@ -347,11 +351,11 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
     # owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
-    # owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+    owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -380,8 +384,8 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     # ms_munge(network = network,
+    #          # prodname_filter = c('stream_chemistry'),
     #          domain = domain)
-             # prodname_filter = c('precip_chemistry'))
 
     # if(domain != 'mcmurdo'){
     #
@@ -412,8 +416,9 @@ for(dmnrow in 1:nrow(network_domain)){
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     ms_derive(network = network,
-              prodname_filter = c('ws_boundary'),
-              domain = domain)
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain,
+              precip_pchem_pflux_skip_existing = F)
 
     # ms_general(network = network,
     #            domain = domain,
@@ -433,13 +438,11 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms.module'
 
+run_postchecks()
+
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,
 #                                           backup = TRUE)
-
-# network_domain_backup <- network_domain
-# network_domain <- network_domain %>%
-#   filter(domain %in% c('loch_vale'))
 
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,

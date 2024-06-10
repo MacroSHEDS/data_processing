@@ -10,3 +10,4 @@ ms004,discharge,NA,NA,linked,NA,automated entry,NA
 ms005,stream_chemistry,NA,NA,linked,NA,automated entry,NA
 ms006,ws_boundary,NA,NA,linked,NA,automated entry,NA
 ms900,precipitation,NA,NA,NA,NA,automated entry,NA
+ms007,stream_gauge_locations,,,ready,,,

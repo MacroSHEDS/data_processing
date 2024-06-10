@@ -451,8 +451,8 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
             d <- d[! weird_unit, ]
         }
 
-        update_neon_detlims(rawd$swc_externalLabSummaryData,
-                            set = 'chem')
+        # update_neon_detlims(rawd$swc_externalLabSummaryData,
+        #                     set = 'chem')
 
         #consolidate QA info. can't find definitions for externalLabDataQF, and
         #the values present in that column aren't obviously indicative of ms_status = 1.

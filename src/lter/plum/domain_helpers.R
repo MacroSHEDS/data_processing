@@ -137,7 +137,11 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code, component
                              data_col_pattern = '#V#',
                              is_sensor = TRUE,
                              sampling_type = 'I')
+    }
 
+    if(code == '173'){
+        #2007 mistakenly included in a file for 2008
+        d <- filter(d, year(datetime) != 2007)
     }
 
     d <- ms_cast_and_reflag(d,

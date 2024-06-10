@@ -177,7 +177,7 @@ process_0_4022 <- function(set_details, network, domain){
 
 #stream_gauge_locations; ws_boundary: STATUS=READY
 #. handle_errors
-process_0_3239 <- function(set_details, network, domain) {
+process_0_3239 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),

@@ -691,3 +691,7 @@ process_2_ms002 <- precip_gauge_from_site_data
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms003 <- derive_precip_pchem_pflux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms007 <- stream_gauge_from_site_data

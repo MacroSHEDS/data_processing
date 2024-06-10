@@ -1181,17 +1181,16 @@ process_2_ms001 <- function(network, domain, prodname_ms){
                                            'discharge__228', 'discharge__396',
                                            'discharge__397', 'discharge__398',
                                            'discharge__399', 'discharge__156',
-                                           'discharge__157', 'discharge__158',
-                                           'discharge__173', 'discharge__174',
-                                           'discharge__114'))
+                                           'discharge__157', 'discharge__173',
+                                           'discharge__174', 'discharge__114'))
 
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
-    sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
+    sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[, 1])
 
     d <- tibble()
     for(i in 1:length(sites)){
 
-		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
         d <- rbind(d, site_full)
     }
@@ -1274,7 +1273,7 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     d <- tibble()
     for(i in 1:length(sites)){
 
-		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
         d <- rbind(d, site_full)
     }
@@ -1326,7 +1325,7 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     d <- tibble()
     for(i in 1:length(sites)){
 
-		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
         d <- rbind(d, site_full)
     }

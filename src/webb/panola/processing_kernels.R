@@ -1,7 +1,7 @@
 
 #retrieval kernels ####
 
-#discharge; stream_chemistry; CUSTOMprecipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
+#discharge; stream_chemistry; precipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
@@ -109,12 +109,12 @@ p1v001_stream_chemistry <- function(zipf){
     return(d)
 }
 
-p1v001_CUSTOMprecipitation <- function(zipf){
+p1v001_precipitation <- function(zipf){
 
     d <- read.csv(unz(zipf, '1_PMRW_Precipitation_WY86-18.csv'),
                         header = TRUE, sep = ",") %>%
         as_tibble() %>%
-        mutate(site = 'granite_etc')
+        mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
@@ -124,13 +124,13 @@ p1v001_CUSTOMprecipitation <- function(zipf){
                          data_col_pattern = '#V#',
                          summary_flagcols = "Quality_Cd",
                          is_sensor = TRUE,
-                         keep_empty_rows = FALSE)
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(Quality_Cd = c('1', '2')),
                             summary_flags_dirty = list(Quality_Cd = c('3', '4')),
-                            keep_empty_rows = FALSE)
+                            keep_empty_rows = TRUE)
 
     d$val <- d$val * 10 #cm -> mm
 
@@ -142,7 +142,7 @@ p1v001_precip_chemistry <- function(zipf){
     d <- read.csv(unz(zipf, '2_PMRW_PrecipitationWaterQuality_WY86-17.csv'),
                   header = TRUE, sep = ",") %>%
         as_tibble() %>%
-        mutate(site = 'granite_etc')
+        mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
@@ -309,7 +309,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
     write_feather(d, file.path(writedir, 'mountain_creek_tributary.feather'))
 }
 
-#discharge; stream_chemistry; CUSTOMprecipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
+#discharge; stream_chemistry; precipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
@@ -328,14 +328,15 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         d <- p1v001_discharge(zipf)
     } else if(prodname == 'stream_chemistry'){
         d <- p1v001_stream_chemistry(zipf)
-    } else if(prodname == 'CUSTOMprecipitation'){
-        d <- p1v001_CUSTOMprecipitation(zipf)
+    } else if(prodname == 'precipitation'){
+        d <- p1v001_precipitation(zipf)
     } else if(prodname == 'precip_chemistry'){
         d <- p1v001_precip_chemistry(zipf)
     } else if(prodname == 'CUSTOMprecip_flux_inst_scaled'){
         p1v001_CUSTOMprecip_flux_inst_scaled(zipf)
         return()
     } else if(prodname == 'CUSTOMstream_flux_inst_scaled'){
+        #all different models. 4 different custom stream fluxes
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_RefTot')
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_RefMod')
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_ClmTot')
@@ -345,7 +346,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    if(prodname == 'precip_chemistry'){
+    if(prodname %in% c('precip_chemistry', 'precipitation')){
         d <- synchronize_timestep(d,
                                   admit_NAs = TRUE,
                                   allow_pre_interp = TRUE)
@@ -380,3 +381,11 @@ process_2_ms001 <- derive_stream_flux
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms002 <- stream_gauge_from_site_data
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms003 <- precip_gauge_from_site_data
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_precip_pchem_pflux
