@@ -14,12 +14,12 @@ process_0_1 <- function(set_details, network, domain){
     dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
     if(set_details$data_type_cd == 'dv') {
-        discharge <- dataRetrieval::readNWISdv(set_details$site_no, '00060')
+        d <- dataRetrieval::readNWISdv(set_details$site_no, '00060')
     } else {
-        discharge <- dataRetrieval::readNWISuv(set_details$site_no, '00060')
+        d <- dataRetrieval::readNWISuv(set_details$site_no, '00060')
     }
 
-    write_feather(discharge, glue(raw_data_dest, '/', set_details$component, '.feather'))
+    write_feather(d, glue(raw_data_dest, '/', set_details$component, '.feather'))
 
     return()
 }
@@ -38,12 +38,12 @@ process_0_2 <- function(set_details, network, domain){
   dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
   if(set_details$data_type_cd == 'dv') {
-    discharge <- dataRetrieval::readNWISdv(set_details$site_no, set_details$component)
+    d <- dataRetrieval::readNWISdv(set_details$site_no, set_details$component)
   } else {
-    discharge <- dataRetrieval::readNWISuv(set_details$site_no, set_details$component)
+    d <- dataRetrieval::readNWISuv(set_details$site_no, set_details$component)
   }
 
-  write_feather(discharge, glue(raw_data_dest, '/', set_details$component, '.feather'))
+  write_feather(d, glue(raw_data_dest, '/', set_details$component, '.feather'))
 
   return()
 }
@@ -61,10 +61,10 @@ process_0_3 <- function(set_details, network, domain){
 
   dir.create(raw_data_dest, showWarnings=FALSE, recursive=TRUE)
 
-  wq_raw <- dataRetrieval::readNWISqw(siteNumbers = set_details$site_no,
-                                      parameterCd = set_details$component)
+  d <- dataRetrieval::readNWISqw(siteNumbers = set_details$site_no,
+                                 parameterCd = set_details$component)
 
-  write_feather(wq_raw, glue(raw_data_dest, '/', set_details$component, '.feather'))
+  write_feather(d, glue(raw_data_dest, '/', set_details$component, '.feather'))
 
   return()
 }

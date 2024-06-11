@@ -888,11 +888,11 @@ process_2_ms005 <- derive_stream_flux
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms006 <- function(network, domain, prodname_ms) {
+process_2_ms006 <- function(network, domain, prodname_ms){
 
     #Temporary, arctic only has 1 precip gauge. Eventually will
     #leverage other data to interpolate but for now directly linking gauge to
-    #watersheds (similar to neon)
+    #watersheds
 
     new_dir <- 'data/lter/arctic/derived/precipitation__ms006/'
     dir.create(new_dir, recursive = TRUE)
@@ -911,7 +911,6 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
       write_feather(precip, glue('{n}{s}.feather',
                                  n = new_dir,
                                  s = sites[i]))
-
     }
 
     return()

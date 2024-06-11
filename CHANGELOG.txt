@@ -39,3 +39,5 @@ precip overhaul:
 	not so... consult mstodo for proper language
 
 added missing precip gauge sites at hjandrews, konza, hbef
+
+precipitation spatial interp fix (some 0s were getting replaced with NA before)

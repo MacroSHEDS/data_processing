@@ -1,10 +1,10 @@
 macrosheds_var,usgs_code,sampling,sensor
-discharge,00060,I,S
+discharge,60,I,S
 temp,00010,I,S
 spCond,00095,I,S
 DO,00300,I,S
 pH,00400,I,S
-turbid,63680,I,S
+turbid_FNU,63680,I,S
 UTP,00665,G,N
 Cl,00940,G,N
 NH4_NH3_N,00608,G,N
