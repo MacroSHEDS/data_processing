@@ -196,6 +196,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
+    browser()
     files <- str_split_fixed(component, '__[|]', n = Inf)[1,]
 
     daily_file <- grep('daily', files, value = TRUE)

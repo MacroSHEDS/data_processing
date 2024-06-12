@@ -804,9 +804,12 @@ ms_read_raw_csv <- function(filepath,
                   'preprocessed_tibble is for rare circumstances only.'))
     }
 
-
     if(! datetime_tz %in% OlsonNames()){
         stop('datetime_tz must be included in OlsonNames()')
+    }
+
+    if(is.list(datetime_cols)){
+        stop('datetime_cols must be a named character vector')
     }
 
     if(length(data_cols) == 1 &&
@@ -1414,6 +1417,10 @@ resolve_datetime <- function(d,
     #return value: d, but with a "datetime" column containing POSIXct datetimes
     #   and without the input datetime columns
 
+    if(datetime_tz %in% c('Pacific/Auckland', 'Etc/GMT-12', 'Etc/GMT+12')){
+        stop("dates (not datetimes) might get shifted to the previous day due to timezone and this function's quirks")
+    }
+
     dt_tb <- tibble(basecol = rep(NA, nrow(d)))
     for(i in 1:length(datetime_colnames)){
 
@@ -1434,6 +1441,13 @@ resolve_datetime <- function(d,
 
     dt_tb$basecol = NULL
 
+    tokens_present <- colnames(dt_tb)
+
+    if(! any(c('H', 'I') %in% tokens_present)){
+        dt_tb$H <- '12'
+        datetime_formats <- c(datetime_formats, '%H')
+    }
+
     #fill in defaults if applicable:
     #(12 for hour, 00 for minute and second, PM for AM/PM)
     dt_tb <- dt_tb %>%
@@ -1447,24 +1461,25 @@ resolve_datetime <- function(d,
                                                        '%[a-zA-Z]') %>%
         unlist()
 
-    dt_col_order <- match(paste0('%',
-                                 colnames(dt_tb)),
+    dt_col_order <- match(paste0('%', tokens_present),
                           datetime_formats_split)
 
-    if('H' %in% colnames(dt_tb)){
-        dt_tb$H[dt_tb$H == ''] <- '00'
+    #defaults part 2
+    if('H' %in% tokens_present){
+        dt_tb$H[dt_tb$H == ''] <- '12'
     }
-    if('M' %in% colnames(dt_tb)){
+    if('M' %in% tokens_present){
         dt_tb$M[dt_tb$M == ''] <- '00'
     }
-    if('S' %in% colnames(dt_tb)){
+    if('S' %in% tokens_present){
         dt_tb$S[dt_tb$S == ''] <- '00'
     }
-    if('I' %in% colnames(dt_tb)){
-        dt_tb$I[dt_tb$I == ''] <- '00'
+    if('I' %in% tokens_present){
+        stop('if "p" is specified as AM but "I" is not specified, this could cause date shifts during time zone conversion.')
+        dt_tb$I[dt_tb$I == ''] <- '12'
     }
-    if('P' %in% colnames(dt_tb)){
-        dt_tb$P[dt_tb$P == ''] <- 'AM'
+    if('p' %in% tokens_present){
+        dt_tb$P[dt_tb$P == ''] <- 'PM'
     }
 
     #parse into datetimes
@@ -1475,13 +1490,15 @@ resolve_datetime <- function(d,
                          everything(),
                          sep = ' ',
                          remove = TRUE) %>%
-            mutate(datetime___ = as_datetime(
-                datetime___,
-                format = paste(datetime_formats_split[dt_col_order],
-                               collapse = ' '),
-                tz = datetime_tz
-            ) %>%
-                with_tz(tz = 'UTC'))
+            mutate(
+                datetime___ = as_datetime(
+                    datetime___,
+                    format = paste(datetime_formats_split[dt_col_order],
+                                   collapse = ' '),
+                    tz = datetime_tz
+                ),
+                datetime___ = with_tz(datetime___, tz = 'UTC')
+            )
     }
 
     dt_tb_ <- sw(handler(dt_tb))
@@ -1526,30 +1543,30 @@ dt_format_to_regex <- function(fmt, optional){
     #   whereas the regex engine would otherwise expect two ":"s, find
     #   only one, and return NA.
 
-    dt_format_regex <- list(Y = '([0-9]{4})?',
-                            y = '([0-9]{2})?',
-                            B = '([a-zA-Z]+)?',
-                            b = '([a-zA-Z]+)?',
-                            h = '([a-zA-Z]+)?',
-                            m = '([0-9]{1,2})?',
-                            e = '([0-9]{1,2})?',
-                            d = '([0-9]{1,2})?',
-                            j = '([0-9]{3})?',
-                            A = '([a-zA-Z]+)?',
-                            a = '([a-zA-Z]+)?',
-                            u = '([0-9]{1})?',
-                            w = '([0-9]{1})?',
-                            U = '([0-9]{2})?',
-                            W = '([0-9]{2})?',
-                            V = '([0-9]{2})?',
-                            C = '([0-9]{2})?',
-                            H = '([0-9]{1,2})?',
-                            I = '([0-9]{1,2})?',
-                            M = '([0-9]{1,2})?',
-                            S = '([0-9]{1,2})?',
-                            p = '([AP]M)?',
-                            z = '([+\\-][0-9]{4})?',
-                            `F` = '([0-9]{4}-[0-9]{2}-[0-9]{2})')
+    dt_format_regex <- list(Y = '([0-9]{4})?',    #year
+                            y = '([0-9]{2})?',    #year
+                            B = '([a-zA-Z]+)?',   #month
+                            b = '([a-zA-Z]+)?',   #month
+                            h = '([a-zA-Z]+)?',   #month
+                            m = '([0-9]{1,2})?',  #month
+                            e = '([0-9]{1,2})?',  #day
+                            d = '([0-9]{1,2})?',  #day
+                            j = '([0-9]{3})?',    #day
+                            A = '([a-zA-Z]+)?',   #day
+                            a = '([a-zA-Z]+)?',   #day
+                            u = '([0-9]{1})?',    #day
+                            w = '([0-9]{1})?',    #day
+                            U = '([0-9]{2})?',    #week
+                            W = '([0-9]{2})?',    #week
+                            V = '([0-9]{2})?',    #week
+                            C = '([0-9]{2})?',    #century
+                            H = '([0-9]{1,2})?',  #hour
+                            I = '([0-9]{1,2})?',  #hour
+                            M = '([0-9]{1,2})?',  #minute
+                            S = '([0-9]{1,2})?',  #second
+                            p = '([AP]M)?',       #AM/PM
+                            # z = '([+\\-][0-9]{4})?', #signed hour
+                            `F` = '([0-9]{4}-[0-9]{2}-[0-9]{2})') #YMD
 
     for(i in 1:length(fmt)){
         fmt_components <- str_match_all(string = fmt[i],
@@ -1561,6 +1578,9 @@ dt_format_to_regex <- function(fmt, optional){
         }
         if(any(fmt_components %in% c('r', 'R', 'T'))){
             stop('Tokens r, R, and T are not accepted. Use a different specification.')
+        }
+        if(any(fmt_components %in% c('z'))){
+            stop('"z" probably should be accepted, but we would need to accommodate it when assigning hour defaults in resolve_datetime')
         }
 
         for(j in 1:length(fmt_components)){
