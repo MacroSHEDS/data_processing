@@ -109,7 +109,7 @@ for(i in 1:nrow(unprod)){
 
     sf::sf_use_s2(TRUE)
 
-    prodname_ms <- glue(unprod$prodname[i], '__', unprod$prodcode[i])
+    prodname_ms <<- glue(unprod$prodname[i], '__', unprod$prodcode[i])
 
     held_data <- get_data_tracker(network = network,
                                   domain = domain)
@@ -154,6 +154,8 @@ for(i in 1:nrow(unprod)){
             if(is.na(last_retrieve)) stop('oi')
             already_have_dates <- difftime(Sys.time(), last_retrieve,  units = 'days') < 120
             general_status <- ifelse(already_have_dir && already_have_dates, 'ok', 'pending')
+        } else {
+            general_status <- 'pending'
         }
 
     } else {

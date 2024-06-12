@@ -1140,7 +1140,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = mungedir)
 
-    sf::st_read(dsn = file.path(mungedir, 'cart_creek')) %>%
+    sf::st_read(dsn = file.path(mungedir, 'cart_creek'),
+                quiet = TRUE) %>%
         sf::st_transform(4326) %>%
         rename(site_code = site_name) %>%
         sf::st_write(dsn = file.path(mungedir, 'cart_creek'),

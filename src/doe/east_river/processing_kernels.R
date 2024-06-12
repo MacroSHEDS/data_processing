@@ -1197,7 +1197,7 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
           exdir = temp_dir)
 
     path <- paste(temp_dir, 'data', sep = '/')
-    sheds <- sf::st_read(path)
+    sheds <- sf::st_read(path, quiet = TRUE)
     projstring <- choose_projection(unprojected = TRUE)
 
     sitecodes <- names(east_river_site_name_map)

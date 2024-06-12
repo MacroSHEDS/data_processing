@@ -3326,7 +3326,8 @@ ms_general <- function(network = domain,
 
     source(glue('src/global/general.R',
                 n = network,
-                d = domain))
+                d = domain),
+           local = TRUE)
 }
 
 ms_delineate <- function(network,
@@ -9574,17 +9575,49 @@ get_gee_standard <- function(network,
                     ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
                 }
             }
-        } else{
+        } else {
             ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
         }
 
         if(qaqc){
             imgcol <- ee$ImageCollection(gee_id)$map(clean_gee_img)$select(band)
-        }else{
+        } else {
             imgcol <- ee$ImageCollection(gee_id)$select(band)
         }
 
         if(exists('gee_bounding_dates', where = .GlobalEnv)){
+
+            avail_dates <- try(imgcol$aggregate_array('system:index')$getInfo(),
+                               silent = TRUE)
+            if(inherits(avail_dates, 'try-error')) browser()
+
+            already_got <- FALSE
+            if(grepl('^[0-9]{4}$', avail_dates[1])){
+                already_got <- as.numeric(avail_dates[length(avail_dates)]) <=
+                    year(gee_bounding_dates[1])
+            } else if(grepl('^[0-9]{4}_[0-9]{2}$', avail_dates[1])){
+                already_got <- ym(avail_dates[length(avail_dates)]) <=
+                    gee_bounding_dates[1]
+            } else if(grepl('^[0-9]{4}[_\\-][0-9]{2}[_\\-][0-9]{2}$', avail_dates[1])){
+                already_got <- ymd(avail_dates[length(avail_dates)]) <=
+                    gee_bounding_dates[1]
+            } else if(grepl('^[12][089][0-9]{6}$', avail_dates[1])){
+                already_got <- ymd(avail_dates[length(avail_dates)]) <=
+                    gee_bounding_dates[1]
+            } else if(grepl('^[12][089][0-9]{5}$', avail_dates[1])){
+                already_got <- as.numeric(substr(avail_dates[length(avail_dates)],
+                                                 1, 4)) <=
+                    year(gee_bounding_dates[1])
+            } else {
+                browser()
+            }
+
+            if(already_got){
+                loginfo(paste('Most recent release of', gee_id, 'already acquired'),
+                        logger = logger_module)
+                return()
+            }
+
             imgcol <- imgcol$filterDate(gee_bounding_dates[1],
                                         gee_bounding_dates[2])
         }
@@ -18310,6 +18343,10 @@ combine_precip_sources <- function(na_dates, site){
 bind_older_ws_traits <- function(d){
 
     #locate existing ws_traits files and combine them with newly retrieved gee data
+
+    if(! exists('trait_dir')){
+        return(d)
+    }
 
     if(setequal(c('datetime', 'site_code', 'var', 'val'), colnames(d))){
         datecol <- 'datetime'

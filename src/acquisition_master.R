@@ -326,19 +326,17 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'hbef')
+dmnrow <- which(network_domain$domain == 'boulder')
 
 retain_ms_globals(ms_globals)
-for(dmnrow in 13:nrow(network_domain)){
+#start at 13 when resume precip_pchem_pflux? unless ldas func needs work, which it prob does.
+for(dmnrow in :nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
-    # donez <- c('bear', 'panola', 'niwot', 'boulder', 'bonanza', 'catalina_jemez', 'fernow')
-    donez <- c('catalina_jemez')
-    if(domain %in% donez) next
 
     held_data <- get_data_tracker(network, domain)
 
@@ -396,41 +394,19 @@ for(dmnrow in 13:nrow(network_domain)){
     #                    verbose = TRUE))
     # }
 
-    ###########################################################################
+    # ms_derive(network = network,
+    #           # prodname_filter = c('precip_pchem_pflux'),
+    #           domain = domain,
+    #           precip_pchem_pflux_skip_existing = F)
 
-    # #other
-    # load_config_datasets(from_where = 'remote')
-    # #setup
-    # dmnrow = 18
-    # network <- network_domain$network[dmnrow]
-    # domain <- network_domain$domain[dmnrow]
-    # held_data <- get_data_tracker(network, domain)
-    # logger_module <- set_up_logger(network = network, domain = domain)
-    # update_product_statuses(network = network, domain = domain)
-    #
-    # #helpers
-    # source('src/global/global_helpers.R')
-    # get_all_local_helpers(network = network, domain = domain)
-
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
-              domain = domain,
-              precip_pchem_pflux_skip_existing = F)
-
-    # ms_general(network = network,
-    #            domain = domain,
-    #            get_missing_only = TRUE)
-               # general_prod_filter = 'prism_precip')
-
-    #owrite
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precipitation')
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'precip_chemistry')
-    # held_data = invalidate_tracked_data(network, domain, 'munge')
-    # owrite_tracker(network, domain)
-    ###########################################################################
+    # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+    source('src/global/global_helpers.R')
+    get_all_local_helpers(network = network,
+                          domain = domain)
+    ms_general(network = network,
+               domain = domain,
+               get_missing_only = TRUE)
+               # general_prod_filter = 'nlcd')
 
     retain_ms_globals(ms_globals)
 }

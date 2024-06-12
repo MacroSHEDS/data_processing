@@ -589,7 +589,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
 
-    ws1 <- st_read(temp_dir) %>%
+    ws1 <- st_read(temp_dir,
+                   quiet = TRUE) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_transform(proj)
@@ -607,7 +608,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
 
-    ws2 <- st_read(temp_dir) %>%
+    ws2 <- st_read(temp_dir,
+                   quiet = TRUE) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
@@ -630,7 +632,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
 
-    ws3 <- st_read(temp_dir) %>%
+    ws3 <- st_read(temp_dir,
+                   quiet = TRUE) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
@@ -649,7 +652,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                       name == 'WS80' ~ 'WS79',
                       TRUE ~ name)
 
-    ws4 <- st_read(temp_dir) %>%
+    ws4 <- st_read(temp_dir,
+                   quiet = TRUE) %>%
         mutate(site_code = !!name) %>%
         select(site_code) %>%
         sf::st_cast(., to = 'POLYGON') %>%
