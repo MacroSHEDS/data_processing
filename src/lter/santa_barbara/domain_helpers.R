@@ -41,7 +41,7 @@ munge_santa_barbara_precip <- function(network, domain, prodname_ms, site_code, 
         rename_with(~sub('timestamp_UTC', 'timestamp_utc', .))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
+                         datetime_cols = c('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                          datetime_tz = 'UTC',
                          site_code_col = 'site_code',
                          alt_site_code = list(BuelltonFS233 = 'BuelltonFireStation233'),
@@ -76,7 +76,7 @@ munge_santa_barbara_discharge <- function(network, domain, prodname_ms, site_cod
         mutate(timestamp_utc = stringr::str_trim(timestamp_utc))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('timestamp_utc' = '%Y-%m-%dT%H:%M'),
+                         datetime_cols = c('timestamp_utc' = '%Y-%m-%dT%H:%M'),
                          datetime_tz = 'UTC',
                          site_code_col = 'site_code',
                          data_cols =  c('discharge_lps' = 'discharge'),

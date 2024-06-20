@@ -48,8 +48,8 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code, com
                                      TRUE ~ .)))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('datetime' = '%Y-%m-%d %H:%M'),
-                             # datetime_cols = list('date' = '%d-%m-%Y',
+                             datetime_cols = c('datetime' = '%Y-%m-%d %H:%M'),
+                             # datetime_cols = c('date' = '%d-%m-%Y',
                              #                      'time' = '%H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
                              site_code_col = 'strmgageid',
@@ -85,7 +85,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code, com
                                      TRUE ~ .)))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('datetime' = '%Y-%m-%d %H:%M'),
+                             datetime_cols = c('datetime' = '%Y-%m-%d %H:%M'),
                              datetime_tz = 'Antarctica/McMurdo',
                              site_code_col = 'strmgageid',
                              data_cols =  setNames(c('temp', 'spCond'),

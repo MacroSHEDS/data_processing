@@ -46,7 +46,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code, compone
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -75,7 +75,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code, compone
         }
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -117,7 +117,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code, component
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -129,7 +129,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code, component
     } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -173,7 +173,7 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code, compon
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DATE' = '%Y-%m-%d',
+                         datetime_cols = c('DATE' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',
@@ -215,7 +215,7 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code, c
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',
@@ -257,7 +257,7 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_code, componen
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',
@@ -304,7 +304,7 @@ munge_precip <- function(network, domain, prodname_ms, site_code, component){
                Time = paste(hour, minute, sep = ':'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%d-%b-%Y',
+                         datetime_cols = c('Date' = '%d-%b-%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',
@@ -338,7 +338,7 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_code, component)
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',

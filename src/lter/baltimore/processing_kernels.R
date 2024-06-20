@@ -74,7 +74,7 @@ process_1_700 <- function(network, domain, prodname_ms, site_code, component){
 
     #2024: no location info available for missing sites: CBLM, GFuGR, GRGF, GRuTW
     d <- ms_read_raw_csv(preprocessed_tibble = d_,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Site',
@@ -122,7 +122,7 @@ process_1_900 <- function(network, domain, prodname_ms, site_code, component){
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Site',
@@ -153,7 +153,7 @@ process_1_800 <- function(network, domain, prodname_ms, site_code, component){
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
@@ -189,7 +189,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
+                         datetime_cols = c('Date_Time_EST' = '%Y-%m-%d %H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Rain_Gauge_ID',
                          data_cols = c('Precipitation_mm'='precipitation'),

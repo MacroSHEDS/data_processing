@@ -42,7 +42,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     hq_hist_path <- grep('hq_hist.csv', fils, value = T)
 
     hq_hist_d <- ms_read_raw_csv(filepath = hq_hist_path,
-                                 datetime_cols = list('Date_instant' = '%Y-%m-%d'),
+                                 datetime_cols = c('Date_instant' = '%Y-%m-%d'),
                                  datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'Instr_ID',
                                  data_cols =  c(Rainfall_m = 'precipitation'),
@@ -59,7 +59,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     # hq_modern_path <- grep('hq_daily', fils, value = T)
     #
     # hq_modern_path <- ms_read_raw_csv(filepath = hq_modern_path,
-    #                              datetime_cols = list('Date' = '%Y-%m-%d'),
+    #                              datetime_cols = c('Date' = '%Y-%m-%d'),
     #                              datetime_tz = 'Etc/GMT-5',
     #                              site_code_col = 'Instr_ID',
     #                              data_cols =  c(Rainfall_m = 'precipitation'),
@@ -75,7 +75,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site_code = 'SEFHQ_pluvio')
 
     pluvio_d <- ms_read_raw_csv(preprocessed_tibble = pluvio_d,
-                                datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
+                                datetime_cols = c('Date_time_' = '%m/%e/%Y %H:%M'),
                                 datetime_tz = 'Etc/GMT-5',
                                 site_code_col = 'site_code',
                                 data_cols =  c(Rainfall_m = 'precipitation'),
@@ -92,7 +92,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     lotti_highrez_path <- grep('lotti_highrez', fils, value = T)
 
     lotti_highrez_d <- ms_read_raw_csv(filepath = lotti_highrez_path,
-                                datetime_cols = list('Date_time_temp' = '%m/%e/%Y %H:%M'),
+                                datetime_cols = c('Date_time_temp' = '%m/%e/%Y %H:%M'),
                                 datetime_tz = 'Etc/GMT-5',
                                 site_code_col = 'Instr_ID',
                                 data_cols =  c(Rainfall_m = 'precipitation'),
@@ -110,7 +110,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     lotti_hist_path <- grep('lotti_hist', fils, value = T)
 
     lotti_hist_d <- ms_read_raw_csv(filepath = lotti_hist_path,
-                                       datetime_cols = list('Date_temp' = '%Y-%m-%d'),
+                                       datetime_cols = c('Date_temp' = '%Y-%m-%d'),
                                        datetime_tz = 'Etc/GMT-5',
                                        site_code_col = 'Instr_ID',
                                        data_cols =  c(Rainfall_m = 'precipitation'),
@@ -128,7 +128,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     met25_highrez_path <- grep('met25_highrez', fils, value = T)
 
     met25_highrez_d <- ms_read_raw_csv(filepath = met25_highrez_path,
-                                    datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
+                                    datetime_cols = c('Date_time_rain' = '%m/%e/%Y %H:%M'),
                                     datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
@@ -146,7 +146,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     met25_hist_path <- grep('met25_hist', fils, value = T)
 
     met25_hist_d <- ms_read_raw_csv(filepath = met25_hist_path,
-                                    datetime_cols = list('Date_temp' = '%Y-%m-%d'),
+                                    datetime_cols = c('Date_temp' = '%Y-%m-%d'),
                                     datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
@@ -165,7 +165,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     look <- read.csv(met5_highrez_path, colClasses = 'character')
 
     met5_highrez_d <- ms_read_raw_csv(filepath = met5_highrez_path,
-                                      datetime_cols = list('Date_time_rain' = '%m/%e/%Y %H:%M'),
+                                      datetime_cols = c('Date_time_rain' = '%m/%e/%Y %H:%M'),
                                       datetime_tz = 'Etc/GMT-5',
                                       site_code_col = 'Instr_ID',
                                       data_cols =  c(Rainfall_m = 'precipitation'),
@@ -182,7 +182,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     met5_hist_path <- grep('met5_hist', fils, value = T)
 
     met5_hist_d <- ms_read_raw_csv(filepath = met5_hist_path,
-                                    datetime_cols = list('Date_temp' = '%Y-%m-%d'),
+                                    datetime_cols = c('Date_temp' = '%Y-%m-%d'),
                                     datetime_tz = 'Etc/GMT-5',
                                     site_code_col = 'Instr_ID',
                                     data_cols =  c(Rainfall_m = 'precipitation'),
@@ -200,7 +200,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     turkey_highrez_path <- grep('turkey_highrez', fils, value = T)
 
     turkey_highrez_d <- ms_read_raw_csv(filepath = turkey_highrez_path,
-                                        datetime_cols = list('Date_time_' = '%m/%e/%Y %H:%M'),
+                                        datetime_cols = c('Date_time_' = '%m/%e/%Y %H:%M'),
                                         datetime_tz = 'Etc/GMT-5',
                                         site_code_col = 'Instr_ID',
                                         alt_site_code = list('TC_Met' = 'TC Met'),
@@ -266,7 +266,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     all_historical <- tibble()
     for(s in 1:length(hist_paths)){
         d_hist <- ms_read_raw_csv(filepath = hist_paths[s],
-                                  datetime_cols = list('Date_' = '%Y-%m-%d'),
+                                  datetime_cols = c('Date_' = '%Y-%m-%d'),
                                   datetime_tz = 'Etc/GMT-5',
                                   site_code_col = 'Location',
                                   data_cols =  c(Dailyflow_ = 'discharge'),
@@ -292,7 +292,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                 mutate(time = str_split_fixed(Data_time, ' ', n = Inf)[,2])
 
             d_modern <- ms_read_raw_csv(preprocessed_tibble = d_modern,
-                                        datetime_cols = list('Date_' = '%Y-%m-%d',
+                                        datetime_cols = c('Date_' = '%Y-%m-%d',
                                                              'time' = '%H:%M'),
                                         datetime_tz = 'Etc/GMT-5',
                                         site_code_col = 'Location',
@@ -302,7 +302,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                         is_sensor = TRUE)
         } else{
             d_modern <- ms_read_raw_csv(filepath = modern_paths[s],
-                                        datetime_cols = list('Data_time' = '%m/%e/%Y %H:%M'),
+                                        datetime_cols = c('Data_time' = '%m/%e/%Y %H:%M'),
                                         datetime_tz = 'Etc/GMT-5',
                                         site_code_col = 'Location',
                                         data_cols =  c(Flow_liter = 'discharge'),

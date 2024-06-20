@@ -146,7 +146,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_q,
-                         datetime_cols = list('datetime1' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = c('datetime1' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site_code',
                          data_cols =  c('val' = 'discharge'),
@@ -215,7 +215,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                 values_from = 'val')
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_chem,
-                         datetime_cols = list('date' = 'X%m.%d.%Y'),
+                         datetime_cols = c('date' = 'X%m.%d.%Y'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'Flume',
                          data_cols =  c('Field Water Temperature' = 'temp',

@@ -146,7 +146,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'SH_weir')
 
         shs1 <- ms_read_raw_csv(preprocessed_tibble = shs1,
-                                datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'America/New_York',
                                 site_code_col = 'site',
                                 data_cols =  c('Discharge' = 'discharge'),
@@ -176,7 +176,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'SH_weir')
 
         shs2 <- ms_read_raw_csv(preprocessed_tibble = shs2,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -201,7 +201,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'SCAL')
 
         sc_ablake <- ms_read_raw_csv(preprocessed_tibble = sc_ablake,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -222,7 +222,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'SCO')
 
         sc_outlet <- ms_read_raw_csv(preprocessed_tibble = sc_outlet,
-                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                      datetime_tz = 'UTC',
                                      site_code_col = 'site',
                                      data_cols =  c('dischg_m3s' = 'discharge'),
@@ -243,7 +243,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'GRO')
 
         gr <- ms_read_raw_csv(preprocessed_tibble = gr,
-                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                      datetime_tz = 'UTC',
                                      site_code_col = 'site',
                                      data_cols =  c('dischg_m3s' = 'discharge'),
@@ -264,7 +264,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
             mutate(site = 'SCCF')
 
         sccf <- ms_read_raw_csv(preprocessed_tibble = sccf,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -326,7 +326,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
         mutate(site = 'NRT')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/New_York',
                          site_code_col = 'site',
                          data_cols =  c('Total_Precip_mm' = 'precipitation'),
@@ -358,7 +358,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
     }
 
     d2 <- ms_read_raw_csv(preprocessed_tibble = d2,
-                          datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                          datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                           datetime_tz = 'America/New_York',
                           site_code_col = 'site',
                           data_cols =  c('mm' = 'precipitation'),
@@ -415,7 +415,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     h6 <- readxl::read_xlsx(h6_f)
 
     h6 <- ms_read_raw_csv(preprocessed_tibble = h6,
-                          datetime_cols = list('Date' = '%Y-%m-%d'),
+                          datetime_cols = c('Date' = '%Y-%m-%d'),
                           datetime_tz = 'America/New_York',
                           site_code_col = 'Site',
                           alt_site_code = list('SH_weir' = c('SSHCZO-WIER', 'SH-WEIR'),
@@ -517,7 +517,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         mutate(name = str_split_fixed(id, '_', n= Inf)[, 1])
 
     d_2014 <- ms_read_raw_csv(preprocessed_tibble = doi_com,
-                              datetime_cols = list('date' = '%Y-%m-%d'),
+                              datetime_cols = c('date' = '%Y-%m-%d'),
                               datetime_tz = 'America/New_York',
                               site_code_col = 'name',
                               alt_site_code = list('SH_weir' = c('SH')),
@@ -601,7 +601,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
             mutate(Sample_Date = as_date(as.numeric(Sample_Date), origin = '1900-01-01'))
 
         sw_data <- ms_read_raw_csv(preprocessed_tibble = sw_data,
-                                   datetime_cols = list('Sample_Date' = '%Y-%m-%d'),
+                                   datetime_cols = c('Sample_Date' = '%Y-%m-%d'),
                                    datetime_tz = 'America/New_York',
                                    site_code_col = 'Sample Name',
                                    #combining SW and SW_ISCO results in 151 replications that get averaged.

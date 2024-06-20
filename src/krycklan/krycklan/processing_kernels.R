@@ -51,7 +51,7 @@ process_1_p01 <- function(network, domain, prodname_ms, site_code, components){
             mutate(sitecode = paste0('Site', sitenum))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('TIMESTAMP' = '%Y-%m-%d'),
+                             datetime_cols = c('TIMESTAMP' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT+1',
                              site_code_col = 'sitecode',
                              data_cols =  c('Q' = 'discharge'),
@@ -87,7 +87,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     colnames(d) <- str_remove_all(colnames(d), 'Â')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
+                         datetime_cols = c('Date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT+1',
                          site_code_col = 'SiteID',
                          alt_site_code = list('Svartberget' = '1'),
@@ -409,7 +409,7 @@ process_1_p03 <- function(network, domain, prodname_ms, site_code, components){
 
         d <- ms_read_raw_csv(
             preprocessed_tibble = d,
-            datetime_cols = list('TIMESTAMP' = '%Y-%m-%d %H:%M'),
+            datetime_cols = c('TIMESTAMP' = '%Y-%m-%d %H:%M'),
             datetime_tz = 'Etc/GMT+1',
             site_code_col = 'sitecode',
             data_cols =  c('pH', SCOND = 'spCond', 'DOC', TOT.N = 'TN',
@@ -495,7 +495,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
         rename(temp_c = 3)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
+                         datetime_cols = c('Date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT+1',
                          site_code_col = 'SiteID',
                          alt_site_code = list('Site1' = '1',
@@ -722,7 +722,7 @@ process_1_p06 <- function(network, domain, prodname_ms, site_code, components){
                            '%Y-%m-%d %H:%M')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('TIMESTAMP' = time_fmt),
+                             datetime_cols = c('TIMESTAMP' = time_fmt),
                              datetime_tz = 'Etc/GMT+1',
                              site_code_col = 'sitecode',
                              data_cols =  c('P' = 'precipitation'),

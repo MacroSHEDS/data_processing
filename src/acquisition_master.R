@@ -326,17 +326,33 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'boulder')
+dmnrow <- which(network_domain$domain == 'arctic')
 
 retain_ms_globals(ms_globals)
-#start at 13 when resume precip_pchem_pflux? unless ldas func needs work, which it prob does.
-for(dmnrow in :nrow(network_domain)){
+#general problems: krycklan (8). why is it going by site-year? skipped neon, mcmurdo
+    # is it okay to retrieve neon in bulk mode?
+    #error in arctic
+    #bonanza failed for several reasons
+#munge:
+    #skipped neon
+2024-06-11 23:27:52.616877 INFO:ms.krycklan.krycklan.module:Working on product: season_length__ms810, site: all_sites
+2024-06-11 23:27:53.017231 INFO:ms.krycklan.krycklan.module:No data was retrived for Site13, 2003
+2024-06-11 23:27:53.405717 INFO:ms.krycklan.krycklan.module:No data was retrived for Site13, 2004
+source('src/global/global_helpers.R')
+
+for(dmnrow in 16:nrow(network_domain)){
+# for(dmnrow in c(17,18,19,20,22,23,24,25,26,27,28,29)){
+# for(dmnrow in c(19,20,22,23,24,25,26,27,28,29)){
+#     #19, 20 are done
+#     #all nsidc for the numbers below are done
+# for(dmnrow in c(23,24,25,26,27,28,29)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
+    # if(domain %in% c('neon', 'mcmurdo')) next
 
     held_data <- get_data_tracker(network, domain)
 
@@ -394,19 +410,19 @@ for(dmnrow in :nrow(network_domain)){
     #                    verbose = TRUE))
     # }
 
-    # ms_derive(network = network,
-    #           # prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain,
-    #           precip_pchem_pflux_skip_existing = F)
+    ms_derive(network = network,
+              # prodname_filter = c('precip_pchem_pflux'),
+              domain = domain,
+              precip_pchem_pflux_skip_existing = F)
 
     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    source('src/global/global_helpers.R')
-    get_all_local_helpers(network = network,
-                          domain = domain)
+    # source('src/global/global_helpers.R')
+    # get_all_local_helpers(network = network,
+    #                       domain = domain)
     ms_general(network = network,
                domain = domain,
                get_missing_only = TRUE)
-               # general_prod_filter = 'nlcd')
+    # general_prod_filter = 'nlcd')
 
     retain_ms_globals(ms_globals)
 }

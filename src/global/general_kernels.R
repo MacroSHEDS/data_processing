@@ -735,7 +735,8 @@ process_3_ms812 <- function(network, domain, prodname_ms, site_code,
 #nlcd: STATUS=READY
 #. handle_errors
 process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries){
-    nlcd_dir <- glue('data/{n}/{d}/ws_traits/nlcd/',
+
+    nlcd_dir <- glue('data/{n}/{d}/ws_traits/nlcd',
                      n = network,
                      d = domain)
 
@@ -795,9 +796,9 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         is_hi <- length(sm(sf::st_intersects(hi_bb, site_boundary))[[1]]) == 1
         is_usa <- length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 1
 
-        if(is_ak){ nlcd_epochs = c('2001_AK', '2011_AK', '2016_AK') }
-        if(is_pr){ nlcd_epochs = '2001_PR' }
-        if(is_hi){ nlcd_epochs = '2001_HI' }
+        if(is_ak) nlcd_epochs <- c('2001_AK', '2011_AK', '2016_AK')
+        if(is_pr) nlcd_epochs <- '2001_PR'
+        if(is_hi) nlcd_epochs <- '2001_HI'
         if(is_usa){
             #pre-2016 epochs are all included in the 2016 release
             nlcd_epochs <- as.character(c(1992, 2001, 2004, 2006, 2008, 2011, 2013, 2016))
@@ -825,11 +826,15 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
 
                 #sort out which releases are needed
                 yrs <- as.numeric(str_extract(avail_releases, '/([0-9]{4})_REL$', group = 1))
-                if(any(yrs > 2021)) stop('need to assimilate new release manually at least once more')
+                if(any(yrs > 2021)) stop('need to assimilate new release manually at least once more. see next comment')
                 avail_releases <- avail_releases[yrs > most_recent_held]
                 new_yrs <- as.numeric(str_extract(avail_releases, '/([0-9]{4})_REL$', group = 1))
-                nlcd_epochs <- nlcd_epochs[as.numeric(nlcd_epochs) > most_recent_held]
-                nlcd_epochs <- c(nlcd_epochs, as.character(new_yrs))
+                if(grepl('_[A-Z]{2}$', nlcd_epochs[1])){
+                    #the next release will probably have AK, PR, HI extensions. maybe parse those here
+                } else {
+                    nlcd_epochs <- nlcd_epochs[as.numeric(nlcd_epochs) > most_recent_held]
+                    nlcd_epochs <- c(nlcd_epochs, as.character(new_yrs))
+                }
 
                 if(! length(avail_releases)){
                     loginfo('nothing to do', logger = logger_module)
@@ -838,8 +843,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
             }
         }
 
-        if(!is_ak && !is_pr && !is_hi && !is_usa){
-
+        if(! is_ak && ! is_pr && ! is_hi && ! is_usa){
             return(generate_ms_exception(glue('Not within the USA, so no NLCD for {s}',
                                               s = site_code)))
         }
@@ -865,7 +869,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
 
         for(e in nlcd_epochs){
 
-            imgcol <- ifelse(as.numeric(e) <= 2016,
+            imgcol <- ifelse(as.numeric(str_extract(e, '[0-9]+')) <= 2016,
                              'USGS/NLCD_RELEASES/2016_REL',
                              glue('USGS/NLCD_RELEASES/{e}_REL/NLCD'))
             #small possibility that this form will be required one day:

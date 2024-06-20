@@ -391,7 +391,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
         )
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
                              data_cols =  c(alkMgPerL = 'alk',
@@ -495,7 +495,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                         values_from = c('val', 'flag'))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
                              data_cols =  c(
@@ -601,7 +601,7 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
     rawd <- neon_average_start_end_times(rawd)
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c(datetime = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(surfWaterNitrateMean = 'NO3'),
@@ -656,7 +656,7 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
     rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'PARMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(date = '%Y-%m-%d'),
+                         datetime_cols = c(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(PARMean = 'PAR'),
@@ -705,7 +705,7 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'surfWaterTempMean')
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(date = '%Y-%m-%d'),
+                         datetime_cols = c(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(surfWaterTempMean = 'temp'),
@@ -855,7 +855,7 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c('CO2', 'N2O', 'CH4'),
@@ -955,7 +955,7 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
     )
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list(date = '%Y-%m-%d'),
+                         datetime_cols = c(date = '%Y-%m-%d'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(specificCond = 'spCond',
@@ -1017,7 +1017,7 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
         rawd1 <- tibble(rawd[[relevant_tbl1]])
 
         d1 <- ms_read_raw_csv(preprocessed_tibble = rawd1,
-                              datetime_cols = list(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_cols = c(endDateTime = '%Y-%m-%d %H:%M:%S'),
                               datetime_tz = 'UTC',
                               site_code_col = 'siteID',
                               data_cols =  c(priPrecipBulk = 'precipitation'),
@@ -1041,7 +1041,7 @@ process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
         rawd2 <- tibble(rawd[[relevant_tbl2]])
 
         d2 <- ms_read_raw_csv(preprocessed_tibble = rawd2,
-                              datetime_cols = list(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_cols = c(endDateTime = '%Y-%m-%d %H:%M:%S'),
                               datetime_tz = 'UTC',
                               site_code_col = 'siteID',
                               data_cols =  c(secPrecipBulk = 'precipitation'),
@@ -1123,7 +1123,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
             mutate(site = site_code_)
 
         d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                             datetime_cols = list(datetime = '%Y-%m-%d %H:%M:%S'),
+                             datetime_cols = c(datetime = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'site',
                              data_cols =  c(discharge_Ls = 'discharge'),
@@ -1188,7 +1188,7 @@ process_1_DP1.20206.001 <- function(network, domain, prodname_ms, site_code,
     )
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(d2HWater = 'dD',
@@ -1248,7 +1248,7 @@ process_1_DP1.00038.001 <- function(network, domain, prodname_ms, site_code,
     )
 
     d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                         datetime_cols = list('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'UTC',
                          site_code_col = 'siteID',
                          data_cols =  c(d2HWater = 'dD',
@@ -1327,7 +1327,7 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     if(site_code == 'TOMB'){
 
         d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                             datetime_cols = list(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_cols = c(endDate = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
                              data_cols =  c(usgsDischarge = 'discharge'),
@@ -1352,7 +1352,7 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = rawd,
-                             datetime_cols = list(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_cols = c(endDate = '%Y-%m-%d %H:%M:%S'),
                              datetime_tz = 'UTC',
                              site_code_col = 'siteID',
                              data_cols =  c(maxpostDischarge = 'discharge'),
@@ -1460,7 +1460,7 @@ process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_read_raw_csv(
         preprocessed_tibble = d,
-        datetime_cols = list('date' = '%Y-%m-%d'),
+        datetime_cols = c('date' = '%Y-%m-%d'),
         datetime_tz = 'UTC',
         site_code_col = 'siteID',
         data_cols =  c(Calcium = 'Ca',

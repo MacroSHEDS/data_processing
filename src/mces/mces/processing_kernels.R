@@ -111,7 +111,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = "%Y-%m-%d"),
+                         datetime_cols = c('Date' = "%Y-%m-%d"),
                          datetime_tz = 'US/Central',
                          site_code_col = 'site_code',
                          data_cols =  c('discharge' = 'discharge'),
@@ -253,7 +253,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = "%m/%d/%Y %H:%M"),
+                         datetime_cols = c('date' = "%m/%d/%Y %H:%M"),
                          datetime_tz = 'US/Central',
                          site_code_col = 'site_code',
                          data_cols =  mces_data_cols,

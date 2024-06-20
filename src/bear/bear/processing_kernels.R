@@ -194,7 +194,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     all_chem[all_chem==''] <- NA
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_chem,
-                         datetime_cols = list('year' = '%Y', 'month' = '%m',
+                         datetime_cols = c('year' = '%Y', 'month' = '%m',
                                               'day' = '%e', 'hour' = '%H'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'watershed',
@@ -276,7 +276,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('year' = '%Y', 'month' = '%m',
+                         datetime_cols = c('year' = '%Y', 'month' = '%m',
                                               'day' = '%e'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site',
@@ -331,7 +331,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                   c = component)
 
   d <- ms_read_raw_csv(filepath = rawfile,
-                       datetime_cols = list('year' = '%Y', 'month' = '%m',
+                       datetime_cols = c('year' = '%Y', 'month' = '%m',
                                             'day' = '%e'),
                        datetime_tz = 'US/Eastern',
                        site_code_col = 'site',

@@ -40,7 +40,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_code,
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%m/%d/%y %H:%M'),
+                             datetime_cols = c('Date_Time' = '%m/%d/%y %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Q_m3sec' = 'discharge'),
@@ -58,7 +58,7 @@ munge_toolik <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%m/%d/%y %H:%M'),
+                             datetime_cols = c('Date_Time' = '%m/%d/%y %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Water_Temp_C' = 'temp',
@@ -89,7 +89,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%d-%b-%Y %H:%M'),
+                             datetime_cols = c('Date_Time' = '%d-%b-%Y %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Q_m3sec' = 'discharge'),
@@ -107,7 +107,7 @@ munge_toolik_2 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%d-%b-%Y %H:%M'),
+                             datetime_cols = c('Date_Time' = '%d-%b-%Y %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Water_Temp_C' = 'temp',

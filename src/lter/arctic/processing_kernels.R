@@ -135,7 +135,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
     if(prodname_ms == 'discharge__10601'){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -154,7 +154,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -193,7 +193,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
   if(prodname_ms == 'discharge__20118'){
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list('Date' = '%Y-%m-%d',
+                           datetime_cols = c('Date' = '%Y-%m-%d',
                                                 'Time' = '%H:%M'),
                            datetime_tz = 'America/Anchorage',
                            site_code_col = 'River',
@@ -214,7 +214,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
           rename(temperature = 8)
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list('Date' = '%Y-%m-%d',
+                           datetime_cols = c('Date' = '%Y-%m-%d',
                                                 'Time' = '%H:%M'),
                            datetime_tz = 'America/Anchorage',
                            site_code_col = 'River',
@@ -490,7 +490,7 @@ process_1_1489 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y%m%d'),
+                         datetime_cols = c('Date' = '%Y%m%d'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'Station',
                          data_cols = c('Daily_Precip_Total_mm' = 'precipitation'),
@@ -529,7 +529,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
     if(prodname_ms == 'discharge__20120'){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -554,7 +554,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -674,7 +674,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
+                             datetime_cols = c('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Q_m3sec' = 'discharge'),
@@ -692,7 +692,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
+                             datetime_cols = c('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Water_Temp_C' = 'temp',
@@ -728,7 +728,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
@@ -767,7 +767,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
@@ -808,7 +808,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',

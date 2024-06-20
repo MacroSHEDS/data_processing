@@ -227,7 +227,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', 'Data/HF00301_v4.csv')
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('DATE_TIME' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('DATE_TIME' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),

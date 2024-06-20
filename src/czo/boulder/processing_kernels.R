@@ -164,7 +164,7 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date_time' = '%m/%d/%y %H:%M'),
+                         datetime_cols = c('date_time' = '%m/%d/%y %H:%M'),
                          # datetime_tz = 'US/Mountain',
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
@@ -233,7 +233,7 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date_time' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = c('date_time' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('DISCHARGE.m.3.10..3..s' = 'discharge'),
@@ -296,7 +296,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component){
 
     #Assuming IN means TIN
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%y',
+                         datetime_cols = c('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
@@ -431,7 +431,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component){
 
     #Assuming IN means TIN
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%y',
+                         datetime_cols = c('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
@@ -561,7 +561,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component){
 
     #Assuming IN means TIN
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%y',
+                         datetime_cols = c('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'Location',
@@ -678,7 +678,7 @@ process_1_7241 <- function(network, domain, prodname_ms, site_code, component){
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%y',
+                         datetime_cols = c('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
@@ -730,7 +730,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component){
 
     #Assuming IN means TIN
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%y',
+                         datetime_cols = c('Date' = '%m/%e/%y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
@@ -844,7 +844,7 @@ process_1_2435 <- function(network, domain, prodname_ms, site_code, component){
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%y',
+                         datetime_cols = c('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
@@ -879,7 +879,7 @@ process_1_2888 <- function(network, domain, prodname_ms, site_code, component){
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%y',
+                         datetime_cols = c('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
@@ -914,7 +914,7 @@ process_1_2889 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%y',
+                         datetime_cols = c('date' = '%m/%e/%y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',

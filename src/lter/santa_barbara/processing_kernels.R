@@ -411,7 +411,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
+                         datetime_cols = c('timestamp_local' = '%Y-%m-%dT%H:%M:%S'),
                          datetime_tz = 'Etc/GMT-8',
                          site_code_col = 'site_code',
                          data_cols =  c('nh4_uM' = 'NH4',

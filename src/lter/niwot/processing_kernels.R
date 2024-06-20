@@ -148,7 +148,7 @@ process_1_213 <- function(network, domain, prodname_ms, site_code,
                    'POC' = 'POC')
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                              'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'samp_loc',
@@ -223,7 +223,7 @@ process_1_103 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -330,7 +330,7 @@ process_1_107 <- function(network, domain, prodname_ms, site_code,
         mutate(time = ifelse(nchar(time) == 3, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -434,7 +434,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -539,7 +539,7 @@ process_1_109 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -647,7 +647,7 @@ process_1_110 <- function(network, domain, prodname_ms, site_code,
         mutate(time = ifelse(nchar(time) == 3, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -751,7 +751,7 @@ process_1_112 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -854,7 +854,7 @@ process_1_113 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -957,7 +957,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          alt_site_code = list('SADDLE_007' = 'SADDLE STREAM 007'),
@@ -1061,7 +1061,7 @@ process_1_160 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          alt_site_code = list('SADDLE' = 'SADDLE STREAM'),
@@ -1165,7 +1165,7 @@ process_1_162 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -1268,7 +1268,7 @@ process_1_163 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -1372,7 +1372,7 @@ process_1_278 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d',
+                         datetime_cols = c('date' = '%Y-%m-%d',
                                               'time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
@@ -1481,7 +1481,7 @@ process_1_236 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
                          data_cols =  'discharge',
@@ -1519,7 +1519,7 @@ process_1_102 <- function(network, domain, prodname_ms, site_code,
             filter(temperature != 'NaN')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('ALBION' = 'alb'),
@@ -1540,7 +1540,7 @@ process_1_102 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(filepath = rawfile,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('ALBION' = 'alb'),
@@ -1587,7 +1587,7 @@ process_1_111 <- function(network, domain, prodname_ms, site_code,
             filter(temperature != 'NaN')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('MARTINELLI' = 'mar'),
@@ -1608,7 +1608,7 @@ process_1_111 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(filepath = rawfile,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('MARTINELLI' = 'mar'),
@@ -1654,7 +1654,7 @@ process_1_74 <- function(network, domain, prodname_ms, site_code,
             filter(temperature != 'NaN')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('SADDLE' = 'sdl'),
@@ -1675,7 +1675,7 @@ process_1_74 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(filepath = rawfile,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('SADDLE' = 'sdl'),
@@ -1721,7 +1721,7 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
             filter(temperature != 'NaN')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('GREEN4' = c('gl4')),
@@ -1742,7 +1742,7 @@ process_1_105 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(filepath = rawfile,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              alt_site_code = list('GREEN4' = c('gl4')),
@@ -1798,7 +1798,7 @@ process_1_169 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
         d <- ms_read_raw_csv(filepath = rawfile,
-                             datetime_cols = list('date' = '%Y-%m-%d'),
+                             datetime_cols = c('date' = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'local_site',
                              data_cols =  'discharge',
@@ -1851,7 +1851,7 @@ process_1_170 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-7',
                          alt_site_code = list('GREEN5' = 'GL5'),
                          site_code_col = 'local_site',
@@ -1904,7 +1904,7 @@ process_1_416 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
                          alt_site_code = list('saddle' = 'sdl'),
@@ -1948,7 +1948,7 @@ process_1_414 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
                          alt_site_code = list('C1' = 'c1'),
@@ -1980,7 +1980,7 @@ process_1_415 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
+                         datetime_cols = c('date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'local_site',
                          alt_site_code = list('D1' = 'd1'),

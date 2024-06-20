@@ -222,7 +222,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_met,
-                         datetime_cols = list('Date' = '%m/%e/%y'),
+                         datetime_cols = c('Date' = '%m/%e/%y'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'site',
                          data_cols =  c('PRECIPITATION' = 'precipitation'),
@@ -292,7 +292,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- full_join(d_d, d_f, by = c('Date', 'Time', 'site'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%Y',
+                         datetime_cols = c('Date' = '%m/%e/%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'site',
@@ -352,7 +352,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path1 <- paste0(temp_dir, '/', relevant_file1)
 
     d <- ms_read_raw_csv(filepath = rel_file_path1,
-                         datetime_cols = list('Date' = '%m/%e/%Y'),
+                         datetime_cols = c('Date' = '%m/%e/%Y'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'WS',
                          data_cols =  c('CA' = 'Ca',
@@ -407,7 +407,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     # d_isco <- ms_read_raw_csv(preprocessed_tibble = d_isco,
     d_isco <- ms_read_raw_csv(filepath = rel_file_path2,
-                         datetime_cols = list('SampleDate' = '%m/%e/%Y',
+                         datetime_cols = c('SampleDate' = '%m/%e/%Y',
                                               'SampleTime' = '%H:%M'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'SiteID',

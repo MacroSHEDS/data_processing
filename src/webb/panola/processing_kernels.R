@@ -39,7 +39,7 @@ p1v001_discharge <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('Streamflow' = 'discharge'),
@@ -63,7 +63,7 @@ p1v001_stream_chemistry <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c(
@@ -117,7 +117,7 @@ p1v001_precipitation <- function(zipf){
         mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('Precip' = 'precipitation'),
@@ -145,7 +145,7 @@ p1v001_precip_chemistry <- function(zipf){
         mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols = c(
@@ -204,7 +204,7 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y'),
+                         datetime_cols = c('Date' = '%m/%d/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('H_WetDep' = 'H',
@@ -264,7 +264,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y'),
+                         datetime_cols = c('Date' = '%m/%d/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
                          data_cols =  c('ANC', 'Ca', 'Mg', 'Na', 'K', 'SO4',

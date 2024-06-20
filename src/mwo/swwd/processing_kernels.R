@@ -136,7 +136,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     # hey! if this kernel is being run again, make sure to check the flag columns
     # in the original data, as there may be new flag info
     d <- ms_read_raw_csv(preprocessed_tibble = raw_xlsx,
-                         datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
                          data_cols =  c('discharge'),
@@ -229,7 +229,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble =  d,
-                         datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
                          data_cols =  mwo_chem_cols,

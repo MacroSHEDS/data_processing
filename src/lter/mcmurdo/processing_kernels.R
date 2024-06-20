@@ -187,7 +187,7 @@ process_1_24 <- function(network, domain, prodname_ms, site_code, component){
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
+                         datetime_cols = c('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
                          alt_site_code = list(
@@ -254,7 +254,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                si = si_mgl)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
+                         datetime_cols = c('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
                          alt_site_code = list(
@@ -340,7 +340,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                srp = srp_ugl)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date_time' = '%m/%e/%y %H:%M'),
+                         datetime_cols = c('date_time' = '%m/%e/%y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'strmgageid',
                          alt_site_code = list(
@@ -411,7 +411,7 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
                STRMGAGEID != 'uvg_f21')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DATE_TIME' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = c('DATE_TIME' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'Antarctica/McMurdo',
                          site_code_col = 'STRMGAGEID',
                          data_cols =  c('TN..mg.L.' = 'TN'),

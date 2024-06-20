@@ -229,7 +229,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
             mutate(date = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,1])
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'sites',
@@ -249,7 +249,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
             mutate(site = 'FLUME_MCZOB')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'site',
@@ -299,7 +299,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component){
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'site',
@@ -320,7 +320,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component){
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'site',
@@ -360,7 +360,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component){
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('StreamFlow' = 'discharge'),
@@ -398,7 +398,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component){
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                             datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'site',
                              data_cols =  c('Temp' = 'temp'),
@@ -410,7 +410,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component){
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                             datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                              datetime_tz = 'Etc/GMT-7',
                              site_code_col = 'site',
                              data_cols =  c('Flow' = 'discharge'),
@@ -517,7 +517,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component){
 
     d <- ms_read_raw_csv(
         preprocessed_tibble = d,
-        datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+        datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
         datetime_tz = 'Etc/GMT-7',
         site_code_col = 'SiteCode',
         alt_site_code = list('HistoryGrove' = c('FLUME_HG', 'FLUME_HG16', 'FLUME_HG_16'),
@@ -634,7 +634,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component){
                                   colnames(d))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'SiteCode',
                          alt_site_code = list('MarshallGulch' = 'MG_WEIR',
@@ -693,7 +693,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component){
         filter(DateTime != 'MST')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'sites',
@@ -733,7 +733,7 @@ process_1_2491 <- function(network, domain, prodname_ms, site_code, component){
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
@@ -774,7 +774,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component){
         mutate(site = 'Burn_Met_Up')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
@@ -825,7 +825,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component){
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
@@ -869,7 +869,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component){
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
@@ -926,7 +926,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component){
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          alt_site_code = list('MG_PC1' = 'Schist',
                                               'MG_PC2' = 'FernValley',
@@ -1066,7 +1066,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component){
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'SiteCode',
@@ -1192,7 +1192,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component){
                                   colnames(d))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'SiteCode',
                          alt_site_code = list('Burn_Met_Low' = 'RainColl_Burn_Low_OC',
@@ -1244,7 +1244,7 @@ process_1_2415 <- function(network, domain, prodname_ms, site_code, component){
         mutate(site = 'MC_flux_tower')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  c('PRECIP' = 'precipitation'),
@@ -1285,7 +1285,7 @@ process_1_2425 <- function(network, domain, prodname_ms, site_code, component){
     names(precip_cat) <- precip_col
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
                          datetime_tz = 'Etc/GMT-7',
                          site_code_col = 'site',
                          data_cols =  precip_cat,

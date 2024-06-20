@@ -585,7 +585,7 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -611,7 +611,7 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
         }
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT-5',
                              site_code_col = 'site_code',
@@ -743,7 +743,7 @@ process_1_393 <-  function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%Y',
+                         datetime_cols = c('Date' = '%m/%e/%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site_code',
@@ -859,7 +859,7 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('DATE' = '%Y-%m-%d',
+                         datetime_cols = c('DATE' = '%Y-%m-%d',
                                               'TIME' = '%H:%M'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'STATION',
@@ -932,7 +932,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
+                         datetime_cols = c('Date' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Permanent_ID',
                          alt_site_code = list('cart_creek' = 'YSI-CC',
@@ -1009,7 +1009,7 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
         mutate(NO3_flag = ifelse(grepl('9', Notes), 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date.1' = '%Y-%m-%d'),
+                         datetime_cols = c('Date.1' = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Site',
                          alt_site_code = list('cart_creek' = 'CC',

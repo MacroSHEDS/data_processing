@@ -161,7 +161,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -211,7 +211,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -261,7 +261,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -311,7 +311,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -432,7 +432,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
         mutate(comments = ifelse(COMMENTS %in% !!COMMENTS_flags, 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
@@ -492,7 +492,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'RecDay' = '%d',
                                               'RecTime' = '%H%M'),
@@ -543,7 +543,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code, component){
                                    toupper(Watershed)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
@@ -583,7 +583,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                                 component == 'ASW012' ~ 'N04D'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y',
+                         datetime_cols = c('Date' = '%m/%d/%Y',
                                               'Time' = '%H:%M:%S'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'site',
@@ -626,7 +626,7 @@ process_1_16 <- function(network, domain, prodname_ms, site_code,
         mutate(RecDay = ifelse(nchar(RecDay) == 1, paste0(0, RecDay), RecDay))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'RecDay' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -667,7 +667,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
         filter(! Watershed %in% c('001d', 'n01d', ''))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d'),
                          datetime_tz = 'Etc/GMT-5',
@@ -724,7 +724,7 @@ process_1_4 <- function(network, domain, prodname_ms, site_code, component){
                      c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('RecDate' = '%m/%e/%Y'),
+                         datetime_cols = c('RecDate' = '%m/%e/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'watershed',
                          alt_site_code = list(#'HQ' = 'HQ02',

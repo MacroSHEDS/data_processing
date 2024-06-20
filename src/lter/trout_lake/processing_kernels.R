@@ -83,7 +83,7 @@ process_1_276 <- function(network, domain, prodname_ms, site_code, component) {
     )
 
     d <- ms_read_raw_csv(preprocessed_tibble = dd,
-                         datetime_cols = list('sampledate' = '%Y-%m-%d',
+                         datetime_cols = c('sampledate' = '%Y-%m-%d',
                                               'sample_time' = '%H:%M:%S'),
                          datetime_tz = 'US/Central',
                          site_code_col = 'site_name',

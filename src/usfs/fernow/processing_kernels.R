@@ -254,7 +254,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
@@ -312,7 +312,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Discharge..mm.' = 'discharge'),
@@ -377,7 +377,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%y'),
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Weather.Station',
                          data_cols =  c('pH' = 'pH',
@@ -452,7 +452,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
                          datetime_tz = 'Etc/GMT-5',
                          site_code_col = 'Watershed',
                          data_cols =  c('pH' = 'pH',

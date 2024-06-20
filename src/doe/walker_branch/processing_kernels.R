@@ -196,7 +196,6 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    browser()
     files <- str_split_fixed(component, '__[|]', n = Inf)[1,]
 
     daily_file <- grep('daily', files, value = TRUE)
@@ -221,7 +220,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'combined_gauges')
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
-                                 datetime_cols = list('Date' = '%Y%m%d'),
+                                 datetime_cols = c('Date' = '%Y%m%d'),
                                  datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
@@ -247,7 +246,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'combined_gauges')
 
     hourly_dat <- ms_read_raw_csv(preprocessed_tibble = hourly_dat,
-                                 datetime_cols = list('DATE' = '%Y%m%d',
+                                 datetime_cols = c('DATE' = '%Y%m%d',
                                                       'TIME' = '%H:%M'),
                                  datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'site',
@@ -323,7 +322,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         pivot_longer(cols = c('EF_DISCHARGE', 'WF_DISCHARGE'))
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
-                                 datetime_cols = list('DATE' = '%Y%m%d'),
+                                 datetime_cols = c('DATE' = '%Y%m%d'),
                                  datetime_tz = 'Etc/GMT-5',
                                  site_code_col = 'name',
                                  data_cols =  c('value' = 'discharge'),
@@ -357,7 +356,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         pivot_longer(cols = c('EF_DISCHARGE', 'WF_DISCHARGE'))
 
     min_dat <- ms_read_raw_csv(preprocessed_tibble = min_dat,
-                               datetime_cols = list('DATE' = '%Y%m%d'),
+                               datetime_cols = c('DATE' = '%Y%m%d'),
                                datetime_tz = 'Etc/GMT-5',
                                site_code_col = 'name',
                                data_cols =  c('value' = 'discharge'),
@@ -433,7 +432,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'west_fork')
 
     west_dat <- ms_read_raw_csv(preprocessed_tibble = west_dat,
-                                datetime_cols = list('DATE' = '%Y%m%d'),
+                                datetime_cols = c('DATE' = '%Y%m%d'),
                                 datetime_tz = 'Etc/GMT-5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
@@ -490,7 +489,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'east_fork')
 
     east_dat <- ms_read_raw_csv(preprocessed_tibble = east_dat,
-                                datetime_cols = list('DATE' = '%Y%m%d'),
+                                datetime_cols = c('DATE' = '%Y%m%d'),
                                 datetime_tz = 'Etc/GMT-5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',

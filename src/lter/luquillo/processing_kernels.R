@@ -99,7 +99,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code, component){
 
     #these codes legit missing: tempcode, phcode, condcode, tsscode, tdpcode, turbiditycode
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('sample_date' = '%Y-%m-%d',
+                         datetime_cols = c('sample_date' = '%Y-%m-%d',
                                               'sample_time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-4',
                          site_code_col = 'sample_id',
@@ -162,7 +162,7 @@ process_1_174 <- function(network, domain, prodname_ms, site_code, component){
 
     #these codes legit missing: tempcode, phcode, condcode, tsscode, tdpcode, turbiditycode
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('sample_date' = '%Y-%m-%d',
+                         datetime_cols = c('sample_date' = '%Y-%m-%d',
                                               'sample_time' = '%H%M'),
                          datetime_tz = 'Etc/GMT-4',
                          site_code_col = 'sample_id',
@@ -226,7 +226,7 @@ process_1_90 <- function(network, domain, prodname_ms, site_code, component){
         mutate(site = 'Bisley_Tower')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list(DATE = '%Y-%m-%d'),
+                         datetime_cols = c(DATE = '%Y-%m-%d'),
                          datetime_tz = 'Etc/GMT-4',
                          site_code_col = 'site',
                          data_cols =  c(Precipitationmm = 'precipitation'),
@@ -269,7 +269,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_code, component){
                                            pad = '0'))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list(date = '%Y-%m-%d',
+                             datetime_cols = c(date = '%Y-%m-%d',
                                                   hour = '%H%M'),
                              datetime_tz = 'Etc/GMT-4',
                              site_code_col = 'site',
@@ -293,7 +293,7 @@ process_1_14 <- function(network, domain, prodname_ms, site_code, component){
     } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list(date = '%Y-%m-%d'),
+                             datetime_cols = c(date = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-4',
                              site_code_col = 'site',
                              data_cols = c(rainfall_mm = 'precipitation'),
@@ -331,7 +331,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_code, component){
             pivot_longer(cols = c(meanTempq1, meanTempq2, meanTempq3))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list(DATE = '%Y-%m-%d'),
+                             datetime_cols = c(DATE = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-4',
                              site_code_col = 'name',
                              alt_site_code = list('Q1' = 'meanTempq1',
@@ -358,7 +358,7 @@ process_1_156 <- function(network, domain, prodname_ms, site_code, component){
             pivot_longer(cols = c(Q1, Q2, Q3))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list(DATE = '%Y-%m-%d'),
+                             datetime_cols = c(DATE = '%Y-%m-%d'),
                              datetime_tz = 'Etc/GMT-4',
                              site_code_col = 'name',
                              data_cols =  c('value' = 'discharge'),
@@ -405,7 +405,7 @@ process_1_182 <- function(network, domain, prodname_ms, site_code, component){
           filter(! datetime == '1900-01-00 00:00') #sensor error
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list(datetime = '%Y-%m-%d %H:%M'),
+                           datetime_cols = c(datetime = '%Y-%m-%d %H:%M'),
                            datetime_tz = 'Etc/GMT-4',
                            site_code_col = 'site',
                            data_cols =  'discharge',

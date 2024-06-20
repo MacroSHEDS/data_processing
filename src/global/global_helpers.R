@@ -1441,12 +1441,12 @@ resolve_datetime <- function(d,
 
     dt_tb$basecol = NULL
 
-    tokens_present <- colnames(dt_tb)
-
-    if(! any(c('H', 'I') %in% tokens_present)){
+    if(! any(c('H', 'I') %in% colnames(dt_tb))){
         dt_tb$H <- '12'
         datetime_formats <- c(datetime_formats, '%H')
     }
+
+    tokens_present <- colnames(dt_tb)
 
     #fill in defaults if applicable:
     #(12 for hour, 00 for minute and second, PM for AM/PM)
@@ -8001,11 +8001,12 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     if(exists('precip_pchem_pflux_skip_existing') && precip_pchem_pflux_skip_existing){
         dd_ <- glue('data/{network}/{domain}/derived')
         dfs_ <- list.files(dd_, full.names = TRUE)
-        if(grepl('precip_chemistry__ms901', dfs_)){
+        if(any(grepl('precip_chemistry__ms901', dfs_))){
             fs_ <- list.files(file.path(dd_, 'precip_chemistry__ms901'))
             fs_ <- str_extract(fs_, '.+(?=\\.feather$)')
             message('skipping ', paste(fs_, collapse = ', '), ' because precip_pchem_pflux_skip_existing is TRUE')
             wb <- filter(wb, ! site_code %in% fs_)
+            if(! nrow(wb)) return()
         }
     }
 
@@ -15008,8 +15009,8 @@ get_nrcs_soils <- function(network,
     bb <- sf::st_bbox(site_boundary)
 
     soil <- try(sw(soilDB::mukey.wcs(aoi = bb,
-                                 db = 'gssurgo',
-                                 quiet = TRUE)))
+                                     db = 'gssurgo',
+                                     quiet = TRUE)))
 
     # should build a chunking method for this
     if(class(soil) == 'try-error'){
@@ -15019,7 +15020,7 @@ get_nrcs_soils <- function(network,
                                var =  names(nrcs_var_name),
                                val = NA)
 
-        return(generate_ms_exception(glue('{s} is too large',
+        return(generate_ms_exception(glue('No data available for {s} in NRCS database.',
                                           s = site)))
     }
 
@@ -15036,8 +15037,15 @@ get_nrcs_soils <- function(network,
     #### comppct_r column, givin in a percent
 
     mukey_sql <- soilDB::format_SQL_in_statement(mukey_values)
+    mukey_sql <- sub("'NaN'", '', mukey_sql)
+    mukey_sql <- sub(',,', ',', mukey_sql)
+    mukey_sql <- sub('^\\(,', '(', mukey_sql)
+    mukey_sql <- sub(',\\)$', ')', mukey_sql) #probably just use na.rm = TRUE in values() above
     component_sql <- sprintf("SELECT cokey, mukey, compname, comppct_r, majcompflag FROM component WHERE mukey IN %s", mukey_sql)
     component <- sm(soilDB::SDA_query(component_sql))
+    if(is.null(component)){
+        stop('something misspecified in soilDB query')
+    }
 
     # Check is soil data is available
     if(length(unique(component$compname)) == 1 &&
