@@ -7952,6 +7952,27 @@ datetimes_to_durations <- function(datetime_vec,
     return(durs)
 }
 
+calculate_dem_res <- function(area_ha, lat, ideal_n_cells){
+
+    if(is.na(area_ha) || is.null(area_ha) || is.infinite(area_ha)) stop('illegal area_ha')
+
+    area_sq_m <- area_ha * 1e4
+
+    get_ground_res <- function(z, lat){
+        cos(lat * pi / 180) * 2 * pi * 6378137 / (256 * 2^z)
+    }
+    calc_cells <- function(area, res) (sqrt(area) / res)^2
+
+    zoom_levels <- 0:14
+    res_diffs <- sapply(
+        zoom_levels,
+        function(zz){
+            abs(calc_cells(area_sq_m, get_ground_res(zz, lat)) - ideal_n_cells)
+        })
+
+    return(zoom_levels[which.min(res_diffs)])
+}
+
 precip_pchem_pflux_idw <- function(pchem_prodname,
                                    precip_prodname,
                                    wb_prodname,
@@ -8051,7 +8072,14 @@ precip_pchem_pflux_idw <- function(pchem_prodname,
     #get a DEM that encompasses all watersheds and gauges
     wb_rg_bbox <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(bind_rows(wb, rg))))
 
-    dem_res <- ifelse(any(wb$area < 5), 9, 8)
+    if(is.null(wb$area) || any(is.na(wb$area))) stop('missing "area" column in wb shapefile')
+
+    # dem_res <- ifelse(any(wb$area < 5), 9, 8)
+    dem_res <- calculate_dem_res(area_ha = min(wb$area),
+                                 lat = mean(bbox$ymin, bbox$ymax),
+                                 ideal_n_cells = 100)
+
+    dem_res <- min(9, dem_res) #not looking for high-res tiny watersheds.
 
     dem <- expo_backoff(
         expr = {
@@ -10579,11 +10607,13 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step){
             discharge <- dataRetrieval::readNWISdv(sites[i], '00060') %>%
                 mutate(datetime = ymd_hms(paste0(Date, ' ', '12:00:00'),
                                           tz = 'UTC')) %>%
-                mutate(val = X_00060_00003)
+                mutate(val = X_00060_00003) %>%
+                rename(code = X_00060_00003_cd)
         } else {
             discharge <- dataRetrieval::readNWISuv(sites[i], '00060') %>%
                 rename(datetime = dateTime,
-                       val = X_00060_00000)
+                       val = X_00060_00000) %>%
+                rename(code = X_00060_00000_cd)
         }
 
         discharge <- discharge %>%
@@ -10591,7 +10621,7 @@ pull_usgs_discharge <- function(network, domain, prodname_ms, sites, time_step){
             mutate(site_code = !!names(sites[i]),
                    var = 'discharge',
                    val = val * 28.31685,
-                   ms_status = if_else(X_00060_00003_cd == 'A', 0, 1)) %>%
+                   ms_status = if_else(grepl('^A', code), 0, 1)) %>%
                    #see https://help.waterdata.usgs.gov/codes-and-parameters/instantaneous-value-qualification-code-uv_rmk_cd
             select(site_code, datetime, val, var, ms_status)
 
@@ -15273,7 +15303,7 @@ load_spatial_data <- function(){
                         logger = logger_module)
                 next
             }
-        } else{
+        } else {
             unzip(zipfile = zip_path,
                   exdir = 'data/spatial')
         }

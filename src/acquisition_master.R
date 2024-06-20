@@ -326,7 +326,7 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'arctic')
+dmnrow <- which(network_domain$domain == 'bonanza')
 
 retain_ms_globals(ms_globals)
 #general problems: krycklan (8). why is it going by site-year? skipped neon, mcmurdo
