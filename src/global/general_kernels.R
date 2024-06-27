@@ -1,8 +1,7 @@
 
 #npp: STATUS=READY
 #. handle_errors
-process_3_ms805 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms805 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     npp <- try(get_gee_standard(network = network,
                                 domain = domain,
@@ -13,7 +12,7 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code,
                                 site_boundary = boundaries,
                                 contiguous_us = TRUE))
 
-    if(is.null(npp)) {
+    if(is.null(npp)){
         return(generate_ms_exception(glue('No data were retrived for {s}',
                                           s = site_code)))
     }
@@ -27,9 +26,9 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code,
         mutate(datetime = as.numeric(substr(datetime, 0, 4)))
 
     npp <- npp$table %>%
-        select(year=datetime, site_code, var, val)
+        select(year = datetime, site_code, var, val)
 
-    if(all(is.na(npp$val))) {
+    if(all(is.na(npp$val))){
         return(generate_ms_exception(glue('No data were retrived for {s}',
                                           s = site_code)))
     }
@@ -593,13 +592,11 @@ process_3_ms811 <- function(network, domain, prodname_ms, site_code,
 
 #nrcs_soils: STATUS=READY
 #. handle_errors
-process_3_ms812 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms812 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     dir.create(glue('data/{n}/{d}/ws_traits/nrcs_soils/',
                     n = network,
                     d = domain), recursive = TRUE)
-
 
     sites <- boundaries$site_code
     for(s in 1:length(sites)){
@@ -744,7 +741,6 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                recursive = TRUE,
                showWarnings = FALSE)
 
-
     # Load landcover defs
     color_key = read_csv('data/spatial/nlcd/pixel_color_key.csv',
                          show_col_types = FALSE)
@@ -796,11 +792,16 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         is_hi <- length(sm(sf::st_intersects(hi_bb, site_boundary))[[1]]) == 1
         is_usa <- length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 1
 
+        if(! is_ak && ! is_pr && ! is_hi && ! is_usa){
+            return(generate_ms_exception(glue('Not within the USA, so no NLCD for {s}',
+                                              s = site_code)))
+        }
+
         if(is_ak) nlcd_epochs <- c('2001_AK', '2011_AK', '2016_AK')
         if(is_pr) nlcd_epochs <- '2001_PR'
         if(is_hi) nlcd_epochs <- '2001_HI'
         if(is_usa){
-            #pre-2016 epochs are all included in the 2016 release
+            #pre-2016 epochs are all included in the 2016 release. this list is appended below
             nlcd_epochs <- as.character(c(1992, 2001, 2004, 2006, 2008, 2011, 2013, 2016))
         }
 
@@ -811,8 +812,14 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         for(i in length(avail_releases):1){
             ar <- avail_releases[i]
             asset_nms <- sapply(ee$data$listAssets(ar)$assets, function(x) x$name)
-            if(! any(grepl('/NLCD$', asset_nms))) avail_releases <- avail_releases[-i]
+            if(! any(grepl('2016_REL', asset_nms)) &&
+               ! any(grepl('/NLCD$', asset_nms))) avail_releases <- avail_releases[-i]
         }
+
+        nlcd_epochs <- union(nlcd_epochs,
+                             str_extract(avail_releases,
+                                         '([0-9]{4})_REL$',
+                                         group = 1))
 
         if(exists('gee_bounding_dates', where = .GlobalEnv)){
 
@@ -841,11 +848,6 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                     return()
                 }
             }
-        }
-
-        if(! is_ak && ! is_pr && ! is_hi && ! is_usa){
-            return(generate_ms_exception(glue('Not within the USA, so no NLCD for {s}',
-                                              s = site_code)))
         }
 
         user_info <- rgee::ee_user_info(quiet = TRUE)
@@ -1906,13 +1908,13 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
 
     googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-    fin_table <- fin_table %>%
-        select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
-
     if(nrow(fin_table) == 0){
         return(generate_ms_exception(glue('No data were retrived for {s}',
                                           s = site_code)))
     }
+
+    fin_table <- fin_table %>%
+        select(date, site_code, dayl, prcp, srad, swe, tmax, tmin, vp)
 
     dir.create(glue('data/{n}/{d}/ws_traits/daymet/',
                     n = network,

@@ -12,6 +12,7 @@ unprod <- univ_products  %>%
     filter(status == 'ready')
 
 if(exists('general_prod_filter_')){
+
     unprod <- filter(unprod, prodname %in% general_prod_filter_)
 
     loginfo(paste('general_prod_filter_ is set. only working on',
@@ -50,22 +51,20 @@ boundaries <- boundaries %>%
 
 too_small_wb <- boundaries$area < 15
 
-# reupload <- FALSE
-# if(any(too_small_wb)) reupload <- TRUE
-if(FALSE %in% is.na(too_small_wb)) {
+if(FALSE %in% is.na(too_small_wb)){
 
     boundaries[too_small_wb, ] <- boundaries[too_small_wb, ] %>%
         mutate(geometry = st_buffer(st_centroid(geometry),
                                     dist = sqrt(10000 * 15 / pi)))
 }
 
-if(any(!sf::st_is_valid(boundaries))){
+if(any(! sf::st_is_valid(boundaries))){
     log_with_indent(generate_ms_err('All watershed boundaries must be s2 valid'),
                     logger_module)
 }
 
-if(class(boundaries)[1] == 'ms_err' | is.null(boundaries[1])){
-    stop('Watershed boundaries are required for general products')
+if(inherits(boundaries, 'ms_err') || is.null(boundaries[1])){
+    stop('Some or all watershed boundaries not yet delineated/retrieved/linked for ', domain)
 }
 
 # Upload watersheds to GEE
@@ -76,34 +75,32 @@ asset_folder <- glue('{a}/macrosheds_ws_boundaries/{d}',
 
 gee_file_exist <- try(rgee::ee_manage_assetlist(asset_folder), silent = TRUE)
 
-# if(inherits(gee_file_exist, 'try-error') || nrow(gee_file_exist) == 0 || reupload){
-
 loginfo('(Re)uploading ws_boundaries to GEE',
         logger = logger_module)
 
 sm(rgee::ee_manage_create(asset_folder))
 
-asset_path <- paste0(asset_folder, '/', 'all_ws_boundaries')
+asset_path <- file.path(asset_folder, 'all_ws_boundaries')
 
-ee_shape <- try(sf_as_ee(boundaries,
-                         via = 'getInfo_to_asset',
-                         assetId = asset_path,
-                         overwrite = TRUE,
-                         quiet = TRUE),
-                silent = TRUE)
-
-if('try-error' %in% class(ee_shape)){
-
-    for(i in 1:nrow(boundaries)){
-        one_boundary <- boundaries[i,]
-        asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
-        sf_as_ee(one_boundary,
-                 via = 'getInfo_to_asset',
-                 assetId = asset_path,
-                 overwrite = TRUE,
-                 quiet = TRUE)
-    }
-}
+# ee_shape <- try(sf_as_ee(boundaries,
+#                          via = 'getInfo_to_asset',
+#                          assetId = asset_path,
+#                          overwrite = TRUE,
+#                          quiet = TRUE),
+#                 silent = TRUE)
+#
+# if(inherits(ee_shape, 'try-error')){
+#
+#     for(i in 1:nrow(boundaries)){
+#         one_boundary <- boundaries[i,]
+#         asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
+#         sf_as_ee(one_boundary,
+#                  via = 'getInfo_to_asset',
+#                  assetId = asset_path,
+#                  overwrite = TRUE,
+#                  quiet = TRUE)
+#     }
+# }
 
 for(i in 1:nrow(unprod)){
 
@@ -124,113 +121,123 @@ for(i in 1:nrow(unprod)){
                  p = prodname_ms),
             logger = logger_module)
 
-    site_code <- 'all_sites'
-
-    if(! site_is_tracked(held_data, prodname_ms, site_code)){
-
-        held_data[[prodname_ms]][[site_code]]$general$status <- 'pending'
-        held_data[[prodname_ms]][[site_code]]$general$mtime <- '1500-01-01'
-        held_data <<- held_data
+    if(bulk_mode){
+        dmn_sites <- 'all_sites'
+    } else {
+        dmn_sites <- site_data %>%
+            filter(network == !!network,
+                   domain == !!domain,
+                   site_type != 'rain_gauge',
+                   in_workflow == 1) %>%
+            pull(site_code)
     }
 
-    # general_status <- get_general_status(tracker = held_data,
-    #                                      prodname_ms = prodname_ms,
-    #                                      site_code = site_code)
+    for(site_code in dmn_sites){
 
-    if(get_missing_only){
+        if(! site_is_tracked(held_data, prodname_ms, site_code)){
 
-        trait_dir <- glue('data/{network}/{domain}/ws_traits/{p}',
-                          p = prodname_from_prodname_ms(prodname_ms))
-        trait_dir <- sub('prism_', 'cc_', trait_dir)
-        trait_dir <- sub('_temp_mean', '_temp', trait_dir)
-        trait_dir <- sub('season_length', 'length_season', trait_dir)
-        trait_dir <- sub('idbp', 'igbp', trait_dir)
+            held_data[[prodname_ms]][[site_code]]$general$status <- 'pending'
+            held_data[[prodname_ms]][[site_code]]$general$mtime <- '1500-01-01'
+            held_data <<- held_data
+        }
 
-        already_have_dir <- dir.exists(trait_dir) && length(list.files(trait_dir))
+        if(get_missing_only){
 
-        if(already_have_dir){
-            fs <- list.files(trait_dir, full.names = TRUE)
-            last_retrieve <- min(file.mtime(fs))
-            if(is.na(last_retrieve)) stop('oi')
-            already_have_dates <- difftime(Sys.time(), last_retrieve,  units = 'days') < 120
-            general_status <- ifelse(already_have_dir && already_have_dates, 'ok', 'pending')
+            if(! bulk_mode) stop('get_missing_only currently only works in bulk_mode, but it would not take much to enable it for bulk_mode = FALSE')
+
+            trait_dir <- glue('data/{network}/{domain}/ws_traits/{p}',
+                              p = prodname_from_prodname_ms(prodname_ms))
+            trait_dir <- sub('prism_', 'cc_', trait_dir)
+            trait_dir <- sub('_temp_mean', '_temp', trait_dir)
+            trait_dir <- sub('season_length', 'length_season', trait_dir)
+            trait_dir <- sub('idbp', 'igbp', trait_dir)
+
+            already_have_dir <- dir.exists(trait_dir) && length(list.files(trait_dir))
+
+            if(already_have_dir){
+                fs <- list.files(trait_dir, full.names = TRUE)
+                last_retrieve <- min(file.mtime(fs))
+                if(is.na(last_retrieve)) stop('oi')
+                already_have_dates <- difftime(Sys.time(), last_retrieve,  units = 'days') < 120
+                general_status <- ifelse(already_have_dir && already_have_dates, 'ok', 'pending')
+            } else {
+                general_status <- 'pending'
+            }
+
         } else {
             general_status <- 'pending'
         }
 
-    } else {
-        general_status <- 'pending'
-    }
+        if(general_status %in% c('ok', 'no_data_avail')){
 
-    if(general_status %in% c('ok', 'no_data_avail')){
+            loginfo(glue('Nothing to do for product: {p}, site: {s}',
+                         p = prodname_ms,
+                         s = site_code),
+                    logger = logger_module)
 
-        loginfo(glue('Nothing to do for product: {p}, site: {s}',
-                     p = prodname_ms,
-                     s = site_code),
+            next
+
+        } else {
+
+            loginfo(glue('Working on product: {p}, site: {s}',
+                         p = prodname_ms,
+                         s = site_code),
+                     logger = logger_module)
+        }
+
+        prodcode <- prodcode_from_prodname_ms(prodname_ms)
+        processing_func <- get(paste0('process_3_', prodcode))
+
+        if(exists('last_retrieve')){
+            #so crude, but would be a huge pain to do proper passing at this point
+            last_retrieve_buffer <- as.Date(last_retrieve) - days(365 + 32)
+            gee_bounding_dates <<- as.character(c(last_retrieve_buffer,
+                                                  Sys.Date()))
+            trait_dir <<- trait_dir
+        }
+
+        general_msg <- sw(do.call(processing_func,
+                                  args = list(network = network,
+                                              domain = domain,
+                                              prodname_ms = prodname_ms,
+                                              site_code = site_code,
+                                              boundaries = boundaries)))
+
+        sw(rm('gee_bounding_dates', 'trait_dir', envir = .GlobalEnv))
+
+        if(is_ms_exception(general_msg)){
+
+            #This indicates that GEE returned an empty table which likely means
+            #The gee product is not available at this location i.e PRISM is only available
+            #in the continental US
+            msg_string <- 'No data available for product: {p}, site: {s}'
+            new_status <- 'no_data_avail'
+
+        } else if(is_ms_err(general_msg)){
+
+            msg_string <- 'Error in product: {p}, site: {s}'
+            new_status <- 'error'
+
+        } else {
+
+            msg_string <- 'Acquired product {p} for site {s}'
+            new_status <- 'ok'
+        }
+
+        msg <- glue(msg_string,
+                    p = prodname_ms,
+                    s = site_code)
+
+        update_data_tracker_g(network = network,
+                              domain = domain,
+                              tracker = held_data,
+                              prodname_ms = prodname_ms,
+                              site_code = site_code,
+                              new_status = new_status)
+
+        loginfo(msg = msg,
                 logger = logger_module)
 
-        next
-
-    } else {
-
-        loginfo(glue('Working on product: {p}, site: {s}',
-                     p = prodname_ms,
-                     s = site_code),
-                 logger = logger_module)
+        gc()
     }
-
-    prodcode <- prodcode_from_prodname_ms(prodname_ms)
-    processing_func <- get(paste0('process_3_', prodcode))
-
-    if(exists('last_retrieve')){
-        #so crude, but would be a huge pain to do proper passing at this point
-        last_retrieve_buffer <- as.Date(last_retrieve) - days(365 + 32)
-        gee_bounding_dates <<- as.character(c(last_retrieve_buffer,
-                                              Sys.Date()))
-        trait_dir <<- trait_dir
-    }
-
-    general_msg <- sw(do.call(processing_func,
-                              args = list(network = network,
-                                          domain = domain,
-                                          prodname_ms = prodname_ms,
-                                          site_code = site_code,
-                                          boundaries = boundaries)))
-
-    sw(rm('gee_bounding_dates', 'trait_dir', envir = .GlobalEnv))
-
-    if(is_ms_exception(general_msg)){
-
-        #This indicates that GEE returned an empty table which likely means
-        #The gee product is not available at this location i.e PRISM is only available
-        #in the continental US
-        msg_string <- 'No data available for product: {p}, site: {s}'
-        new_status <- 'no_data_avail'
-
-    } else if(is_ms_err(general_msg)){
-
-        msg_string <- 'Error in product: {p}, site: {s}'
-        new_status <- 'error'
-
-    } else {
-
-        msg_string <- 'Acquired product {p} for site {s}'
-        new_status <- 'ok'
-    }
-
-    msg <- glue(msg_string,
-                p = prodname_ms,
-                s = site_code)
-
-    update_data_tracker_g(network = network,
-                          domain = domain,
-                          tracker = held_data,
-                          prodname_ms = prodname_ms,
-                          site_code = site_code,
-                          new_status = new_status)
-
-    loginfo(msg = msg,
-            logger = logger_module)
-
-    gc()
 }

@@ -3327,15 +3327,25 @@ ms_munge <- function(network = domain,
 ms_general <- function(network = domain,
                        domain,
                        get_missing_only = FALSE,
-                       general_prod_filter = NULL){
+                       general_prod_filter = NULL,
+                       bulk_mode = TRUE){
 
     #if get_missing_only is TRUE, ws_traits will only be retrieved
     #for ws_traits directories that are missing or empty
+    #bulk_mode: logical. if TRUE, the bounding box of the domain will be used to
+    #   retrieve spatial data. if FALSE, site bboxes are used instead. TRUE is
+    #   appropriate everywhere except NEON as of 2024
 
     if(get_missing_only){
         get_missing_only <<- TRUE
     } else {
         get_missing_only <<- FALSE
+    }
+
+    if(bulk_mode){
+        bulk_mode <<- TRUE
+    } else {
+        bulk_mode <<- FALSE
     }
 
     if(! is.null(general_prod_filter)){
@@ -6198,12 +6208,18 @@ ms_list_files <- function(network, domain, prodname_ms){
 
     level <- ifelse(is_derived_product(prodname_ms), 'derived', 'munged')
 
-    files <- glue('data/{n}/{d}/{l}/{p}',
+    prods <- glue('data/{n}/{d}/{l}/{p}',
                   n = network,
                   d = domain,
                   l = level,
-                  p = prodname_ms) %>%
-        list.files(full.names = TRUE)
+                  p = prodname_ms)
+
+    missing_prods <- which(! dir.exists(prods))
+    if(length(missing_prods)){
+        stop('These products are missing: ', paste(prods[missing_prods], collapse = ', '))
+    }
+
+    files <- list.files(prods, full.names = TRUE)
 
     return(files)
 }
@@ -9478,6 +9494,7 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end, qaqc=FALSE,
             # Return a mask band image, giving the qa value.
             image$bitwiseAnd(qa)$lt(1)
         }
+
         clean_gee_img <- function(img) {
             # Extract the selected band
             img_values <- img$select(band)
@@ -9498,44 +9515,48 @@ get_gee_imgcol <- function(gee_id, band, prodname, start, end, qaqc=FALSE,
         gee_imcol <- ee$ImageCollection(gee_id)$
             filterDate(start, end)$
             map(clean_gee_img)$
-            map(function(x){
-                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-                name <- ee$String$cat(col_name, date)
-                x$select(band)$rename(name)
-            })
+            select(band)
+            # map(function(x){
+            #     date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+            #     name <- ee$String$cat(col_name, date)
+            #     x$select(band)$rename(name)
+            # })
 
 
-    } else{
+    } else {
+
         gee_imcol <- ee$ImageCollection(gee_id)$
             filterDate(start, end)$
-            select(band)$
-            map(function(x){
-                date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
-                name <- ee$String$cat(col_name, date)
-                x$select(band)$rename(name)
-            })
+            select(band)
+            # map(function(x){
+            #     date <- ee$Date(x$get("system:time_start"))$format('YYYY_MM_dd')
+            #     name <- ee$String$cat(col_name, date)
+            #     x$select(band)$rename(name)
+            # })
     }
 
     return(gee_imcol)
 
 }
 
-clean_gee_table <- function(ee_ws_table,
-                            reducer) {
+clean_gee_table <- function(ee_ws_table, reducer){
 
     col_names <- colnames(ee_ws_table)
-    col_names <- col_names[!grepl('site_code', col_names)]
+    col_names <- grep('site_code|area',
+                      col_names,
+                      invert = TRUE,
+                      value = TRUE)
 
-    table_fin <- ee_ws_table %>%
+    if(! grepl('^X[0-9\\-]+_[^X]+X', colnames(ee_ws_table)[3])) stop('adapt regex below')
+
+    ee_ws_table <- ee_ws_table %>%
         pivot_longer(cols = !!col_names, values_to = 'val', names_to = 'var_date') %>%
-        mutate(var = str_split_fixed(var_date, 'X', n = Inf)[,1],
-               datetime = str_split_fixed(var_date, 'X', n = Inf)[,2]) %>%
-        mutate(var = glue('{v}_{r}',
-                          v = var,
-                          r = reducer)) %>%
+        mutate(var = str_extract(var_date, '^X[0-9\\-]+_([^X]+)X', group = 1),
+               datetime = str_extract(var_date, '^X([0-9\\-]+)_[^X]+X', group = 1)) %>%
+        mutate(var = glue('{var}_{reducer}')) %>%
         select(site_code, datetime, var, val)
 
-    return(table_fin)
+    return(ee_ws_table)
 }
 
 get_gee_standard <- function(network,
@@ -9551,24 +9572,38 @@ get_gee_standard <- function(network,
                              contiguous_us = FALSE,
                              summary_stat = 'median'){
 
+    #batch: logical. Deprecated in favor of the less hygienic but more convenient
+    #   bulk_mode parameter of ms_general. batch is always TRUE now, because
+    #   the alternative method fails on big timeseries like prism
+
     if(! summary_stat %in% c('median', 'mean')){
         stop('summary_stat must be median or mean')
     }
 
+    # if(exists('bulk_mode') && bulk_mode){
+    #     batch <- TRUE
+    # } else {
+    #     batch <- FALSE
+    # }
+
+    site_boundary <- sf::st_make_valid(site_boundary)
+
     if(contiguous_us){
+
         usa_bb <- sf::st_bbox(obj = c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                       ymax = 49.384), crs = 4326) %>%
             sf::st_as_sfc(., crs = 4326)
 
-        is_usa <- ! length(sm(sf::st_intersects(usa_bb, sf::st_make_valid(site_boundary)))[[1]]) == 0
+        is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
 
         if(! is_usa){
+            message('no sites within contiguous USA')
             return(NULL)
         }
     }
 
     qaqc <- FALSE
-    if(!is.null(qa_band) || !is.null(bit_mask)){
+    if(! is.null(qa_band) || ! is.null(bit_mask)){
         if(any(is.null(qa_band), is.null(bit_mask))){
             stop('qa_band and bit_mask must both be provided if one is')
         } else{
@@ -9581,15 +9616,18 @@ get_gee_standard <- function(network,
         # Remove file if is in drive
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-        # Mask bad pixles functions
-        get_gee_QABits <- function(image) {
+        # Mask bad pixels functions
+        get_gee_QABits <- function(image){
+
             # Convert binary (character) to decimal (little endian)
             qa <- sum(2^(which(rev(unlist(strsplit(as.character(bit_mask), "")) == 1))-1))
+
             # Return a mask band image, giving the qa value.
             image$bitwiseAnd(qa)$lt(1)
         }
 
-        clean_gee_img <- function(img) {
+        clean_gee_img <- function(img){
+
             # Extract the selected band
             img_values <- img$select(band)
 
@@ -9613,17 +9651,20 @@ get_gee_standard <- function(network,
         asset_path <- rgee::ee_manage_assetlist(asset_folder)
 
         if(nrow(asset_path) > 1){
+
             for(i in 1:nrow(asset_path)){
 
                 if(i == 1){
                     ws_boundary_asset <- ee$FeatureCollection(asset_path$ID[i])
                 }
+
                 if(i > 1){
                     one_ws <- ee$FeatureCollection(asset_path$ID[i])
 
                     ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
                 }
             }
+
         } else {
             ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
         }
@@ -9654,9 +9695,9 @@ get_gee_standard <- function(network,
                 already_got <- ymd(avail_dates[length(avail_dates)]) <=
                     gee_bounding_dates[1]
             } else if(grepl('^[12][089][0-9]{5}$', avail_dates[1])){
-                already_got <- as.numeric(substr(avail_dates[length(avail_dates)],
-                                                 1, 4)) <=
-                    year(gee_bounding_dates[1])
+                already_got <- as_datetime(avail_dates[length(avail_dates)],
+                                           format = '%Y%j') <=
+                    gee_bounding_dates[1]
             } else {
                 browser()
             }
@@ -9670,6 +9711,10 @@ get_gee_standard <- function(network,
             imgcol <- imgcol$filterDate(gee_bounding_dates[1],
                                         gee_bounding_dates[2])
         }
+
+        rez <- case_when(site_boundary$area < 1e5 ~ rez,
+                         between(site_boundary$area, 1e5, 1e6) ~ rez * 2,
+                         site_boundary$area > 1e6 ~ rez * 4)
 
         if(summary_stat == 'median'){
 
@@ -9730,16 +9775,18 @@ get_gee_standard <- function(network,
         sd_name <- glue('{c}_sd', c = prodname)
         median_name <- glue('{c}_{s}', c = prodname, s = summary_stat)
 
-        fin_table <- read_csv(temp_rgee) %>%
+        d_combined <- read_csv(temp_rgee, show_col_types = FALSE) %>%
             mutate(imageId = substr(`system:index`, 1, 10))
 
         googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
-        if(! summary_stat %in% colnames(fin_table) && !'stdDev' %in% colnames(fin_table)){
+        if(! summary_stat %in% colnames(d_combined) &&
+           ! 'stdDev' %in% colnames(d_combined)){
+            browser()
             return(NULL)
         }
 
-        fin_table <- fin_table %>%
+        d_combined <- d_combined %>%
             select(site_code, stdDev, !!summary_stat, imageId) %>%
             rename(datetime = imageId,
                    !!sd_name := stdDev,
@@ -9748,7 +9795,7 @@ get_gee_standard <- function(network,
                          names_to = 'var',
                          values_to = 'val')
 
-        fin <- list(table = fin_table,
+        out <- list(table = d_combined,
                     type = 'batch')
 
     } else {
@@ -9768,42 +9815,79 @@ get_gee_standard <- function(network,
                                  gee_enddate,
                                  qaqc = qaqc)
 
-        ext_median <- try(ee_extract(
-            x = imgcol,
-            y = sheds,
-            scale = rez,
-            fun = ee$Reducer$median(),
-            sf = FALSE
-        ))
+        d_combined <- tibble()
+        for(i in seq_len(nrow(site_boundary))){
 
-        if(length(ext_median) <= 4 || class(ext_median) == 'try-error') {
-            return(NULL)
+            site_bnd <- site_boundary[i, ]
+
+            print(paste('Working on', site_bnd$site_code))
+
+            scale_ <- case_when(site_bnd$area < 1e5 ~ rez,
+                                between(site_bnd$area, 1e5, 1e6) ~ rez * 2,
+                                site_bnd$area > 1e6 ~ rez * 4)
+
+            while(TRUE){
+
+                ext_median <- try(ee_extract(
+                    x = imgcol,
+                    y = site_bnd,
+                    scale = scale_,
+                    fun = ee$Reducer$median(),
+                    sf = FALSE
+                ))
+
+                if(inherits(ext_median, 'try-error') && grepl('timed out', ext_median)){
+                    message('median computation timed out. incrementing scale parameter')
+                    scale_ <- scale_ * 2
+                    if(is.na(scale_)) stop('rly need larger scales?')
+                } else break
+            }
+
+            if(length(ext_median) == 2){
+                ext_median <- tibble()
+            } else if(length(ext_median) <= 4 || inherits(ext_median, 'try-error')){
+                message('investigate this')
+                browser()
+            } else {
+                ext_median <- clean_gee_table(ee_ws_table = ext_median,
+                                              reducer = 'median')
+            }
+
+            while(TRUE){
+
+                ext_sd <- try(ee_extract(
+                    x = imgcol,
+                    y = site_bnd,
+                    scale = scale_,
+                    fun = ee$Reducer$stdDev(),
+                    sf = FALSE
+                ))
+
+                if(inherits(ext_sd, 'try-error') && grepl('timed out', ext_sd)){
+                    message('sdev computation timed out. incrementing scale parameter')
+                    scale_ <- scale_ * 2
+                    if(is.na(scale_)) stop('rly need larger scales?')
+                } else break
+            }
+
+            if(length(ext_sd) == 2){
+                ext_sd <- tibble()
+            } else if(length(ext_sd) <= 4 || inherits(ext_sd, 'try-error')){
+                message('investigate this')
+                browser()
+            } else {
+                ext_sd <- clean_gee_table(ext_sd, reducer = 'sd')
+            }
+
+            d_combined <- bind_rows(ext_median, ext_sd) %>%
+                bind_rows(d_combined)
         }
 
-        ext_median <- clean_gee_table(ee_ws_table = ext_median,
-                                      reducer = 'median')
-
-        ext_sd <- try(ee_extract(
-            x = imgcol,
-            y = sheds,
-            scale = rez,
-            fun = ee$Reducer$stdDev(),
-            sf = FALSE
-        ))
-
-        if(length(ext_sd) <= 4 || class(ext_sd) == 'try-error') {
-            ext_sd <- tibble()
-        } else {
-            ext_sd <- clean_gee_table(ext_sd, reducer = 'sd')
-        }
-
-        fin_table <- rbind(ext_median, ext_sd)
-
-        fin <- list(table = fin_table,
+        out <- list(table = d_combined,
                     type = 'ee_extract')
     }
 
-    return(fin)
+    return(out)
 }
 
 get_relative_uncert <- function(x){
@@ -15086,7 +15170,7 @@ get_nrcs_soils <- function(network,
                                var =  names(nrcs_var_name),
                                val = NA)
 
-        return(generate_ms_exception(glue('No data was retrived for {s}',
+        return(generate_ms_exception(glue('gSSURGO surveys not yet completed for {s}',
                                           s = site)))
     }
 
@@ -16594,21 +16678,18 @@ save_general_files <- function(final_file, raw_file, domain_dir){
 
         final_file_site <- filter(final_file, site_code == !!sites[s])
 
-        sum_path <- glue('{d}sum_{s}.feather',
-                         d = domain_dir,
-                         s = sites[s])
+        sum_path <- file.path(domain_dir,
+                              glue('sum_{sites[s]}.feather'))
 
         write_feather(final_file_site, sum_path)
 
         if(raw_exists){
             raw_file_site <- filter(raw_file, site_code == !!sites[s])
 
-            raw_path <- glue('{d}raw_{s}.feather',
-                             d = domain_dir,
-                             s = sites[s])
+            raw_path <- file.path(domain_dir,
+                                  glue('raw_{sites[s]}.feather'))
 
             write_feather(raw_file_site, raw_path)
-
         }
     }
 }
@@ -18098,6 +18179,25 @@ runoff_to_discharge <- function(x, ws_area_ha){
     return(lps)
 }
 
+discharge_to_runoff <- function(x, ws_area_ha){
+
+    #x: a vector of discharge in L/s
+    #ws_area_ha: watershed area in hectares
+
+    if (is.na(ws_area_ha)) stop('ws_area_ha is missing')
+
+    ws_area_m2 <- ws_area_ha * 10^4
+
+    #x <- x / 1000 #m^3/s
+    #x <- x / ws_area_m2 #m/s
+    #x <- x * 86400 #m/d
+    #x <- x * 1000 #mm/d
+
+    mm_per_day <- as.numeric(x) * 86400 / ws_area_m2
+
+    return(mm_per_day)
+}
+
 get_ldas_precip <- function(lat, lon, startdate = NULL, enddate = NULL){
 
     #lat = numeric latitude, WGS84. negative for southern hemisphere
@@ -18440,8 +18540,10 @@ bind_older_ws_traits <- function(d){
     }
 
     if(nrow(d_out) < nrow(d)) stop('nope')
-    if(nrow(anti_join(d_old, d_out, by = c(datecol, 'site_code', 'var')))) stop('nope')
-    if(! setequal(colnames(d_old), colnames(d_out))) stop('nope')
+    if(length(colnames(d_old))){
+        if(nrow(anti_join(d_old, d_out, by = c(datecol, 'site_code', 'var')))) stop('nope')
+        if(! setequal(colnames(d_old), colnames(d_out))) stop('nope')
+    }
 
     return(d_out)
 }

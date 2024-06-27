@@ -1556,11 +1556,11 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_chemistry__20093.001',
+                     input_prodname_ms = c('stream_chemistry__DP1.20093.001',
                                            'stream_quality__DP1.20288.001',
                                            # 'spCond__DP1.20008.001',
                                            'stream_nitrate__DP1.20033.001',
-                                           'stream_gases__DP1.20297.001',
+                                           'stream_gases__DP1.20097.001',
                                            'stream_temperature__DP1.20053.001',
                                            'stream_PAR__DP1.20042.001',
                                            'isotopes__DP1.20206.001'))
