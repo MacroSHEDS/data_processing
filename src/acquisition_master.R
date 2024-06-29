@@ -326,7 +326,7 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'neon')
+dmnrow <- which(network_domain$domain == 'panola')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -347,11 +347,13 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
-    # owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    owrite_tracker(network, domain)
 
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
-    # owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
+    owrite_tracker(network, domain)
+    held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)
@@ -379,9 +381,9 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    # ms_munge(network = network,
-    #          # prodname_filter = c('stream_chemistry'),
-    #          domain = domain)
+    ms_munge(network = network,
+             prodname_filter = c('discharge'),
+             domain = domain)
 
     # if(domain != 'mcmurdo'){
     #
@@ -393,19 +395,19 @@ for(dmnrow in 1:nrow(network_domain)){
     #                    verbose = TRUE))
     # }
 
-    # ms_derive(network = network,
-    #           # prodname_filter = c('precip_pchem_pflux'),
-    #           domain = domain,
-    #           precip_pchem_pflux_skip_existing = F)
+    ms_derive(network = network,
+              prodname_filter = c('discharge', 'stream_flux_inst'),
+              domain = domain,
+              precip_pchem_pflux_skip_existing = F)
 
-    if(domain != 'mcmurdo'){
-        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = F,
-                   general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    }
+    # if(domain != 'mcmurdo'){
+    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = F,
+    #                general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    # }
 
     retain_ms_globals(ms_globals)
 }

@@ -567,16 +567,17 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     file_path <- list.files(rawdir, full.names = TRUE)
 
-    temp_path <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     zipped_files <- unzip(zipfile = file_path,
-                          exdir = temp_path,
+                          exdir = temp_dir,
                           overwrite = TRUE)
 
     projstring <- choose_projection(unprojected = TRUE)
 
     d <- sf::st_read(glue('{tp}/ws_boundary',
-                          tp = temp_path),
+                          tp = temp_dir),
                      stringsAsFactors = FALSE,
                      quiet = TRUE) %>%
         select(site_code = Huvudomr,

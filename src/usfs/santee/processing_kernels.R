@@ -34,7 +34,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T, full.names = T)
 
@@ -255,7 +257,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
 
     fils <- list.files(paste0(temp_dir, '/', 'santee_q'), full.names = T)
@@ -358,7 +362,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(paste0(temp_dir, '/', 'santee_waterqual'),
                        recursive = T, full.names = T)
@@ -570,15 +576,13 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                     p = prodname_ms,
                     s = site_code)
 
-    # WS79 AND WS80 are miss labeled. Check this if the product is updated
+    # WS79 AND WS80 are mislabeled. Check this if the product is updated
     wb_paths <- list.files(rawfile, full.names = T)
-    # wb_paths <- grep('WS79|WS80', wb_paths, value = TRUE)
-    temp_dir <- tempdir()
+
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     proj <- choose_projection(unprojected = TRUE)
-
-    unlink(temp_dir, recursive = T)
-    temp_dir <- tempdir()
 
     unzip(wb_paths[1], exdir = temp_dir)
 

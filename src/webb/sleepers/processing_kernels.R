@@ -160,10 +160,9 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -319,10 +318,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -553,10 +551,9 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 

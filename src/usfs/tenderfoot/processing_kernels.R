@@ -124,7 +124,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+	temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -199,7 +201,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
 
     rel_file_path <- paste0(temp_dir, '/', 'Data/Tenderfoot_waterquality_data_1992-2009.csv')

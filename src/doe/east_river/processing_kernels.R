@@ -570,10 +570,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -681,7 +679,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -775,7 +775,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
@@ -873,7 +875,8 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -983,7 +986,6 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 #. handle_errors
 process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, component){
 
-    # rawfile='data/doe/east_river/raw/stream_chemistry__VERSIONLESS006/sitename_NA/east_river_carbon.zip'
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
                     n = network,
                     d = domain,
@@ -991,7 +993,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -1088,7 +1091,8 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -1188,10 +1192,8 @@ process_1_VERSIONLESS008 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     unzip(rawfile,
           exdir = temp_dir)
@@ -1243,7 +1245,8 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
 
     zipped_files <- unzip(rawfile, list = TRUE)
 

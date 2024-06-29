@@ -1,6 +1,6 @@
 #run acquisition_master.R down to main loop
 
-#do our totals for Panola match those determined by Aulenbach et al.?
+#do our totals for Panola match those determined by Aulenbach et al.? ####
 
 o = read_feather('data/webb/panola/derived/discharge__ms005/mountain_creek_tributary.feather') %>%
     group_by(site_code, var) %>%
@@ -78,7 +78,7 @@ o %>%
 
 #can we compute runoff the same way?
 
-t %>%
+tt1 = t %>%
     arrange(datetime) %>%
     mutate(time_diff_sec = as.numeric(difftime(lead(datetime, 1), datetime, units = "secs")),
            time_diff_sec = ifelse(is.na(time_diff_sec), 0, time_diff_sec),
@@ -102,3 +102,62 @@ t %>%
     ungroup() %>%
     print(n=10)
 
+
+#the new ms approach
+first_midnight <- floor_date(min(t$datetime), unit = 'day') + days()
+last_midnight <- floor_date(max(t$datetime), unit = 'day') - days()
+tt2 = t %>%
+    select(datetime, val = Streamflow) %>%
+    filter(! is.na(val)) %>%
+    tidyr::complete(datetime = seq(first_midnight, last_midnight, by = 'day'),
+                    fill = list(site_code = t$site_code[1],
+                                var = t$var[1],
+                                ms_status = 0,
+                                ms_interp = 0)) %>%
+    arrange(datetime) %>%
+    mutate(val = imputeTS::na_interpolation(val, maxgap = 1, rule = 1),
+           next_dt = lead(datetime, 1, default = last(datetime)),
+           time_diff = as.numeric(difftime(next_dt, datetime, units = 'sec')),
+           #value for each interval becomes the average between it and the
+           #next, weighted by the duration of the interval in seconds.
+           liters = (val + lead(val, default = last(val))) / 2 * time_diff) %>%
+    group_by(datetime = floor_date(datetime, unit = 'day')) %>%
+    summarize(val = sum(liters),
+              .groups = 'drop') %>%
+    mutate(val = val / 86400) %>%
+
+    mutate(runoff = discharge_to_runoff(val, ws_area_ha = ws_area)) %>%
+    mutate(wy = ifelse(month(datetime) >= 10, year(datetime) + 1, year(datetime))) %>%
+    mutate(runoff = imputeTS::na_interpolation(runoff, maxgap = Inf, rule = 1)) %>%
+    group_by(wy) %>%
+    summarize(ann_runoff = sum(runoff)) %>%
+    left_join(tt, by = 'wy') %>%
+    rowwise() %>%
+    mutate(pct_diff = (ann_runoff - Runoff) / mean(c(ann_runoff, Runoff)) * 100) %>%
+    ungroup() %>%
+    print(n=10)
+
+#okay, final look at panola derived runoff loads after overhauling Q aggregation ####
+#pretty sure this is redundant with the last thing above
+
+o = read_feather('data/webb/panola/derived/discharge__ms005/mountain_creek_tributary.feather') %>%
+    group_by(site_code, var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = 'day'))
+
+tt = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/12_PMRW_StreamwaterSoluteFluxes_WaterYear_WY86-16.csv') %>%
+    distinct(Water_Year, Runoff) %>%
+    rename(wy = Water_Year)
+
+ws_area = filter(site_data, domain == 'panola', site_type == 'stream_gauge') %>%
+    pull(ws_area_ha)
+
+o %>%
+    mutate(runoff = discharge_to_runoff(val, ws_area_ha = ws_area)) %>%
+    mutate(wy = ifelse(month(datetime) >= 10, year(datetime) + 1, year(datetime))) %>%
+    # print(n=100) %>%
+    group_by(wy) %>%
+    summarize(macrosheds_runoff = sum(runoff, na.rm = T)) %>%
+    left_join(tt, by = 'wy') %>%
+    rowwise() %>%
+    mutate(pct_diff = (macrosheds_runoff - Runoff) / mean(c(macrosheds_runoff, Runoff)) * 100) %>%
+    ungroup()

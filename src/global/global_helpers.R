@@ -7592,6 +7592,12 @@ synchronize_timestep <- function(d,
                 select(-val_err)
         }
 
+        #estimating daily discharge via the trapezoidal rule as of 20240628
+        var_is_q <- drop_var_prefix(sitevar_chunk$var[1]) == 'discharge'
+        if(var_is_q){
+            sitevar_chunk <- aggregate_subdaily_q(sitevar_chunk)
+        }
+
         #round each site-variable tibble's datetime column to the desired interval.
         sitevar_chunk <- mutate(sitevar_chunk,
                                 datetime = lubridate::floor_date(
@@ -7613,7 +7619,9 @@ synchronize_timestep <- function(d,
 
         if(nrow(summary_and_interp_chunk)){
 
-            #summarize by sum for P, and mean for everything else
+            #summarize by sum for P, and mean for everything else.
+            #sub-daily discharge has already been aggregated to daily using trapezoidal
+            #method, so this is a no-op
 
             summary_and_interp_chunk_dt <- summary_and_interp_chunk %>%
                 mutate(val_err = errors(val),
@@ -7698,6 +7706,91 @@ synchronize_timestep <- function(d,
         purrr::reduce(bind_rows) %>%
         arrange(site_code, var, datetime) %>%
         select(datetime, site_code, var, val, ms_status, ms_interp)
+
+    return(d)
+}
+
+aggregate_subdaily_q <- function(d){
+
+    #uses pseudo trapezoidal rule to estimate daily discharge from
+    #sub-daily (porentially irregular) sampling intervals.
+
+    #if interval is not sub-daily, nothing to do here
+    if(ms_determine_data_interval(d) >= 1440){
+        message('no sub-daily Q to aggregate')
+        return(d)
+    } else {
+        message('AGGREGATING SUB-DAILY Q')
+    }
+
+    d <- filter(d, ! is.na(val))
+
+    first_midnight <- floor_date(min(d$datetime), unit = 'day') + days()
+    last_midnight <- floor_date(max(d$datetime), unit = 'day')
+
+    #insert and interpolate midnights
+    d <- d %>%
+        arrange(datetime) %>%
+        tidyr::complete(datetime = seq(first_midnight, last_midnight, by = 'day'),
+                        fill = list(site_code = d$site_code[1],
+                                    var = d$var[1],
+                                    ms_status = 0,
+                                    ms_interp = 0)) %>%
+        arrange(datetime) %>% #`complete` jumbles the order
+        mutate(val = imputeTS::na_interpolation(val, maxgap = 1, rule = 1))
+
+    first_dt <- min(d$datetime)
+    last_dt <- max(d$datetime)
+
+    #chop off incomplete first/last days
+    if(format(first_dt, '%H:%M') != '00:00'){
+        d <- filter(d, as.Date(datetime) != as.Date(first_dt))
+    }
+    if(format(last_dt, '%H:%M:%S') != c('00:00:00') &&
+       ! grepl('^23:[4-5]', format(last_dt, '%H:%M'))){
+        d <- filter(d,
+                    as.Date(datetime) != as.Date(last_dt) |
+                    format(datetime, '%H:%M:%S') == '00:00:00')
+    }
+
+    #pseudo-trapezoid rule to integrate discharge by second and bin it by day
+    d <- d %>%
+        mutate(next_dt = lead(datetime, 1, default = last(datetime)),
+               time_diff = as.numeric(difftime(next_dt, datetime, units = 'sec')),
+               #value for each interval becomes the average between it and the
+               #next, weighted by the duration of the interval in seconds.
+               liters = (val + lead(val, default = last(val))) / 2 * time_diff) %>%
+        select(-val) %>%
+
+        # group_by(datetime = floor_date(datetime, unit = 'day')) %>%
+        # summarize(site_code = first(site_code),
+        #           var = first(var),
+        #           val = sum(liters),
+        #           ms_status = numeric_any(ms_status),
+        #           ms_interp = numeric_any(ms_interp),
+        #           .groups = 'drop') %>%
+        # mutate(val = val / 86400)
+
+        mutate(liters_err = errors(liters),
+               liters = errors::drop_errors(liters)) %>%
+        #see parent function for explanation of what's going on here with error
+        as.data.table() %>%
+        .[, .(
+            site_code = data.table::first(site_code),
+            var = data.table::first(var),
+            liters_err = max(sd_or_0(liters, na.rm = TRUE) / sqrt(.N),
+                          mean(liters_err, na.rm = TRUE)),
+            val = sum(liters),
+            ms_status = numeric_any(ms_status),
+            ms_interp = numeric_any(ms_interp)
+        ), by = .(datetime = floor_date(datetime, unit = 'day'))] %>%
+        as_tibble() %>%
+        mutate(val = set_errors(val, liters_err),
+               val = val / 86400) %>%
+        select(-liters_err) %>%
+        filter(! is.na(val))
+
+    if(drop_errors(last(d$val)) == 0) d <- slice(d, -n())
 
     return(d)
 }
@@ -14587,7 +14680,7 @@ least_common_multiple <- function(a, b){
 
 ms_determine_data_interval <- function(d, per_column = FALSE){
 
-    #calculates the mode interval in each column, then returns the
+    #calculates the mode interval for each variable, then returns the
     #   greatest common divisor of those modes as the interval, in minutes.
 
     vars <- unique(d$var)
