@@ -167,7 +167,6 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get
@@ -325,7 +324,6 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get
@@ -558,7 +556,6 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get

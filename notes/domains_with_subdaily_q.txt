@@ -11,3 +11,9 @@ mcmurdo
 plum
 santa_barbara
 neon
+krew
+santee
+suef
+usgs
+loch_vale
+panola
