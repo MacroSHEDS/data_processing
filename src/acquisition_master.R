@@ -347,13 +347,13 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
-    owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
+    # owrite_tracker(network, domain)
 
-    held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
-    owrite_tracker(network, domain)
-    held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
-    owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
+    # owrite_tracker(network, domain)
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
                                    domain = domain)

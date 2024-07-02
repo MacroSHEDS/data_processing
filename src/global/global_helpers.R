@@ -5649,7 +5649,8 @@ convert_to_gl <- function(x, input_unit, molecule){
     #this is for converting to concentration in mass per volume, from either
     #   equivalents per volume or moles per volume. It is NOT for converting to grams
     #   per liter. Therefore, if your input units are already xg/L, where x is
-    #   n, u, m, k, etc., this function will do nothing.
+    #   n, u, m, k, etc., this function will do nothing. In fact, this function ignores
+    #   those prefixes. Use convert_unit for that.
 
     molecule_real <- ms_vars %>%
         filter(variable_code == !!molecule) %>%

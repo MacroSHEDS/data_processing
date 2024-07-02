@@ -196,12 +196,18 @@ for(i in 1:nrow(unprod)){
             trait_dir <<- trait_dir
         }
 
+        if(length(dmn_sites) > 1 || dmn_sites != 'all_sites'){
+            bnd <- filter(boundaries, site_code == !!site_code)
+        } else {
+            bnd <- boundaries
+        }
+
         general_msg <- sw(do.call(processing_func,
                                   args = list(network = network,
                                               domain = domain,
                                               prodname_ms = prodname_ms,
                                               site_code = site_code,
-                                              boundaries = boundaries)))
+                                              boundaries = bnd)))
 
         sw(rm('gee_bounding_dates', 'trait_dir', envir = .GlobalEnv))
 

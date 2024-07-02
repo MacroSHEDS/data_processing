@@ -1,6 +1,7 @@
 #run acquisition_master.R down to main loop
 
 #do our totals for Panola match those determined by Aulenbach et al.? ####
+#start with discharge
 
 o = read_feather('data/webb/panola/derived/discharge__ms005/mountain_creek_tributary.feather') %>%
     group_by(site_code, var) %>%
@@ -161,3 +162,287 @@ o %>%
     rowwise() %>%
     mutate(pct_diff = (macrosheds_runoff - Runoff) / mean(c(macrosheds_runoff, Runoff)) * 100) %>%
     ungroup()
+
+
+#what about precip, pchem, pflux? ####
+#start with pflux ####
+
+convert_Ca <- function(ca_ueq_m2) {
+    ca_kg_ha <- ca_ueq_m2 * 20.04 * 10^(-5)
+    return(ca_kg_ha)
+}
+convert_unit(convert_to_gl(x = 10, input_unit = 'ueq/L', molecule = 'Ca'),
+             'ug/L', 'g/L')
+10 * 20.04 * 1e-6
+#okay, our converter is working
+ms_conversions(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 10),
+               convert_units_from = c(Ca = 'ueq/L'), convert_units_to = c(Ca = 'g/L'))
+#yup, def chill.
+
+o = read_feather('data/webb/panola/derived/precip_flux_inst__ms902/mountain_creek_tributary.feather') %>%
+    group_by(site_code, var) %>%
+    tidyr::complete(datetime = seq(min(datetime), max(datetime), by = 'day')) %>%
+    ungroup()
+t = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/8_PMRW_WetDepositionSoluteFluxes_Daily_WY86-17.csv') %>%
+    mutate(Date = as_date(Date, format = '%m/%d/%Y'))
+
+oo = filter(o, var == 'GN_Ca') %>% mutate(date = as.Date(datetime)) %>% select(date, val)
+tz = select(t, date = Date, val_aul = Ca_WetDep) %>%
+    mutate(val_aul = as.numeric(val_aul),
+           val_aul = convert_Ca(val_aul))
+zzz = full_join(oo, tz, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+fivenum(zzz$pct_diff, na.rm = T)
+fivenum(filter(zzz, abs(pct_diff) != 200)$pct_diff, na.rm = T)
+
+#ugh, off by about 200% across the board ####
+#actually off by a lot more than that. this is just what happens when one number is
+#close to 0 and the other is orders of magnitude larger.
+
+#is it precip that's causing the discrepancy?
+
+op = read_feather('data/webb/panola/derived/precipitation__ms900/mountain_creek_tributary.feather') %>%
+    group_by(site_code, var) %>%
+    mutate(date = as_date(datetime)) %>%
+    tidyr::complete(date = seq(min(date), max(date), by = 'day')) %>%
+    ungroup() %>%
+    select(date, val)
+tp = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/1_PMRW_Precipitation_WY86-18.csv') %>%
+    mutate(datetime = as_datetime(Date, format = '%m/%d/%Y %H:%M:%S')) %>%
+    group_by(date = date(datetime)) %>%
+    summarize(p_aul = sum(Precip)) %>%
+    ungroup() %>%
+    mutate(p_aul = p_aul * 10)
+zp = full_join(op, tp, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - p_aul) / mean(c(val, p_aul)) * 100) %>%
+    ungroup() %>%
+    filter(! is.na(p_aul) & ! is.na(val))
+
+fivenum(filter(zp, abs(pct_diff) != 200)$pct_diff, na.rm = T)
+zp[zp$pct_diff > 198,]
+zp[zp$pct_diff < -198,]
+
+sum(abs(zp$pct_diff) > 100)
+
+#lots of big discreps in precip. likely cause. let's see about pchem ####
+
+convert_Ca2 <- function(ca_ueq_L) {
+    ca_mg_L <- ca_ueq_L * 20.04 * 10^(-6) * 1000
+    return(ca_mg_L)
+}
+
+opc = read_feather('data/webb/panola/derived/precip_chemistry__ms901/mountain_creek_tributary.feather') %>%
+    group_by(site_code, var) %>%
+    mutate(date = as_date(datetime)) %>%
+    tidyr::complete(date = seq(min(date), max(date), by = 'day')) %>%
+    ungroup() %>%
+    select(date, val, var)
+tpc = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/2_PMRW_PrecipitationWaterQuality_WY86-17.csv') %>%
+    mutate(Date = as_date(Date, format = '%m/%d/%Y %H:%M'))
+
+oopc = filter(opc, var == 'GN_Ca') %>% select(date, val)
+ttpc = select(tpc, date = Date, val_aul = Ca_Conc) %>%
+    mutate(val_aul = as.numeric(val_aul),
+           val_aul = convert_Ca2(val_aul)) %>%
+    group_by(date) %>%
+    summarize(val_aul = mean(val_aul, na.rm =T)) %>%
+    ungroup()
+zz = full_join(oopc, ttpc, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+zz_ = zz %>%
+    filter(! is.na(pct_diff))
+fivenum(zz_$pct_diff, na.rm = T)
+fivenum(filter(zz_, abs(pct_diff) != 200)$pct_diff, na.rm = T)
+
+zz[zz$pct_diff > 100,]
+zz[zz$pct_diff < -100,]
+
+sum(abs(zz$pct_diff) > 100)
+
+#okay, so it's precip causing all the trouble? ####
+
+zp
+
+#why are we so wrong about 1985-10-21?
+
+gg = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/1_PMRW_Precipitation_WY86-18.csv') %>%
+    mutate(Date = as_datetime(Date, format = '%m/%d/%Y %H:%M:%S'),
+           Precip = Precip * 10)
+chez_dates = as.Date(c('1985-10-19', '1985-10-20', '1985-10-21', '1985-10-22', '1985-10-23'))
+qrg = (filter(gg, as.Date(Date) %in% chez_dates))
+filter(op, date %in% chez_dates)
+sum(qrg$Precip)
+
+#this is after ms_read_csv
+filter(d, as.Date(datetime) %in% chez_dates)
+
+#the 1985-10-21 discrepancy is just because of datetime shifts
+#so what's up with pflux? no explanation for consistency of discrepancy
+
+plot(density(na.omit(zzz$pct_diff)))
+chez_dates = as.Date(c('1985-10-14', '1985-10-15', '1985-10-16', '1985-10-17', '1985-10-18'))
+#pflux
+filter(zzz, date %in% chez_dates)
+#precip
+filter(zp, date %in% chez_dates)
+#pchem
+filter(zz, date %in% chez_dates)
+filter(tpc, between(Date, as.Date('1985-10-01'), as.Date('1985-11-01')))
+# ms_conversions(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 1.99),
+#                convert_units_from = c(Ca = 'ueq/L'), convert_units_to = c(Ca = 'mg/L'))
+
+#interesting. it may be that aulenbach used linear interpolation for precip chemistry, whereas
+#we use nocb. aulenbach would have then interpolated Ca on 10-16 as hasf of what we did. still, that
+#   should produce at worst a 100% discrep. but let's see if the numbers are different for Cl
+
+var__ = 'GN_Cl'
+
+conv_ = function(zfg, molec, frm, to){
+    convert_unit(convert_to_gl(x = zfg, input_unit = frm, molecule = molec),
+                 frm, to)
+}
+
+#pflux
+oo = filter(o, var == var__) %>% mutate(date = as.Date(datetime)) %>% select(date, val)
+tz = select(t, date = Date, val_aul = SO4_WetDep) %>%
+    mutate(val_aul = as.numeric(val_aul),
+           val_aul = conv_(val_aul, 'Cl', 'ueq/L', 'kg/L') / 1000)
+zzz = full_join(oo, tz, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+
+#pchem
+oopc = filter(opc, var == var__) %>% select(date, val)
+ttpc = select(tpc, date = Date, val_aul = SO4_Conc) %>%
+    mutate(val_aul = as.numeric(val_aul),
+           val_aul = conv_(val_aul, 'Cl', 'ueq/L', 'mg/L')) %>%
+    group_by(date) %>%
+    summarize(val_aul = mean(val_aul, na.rm =T)) %>%
+    ungroup()
+zz = full_join(oopc, ttpc, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+
+# chez_dates = seq(as.Date('1985-10-01'), as.Date('1985-10-30'), 'day')
+#compare
+filter(zzz, date %in% chez_dates) %>% print(n=100)
+#precip
+filter(zp, date %in% chez_dates) %>% print(n=100)
+#pchem
+filter(zz, date %in% chez_dates) %>% print(n=100)
+
+#argh! no idea why the numbers are so different. let's look at annual loads ####
+
+a = read_feather('data/webb/panola/derived/precip_flux_inst__ms902/mountain_creek_tributary.feather') %>%
+    mutate(wy = ifelse(month(datetime) >= 10, year(datetime) + 1, year(datetime))) %>%
+    group_by(wy, var) %>%
+    summarize(val = sum(val, na.rm = T)) %>%
+    ungroup()
+b = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/10_PMRW_WetDepositionSoluteFluxes_WaterYear_WY86-16.csv')
+
+aa = filter(a, var == 'GN_Ca') %>% select(-var)
+
+bb = select(b, wy = Water_Year, val_aul = Ca_WetDep) %>%
+    mutate(val_aul = conv_(as.numeric(val_aul), 'Ca', 'meq/L', 'kg/L') * 10000)
+
+omg = full_join(aa, bb, by = 'wy') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+tail(omg)
+
+
+#zomg, i'm working with unscaled pflux! revisit this after postprocess! ####
+
+a = read_feather('data/webb/panola/derived/precip_flux_inst_scaled__ms902/mountain_creek_tributary.feather') %>%
+    mutate(wy = ifelse(month(datetime) >= 10, year(datetime) + 1, year(datetime))) %>%
+    group_by(wy, var) %>%
+    summarize(val = sum(val, na.rm = T)) %>%
+    ungroup()
+b = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/10_PMRW_WetDepositionSoluteFluxes_WaterYear_WY86-16.csv')
+
+aa = filter(a, var == 'GN_Ca') %>% select(-var)
+
+bb = select(b, wy = Water_Year, val_aul = Ca_WetDep) %>%
+    mutate(val_aul = conv_(as.numeric(val_aul), 'Ca', 'meq/L', 'kg/L') * 10000)
+
+omg = full_join(aa, bb, by = 'wy') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - val_aul) / mean(c(val, val_aul)) * 100) %>%
+    ungroup()
+
+#wow, all of this panicking was for nought ####
+
+#okay, let's look at neon MCRA versus hjandrews MACK ####
+
+#pflux
+
+x = read_feather('data/lter/hjandrews/derived/precip_flux_inst_scaled__ms902/GSMACK.feather') %>%
+    filter(var == 'GN_Ca')
+y = read_feather('data/neon/neon/derived/precip_flux_inst_scaled__ms902/MCRA.feather') %>%
+    filter(var == 'GN_Ca')
+
+x = select(x, datetime, val)
+y = select(y, datetime, val)
+
+yyy = full_join(x, y, by = 'datetime') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val.x - val.y) / mean(c(val.x, val.y)) * 100) %>%
+    ungroup()
+
+na.omit(yyy$pct_diff) %>% fivenum()
+
+sum(abs(yyy$pct_diff) > 50, na.rm=T)
+yyy = filter(yyy, ! is.na(pct_diff))
+yyy[yyy$pct_diff > 100,]
+
+#not bad. what about annual totals?
+
+xtot = x %>%
+    group_by(yr = year(datetime)) %>%
+    summarize(val = sum(val, na.rm = T))
+ytot = y %>%
+    group_by(yr = year(datetime)) %>%
+    summarize(val = sum(val, na.rm = T))
+
+yyy = full_join(xtot, ytot, by = 'yr') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val.x - val.y) / mean(c(val.x, val.y)) * 100) %>%
+    ungroup()
+
+na.omit(yyy$pct_diff) %>% fivenum()
+
+sum(abs(yyy$pct_diff) > 50, na.rm=T)
+yyy = filter(yyy, ! is.na(pct_diff))
+yyy[yyy$pct_diff > 100,]
+
+#jolly good. and sflux?
+
+x = read_feather('data/lter/hjandrews/derived/stream_flux_inst_scaled__ms001/GSMACK.feather') %>%
+    filter(var == 'GN_Ca')
+y = read_feather('data/neon/neon/derived/stream_flux_inst_scaled__ms006/MCRA.feather') %>%
+    filter(var == 'GN_Ca')
+
+x = select(x, datetime, val)
+y = select(y, datetime, val)
+
+yyy = full_join(x, y, by = 'datetime') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val.x - val.y) / mean(c(val.x, val.y)) * 100) %>%
+    ungroup()
+
+na.omit(yyy$pct_diff) %>% fivenum()
+
+sum(abs(yyy$pct_diff) > 50, na.rm=T)
+yyy = filter(yyy, ! is.na(pct_diff))
+yyy[yyy$pct_diff > 100,]
+yyy[yyy$pct_diff < 100,]
+
+#oh right, these are actually different streams. nvm
