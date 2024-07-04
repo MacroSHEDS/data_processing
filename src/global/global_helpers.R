@@ -129,6 +129,11 @@ assign('normally_converted_to',
        value = normally_converted_to,
        envir = .GlobalEnv)
 
+status_codes <- c('READY', 'PENDING', 'PAUSED', 'OBSOLETE', 'TEST')
+assign('status_codes',
+       value = status_codes,
+       envir = .GlobalEnv)
+
 #exports from an attempt to use socket cluster parallelization;
 # idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
 #                     'tidyverse', 'lubridate', 'feather', 'glue',
@@ -5375,13 +5380,16 @@ ms_calc_watershed_area <- function(network,
     wb <- sf::st_read(wd_path,
                       quiet = TRUE)
 
+    if(nrow(wb) != 1) stop('expected 1 row in ', wd_path, '; got ', nrow(wb), '.')
+
     if(! sf::st_is_valid(wb)){
         stop('Watershed is not s2 valid, was this boundary produced under an older version of the system?')
     }
 
     ws_area_ha <- as.numeric(sf::st_area(wb)) / 10000
 
-    if(! 'area' %in% colnames(wb)){
+    has_area_col <- 'area' %in% colnames(wb)
+    if(! has_area_col || wb$area != ws_area_ha){
         wb$area <- ws_area_ha
         wb <- relocate(wb, area, .after = 'site_code')
         sw(sf::st_write(obj = wb,
@@ -5588,8 +5596,6 @@ update_product_file <- function(network,
 
 update_product_statuses <- function(network, domain){
 
-    #status_codes should maybe be defined globally, or in a file
-    status_codes = c('READY', 'PENDING', 'PAUSED', 'OBSOLETE', 'TEST')
     kf = glue('src/{n}/{d}/processing_kernels.R', n=network, d=domain)
     kernel_lines = read_lines(kf)
 
@@ -9744,23 +9750,31 @@ get_gee_standard <- function(network,
 
         asset_path <- rgee::ee_manage_assetlist(asset_folder)
 
-        if(nrow(asset_path) > 1){
+        if(bulk_mode){
+            if(nrow(asset_path) > 1){
 
-            for(i in 1:nrow(asset_path)){
+                for(i in 1:nrow(asset_path)){
 
-                if(i == 1){
-                    ws_boundary_asset <- ee$FeatureCollection(asset_path$ID[i])
+                    if(i == 1){
+                        ws_boundary_asset <- ee$FeatureCollection(asset_path$ID[i])
+                    }
+
+                    if(i > 1){
+                        one_ws <- ee$FeatureCollection(asset_path$ID[i])
+
+                        ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
+                    }
                 }
 
-                if(i > 1){
-                    one_ws <- ee$FeatureCollection(asset_path$ID[i])
-
-                    ws_boundary_asset <- ws_boundary_asset$merge(one_ws)
-                }
+            } else {
+                ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
             }
-
         } else {
-            ws_boundary_asset <- ee$FeatureCollection(asset_path$ID)
+            site_code <- site_boundary$site_code
+            if(length(site_code) != 1) stop('err')
+            pth <- asset_path$ID[grepl(glue('/{site_code}$'), asset_path$ID)]
+            if(length(pth) != 1) stop('err2')
+            ws_boundary_asset <- ee$FeatureCollection(pth)
         }
 
         if(qaqc){
@@ -16822,7 +16836,7 @@ run_prechecks <- function(){
 
 run_postchecks <- function(){
 
-    warning('these checks will probably not work on Windows. MacOS is possible.')
+    warning('some of these checks will probably fail on Windows. MacOS might be okay. if they fail, use GPT to convert `system` calls to list.dirs() etc')
 
     domains_without_stream_gauge_locs <- system('find data/ -type d -name "derived" -exec sh -c \'find "$1" -maxdepth 1 -type d -name "stream_gauge_locations*" | grep -q . || echo "$1"\' _ {} \\; | cut -d/ -f 3',
                                                 intern = TRUE)
@@ -16831,7 +16845,134 @@ run_postchecks <- function(){
                 paste(domains_without_stream_gauge_locs, collapse = ', '))
     }
 
-    message('add more of these checks!')
+    check_product_existence()
+    check_for_empty_derive_folders()
+    check_that_ws_areas_match()
+    check_for_GS_precipitation()
+}
+
+check_product_existence <- function(){
+
+    print('checking for the existence of products that are defined in products.csv files')
+
+    prods_csvs <- system('find src/ -type f -name "products.csv"',
+                         intern = TRUE)
+
+    domains_included <- site_data %>%
+        filter(in_workflow == 1) %>%
+        pull(domain) %>%
+        unique()
+
+    prods_csvs <- Filter(function(x){
+        str_extract(x, '([^/]+)/products.csv$', group = 1) %in% domains_included
+    }, prods_csvs)
+
+    prods_that_should_exist <- c()
+    for(pc in prods_csvs){
+        prods_that_should_exist <- read_csv(pc, show_col_types = FALSE) %>%
+            filter(derive_status %in% c('ready', 'linked') |
+                       notes == 'automated entry') %>%
+            mutate(prodname_ms = paste(prodname, prodcode, sep = '__')) %>%
+            pull(prodname_ms) %>%
+            {file.path(pc, .)} %>%
+            str_replace('^src', 'data') %>%
+            str_replace('products\\.csv', 'derived') %>%
+            c(., prods_that_should_exist)
+    }
+
+    prods_that_do_exist <- system('find data/ -maxdepth 4 -type d -path "*/derived/*" ! -name "documentation"',
+                                  intern = TRUE)
+
+    maybe_missing <- setdiff(prods_that_should_exist, prods_that_do_exist)
+    pkernels <- grep('precip_pchem_pflux', maybe_missing, value = TRUE)
+    non_pkernels <- grep('precip_pchem_pflux', maybe_missing, value = TRUE, invert = TRUE)
+
+    if(length(non_pkernels)){
+        warning('missing products:\n\t', paste(non_pkernels, collapse = '\n\t'))
+    }
+
+    unaccounted_for <- setdiff(prods_that_do_exist, prods_that_should_exist)
+    unaccounted_for <- grep('_scaled__', unaccounted_for, value = TRUE, invert = TRUE)
+
+    if(length(unaccounted_for)) stop('following section not yet complete')
+    def_missing <- c()
+    for(pk in pkernels){
+        srch <- str_replace(pk, 'precip_pchem_pflux__ms...', 'precip')
+        matched <- grep(srch, unaccounted_for, value = TRUE)
+        if(! length(matched)) def_missing <- c(def_missing, pk)
+        unaccounted_for <- setdiff(unaccounted_for, matched)
+    }
+}
+
+check_for_empty_derive_folders <- function(){
+
+    print('looking for empty derived folders')
+
+    empties <- system("find data -type d -path '*/derived/*' -empty", intern = TRUE)
+    if(length(empties)){
+        warning('these derived directories are empty:\n\t',
+                paste(empties, collapse = '\n\t'))
+    }
+}
+
+check_that_ws_areas_match <- function(){
+
+    print('looking for ws_area discrepancies between site_data and ws_boundary shapefiles')
+
+    ws_bnds <- system("find data -type f -path '*/derived/ws_bound*.shp'", intern = TRUE)
+
+    discreps <- c()
+    for(wb in ws_bnds){
+        d <- sf::st_read(wb, quiet = TRUE)
+        if(nrow(d) != 1) warning('expected one row in ', wb, '. got ', nrow(d))
+        site_code <- d$site_code
+        dmn <- str_split_fixed(wb, '/', n = 4)[, 3]
+        area <- round(d$area, 3)
+
+        siterow <- filter(site_data, site_code == !!site_code, site_type == 'stream_gauge')
+        if(nrow(siterow) != 1) warning('expected one row in siterow. got ', nrow(d))
+
+        area2 <- round(siterow$ws_area_ha, 3)
+        if(area != area2){
+            discreps <- c(discreps, paste0(dmn, '-', site_code, ': ', area,
+                                           ' (shp); ', area2, ' (site_data)'))
+        }
+    }
+
+    if(length(discreps)){
+        options(warning.length = 8170)
+        warning('areas differ for:\n\t',
+                paste(discreps, collapse = '\n\t'),
+                '.\n   For any large discrepancies, ms_general needs to be rerun.')
+        options(warning.length = 1000)
+    }
+}
+
+check_for_GS_precipitation <- function(){
+
+    print('looking for questionable sampling regimes')
+
+    prcp <- system("find data -type f -path '*/derived/precipitation*.feather'", intern = TRUE)
+    problems <- c()
+    for(pc in prcp){
+
+        prefixes <- read_feather(pc, columns = 'var') %>%
+            pull() %>%
+            unique() %>%
+            extract_var_prefix()
+
+        if(any(prefixes != 'IS')){
+            unexpected <- grep('IS', prefixes, invert = TRUE, value = TRUE)
+            dmn_sit <- str_match(pc, 'data/[^/]+/([^/]+)/derived/precipitation__ms.../(.+?)\\.feather$')[, 2:3]
+            problems <- c(problems, paste0(dmn_sit[1], '-', dmn_sit[2], ': ',
+                                           paste(unexpected, collapse = ', ')))
+        }
+    }
+
+    if(length(problems)){
+        warning('unexpected sampling regimes encountered (IN and GN might be okay, but not GS):\n\t',
+                paste(problems, collapse = '\n\t'))
+    }
 }
 
 count_sigfigs <- function(x){

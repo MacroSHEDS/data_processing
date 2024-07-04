@@ -326,7 +326,7 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'panola')
+dmnrow <- which(network_domain$domain == 'bear')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -385,29 +385,29 @@ for(dmnrow in 1:nrow(network_domain)){
              prodname_filter = c('discharge'),
              domain = domain)
 
-    # if(domain != 'mcmurdo'){
-    #
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #    sw(ms_delineate(network = network,
-    #                    domain = domain,
-    #                    dev_machine_status = ms_instance$machine_status,
-    #                    # overwrite_wb_sites = c('TE03'),
-    #                    verbose = TRUE))
-    # }
+    if(domain != 'mcmurdo'){
+        #might have to specify locatoin to whitebox executable:
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        # overwrite_wb_sites = c('TE03'),
+                        verbose = FALSE))
+    }
 
     ms_derive(network = network,
               prodname_filter = c('discharge', 'stream_flux_inst'),
               domain = domain,
               precip_pchem_pflux_skip_existing = F)
 
-    # if(domain != 'mcmurdo'){
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #     ms_general(network = network,
-    #                domain = domain,
-    #                get_missing_only = F,
-    #                general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    # }
+    if(domain != 'mcmurdo'){
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = F,
+                   general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    }
 
     retain_ms_globals(ms_globals)
 }
