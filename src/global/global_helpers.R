@@ -10227,6 +10227,29 @@ combine_products <- function(network, domain, prodname_ms, input_prodname_ms,
 
         site_full <- map_dfr(site_files, read_feather)
 
+        dd <- duplicated(select(site_full, datetime, var))
+        if(any(dd)){
+
+            logwarn(glue('Duplicate/replicate records found for site {sites[i]}.',
+                         ' These will be averaged.'),
+                    logger = logger_module)
+
+            site_full[dd | duplicated(select(site_full, datetime, var), fromLast = TRUE), ] %>%
+                arrange(datetime, var) %>%
+                print()
+
+            site_full <- site_full %>%
+                group_by(datetime, var) %>%
+                summarize(site_code = first(site_code),
+                          val = mean(val),
+                          val_err = max(sd_or_0(val, na.rm = TRUE) / sqrt(n()),
+                                        mean(val_err, na.rm = TRUE)),
+                          ms_interp = max(ms_interp),
+                          ms_status = max(ms_status),
+                          .groups = 'drop') %>%
+                relocate(datetime, site_code, var, val, ms_status, ms_interp, val_err)
+        }
+
         if(! rtrn){
             write_ms_file(d = site_full,
                           network = network,
@@ -10735,13 +10758,14 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
 
     crs <- unique(locations$CRS)
 
-    if(length(crs) > 1) {
+    if(length(crs) > 1){
         stop('crs is not consistent for all sites, cannot convert location in
              site_data to stream_gauge location product')
     }
 
     locations <- locations %>%
-        sf::st_as_sf(coords = c('longitude', 'latitude'), crs = crs) %>%
+        sf::st_as_sf(coords = c('longitude', 'latitude'),
+                     crs = crs) %>%
         select(site_code)
 
     path <- glue('data/{n}/{d}/derived/{p}',
@@ -10749,17 +10773,56 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
                  d = domain,
                  p = prodname_ms)
 
-    dir.create(path, recursive = TRUE)
+    dir.create(path,
+               recursive = TRUE,
+               showWarnings = FALSE)
 
-    for(i in 1:nrow(locations)) {
+    for(i in 1:nrow(locations)){
 
-        site_code <- pull(locations[i,], site_code)
+        site_code <- pull(locations[i, ], site_code)
 
-        sf::st_write(locations[i,],
-                     glue('{path}/{site_code}'),
-                     driver = 'ESRI Shapefile',
-                     delete_dsn = TRUE,
-                     quiet = TRUE)
+        name_contains_period <- str_detect(site_code, '\\.')
+
+        if(name_contains_period){
+
+            #st_write does not allow periods in filenames. here's a workaround
+
+            correct_dir <- glue('{path}/{site_code}')
+            if(dir.exists(correct_dir)){
+                unlink(correct_dir,
+                       recursive = TRUE)
+            }
+
+            temp_name <- str_replace_all(site_code, '\\.', '__R__')
+
+            sf::st_write(locations[i, ],
+                         glue('{path}/{temp_name}'),
+                         driver = 'ESRI Shapefile',
+                         delete_dsn = TRUE,
+                         quiet = TRUE)
+
+            #all shapefile extensions
+            extensions <- c('.shp', '.shx', '.dbf', '.prj', '.cpg', '.sbn',
+                            '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs',
+                            '.mxs', '.atx')
+
+            for(ext in extensions){
+                temp_path <- glue('{path}/{temp_name}/{temp_name}{ext}')
+                if(file.exists(temp_path)){
+                    file.rename(temp_path, glue('{path}/{temp_name}/{site_code}{ext}'))
+                }
+            }
+            file.rename(glue('{path}/{temp_name}'),
+                        correct_dir)
+
+        } else {
+
+            sf::st_write(locations[i, ],
+                         glue('{path}/{site_code}'),
+                         driver = 'ESRI Shapefile',
+                         delete_dsn = TRUE,
+                         quiet = TRUE)
+        }
     }
 }
 
@@ -16849,6 +16912,9 @@ run_postchecks <- function(){
     check_for_empty_derive_folders()
     check_that_ws_areas_match()
     check_for_GS_precipitation()
+    check_for_dupes()
+    # check_for_PQ_imbalance()
+    mark_superfluous_files()
 }
 
 check_product_existence <- function(){
@@ -16972,6 +17038,67 @@ check_for_GS_precipitation <- function(){
     if(length(problems)){
         warning('unexpected sampling regimes encountered (IN and GN might be okay, but not GS):\n\t',
                 paste(problems, collapse = '\n\t'))
+    }
+}
+
+check_for_dupes <- function(){
+
+    print('looking for duplicated records')
+
+    ff <- system("find data -type f -path '*/derived/*.feather'", intern = TRUE)
+    fflen <- length(ff)
+    for(i in seq_along(ff)){
+
+        f <- ff[i]
+        if(i %% 100 == 0) print(glue('{i}/{fflen} files checked'))
+
+        dd <- read_feather(f, columns = c('datetime', 'site_code', 'var')) %>%
+            duplicated()
+
+        if(any(dd)){
+            # browser()
+            # zz = read_feather(f, columns = c('datetime', 'site_code', 'var'))
+            # zzz = read_feather(f)
+            # d2 = zzz[duplicated(zz) | duplicated(zz, fromLast = T),] %>% arrange(datetime)
+            warning('duplicate record detected in ', f)
+        }
+    }
+}
+
+mark_superfluous_files <- function(){
+
+    glue('looking for files that correspond to unknown/untracked sites.')
+
+    known_sites <- site_data %>%
+        filter(in_workflow == 1) %>%
+        pull(site_code)
+
+    ff <- system("find data -type f -path '*/derived/*.feather'", intern = TRUE)
+    to_remove <- c()
+    for(i in seq_along(ff)){
+
+        site_code <- str_extract(basename(ff[i]), '.+(?=\\.feather)')
+        if(! site_code %in% known_sites){
+            to_remove <- c(to_remove, ff[i])
+            file.rename(ff[i], paste0(ff[i], 'REMOVETHISFILE'))
+        }
+    }
+
+    logwarn(paste0('SUPERFLUOUS FILES:\n\t',
+                   paste(to_remove, collapse = '\n\t'),
+                   '\n\n\tThese filenames have been appended with "REMOVETHISFILE". They ',
+                   'can be removed with remove_superfluous_files()'),
+            logger = logger_module)
+
+    ff <- system("find data -type f -path '*/derived/*.shp'", intern = TRUE)
+    to_remove_shp <- c()
+    for(i in seq_along(ff)){
+
+        site_code <- str_extract(basename(ff[i]), '.+(?=\\.shp)')
+        if(! site_code %in% known_sites){
+            to_remove_shp <- c(to_remove, ff[i])
+            stop('there should not be superfluous shapefiles. investigate this')
+        }
     }
 }
 

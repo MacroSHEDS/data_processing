@@ -664,6 +664,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                       shapefile = FALSE)
     }
 
+    unlink(temp_dir, recursive = TRUE)
+
     return()
 }
 
@@ -1350,6 +1352,8 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
+
+    unlink(temp_dir, recursive = TRUE)
 
     return()
 }

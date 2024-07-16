@@ -326,16 +326,16 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'bear')
+dmnrow <- which(network_domain$domain == 'arctic')
 
 for(dmnrow in 1:nrow(network_domain)){
+for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
-    # if(domain %in% c('neon', 'mcmurdo')) next
 
     held_data <- get_data_tracker(network, domain)
 
@@ -382,7 +382,7 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_munge(network = network,
-             prodname_filter = c('discharge'),
+             # prodname_filter = c('discharge'),
              domain = domain)
 
     if(domain != 'mcmurdo'){
@@ -396,18 +396,18 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     ms_derive(network = network,
-              prodname_filter = c('discharge', 'stream_flux_inst'),
+              # prodname_filter = c('ws_boundary'),
               domain = domain,
               precip_pchem_pflux_skip_existing = F)
-
-    if(domain != 'mcmurdo'){
-        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = F,
-                   general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    }
+    #
+    # if(domain != 'mcmurdo'){
+    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = F,
+    #                general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    # }
 
     retain_ms_globals(ms_globals)
 }
@@ -415,6 +415,7 @@ for(dmnrow in 1:nrow(network_domain)){
 logger_module <- 'ms.module'
 
 run_postchecks()
+# remove_superfluous_files()
 
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,

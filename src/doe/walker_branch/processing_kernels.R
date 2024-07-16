@@ -368,22 +368,34 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                is_sensor = TRUE)
 
     min_dat <- ms_cast_and_reflag(min_dat,
-                                    varflag_col_pattern = NA,
-                                    summary_flags_to_drop = list('CODE' = 'DROP'),
-                                    summary_flags_dirty = list('CODE' = c('EFWF_EST',
-                                                                          'WF_EST',
-                                                                          'EF_EST',
-                                                                          'EFWT_EST',
-                                                                          'WF_REG',
-                                                                          'EF_REG',
-                                                                          'WF_REG2',
-                                                                          'EFWF_ISCO')))
+                                  varflag_col_pattern = NA,
+                                  summary_flags_to_drop = list('CODE' = 'DROP'),
+                                  summary_flags_dirty = list('CODE' = c('EFWF_EST',
+                                                                        'WF_EST',
+                                                                        'EF_EST',
+                                                                        'EFWT_EST',
+                                                                        'WF_REG',
+                                                                        'EF_REG',
+                                                                        'WF_REG2',
+                                                                        'EFWF_ISCO')))
 
     min_dat <- qc_hdetlim_and_uncert(min_dat, prodname_ms = prodname_ms)
 
     min_dat <- synchronize_timestep(min_dat)
 
-    d <- rbind(daily_dat, min_dat) %>%
+    d <- rbind(daily_dat, min_dat)
+
+    dups <- duplicated(select(d, datetime, var, site_code)) |
+            duplicated(select(d, datetime, var, site_code), fromLast = T)
+
+    #average duplicates
+    d <- d[dups, ] %>%
+        group_by(datetime, site_code, var) %>%
+        summarize(val = mean(val),
+                  ms_status = max(ms_status),
+                  ms_interp = max(ms_interp),
+                  .groups = 'drop') %>%
+        bind_rows(d) %>%
         arrange(datetime)
 
     sites <- unique(d$site_code)
