@@ -395,7 +395,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                   ms_status = max(ms_status),
                   ms_interp = max(ms_interp),
                   .groups = 'drop') %>%
-        bind_rows(d) %>%
+        bind_rows(d[! dups, ]) %>%
         arrange(datetime)
 
     sites <- unique(d$site_code)

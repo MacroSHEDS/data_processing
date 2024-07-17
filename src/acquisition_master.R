@@ -326,10 +326,9 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'arctic')
+dmnrow <- which(network_domain$domain == 'walker_branch')
 
 for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
@@ -340,6 +339,7 @@ for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
     held_data <- get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
+
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
@@ -349,10 +349,7 @@ for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
-
     # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
-    # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -399,15 +396,28 @@ for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
               # prodname_filter = c('ws_boundary'),
               domain = domain,
               precip_pchem_pflux_skip_existing = F)
-    #
-    # if(domain != 'mcmurdo'){
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #     ms_general(network = network,
-    #                domain = domain,
-    #                get_missing_only = F,
-    #                general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    # }
+
+    if(domain != 'mcmurdo'){
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = F,
+                   # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+                   general_prod_filter = c('start_season', 'end_season', 'max_season', 'season_length', #gg
+                                           'terrain', #extract_ws_mean?
+                                           'nrcs_soils', #gg
+                                           'nlcd', #gg
+                                           'nadp', #extract_ws_mean
+                                           'pelletier_soil_thickness', #extract_ws_mean
+                                           'geochemical', #extract_ws_mean
+                                           'bfi', #extract_ws_mean
+                                           'nsidc', #gg?
+                                           'glhymps', #gg?
+                                           'lithology', #gg?
+                                           'daymet', #NEEDS FLEXIBLE SCALE!!!
+                                           'modis_igbp' #gg? uses gee),
+                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    }
 
     retain_ms_globals(ms_globals)
 }
@@ -415,7 +425,7 @@ for(dmnrow in c(1, 6, 23, 12, 18, 10, 13)){
 logger_module <- 'ms.module'
 
 run_postchecks()
-# remove_superfluous_files()
+# remove_superfluous_files() #uncomment and run
 
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,

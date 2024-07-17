@@ -16913,13 +16913,14 @@ run_postchecks <- function(){
     check_that_ws_areas_match()
     check_for_GS_precipitation()
     check_for_dupes()
-    # check_for_PQ_imbalance()
     mark_superfluous_files()
+    check_for_PQ_imbalance()
 }
 
 check_product_existence <- function(){
 
     print('checking for the existence of products that are defined in products.csv files')
+    require_shell_tool('find')
 
     prods_csvs <- system('find src/ -type f -name "products.csv"',
                          intern = TRUE)
@@ -16973,6 +16974,7 @@ check_product_existence <- function(){
 check_for_empty_derive_folders <- function(){
 
     print('looking for empty derived folders')
+    require_shell_tool('find')
 
     empties <- system("find data -type d -path '*/derived/*' -empty", intern = TRUE)
     if(length(empties)){
@@ -16984,6 +16986,7 @@ check_for_empty_derive_folders <- function(){
 check_that_ws_areas_match <- function(){
 
     print('looking for ws_area discrepancies between site_data and ws_boundary shapefiles')
+    require_shell_tool('find')
 
     ws_bnds <- system("find data -type f -path '*/derived/ws_bound*.shp'", intern = TRUE)
 
@@ -17017,6 +17020,7 @@ check_that_ws_areas_match <- function(){
 check_for_GS_precipitation <- function(){
 
     print('looking for questionable sampling regimes')
+    require_shell_tool('find')
 
     prcp <- system("find data -type f -path '*/derived/precipitation*.feather'", intern = TRUE)
     problems <- c()
@@ -17044,6 +17048,7 @@ check_for_GS_precipitation <- function(){
 check_for_dupes <- function(){
 
     print('looking for duplicated records')
+    require_shell_tool('find')
 
     ff <- system("find data -type f -path '*/derived/*.feather'", intern = TRUE)
     fflen <- length(ff)
@@ -17063,11 +17068,166 @@ check_for_dupes <- function(){
             warning('duplicate record detected in ', f)
         }
     }
+
+    fp = grep('discharge|precipitation', ff, value=T)
+    # fp = grep('walker_branch', fp, value=T)
+    fplen <- length(fp)
+    for(i in seq_along(fp)){
+
+        f <- fp[i]
+        if(i %% 100 == 0) print(glue('{i}/{fplen} files checked'))
+
+        dd <- read_feather(f, columns = c('datetime', 'site_code')) %>%
+            duplicated()
+
+        if(any(dd)){
+            warning('duplicate record detected in ', f, ' when "var" column is ignored. This means there are multiple sampling regimes for the same date')
+        }
+    }
+}
+
+check_for_PQ_imbalance <- function(){
+
+    print('Checking precipitation-discharge balance')
+    require_shell_tool('find')
+
+    qq <- system("find data -type f -path '*/derived/discharge*.feather'", intern = TRUE)
+    pp <- system("find data -type f -path '*/derived/precipitation*.feather'", intern = TRUE)
+
+    qp_sites <- inner_join(
+        mutate(tibble(q = qq), nm = basename(q)),
+        mutate(tibble(p = pp), nm = basename(p)),
+        by = 'nm'
+    )
+
+    results <- tibble()
+    for(i in seq_len(nrow(qp_sites))){
+    # for(i in which(grepl('niwot', qp_sites$q))){
+
+        ntw <- str_extract(qp_sites$q[i], 'data/([^/]+)', group = 1)
+        dmn <- str_extract(qp_sites$q[i], 'data/[^/]+/([^/]+)', group = 1)
+        site <- str_extract(qp_sites$nm[i], '.+(?=\\.feather$)')
+
+        area <- site_data %>%
+            filter(domain == dmn,
+                   site_code == site,
+                   in_workflow == 1,
+                   site_type == 'stream_gauge') %>%
+            pull(ws_area_ha)
+
+        Q <- read_feather(qp_sites$q[i], columns = c('datetime', 'val'))
+        P <- read_feather(qp_sites$p[i], columns = c('datetime', 'val'))
+        prism_P <- try({
+            read_feather(glue('data/{ntw}/{dmn}/ws_traits/cc_precip/sum_{site}.feather')) %>%
+                filter(var == 'cc_cumulative_precip') %>%
+                select(year, prism = val)
+        }, silent = TRUE)
+        if(inherits(prism_P, 'try-error')){
+            prism_P <- tibble(year = numeric(), prism = numeric())
+        }
+
+        #join P and Q
+        pq <- Q %>%
+            full_join(P,
+                      by = 'datetime',
+                      suffix = c('.q', '.p')) %>%
+            arrange(datetime)
+
+        #drop leading/trailing incomplete records; make NAs explicit
+        first_complete_row <- max(Position(function(x) ! is.na(x), pq$val.q),
+                                  Position(function(x) ! is.na(x), pq$val.p))
+        last_complete_row <- min(Position(function(x) ! is.na(x), pq$val.q,
+                                          right = TRUE),
+                                 Position(function(x) ! is.na(x), pq$val.p,
+                                          right = TRUE))
+
+        pq <- pq %>%
+            slice(first_complete_row:last_complete_row) %>%
+            tidyr::complete(datetime = seq(min(datetime),
+                                           max(datetime),
+                                           by = 'day')) %>%
+            mutate(year = year(datetime))
+
+        #impute gaps up to 10 days
+        try({
+            pq <- pq %>%
+                mutate(val.q = na_interpolation(val.q, maxgap = 10),
+                       val.p = na_replace(val.p, 0, maxgap = 10))
+        }, silent = TRUE)
+
+        #drop years with more than 90% missing data in either P or Q column
+        #NOTE: this may increase discrepancy between p and prism_P
+        na_props <- pq %>%
+            group_by(year) %>%
+            summarize(na_prop_q = sum(is.na(val.q)) / n(),
+                      na_prop_p = sum(is.na(val.p)) / n())
+
+        pq <- pq %>%
+            left_join(na_props, by = 'year') %>%
+            filter(na_prop_q < 0.9,
+                   na_prop_p < 0.9) %>%
+            select(-starts_with('na_prop'))
+
+        if(! nrow(pq)){
+            results <- bind_rows(results,
+                                 tibble(domain = dmn, site_code = site))
+            next
+        }
+
+        #drop long stretches of missing Q. these may indicate dry/frozen streams
+        pq <- pq %>%
+            mutate(change = cumsum(! is.na(val.q) != lag(! is.na(val.q),
+                                                         default = TRUE))) %>%
+            group_by(change) %>%
+            mutate(na_count = sum(is.na(val.q))) %>%
+            filter(! (is.na(val.q) & na_count >= 30)) %>%
+            ungroup() %>%
+            select(-change, -na_count)
+
+        pq_ann <- pq %>%
+            mutate(val.q = discharge_to_runoff(val.q, area)) %>%
+            group_by(year = year(datetime)) %>%
+            summarize(q = sum(val.q, na.rm = TRUE),
+                      p = sum(val.p, na.rm = TRUE),
+                      .groups = 'drop') %>%
+            left_join(prism_P,
+                      by = 'year') %>%
+            mutate(p_minus_q = p - q,
+                   prism_minus_q = prism - q) %>%
+            rowwise() %>%
+            mutate(pct_gt_p = (p - q) / q * 100,
+                   pct_gt_prism = (prism - q) / q * 100) %>%
+            ungroup() %>%
+            slice(2:(nrow(.) - 1)) #ignore first and last years, which might be truncated
+
+        results <- pq_ann %>%
+            summarize(q_gt_p_pct = round(sum(p_minus_q <= 0) / n() * 100, 1),
+                      q_gt_prism_pct = round(sum(prism_minus_q <= 0, na.rm = TRUE) / n() * 100, 1),
+                      p_gt_10x_q_pct = round(sum(pct_gt_p >= 1000) / n() * 100, 1),
+                      prism_gt_10x_q_pct = round(sum(pct_gt_prism >= 1000, na.rm = TRUE) / n() * 100, 1)) %>%
+            mutate(domain = !!dmn,
+                   site_code = !!site) %>%
+            relocate(domain, site_code) %>%
+            bind_rows(results)
+    }
+
+    #read as e.g. "percent of siteyears for qhich Q > P"
+    print(results, n = 1000)
+
+    smry <- results %>%
+        summarize(total_sites = n(),
+                  Q_gt_P = sum(q_gt_p_pct > 0, na.rm = TRUE),
+                  Q_gt_PRISM = sum(q_gt_prism_pct > 0, na.rm = TRUE),
+                  P_gt_10Q = sum(p_gt_10x_q_pct > 0, na.rm = TRUE),
+                  PRISM_gt_10Q = sum(prism_gt_10x_q_pct > 0, na.rm = TRUE))
+
+    print(smry)
 }
 
 mark_superfluous_files <- function(){
 
     glue('looking for files that correspond to unknown/untracked sites.')
+    require_shell_tool('find')
 
     known_sites <- site_data %>%
         filter(in_workflow == 1) %>%
@@ -17100,6 +17260,39 @@ mark_superfluous_files <- function(){
             stop('there should not be superfluous shapefiles. investigate this')
         }
     }
+}
+
+require_shell_tool <- function(tool){
+
+    command_check <- try({
+        system(glue('{tool} --version'),
+               intern = TRUE,
+               ignore.stderr = TRUE)
+    }, silent = TRUE)
+
+    if(inherits(command_check, 'try-error') || ! length(command_check)){
+        stop(glue("The '{tool}' command is not available. Either install it or modify this routine to be OS-agnostic.\n"))
+    }
+
+    return(invisible())
+}
+
+remove_superfluous_files <- function(){
+
+    require_shell_tool('find')
+
+    file_list <- system("find data -type f -name '*REMOVETHISFILE'", intern = TRUE)
+
+    if(! length(file_list)){
+        cat('No superfluous files found. Taking no action\n')
+        return(invisible())
+    }
+
+    print(glue('In 10 seconds, {length(file_list)} files will be removed. Mash Esc to cancel!'))
+    Sys.sleep(10)
+
+    system("find data -type f -name '*REMOVETHISFILE' -delete")
+    print(glue('{length(file_list)} files removed.'))
 }
 
 count_sigfigs <- function(x){

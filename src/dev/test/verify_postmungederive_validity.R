@@ -152,7 +152,7 @@ tt = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/12_PMR
 ws_area = filter(site_data, domain == 'panola', site_type == 'stream_gauge') %>%
     pull(ws_area_ha)
 
-o %>%
+q_ann = o %>%
     mutate(runoff = discharge_to_runoff(val, ws_area_ha = ws_area)) %>%
     mutate(wy = ifelse(month(datetime) >= 10, year(datetime) + 1, year(datetime))) %>%
     # print(n=100) %>%
@@ -161,7 +161,8 @@ o %>%
     left_join(tt, by = 'wy') %>%
     rowwise() %>%
     mutate(pct_diff = (macrosheds_runoff - Runoff) / mean(c(macrosheds_runoff, Runoff)) * 100) %>%
-    ungroup()
+    ungroup() %>%
+    print()
 
 
 #what about precip, pchem, pflux? ####
@@ -227,6 +228,22 @@ zp[zp$pct_diff < -198,]
 
 sum(abs(zp$pct_diff) > 100)
 
+#annual precip?
+p_ann = zp %>%
+    mutate(wy = ifelse(month(date) >= 10, year(date) + 1, year(date))) %>%
+    group_by(wy) %>%
+    summarize(ms = sum(val, na.rm = T),
+              aul = sum(p_aul, na.rm = T),
+              .groups = 'drop') %>%
+    rowwise() %>%
+    mutate(pct_diff = (ms - aul) / mean(c(ms, aul)) * 100) %>%
+    ungroup()
+
+#all good. so there's just a huge P-Q discrep in aulenbach?
+p_ann
+q_ann
+#yes. because P often exceeds Q by a large margin. it's just the other way around that you need to watch out for
+
 #lots of big discreps in precip. likely cause. let's see about pchem ####
 
 convert_Ca2 <- function(ca_ueq_L) {
@@ -267,6 +284,7 @@ sum(abs(zz$pct_diff) > 100)
 #okay, so it's precip causing all the trouble? ####
 
 zp
+zp$pct_diff
 
 #why are we so wrong about 1985-10-21?
 
