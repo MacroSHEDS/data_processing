@@ -11065,7 +11065,8 @@ postprocess_entire_dataset <- function(site_data,
     #   set to NA (the dafault) to prevent thinning.
     #push_new_version_to_figshare: if TRUE, publishes the basic version of our dataset that's
     #   stored on Figshare and queried by the macrosheds R package
-    #push_new_version_to_edi: if TRUE, publishes the full version of our dataset to EDI
+    #push_new_version_to_figshare_and_edi: if TRUE, publishes the full version of
+    #   the dataset to EDI (primary) and Figshare (used by the macrosheds package)
 
     #for post-derive steps (and patches, honestly) that finalize the dataset and/or
     #save the portal some processing.
@@ -11077,6 +11078,18 @@ postprocess_entire_dataset <- function(site_data,
     #     log_with_indent('Filtering ungauged sites', logger = logger_module)
     #     site_data <- filter(site_data, site_type != 'stream_sampling_point')
     # }
+
+    #NaN -> NA                  [COMPLETE]
+    #remove combining products  [COMPLETE?]
+    #update varnames            [early]
+    #remove NH4, PO4, etc.?     [early]
+    general_cleanup() #after postprocess, before edi/figshare upload
+    #datetime to date           [save for end]
+    #isolate sampling regime    [save for end]
+    #"area" -> "ws_area_ha"     [save for end]
+    #remove provenance records for networks/dmns/sites not in workflow
+    #update changelog before finalizing
+        #disclaimer, other provenance stuff, etc.
 
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
@@ -11133,6 +11146,10 @@ postprocess_entire_dataset <- function(site_data,
     insert_unknown_uncertainties(path = '../portal/data')
     NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
     NaN_to_NA(path = '../portal/data')
+
+    ##
+    ## THIS IS WHERE NEW CLEANUP STEPS HAPPEN ##
+    ##
 
     log_with_indent('cataloging held data', logger = logger_module)
     catalog_held_data(site_data = site_data,
