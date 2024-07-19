@@ -261,7 +261,7 @@ process_1_4341 <- function(network, domain, prodname_ms, site_code, components){
     #they may indicate insufficiencies
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = c(DATE = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(MEAN_Q = 'discharge'),
                          data_col_pattern = '#V#',
@@ -392,7 +392,7 @@ process_1_4021 <- function(network, domain, prodname_ms, site_code, components){
     #they may indicate insufficiencies
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(PH='pH', COND='spCond', ALK='alk',
                              SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
@@ -446,7 +446,7 @@ process_1_4022 <- function(network, domain, prodname_ms, site_code, components){
     # but RCADMN, RCHI15, RCHIF7, RCHIR7 not listedRCADMN, RCHI15, RCHIF7, RCHIR7
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(PH='pH', COND='spCond', ALK='alk',
                                         SSED='suspSed', SI='Si', PARTP='TPP', PO4P='PO4_P',
@@ -570,7 +570,7 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code, components){
 
     d <- ms_read_raw_csv(filepath = rawfile1,
                          datetime_cols = c(DATE = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(WATERTEMP_MEAN_DAY = 'temp'),
                          data_col_pattern = '#V#',
@@ -594,7 +594,7 @@ process_1_4020 <- function(network, domain, prodname_ms, site_code, components){
 
     d_ <- ms_read_raw_csv(filepath = rawfile2,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(WATERTEMP_MEAN = 'temp'),
                          data_col_pattern = '#V#',

@@ -518,7 +518,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('dateTime' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('PrecipRate' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -631,7 +631,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('standard_time' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          alt_site_code = east_river_site_name_map,
                          data_cols =  c('q' = 'discharge'),
@@ -732,7 +732,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c(deltad = 'dD',
                                         deltao18 = 'd18O'),
@@ -829,7 +829,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  east_river_cations,
                          data_col_pattern = '#V#',
@@ -932,7 +932,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c(chloride = 'Cl',
                                         nitrate = 'NO3',
@@ -1047,7 +1047,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c(dic = 'DIC',
                                         npoc = 'DOC'),
@@ -1145,7 +1145,7 @@ process_1_VERSIONLESS007 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c(tdn = 'TDN',
                                         ammonia_n = 'NH3_N'),
@@ -1316,7 +1316,7 @@ process_1_VERSIONLESS009 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-7',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          alt_site_code = east_river_site_name_map,
                          data_cols =  target_var,

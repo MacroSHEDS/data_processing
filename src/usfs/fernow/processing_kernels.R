@@ -256,7 +256,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -315,7 +315,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Discharge..mm.' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -381,7 +381,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Weather.Station',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',
@@ -457,7 +457,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',

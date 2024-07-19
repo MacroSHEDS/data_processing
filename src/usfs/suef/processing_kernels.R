@@ -228,7 +228,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
                          datetime_cols = c('DATE_TIME' = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(INST_Q = 'discharge'),
                          data_col_pattern = '#V#',
@@ -299,7 +299,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-8',
+                         datetime_tz = 'Etc/GMT+8',
                          site_code_col = 'SITECODE',
                          data_cols =  c(PH='pH',
                                         COND='spCond',
@@ -438,7 +438,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'Etc/GMT-8',
+                             datetime_tz = 'Etc/GMT+8',
                              site_code_col = 'SITECODE',
                              data_cols =  c(PH='pH',
                                             COND='spCond',
@@ -491,7 +491,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c(DATE_TIME = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'Etc/GMT-8',
+                             datetime_tz = 'Etc/GMT+8',
                              site_code_col = 'SITECODE',
                              data_cols =  c(PRECIP_CM = 'precipitation'),
                              data_col_pattern = '#V#',

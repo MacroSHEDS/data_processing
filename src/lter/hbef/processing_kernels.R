@@ -143,7 +143,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_code, component){
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATETIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'Etc/GMT-5', #EST
+                         datetime_tz = 'Etc/GMT+5', #EST
                          site_code_col = 'WS',
                          alt_site_code = list('w1' = c('1', 'W1'),
                                               'w2' = c('2', 'W2'),
@@ -183,7 +183,7 @@ process_1_13 <- function(network, domain, prodname_ms, site_code, component){
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATE = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'rainGage',
                          data_cols = c(Precip = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -232,7 +232,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_code, component){
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c(date = '%Y-%m-%d',
                                                timeEST = '%H:%M'),
-                             datetime_tz = 'Etc/GMT-5',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site',
                              alt_site_code = list('w1' = c('1', 'W1'),
                                                   'w2' = c('2', 'W2'),
@@ -270,7 +270,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_code, component){
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c(date = '%Y-%m-%d',
                                                timeEST = '%H:%M'),
-                             datetime_tz = 'Etc/GMT-5',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site',
                              alt_site_code = list('w1' = c('1', 'W1'),
                                                   'w2' = c('2', 'W2'),

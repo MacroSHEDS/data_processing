@@ -76,7 +76,7 @@ process_1_700 <- function(network, domain, prodname_ms, site_code, component){
     d <- ms_read_raw_csv(preprocessed_tibble = d_,
                          datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
                          #very different values at e.g. GFCP and GFCPComp sometimes
                          # alt_site_code = list('GFCP' = 'GFCPComp',
@@ -124,7 +124,7 @@ process_1_900 <- function(network, domain, prodname_ms, site_code, component){
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
                                        'temperature'='temp', 'dox'='DO', 'ph'='pH',
@@ -154,7 +154,7 @@ process_1_800 <- function(network, domain, prodname_ms, site_code, component){
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c('date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
                                        'sulfate'='SO4', 'nitrogen_total'='TN',
@@ -190,7 +190,7 @@ process_1_3110 <- function(network, domain, prodname_ms, site_code, component){
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c('Date_Time_EST' = '%Y-%m-%d %H:%M'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Rain_Gauge_ID',
                          data_cols = c('Precipitation_mm'='precipitation'),
                          data_col_pattern = '#V#',

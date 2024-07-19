@@ -221,7 +221,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
                                  datetime_cols = c('Date' = '%Y%m%d'),
-                                 datetime_tz = 'Etc/GMT-5',
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  data_col_pattern = '#V#',
@@ -248,7 +248,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     hourly_dat <- ms_read_raw_csv(preprocessed_tibble = hourly_dat,
                                  datetime_cols = c('DATE' = '%Y%m%d',
                                                       'TIME' = '%H:%M'),
-                                 datetime_tz = 'Etc/GMT-5',
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  summary_flagcols = 'FLAG',
@@ -323,7 +323,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
                                  datetime_cols = c('DATE' = '%Y%m%d'),
-                                 datetime_tz = 'Etc/GMT-5',
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'name',
                                  data_cols =  c('value' = 'discharge'),
                                  alt_site_code = list(east_fork = 'EF_DISCHARGE',
@@ -357,7 +357,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     min_dat <- ms_read_raw_csv(preprocessed_tibble = min_dat,
                                datetime_cols = c('DATE' = '%Y%m%d'),
-                               datetime_tz = 'Etc/GMT-5',
+                               datetime_tz = 'Etc/GMT+5',
                                site_code_col = 'name',
                                data_cols =  c('value' = 'discharge'),
                                alt_site_code = list(east_fork = 'EF_DISCHARGE',
@@ -445,7 +445,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     west_dat <- ms_read_raw_csv(preprocessed_tibble = west_dat,
                                 datetime_cols = c('DATE' = '%Y%m%d'),
-                                datetime_tz = 'Etc/GMT-5',
+                                datetime_tz = 'Etc/GMT+5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',
@@ -502,7 +502,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     east_dat <- ms_read_raw_csv(preprocessed_tibble = east_dat,
                                 datetime_cols = c('DATE' = '%Y%m%d'),
-                                datetime_tz = 'Etc/GMT-5',
+                                datetime_tz = 'Etc/GMT+5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',

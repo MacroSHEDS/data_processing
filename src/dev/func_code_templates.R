@@ -61,7 +61,7 @@ process_1_XXX <- function(network, domain, prodname_ms, site_code,
         mutate(
             #if timezone doesn't change with DST, specify it as a GMT offset:
             datetime = with_tz(as_datetime(d$datetime[1],
-                                          tz = 'Etc/GMT-8'),
+                                          tz = 'Etc/GMT+8'),
                                tz = 'UTC'),
             #if it does observe DST, use something like this:
             # datetime = with_tz(as_datetime(d$datetime[1], 'US/Eastern'), 'UTC'),

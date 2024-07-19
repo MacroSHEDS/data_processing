@@ -52,7 +52,7 @@ process_1_p01 <- function(network, domain, prodname_ms, site_code, components){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c('TIMESTAMP' = '%Y-%m-%d'),
-                             datetime_tz = 'Etc/GMT+1',
+                             datetime_tz = 'Etc/GMT-1',
                              site_code_col = 'sitecode',
                              data_cols =  c('Q' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -88,7 +88,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT+1',
+                         datetime_tz = 'Etc/GMT-1',
                          site_code_col = 'SiteID',
                          alt_site_code = list('Svartberget' = '1'),
                          data_cols =  c(#'EC.µS.cm' = 'spCond',
@@ -410,7 +410,7 @@ process_1_p03 <- function(network, domain, prodname_ms, site_code, components){
         d <- ms_read_raw_csv(
             preprocessed_tibble = d,
             datetime_cols = c('TIMESTAMP' = '%Y-%m-%d %H:%M'),
-            datetime_tz = 'Etc/GMT+1',
+            datetime_tz = 'Etc/GMT-1',
             site_code_col = 'sitecode',
             data_cols =  c('pH', SCOND = 'spCond', 'DOC', TOT.N = 'TN',
                            PO4.P = 'PO4_P', NH4.N = 'NH4_N', NO2.NO3.N = 'NO3_NO2_N',
@@ -496,7 +496,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Date' = '%Y-%m-%d'),
-                         datetime_tz = 'Etc/GMT+1',
+                         datetime_tz = 'Etc/GMT-1',
                          site_code_col = 'SiteID',
                          alt_site_code = list('Site1' = '1',
                                               'Site2' = '2',
@@ -724,7 +724,7 @@ process_1_p06 <- function(network, domain, prodname_ms, site_code, components){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c('TIMESTAMP' = time_fmt),
-                             datetime_tz = 'Etc/GMT+1',
+                             datetime_tz = 'Etc/GMT-1',
                              site_code_col = 'sitecode',
                              data_cols =  c('P' = 'precipitation'),
                              data_col_pattern = '#V#',

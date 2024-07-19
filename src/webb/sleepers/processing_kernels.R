@@ -198,7 +198,7 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  c('Precip_Depth_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -266,7 +266,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Date' = '%m/%d/%y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Precip..mm' = 'precipitation'),
                          data_col_pattern = '#V#',
@@ -381,7 +381,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
@@ -502,7 +502,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('date' = "%Y-%m-%d"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c("discharge" = "discharge"),
                          data_col_pattern = '#V#',
@@ -621,7 +621,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('Date_Time' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
