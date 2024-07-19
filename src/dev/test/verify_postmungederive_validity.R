@@ -211,11 +211,20 @@ op = read_feather('data/webb/panola/derived/precipitation__ms900/mountain_creek_
     ungroup() %>%
     select(date, val)
 tp = read_csv('data/webb/panola/raw/discharge__VERSIONLESS001/sitename_NA/1_PMRW_Precipitation_WY86-18.csv') %>%
-    mutate(datetime = as_datetime(Date, format = '%m/%d/%Y %H:%M:%S')) %>%
+    mutate(datetime = as_datetime(Date, format = '%m/%d/%Y %H:%M:%S', tz = 'Etc/GMT+5'),
+           datetime = with_tz(datetime, 'UTC')) %>%
     group_by(date = date(datetime)) %>%
     summarize(p_aul = sum(Precip)) %>%
     ungroup() %>%
     mutate(p_aul = p_aul * 10)
+prism = read_feather('data/webb/panola/ws_traits/cc_precip/raw_mountain_creek_tributary.feather') %>%
+    filter(var == 'cc_precip_median') %>%
+    select(date = datetime, val) %>%
+    inner_join(tp, by = 'date') %>%
+    rowwise() %>%
+    mutate(pct_diff = (val - p_aul) / mean(c(val, p_aul)) * 100) %>%
+    ungroup()
+
 zp = full_join(op, tp, by = 'date') %>%
     rowwise() %>%
     mutate(pct_diff = (val - p_aul) / mean(c(val, p_aul)) * 100) %>%

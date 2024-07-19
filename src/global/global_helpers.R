@@ -10381,11 +10381,7 @@ load_config_datasets <- function(from_where){
            pos = .GlobalEnv)
 }
 
-write_portal_config_datasets <- function(portal_config = NULL){
-
-    if(!is.null(portal_config)) {
-      conf <- portal_config
-    }
+write_portal_config_datasets <- function(){
 
     #so we don't have to read these from gdrive when running the app in
     #production. also, nice to report download sizes this way and avoid some
@@ -10486,6 +10482,10 @@ ms_write_confdata <- function(x,
     if(! which_dataset %in% known_datasets){
         stop(glue('which_dataset must be one of: "{kd}"',
                   kd = paste(known_datasets, collapse = '", "')))
+    }
+
+    if(which_dataset == 'site_data' && ! any(site_data$in_workflow == 0)){
+        stop('something is causing in_workflow == 0 sites to be removed from site_data')
     }
 
     type_string <- case_when(
@@ -10944,6 +10944,51 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
     }
 }
 
+final_cleanup <- function(path){
+
+    #started with more encapsulation, but that's a lot of unneccessary read/write
+    #operations, which can be hard on SSDs
+
+    insert_unknown_uncertainties(path = path)
+    NaN_to_NA(path = path)
+    #make sure portal data got updated
+
+    #so now dumping operations here. So far:
+    #1. convert datetime to date. we no longer have intentions of going sub-daily
+    #2. remove sampling regime information from the variable name, into two separate columns
+    #   scratch that. separate grab/installed into its own column, but ditch sensor/nonsensor
+    #3. change name of "area" column in ws_boundary shapefiles to "ws_area_ha"
+    #4. remove site-level shapefiles and text documentation from portal/data
+
+    paths <- list.files(path = path,
+                        pattern = '*.feather',
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+    paths <- grep('/(?:biplot|general)/',
+                  paths,
+                  value = TRUE,
+                  invert = TRUE)
+
+    for(p in paths){
+
+        # if(! 'var' %in% names(feather::feather_metadata(p)$types)) next
+        read_feather(p) %>%
+            rename(date = datetime) %>%
+            mutate(date = as.Date(date)) %>%
+            tidyr::separate_wider_regex(
+                cols = var,
+                patterns = c(grab_sample = '.',
+                             '..',
+                             var = '.*')
+            ) %>%
+            mutate(grab_sample = grab_sample == 'G') %>%
+            write_feather(p)
+    }
+
+
+}
+
 insert_unknown_uncertainties <- function(path){
 
     #loads all feather files in path. replaces val_err with NA for superunknown vars.
@@ -11081,26 +11126,12 @@ postprocess_entire_dataset <- function(site_data,
     #     site_data <- filter(site_data, site_type != 'stream_sampling_point')
     # }
 
-    #NaN -> NA                  [COMPLETE]
-    #remove combining products  [COMPLETE?]
-    #update varnames            [early]
-    #remove NH4, PO4, etc.?     [early]
-    # general_cleanup() #NOT NEEDED? after postprocess, before edi/figshare upload
-    #datetime to date           [save for end]
-    #isolate sampling regime    [save for end]
-    #"area" -> "ws_area_ha"     [save for end]
-    #remove provenance records for networks/dmns/sites not in workflow
-    #update changelog before finalizing
-        #disclaimer, other provenance stuff, etc.
-
     log_with_indent('scaling flux by area', logger = logger_module)
     scale_flux_by_area(network_domain = network_domain,
                        site_data = site_data)
 
-    # portal_config <- jsonlite::read_json('./portal_config.json')
-
     log_with_indent('writing config datasets to local dir', logger = logger_module)
-    write_portal_config_datasets(portal_config)
+    write_portal_config_datasets()
 
     log_with_indent('combining watershed boundaries', logger = logger_module)
     combine_ws_boundaries()
@@ -11142,16 +11173,25 @@ postprocess_entire_dataset <- function(site_data,
                     logger = logger_module)
     generate_output_dataset(vsn = dataset_version)
 
-    log_with_indent('replacing superunknown uncertainties and NaNs with NA',
+    #NaN -> NA                  [COMPLETE]
+    #remove combining products  [COMPLETE?]
+    #update varnames            [early; DONE]
+    #remove NH4, PO4, etc.?     [early]
+    # general_cleanup() #NOT NEEDED? after postprocess, before edi/figshare upload
+    #datetime to date           [save for end]
+    #isolate sampling regime    [save for end]
+    #"area" -> "ws_area_ha"     [save for end]
+    #remove provenance records for networks/dmns/sites not in workflow
+    #update changelog before finalizing
+    #disclaimer, other provenance stuff, etc.
+    log_with_indent('final cleanup',
                     logger = logger_module)
-    insert_unknown_uncertainties(path = paste0('macrosheds_dataset_v', dataset_version))
-    insert_unknown_uncertainties(path = '../portal/data')
-    NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
-    NaN_to_NA(path = '../portal/data')
+    final_cleanup(path = paste0('macrosheds_dataset_v', dataset_version))
 
-    ##
-    ## THIS IS WHERE NEW CLEANUP STEPS HAPPEN ##
-    ##
+    # insert_unknown_uncertainties(path = paste0('macrosheds_dataset_v', dataset_version))
+    # # insert_unknown_uncertainties(path = '../portal/data') #VERIFY THAT THIS IS ACTUALLY NEEDED
+    # NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
+    # # NaN_to_NA(path = '../portal/data') ##VERIFY THAT THIS IS ACTUALLY NEEDED
 
     log_with_indent('cataloging held data', logger = logger_module)
     catalog_held_data(site_data = site_data,
@@ -16934,6 +16974,7 @@ run_postchecks <- function(){
     check_for_dupes()
     mark_superfluous_files()
     check_for_PQ_imbalance()
+    remove_some_molecular_forms()
 }
 
 check_product_existence <- function(){
@@ -17230,7 +17271,7 @@ check_for_PQ_imbalance <- function(){
             bind_rows(results)
     }
 
-    #read as e.g. "percent of siteyears for qhich Q > P"
+    #read as e.g. "percent of siteyears for which Q > P"
     print(results, n = 1000)
 
     smry <- results %>%
@@ -17263,10 +17304,30 @@ mark_superfluous_files <- function(){
         }
     }
 
-    logwarn(paste0('SUPERFLUOUS FILES:\n\t',
-                   paste(to_remove, collapse = '\n\t'),
-                   '\n\n\tThese filenames have been appended with "REMOVETHISFILE". They ',
-                   'can be removed with remove_superfluous_files()'),
+    logwarn(paste(length(to_remove),
+                  'superfluous files detected in data/. These have been appended with "REMOVETHISFILE". They',
+                  'can be removed with remove_superfluous_files("data")'),
+            logger = logger_module)
+
+    ffp <- system("find ../portal/data -type f -name '*.feather'", intern = TRUE)
+    for(i in seq_along(ffp)){
+
+        site_code <- str_extract(basename(ffp[i]), '.+(?=\\.feather)')
+        if(! site_code %in% known_sites){
+            to_remove <- c(to_remove, ffp[i])
+            file.rename(ffp[i], paste0(ffp[i], 'REMOVETHISFILE'))
+        }
+    }
+    # if(length(to_remove)) warning('superfluous files detected in portal/data'
+
+    # logwarn(paste0('SUPERFLUOUS FILES:\n\t',
+    #                paste(to_remove, collapse = '\n\t'),
+    #                '\n\n\tThese filenames have been appended with "REMOVETHISFILE". They ',
+    #                'can be removed with remove_superfluous_files()'),
+    #         logger = logger_module)
+    logwarn(paste(length(to_remove_p),
+                  'superfluous files detected in ../portal/data. These have been appended with "REMOVETHISFILE". They',
+                  'can be removed with remove_superfluous_files("../portal/data")'),
             logger = logger_module)
 
     ff <- system("find data -type f -path '*/derived/*.shp'", intern = TRUE)
@@ -17278,6 +17339,20 @@ mark_superfluous_files <- function(){
             to_remove_shp <- c(to_remove, ff[i])
             stop('there should not be superfluous shapefiles. investigate this')
         }
+    }
+}
+
+remove_some_molecular_forms <- function(){
+
+    print('Removing some molecular variables, e.g. NH4 (and keeping NH4-N)')
+    require_shell_tool('find')
+
+    ff <- system("find data -type f -path '*/derived/*chemistry*/*.feather' -o -path '*/derived/*flux*/*.feather'",
+                 intern = TRUE)
+    for(f in ff){
+        read_feather(f) %>%
+           filter(! drop_var_prefix(var) %in% normally_converted_molecules) %>%
+            write_feather(f)
     }
 }
 
@@ -17296,21 +17371,21 @@ require_shell_tool <- function(tool){
     return(invisible())
 }
 
-remove_superfluous_files <- function(){
+remove_superfluous_files <- function(path){
 
     require_shell_tool('find')
 
-    file_list <- system("find data -type f -name '*REMOVETHISFILE'", intern = TRUE)
+    file_list <- system(paste("find", path, "-type f -name '*REMOVETHISFILE'"), intern = TRUE)
 
     if(! length(file_list)){
         cat('No superfluous files found. Taking no action\n')
         return(invisible())
     }
 
-    print(glue('In 10 seconds, {length(file_list)} files will be removed. Mash Esc to cancel!'))
+    print(glue('In 10 seconds, {length(file_list)} files will be removed from {path}. Mash Esc to cancel!'))
     Sys.sleep(10)
 
-    system("find data -type f -name '*REMOVETHISFILE' -delete")
+    system(paste("find", path, "-type f -name '*REMOVETHISFILE' -delete"))
     print(glue('{length(file_list)} files removed.'))
 }
 
