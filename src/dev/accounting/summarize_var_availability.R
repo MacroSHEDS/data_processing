@@ -63,9 +63,17 @@ smry2
 
 print(Si_A, n = 1000)
 Si_B
+filter(site_data, site_type == 'stream_gauge', site_code %in% Si_A$site_code) %>%
+    select(latitude, longitude) %>%
+    st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+    mapview::mapview()
 
 print(DOC_A, n = 1000)
 DOC_B
+filter(site_data, site_type == 'stream_gauge', site_code %in% DOC_A$site_code) %>%
+    select(latitude, longitude) %>%
+    st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+    mapview::mapview()
 
 print(NO3_A, n = 1000)
 NO3_B

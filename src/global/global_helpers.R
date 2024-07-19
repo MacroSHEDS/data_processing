@@ -4990,6 +4990,8 @@ ms_derive <- function(network = domain,
     #link all derived products to the data portal directory
     create_portal_links(network = network,
                         domain = domain)
+    #for removing derelicts from portal/data
+    #find portal/data ! -path './general/*' ! -path '*/documentation/*' ! -path '*flux_inst_scaled*' -type f -links 1 -delete
 }
 
 import_ancestor_env <- function(pos = 1){
@@ -6073,7 +6075,7 @@ create_portal_links <- function(network, domain){
     #derived products except cdnr_discharge, usgs_discharge, and pre-idw precipitation.
     #we will eventually let portal users view and download uninterpolated (spatially)
     #rain gauge data, and at that time we may choose to simply delete the sections
-    #below (**) that filters those datasets.
+    #below (**) that filter those datasets.
 
     derive_dir <- glue('data/{n}/{d}/derived',
                        n = network,
@@ -11083,7 +11085,7 @@ postprocess_entire_dataset <- function(site_data,
     #remove combining products  [COMPLETE?]
     #update varnames            [early]
     #remove NH4, PO4, etc.?     [early]
-    general_cleanup() #after postprocess, before edi/figshare upload
+    # general_cleanup() #NOT NEEDED? after postprocess, before edi/figshare upload
     #datetime to date           [save for end]
     #isolate sampling regime    [save for end]
     #"area" -> "ws_area_ha"     [save for end]
