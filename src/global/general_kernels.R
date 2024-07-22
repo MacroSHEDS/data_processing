@@ -909,7 +909,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                                                      # crs = 'ESPG:4326',
                                                      region = site_ws_asset$geometry(),
                                                      fileNamePrefix = file_name,
-                                                     maxPixels=NULL)
+                                                     maxPixels = 105921861) #one larger than neon-TOMB
 
             needed_files <- c(needed_files, file_name)
             all_ee_task <- c(all_ee_task, ee_description)
@@ -939,8 +939,15 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         task_running <- task_running %>%
             filter(DestinationPath %in% all_ee_task)
 
-        Sys.sleep(5)
+        Sys.sleep(10)
     }
+
+    Sys.sleep(60)
+    task_running <- rgee::ee_manage_task()
+    if(any(task_running$State %in% c('RUNNING', 'READY'))){
+        stop('weird. somehow the while loop above is exiting early')
+    }
+
     temp_rgee <- tempfile(fileext = '.tif')
 
     for(i in 1:length(needed_files)){
@@ -954,6 +961,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         file_there <- googledrive::drive_get(paste0('GEE/', rel_file))
 
         if(nrow(file_there) == 0) next
+
         expo_backoff(
             expr = {
                 googledrive::drive_download(file = paste0('GEE/', rel_file),

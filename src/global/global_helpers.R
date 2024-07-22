@@ -10958,7 +10958,6 @@ final_cleanup <- function(path){
     #2. remove sampling regime information from the variable name, into two separate columns
     #   scratch that. separate grab/installed into its own column, but ditch sensor/nonsensor
     #3. change name of "area" column in ws_boundary shapefiles to "ws_area_ha"
-    #4. remove site-level shapefiles and text documentation from portal/data
 
     paths <- list.files(path = path,
                         pattern = '*.feather',
@@ -10970,10 +10969,9 @@ final_cleanup <- function(path){
                   value = TRUE,
                   invert = TRUE)
 
-    # STILL NEED TO RUN THIS
+    #1, 2
     for(p in paths){
 
-        # if(! 'var' %in% names(feather::feather_metadata(p)$types)) next
         read_feather(p) %>%
             rename(date = datetime) %>%
             mutate(date = as.Date(date)) %>%
@@ -10987,7 +10985,20 @@ final_cleanup <- function(path){
             write_feather(p)
     }
 
-    # STILL NEED TO BUILD STEPS 3 AND 4
+    #3
+    paths <- list.files(path = path,
+                        pattern = '*shp',
+                        recursive = TRUE,
+                        full.names = TRUE)
+    paths <- grep('ws_bound', paths, value = TRUE)
+
+    for(p in paths){
+        st_read(p) %>%
+            rename(ws_area_ha = area) %>%
+            st_write(dsn = p,
+                     delete_dsn = TRUE,
+                     quiet = TRUE)
+    }
 }
 
 insert_unknown_uncertainties <- function(path){
@@ -11099,6 +11110,22 @@ postprocess_attribution_ts <- function(){
     return(attrib_d)
 }
 
+remove_spatial_portal_files <- function(){
+
+    # paths <- list.dirs(path = '../portal/data',
+    #                    recursive = TRUE,
+    #                    full.names = TRUE)
+    # grep('ws_bound|stream_gauge_loc|precip_gauge_loc', paths, value = TRUE)
+
+    print('removing site-level spatial portal files')
+    require_shell_tool('find')
+    require_shell_tool('rm')
+
+    stop('why is it saying "no such file or directory" even while successfully removing the files?')
+    system("find ../portal -type d -name 'ws_boundary' -exec rm -r {} \\;")
+    system("find ../portal -type d -name '*gauge_locations' -exec rm -r {} \\;")
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -11188,11 +11215,7 @@ postprocess_entire_dataset <- function(site_data,
     log_with_indent('final cleanup',
                     logger = logger_module)
     final_cleanup(path = paste0('macrosheds_dataset_v', dataset_version))
-
-    # insert_unknown_uncertainties(path = paste0('macrosheds_dataset_v', dataset_version))
-    # # insert_unknown_uncertainties(path = '../portal/data') #VERIFY THAT THIS IS ACTUALLY NEEDED
-    # NaN_to_NA(path = paste0('macrosheds_dataset_v', dataset_version))
-    # # NaN_to_NA(path = '../portal/data') ##VERIFY THAT THIS IS ACTUALLY NEEDED
+    remove_spatial_portal_files()
 
     log_with_indent('cataloging held data', logger = logger_module)
     catalog_held_data(site_data = site_data,
@@ -11826,7 +11849,7 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
     file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
                 to = tld)
 
-    unlink(file.path(tld, 'load_entire_product.R'))
+    # unlink(file.path(tld, 'load_entire_product.R'))
 
     all_dirs <- list.dirs(tld)
 
@@ -13513,10 +13536,6 @@ generate_output_dataset <- function(vsn){
              call. = FALSE)
     })
 
-    # system2('find', c('data', '-path', '"*derived/*.feather"', '-printf',
-    #                   '%P\\\\0\\\\n', '|', 'rsync', '-av', '--files-from=-',
-    #                   'data', paste0('macrosheds_dataset_v', vsn)))
-
     find_dirs_within_outputdata <- function(keyword, vsn){
 
         files <- dir(path = paste0('macrosheds_dataset_v', vsn),
@@ -13580,13 +13599,8 @@ generate_output_dataset <- function(vsn){
 
     #drop em all from the final dataset
     for(dr in dirs_to_delete){
-        unlink(x = dr,
-               recursive = TRUE)
+        unlink(x = dr, recursive = TRUE)
     }
-
-    #put convenience functions in there
-    file.copy(from = 'src/output_dataset_convenience_functions/load_entire_product.R',
-              to = paste0('macrosheds_dataset_v', vsn, '/load_entire_product.R'))
 
     #add notes
     warning("Don't forget to add notes! (and eventually generate changelog automatically)")
@@ -13748,6 +13762,8 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #TODO: scale flux within derive kernels eventually. it'll make for clearer
     #   documentation
+
+    stop('next time you run this: pretty sure it doesnt need to be run separately for portal and data acquis, due to the fact write_feather references the same inode')
 
     ws_areas <- site_data %>%
         filter(site_type == 'stream_gauge') %>%
@@ -14410,16 +14426,21 @@ catalog_held_data <- function(network_domain, site_data){
             for(f in product_files){
 
                 product_breakdown <- read_feather(f) %>%
-                    mutate(
-                        sample_regimen = extract_var_prefix(var),
-                        var = drop_var_prefix(var)) %>%
-                    group_by(var, sample_regimen, site_code) %>%
+                    # mutate(
+                        # sample_regimen = extract_var_prefix(var),
+                        # var = drop_var_prefix(var)) %>%
+                    # group_by(var, sample_regimen, site_code) %>%
+                    group_by(var, grab_sample, site_code) %>%
                     summarize(
                         n_observations = length(na.omit(val)),
-                        first_record_UTC = min(datetime,
-                                               na.rm = TRUE),
-                        last_record_UTC = max(datetime,
-                                              na.rm = TRUE),
+                        first_record = min(date,
+                                           na.rm = TRUE),
+                        last_record = max(date,
+                                          na.rm = TRUE),
+                        # first_record_UTC = min(datetime,
+                        #                        na.rm = TRUE),
+                        # last_record_UTC = max(datetime,
+                        #                       na.rm = TRUE),
                         prop_flagged = sum(ms_status) / n_observations,
                         prop_imputed = sum(ms_interp) / n_observations) %>%
                     ungroup() %>%
@@ -14428,7 +14449,7 @@ catalog_held_data <- function(network_domain, site_data){
                 flx_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 1]
                 is_flxvar <- product_breakdown$var %in% flx_vars
                 other_chemish_vars <- ms_vars$variable_code[ms_vars$flux_convertible == 0 &
-                    ms_vars$variable_type %in% c('phys', 'chem_mix', 'chem_discrete', 'bio', 'gas') &
+                    ms_vars$variable_type %in% c('phys', 'chem_mix', 'chem_discrete', 'bio', 'gas', 'isotope') &
                     ms_vars$unit %in% c('ueq/L', 'mg/L', 'eq/L')]
                 is_other_chemish <- product_breakdown$var %in% other_chemish_vars
 
@@ -14448,7 +14469,7 @@ catalog_held_data <- function(network_domain, site_data){
 
             #summarize and enhance goodies
             product_breakdown <- product_breakdown %>%
-                group_by(var, sample_regimen, site_code, chem_class) %>%
+                group_by(var, grab_sample, site_code, chem_class) %>%
                 summarize(
                     n_flagged = sum(prop_flagged * n_observations,
                                     na.rm = TRUE),
@@ -14460,34 +14481,34 @@ catalog_held_data <- function(network_domain, site_data){
                                         digits = 2),
                     pct_imputed = round(n_imputed / n_observations * 100,
                                         digits = 2),
-                    first_record_UTC = min(first_record_UTC,
-                                           na.rm = TRUE),
-                    last_record_UTC = max(last_record_UTC,
-                                          na.rm = TRUE)) %>%
+                    first_record = min(first_record,
+                                       na.rm = TRUE),
+                    last_record = max(last_record,
+                                      na.rm = TRUE)) %>%
                 ungroup() %>%
                 select(-n_flagged, -n_imputed) %>%
-                mutate(sample_regimen = case_when(
-                    sample_regimen == 'GS' ~ 'grab-sensor',
-                    sample_regimen == 'IS' ~ 'installed-sensor',
-                    sample_regimen == 'GN' ~ 'grab-nonsensor',
-                    sample_regimen == 'IN' ~ 'installed-nonsensor')) %>%
-                select(site_code, var, sample_regimen, n_observations,
-                       first_record_UTC, last_record_UTC, pct_flagged,
+                # mutate(sample_regimen = case_when(
+                #     sample_regimen == 'GS' ~ 'grab-sensor',
+                #     sample_regimen == 'IS' ~ 'installed-sensor',
+                #     sample_regimen == 'GN' ~ 'grab-nonsensor',
+                #     sample_regimen == 'IN' ~ 'installed-nonsensor')) %>%
+                select(site_code, var, grab_sample, n_observations,
+                       first_record, last_record, pct_flagged,
                        pct_imputed, chem_class)
 
-            #if multiple sample regimens for a site-variable, aggregate and append them as sample_regimen "all"
+            #if multiple sample regimens for a site-variable, aggregate and append them as grab_sample "all"
             product_breakdown <- product_breakdown %>%
                 group_by(site_code, var, chem_class) %>%
                 summarize(
                     n_observations = if(n() > 1) sum(n_observations, na.rm = TRUE) else first(n_observations),
                     pct_flagged = if(n() > 1) round(sum(pct_flagged, na.rm = TRUE), digits = 2) else first(pct_flagged),
                     pct_imputed = if(n() > 1) round(sum(pct_imputed, na.rm = TRUE), digits = 2) else first(pct_imputed),
-                    first_record_UTC = if(n() > 1) min(first_record_UTC, na.rm = TRUE) else first(first_record_UTC),
-                    last_record_UTC = if(n() > 1) max(last_record_UTC, na.rm = TRUE) else first(last_record_UTC),
-                    sample_regimen = if(n() > 1) 'all' else 'drop'
+                    first_record = if(n() > 1) min(first_record, na.rm = TRUE) else first(first_record),
+                    last_record = if(n() > 1) max(last_record, na.rm = TRUE) else first(last_record),
+                    grab_sample = if(n() > 1) FALSE else first(grab_sample)
                 ) %>%
                 ungroup() %>%
-                filter(sample_regimen != 'drop') %>%
+                # filter(sample_regimen != 'drop') %>%
                 bind_rows(product_breakdown)
 
             #merge other stuff from variables and site_data config sheets;
@@ -14510,16 +14531,19 @@ catalog_held_data <- function(network_domain, site_data){
                        VariableCode = var,
                        VariableName = variable_name,
                        ChemCategory = chem_class,
-                       SampleRegimen = sample_regimen,
+                       GrabSample = grab_sample,
+                       # SampleRegimen = sample_regimen,
                        Unit = unit,
                        Observations = n_observations,
-                       FirstRecordUTC = first_record_UTC,
-                       LastRecordUTC = last_record_UTC,
+                       FirstRecord = first_record,
+                       LastRecord = last_record,
                        PercentFlagged = pct_flagged,
                        PercentImputed = pct_imputed) %>%
                 arrange(network, domain, site_code, VariableCode, ChemCategory,
-                        SampleRegimen) %>%
-                filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
+                        GrabSample)
+                # filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
+
+            if(any(is.na(product_breakdown))) stop('NA domain(s) detected')
 
             #combine with other product summaries
             all_variable_breakdown <- bind_rows(all_variable_breakdown,
@@ -14540,11 +14564,11 @@ catalog_held_data <- function(network_domain, site_data){
     #e.g. pH, spCond, d18O
     all_variable_breakdown <- all_variable_breakdown %>%
         group_by(network, domain, site_code, VariableCode, ChemCategory,
-                 SampleRegimen) %>%
+                 GrabSample) %>%
         summarize(VariableName = first(VariableName),
                   Unit = first(Unit),
-                  FirstRecordUTC = min(FirstRecordUTC),
-                  LastRecordUTC = max(LastRecordUTC),
+                  FirstRecord = min(FirstRecord),
+                  LastRecord = max(LastRecord),
                   PercentFlagged = sum(Observations * (PercentFlagged / 100)) /
                       sum(Observations) * 100,
                   PercentImputed = sum(Observations * (PercentImputed / 100)) /
@@ -14558,10 +14582,10 @@ catalog_held_data <- function(network_domain, site_data){
             Observations = sum(Observations,
                                na.rm = TRUE),
             Sites = length(unique(paste0(network, domain, site_code))),
-            FirstRecordUTC = min(FirstRecordUTC,
-                                 na.rm = TRUE),
-            LastRecordUTC = max(LastRecordUTC,
-                                na.rm = TRUE),
+            FirstRecord = min(FirstRecord,
+                              na.rm = TRUE),
+            LastRecord = max(LastRecord,
+                             na.rm = TRUE),
             VariableName = first(VariableName),
             Unit = first(Unit)) %>%
         ungroup() %>%
@@ -14569,8 +14593,8 @@ catalog_held_data <- function(network_domain, site_data){
                Availability = paste0("<button type='button' id='", VariableCode, "'>view</button>")) %>%
                # Availability = paste0("<a href='?", VariableCode, "'>view</a>")) %>%
         select(Availability, VariableName, VariableCode, ChemCategory, Unit,
-               Observations, Sites, MeanObsPerSite, FirstRecordUTC,
-               LastRecordUTC)
+               Observations, Sites, MeanObsPerSite, FirstRecord,
+               LastRecord)
 
     readr::write_csv(x = all_variable_display,
                      file = '../portal/data/general/catalog_files/all_variables.csv')
@@ -14590,15 +14614,15 @@ catalog_held_data <- function(network_domain, site_data){
             summarize(
                 Observations = sum(Observations,
                                    na.rm = TRUE),
-                FirstRecordUTC = min(FirstRecordUTC,
+                FirstRecordUTC = min(FirstRecord,
                                      na.rm = TRUE),
-                LastRecordUTC = max(LastRecordUTC,
+                LastRecordUTC = max(LastRecord,
                                     na.rm = TRUE),
                 Unit = first(Unit)) %>%
             ungroup()
 
-        ndays <- difftime(time1 = indiv_variable_display$LastRecordUTC,
-                          time2 = indiv_variable_display$FirstRecordUTC,
+        ndays <- difftime(time1 = indiv_variable_display$LastRecord,
+                          time2 = indiv_variable_display$FirstRecord,
                           units = 'days') %>%
             as.numeric()
 
@@ -14615,8 +14639,8 @@ catalog_held_data <- function(network_domain, site_data){
             select(Network = pretty_network,
                    Domain = pretty_domain,
                    SiteCode = site_code,
-                   ChemCategory, Unit, Observations, FirstRecordUTC,
-                   LastRecordUTC, MeanObsPerDay) %>%
+                   ChemCategory, Unit, Observations, FirstRecord,
+                   LastRecord, MeanObsPerDay) %>%
             arrange(Network, Domain, SiteCode, ChemCategory)
 
         if(any(duplicated(indiv_variable_display[c('SiteCode', 'ChemCategory')]))){
@@ -14637,10 +14661,10 @@ catalog_held_data <- function(network_domain, site_data){
             Observations = sum(Observations,
                                na.rm = TRUE),
             Variables = length(unique(VariableCode)),
-            FirstRecordUTC = min(FirstRecordUTC,
-                                 na.rm = TRUE),
-            LastRecordUTC = max(LastRecordUTC,
-                                na.rm = TRUE)) %>%
+            FirstRecord = min(FirstRecord,
+                              na.rm = TRUE),
+            LastRecord = max(LastRecord,
+                             na.rm = TRUE)) %>%
         ungroup() %>%
         mutate(MeanObsPerVar = round(Observations / Variables, 0),
                ExternalLink = 'feature not yet built',
@@ -14662,7 +14686,7 @@ catalog_held_data <- function(network_domain, site_data){
                # GeodeticDatum,
                SiteType = site_type,
                AreaHectares = ws_area_ha,
-               Observations, Variables, FirstRecordUTC, LastRecordUTC,
+               Observations, Variables, FirstRecord, LastRecord,
                ExternalLink) %>%
         mutate(WatershedStatus = case_when(WatershedStatus == 'exp' ~ 'experimental',
                                            WatershedStatus == 'non_exp' ~ 'non-experimental',
@@ -14690,8 +14714,8 @@ catalog_held_data <- function(network_domain, site_data){
                    domain == dmn,
                    site_code == sit)
 
-        ndays <- difftime(time1 = indiv_site_display$LastRecordUTC,
-                          time2 = indiv_site_display$FirstRecordUTC,
+        ndays <- difftime(time1 = indiv_site_display$LastRecord,
+                          time2 = indiv_site_display$FirstRecord,
                           units = 'days') %>%
             as.numeric()
 
@@ -14705,11 +14729,11 @@ catalog_held_data <- function(network_domain, site_data){
             #                  domain, pretty_domain, network, pretty_network,
             #                  site_code),
             #           by = c('network', 'domain', 'site_code')) %>%
-            select(VariableCode, VariableName, ChemCategory, SampleRegimen, Unit,
-                   Observations, FirstRecordUTC, LastRecordUTC,
+            select(VariableCode, VariableName, ChemCategory, GrabSample, Unit,
+                   Observations, FirstRecord, LastRecord,
                    MeanObsPerDay, PercentFlagged, PercentImputed)
 
-        if(any(duplicated(indiv_site_display[c('VariableCode', 'ChemCategory', 'SampleRegimen')]))){
+        if(any(duplicated(indiv_site_display[c('VariableCode', 'ChemCategory', 'GrabSample')]))){
             stop("duplicated vars in indiv_site_display. what's the deal?")
         }
 

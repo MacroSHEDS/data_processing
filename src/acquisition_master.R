@@ -326,19 +326,9 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'walker_branch')
-
-zzz <- which(network_domain$domain %in% c('krycklan', 'east_river', 'walker_branch',
-                                          'sleepers', 'panola', 'suef', 'santee',
-                                          'fernow', 'hbef', 'plum', 'santa_barbara',
-                                          'baltimore', 'luquillo', 'konza',
-                                          'hjandrews', 'niwot', 'catalina_jemez',
-                                          'boulder'))
-# 2  4  6  7  8 10 12 13 14 15 17 18 19 22 24 25 28 29
-#    4                                        25 28
+dmnrow <- which(network_domain$domain == 'neon')
 
 for(dmnrow in 1:nrow(network_domain)){
-for(dmnrow in c(4,25,28)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
@@ -388,37 +378,40 @@ for(dmnrow in c(4,25,28)){
                             domain = domain)
     }
 
-    # ms_munge(network = network,
-    #          # prodname_filter = c('discharge'),
-    #          domain = domain)
+    ms_munge(network = network,
+             # prodname_filter = c('discharge'),
+             domain = domain)
 
-    # has_wsbound = get_product_info(network = network,
-    #                  domain = domain,
-    #                  status_level = 'munge',
-    #                  get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
-    # if(domain != 'mcmurdo' && has_wsbound){
-    #     #might have to specify locatoin to whitebox executable:
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #     sw(ms_delineate(network = network,
-    #                     domain = domain,
-    #                     dev_machine_status = ms_instance$machine_status,
-    #                     # overwrite_wb_sites = c('TE03'),
-    #                     verbose = FALSE))
-    # }
+    #build this into ms_delineate and add a new parameter for it.
+    #(only useful when rerunning stuff after a fix. otherwise just delineate them all.)
+    has_wsbound = get_product_info(network = network,
+                     domain = domain,
+                     status_level = 'munge',
+                     get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
+    if(domain != 'mcmurdo' && has_wsbound){
+        #might have to specify locatoin to whitebox executable:
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        # overwrite_wb_sites = c('TE03'),
+                        verbose = FALSE))
+    }
 
     ms_derive(network = network,
               # prodname_filter = c('precip_pchem_pflux'),
               domain = domain,
               precip_pchem_pflux_skip_existing = ifelse(domain == 'catalina_jemez', T, F))
 
-    # if(domain != 'mcmurdo'){
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #     ms_general(network = network,
-    #                domain = domain,
-    #                get_missing_only = F,
-    #                # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    # }
+    if(domain != 'mcmurdo'){
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        ms_general(network = network,
+                   domain = domain,
+                   get_missing_only = F,
+                   # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+                   general_prod_filter = c('nlcd'),
+                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    }
 
     retain_ms_globals(ms_globals)
 }
