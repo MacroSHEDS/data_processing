@@ -328,7 +328,17 @@ run_prechecks()
 ## change string in line below to find row index of your desired domain
 dmnrow <- which(network_domain$domain == 'walker_branch')
 
+zzz <- which(network_domain$domain %in% c('krycklan', 'east_river', 'walker_branch',
+                                          'sleepers', 'panola', 'suef', 'santee',
+                                          'fernow', 'hbef', 'plum', 'santa_barbara',
+                                          'baltimore', 'luquillo', 'konza',
+                                          'hjandrews', 'niwot', 'catalina_jemez',
+                                          'boulder'))
+# 2  4  6  7  8 10 12 13 14 15 17 18 19 22 24 25 28 29
+#    4                                        25 28
+
 for(dmnrow in 1:nrow(network_domain)){
+for(dmnrow in c(4,25,28)){
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
@@ -349,7 +359,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'discharge')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -378,46 +388,37 @@ for(dmnrow in 1:nrow(network_domain)){
                             domain = domain)
     }
 
-    ms_munge(network = network,
-             # prodname_filter = c('discharge'),
-             domain = domain)
+    # ms_munge(network = network,
+    #          # prodname_filter = c('discharge'),
+    #          domain = domain)
 
-    if(domain != 'mcmurdo'){
-        #might have to specify locatoin to whitebox executable:
-        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-        sw(ms_delineate(network = network,
-                        domain = domain,
-                        dev_machine_status = ms_instance$machine_status,
-                        # overwrite_wb_sites = c('TE03'),
-                        verbose = FALSE))
-    }
+    # has_wsbound = get_product_info(network = network,
+    #                  domain = domain,
+    #                  status_level = 'munge',
+    #                  get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
+    # if(domain != 'mcmurdo' && has_wsbound){
+    #     #might have to specify locatoin to whitebox executable:
+    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+    #     sw(ms_delineate(network = network,
+    #                     domain = domain,
+    #                     dev_machine_status = ms_instance$machine_status,
+    #                     # overwrite_wb_sites = c('TE03'),
+    #                     verbose = FALSE))
+    # }
 
     ms_derive(network = network,
-              # prodname_filter = c('ws_boundary'),
+              # prodname_filter = c('precip_pchem_pflux'),
               domain = domain,
-              precip_pchem_pflux_skip_existing = F)
+              precip_pchem_pflux_skip_existing = ifelse(domain == 'catalina_jemez', T, F))
 
-    if(domain != 'mcmurdo'){
-        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-        ms_general(network = network,
-                   domain = domain,
-                   get_missing_only = F,
-                   # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-                   general_prod_filter = c('start_season', 'end_season', 'max_season', 'season_length', #gg
-                                           'terrain', #extract_ws_mean?
-                                           'nrcs_soils', #gg
-                                           'nlcd', #gg
-                                           'nadp', #extract_ws_mean
-                                           'pelletier_soil_thickness', #extract_ws_mean
-                                           'geochemical', #extract_ws_mean
-                                           'bfi', #extract_ws_mean
-                                           'nsidc', #gg?
-                                           'glhymps', #gg?
-                                           'lithology', #gg?
-                                           'daymet', #NEEDS FLEXIBLE SCALE!!!
-                                           'modis_igbp' #gg? uses gee),
-                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
-    }
+    # if(domain != 'mcmurdo'){
+    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+    #     ms_general(network = network,
+    #                domain = domain,
+    #                get_missing_only = F,
+    #                # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
+    #                bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+    # }
 
     retain_ms_globals(ms_globals)
 }
@@ -425,7 +426,8 @@ for(dmnrow in 1:nrow(network_domain)){
 logger_module <- 'ms.module'
 
 run_postchecks()
-# remove_superfluous_files() #uncomment and run
+# remove_superfluous_files('data') #uncomment and run
+# remove_superfluous_files('../portal/data') #uncomment and run
 
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,

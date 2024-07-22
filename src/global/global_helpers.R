@@ -10970,6 +10970,7 @@ final_cleanup <- function(path){
                   value = TRUE,
                   invert = TRUE)
 
+    # STILL NEED TO RUN THIS
     for(p in paths){
 
         # if(! 'var' %in% names(feather::feather_metadata(p)$types)) next
@@ -10986,7 +10987,7 @@ final_cleanup <- function(path){
             write_feather(p)
     }
 
-
+    # STILL NEED TO BUILD STEPS 3 AND 4
 }
 
 insert_unknown_uncertainties <- function(path){
