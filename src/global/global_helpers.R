@@ -14543,7 +14543,10 @@ catalog_held_data <- function(network_domain, site_data){
                         GrabSample)
                 # filter(! is.na(domain)) #only needed for unresolved Arctic naming issue (1/15/21)
 
-            if(any(is.na(product_breakdown))) stop('NA domain(s) detected')
+            if(any(is.na(product_breakdown$domain))){
+                browser()
+                stop('NA domain(s) detected')
+            }
 
             #combine with other product summaries
             all_variable_breakdown <- bind_rows(all_variable_breakdown,
@@ -17350,7 +17353,7 @@ mark_superfluous_files <- function(){
     #                '\n\n\tThese filenames have been appended with "REMOVETHISFILE". They ',
     #                'can be removed with remove_superfluous_files()'),
     #         logger = logger_module)
-    logwarn(paste(length(to_remove_p),
+    logwarn(paste(length(to_remove),
                   'superfluous files detected in ../portal/data. These have been appended with "REMOVETHISFILE". They',
                   'can be removed with remove_superfluous_files("../portal/data")'),
             logger = logger_module)
@@ -17369,7 +17372,7 @@ mark_superfluous_files <- function(){
 
 remove_some_molecular_forms <- function(){
 
-    print('Removing some molecular variables, e.g. NH4 (and keeping NH4-N)')
+    print('Removing some molecular variables, e.g. NH4 (and keeping e.g. NH4-N)')
     require_shell_tool('find')
 
     ff <- system("find data -type f -path '*/derived/*chemistry*/*.feather' -o -path '*/derived/*flux*/*.feather'",

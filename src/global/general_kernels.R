@@ -1841,6 +1841,7 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_3_ms824 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
+    browser()
 
     user_info <- rgee::ee_user_info(quiet = TRUE)
 
@@ -1870,12 +1871,20 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
         filterBounds(ws_boundary_asset)$
         select('dayl','prcp', 'tmin', 'tmax', 'srad', 'swe', 'vp')
 
+    if(! bulk_mode){
+        scale_ <- case_when(boundaries$area < 1e5 ~ 1000,
+                            between(boundaries$area, 1e5, 1e6) ~ 2000,
+                            boundaries$area > 1e6 ~ 16000)
+    } else {
+        scale_ <- 1000
+    }
+
     results <- ws_boundary_asset$map(function(f) {
         fin = imgcol$map(function(i) {
             mean = i$reduceRegion(
                 geometry = f$geometry(),
                 reducer = ee$Reducer$mean(),
-                scale = 1000
+                scale = scale_
             )
             f$setMulti(mean)$set(list(date = i$date()))
         })
