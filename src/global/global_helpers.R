@@ -13763,10 +13763,11 @@ scale_flux_by_area <- function(network_domain, site_data){
     #TODO: scale flux within derive kernels eventually. it'll make for clearer
     #   documentation
 
-    stop('next time you run this: pretty sure it doesnt need to be run separately for portal and data acquis, due to the fact write_feather references the same inode')
+    stop('something is wrong with this function. trace usgs/usgs/stream_flux_inst and see why it doesnt get linked')
 
     ws_areas <- site_data %>%
-        filter(site_type == 'stream_gauge') %>%
+        filter(in_workflow == 1,
+               site_type == 'stream_gauge') %>%
         select(domain, site_code, ws_area_ha) %>%
         plyr::dlply(.variables = 'domain',
                     .fun = function(x) select(x, -domain))
