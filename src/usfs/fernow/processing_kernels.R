@@ -545,7 +545,7 @@ process_2_ms004 <- function(network, domain, prodname_ms){
                                   qprod = qprod,
                                   site_code = s))
 
-        if(!is.null(flux)){
+        if(! is.null(flux)){
 
             write_ms_file(d = flux,
                           network = network,

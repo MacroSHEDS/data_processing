@@ -759,18 +759,22 @@ process_2_ms006 <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = qprod)
 
+    if(length(qfiles) > 1) stop('new qfile added. update code below')
+
     flux_sites <- fname_from_fpath(chemfiles, include_fext = FALSE)
 
     for(s in flux_sites){
-        q_ws <- feather::read_feather(qfiles[[1]]) %>%
-            mutate(site_code = s)
-        feather::write_feather(q_ws, qfiles)
+
+        #could def be handled better. also see below.
+        read_feather(qfiles) %>%
+            mutate(site_code = !!s) %>%
+            write_feather(qfiles)
 
         flux <- sw(calc_inst_flux(chemprod = chemprod,
                                   qprod = qprod,
                                   site_code = s))
 
-        if(!is.null(flux)){
+        if(! is.null(flux)){
 
             write_ms_file(d = flux,
                           network = network,
@@ -781,4 +785,8 @@ process_2_ms006 <- function(network, domain, prodname_ms){
                           shapefile = FALSE)
         }
     }
+
+    read_feather(qfiles) %>%
+        mutate(site_code = 'R-29') %>%
+        write_feather(qfiles)
 }

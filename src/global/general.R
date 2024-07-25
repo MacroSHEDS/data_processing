@@ -82,25 +82,25 @@ sm(rgee::ee_manage_create(asset_folder))
 
 asset_path <- file.path(asset_folder, 'all_ws_boundaries')
 
-# ee_shape <- try(sf_as_ee(boundaries,
-#                          via = 'getInfo_to_asset',
-#                          assetId = asset_path,
-#                          overwrite = TRUE,
-#                          quiet = TRUE),
-#                 silent = TRUE)
-#
-# if(inherits(ee_shape, 'try-error')){
-#
-#     for(i in 1:nrow(boundaries)){
-#         one_boundary <- boundaries[i,]
-#         asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
-#         sf_as_ee(one_boundary,
-#                  via = 'getInfo_to_asset',
-#                  assetId = asset_path,
-#                  overwrite = TRUE,
-#                  quiet = TRUE)
-#     }
-# }
+ee_shape <- try(sf_as_ee(boundaries,
+                         via = 'getInfo_to_asset',
+                         assetId = asset_path,
+                         overwrite = TRUE,
+                         quiet = TRUE),
+                silent = TRUE)
+
+if(inherits(ee_shape, 'try-error')){
+
+    for(i in 1:nrow(boundaries)){
+        one_boundary <- boundaries[i,]
+        asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
+        sf_as_ee(one_boundary,
+                 via = 'getInfo_to_asset',
+                 assetId = asset_path,
+                 overwrite = TRUE,
+                 quiet = TRUE)
+    }
+}
 
 for(i in 1:nrow(unprod)){
 

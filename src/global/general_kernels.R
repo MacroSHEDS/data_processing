@@ -1841,7 +1841,6 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
 #. handle_errors
 process_3_ms824 <- function(network, domain, prodname_ms, site_code,
                             boundaries) {
-    browser()
 
     user_info <- rgee::ee_user_info(quiet = TRUE)
 
@@ -1926,8 +1925,7 @@ process_3_ms824 <- function(network, domain, prodname_ms, site_code,
     googledrive::drive_rm('GEE/rgee.csv', verbose = FALSE)
 
     if(nrow(fin_table) == 0){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {domain}')))
     }
 
     fin_table <- fin_table %>%

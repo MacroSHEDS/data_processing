@@ -326,7 +326,7 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'neon')
+dmnrow <- which(network_domain$domain == 'bonanza')
 
 for(dmnrow in 1:nrow(network_domain)){
 
@@ -349,7 +349,7 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'precip_pchem_pflux')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'CUSTOMprecipitation')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -394,14 +394,14 @@ for(dmnrow in 1:nrow(network_domain)){
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        # overwrite_wb_sites = c('TE03'),
+                        # overwrite_wb_sites = c('CJ'),
                         verbose = FALSE))
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('precip_pchem_pflux'),
+              # prodname_filter = c('CUSTOMprecip_flux_inst'),
               domain = domain,
-              precip_pchem_pflux_skip_existing = ifelse(domain == 'catalina_jemez', T, F))
+              precip_pchem_pflux_skip_existing = FALSE)
 
     if(domain != 'mcmurdo'){
         # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
@@ -409,8 +409,7 @@ for(dmnrow in 1:nrow(network_domain)){
                    domain = domain,
                    get_missing_only = F,
                    # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
-                   general_prod_filter = c('nlcd'),
-                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE))
+                   bulk_mode = ifelse(domain == 'neon', FALSE, TRUE)) #daymet is always in bulk mode. indicates that all products could be. on other hand, daymet still uses fixed resolution, which isn't great
     }
 
     retain_ms_globals(ms_globals)

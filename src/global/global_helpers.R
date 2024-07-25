@@ -3967,6 +3967,20 @@ delineate_watershed_apriori_recurse <- function(lat,
     return(selection)
 }
 
+get_utm_crs <- function(point){
+
+    lon <- st_coordinates(point)[1, 1]
+    lat <- st_coordinates(point)[1, 2]
+
+    zone_number <- floor((lon + 180) / 6) + 1
+    zone_hemisphere <- ifelse(lat >= 0, 'N', 'S')
+
+    zone <- paste0(zone_number, zone_hemisphere)
+    crs <- paste0("EPSG:", ifelse(grepl('N', zone), 32600, 32700) + zone_number)
+
+    return(crs)
+}
+
 # site_row = site_data[1, ]; lat = site_row$latitude; long = site_row$longitude; crs=4326; site_code=site_row$site_code
 delineate_watershed_apriori <- function(lat,
                                         long,
@@ -4082,7 +4096,7 @@ delineate_watershed_apriori <- function(lat,
             # dem_resolution <- choose_dem_resolution(
             #     dev_machine_status = dev_machine_status,
             #     buffer_radius = buffer_radius)
-            dem_resolution <- 10
+            dem_resolution <- 9
         }
 
         if(verbose){
@@ -4115,8 +4129,9 @@ delineate_watershed_apriori <- function(lat,
                        .trim = FALSE))
         }
 
-        site_buf <- sf::st_buffer(x = site,
-                                  dist = buffer_radius)
+        site_buf <- sf::st_buffer(x = st_transform(site, get_utm_crs(site)),
+                                  dist = buffer_radius) %>%
+            st_transform(st_crs(site))
 
         dem <- expo_backoff(
             expr = {
@@ -4503,10 +4518,12 @@ delineate_watershed_by_specification <- function(lat,
         sf::st_as_sf(coords = c("y", "x"),
                      crs = crs) %>%
         sf::st_transform(proj)
-    # sf::st_transform(4326) #WGS 84 (would be nice to do this unprojected)
 
-    site_buf <- sf::st_buffer(x = site,
-                              dist = buffer_radius)
+    # site_buf <- sf::st_buffer(x = site,
+    #                           dist = buffer_radius)
+    site_buf <- sf::st_buffer(x = st_transform(site, get_utm_crs(site)),
+                              dist = buffer_radius) %>%
+        st_transform(st_crs(site))
 
     dem <- expo_backoff(
         expr = {
@@ -6262,7 +6279,8 @@ calc_inst_flux <- function(chemprod, qprod, site_code){
     #qprod is the prodname_ms for stream discharge or precip volume over time.
     #   it can be a munged or derived product.
 
-    if(! grepl('(precipitation|discharge)', prodname_from_prodname_ms(qprod))){
+    q_type <- prodname_from_prodname_ms(qprod)
+    if(! grepl('(precipitation|discharge)', q_type)){
         stop('Could not determine stream/precip')
     }
 
@@ -6320,20 +6338,39 @@ calc_inst_flux <- function(chemprod, qprod, site_code){
             join_distance <- c('7:30')#, '%M:%S')
         }
 
-        chem_split[[i]] <- approxjoin_datetime(x = chem_chunk,
-                                               y = flow,
-                                               rollmax = join_distance,
-                                               keep_datetimes_from = 'x') %>%
-            mutate(site_code = site_code_x,
-                   var = var_x,
-                #  kg/d = mg/L *  L/s  * 86400 / 1e6
-                   val = val_x * val_y * 86400 / 1e6,
-                   ms_status = numeric_any_v(ms_status_x, ms_status_y),
-                   ms_interp = numeric_any_v(ms_interp_x, ms_interp_y)) %>%
-            select(-starts_with(c('site_code_', 'var_', 'val_',
-                                  'ms_status_', 'ms_interp_'))) %>%
-            filter(! is.na(val)) %>% #should be redundant
-            arrange(datetime)
+        d_ <- approxjoin_datetime(x = chem_chunk,
+                                  y = flow,
+                                  rollmax = join_distance,
+                                  keep_datetimes_from = 'x')
+
+        if(q_type == 'discharge'){
+            d_ <- d_ %>%
+                mutate(site_code = site_code_x,
+                       var = var_x,
+                    #  kg/d = mg/L *  L/s  * 86400 / 1e6
+                       val = val_x * val_y * 86400 / 1e6,
+                       ms_status = numeric_any_v(ms_status_x, ms_status_y),
+                       ms_interp = numeric_any_v(ms_interp_x, ms_interp_y)) %>%
+                select(-starts_with(c('site_code_', 'var_', 'val_',
+                                      'ms_status_', 'ms_interp_'))) %>%
+                filter(! is.na(val)) %>% #should be redundant
+                arrange(datetime)
+        } else {
+            d_ <- d_ %>%
+                mutate(site_code = site_code_x,
+                       var = var_x,
+                       # kg/ha/d = mg/L *  mm/d * ha/100
+                       val = val_x * val_y / 100,
+                       ms_status = numeric_any_v(ms_status_x, ms_status_y),
+                       ms_interp = numeric_any_v(ms_interp_x, ms_interp_y)) %>%
+                select(-starts_with(c('site_code_', 'var_', 'val_',
+                                      'ms_status_', 'ms_interp_'))) %>%
+                filter(! is.na(val)) %>% #should be redundant
+                arrange(datetime) %>%
+                undo_scale_flux_by_area()
+        }
+
+        chem_split[[i]] <- d_
     }
 
     flux <- chem_split %>%
@@ -9822,9 +9859,10 @@ get_gee_standard <- function(network,
                                         gee_bounding_dates[2])
         }
 
-        rez <- case_when(site_boundary$area < 1e5 ~ rez,
-                         between(site_boundary$area, 1e5, 1e6) ~ rez * 2,
-                         site_boundary$area > 1e6 ~ rez * 4)
+        smallest_ws <- min(site_boundary$area)
+        rez <- case_when(smallest_ws < 1e5 ~ rez,
+                         between(smallest_ws, 1e5, 1e6) ~ rez * 2,
+                         smallest_ws > 1e6 ~ rez * 4)
 
         if(summary_stat == 'median'){
 
@@ -10485,7 +10523,7 @@ ms_write_confdata <- function(x,
     }
 
     if(which_dataset == 'site_data' && ! any(site_data$in_workflow == 0)){
-        stop('something is causing in_workflow == 0 sites to be removed from site_data')
+        stop('something is still causing in_workflow == 0 sites to be removed from site_data')
     }
 
     type_string <- case_when(
@@ -10949,6 +10987,8 @@ final_cleanup <- function(path){
     #started with more encapsulation, but that's a lot of unneccessary read/write
     #operations, which can be hard on SSDs
 
+    require_shell_tool('find')
+
     insert_unknown_uncertainties(path = path)
     NaN_to_NA(path = path)
     #make sure portal data got updated
@@ -10958,6 +10998,7 @@ final_cleanup <- function(path){
     #2. remove sampling regime information from the variable name, into two separate columns
     #   scratch that. separate grab/installed into its own column, but ditch sensor/nonsensor
     #3. change name of "area" column in ws_boundary shapefiles to "ws_area_ha"
+    #4. remove empty ws_trait folders
 
     paths <- list.files(path = path,
                         pattern = '*.feather',
@@ -10999,6 +11040,9 @@ final_cleanup <- function(path){
                      delete_dsn = TRUE,
                      quiet = TRUE)
     }
+
+    #4
+    system('find data -type d -empty -delete')
 }
 
 insert_unknown_uncertainties <- function(path){
@@ -13758,12 +13802,23 @@ scale_flux_by_area <- function(network_domain, site_data){
     #   kernels, but this solution works fine and doesn't require major
     #   modification or rebuilding of the dataset.
 
-    #see also undo_scale_flux_by_area in dev_helpers.R
+    #see also undo_scale_flux_by_area (a much simpler function)
 
     #TODO: scale flux within derive kernels eventually. it'll make for clearer
     #   documentation
 
-    stop('something is wrong with this function. trace usgs/usgs/stream_flux_inst and see why it doesnt get linked')
+    stop('something is wrong with this function, or upstream. trace usgs/usgs/stream_flux_inst and see why it doesnt get linked. also see...')
+    #loch vale. here is a command that will help: find . -type f -path '*/derived/*precip_flux_inst*/*.feather' ! -path '*documentation*' -links 1 #vs links 2
+    #forsooth, there's actually something wrong with this function AND upstream. for one, hardlinks don't seem to be created for these domains (nvm, i think this was an anti-fluke)
+    #for two, this function appears to have been designed to be hardlink-agnostic in that it operates separately on data_processing/data and portal/data
+
+    require_shell_tool('find')
+    missing_links <- system("find ../portal/data -name '*.feather' -links 1",
+                            intern = TRUE)
+    if(length(missing_links)){
+        stop('might need to manually hardlink some files from data_processing/data to portal/data. def need to get to the bottom of this.')
+        #obvs the scaled files created by this func won't be hardlinked anywhere. should they be?
+    }
 
     ws_areas <- site_data %>%
         filter(in_workflow == 1,
@@ -13772,11 +13827,20 @@ scale_flux_by_area <- function(network_domain, site_data){
         plyr::dlply(.variables = 'domain',
                     .fun = function(x) select(x, -domain))
 
+    no_scale_dmns <- sapply(ws_areas, function(x) any(is.na(x$ws_area_ha))) %>%
+        purrr::keep(isTRUE) %>%
+        names()
+
     domains <- names(ws_areas)
 
     #the original engine of this function, which still only converts portal data
     engine_for_portal <- function(flux_var, domains, ws_areas){
         for(dmn in domains){
+
+            if(dmn %in% no_scale_dmns){
+                warning('NAs in ws_area_ha for ', dmn, '. Not scaling (skipping) this domain.')
+                next
+            }
 
             files <- try(
                 {
@@ -13809,18 +13873,21 @@ scale_flux_by_area <- function(network_domain, site_data){
                     select(-val_err) %>%
                     arrange(site_code, var, datetime) %>%
                     left_join(ws_areas[[dmn]],
-                              by = 'site_code') %>%
-                    mutate(val = sw(val / ws_area_ha)) %>%
-                    select(-ws_area_ha)
+                              by = 'site_code')
 
+                if(any(is.na(d$ws_area_ha))){
+                    warning('NAs in ws_area_ha for ', dmn, '. Not scaling this domain.')
+                    break
+                } else {
+                    d <- mutate(d, val = sw(val / ws_area_ha))
+                }
+
+                d$ws_area_ha <- NULL
                 d$val_err <- errors(d$val)
                 d$val <- errors::drop_errors(d$val)
 
                 write_feather(x = d,
-                              path = glue('../portal/data/{d}/{v}_scaled/{f}',
-                                          d = dmn,
-                                          v = flux_var,
-                                          f = fil))
+                              path = glue('../portal/data/{dmn}/{flux_var}_scaled/{fil}'))
             }
         }
     }
@@ -13829,7 +13896,15 @@ scale_flux_by_area <- function(network_domain, site_data){
                       domains = domains,
                       ws_areas = ws_areas)
 
+    engine_for_portal(flux_var = 'CUSTOMstream_flux_inst',
+                      domains = domains,
+                      ws_areas = ws_areas)
+
     engine_for_portal(flux_var = 'precip_flux_inst',
+                      domains = domains,
+                      ws_areas = ws_areas)
+
+    engine_for_portal(flux_var = 'CUSTOMprecip_flux_inst',
                       domains = domains,
                       ws_areas = ws_areas)
 
@@ -13839,9 +13914,16 @@ scale_flux_by_area <- function(network_domain, site_data){
                                      full.names = TRUE,
                                      recursive = TRUE)
 
-    unscaled_portal_flux_dirs <-
-        unscaled_portal_flux_dirs[! grepl(pattern = '(/documentation/|inst_scaled)',
-                                          x = unscaled_portal_flux_dirs)]
+    unscaled_portal_flux_dirs <- grep('(/documentation/|inst_scaled)',
+                                      unscaled_portal_flux_dirs,
+                                      value = TRUE,
+                                      invert = TRUE)
+
+    #omit (i.e. do not delete) domains like mcmurdo that cannot be scaled
+    unscaled_portal_flux_dirs <- grep(glue('/{paste(no_scale_dmns, collapse = "|")}/'),
+                                      unscaled_portal_flux_dirs,
+                                      value = TRUE,
+                                      invert = TRUE)
 
     lapply(X = unscaled_portal_flux_dirs,
            FUN = unlink,
@@ -13849,10 +13931,16 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     #the new engine, for scaling flux data within data_acquisition/data
     engine_for_data_acquis <- function(flux_var, network_domain, ws_areas){
+
         for(i in 1:nrow(network_domain)){
 
             ntw <- network_domain$network[i]
             dmn <- network_domain$domain[i]
+
+            if(dmn %in% no_scale_dmns){
+                warning('NAs in ws_area_ha for ', dmn, '. Not scaling (skipping) this domain.')
+                next
+            }
 
             flux_var_dir <- try(
                 {
@@ -13864,12 +13952,13 @@ scale_flux_by_area <- function(network_domain, site_data){
                                      full.names = FALSE,
                                      recursive = FALSE)
 
+                    # panola CUSTOM prods should be the only ones that are already scaled.
+                    # (they get ignored here on that account).
+                    # otherwise current practice is to unscale CUSTOM prods within
+                    # kernels so that we don't have to keep track of them here.
                     ff <- ff[! grepl(pattern = 'inst_scaled',
                                      x = ff)]
 
-                    # remove custom precip prods
-                    ff <- ff[! grepl(pattern = 'CUSTOM',
-                                     x = ff)]
                 },
                 silent = TRUE
             )
@@ -13877,9 +13966,11 @@ scale_flux_by_area <- function(network_domain, site_data){
             if('try-error' %in% class(flux_var_dir) || length(flux_var_dir) == 0) next
 
             prodcode <- prodcode_from_prodname_ms(flux_var_dir)
-            dir.create(path = glue('data/{n}/{d}/derived/{v}_scaled__{pc}',
+            dir.create(path = glue('data/{n}/{d}/derived/{cst}{v}_scaled__{pc}',
                                    n = ntw,
                                    d = dmn,
+                                   cst = ifelse(grepl('CUSTOM', flux_var_dir),
+                                                'CUSTOM', ''),
                                    v = flux_var,
                                    pc = prodcode),
                        recursive = TRUE,
@@ -13902,10 +13993,16 @@ scale_flux_by_area <- function(network_domain, site_data){
                     select(-val_err) %>%
                     arrange(site_code, var, datetime) %>%
                     left_join(ws_areas[[dmn]],
-                              by = 'site_code') %>%
-                    mutate(val = sw(val / ws_area_ha)) %>%
-                    select(-ws_area_ha)
+                              by = 'site_code')
 
+                if(any(is.na(d$ws_area_ha))){
+                    warning('NAs in ws_area_ha for ', dmn, '. Not scaling this domain.')
+                    break
+                } else {
+                    d <- mutate(d, val = sw(val / ws_area_ha))
+                }
+
+                d$ws_area_ha <- NULL
                 d$val_err <- errors(d$val)
                 d$val <- errors::drop_errors(d$val)
 
@@ -13915,6 +14012,8 @@ scale_flux_by_area <- function(network_domain, site_data){
 
                 dir_fin <- gsub('(ms[0-9]{3}/).*', '\\1', f_scaled)
                 if(! dir.exists(dir_fin)){
+                    #pretty sure this section is unneeded. also the line above can be replaced with dirname(f_scaled)
+                    browser()
                     dir.create(dir_fin)
                 }
 
@@ -13924,13 +14023,26 @@ scale_flux_by_area <- function(network_domain, site_data){
         }
     }
 
+    #don't need these here!
+    # engine_for_data_acquis(flux_var = 'CUSTOMstream_flux_inst',
+    # engine_for_data_acquis(flux_var = 'CUSTOMprecip_flux_inst',
     engine_for_data_acquis(flux_var = 'stream_flux_inst',
                            network_domain = network_domain,
                            ws_areas = ws_areas)
-
     engine_for_data_acquis(flux_var = 'precip_flux_inst',
                            network_domain = network_domain,
                            ws_areas = ws_areas)
+
+
+    # system("find data -path '*/derived/*.feather' -links 1", intern = TRUE)
+    # missing_links <- system("find ../portal/data -name '*.feather' -links 1",
+    #                         intern = TRUE)
+    # if(length(missing_links)){
+    #     stop('might need to manually hardlink some files from data_processing/data to portal/data. def need to get to the bottom of this.')
+    # }
+
+
+    # MUST NOT REMOVE MCMURDO/BONANZA UNSCALED
 
     unscaled_acquisition_flux_dirs <- dir(path = 'data',
                                           pattern = '*_flux_inst',
@@ -13952,6 +14064,25 @@ scale_flux_by_area <- function(network_domain, site_data){
 
     return(invisible())
 }
+
+undo_scale_flux_by_area <- function(d){
+
+    sites <- unique(d$site_code)
+
+    ws_areas <- site_data %>%
+        filter(site_type == 'stream_gauge') %>%
+        select(site_code, ws_area_ha) %>%
+        filter(site_code %in% !!sites)
+
+    d <- d %>%
+        left_join(ws_areas,
+                  by = 'site_code') %>%
+        mutate(val = val * ws_area_ha) %>%
+        select(-ws_area_ha)
+
+    return(d)
+}
+
 
 approxjoin_datetime <- function(x,
                                 y,
@@ -17004,6 +17135,42 @@ run_postchecks <- function(){
     mark_superfluous_files()
     check_for_PQ_imbalance()
     remove_some_molecular_forms()
+    check_for_missing_ws_traits()
+}
+
+check_for_missing_ws_traits <- function(){
+
+    print('checking for missing/empty ws_traits dirs')
+    require_shell_tool('find')
+
+    print('empties (some should be, e.g. nlcd outside N.Am or nsidc outside CONUS):')
+    system("find . -type d -path '*/ws_traits/*' -empty")
+
+    all_ws_traits <- c(
+        'bare_cover', 'bfi', 'cc_precip', 'cc_temp', 'daymet', 'end_season',
+        'et_ref', 'fpar', 'geochemical', 'glhymps', 'gpp', 'lai', 'length_season',
+        'lithology', 'max_season', 'modis_igbp', 'nadp', 'ndvi', 'nlcd',
+        'npp', 'nrcs_soils', 'nsidc', 'pelletier_soil_thickness', 'start_season',
+        'tcw', 'terrain', 'tree_cover', 'veg_cover'
+    )
+
+    print('missing:')
+    missings <- c()
+    for(wt in all_ws_traits){
+
+        missings_ <- system(glue("find . -type d -name \"ws_traits\" -exec sh -c 'test -d \"$1/[wt]\" || echo \"$1\"' _ {} \\;",
+                                .open = '[', .close = ']'),
+                           intern = TRUE)
+
+        if(! length(missings_)){
+            missings <- c(missings, paste('Got', wt))
+        } else {
+            missings <- c(missings, file.path(missings_,
+                                              wt))
+        }
+    }
+
+    cat(paste(missings, collapse = '\n'), '\n')
 }
 
 check_product_existence <- function(){

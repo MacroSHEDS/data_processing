@@ -196,6 +196,9 @@ p1v001_precip_chemistry <- function(zipf){
     return(d)
 }
 
+#new protocol is to ensure that CUSTOM prods are unscaled when they leave the kernel,
+#so that they can be scaled along with the others in postprocessing. exception
+#was written in 2024 for panola, but let's not require exceptions in future.
 p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
 
     d <- read.csv(unz(zipf, '8_PMRW_WetDepositionSoluteFluxes_Daily_WY86-17.csv'),
@@ -253,6 +256,9 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
     return(d)
 }
 
+#new protocol is to ensure that CUSTOM prods are unscaled when they leave the kernel,
+#so that they can be scaled along with the others in postprocessing. exception
+#was written in 2024 for panola, but let's not require exceptions in future.
 p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
 
     d <- read.csv(unz(zipf, '11_PMRW_StreamwaterSoluteFluxes_Daily_WY86-16.csv'),
