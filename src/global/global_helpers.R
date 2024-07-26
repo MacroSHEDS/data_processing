@@ -3333,11 +3333,14 @@ ms_general <- function(network = domain,
                        domain,
                        get_missing_only = FALSE,
                        general_prod_filter = NULL,
+                       site_filter = NULL,
                        bulk_mode = TRUE){
 
-    #if get_missing_only is TRUE, ws_traits will only be retrieved
-    #for ws_traits directories that are missing or empty
-    #bulk_mode: logical. if TRUE, the bounding box of the domain will be used to
+    #get_missing_only: logical. if TRUE, ws_traits will only be retrieved
+    #    for ws_traits directories that are missing or empty
+    #general_prod_filter: character vector. only these products will be retrieved.
+    #site_filter: character vector. only these sites will be retrieved.
+    #bulk_mode. logical: if TRUE, the bounding box of the domain will be used to
     #   retrieve spatial data. if FALSE, site bboxes are used instead. TRUE is
     #   appropriate everywhere except NEON as of 2024
 
@@ -3357,6 +3360,12 @@ ms_general <- function(network = domain,
         general_prod_filter_ <<- general_prod_filter
     } else {
         sw(rm('general_prod_filter_', envir = .GlobalEnv))
+    }
+
+    if(! is.null(site_filter)){
+        site_filter_ <<- site_filter
+    } else {
+        sw(rm('site_filter_', envir = .GlobalEnv))
     }
 
     source(glue('src/global/general.R',
@@ -10988,6 +10997,7 @@ final_cleanup <- function(path){
     #operations, which can be hard on SSDs
 
     require_shell_tool('find')
+    print('final cleanup...')
 
     insert_unknown_uncertainties(path = path)
     NaN_to_NA(path = path)
@@ -11034,7 +11044,7 @@ final_cleanup <- function(path){
     paths <- grep('ws_bound', paths, value = TRUE)
 
     for(p in paths){
-        st_read(p) %>%
+        st_read(p, quiet = TRUE) %>%
             rename(ws_area_ha = area) %>%
             st_write(dsn = p,
                      delete_dsn = TRUE,
@@ -11165,7 +11175,7 @@ remove_spatial_portal_files <- function(){
     require_shell_tool('find')
     require_shell_tool('rm')
 
-    stop('why is it saying "no such file or directory" even while successfully removing the files?')
+    warning('why is it saying "no such file or directory" even while successfully removing the files?')
     system("find ../portal -type d -name 'ws_boundary' -exec rm -r {} \\;")
     system("find ../portal -type d -name '*gauge_locations' -exec rm -r {} \\;")
 }
@@ -12700,9 +12710,9 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
                      x = all_dirs,
                      value = TRUE)
 
-    warning('temporarily removing NEON')
-    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
-    unlink(file.path(tld, 'neon/'), recursive = TRUE)
+    # warning('temporarily removing NEON')
+    # dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    # unlink(file.path(tld, 'neon/'), recursive = TRUE)
 
     for(jd in dmn_dirs){
 
@@ -14033,16 +14043,12 @@ scale_flux_by_area <- function(network_domain, site_data){
                            network_domain = network_domain,
                            ws_areas = ws_areas)
 
-
     # system("find data -path '*/derived/*.feather' -links 1", intern = TRUE)
     # missing_links <- system("find ../portal/data -name '*.feather' -links 1",
     #                         intern = TRUE)
     # if(length(missing_links)){
     #     stop('might need to manually hardlink some files from data_processing/data to portal/data. def need to get to the bottom of this.')
     # }
-
-
-    # MUST NOT REMOVE MCMURDO/BONANZA UNSCALED
 
     unscaled_acquisition_flux_dirs <- dir(path = 'data',
                                           pattern = '*_flux_inst',
@@ -14057,6 +14063,12 @@ scale_flux_by_area <- function(network_domain, site_data){
     unscaled_acquisition_flux_dirs <-
         unscaled_acquisition_flux_dirs[grepl(pattern = '/derived/',
                                                x = unscaled_acquisition_flux_dirs)]
+
+    #omit (i.e. do not delete) domains like mcmurdo that cannot be scaled
+    unscaled_acquisition_flux_dirs <- grep(glue('/{paste(no_scale_dmns, collapse = "|")}/'),
+                                           unscaled_acquisition_flux_dirs,
+                                           value = TRUE,
+                                           invert = TRUE)
 
     lapply(X = unscaled_acquisition_flux_dirs,
            FUN = unlink,
@@ -14542,6 +14554,11 @@ catalog_held_data <- function(network_domain, site_data){
             product_files <- list.files(nonspatial_prods[j],
                        full.names = TRUE,
                        recursive = TRUE)
+
+            product_files <- grep('CUSTOM',
+                                  product_files,
+                                  invert = TRUE,
+                                  value = TRUE)
 
             # product_vars <- c()
             # nobs <- 0
@@ -17485,8 +17502,12 @@ mark_superfluous_files <- function(){
     glue('looking for files that correspond to unknown/untracked sites.')
     require_shell_tool('find')
 
+    stop('in 2025: work needed here. ran this previously without filtering for site type just below. but that results in some weird sites like catalina:MG_Outlet, which is a rain gauge and also secretly has a few schem samples, to get through, which causes problems downstream. the first loop is able to handle this appropriately if the comment secions are toggled. however, cant grep on ms9xx for portal, so will have to match filenames.')
+    #bonanza:C1 is the only other such problem.
+
     known_sites <- site_data %>%
         filter(in_workflow == 1) %>%
+               # site_type != 'rain_gauge') %>%
         pull(site_code)
 
     ff <- system("find data -type f -path '*/derived/*.feather'", intern = TRUE)
@@ -17496,9 +17517,18 @@ mark_superfluous_files <- function(){
         site_code <- str_extract(basename(ff[i]), '.+(?=\\.feather)')
         if(! site_code %in% known_sites){
             to_remove <- c(to_remove, ff[i])
-            file.rename(ff[i], paste0(ff[i], 'REMOVETHISFILE'))
+            file.rename(ff[i], paste0(ff[i], 'REMOVETHISFILE'))#
         }
     }
+
+    # to_remove <- grep('/(?:CUSTOM)?precip[a-z_]+?ms[^89][0-9]{2}/',
+    #      to_remove,
+    #      value = TRUE,
+    #      invert = TRUE)
+    #
+    # for(rr in to_remove){
+    #     file.rename(rr, paste0(rr, 'REMOVETHISFILE'))
+    # }
 
     logwarn(paste(length(to_remove),
                   'superfluous files detected in data/. These have been appended with "REMOVETHISFILE". They',
@@ -17514,7 +17544,6 @@ mark_superfluous_files <- function(){
             file.rename(ffp[i], paste0(ffp[i], 'REMOVETHISFILE'))
         }
     }
-    # if(length(to_remove)) warning('superfluous files detected in portal/data'
 
     # logwarn(paste0('SUPERFLUOUS FILES:\n\t',
     #                paste(to_remove, collapse = '\n\t'),

@@ -127,7 +127,7 @@ for(i in 1:nrow(unprod)){
         dmn_sites <- site_data %>%
             filter(network == !!network,
                    domain == !!domain,
-                   site_type != 'rain_gauge',
+                   site_type == 'stream_gauge',
                    in_workflow == 1) %>%
             pull(site_code)
     }
@@ -198,6 +198,11 @@ for(i in 1:nrow(unprod)){
 
         if(length(dmn_sites) > 1 || dmn_sites != 'all_sites'){
             bnd <- filter(boundaries, site_code == !!site_code)
+        } else if(exists('site_filter_')){
+            bnd <- filter(boundaries, site_code %in% site_filter_)
+            cat('only processing',
+                paste(site_filter_, collapse = ', '),
+                'because site_filter is set.\n')
         } else {
             bnd <- boundaries
         }
