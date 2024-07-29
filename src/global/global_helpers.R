@@ -11255,17 +11255,6 @@ postprocess_entire_dataset <- function(site_data,
                     logger = logger_module)
     generate_output_dataset(vsn = dataset_version)
 
-    #NaN -> NA                  [COMPLETE]
-    #remove combining products  [COMPLETE?]
-    #update varnames            [early; DONE]
-    #remove NH4, PO4, etc.?     [early]
-    # general_cleanup() #NOT NEEDED? after postprocess, before edi/figshare upload
-    #datetime to date           [save for end]
-    #isolate sampling regime    [save for end]
-    #"area" -> "ws_area_ha"     [save for end]
-    #remove provenance records for networks/dmns/sites not in workflow
-    #update changelog before finalizing
-    #disclaimer, other provenance stuff, etc.
     log_with_indent('final cleanup',
                     logger = logger_module)
     final_cleanup(path = paste0('macrosheds_dataset_v', dataset_version))
@@ -14473,6 +14462,13 @@ munge_versionless_product <- function(network,
 
 catalog_held_data <- function(network_domain, site_data){
 
+    catalog_dir <- '../portal/data/general/catalog_files'
+    if(dir.exists(catalog_dir)){
+        unlink(catalog_dir, recursive = TRUE)
+    }
+
+    dir.create(catalog_dir, showWarnings = FALSE)
+
     #tabulates:
     # + total nonspatial observations for the portal landing page
     # + informational catalog for all variables
@@ -14532,6 +14528,17 @@ catalog_held_data <- function(network_domain, site_data){
         spatial_prods <- site_prods[spatial_prod_inds]
         nonspatial_prods <- site_prods[-spatial_prod_inds]
 
+        #don't double-count when there's a custom version of a product
+        custprods <- grep('CUSTOM', nonspatial_prods, value = TRUE)
+        if(length(custprods)){
+            for(cp in custprods){
+                pname <- str_extract(cp, 'CUSTOM(.+?)__', group = 1)
+                if(sum(grepl(pname, nonspatial_prods)) > 1){
+                    nonspatial_prods <- nonspatial_prods[! nonspatial_prods == cp]
+                }
+            }
+        }
+
         for(j in seq_along(nonspatial_prods)){
 
             if(any(grepl('precip_pchem_pflux', nonspatial_prods))){
@@ -14554,11 +14561,6 @@ catalog_held_data <- function(network_domain, site_data){
             product_files <- list.files(nonspatial_prods[j],
                        full.names = TRUE,
                        recursive = TRUE)
-
-            product_files <- grep('CUSTOM',
-                                  product_files,
-                                  invert = TRUE,
-                                  value = TRUE)
 
             # product_vars <- c()
             # nobs <- 0
@@ -14706,9 +14708,6 @@ catalog_held_data <- function(network_domain, site_data){
     readr::write_file(x = as.character(nobs_nonspatial),
                       file = '../portal/data/general/total_nonspatial_observations.txt')
 
-    dir.create('../portal/data/general/catalog_files',
-               showWarnings = FALSE)
-
     ## generate and write file describing all variables
 
     #chem and flux stuff is broken out by category, so summarize the vars that,
@@ -14766,9 +14765,9 @@ catalog_held_data <- function(network_domain, site_data){
             summarize(
                 Observations = sum(Observations,
                                    na.rm = TRUE),
-                FirstRecordUTC = min(FirstRecord,
-                                     na.rm = TRUE),
-                LastRecordUTC = max(LastRecord,
+                FirstRecord = min(FirstRecord,
+                                  na.rm = TRUE),
+                LastRecord = max(LastRecord,
                                     na.rm = TRUE),
                 Unit = first(Unit)) %>%
             ungroup()
