@@ -1,3 +1,5 @@
+setwd('~/git/macrosheds/portal')
+
 #compile all varnames encountered in ws_traits files
 zz = system('find ../data_acquisition/data/webb/sleepers/ws_traits -name "*.feather"', intern = T)
 enc_vars = c()
@@ -47,7 +49,18 @@ for(z in zzz){
 setdiff(est_vars, enc_vars2)
 setdiff(enc_vars2, est_vars)
 
-setdiff(po, est_vars)
+setdiff(po, est_vars) #???
+intersect(po, enc_vars)
+setdiff(po, enc_vars)
+setdiff(po, enc_vars2)
+
+yd = read_feather('data/general/biplot/year.feather')
+ydv = unique(yd$var)
+setdiff(po, ydv)
+
+
+intersect(setdiff(po, est_vars), ydv)
+setdiff(setdiff(po, est_vars), ydv)
 
 #k. cool. all of this should be cleared up next time we run ws_traits from scratch.
 #OR simply sed through the typo names and fix them. probs should do the latter.

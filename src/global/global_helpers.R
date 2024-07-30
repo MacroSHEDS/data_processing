@@ -11291,8 +11291,6 @@ postprocess_entire_dataset <- function(site_data,
 
     if(push_new_version_to_figshare_and_edi){
 
-        stop('before building v2, take a close look at reformat_camels_for_ms and make sure 1) its incorporating new sites, and 2) it generates hydro attributes. probably need to borrow the hydro section from data_birth_dist2.R')
-
         message('Are you sure you want to modify our published package dataset? mash ESC within 10 seconds if not.')
         Sys.sleep(10)
 
@@ -11310,6 +11308,8 @@ postprocess_entire_dataset <- function(site_data,
 
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
+        stop('before building v2, take a close look at reformat_camels_for_ms and make sure 1) its incorporating new sites, and 2) it generates hydro attributes. probably need to borrow the hydro section from data_birth_dist2.R')
+        stop('-Inf is ending up in CAMELS_compliant_Daymet_forcings on EDI. that should get fixed upstream of figshare code. no work done on this yet, so step through and make the change approximately here. corrections of "lncd_", "idbp" etc should also happen here.')
         reformat_camels_for_ms(vsn = dataset_version)
 
         # log_with_indent('adding legal metadata to each domain directory',
@@ -11661,8 +11661,8 @@ prepare_site_metadata_for_figshare <- function(outfile){
                ws_area_ha = AreaHectares,
                n_observations = Observations,
                n_variables = Variables,
-               first_record_utc = FirstRecordUTC,
-               last_record_utc = LastRecordUTC,
+               first_record = FirstRecord,
+               last_record = LastRecord,
                timezone_olson)
 
     ms_site_data <- figd
@@ -11708,9 +11708,10 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
                    observations = Observations,
                    n_sites = Sites,
                    # mean_obs_per_site = MeanObsPerSite,
-                   first_record_utc = FirstRecordUTC,
-                   last_record_utc = LastRecordUTC) %>%
-            filter(! grepl('_flux$', chem_category)) #TEMP: removing flux metadata
+                   first_record = FirstRecord,
+                   last_record = LastRecord) %>%
+            arrange(tolower(variable_name), chem_category)
+            # filter(! grepl('_flux$', chem_category)) #TEMP: removing flux metadata
 
         write_csv(ms_vars_ts, outfile_ts)
 
@@ -11718,13 +11719,15 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             select(variable_code, molecule, valence, flux_convertible) %>%
             right_join(ms_vars_ts, by = 'variable_code') %>%
             relocate(molecule, valence, .after = 'unit') %>%
-            relocate(flux_convertible, .after = 'last_record_utc')
+            relocate(flux_convertible, .after = 'last_record') %>%
+            arrange(tolower(variable_name), chem_category)
 
         save(ms_vars_ts, file = '../r_package/data/ms_vars_ts.RData')
 
         ms_vars_ws <- ms_vars %>%
             filter(variable_type == 'ws_char') %>%
-            select(variable_code, variable_name, unit)
+            select(variable_code, variable_name, unit) %>%
+            arrange(tolower(variable_code))
 
         write_csv(ms_vars_ws, outfile_ws)
         save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
@@ -11734,6 +11737,7 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             select(variable_code, variable_name, unit,
                    range_check_minimum = val_min,
                    range_check_maximum = val_max) %>%
+            arrange(tolower(variable_name)) %>%
             write_csv(outfile_range_check)
 
     } else if(fs_format == 'old'){
@@ -11741,6 +11745,7 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
         ms_vars %>%
             select(variable_code, variable_name, unit, variable_type,
                    variable_subtype, valence, molecule, flux_convertible) %>%
+            arrange(tolower(variable_name)) %>%
             write_csv(outfile)
     }
 }
@@ -11997,8 +12002,6 @@ prepare_for_figshare <- function(where, dataset_version){
         stop(paste('The "system" calls below probably will not work on windows.',
                    'investigate and update those calls if necessary'))
     }
-
-    stop('-Inf is ending up in CAMELS_compliant_Daymet_forcings on EDI. that should get fixed upstream of figshare code. no work done on this yet, so step through and make the change approximately here. corrections of "lncd_", "idbp" etc should also happen here.')
 
     #prepare documentation and metadata
     make_figshare_docs_skeleton(where = where)
@@ -16437,7 +16440,8 @@ generate_watershed_raw_spatial_dataset <- function(){
     all_files <- list.files('data',
                             recursive = TRUE,
                             full.names = TRUE)
-    all_files <- all_files[! grepl('general/|spatial/', all_files)]
+    all_files <- grep('ws_traits/', all_files, value = TRUE)
+    # all_files <- all_files[! grepl('general/|spatial/', all_files)]
 
     raw_spatial_dat <- tibble()
     for(i in 1:length(ws_trait_folders)){
@@ -16608,7 +16612,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                default_site = site_code)
 
     all_domain <- tibble()
-    for(i in 1:nrow(df)) {
+    for(i in 1:nrow(df)){
 
         dom <- df$domain[i]
         net <- df$network[i]
@@ -16616,6 +16620,17 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
         dom_path <- glue('../portal/data/{d}/',
                          d = dom)
         domain_files <- list.files(dom_path)
+
+        #don't double-count when there's a custom version of a product
+        custprods <- grep('CUSTOM', domain_files, value = TRUE)
+        if(length(custprods)){
+            for(cp in custprods){
+                pname <- str_extract(cp, '(?<=CUSTOM).*')
+                if(sum(grepl(pname, domain_files)) > 1){
+                    domain_files <- domain_files[! domain_files == cp]
+                }
+            }
+        }
 
         chem_prod <- grep('stream_chemistry', domain_files, value = TRUE)
 
@@ -16871,7 +16886,7 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
                         summarise(val = mean(val, na.rm = TRUE),
                                   count = n()) %>%
                         ungroup() %>%
-                        mutate(missing = (356-count)/365) %>%
+                        mutate(missing = (356-count) / 365) %>%
                         mutate(missing = ifelse(missing < 0, 0, missing)) %>%
                         select(-count) %>%
                         mutate(var = glue('{v}_precip_conc', v = var)) %>%
@@ -16934,16 +16949,16 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
     }
 
     all_domain <- all_domain %>%
-        mutate(missing = missing*100) %>%
+        mutate(missing = missing * 100) %>%
         mutate(missing = as.numeric(substr(missing, 1, 2))) %>%
         mutate(val = round(val, 4))
 
     dir.create('../portal/data/general/biplot',
                showWarnings = FALSE)
 
-    if(! filter_ms_interp && ! filter_ms_status){
-        write_feather(all_domain, '../portal/data/general/biplot/year.feather')
-    }
+    # if(! filter_ms_interp && ! filter_ms_status){
+    write_feather(all_domain, '../portal/data/general/biplot/year.feather')
+    # }
 }
 
 compute_yearly_summary_ws <- function(){
@@ -17038,8 +17053,8 @@ compute_yearly_summary_ws <- function(){
         area_q <- areas %>%
             select(site_code, domain, area = val) %>%
             full_join(., conc_sum, by = c('site_code', 'domain')) %>%
-            mutate(discharge_a = ifelse(var == 'discharge', val/(area*10000), NA)) %>%
-            mutate(discharge_a = discharge_a*1000) %>%
+            mutate(discharge_a = ifelse(var == 'discharge', val / (area * 10000), NA)) %>%
+            mutate(discharge_a = discharge_a * 1000) %>%
             filter(!is.na(discharge_a)) %>%
             mutate(var = 'discharge_a') %>%
             select(-val, -area) %>%
