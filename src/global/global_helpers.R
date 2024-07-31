@@ -134,6 +134,31 @@ assign('status_codes',
        value = status_codes,
        envir = .GlobalEnv)
 
+known_publishers <- c(
+    'Watershed Function SFA, ESS-DIVE repository',
+    'U.S. Geological Survey',
+    'United States Geological Survey (USGS), Environmental Protection Agency (EPA)',
+    'Wisconsin State Laboratory of Hygiene',#add to loch vale
+    'National Water Information Service',
+    'Forest Science Data Bank',
+    'USDA Ag Data Commons', #add to santee (also need to add a url in santee?)
+    'Forest Service Research Data Archive',
+    'U.S. Forest Service, Northern Region',
+    'NEON', #manually added to record
+    'Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S. Department of Energy',
+    'Penn State University' #add to shale_hills
+)
+#known_publishers NOTES:
+#   suef may need url
+#   sleepers might need commas changed to periods
+#   shale_hills might need commas changed to periods and ampersands added to authors
+#   one east_river site has "ESS_DIVE" instead of "ESS-DIVE"
+#   run find and replace on the gsheet using this expression: \(([0-9]{4})[a-z]\) and "($1)" to replace
+
+assign('known_publishers',
+       value = known_publishers,
+       envir = .GlobalEnv)
+
 #exports from an attempt to use socket cluster parallelization;
 # idw_pkg_export <- c('logging', 'errors', 'jsonlite', 'plyr',
 #                     'tidyverse', 'lubridate', 'feather', 'glue',
@@ -634,14 +659,20 @@ identify_sampling_bypass <- function(df,
 
 drop_var_prefix <- function(x){
 
-    unprefixed <- substr(x, 4, nchar(x))
+    # unprefixed <- substr(x, 4, nchar(x))
+    unprefixed <- ifelse(substr(x, 3, 3) == '_',
+                         substr(x, 4, nchar(x)),
+                         x)
 
     return(unprefixed)
 }
 
 extract_var_prefix <- function(x){
 
-    prefix <- substr(x, 1, 2)
+    # prefix <- substr(x, 1, 2)
+    prefix <- ifelse(substr(x, 3, 3) == '_',
+                     substr(x, 1, 2),
+                     x)
 
     return(prefix)
 }
@@ -11130,7 +11161,6 @@ postprocess_attribution_ts <- function(){
 
     pcm <- tibble()
     for(i in seq_len(nrow(network_domain))){
-    # for(i in seq_len(26)){
 
         pcm <- read_csv(glue('src/{n}/{d}/products.csv',
                              n = network_domain$network[i],
@@ -11154,7 +11184,7 @@ postprocess_attribution_ts <- function(){
     )
 
     attrib_d <- left_join(attrib_d, pcm,
-                             by = c(macrosheds_prodcode = 'prodcode', 'domain')) %>%
+                          by = c(macrosheds_prodcode = 'prodcode', 'domain')) %>%
         relocate(prodname, .after = 'macrosheds_prodcode') %>%
         filter(! is.na(prodname)) %>%
         rename(macrosheds_prodname = prodname) %>%
@@ -11724,13 +11754,31 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
 
         save(ms_vars_ts, file = '../r_package/data/ms_vars_ts.RData')
 
+        univ_codes <- univ_products %>%
+            select(starts_with('data_')) %>%
+            distinct()
+
         ms_vars_ws <- ms_vars %>%
             filter(variable_type == 'ws_char') %>%
             select(variable_code, variable_name, unit) %>%
-            arrange(tolower(variable_code))
+            arrange(tolower(variable_code)) %>%
+            mutate(
+                data_class_code = str_extract(variable_code,
+                                              '^([a-z])(?=[a-z]_)',
+                                              group = 1),
+                data_source_code = str_extract(variable_code,
+                                               '^[a-z]([a-z])(?=_)',
+                                               group = 1),
+                variable_code = drop_var_prefix(variable_code)
+            ) %>%
+            left_join(univ_codes,
+                      by = c('data_class_code', 'data_source_code')) %>%
+            select(-matches('data.*code'))
 
         write_csv(ms_vars_ws, outfile_ws)
         save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
+
+        warning('remove the code below that filters streampulse variables (2 places)')
 
         ms_vars %>%
             filter(variable_type != 'ws_char') %>%
@@ -11738,6 +11786,8 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
                    range_check_minimum = val_min,
                    range_check_maximum = val_max) %>%
             arrange(tolower(variable_name)) %>%
+            filter(! variable_code %in% normally_converted_molecules) %>%
+            filter(! variable_code %in% c('model_GPP', 'model_ER', 'model_k600')) %>%
             write_csv(outfile_range_check)
 
     } else if(fs_format == 'old'){
@@ -11745,7 +11795,13 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
         ms_vars %>%
             select(variable_code, variable_name, unit, variable_type,
                    variable_subtype, valence, molecule, flux_convertible) %>%
-            arrange(tolower(variable_name)) %>%
+            arrange(variable_type == 'ws_char',
+                    tolower(variable_name)) %>%
+            filter(! variable_code %in% normally_converted_molecules) %>%
+            mutate(variable_code = ifelse(variable_type == 'ws_char',
+                                          drop_var_prefix(variable_code),
+                                          variable_code)) %>%
+            filter(! variable_code %in% c('model_GPP', 'model_ER', 'model_k600')) %>%
             write_csv(outfile)
     }
 }
@@ -11812,19 +11868,76 @@ prepare_variable_catalog_for_figshare <- function(outfile){
     write_csv(var_cat, outfile)
 }
 
+scrape_citations_into_bibtex <- function(d, to_where){
+
+    domains_present <- site_data %>%
+        filter(in_workflow == 1) %>%
+        distinct(domain) %>%
+        pull()
+
+    cites <- d %>%
+        filter(domain %in% domains_present) %>%
+        arrange(network, domain, macrosheds_prodname) %>%
+        pull(citation)
+
+    # ccc <- grep('(?:Environmental Data)|hydroshare', cites, value=T, invert = T)
+    # for(i in seq_along(ccc)){
+    for(cc in cites){
+        if(grepl('Environmental Data Initiative', cc)){
+            print('a')
+            bib_comps <- convert_EDI_to_APA(cc, NULL, raw = TRUE)
+        } else if(grepl('hydroshare.org', cc)){
+            print('a')
+            bib_comps <- convert_hydroshare_to_APA(cc, NULL, raw = TRUE)
+        } else {
+            bib_comps <- convert_ms_to_prebib(cc)
+            HERE. find out if this function can handle the hydroshare and edi cases too! if so, simplify the above.
+        }
+    }
+}
+
+format_attrib_for_DUA <- function(d, to_where){
+
+    ss <- site_data %>%
+        filter(site_type == 'stream_gauge',
+               in_workflow == 1) %>%
+        group_by(network, pretty_network, domain) %>%
+        summarize(Sites = n(),
+                  .groups = 'drop')
+
+    #NEEDS WORK. first must scrape gsheet into bibtex
+    d %>%
+        select(network, domain, citation) %>%
+        # macrosheds:::format_bibliography(d)->zz
+        # macrosheds:::format_bibliography(macrosheds::attrib_ts_data)->zz
+        # macrosheds::ms_generate_attribution()->zz
+
+        left_join(ss, by = c('network', 'domain')) %>%
+        select(Network = pretty_network,
+               `Domain code` = domain,
+               Sites,
+               Citations)
+
+}
+
 assemble_misc_docs_figshare <- function(where){
 
     docs_dir <- file.path(where, '0_documentation_and_metadata')
     dir.create(docs_dir, showWarnings = FALSE)
 
+    attrib_ts_data <- postprocess_attribution_ts()
+    write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
+
+    scrape_citations_into_bibtex(d = attrib_ts_data, to_where = 'scratch/')
+    format_attrib_for_DUA(d = attrib_ts_data, to_where = 'scratch/')
+    #another func here to write the table that goes on data agreements page
+    #probably here too, a func to add year letters to 01b_attribution_and_intellectual_rights_complete.csv
+    #another one for a bibtex to read into zotero, whence data-agree references will be generated
+    #a note/warning that manual copy/paste is required
+
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
                                 path = file.path(docs_dir, '01a_data_use_agreements.docx'),
                                 overwrite = TRUE)
-    # googledrive::drive_download(file = googledrive::as_id(conf$site_doi_license_gsheet),
-    #                             path = file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.xlsx'),
-    #                             overwrite = TRUE)
-    attrib_ts_data <- postprocess_attribution_ts()
-    write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
     attrib_ws_data <- googlesheets4::read_sheet(
         conf$univ_prods_gsheet,
@@ -11843,6 +11956,7 @@ assemble_misc_docs_figshare <- function(where){
         write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
     file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
               file.path(docs_dir, '05_timeseries_documentation'))
+        #get the following file from scrape_citations_into_bibtex instead!
     file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/timeseries_refs.bib',
               file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib'))
     file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/ws_attr_refs.bib',
@@ -12552,16 +12666,21 @@ find_resource_title <- function(x){
 
         xspl <- strsplit(xx, '\\. ')[[1]]
         xspl <- xspl[! grepl('National Ecological Observatory Network', xspl)]
+        xspl <- xspl[! grepl('Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S', xspl)]
         xspl <- xspl[! grepl('USDA Forest Service', xspl)]
         xspl <- xspl[! grepl('Susquehanna', xspl)]
         xspl <- xspl[! grepl('Dataset accessed from', xspl)]
         xspl <- xspl[! grepl('Williams', xspl)]
         xspl <- xspl[! grepl('^http', xspl)]
         xspl <- xspl[! grepl('Environmental Data Initiative', xspl)]
+        xspl <- xspl[! grepl('^HydroShare$', xspl)]
+        xspl <- Filter(function(x) ! x %in% known_publishers, xspl)
+        xspl <- xspl[! grepl(', [A-Z]\\.,', xspl)]
 
         if(is_edi){
             xspl <- xspl[! grepl('^ver [0-9]+$', xspl)]
-            xspl <- xspl[-(1:which(grepl('^[0-9]{4}$', xspl)))]
+            xspl <- xspl[-(1:which(grepl('^\\(?[0-9]{4}[a-z]*\\)?$', xspl)))]
+            # xspl <- xspl[-(1:which(grepl('^[0-9]{4}$', xspl)))]
             xspl <- paste(xspl, collapse = '. ')
         }
         #probs safe to build this. i feel like there's inconsistency in hydroshare
@@ -18409,7 +18528,11 @@ successive_ints <- function(v){
     return(grouped_list)
 }
 
-convert_EDI_to_APA <- function(citation, provenance_row){
+convert_EDI_to_APA <- function(citation, provenance_row, raw = FALSE){
+
+    #provenance_row: deprecated
+    #raw: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
+    #   rather than a formatted citation
 
     # citation = 'Caine, N., J. Morse, and Niwot Ridge LTER. 2023. Streamflow data for Albion camp, 1981 - ongoing. ver 18. Environmental Data Initiative. https://doi.org/10.6073/pasta/cc7e183b27383d894709fcc3e2e8cc74 (Accessed 2024-01-15).'
     # citation = 'Wollheim, W. and Plum Island Ecosystems LTER. 2019. PIE LTER time series of nutrient grab samples from Ipswich River and Parker River watershed catchments, Masachusetts, with frequency ranging from weekly to monthly between 2001 and 2019. ver 9. Environmental Data Initiative. https://doi.org/10.6073/pasta/465825142c5393363c707b1243dd4016 (Accessed 2024-01-15).'
@@ -18418,122 +18541,6 @@ convert_EDI_to_APA <- function(citation, provenance_row){
     # citation = 'Santa Barbara Coastal LTER and J. Q. Melack. 2019. SBC LTER: Land: Hydrology: Santa Barbara County Flood Control District - Precipitation at KTYD (KTYD227) ver 8. Environmental Data Initiative. https://doi.org/10.6073/pasta/6c6ceaab7c189afc85abb893280492a8 (Accessed 2024-01-16).'
     # authors <- parts[1:(titleind - 2)]
     title <- find_resource_title(citation)
-
-    format_authors <- function(authors){
-
-        if(length(authors) == 1){
-            return(authors[[1]])
-        }
-
-        last_auth <- which(grepl('^(?:.*, )?and [A-Z]$', authors))
-        organizational_author <- FALSE
-        #omg so far past point of diminishing returns. just hard code the weird ones
-        override <- ifelse(any(grepl('Cary Institute Of Ecosystem Studies', authors)), TRUE, FALSE)
-        if(! length(last_auth) || override){
-            if(any(grepl(' and ', authors[-length(authors)]))){
-                case3 <- domain == 'baltimore' && authors[length(authors)] == 'Welty'
-                if(case3 && all(c('Lagrosa, and C', 'Welty') %in% authors)){
-                    return('Cary Institute Of Ecosystem Studies, Lagrosa, J., & Welty, C')
-                }
-                if(! grepl(' and ', authors[1])) stop('probably need to adjust for this')
-                case1 <- domain == 'santa_barbara' && authors[length(authors)] == 'Melack'
-                case2 <- domain == 'niwot' && authors[length(authors)] == 'Caine'
-                if(case1 || case2){
-                   authors <- strsplit(authors, " and ") %>% unlist()
-                   inits <- unlist(authors[-c(1, length(authors))])
-                   if(! length(inits) %in% 1:2) stop('has been e.g. J Q or just J for santa b')
-                   out <- paste0(authors[1], ', & ', authors[length(authors)], ', ',
-                                 paste(inits, collapse = '. '))
-                   return(out)
-                }
-                stop('ugh. just hardcoding this for santa barbara. if it comes up again, deal with it properly')
-            }
-            last_auth <- which(grepl('^(?:.*, )?and [A-Za-z ]+$', authors))
-            organizational_author <- TRUE
-        }
-        if(length(last_auth)){
-            if(grepl(', and ', authors[last_auth])){
-                authors <- strsplit(authors, ", and ") %>% unlist()
-                authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
-            } else {
-                authors[last_auth] <- sub('and ', ', ', authors[last_auth])
-            }
-        }
-
-        authors <- as.list(authors)
-
-        authors <- lapply(authors, function(x){
-            if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
-        })
-        new_initial <- grep('^, [A-Z]$', authors)
-        extra_initial <- grep('^[A-Z]$', authors)
-
-        initial_groups <- successive_ints(extra_initial)
-        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
-        if(only_single_initials){
-            first_auth_inits <- NULL
-        } else {
-            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
-        }
-
-        if(is.null(first_auth_inits)){
-            first_auth <- authors[[1]]
-        } else {
-            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
-        }
-
-        if(! only_single_initials){
-            for(init in rev(new_initial)){
-                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
-                if(! is.null(ig_)){
-                    authors[[init]] <- paste(authors[init],
-                                             paste(authors[ig_], collapse = '. '),
-                                             sep = '. ')
-                    authors[ig_] <- NULL
-                }
-            }
-        }
-
-        authors[[1]] <- first_auth
-        authors[first_auth_inits] <- NULL
-
-        authors <- gsub("^, ", "", authors)
-        # authors <- strsplit(authors, ", and ") %>% unlist()
-
-        if(length(authors) %% 2 == 0 && ! organizational_author){
-            stop('error parsing citation authors')
-        }
-
-        if(organizational_author){
-            last_author <- authors[length(authors)]
-            authors <- authors[-length(authors)]
-        }
-
-        #reorder author components
-        if(length(authors) != 1){
-
-            firstauthor <- authors[1]
-            notfirst <- reverse_vector_pairs(authors[-1])
-            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
-                map(~paste(., collapse = ', ')) %>%
-                paste0(., '.')
-            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
-            notfirst <- paste(notfirst, collapse = ', ')
-            authors <- paste0(firstauthor, '., ', notfirst)
-        }
-
-        if(organizational_author){
-            authors <- sub(' &', '', authors)
-            if(str_count(authors, ',') > 1){
-                authors <- paste0(authors, ',')
-            } else {
-                authors <- paste0(authors, '.,')
-            }
-            authors <- paste(authors, last_author, sep = ' & ')
-        }
-
-        return(authors)
-    }
 
     parts <- str_split(citation, "[\\.]", simplify = TRUE) %>%
         map(str_trim) %>%
@@ -18567,7 +18574,7 @@ convert_EDI_to_APA <- function(citation, provenance_row){
         stop('dang, we need to handle periods in titles... still?')
     }
     title <- sub('( ver [0-9]+)$', '.\\1', title)
-    author <- format_authors(parts[1:(titleind - 2)])
+    author <- format_authors_edi(parts[1:(titleind - 2)])
     year <- parts[titleind - 1]
     vsn <- parts[titleind + 1]
     if(! grepl('ver ', vsn)) vsn <- ''
@@ -18586,6 +18593,19 @@ convert_EDI_to_APA <- function(citation, provenance_row){
     #     stop('parsing error when determining former publication year')
     # }
 
+    if(raw){
+
+        components <- list(
+            author = author,
+            year = year,
+            title = title,
+            publisher = paste(vsn, publisher, sep = '. '),
+            url = url
+        )
+
+        return(components)
+    }
+
     #combine
     # apa_citation <- paste0(author, ". (", yearletter, "). ", title, ". ", vsn, ". ",
     apa_citation <- paste0(author, ". (", year, "). ", title, ". ", vsn, ". ",
@@ -18595,7 +18615,11 @@ convert_EDI_to_APA <- function(citation, provenance_row){
     return(apa_citation)
 }
 
-convert_hydroshare_to_APA <- function(citation, provenance_row){
+convert_hydroshare_to_APA <- function(citation, provenance_row, raw = FALSE){
+
+    #provenance_row: deprecated
+    #raw: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
+    #   rather than a formatted citation
 
     # authors = author_bits
     # citation_text->citation
@@ -18610,95 +18634,6 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
     # citation = 'Chorover, J. (2021). CJCZO -- Precipitation Chemistry -- Santa Catalina Mountains -- (2006-2019), HydroShare, http://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24'
     # authors = author_bits
 
-    format_authors <- function(authors){
-
-        if(length(authors) == 1){
-
-            if(! grepl('\\.$', authors[[1]])){
-                authors[[1]] <- paste0(authors[[1]], '.')
-            }
-            return(authors[[1]])
-        }
-
-        for(i in 2:(length(authors) - 1)){
-            current_element <- authors[[i]][1]
-            if(grepl("[A-Za-z]+, [A-Z]$", current_element)){
-                # initial <- sub(".*,( [A-Z])$", "\\1", current_element)
-                # authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
-                initial <- sub(".*(, [A-Z])$", "\\1", current_element)
-                authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
-                authors <- c(authors[1:i], initial, authors[(i + 1):length(authors)])
-                # authors[[i + 1]][1] <- paste(initial, authors[[i + 1]][1], sep = '. ')
-            }
-        }
-
-        authors <- lapply(authors, function(x){
-                if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
-            })
-        new_initial <- grep('^, [A-Z]$', authors)
-        extra_initial <- grep('^[A-Z]$', authors)
-
-        initial_groups <- successive_ints(extra_initial)
-        only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
-        if(only_single_initials){
-            first_auth_inits <- NULL
-        } else {
-            first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
-        }
-
-        if(is.null(first_auth_inits)){
-            first_auth <- authors[[1]]
-        } else {
-            first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
-        }
-
-        if(! only_single_initials){
-            for(init in rev(new_initial)){
-                ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
-                if(! is.null(ig_)){
-                    authors[[init]] <- paste(authors[init],
-                                             paste(authors[ig_], collapse = '. '),
-                                             sep = '. ')
-                    authors[ig_] <- NULL
-                }
-            }
-        }
-
-        authors[[1]] <- first_auth
-        authors[first_auth_inits] <- NULL
-
-        authors <- gsub("^, ", "", authors)
-        # authors <- strsplit(authors, ", and ") %>% unlist()
-
-        if(length(authors) %% 2 == 0){
-            authors <- c(authors[1], unlist(strsplit(authors[-1], ", ")))
-        }
-
-        #reorder author components
-        if(length(authors) != 1){
-            firstauthor <- authors[1]
-            notfirst <- reverse_vector_pairs(authors[-1])
-            notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
-                map(~paste(., collapse = ', ')) %>%
-                paste0(., '.')
-            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
-                notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
-            }
-            notfirst <- paste(notfirst, collapse = ', ')
-            if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
-                authors <- paste0(firstauthor, '., ', notfirst)
-            } else {
-                authors <- paste0(firstauthor, ', ', notfirst)
-            }
-        }
-
-        if(! grepl('\\.$', authors)){
-            authors <- paste0(authors, '.')
-        }
-
-        return(authors)
-    }
-
     parts <- str_match(citation, '^(.+?)\\(([0-9]{4})\\)\\.(.+)$')[, 2:4] %>%
         map(str_trim) %>%
         unlist()
@@ -18707,8 +18642,7 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
         discard(~. == '') %>%
         map(str_trim)
 
-    author <- format_authors(author_bits)
-    # print(author)
+    author <- format_authors_hydroshare(author_bits)
 
     title_etc <- sub(', HydroShare, http', '. HydroShare. http', parts[3])
     title_etc <- sub('http:', 'https:', title_etc)
@@ -18724,11 +18658,282 @@ convert_hydroshare_to_APA <- function(citation, provenance_row){
     #     stop('parsing error when determining former publication year')
     # }
 
+    if(raw){
+
+        more_comps <- str_split(title_etc, '\\. HydroShare. ')[[1]]
+
+        components <- list(
+            author = author,
+            year = parts[2],
+            title = more_comps[1],
+            publisher = 'HydroShare',
+            url = more_comps[2]
+        )
+
+        return(components)
+    }
+
     #combine
     apa_citation <- paste0(author, " (", parts[2], "). ", title_etc)
     # apa_citation <- paste0(author, " (", parts[2], yearletter, "). ", title_etc)
 
     return(apa_citation)
+}
+
+format_authors_edi <- function(authors){
+
+    if(length(authors) == 1){
+        return(authors[[1]])
+    }
+
+    last_auth <- which(grepl('^(?:.*, )?and [A-Z]$', authors))
+    organizational_author <- FALSE
+    #omg so far past point of diminishing returns. just hard code the weird ones
+    override <- ifelse(any(grepl('Cary Institute Of Ecosystem Studies', authors)), TRUE, FALSE)
+    if(! length(last_auth) || override){
+        if(any(grepl(' and ', authors[-length(authors)]))){
+            case3 <- domain == 'baltimore' && authors[length(authors)] == 'Welty'
+            if(case3 && all(c('Lagrosa, and C', 'Welty') %in% authors)){
+                return('Cary Institute Of Ecosystem Studies, Lagrosa, J., & Welty, C')
+            }
+            if(! grepl(' and ', authors[1])) stop('probably need to adjust for this')
+            case1 <- domain == 'santa_barbara' && authors[length(authors)] == 'Melack'
+            case2 <- domain == 'niwot' && authors[length(authors)] == 'Caine'
+            if(case1 || case2){
+                authors <- strsplit(authors, " and ") %>% unlist()
+                inits <- unlist(authors[-c(1, length(authors))])
+                if(! length(inits) %in% 1:2) stop('has been e.g. J Q or just J for santa b')
+                out <- paste0(authors[1], ', & ', authors[length(authors)], ', ',
+                              paste(inits, collapse = '. '))
+                return(out)
+            }
+            stop('ugh. just hardcoding this for santa barbara. if it comes up again, deal with it properly')
+        }
+        last_auth <- which(grepl('^(?:.*, )?and [A-Za-z ]+$', authors))
+        organizational_author <- TRUE
+    }
+    if(length(last_auth)){
+        if(grepl(', and ', authors[last_auth])){
+            authors <- strsplit(authors, ", and ") %>% unlist()
+            authors[last_auth + 1] <- paste(',', authors[last_auth + 1])
+        } else {
+            authors[last_auth] <- sub('and ', ', ', authors[last_auth])
+        }
+    }
+
+    authors <- as.list(authors)
+
+    authors <- lapply(authors, function(x){
+        if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+    })
+    new_initial <- grep('^, [A-Z]$', authors)
+    extra_initial <- grep('^[A-Z]$', authors)
+
+    initial_groups <- successive_ints(extra_initial)
+    only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+    if(only_single_initials){
+        first_auth_inits <- NULL
+    } else {
+        first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+    }
+
+    if(is.null(first_auth_inits)){
+        first_auth <- authors[[1]]
+    } else {
+        first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+    }
+
+    if(! only_single_initials){
+        for(init in rev(new_initial)){
+            ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+            if(! is.null(ig_)){
+                authors[[init]] <- paste(authors[init],
+                                         paste(authors[ig_], collapse = '. '),
+                                         sep = '. ')
+                authors[ig_] <- NULL
+            }
+        }
+    }
+
+    authors[[1]] <- first_auth
+    authors[first_auth_inits] <- NULL
+
+    authors <- gsub("^, ", "", authors)
+    # authors <- strsplit(authors, ", and ") %>% unlist()
+
+    if(length(authors) %% 2 == 0 && ! organizational_author){
+        stop('error parsing citation authors')
+    }
+
+    if(organizational_author){
+        last_author <- authors[length(authors)]
+        authors <- authors[-length(authors)]
+    }
+
+    #reorder author components
+    if(length(authors) != 1){
+
+        firstauthor <- authors[1]
+        notfirst <- reverse_vector_pairs(authors[-1])
+        notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+            map(~paste(., collapse = ', ')) %>%
+            paste0(., '.')
+        notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+        notfirst <- paste(notfirst, collapse = ', ')
+        authors <- paste0(firstauthor, '., ', notfirst)
+    }
+
+    if(organizational_author){
+        authors <- sub(' &', '', authors)
+        if(str_count(authors, ',') > 1){
+            authors <- paste0(authors, ',')
+        } else {
+            authors <- paste0(authors, '.,')
+        }
+        authors <- paste(authors, last_author, sep = ' & ')
+    }
+
+    return(authors)
+}
+
+format_authors_hydroshare <- function(authors){
+
+    if(length(authors) == 1){
+
+        if(! grepl('\\.$', authors[[1]])){
+            authors[[1]] <- paste0(authors[[1]], '.')
+        }
+        return(authors[[1]])
+    }
+
+    for(i in 2:(length(authors) - 1)){
+        current_element <- authors[[i]][1]
+        if(grepl("[A-Za-z]+, [A-Z]$", current_element)){
+            # initial <- sub(".*,( [A-Z])$", "\\1", current_element)
+            # authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+            initial <- sub(".*(, [A-Z])$", "\\1", current_element)
+            authors[[i]][1] <- gsub(", [A-Z]$", "", current_element)
+            authors <- c(authors[1:i], initial, authors[(i + 1):length(authors)])
+            # authors[[i + 1]][1] <- paste(initial, authors[[i + 1]][1], sep = '. ')
+        }
+    }
+
+    authors <- lapply(authors, function(x){
+        if(grepl('^,? ?[a-zA-Z]$', x)) toupper(x) else x
+    })
+    new_initial <- grep('^, [A-Z]$', authors)
+    extra_initial <- grep('^[A-Z]$', authors)
+
+    initial_groups <- successive_ints(extra_initial)
+    only_single_initials <- length(initial_groups) == 1 && any(! length(initial_groups[[1]]))
+    if(only_single_initials){
+        first_auth_inits <- NULL
+    } else {
+        first_auth_inits <- unlist(keep(initial_groups, ~.[1] == 2), use.names = FALSE)
+    }
+
+    if(is.null(first_auth_inits)){
+        first_auth <- authors[[1]]
+    } else {
+        first_auth <- paste(authors[c(1, first_auth_inits)], collapse = '. ')
+    }
+
+    if(! only_single_initials){
+        for(init in rev(new_initial)){
+            ig_ <- unlist(keep(initial_groups, ~.[1] == init + 1), use.names = FALSE)
+            if(! is.null(ig_)){
+                authors[[init]] <- paste(authors[init],
+                                         paste(authors[ig_], collapse = '. '),
+                                         sep = '. ')
+                authors[ig_] <- NULL
+            }
+        }
+    }
+
+    authors[[1]] <- first_auth
+    authors[first_auth_inits] <- NULL
+
+    authors <- gsub("^, ", "", authors)
+    # authors <- strsplit(authors, ", and ") %>% unlist()
+
+    if(length(authors) %% 2 == 0){
+        authors <- c(authors[1], unlist(strsplit(authors[-1], ", ")))
+    }
+
+    #reorder author components
+    if(length(authors) != 1){
+        firstauthor <- authors[1]
+        notfirst <- reverse_vector_pairs(authors[-1])
+        notfirst <- split(notfirst, ceiling(seq_along(notfirst) / 2)) %>%
+            map(~paste(., collapse = ', ')) %>%
+            paste0(., '.')
+        if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+            notfirst[length(notfirst)] <- paste('&', notfirst[length(notfirst)])
+        }
+        notfirst <- paste(notfirst, collapse = ', ')
+        if(length(notfirst) != 1 || ! grepl('^(?:[A-Z]. ?)+$', notfirst)){
+            authors <- paste0(firstauthor, '., ', notfirst)
+        } else {
+            authors <- paste0(firstauthor, ', ', notfirst)
+        }
+    }
+
+    if(! grepl('\\.$', authors)){
+        authors <- paste0(authors, '.')
+    }
+
+    return(authors)
+}
+
+convert_ms_to_prebib <- function(citation){
+
+    #raw: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
+    #   rather than a formatted citation
+
+    warning('some citations may be missing publishers/urls, and will not parse. ',
+            'see notes associated with known_publishers global var to find out which ones need to have these fields manually added')
+
+    title <- find_resource_title(citation)
+    title <- sub('in the Mt Hood National Forest',
+                 'in the Mt. Hood National Forest',
+                 title)
+
+    comps <- str_split(citation, fixed(paste0('. ', title, '. ')))[[1]]
+    comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
+    author <- comps_[1]
+    year <- comps_[2]
+
+    pubid <- sapply(known_publishers,
+                  function(x) str_detect(fixed(comps[2]), fixed(x)),
+                  USE.NAMES = FALSE) %>%
+        which()
+
+    if(! length(pubid)) stop('unknown/missing publisher detected:\n', citation)
+
+    pub <- known_publishers[pubid]
+
+    url <- sub(paste0(pub, '\\. '),
+                    '',
+                    comps[2])
+
+    # if(raw){
+    components <- list(
+        author = author,
+        year = year,
+        title = title,
+        publisher = pub,
+        url = url
+    )
+
+    return(components)
+    # }
+
+    # #combine (this works, but pretty sure it would just return the input)
+    # apa_citation <- paste0(author, ". (", year, "). ", title, ". ",
+    #                        pub, ". ", url) %>%
+    #     str_replace_all('\\. ?\\.', '.') #probs unnecessary
+    #
+    # return(apa_citation)
 }
 
 update_prov_dt <- function(sitecd = NULL, dt, usgs = FALSE){
@@ -18792,7 +18997,7 @@ update_provenance <- function(url, last_download_dt){
         citation_text <- convert_hydroshare_to_APA(citation_text_, prov)
 
     } else {
-        warning('Provenance update required (citation_and_intellectual_rights googlesheet')
+        warning('Provenance update required (citation_and_intellectual_rights googlesheet).')
     }
 
     cat('old citation:\n', citation_text_, '\n')
