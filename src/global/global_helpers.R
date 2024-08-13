@@ -135,6 +135,8 @@ assign('status_codes',
        envir = .GlobalEnv)
 
 known_publishers <- c(
+    'Environmental Data Initiative',
+    'HydroShare',
     'Watershed Function SFA, ESS-DIVE repository',
     'U.S. Geological Survey',
     'United States Geological Survey (USGS), Environmental Protection Agency (EPA)',
@@ -148,15 +150,47 @@ known_publishers <- c(
     'Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S. Department of Energy',
     'Penn State University' #add to shale_hills
 )
-#known_publishers NOTES:
+#known_publishers NOTES. fix these in citation gsheet before building dataset.
+#(also apply to institutional_authors below):
 #   suef may need url
 #   sleepers might need commas changed to periods
 #   shale_hills might need commas changed to periods and ampersands added to authors
 #   one east_river site has "ESS_DIVE" instead of "ESS-DIVE"
 #   run find and replace on the gsheet using this expression: \(([0-9]{4})[a-z]\) and "($1)" to replace
+#   remove the "and" before and add a space within "and International Institute of Tropical Forestry(IITF), USDA Forest Service"
+#   find and replace "& Melack, J. (" to "& Melack, J. M. ("
 
 assign('known_publishers',
        value = known_publishers,
+       envir = .GlobalEnv)
+
+#might need to update these before generating new dataset
+institutional_authors <- c(
+    'Bonanza Creek LTER',
+    'Cary Institute of Ecosystem Studies',
+    'U.S. Forest Service',
+    'Niwot Ridge LTER',
+    'Plum Island Ecosystems LTER',
+    'Santa Barbara Coastal LTER',
+    'U.S. Geological Survey',
+    'Hubbard Brook Watershed Ecosystem Record (HBWatER)',
+    'NEON (National Ecological Observatory Network)',
+    'NADP Program Office',
+    'Water Quality Portal',
+    'Santee Experimental Forest, Southern Research Station, USDA Forest Service',
+    'International Institute of Tropical Forestry (IITF), USDA Forest Service',
+    'USDA Forest Service, Northern Research Station',
+    'USDA Forest Service, Southern Region'
+)
+
+two_letter_seq <- paste0(rep(letters, each = 26), letters)
+
+names(institutional_authors) <- paste0('Placeholder',
+                                       two_letter_seq[1:length(institutional_authors)],
+                                       ' X. X.')
+
+assign('institutional_authors',
+       value = institutional_authors,
        envir = .GlobalEnv)
 
 #exports from an attempt to use socket cluster parallelization;
@@ -11164,7 +11198,8 @@ postprocess_attribution_ts <- function(){
 
         pcm <- read_csv(glue('src/{n}/{d}/products.csv',
                              n = network_domain$network[i],
-                             d = network_domain$domain[i])) %>%
+                             d = network_domain$domain[i]),
+                        show_col_types = FALSE) %>%
             filter(! retrieve_status %in% c('paused', 'pending')) %>%
             select(prodcode, prodname) %>%
             mutate(domain = network_domain$domain[i]) %>%
@@ -11868,7 +11903,9 @@ prepare_variable_catalog_for_figshare <- function(outfile){
     write_csv(var_cat, outfile)
 }
 
-scrape_citations_into_bibtex <- function(d, to_where){
+scrape_citations_into_bibtex <- function(d, outfile = NULL){
+
+    #outfile: path to a ".bib" file that will be written. If NULL, text is returned.
 
     domains_present <- site_data %>%
         filter(in_workflow == 1) %>%
@@ -11880,23 +11917,179 @@ scrape_citations_into_bibtex <- function(d, to_where){
         arrange(network, domain, macrosheds_prodname) %>%
         pull(citation)
 
-    # ccc <- grep('(?:Environmental Data)|hydroshare', cites, value=T, invert = T)
-    # for(i in seq_along(ccc)){
+    bib_out <- ''
     for(cc in cites){
-        if(grepl('Environmental Data Initiative', cc)){
-            print('a')
-            bib_comps <- convert_EDI_to_APA(cc, NULL, raw = TRUE)
-        } else if(grepl('hydroshare.org', cc)){
-            print('a')
-            bib_comps <- convert_hydroshare_to_APA(cc, NULL, raw = TRUE)
-        } else {
-            bib_comps <- convert_ms_to_prebib(cc)
-            HERE. find out if this function can handle the hydroshare and edi cases too! if so, simplify the above.
-        }
+        bib_out <- glue(bib_out,
+                        convert_ms_to_bib(cc),
+                        .open = '<<', .close = '>>', .trim = FALSE)
     }
+
+    if(is.null(outfile)){
+        return(bib_out)
+    }
+
+    writeLines(bib_out, outfile)
+
+    message('Timeseries citations have been written to ', outfile,
+            '. Import to Zotero, then export references to Data Use Agreements, ',
+            'and then press any key to continue.')
+    readLines(n = 1)
 }
 
-format_attrib_for_DUA <- function(d, to_where){
+format_citation_for_DUA <- function(citations){
+
+    #summarizes a vector of citations into the format we use for tables in
+    #the Data Use Agreements document, e.g.:
+    #Bowden 2021a-d; Kling 2016a-t; 2019; Shaver 2019; Zarnetske 2020; Zarnetske, Bowden, and Abbot 2020a,b
+
+    auths_ <- years_ <- c()
+    for(cc in citations){
+
+        title <- find_resource_title(cc)
+        title <- sub('in the Mt Hood National Forest',
+                     'in the Mt. Hood National Forest',
+                     title)
+
+        comps <- str_split(cc, fixed(paste0('. ', title, '. ')))[[1]]
+        comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
+
+        author <- comps_[1]
+        author <- sub('Cary Institute Of Ecosystem Studies',
+                      'Cary Institute of Ecosystem Studies',
+                      author)
+
+        year <- comps_[2]
+
+        # ay <- paste(author, year, sep = '.')
+        # ay <- sub('\\.\\.', '.', ay)
+
+        # auth_year <- c(auth_year, ay)
+        auths_ <- c(auths_, author)
+        years_ <- c(years_, year)
+    }
+
+    #for institutional author names, replace them with a placeholder so they can
+    #be processed properly
+    for(i in seq_along(auths_)){
+
+        instid <- sapply(unname(institutional_authors),
+                         function(x) str_detect(fixed(auths_[i]), fixed(x)),
+                         USE.NAMES = FALSE) %>%
+            which()
+
+        if(length(instid)){
+            auths_[i] <- str_replace(fixed(auths_[i]),
+                                     fixed(unname(institutional_authors[instid])),
+                                     names(institutional_authors[instid]))
+        }
+    }
+
+    uniq_auth_year <- tibble(auths = auths_,
+                             years = years_) %>%
+        group_by(auths) %>%
+        summarize(years = list(sort(as.numeric(years))),
+                  n = list(as.integer(table(years))),
+                  .groups = 'drop') %>%
+        mutate(years = map(years, unique)) %>%
+        mutate(etal = str_count(auths, '\\., (?:& )?') + 1 > 2,
+               surnames = str_extract_all(auths, '\\b[a-zA-Z]{2,}\\b'))
+
+    #find distinguishing indices for multi-author citations
+    uniq_auth_year$distinguishing_elem <- NA_real_
+    etals <- which(uniq_auth_year$etal)
+    for(i in etals){
+
+        cur_elem <- uniq_auth_year$surnames[[i]]
+        other_elems <- uniq_auth_year$surnames[setdiff(etals, i)]
+
+        diff_ind <- 1
+        for(j in seq_along(other_elems)){
+
+            comp_elem <- other_elems[[j]]
+            min_length <- min(length(cur_elem), length(comp_elem))
+            diff_ind_ <- which(cur_elem[1:min_length] != comp_elem[1:min_length])[1]
+
+            diff_ind <- max(c(diff_ind, diff_ind_))
+        }
+
+        uniq_auth_year$distinguishing_elem[i] <- diff_ind
+    }
+
+    #format compact citation
+    out <- c()
+    for(i in 1:nrow(uniq_auth_year)){
+
+        author <- uniq_auth_year$auths[i]
+        yr <- uniq_auth_year$years[[i]]
+        n_auth <- str_count(author, '\\., (?:& )?') + 1
+
+        if(n_auth > 2){
+
+            dist_elem <- uniq_auth_year$distinguishing_elem[i]
+            all_auths <- str_extract_all(author, "\\b[a-zA-Z]{2,}\\b")[[1]]
+
+            if(is.na(dist_elem) || n_auth == dist_elem){
+                author <- paste(paste(all_auths[-length(all_auths)],
+                                      collapse = ', '),
+                                all_auths[length(all_auths)],
+                                sep = ', & ')
+            } else {
+                author <- all_auths[1:dist_elem] %>%
+                    paste(collapse = ', ') %>%
+                    paste0(', et al.')
+            }
+
+        } else {
+            author <- paste(str_extract_all(author, "\\b[a-zA-Z]{2,}\\b")[[1]],
+                            collapse = ' & ')
+        }
+
+        for(j in seq_along(yr)){
+
+            yy <- yr[j]
+            nn <- uniq_auth_year$n[[i]][j]
+            item <- paste(author, yy)
+
+            if(nn > 1){
+                item <- paste0(item, 'a-', c(letters, two_letter_seq)[nn])
+            }
+
+            out <- c(out, item)
+        }
+    }
+
+    out <- sort(out)
+    bases <- str_extract(out, '.*(?= [0-9]{4}(?:[a-z]\\-[a-z]+)?$)')
+    yrs_plus <- str_extract(out, '[0-9]{4}(?:[a-z]\\-[a-z]+)?$')
+
+    just_yr <- duplicated(bases)
+    out[just_yr] <- yrs_plus[just_yr]
+
+    #reassign institutional authors to their placeholders
+    for(i in seq_along(out)){
+
+        instid <- sapply(substr(names(institutional_authors), 1, 13),
+                         function(x) str_detect(fixed(out[i]), fixed(x)),
+                         USE.NAMES = FALSE) %>%
+            which()
+
+        if(length(instid)){
+            out[i] <- sub(substr(names(institutional_authors[instid]),
+                                 1, 13),
+                          unname(institutional_authors[instid]),
+                          out[i])
+        }
+    }
+
+    str_out <- paste(out, collapse = '; ')
+
+    return(str_out)
+}
+
+format_attrib_for_DUA <- function(d, outfile){
+
+    #extract data from attribution gsheet and write it to CSV. It can then be
+    #   copied and pasted to the table in the Data Use Agreements
 
     ss <- site_data %>%
         filter(site_type == 'stream_gauge',
@@ -11905,19 +12098,21 @@ format_attrib_for_DUA <- function(d, to_where){
         summarize(Sites = n(),
                   .groups = 'drop')
 
-    #NEEDS WORK. first must scrape gsheet into bibtex
     d %>%
-        select(network, domain, citation) %>%
-        # macrosheds:::format_bibliography(d)->zz
-        # macrosheds:::format_bibliography(macrosheds::attrib_ts_data)->zz
-        # macrosheds::ms_generate_attribution()->zz
-
+        # filter(domain == 'santa_barbara') %>% pull(citation)->citations
+        group_by(network, domain) %>%
+        summarize(Citations = format_citation_for_DUA(citation),
+                  .groups = 'drop') %>%
         left_join(ss, by = c('network', 'domain')) %>%
         select(Network = pretty_network,
                `Domain code` = domain,
                Sites,
-               Citations)
+               Citations) %>%
+        write_csv(outfile)
 
+    message('Section 4.1 table has been written to ', outfile,
+            '. Copy it to Data Use Agreements and then press any key to continue.')
+    readLines(n = 1)
 }
 
 assemble_misc_docs_figshare <- function(where){
@@ -11928,12 +12123,9 @@ assemble_misc_docs_figshare <- function(where){
     attrib_ts_data <- postprocess_attribution_ts()
     write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
-    scrape_citations_into_bibtex(d = attrib_ts_data, to_where = 'scratch/')
-    format_attrib_for_DUA(d = attrib_ts_data, to_where = 'scratch/')
-    #another func here to write the table that goes on data agreements page
-    #probably here too, a func to add year letters to 01b_attribution_and_intellectual_rights_complete.csv
-    #another one for a bibtex to read into zotero, whence data-agree references will be generated
-    #a note/warning that manual copy/paste is required
+    scrape_citations_into_bibtex(d = attrib_ts_data, outfile = 'scratch/ts.bib')
+    format_attrib_for_DUA(d = attrib_ts_data, outfile = 'scratch/DUA.csv')
+    #probably here too (no, above), a func to add year letters to 01b_attribution_and_intellectual_rights_complete.csv
 
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
                                 path = file.path(docs_dir, '01a_data_use_agreements.docx'),
@@ -18885,13 +19077,39 @@ format_authors_hydroshare <- function(authors){
     return(authors)
 }
 
-convert_ms_to_prebib <- function(citation){
+once_per_session_warning <- function(label, message){
 
-    #raw: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
+    #label: a character string representing the warning. this string will become
+    #   a variable in an environment called "warnings_"
+
+    if(! exists('warnings_', envir = .GlobalEnv)){
+        assign('warnings_', new.env(parent = .GlobalEnv), envir = .GlobalEnv)
+    }
+
+    warnings_env <- get('warnings_', envir = .GlobalEnv)
+
+    if(exists(label, where = warnings_env)){
+        return(invisible())
+    } else {
+        assign(label, value = 'placeholder', envir = warnings_env)
+    }
+
+    message <- paste0(message, '. This warning will appear once per session.')
+    message <- sub('\\. ?\\.', '.', message)
+
+    warning(message, call. = FALSE)
+}
+
+convert_ms_to_bib <- function(citation, list = FALSE){
+
+    #list: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
     #   rather than a formatted citation
 
-    warning('some citations may be missing publishers/urls, and will not parse. ',
-            'see notes associated with known_publishers global var to find out which ones need to have these fields manually added')
+    once_per_session_warning(
+        label = 'publishers',
+        message = paste('some citations may be missing publishers/urls, and will not parse.',
+                        'see notes associated with known_publishers global var to find out which ones need to have these fields manually added')
+    )
 
     title <- find_resource_title(citation)
     title <- sub('in the Mt Hood National Forest',
@@ -18899,9 +19117,23 @@ convert_ms_to_prebib <- function(citation){
                  title)
 
     comps <- str_split(citation, fixed(paste0('. ', title, '. ')))[[1]]
+
+    key <- paste(tolower(str_extract(author, '^.+?(?=,)')),
+                 tolower(str_extract(title, '^.+?(?= )')),
+                 year,
+                 sep = '_')
+
+    title <- gsub('\\b([A-Z][a-z]*)\\b', '{\\1}', title)
+
     comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
     author <- comps_[1]
     year <- comps_[2]
+
+    author <- gsub('\\., (?:& )?', '. and ', author)
+    author <- gsub(', & ', ' and ', author)
+    author <- paste0(author, '.')
+    author <- sub('\\.\\.$', '.', author)
+    author <- gsub(', ([A-Z]\\.) ([A-Z]\\.)', ', \\1\\2', author)
 
     pubid <- sapply(known_publishers,
                   function(x) str_detect(fixed(comps[2]), fixed(x)),
@@ -18912,28 +19144,34 @@ convert_ms_to_prebib <- function(citation){
 
     pub <- known_publishers[pubid]
 
-    url <- sub(paste0(pub, '\\. '),
-                    '',
-                    comps[2])
+    url <- sub(paste0(pub, '\\. '), '', comps[2])
+    url <- str_extract(url, 'https?://.+')
 
-    # if(raw){
-    components <- list(
-        author = author,
-        year = year,
-        title = title,
-        publisher = pub,
-        url = url
-    )
+    if(list){
+        components <- list(
+            author = author,
+            year = year,
+            title = title,
+            publisher = pub,
+            url = url
+        )
 
-    return(components)
-    # }
+        return(components)
+    }
 
-    # #combine (this works, but pretty sure it would just return the input)
-    # apa_citation <- paste0(author, ". (", year, "). ", title, ". ",
-    #                        pub, ". ", url) %>%
-    #     str_replace_all('\\. ?\\.', '.') #probs unnecessary
-    #
-    # return(apa_citation)
+    doi_url <- ifelse(grepl('^https?://doi\\.org', url), 'doi', 'url')
+
+    bib <- glue('\n@misc{', key,
+                ',\n\ttitle = {', title,
+                '},\n\tpublisher = {', pub,
+                '},\n\tauthor = {', author,
+                '},\n\tyear = {', year,
+                '},\n\t', doi_url, ' = {', url,
+                '}\n}\n',
+                .open = '<<', .close = '>>',
+                .trim = FALSE)
+
+    return(bib)
 }
 
 update_prov_dt <- function(sitecd = NULL, dt, usgs = FALSE){
