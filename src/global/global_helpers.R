@@ -148,10 +148,25 @@ known_publishers <- c(
     'U.S. Forest Service, Northern Region',
     'NEON', #manually added to record
     'Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S. Department of Energy',
-    'Penn State University' #add to shale_hills
+    'Penn State University', #add to shale_hills
+    #these are for ws_attrs
+    'United States Department of Agriculture, Natural Resources Conservation Service',
+    'Joerd',
+    'Remote Sensing in Ecology and Conservation',
+    'NASA EOSDIS Land Processes DAAC',
+    'Oregon State University',
+    'Earth Resources Observation and Science (EROS) Center',
+    'ORNL DAAC',
+    'NASA National Snow and Ice Data Center Distributed Active Archive Center',
+    'PANGAEA',
+    'ISPRS Journal of Photogrammetry and Remote Sensing',
+    'International Journal of Climatology',
+    'Scholars Portal Dataverse'
 )
 #known_publishers NOTES. fix these in citation gsheet before building dataset.
 #(also apply to institutional_authors below):
+#IF any more journals get added as publishers and they don't have the word "Journal" in their name,
+#   convert_ms_to_bib() will need to be updated accordingly (to recognize when to use journal formatting)
 #   suef may need url
 #   sleepers might need commas changed to periods
 #   shale_hills might need commas changed to periods and ampersands added to authors
@@ -180,7 +195,10 @@ institutional_authors <- c(
     'Santee Experimental Forest, Southern Research Station, USDA Forest Service',
     'International Institute of Tropical Forestry (IITF), USDA Forest Service',
     'USDA Forest Service, Northern Research Station',
-    'USDA Forest Service, Southern Region'
+    'USDA Forest Service, Southern Region',
+    'Mapzen',
+    'PRISM Climate Group',
+    'Soil Survey Staff'
 )
 
 two_letter_seq <- paste0(rep(letters, each = 26), letters)
@@ -11170,23 +11188,32 @@ create_missing_stream_gauge_locations <- function(where){
     dmns <- sapply(dmn_paths, function(x) str_split(x, '/')[[1]][3],
                    USE.NAMES = FALSE)
 
+    domains_in_wkflow <- site_data %>%
+        filter(in_workflow == 1,
+               site_type == 'stream_gauge') %>%
+        distinct(domain) %>%
+        pull()
+
     for(i in seq_along(dmns)){
 
         pth <- dmn_paths[i]
         d <- dmns[i]
 
+        if(! d %in% domains_in_wkflow) next
+
         derived_dirs <- list.files(file.path(pth, 'derived'))
         if(! any(grepl('stream_gauge_locations', derived_dirs))){
 
-            site_data %>%
-                filter(domain == !!d,
-                       in_workflow == 1,
-                       site_type == 'stream_gauge') %>%
-                select(site_code, latitude, longitude) %>%
-                st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
-                st_write(glue('{where}/5_shapefiles/{d}_stream_gauge_locations.shp'),
-                         driver = 'ESRI Shapefile',
-                         quiet = TRUE)
+            print(paste(d, 'is missing stream gauge locations!'))
+            # site_data %>%
+            #     filter(domain == !!d,
+            #            in_workflow == 1,
+            #            site_type == 'stream_gauge') %>%
+            #     select(site_code, latitude, longitude) %>%
+            #     st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>%
+            #     st_write(glue('{where}/5_shapefiles/{d}_stream_gauge_locations.shp'),
+            #              driver = 'ESRI Shapefile',
+            #              quiet = TRUE)
         }
     }
 }
@@ -11367,8 +11394,9 @@ postprocess_entire_dataset <- function(site_data,
         prepare_for_figshare(where = fs_dir,
                              dataset_version = dataset_version)
 
-        log_with_indent('creating stream_gauge_locations shapefiles where they are missing',
-                        logger = logger_module)
+        # log_with_indent('creating stream_gauge_locations shapefiles where they are missing',
+        #                 logger = logger_module)
+        #this func is disabled. just a (probably redundant) postcheck now
         create_missing_stream_gauge_locations(where = fs_dir)
 
         prepare_for_figshare_packageformat(where = fs_dir,
@@ -11912,10 +11940,14 @@ scrape_citations_into_bibtex <- function(d, outfile = NULL){
         distinct(domain) %>%
         pull()
 
-    cites <- d %>%
-        filter(domain %in% domains_present) %>%
-        arrange(network, domain, macrosheds_prodname) %>%
-        pull(citation)
+    if('retrieved_from_GEE' %in% colnames(d)){
+        cites <- d$citation
+    } else {
+        cites <- d %>%
+            filter(domain %in% domains_present) %>%
+            arrange(network, domain, macrosheds_prodname) %>%
+            pull(citation)
+    }
 
     bib_out <- ''
     for(cc in cites){
@@ -11931,8 +11963,9 @@ scrape_citations_into_bibtex <- function(d, outfile = NULL){
     writeLines(bib_out, outfile)
 
     message('Timeseries citations have been written to ', outfile,
-            '. Import to Zotero, then export references to Data Use Agreements, ',
+            '. Import to Zotero, then export references in AGU style to Data Use Agreements, ',
             'and then press any key to continue.')
+    cat('>')
     readLines(n = 1)
 }
 
@@ -11946,9 +11979,6 @@ format_citation_for_DUA <- function(citations){
     for(cc in citations){
 
         title <- find_resource_title(cc)
-        title <- sub('in the Mt Hood National Forest',
-                     'in the Mt. Hood National Forest',
-                     title)
 
         comps <- str_split(cc, fixed(paste0('. ', title, '. ')))[[1]]
         comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
@@ -11957,13 +11987,8 @@ format_citation_for_DUA <- function(citations){
         author <- sub('Cary Institute Of Ecosystem Studies',
                       'Cary Institute of Ecosystem Studies',
                       author)
-
         year <- comps_[2]
 
-        # ay <- paste(author, year, sep = '.')
-        # ay <- sub('\\.\\.', '.', ay)
-
-        # auth_year <- c(auth_year, ay)
         auths_ <- c(auths_, author)
         years_ <- c(years_, year)
     }
@@ -12104,8 +12129,9 @@ format_attrib_for_DUA <- function(d, outfile){
         summarize(Citations = format_citation_for_DUA(citation),
                   .groups = 'drop') %>%
         left_join(ss, by = c('network', 'domain')) %>%
-        select(Network = pretty_network,
-               `Domain code` = domain,
+        arrange(domain) %>%
+        select(`Domain code` = domain,
+               Network = pretty_network,
                Sites,
                Citations) %>%
         write_csv(outfile)
@@ -12115,17 +12141,42 @@ format_attrib_for_DUA <- function(d, outfile){
     readLines(n = 1)
 }
 
+add_letters_to_attrib_ts <- function(d){
+
+    #changes e.g. "Smith, A. B. 2020" to "Smith, A. B. 2020a", where appropriate
+
+    aa <- str_extract_all(d$citation, '\\([0-9]{4}[a-z]\\)') %>% unlist()
+    if(length(aa)) stop('detected old yearletters in citation list')
+
+    d <- d %>%
+        arrange(citation) %>%
+        mutate(authoryear = str_extract(citation, '.*? \\([12][0-9]{3}\\)'),
+               year = str_extract(authoryear, '\\(([12][0-9]{3})\\)', group = 1)) %>%
+        group_by(authoryear) %>%
+        mutate(year = if(n() > 1) paste0(year, c(letters, two_letter_seq)[1:n()]) else year,
+               citation = map2_chr(citation, year,
+                                   ~sub('\\(([12][0-9]{3})\\)', glue('({.y})'), .x))) %>%
+        ungroup() %>%
+        select(-authoryear, -year)
+
+    return(d)
+}
+
 assemble_misc_docs_figshare <- function(where){
 
     docs_dir <- file.path(where, '0_documentation_and_metadata')
     dir.create(docs_dir, showWarnings = FALSE)
 
     attrib_ts_data <- postprocess_attribution_ts()
-    write_csv(attrib_ts_data, file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
+    attrib_ts_data_withletters <- add_letters_to_attrib_ts(attrib_ts_data)
+    write_csv(attrib_ts_data_withletters,
+              file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
-    scrape_citations_into_bibtex(d = attrib_ts_data, outfile = 'scratch/ts.bib')
+    scrape_citations_into_bibtex(
+        d = attrib_ts_data,
+        outfile = file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib')
+    )
     format_attrib_for_DUA(d = attrib_ts_data, outfile = 'scratch/DUA.csv')
-    #probably here too (no, above), a func to add year letters to 01b_attribution_and_intellectual_rights_complete.csv
 
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
                                 path = file.path(docs_dir, '01a_data_use_agreements.docx'),
@@ -12140,45 +12191,45 @@ assemble_misc_docs_figshare <- function(where){
                doi, license, citation, url, addtl_info = notes) %>%
         mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE))
 
+    scrape_citations_into_bibtex(
+        d = attrib_ws_data,
+        outfile = file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib')
+    )
+
     #these datasets required for macrosheds package functioning
     save(attrib_ws_data, file = '../r_package/data/attribution_and_intellectual_rights_ws_attr.RData')
-    save(attrib_ts_data, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
+    save(attrib_ts_data_withletters, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
 
-    select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
-        write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
-    file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
-              file.path(docs_dir, '05_timeseries_documentation'))
-        #get the following file from scrape_citations_into_bibtex instead!
-    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/timeseries_refs.bib',
-              file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib'))
-    file.copy('/home/mike/git/macrosheds/papers/release_paper/tables/ws_attr_refs.bib',
-              file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib'))
-    file.copy('src/templates/figshare_docfiles/07a_CAMELS-compliant_datasets_metadata.txt',
-              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
-    file.copy('src/templates/figshare_docfiles/07b_CAMELS-compliant_ws_attributes_column_descriptions.txt',
-              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
-    file.copy('src/templates/figshare_docfiles/07c_CAMELS-compliant_Daymet_forcings_column_descriptions.txt',
-              file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
-    file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
-    file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
-    file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
-              file.path(docs_dir, '04_site_documentation'))
-    file.copy('../portal/static/documentation/timeseries/columns.txt',
-              file.path(docs_dir, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
-    file.copy('../portal/static/documentation/watershed_summary/columns.csv',
-              file.path(docs_dir, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
-    file.copy('../portal/static/documentation/watershed_trait_timeseries/columns.txt',
-              file.path(docs_dir, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
-    file.copy('src/templates/figshare_docfiles/05c_timeseries_variable_metadata_column_descriptions.txt',
-              file.path(docs_dir, '05_timeseries_documentation'))
-    file.copy('src/templates/figshare_docfiles/06c_ws_attr_variable_metadata_column_descriptions.txt',
-              file.path(docs_dir, '06_ws_attr_documentation'))
-    file.copy('../portal/data/general/spatial_downloadables/variable_category_codes.csv',
-              file.path(docs_dir, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
-    file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
-              file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
+    # select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
+    #     write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
+    # file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
+    #           file.path(docs_dir, '05_timeseries_documentation'))
+    # file.copy('src/templates/figshare_docfiles/07a_CAMELS-compliant_datasets_metadata.txt',
+    #           file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    # file.copy('src/templates/figshare_docfiles/07b_CAMELS-compliant_ws_attributes_column_descriptions.txt',
+    #           file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    # file.copy('src/templates/figshare_docfiles/07c_CAMELS-compliant_Daymet_forcings_column_descriptions.txt',
+    #           file.path(docs_dir, '07_CAMELS-compliant_datasets_documentation'))
+    # file.copy('src/templates/figshare_docfiles/02_glossary.txt', docs_dir)
+    # file.copy('src/templates/figshare_docfiles/03_changelog.txt', docs_dir)
+    # file.copy('/home/mike/git/macrosheds/data_acquisition/src/templates/figshare_docfiles/04b_site_metadata_column_descriptions.txt',
+    #           file.path(docs_dir, '04_site_documentation'))
+    # file.copy('../portal/static/documentation/timeseries/columns.txt',
+    #           file.path(docs_dir, '05_timeseries_documentation', '05d_timeseries_column_descriptions.txt'))
+    # file.copy('../portal/static/documentation/watershed_summary/columns.csv',
+    #           file.path(docs_dir, '06_ws_attr_documentation', '06f_ws_attr_summary_column_descriptions.csv'))
+    # file.copy('../portal/static/documentation/watershed_trait_timeseries/columns.txt',
+    #           file.path(docs_dir, '06_ws_attr_documentation', '06g_ws_attr_timeseries_column_descriptions.txt'))
+    # file.copy('src/templates/figshare_docfiles/05c_timeseries_variable_metadata_column_descriptions.txt',
+    #           file.path(docs_dir, '05_timeseries_documentation'))
+    # file.copy('src/templates/figshare_docfiles/06c_ws_attr_variable_metadata_column_descriptions.txt',
+    #           file.path(docs_dir, '06_ws_attr_documentation'))
+    # file.copy('../portal/data/general/spatial_downloadables/variable_category_codes.csv',
+    #           file.path(docs_dir, '06_ws_attr_documentation', '06d_ws_attr_variable_category_codes.csv'))
+    # file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
+    #           file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
 
-    prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
+    # prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
 }
 
 prepare_data_irreg_doc_for_figshare <- function(outfile){
@@ -12203,17 +12254,15 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
     file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
                 to = tld)
 
-    # unlink(file.path(tld, 'load_entire_product.R'))
-
     all_dirs <- list.dirs(tld)
 
     dmn_dirs <- grep(pattern = 'derived$',
                      x = all_dirs,
                      value = TRUE)
 
-    warning('temporarily removing NEON (there is another place where this happens)')
-    dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
-    unlink(file.path(tld, 'neon/'), recursive = TRUE)
+    # warning('temporarily removing NEON (there is another place where this happens)')
+    # dmn_dirs <- grep('neon', dmn_dirs, invert = TRUE, value = TRUE)
+    # unlink(file.path(tld, 'neon/'), recursive = TRUE)
 
     for(jd in dmn_dirs){
 
@@ -12236,24 +12285,24 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
         #dip into network dir for convenience. this is not ideal
         setwd(parent_folder)
 
-        ## TEMP
-        warning('temporarily removing flux from ts data')
-        flux_dirs_to_rm <- grep(pattern = 'flux',
-                                x = list.files(dmn,
-                                               full.names = TRUE),
-                                value = TRUE)
-        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
-
-        zz <- list.files(glue('{dmn}/documentation'), full.names = TRUE, recursive = TRUE)
-        file.remove(grep('flux_inst', zz, value = TRUE))
-        pppf = grep('precip_pchem_pflux', zz, value = TRUE)
-        if(length(pppf) > 1) stop()
-        if(length(pppf) == 1){
-            read_file(pppf) %>%
-                str_replace('Special note for flux products:\nOur instantaneous stream flux product is called \"stream_flux_inst\" during standard kernel \nprocessing, but its name changes to \"stream_flux_inst_scaled\" during postprocessing, when each value\nis scaled by watershed area. Consider both of these variant names to refer to the same product wherever\nyou encounter them in our documentation. The same goes for \"precip_flux_inst\" and \"precip_flux_inst_scaled\".\nMore information about postprocessing code is included below.',
-                            'Special note: flux products are currently not included with the published dataset, but can be generated\nvia the macrosheds package for R. We will soon publish robust annual and monthly\nflux estimates for each siteyear, and at that time we may begin publishing instantaneous flux as well.') %>%
-                write_file(pppf)
-        }
+        # ## TEMP
+        # warning('temporarily removing flux from ts data')
+        # flux_dirs_to_rm <- grep(pattern = 'flux',
+        #                         x = list.files(dmn,
+        #                                        full.names = TRUE),
+        #                         value = TRUE)
+        # invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
+        #
+        # zz <- list.files(glue('{dmn}/documentation'), full.names = TRUE, recursive = TRUE)
+        # file.remove(grep('flux_inst', zz, value = TRUE))
+        # pppf = grep('precip_pchem_pflux', zz, value = TRUE)
+        # if(length(pppf) > 1) stop()
+        # if(length(pppf) == 1){
+        #     read_file(pppf) %>%
+        #         str_replace('Special note for flux products:\nOur instantaneous stream flux product is called \"stream_flux_inst\" during standard kernel \nprocessing, but its name changes to \"stream_flux_inst_scaled\" during postprocessing, when each value\nis scaled by watershed area. Consider both of these variant names to refer to the same product wherever\nyou encounter them in our documentation. The same goes for \"precip_flux_inst\" and \"precip_flux_inst_scaled\".\nMore information about postprocessing code is included below.',
+        #                     'Special note: flux products are currently not included with the published dataset, but can be generated\nvia the macrosheds package for R. We will soon publish robust annual and monthly\nflux estimates for each siteyear, and at that time we may begin publishing instantaneous flux as well.') %>%
+        #         write_file(pppf)
+        # }
 
         ## remove the prodcode extensions from dirnames
         rslt <- character()
@@ -12261,8 +12310,6 @@ prepare_ts_data_for_figshare <- function(where, dataset_version){
                        intern = TRUE)
         if(! is_empty(rslt)){
             setwd('../../..')
-            # warning(paste('precursor files still present for', dmn))
-            # next
             stop(paste('precursor files still present for', dmn))
         }
 
@@ -12298,8 +12345,8 @@ prepare_ws_attr_data_for_figshare <- function(where){
     file.copy(from = '../portal/data/general/spatial_downloadables/watershed_summaries.csv',
               to = file.path(tld, 'ws_attr_summaries.csv'))
 
-    warning('temporarily removing NEON data')
-    system("find macrosheds_figshare_v1/macrosheds_watershed_attribute_data/ws_attr_timeseries -name '*.csv' | xargs sed -e '/neon/d' -i")
+    # warning('temporarily removing NEON data')
+    # system("find macrosheds_figshare_v1/macrosheds_watershed_attribute_data/ws_attr_timeseries -name '*.csv' | xargs sed -e '/neon/d' -i")
 }
 
 prepare_for_figshare <- function(where, dataset_version){
@@ -12322,8 +12369,6 @@ prepare_for_figshare <- function(where, dataset_version){
     prepare_ws_attr_data_for_figshare(where = where)
 
     #decided to change some dirnames. easiest to just do that as a patch here
-    # file.rename(file.path(where, 'macrosheds_documentation'),
-    #             file.path(where, '0_documentation_and_metadata'))
     file.rename(file.path(where, 'macrosheds_watershed_attribute_data'),
                 file.path(where, '1_watershed_attribute_data'))
     file.rename(file.path(where, 'macrosheds_timeseries_data'),
@@ -12885,6 +12930,10 @@ find_resource_title <- function(x){
 
     }, USE.NAMES = FALSE)
 
+    out <- sub('in the Mt Hood National Forest',
+               'in the Mt. Hood National Forest',
+               out)
+
     return(out)
 }
 
@@ -12981,11 +13030,11 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
                    'investigate and update those calls if you need to update figshare from windows'))
     }
 
-    #prepare documentation files needed by the package
-    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
-    prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
-                                           fs_format = 'old')
-    prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
+    #prepare documentation files needed by the package (some of these funcnames are now misnomers)
+    # prepare_site_metadata_for_figshare(outfile = file.path(where,site_metadata.csv 'macrosheds_documentation_packageformat/site_metadata.csv'))
+    # prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
+    #                                        fs_format = 'old')
+    # prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
@@ -13055,8 +13104,6 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
                        intern = TRUE)
         if(! is_empty(rslt)){
             setwd('../../..')
-            # warning('precursor files still present')
-            # next
             stop('precursor files still present')
         }
 
@@ -19112,28 +19159,35 @@ convert_ms_to_bib <- function(citation, list = FALSE){
     )
 
     title <- find_resource_title(citation)
-    title <- sub('in the Mt Hood National Forest',
-                 'in the Mt. Hood National Forest',
-                 title)
-
     comps <- str_split(citation, fixed(paste0('. ', title, '. ')))[[1]]
+    comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
+    author <- comps_[1]
+    year <- comps_[2]
+
+    if(is.na(title)) stop('title missing or misformatted?')
+    if(is.na(author)) stop('author missing or misformatted?')
+    if(is.na(year)) stop('year missing or misformatted?')
 
     key <- paste(tolower(str_extract(author, '^.+?(?=,)')),
                  tolower(str_extract(title, '^.+?(?= )')),
                  year,
                  sep = '_')
 
-    title <- gsub('\\b([A-Z][a-z]*)\\b', '{\\1}', title)
+    if(is.na(key)) stop('author or title missing/misformatted?')
 
-    comps_ <- str_match(comps[1], '^(.+)?\\. \\(([0-9]{4})\\)$')[, 2:3]
-    author <- comps_[1]
-    year <- comps_[2]
+    title <- gsub('\\b([A-Z][a-z]*)\\b', '{\\1}', title)
 
     author <- gsub('\\., (?:& )?', '. and ', author)
     author <- gsub(', & ', ' and ', author)
-    author <- paste0(author, '.')
+    if(grepl(' [A-Z]$', author)) author <- paste0(author, '.')
     author <- sub('\\.\\.$', '.', author)
     author <- gsub(', ([A-Z]\\.) ([A-Z]\\.)', ', \\1\\2', author)
+
+    #prevent institutional authors from being interpreted as people
+    for(ii in institutional_authors){
+        author <- gsub(ii, paste0('{', ii, '}'), author,
+                       fixed = TRUE)
+    }
 
     pubid <- sapply(known_publishers,
                   function(x) str_detect(fixed(comps[2]), fixed(x)),
@@ -19146,6 +19200,8 @@ convert_ms_to_bib <- function(citation, list = FALSE){
 
     url <- sub(paste0(pub, '\\. '), '', comps[2])
     url <- str_extract(url, 'https?://.+')
+
+    if(is.na(url)) stop('url/doi missing/misformatted?')
 
     if(list){
         components <- list(
@@ -19161,15 +19217,30 @@ convert_ms_to_bib <- function(citation, list = FALSE){
 
     doi_url <- ifelse(grepl('^https?://doi\\.org', url), 'doi', 'url')
 
-    bib <- glue('\n@misc{', key,
-                ',\n\ttitle = {', title,
-                '},\n\tpublisher = {', pub,
-                '},\n\tauthor = {', author,
-                '},\n\tyear = {', year,
-                '},\n\t', doi_url, ' = {', url,
-                '}\n}\n',
-                .open = '<<', .close = '>>',
-                .trim = FALSE)
+    if(grepl('Journal', pub)){
+
+        bib <- glue('\n@article{', key,
+                    ',\n\ttitle = {', title,
+                    '},\n\t', doi_url, ' = {', url,
+                    '},\n\tjournal = {', pub,
+                    '},\n\tauthor = {', author,
+                    '},\n\tyear = {', year,
+                    '}\n}\n',
+                    .open = '<<', .close = '>>',
+                    .trim = FALSE)
+
+    } else {
+
+        bib <- glue('\n@misc{', key,
+                    ',\n\ttitle = {', title,
+                    '},\n\tpublisher = {', pub,
+                    '},\n\tauthor = {', author,
+                    '},\n\tyear = {', year,
+                    '},\n\t', doi_url, ' = {', url,
+                    '}\n}\n',
+                    .open = '<<', .close = '>>',
+                    .trim = FALSE)
+    }
 
     return(bib)
 }
