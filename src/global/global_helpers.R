@@ -15883,7 +15883,7 @@ get_nrcs_soils <- function(network,
                            site,
                            ws_boundaries){
 
-    # Use soilDB to download  soil map unit key (mukey) calssification raster
+    # Use soilDB to download  soil map unit key (mukey) classification raster
     site_boundary <- ws_boundaries %>%
         filter(site_code == site)
 
