@@ -1,5 +1,4 @@
-# source('src/dev/camels_formatting_workspace/camels_helpers.R')
-source('~/ssd2/q_sim/src/lstm_dungeon/camels_helpers.R')
+source('src/dev/camels_formatting_workspace/camels_helpers.R')
 
 # rm '~/ssd2/q_sim/in/CAMELS/basin_dataset_public_v1p2/basin_mean_forcing/daymet/02/011230*'
 

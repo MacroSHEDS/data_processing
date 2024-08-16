@@ -96,7 +96,7 @@ srad_from_t <- function(et_rad, cs_rad, t_min, t_max, coastal=FALSE) {
 
 calc_daymet_pet <- function(df) {
 
-    df <- df %>%
+    df %>%
         rename(t_min = tmin,
                t_max = tmax,
                s_rad = srad,
@@ -126,7 +126,7 @@ calc_daymet_pet <- function(df) {
 
 calc_daymet_pet_ca <- function(df) {
 
-    df <- df %>%
+    df %>%
         rename(t_min = tmin,
                t_max = tmax,
                s_rad = srad,

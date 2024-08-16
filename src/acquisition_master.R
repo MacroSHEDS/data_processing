@@ -3,22 +3,13 @@ suppressPackageStartupMessages({
 
     # #spatial packages
     library(terra)  #must load before gstat package (which isn't currently needed)
-    # # library(gstat) #must load before raster package (not needed)
-    # library(raster)
-    # # library(stars) #not needed (yet)
     library(sf) #must load here in order to look for sf::sf_use_s2 (below)
-    # library(sp)
-    # library(mapview)
-    # library(elevatr)
-    # library(rgee) #requires system installation of gcloud (https://cloud.google.com/sdk/docs/install)
-    #also requires geojsonio
     # remotes::install_github("giswqs/whiteboxR")
-    # library(whitebox)
     #might need the following if you can't get whitebox to install. build from source and
     #   reference the executable like so
     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-
     library(nhdplusTools)
+    # library(streamstats)
 
     #everything else
     library(httr)
@@ -43,19 +34,15 @@ suppressPackageStartupMessages({
     library(doFuture)
     library(googlesheets4)
     library(googledrive)
-    library(rgee) #requires geojsonio package
+    library(rgee) #requires geojsonio package and system installation of gcloud (https://cloud.google.com/sdk/docs/install)
     library(osmdata)
     library(RCurl)
     library(rvest)
-    # library(streamstats)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
     # library(fuzzyjoin) #nvm. too memory inefficient. implementing rolling join
     #   from data.table instead
-
-    #other stuff we need when R updates
-    # install.packages('geojsonio')
 })
 
 #set the dataset version. This is used to name the output dataset and diagnostic

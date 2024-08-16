@@ -11731,14 +11731,15 @@ prepare_site_metadata_for_figshare <- function(outfile){
     #but also writes the site_data file for the ms package
 
     figd <- select(site_data,
-                   network, pretty_network, domain, pretty_domain, site_code,
+                   network, pretty_network, domain, pretty_domain, site_code, site_type,
                    epsg_code = CRS,
                    timezone_olson = local_time_zone) %>%
         right_join(read_csv('../portal/data/general/catalog_files/all_sites.csv',
                             col_types = cols()),
                    by = c(pretty_network = 'Network',
                           pretty_domain = 'Domain',
-                          site_code = 'SiteCode')) %>%
+                          site_code = 'SiteCode',
+                          site_type = 'SiteType')) %>%
         select(network,
                network_fullname = pretty_network,
                domain,
@@ -11746,7 +11747,7 @@ prepare_site_metadata_for_figshare <- function(outfile){
                site_code,
                site_fullname = SiteName,
                stream_name = StreamName,
-               site_type = SiteType,
+               site_type,
                ws_status = WatershedStatus,
                latitude = Latitude,
                longitude = Longitude,
@@ -11892,10 +11893,12 @@ prepare_variable_catalog_for_figshare <- function(outfile){
         select(variable_code, variable_name,
                chem_category = ChemCategory, unit = Unit,
                network, domain, site_code = SiteCode, observations = Observations,
-               first_record_utc = FirstRecordUTC, last_record_utc = LastRecordUTC,
+               first_record = FirstRecord, last_record = LastRecord,
                mean_obs_per_day = MeanObsPerDay) %>%
         mutate(mean_obs_per_day = as.numeric(mean_obs_per_day),
-               mean_obs_per_day = ifelse(is.infinite(mean_obs_per_day), 1, mean_obs_per_day))
+               mean_obs_per_day = ifelse(is.infinite(mean_obs_per_day), 1, mean_obs_per_day),
+               first_record = as.Date(first_record),
+               last_record = as.Date(last_record))
 
     # #prepare site data catalog files for macrosheds package
     # site_cat_files <- list.files('../portal/data/general/catalog_files/indiv_sites/',
@@ -13030,11 +13033,13 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
                    'investigate and update those calls if you need to update figshare from windows'))
     }
 
+    require_shell_tool('rename')
+
     #prepare documentation files needed by the package (some of these funcnames are now misnomers)
     # prepare_site_metadata_for_figshare(outfile = file.path(where,site_metadata.csv 'macrosheds_documentation_packageformat/site_metadata.csv'))
     # prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
     #                                        fs_format = 'old')
-    # prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
+    prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
               overwrite = TRUE)
@@ -13054,7 +13059,9 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
                 to = tld)
 
-    unlink(file.path(tld, 'load_entire_product.R'))
+    # switch these lines on to make temp versions of dataset before package is updated ****
+    #append a distinguishing token to all network dirs
+    # system(glue("rename 's/(.*)/$1_/' {tld}/*")) #****
 
     all_dirs <- list.dirs(tld)
 
@@ -13082,9 +13089,7 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
 
         dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
 
-        parent_folder <- sub(pattern = glue('/', dmn),
-                             replacement = '',
-                             x = to_folder)
+        parent_folder <- dirname(to_folder)
 
         #dip into network dir for convenience. this is not ideal
         setwd(parent_folder)
@@ -13111,14 +13116,18 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
         file.copy(from = '../../../src/templates/figshare_docfiles/ts_docs_readme.txt',
                   to = file.path(dmn, 'documentation', 'README.txt'))
 
-        zip(zipfile = glue(dmn, '.zip'),
+        zip(zipfile = glue(dmn, '.zip'), #and switch this off ****
             files = dmn,
             flags = '-r9Xq')
 
         setwd('../../..')
 
-        unlink(to_folder, recursive = TRUE)
+        # system(glue('mv {file.path(parent_folder, dmn)} {tld}')) #****
+
+        unlink(to_folder, recursive = TRUE) #and switch this off ****
     }
+
+    # system(glue('find <<tld>> -maxdepth 1 -type d -name "*_" -exec rmdir {} \\;', .open = '<<', .close = '>>')) #****
 }
 
 figshare_create_article <- function(title,
