@@ -1,6 +1,7 @@
 source('src/dev/camels_formatting_workspace/camels_helpers.R')
 
-# rm '~/ssd2/q_sim/in/CAMELS/basin_dataset_public_v1p2/basin_mean_forcing/daymet/02/011230*'
+err_file <- '~/ssd2/q_sim/in/CAMELS/basin_dataset_public_v1p2/basin_mean_forcing/daymet/02/011230*'
+if(file.exists(err_file)) file.remove(err_file)
 
 #map Daymet data
 folds <- stringr::str_pad(1:18, 2, 'left', '0')

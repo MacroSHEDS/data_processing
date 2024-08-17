@@ -20,9 +20,6 @@ for(dmnrow in 1:nrow(network_domain)){
                in_workflow == 1,
                site_type == 'stream_gauge') %>%
         select(site_code, latitude, longitude)
-    # dmn_sites <- read_csv('in/NEON/dmn_site_info.csv') %>%
-    #     filter(SiteID != 'TOOK') %>%
-    #     select(site_code = SiteID, latitude = Latitude, longitude = Longitude)
 
     dmn_elevs <- map_dfr(list.files(glue('data/{ntw}/{dmn}/ws_traits/terrain'),
                                     full.names = TRUE),
@@ -39,9 +36,6 @@ for(dmnrow in 1:nrow(network_domain)){
     }
 
     if(! nrow(dmn_elevs) || any(is.na(dmn_elevs$elev))) stop('oi!')
-    # dmn_elevs <- read_csv('in/NEON/dmn_site_info2.csv') %>%
-    #     filter(field_site_id %in% dmn_sites$site_code) %>%
-    #     select(site_code = field_site_id, elev = field_mean_elevation_m)
 
     bndf <- list.files(glue('data/{ntw}/{dmn}/derived'), pattern = 'ws_boundary')
     dmn_boundaries <- map_dfr(list.files(glue('data/{ntw}/{dmn}/derived/{bndf}'),
@@ -50,9 +44,6 @@ for(dmnrow in 1:nrow(network_domain)){
                                          full.names = TRUE),
                               ~st_read(., quiet = TRUE)) %>%
         select(site_code, geometry)
-    # dmn_boundaries <- st_read() %>%
-    #     filter(SiteID %in% dmn_sites$site_code) %>%
-    #     select(site_code = SiteID, geometry)
 
     df <- left_join(dmn_daymet, dmn_sites, by = 'site_code') %>%
         left_join(., dmn_elevs, by = 'site_code')
