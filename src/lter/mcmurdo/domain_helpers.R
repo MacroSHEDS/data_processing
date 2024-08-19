@@ -36,7 +36,7 @@ munge_mcmurdo_discharge <- function(network, domain, prodname_ms, site_code, com
                                'dschrge_qlty'),
                              colnames(d))
         datcol <- intersect(c('dschrge_rate', 'discharge_rate'),
-                             colnames(d))
+                            colnames(d))
 
         d <- d %>%
             mutate(across(all_of(flagcol),

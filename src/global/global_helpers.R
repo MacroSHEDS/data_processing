@@ -17518,11 +17518,25 @@ run_postchecks <- function(){
 
     warning('some of these checks will probably fail on Windows. MacOS might be okay. if they fail, use GPT to convert `system` calls to list.dirs() etc')
 
+    require_shell_tool('find')
+
     domains_without_stream_gauge_locs <- system('find data/ -type d -name "derived" -exec sh -c \'find "$1" -maxdepth 1 -type d -name "stream_gauge_locations*" | grep -q . || echo "$1"\' _ {} \\; | cut -d/ -f 3',
                                                 intern = TRUE)
     if(length(domains_without_stream_gauge_locs)){
         message('these domains do not have a stream_gauge_locations product in their derive folder:\n\t',
                 paste(domains_without_stream_gauge_locs, collapse = ', '))
+    }
+
+    #look for neon duplicate records
+    neon_dupe_check <- read_feather('data/neon/neon/derived/discharge__ms002/SYCA.feather',
+                                    columns = 'site_code') %>% distinct()
+    if(neon_dupe_check > 1) stop('raw NEON Q for site SYCA contains COMO data. same with FLNT and MCDI. This is resolved in the munge kernel, but has not propagated')
+
+    #look for derelict "year" column in some Q files
+    q_files <- system("find data/ -path '*/derived/discharge*.feather'", intern = TRUE)
+    for(f in q_files){
+        read_result <- try(read_feather(f, columns = 'year'), silent = TRUE)
+        if(! inherits(read_result, 'try-error')) stop('some Q files still have a "year" column! e.g. ', f)
     }
 
     check_product_existence()

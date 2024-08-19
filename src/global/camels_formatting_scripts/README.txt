@@ -11,14 +11,9 @@
 	(renamed from camles_soil.R) 
     sources helpers
     writes soil.feather
-4. camelsesque_veg_topo_geol_soil.R
+4. camelsesque_ws_attrs.R
 	(renamed from camels_attr.R)
     sources helpers
 	runs rootdepth loop that used to be separate miniscript
     writes clim, vege, topo, geol, soil.feather
 
-
-do i need this?
-
-write_csv(select(daymet_d_supp, date, site_code, pet),
-                  glue('scratch/camels_assembly/camels_pet_isolate/{s}.csv'))

@@ -1,4 +1,4 @@
-source('src/dev/camels_formatting_workspace/camels_helpers.R')
+source('src/global/camels_formatting_scripts/camels_helpers.R')
 dir.create('scratch/camels_assembly/daymet_with_pet', recursive = TRUE, showWarnings = FALSE)
 
 a_cof <- terra::rast('~/ssd2/q_sim/in/CAMELS/aptt1_30s/aptt1')

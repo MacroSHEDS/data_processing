@@ -1,6 +1,6 @@
 #TODO: some sitefiles can't be generated because the requested pixel dimensions are too large. probs fixable.
 
-source('src/dev/camels_formatting_workspace/camels_helpers.R')
+source('src/global/camels_formatting_scripts/camels_helpers.R')
 
 dir.create('scratch/camels_assembly/recomputed_attributes/soil', showWarnings = FALSE)
 dir.create('scratch/camels_assembly/recomputed_attributes/soil_fails', showWarnings = FALSE)

@@ -1312,6 +1312,9 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception('Relevant file missing'))
     }
 
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, ! siteID == !!site_code)
+
     if(all(is.na(rawd$maxpostDischarge))){
         return(generate_ms_exception(paste('No data for', site_code)))
     }
