@@ -176,7 +176,7 @@ convert_unit(convert_to_gl(x = 10, input_unit = 'ueq/L', molecule = 'Ca'),
              'ug/L', 'g/L')
 10 * 20.04 * 1e-6
 #okay, our converter is working
-ms_conversions(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 10),
+ms_conversions_(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 10),
                convert_units_from = c(Ca = 'ueq/L'), convert_units_to = c(Ca = 'g/L'))
 #yup, def chill.
 
@@ -320,7 +320,7 @@ filter(zp, date %in% chez_dates)
 #pchem
 filter(zz, date %in% chez_dates)
 filter(tpc, between(Date, as.Date('1985-10-01'), as.Date('1985-11-01')))
-# ms_conversions(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 1.99),
+# ms_conversions_(tibble(datetime = as.POSIXct(1), site_code = 'a', var = 'GN_Ca', val = 1.99),
 #                convert_units_from = c(Ca = 'ueq/L'), convert_units_to = c(Ca = 'mg/L'))
 
 #interesting. it may be that aulenbach used linear interpolation for precip chemistry, whereas

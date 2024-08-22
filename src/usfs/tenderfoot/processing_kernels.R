@@ -264,7 +264,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d, convert_units_from = c('SO4' = 'mg/l'), convert_units_to = c('SO4' = 'mg/l')) # going from mg/l to mg/l as S
+    d <- ms_conversions_(d, convert_units_from = c('SO4' = 'mg/l'), convert_units_to = c('SO4' = 'mg/l')) # going from mg/l to mg/l as S
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

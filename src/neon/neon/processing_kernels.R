@@ -406,7 +406,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
                                 summary_flags_clean = list(actual_quality_flag = '0'),
                                 summary_flags_dirty = list(actual_quality_flag = '1'))
 
-        out_dom <- ms_conversions(d,
+        out_dom <- ms_conversions_(d,
                                   convert_units_from = c(ANC = 'meq'),
                                   convert_units_to = c(ANC = 'eq'))
     }
@@ -524,7 +524,7 @@ process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
         conv_vars <- neon_chem_vars %>%
             filter(tolower(neon_unit) != tolower(unit))
 
-        out_lab <- ms_conversions(
+        out_lab <- ms_conversions_(
             d,
             convert_units_from = deframe(select(conv_vars, ms_var, neon_unit)),
             convert_units_to = deframe(select(conv_vars, ms_var, unit))
@@ -615,7 +615,7 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_clean = list(finalQF = '0'),
                             summary_flags_to_drop = list(finalQF = 'sentinel'))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NO3 = 'umol/L'),
                         convert_units_to = c(NO3 = 'mg/L'))
 
@@ -871,7 +871,7 @@ process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_clean = list(finalQF = '0'),
                             summary_flags_to_drop = list(finalQF = 'sentinel'))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(CO2 = 'mol/L',
                                                CH4 = 'mol/L',
                                                N2O = 'mol/L'),
@@ -974,7 +974,7 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
                             variable_flags_clean = '0',
                             variable_flags_to_drop = 'sentinel')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(Chla = 'ug/L'),
                         convert_units_to = c(Chla = 'mg/L'))
 

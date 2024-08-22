@@ -379,7 +379,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('Ca' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'K' = 'umol/l',
@@ -440,7 +440,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                  variable_flags_dirty = c('Y', 'y'),
                                  variable_flags_to_drop = 'DROP')
 
-    d_isco <- ms_conversions(d_isco,
+    d_isco <- ms_conversions_(d_isco,
                         convert_units_from = c('Ca' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'K' = 'umol/l',

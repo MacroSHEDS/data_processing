@@ -182,7 +182,7 @@ process_wqp_chem <- function(rawfile, ms_site_code){
     vars_present <- drop_var_prefix(unique(d$var))
     nonconvs <- nonconvs[nonconvs %in% vars_present & normally_converted_to %in% vars_present]
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = setNames(required_conversions$unit_usgs,
                                                       required_conversions$ms_varcode),
                         convert_units_to = setNames(required_conversions$unit_ms,

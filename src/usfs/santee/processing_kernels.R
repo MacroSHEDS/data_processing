@@ -415,7 +415,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     all_modern <- all_modern %>%
         mutate(val = ifelse(var == 'spCond', val*1000, val))
 
-    all_modern <- ms_conversions(all_modern,
+    all_modern <- ms_conversions_(all_modern,
                                      convert_units_from = c(PO4 = 'mg/l'),
                                      convert_units_to = c(PO4 = 'mg/l'))
 
@@ -454,7 +454,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         all_historical <- rbind(all_historical, d_h)
     }
 
-    all_historical <- ms_conversions(all_historical,
+    all_historical <- ms_conversions_(all_historical,
                                      convert_units_from = c(SiO3 = 'mg/l'),
                                      convert_units_to = c(SiO3 = 'mg/l'))
 
@@ -539,7 +539,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                             varflag_col_pattern = NA,
                             keep_empty_rows = FALSE)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(PO4 = 'mg/l'),
                         convert_units_to = c(PO4 = 'mg/l'))
 

@@ -466,7 +466,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_dirty = list('comments' = c(1)))
 
     # Discrepancy in konza meta data that list DOC as both mg/l and ug/l
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                         #                       'NH4', 'NH3'),
                         convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
@@ -697,7 +697,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_clean = list(Comments = 'clean'),
                             keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NO3_N = 'ug/l',
                                                NH4_N = 'ug/l',
                                                TPsN = 'ug/l',

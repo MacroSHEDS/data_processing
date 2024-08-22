@@ -230,7 +230,7 @@ convert_from_gl <- function(x, input_unit, output_unit, molecule, g_conver) {
     
 }
 
-ms_conversions <- function(d,
+ms_conversions_ <- function(d,
                            keep_molecular,
                            convert_units_from,
                            convert_units_to){

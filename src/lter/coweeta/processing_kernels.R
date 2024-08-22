@@ -461,7 +461,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- ms_conversions(d,
+  d <- ms_conversions_(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                      #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
@@ -661,7 +661,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- ms_conversions(d,
+  d <- ms_conversions_(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                      #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',

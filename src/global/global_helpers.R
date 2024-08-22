@@ -2321,7 +2321,7 @@ ms_cast_and_reflag <- function(d,
     return(d)
 }
 
-ms_conversions_ <- function(d,
+ms_conversions__ <- function(d,
                            keep_molecular,
                            convert_units_from,
                            convert_units_to,
@@ -13816,10 +13816,10 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         #                      intern = TRUE,
         #                      ignore.stdout = FALSE,
         #                      ignore.stderr = FALSE)
-        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions.R. maybe your path is different?')
+        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions_.R. maybe your path is different?')
         #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
         #                             fls[[1]]$id,
-        #                             "/g' ../r_package/R/ms_conversions.R -i"),
+        #                             "/g' ../r_package/R/ms_conversions_.R -i"),
         #                      intern = TRUE,
         #                      ignore.stdout = FALSE,
         #                      ignore.stderr = FALSE)
@@ -18157,7 +18157,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     core_ <- function(dl_set, keep_molecular = NULL){
 
-        #prepare detlim data to be used with ms_conversions_
+        #prepare detlim data to be used with ms_conversions__
         dls_ms_format <- dl_set %>%
             mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
                    # site_code = 'a',
@@ -18171,7 +18171,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
         names(to_units) <- dl_set$variable_original
 
         #convert detlims to canonical units
-        dls_conv <- ms_conversions_(d = dls_ms_format,
+        dls_conv <- ms_conversions__(d = dls_ms_format,
                                    convert_units_from = from_units,
                                    convert_units_to = to_units,
                                    keep_molecular = keep_molecular,

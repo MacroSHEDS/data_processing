@@ -275,7 +275,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
     d <- synchronize_timestep(d)
 
-    ## create structure specific to **ms_conversions** units_from and units_to args
+    ## create structure specific to **ms_conversions_** units_from and units_to args
     mces_data_conversions_from <- c()
     mces_data_conversions_to <- c()
 
@@ -292,7 +292,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       }
     }
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                           convert_units_from = mces_data_conversions_from,
                           convert_units_to = mces_data_conversions_to)
 

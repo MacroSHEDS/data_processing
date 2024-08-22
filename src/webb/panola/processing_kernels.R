@@ -102,7 +102,7 @@ p1v001_stream_chemistry <- function(zipf){
 
     update_detlims(d, sapply(var_deets, function(x) x[1]))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
@@ -189,7 +189,7 @@ p1v001_precip_chemistry <- function(zipf){
 
     update_detlims(d, lapply(var_deets, function(x) x[1]))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
@@ -237,7 +237,7 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
         'Cl' = c('ueq/l', 'kg/l')
     )
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
@@ -297,7 +297,7 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
         'DOC' = c('umol/l', 'kg/l')
     )
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 

@@ -449,7 +449,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     h6 <- ms_cast_and_reflag(d = h6,
                              variable_flags_bdl = c('BDL'))
 
-    h6 <- ms_conversions(h6,
+    h6 <- ms_conversions_(h6,
                          convert_units_from = c('F' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'SO4' = 'umol/l',
@@ -547,7 +547,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d_2014 <- ms_cast_and_reflag(d = d_2014,
                                  variable_flags_bdl = c('BDL'))
 
-    d_2014 <- ms_conversions(d_2014,
+    d_2014 <- ms_conversions_(d_2014,
                          convert_units_from = c('Cl' = 'umol/l',
                                                 'SO4' = 'umol/l',
                                                 'NO3' = 'umol/l',
@@ -629,7 +629,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         sw_all <- rbind(sw_all, sw_data)
     }
 
-    sw_all <- ms_conversions(sw_all,
+    sw_all <- ms_conversions_(sw_all,
                              convert_units_from = c('Cl' = 'umol/l',
                                                     'NO3' = 'umol/l',
                                                     'SO4' = 'umol/l',

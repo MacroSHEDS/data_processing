@@ -232,7 +232,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                             variable_flags_to_drop = 'DROP',
                             variable_flags_dirty = c('DL', 'RL'))
 
-    d <- ms_conversions(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l',
+    d <- ms_conversions_(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l',
                                                   'Na' = 'ueq/l', 'Cl' = 'ueq/l', 'SO4' = 'ueq/l',
                                                   'NO3' = 'ueq/l', 'NH4' = 'ueq/l', 'ANC' = 'ueq/l',
                                                   'HCO3' = 'ueq/l'),
@@ -367,7 +367,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                             varflag_col_pattern = NA,
                             keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l',
+    d <- ms_conversions_(d, convert_units_from = c('Ca' = 'ueq/l', 'Mg' = 'ueq/l', 'K' = 'ueq/l',
                                                   'Na' = 'ueq/l', 'Cl' = 'ueq/l', 'SO4' = 'ueq/l',
                                                   'NO3' = 'ueq/l', 'NH4' = 'ueq/l', 'ANC' = 'ueq/l'),
                         convert_units_to = c('Ca' = 'mg/l', 'Mg' = 'mg/l', 'K' = 'mg/l',

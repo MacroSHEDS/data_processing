@@ -376,7 +376,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                   network = network,
                                   prodname_ms = prodname_ms)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NH4 = 'umol/l',
                                                CO2 = 'umol/l',
                                                Ca = 'umol/l',
@@ -741,7 +741,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 
@@ -780,7 +780,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 
@@ -821,7 +821,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 

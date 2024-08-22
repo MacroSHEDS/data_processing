@@ -62,7 +62,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code, compone
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = c('spCond' = 'mS/cm'),
                             convert_units_to = c('spCond' = 'uS/cm'))
 

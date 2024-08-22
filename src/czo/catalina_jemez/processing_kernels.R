@@ -541,7 +541,7 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component){
                           names(units))
 
     units <- sub('moles', 'mol', units)
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = units,
                         convert_units_to = new_units)
 
@@ -654,7 +654,7 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component){
     units <- sub('moles', 'mol', units)
 
     if(length(units)){
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = units,
                             convert_units_to = new_units)
     }
@@ -1087,7 +1087,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component){
     units <- sub('moles', 'mol', units)
 
     if(length(units)){
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = units,
                             convert_units_to = new_units)
     }
@@ -1214,7 +1214,7 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component){
     units <- sub('moles', 'mol', units)
 
     if(length(units)){
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = units,
                             convert_units_to = new_units)
     }

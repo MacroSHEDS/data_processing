@@ -404,7 +404,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                             varflag_col_pattern = NA,
                             keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(ANC = 'ueq/l'),
                         convert_units_to = c(ANC = 'eq/l'))
 
@@ -477,7 +477,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(ANC = 'ueq/l'),
                         convert_units_to = c(ANC = 'eq/l'))
 

@@ -355,7 +355,7 @@ process_1_2783 <- function(network, domain, prodname_ms, site_code, component){
                             variable_flags_bdl = c('u', 'U', 'DL'),
                             variable_flags_to_drop = 'sentinel')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',
@@ -484,7 +484,7 @@ process_1_3064 <- function(network, domain, prodname_ms, site_code, component){
                             variable_flags_bdl = c('u', 'U', 'DL'),
                             variable_flags_to_drop = 'sentinel')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',
@@ -617,7 +617,7 @@ process_1_3065 <- function(network, domain, prodname_ms, site_code, component){
                             variable_flags_bdl = c('u', 'U', 'DL'),
                             variable_flags_to_drop = 'sentinel')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',
@@ -783,7 +783,7 @@ process_1_3639 <- function(network, domain, prodname_ms, site_code, component){
                             variable_flags_to_drop = 'sentinel',
                             keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('H' = 'ueq/l',
                                                'NH4' = 'ueq/l',
                                                'Ca' = 'ueq/l',

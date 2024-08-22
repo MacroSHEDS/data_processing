@@ -313,7 +313,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
 
     d <- filter_single_samp_sites(d)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('SO4' = 'mg/l'),
                         convert_units_to = c('SO4' = 'mg/l'))
 
@@ -375,7 +375,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
 
     d <- filter_single_samp_sites(d)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
                                                'NH4_N' = 'ug/l',
@@ -433,7 +433,7 @@ process_1_78 <- function(network, domain, prodname_ms, site_code,
 
     d <- filter_single_samp_sites(d)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3_N' = 'ug/l',
                                                'NO2_N' = 'ug/l',
                                                'NH4_N' = 'ug/l',

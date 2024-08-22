@@ -103,7 +103,7 @@ process_1_700 <- function(network, domain, prodname_ms, site_code, component){
 
     conv_units <- c('PO4_P', 'SO4', 'TP', 'DO', 'Ca', 'HCO3', 'K', 'Mg', 'Na')
 
-    d <- ms_conversions(
+    d <- ms_conversions_(
         d,
         convert_units_from = setNames(rep('ug/l', length(conv_units)),
                                       conv_units),
@@ -138,7 +138,7 @@ process_1_900 <- function(network, domain, prodname_ms, site_code, component){
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(DO = 'ug/l'),
                         convert_units_to = c(DO = 'mg/l'))
 
@@ -166,7 +166,7 @@ process_1_800 <- function(network, domain, prodname_ms, site_code, component){
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(PO4_P = 'ug/l',
                                                TP = 'ug/l',
                                                SO4 = 'ug/l'),

@@ -431,7 +431,7 @@ process_1_6 <- function(network, domain, prodname_ms, site_code, component){
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NH4' = 'umol/l',
                                                'NO3_NO2' = 'umol/l',
                                                'PO4' = 'umol/l',

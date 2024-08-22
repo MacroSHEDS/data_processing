@@ -598,7 +598,7 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = c('spCond' = 'mS/cm'),
                             convert_units_to = c('spCond' = 'uS/cm'))
 
@@ -892,7 +892,7 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('COMMENTS' = 'DROP'),
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NH4_N' = 'umol/l',
                                                'NO3_N' = 'umol/l',
                                                'PO4_P' = 'umol/l',
@@ -954,7 +954,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NH4_N' = 'umol/l',
                                                'PO4_P' = 'umol/l',
                                                'NO3_NO2_N' = 'umol/l',
@@ -1032,7 +1032,7 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
                             variable_flags_to_drop = 'DROP',
                             variable_flags_dirty = '1')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                    convert_units_from = c('TP' = 'umol/l',
                                           'TN' = 'umol/l',
                                           'NO3_NO2_N' = 'umol/l',
