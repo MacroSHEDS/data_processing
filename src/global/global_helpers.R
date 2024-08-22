@@ -2321,7 +2321,7 @@ ms_cast_and_reflag <- function(d,
     return(d)
 }
 
-ms_conversions <- function(d,
+ms_conversions_ <- function(d,
                            keep_molecular,
                            convert_units_from,
                            convert_units_to,
@@ -11121,7 +11121,7 @@ final_cleanup <- function(path){
 
     #3
     paths <- list.files(path = path,
-                        pattern = '*shp',
+                        pattern = '\\.shp$',
                         recursive = TRUE,
                         full.names = TRUE)
     paths <- grep('ws_bound', paths, value = TRUE)
@@ -11401,47 +11401,46 @@ postprocess_entire_dataset <- function(site_data,
 
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
-        stop('before building v2, take a close look at reformat_camels_for_ms and make sure 1) its incorporating new sites, and 2) it generates hydro attributes. probably need to borrow the hydro section from data_birth_dist2.R')
-        stop('-Inf is ending up in CAMELS_compliant_Daymet_forcings on EDI. that should get fixed upstream of figshare code. no work done on this yet, so step through and make the change approximately here. corrections of "lncd_", "idbp" etc should also happen here.')
         reformat_camels_for_ms(vsn = dataset_version)
 
         # log_with_indent('adding legal metadata to each domain directory',
         #                 logger = logger_module)
         # legal_details_scrape(dataset_version = dataset_version)
 
-        warning('TEMPORARY: removing all remaining NEON data, flux data, and in-progress domains')
-        remove_flux_neon_etc(where = fs_dir)
+        # warning('TEMPORARY: removing all remaining NEON data, flux data, and in-progress domains')
+        # remove_flux_neon_etc(where = fs_dir,
+        #                      rm_dmns = c('swwd', 'mces', 'streampulse', 'acton_lake'))
 
         log_with_indent(glue('Uploading dataset v{vv} to Figshare',
                              vv = dataset_version),
                         logger = logger_module)
         # upload_dataset_to_figshare(dataset_version = dataset_version)
 
-        warning('IMPROVE THE FOLLOWING system calls (fix these issues upstream)')
-        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' -i"))
-        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/lg_lncd/lg_nlcd/g' -i"))
-        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i"))
-        system("find ../portal -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' -i")
-        system("find ../portal -name '*.csv' | xargs sed -e 's/lg_lncd/lg_nlcd/g' -i")
-        system("find ../portal -name '*.csv' | xargs sed -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i")
-        system("find ../portal -name '*.csv' | xargs sed -e 's/idbp/igbp/g' -i")
+        warning('are name issues like "lncd_lichens" not yet fixed upstream?')
+        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
+                    "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i"))
+        system(glue("find ../portal -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
+                    "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' ",
+                    "-e 's/idbp/igbp/g' -i"))
         read_feather('../portal/data/general/biplot/year.feather') %>%
             mutate(var = ifelse(var == 'lb_igbp_cloased_shrub', 'lb_igbp_closed_shrub', var),
                    var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
             write_feather('../portal/data/general/biplot/year.feather')
-        read_feather('../portal/data/general/biplot/year.feather') %>%
-            filter(! (domain == 'usgs' & site_code %in% c('BARN', 'DRKR', 'GFCP', 'GFGB', 'GFGL', 'GFVN', 'MAWI', 'MCDN', 'POBR'))) %>%
-            filter(domain != 'neon') %>%
-            write_feather('../portal/data/general/biplot/year.feather')
 
-        #make feather versions of ws attr files (crude af, whatev)
-        read_csv(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.csv')) %>%
+        #make feather versions of ws attr files
+        read_csv(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.csv'),
+                 show_col_types = FALSE) %>%
             write_feather(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.feather'))
-        lapply(list.files(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_timeseries'),
-                          full.names = TRUE),
-               function(x){
-                   write_feather(read_csv(x), sub('\\.csv$', '.feather', x))
-               })
+        invisible(capture.output(
+            lapply(
+                list.files(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_timeseries'),
+                           full.names = TRUE),
+                function(x){
+                    write_feather(read_csv(x, show_col_types = FALSE),
+                                  sub('\\.csv$', '.feather', x))
+                }
+            )
+        ))
 
         upload_dataset_to_figshare_packageversion(dataset_version = dataset_version)
     } else {
@@ -11609,12 +11608,7 @@ add_a_few_more_things_to_figshare <- function(){
                        file = '../r_package/data/figshare_id_check.txt')
 }
 
-remove_flux_neon_etc <- function(where){
-
-    #rm domains
-
-    # rm_ntws <- c('neon', 'webb', 'mwo')
-    rm_dmns <- c('neon', 'sleeper', 'sleepers', 'loch_vale', 'trout_lake', 'panola', 'swwd')
+remove_flux_neon_etc <- function(where, rm_dmns){
 
     loc <- glue('{where}/0_documentation_and_metadata/04_site_documentation/04a_site_metadata.csv')
     read_csv(loc) %>%
@@ -12170,16 +12164,16 @@ assemble_misc_docs_figshare <- function(where){
     docs_dir <- file.path(where, '0_documentation_and_metadata')
     dir.create(docs_dir, showWarnings = FALSE)
 
-    attrib_ts_data <- postprocess_attribution_ts()
-    attrib_ts_data_withletters <- add_letters_to_attrib_ts(attrib_ts_data)
-    write_csv(attrib_ts_data_withletters,
+    attrib_ts_data_noletters <- postprocess_attribution_ts()
+    attrib_ts_data <- add_letters_to_attrib_ts(attrib_ts_data_noletters)
+    write_csv(attrib_ts_data,
               file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
     scrape_citations_into_bibtex(
-        d = attrib_ts_data,
+        d = attrib_ts_data_noletters,
         outfile = file.path(docs_dir, '05_timeseries_documentation', '05h_timeseries_refs.bib')
     )
-    format_attrib_for_DUA(d = attrib_ts_data, outfile = 'scratch/DUA.csv')
+    format_attrib_for_DUA(d = attrib_ts_data_noletters, outfile = 'scratch/DUA.csv')
 
     googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
                                 path = file.path(docs_dir, '01a_data_use_agreements.docx'),
@@ -12201,7 +12195,7 @@ assemble_misc_docs_figshare <- function(where){
 
     #these datasets required for macrosheds package functioning
     save(attrib_ws_data, file = '../r_package/data/attribution_and_intellectual_rights_ws_attr.RData')
-    save(attrib_ts_data_withletters, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
+    save(attrib_ts_data, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
 
     # select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
     #     write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
@@ -12232,7 +12226,7 @@ assemble_misc_docs_figshare <- function(where){
     # file.copy('../portal/data/general/spatial_downloadables/data_source_codes.csv',
     #           file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
 
-    # prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
+    prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
 }
 
 prepare_data_irreg_doc_for_figshare <- function(outfile){
@@ -13036,9 +13030,9 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     require_shell_tool('rename')
 
     #prepare documentation files needed by the package (some of these funcnames are now misnomers)
-    # prepare_site_metadata_for_figshare(outfile = file.path(where,site_metadata.csv 'macrosheds_documentation_packageformat/site_metadata.csv'))
-    # prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
-    #                                        fs_format = 'old')
+    prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
+    prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
+                                           fs_format = 'old')
     prepare_variable_catalog_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_catalog.csv'))
     file.copy('src/templates/figshare_docfiles/packageformat_readme.txt',
               file.path(where, 'macrosheds_documentation_packageformat', 'README.txt'),
@@ -13094,14 +13088,13 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
         #dip into network dir for convenience. this is not ideal
         setwd(parent_folder)
 
-        ## TEMP
-        warning('temporarily removing all flux data from figshare dataset')
-        flux_dirs_to_rm <- grep(pattern = 'flux',
-                                x = list.files(dmn,
-                                               full.names = TRUE),
-                                value = TRUE)
-        invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
-
+        # ## TEMP
+        # warning('temporarily removing all flux data from figshare dataset')
+        # flux_dirs_to_rm <- grep(pattern = 'flux',
+        #                         x = list.files(dmn,
+        #                                        full.names = TRUE),
+        #                         value = TRUE)
+        # invisible(lapply(flux_dirs_to_rm, unlink, recursive = TRUE))
 
         ## remove the prodcode extensions from dirnames
         rslt <- character()
@@ -13127,7 +13120,7 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
         unlink(to_folder, recursive = TRUE) #and switch this off ****
     }
 
-    # system(glue('find <<tld>> -maxdepth 1 -type d -name "*_" -exec rmdir {} \\;', .open = '<<', .close = '>>')) #****
+    system(glue('find <<tld>> -maxdepth 1 -type d -name "*_" -exec rmdir {} \\;', .open = '<<', .close = '>>')) #****
 }
 
 figshare_create_article <- function(title,
@@ -14975,10 +14968,10 @@ catalog_held_data <- function(network_domain, site_data){
                 is_other_chemish <- product_breakdown$var %in% other_chemish_vars
 
                 product_breakdown$chem_class <- 'NA'
-                if(grepl('stream_flux_inst_scaled', f)){
+                if(grepl('stream_flux_inst', f)){
                     product_breakdown$chem_class[is_flxvar] <- 'stream_flux'
                     product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
-                } else if(grepl('precip_flux_inst_scaled', f)){
+                } else if(grepl('precip_flux_inst', f)){
                     product_breakdown$chem_class[is_flxvar] <- 'precip_flux'
                     product_breakdown <- product_breakdown[! product_breakdown$chem_class == 'NA', ] #NAs shouldn't exist here
                 } else if(grepl('precip_chemistry', f)){
@@ -17548,6 +17541,37 @@ run_postchecks <- function(){
     check_for_PQ_imbalance()
     remove_some_molecular_forms()
     check_for_missing_ws_traits()
+    check_for_derelict_ws_traits()
+}
+
+check_for_derelict_ws_traits <- function(){
+
+    print('checking for derelict ws_traits feathers')
+    require_shell_tool('find')
+
+    attr_files <- system("find data/ -path '*/ws_traits/*.feather'", intern=T)
+    attr_files <- grep('domain_climate', attr_files, value = TRUE, invert = TRUE)
+
+    found_sites <- str_extract(attr_files, '([^/]+)\\.feather', group = 1) %>%
+        str_replace('(?:sum|raw)_', '')
+
+    forreals_sites = site_data %>%
+        filter(in_workflow == 1,
+               site_type == 'stream_gauge') %>%
+        pull(site_code)
+
+    to_delete <- attr_files[! found_sites %in% forreals_sites]
+    print(to_delete)
+
+    resp <- get_response_1char('Derelict ws_attrs files discovered. Okay to delete these? (Y/n)',
+                               possible_chars = c('Y', 'n'))
+
+    if(resp == 'Y'){
+        invisible(file.remove(to_delete))
+        print(paste('deleted', length(to_delete), 'files'))
+    } else {
+        print('not deleting. be warned that the sites associated with these files are not in site_data!')
+    }
 }
 
 check_for_missing_ws_traits <- function(){
@@ -18133,7 +18157,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
 
     core_ <- function(dl_set, keep_molecular = NULL){
 
-        #prepare detlim data to be used with ms_conversions
+        #prepare detlim data to be used with ms_conversions_
         dls_ms_format <- dl_set %>%
             mutate(datetime = as.POSIXct('2000-01-01 00:00:00', tz = 'UTC'),
                    # site_code = 'a',
@@ -18147,7 +18171,7 @@ standardize_detection_limits <- function(dls, vs, update_on_gdrive = FALSE){
         names(to_units) <- dl_set$variable_original
 
         #convert detlims to canonical units
-        dls_conv <- ms_conversions(d = dls_ms_format,
+        dls_conv <- ms_conversions_(d = dls_ms_format,
                                    convert_units_from = from_units,
                                    convert_units_to = to_units,
                                    keep_molecular = keep_molecular,
@@ -18342,24 +18366,29 @@ legal_details_scrape <- function(dataset_version){
 
 reformat_camels_for_ms <- function(vsn){
 
-    ms_attributes_dir <- '../qa_experimentation/data/ms_in_camels_format'
+    ms_attributes_dir <- 'scratch/camels_assembly/ms_attributes'
+    daymet_dir <- 'scratch/camels_assembly/daymet_with_pet'
 
-    all_files <- list.files(ms_attributes_dir, recursive = TRUE, full.names = TRUE)
+    source('src/global/camels_formatting_scripts/append_pet_to_daymet.R',
+           local = new.env())
+    source('src/global/camels_formatting_scripts/camelsesque_ws_attrs.R',
+           local = new.env())
+    source('src/global/camels_formatting_scripts/camels_hydro.R',
+           local = new.env())
 
-    soil_files <- all_files[grep('soil.feather', all_files)]
-    clim_files <- all_files[grep('clim.feather', all_files)]
-    topo_files <- all_files[grep('topo.feather', all_files)]
-    vege_files <- all_files[grep('vege.feather', all_files)]
-    geol_files <- all_files[grep('geol.feather', all_files)]
-    daymet_files <- all_files[grep('daymet_full_climate.feather', all_files)]
-    daymet_files <- daymet_files[! grepl('/NC/', daymet_files)]
-    warning('removing NC daymet data from camels set')
+    attr_files <- list.files(ms_attributes_dir,
+                             recursive = TRUE,
+                             full.names = TRUE)
 
-    soil <- map_dfr(soil_files, read_feather)
-    clim <- map_dfr(clim_files, read_feather)
-    topo <- map_dfr(topo_files, read_feather)
-    geol <- map_dfr(geol_files, read_feather)
-    vege <- map_dfr(vege_files, read_feather)
+    daymet_files <- list.files(daymet_dir,
+                               full.names = TRUE)
+
+    soil <- map_dfr(grep('soil\\.', attr_files, value = TRUE), read_feather)
+    clim <- map_dfr(grep('clim\\.', attr_files, value = TRUE), read_feather)
+    topo <- map_dfr(grep('topo\\.', attr_files, value = TRUE), read_feather)
+    geol <- map_dfr(grep('geol\\.', attr_files, value = TRUE), read_feather)
+    vege <- map_dfr(grep('vege\\.', attr_files, value = TRUE), read_feather)
+    hydro <- map_dfr(grep('hydro\\.', attr_files, value = TRUE), read_feather)
 
     dir.create(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes'), showWarnings = FALSE)
     dir.create(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings'), showWarnings = FALSE)
@@ -18369,16 +18398,18 @@ reformat_camels_for_ms <- function(vsn){
     write_csv(topo, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/topo.csv'))
     write_csv(geol, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/geol.csv'))
     write_csv(vege, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/vege.csv'))
+    write_csv(hydro, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/hydro.csv'))
 
     for(i in 1:length(daymet_files)){
 
-        this_daymet <- read_feather(daymet_files[i])
+        this_daymet <- read_csv(daymet_files[i], show_col_types = FALSE)
 
         sites <- unique(this_daymet$site_code)
+        for(s in sites){
 
-        for(s in 1:length(sites)){
             this_site <- this_daymet %>%
-                filter(site_code == !!sites[s]) %>%
+                filter(site_code == !!s) %>%
+                mutate(pet = if_else(is.infinite(pet), NA_real_, pet)) %>%
                 rename(`dayl(s)` = dayl,
                        `prcp(mm/day)` = prcp,
                        `srad(W/m2)` = srad,
@@ -18388,203 +18419,10 @@ reformat_camels_for_ms <- function(vsn){
                        `vp(Pa)` = vp,
                        `pet(mm)` = pet)
 
-            write_csv(this_site, glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv',
-                                      s = sites[s]))
+            write_csv(this_site,
+                      glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv'))
         }
     }
-
-    ## summarize hydrologic watershed attributes
-
-    # read in hydrology files
-    all_fil <- list.files(glue('macrosheds_dataset_v{vsn}'), recursive = T, full.names = T)
-    all_q_fil <- grep('discharge', all_fil, value = T)
-    all_q_fil <- grep('feather', all_q_fil, value = T)
-
-    all_q <- map_dfr(all_q_fil, read_feather) %>%
-        select(-any_of('year'))
-
-    # Prep data
-    site_doms <- site_data %>%
-        filter(site_type == 'stream_gauge') %>%
-        select(site_code, domain)
-
-    # sites_to_remove <-  site_data %>%
-    #     mutate(remove = ifelse(stream == 'Kuparuk River', 1, 0)) %>%
-    #     mutate(remove = ifelse(stream == 'Oksrukuyik Creek' & domain == 'arctic', 1, remove)) %>%
-    #     mutate(remove = ifelse(is.na(remove), 0, remove)) %>%
-    #     mutate(remove = ifelse(site_code %in% c('Oksrukuyik_Creek_1.7', 'Kuparuk_River_0'), 0, remove)) %>%
-    #     mutate(remove = ifelse(domain == 'neon', 1, remove)) %>%
-    #     select(site_code, remove)
-
-    site_area <- site_data %>%
-        filter(in_workflow == 1) %>%
-        filter(site_type == 'stream_gauge') %>%
-        select(site_code, ws_area_ha)
-
-    # Scale Q to watershed area
-    q_daily <- all_q %>%
-        left_join(site_doms, by = 'site_code') %>%
-        # left_join(sites_to_remove, by = 'site_code') %>%
-        # filter(remove == 0) %>%
-        # select(-remove) %>%
-        filter(!is.na(val)) %>%
-        group_by(site_code, datetime) %>%
-        summarise(val = mean(val),
-                  ms_status = max(ms_status),
-                  ms_interp = max(ms_interp)) %>%
-        ungroup() %>%
-        mutate(q_scaled = (val*86400)/1000) %>%
-        left_join(site_area, by = 'site_code') %>%
-        mutate(q_scaled = q_scaled/(ws_area_ha*10000)) %>%
-        mutate(q_scaled = q_scaled*1000) %>%
-        filter(!is.na(q_scaled))
-
-    # Look at watershed with mostly full water years (camels function operate on water year)
-    q_check <- q_daily %>%
-        left_join(site_doms) %>%
-        filter(!domain %in% c('mcmurdo')) %>%
-        mutate(year = year(datetime),
-               month = month(datetime)) %>%
-        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
-        group_by(site_code, water_year) %>%
-        summarise(n = n(),
-                  ms_status = sum(ms_status),
-                  ms_interp = sum(ms_interp)) %>%
-        ungroup()
-
-    frz_dry_sites <- q_check %>%
-        group_by(site_code) %>%
-        summarize(nyears = n(),
-                  mean_ndays = mean(n),
-                  max_ndays = max(n),
-                  prop_mean = mean_ndays / max_ndays) %>%
-        filter(max_ndays < 365,
-               nyears > 1)
-
-    q_check = left_join(q_check, select(frz_dry_sites, site_code, max_ndays))
-
-    good_site_years <- q_check %>%
-        filter(n >= 311 |
-                   (site_code %in% frz_dry_sites$site_code & n >= max_ndays * 0.4)) %>%
-        select(site_code, water_year) %>%
-        mutate(good = 1)
-
-    all_sacled <- q_daily %>%
-        mutate(year = year(datetime),
-               month = month(datetime)) %>%
-        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
-        filter(!is.na(q_scaled)) %>%
-        group_by(site_code, water_year) %>%
-        summarise(sum = sum(q_scaled, na.rm = T),
-                  n = n(),
-                  ms_status = sum(ms_status),
-                  ms_interp = sum(ms_interp)) %>%
-        ungroup() %>%
-        # mutate(sum = sum*1000) %>%
-        left_join(good_site_years, by = c('site_code', 'water_year')) %>%
-        filter(good == 1) %>%
-        left_join(site_doms)
-
-    annual_flow <- all_sacled %>%
-        # filter(! site_code %in% c('ON02', 'TE03')) %>%
-        group_by(site_code) %>%
-        summarise(sum = mean(sum, na.rm = T)) %>%
-        ungroup() %>%
-        # full_join(., site_eco, by = 'site_code') %>%
-        # filter(!is.na(eco_region)) %>%
-        filter(!is.na(sum)) %>%
-        as.data.frame() %>%
-        select(site_code, sum)
-        # left_join(., site_eco, by = 'site_code')
-
-    # Get daymet precip
-    daymet_files <- list.files('data', recursive = T, full.names = T)
-    daymet_files <- grep('daymet', daymet_files, value = T)
-
-    all_daymet <- map_dfr(daymet_files, read_feather)
-
-    daymet_annual <- all_daymet %>%
-        group_by(site_code, date) %>%
-        summarise(prcp = mean(prcp)) %>%
-        ungroup() %>%
-        mutate(year = year(date),
-               month = month(date)) %>%
-        mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
-        group_by(site_code, water_year) %>%
-        summarise(prcp = sum(prcp, na.rm = T),
-                  n = n()) %>%
-        ungroup()
-
-    runof_rations <- left_join(all_sacled, daymet_annual, by = c('site_code', 'water_year')) %>%
-        mutate(runoff_ratio = sum/prcp) %>%
-        filter(runoff_ratio < 2) %>%
-        # filter(!site_code %in% c('ON02', 'TE03')) %>%
-        group_by(site_code) %>%
-        summarise(mean_rr = mean(runoff_ratio, na.rm = T)) %>%
-        ungroup() %>%
-        # full_join(., site_eco, by = 'site_code') %>%
-        # filter(!is.na(eco_region)) %>%
-        filter(!is.na(mean_rr))
-
-    # CAMELS hydro attributes
-    setwd('../papers/release_paper')
-    source('src/camels/hydro/hydro_signatures.R')
-    setwd('../../data_acquisition')
-
-    hydro_sites <- good_site_years %>%
-        pull(site_code) %>%
-        unique()
-
-    all_site_hydro <- tibble()
-    for(i in 1:length(hydro_sites)){
-
-        good_years <- good_site_years %>%
-            filter(site_code == !!hydro_sites[i]) %>%
-            pull(water_year)
-
-        one_site_q <- q_daily %>%
-            filter(site_code == !!hydro_sites[i]) %>%
-            mutate(year = year(datetime),
-                   month = month(datetime)) %>%
-            mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
-            filter(water_year %in% !!good_years)
-
-        one_site_precip <- all_daymet %>%
-            mutate(year = year(date),
-                   month = month(date)) %>%
-            mutate(water_year = ifelse(month %in% c(10,11,12), year + 1, year)) %>%
-            filter(site_code == !!hydro_sites[i],
-                   water_year %in% !!good_years) %>%
-            group_by(date, site_code) %>%
-            summarise(precip = mean(prcp, na.rm = T)) %>%
-            ungroup() %>%
-            rename(datetime = date)
-
-        one_site <- full_join(one_site_q, one_site_precip) %>%
-            filter(!is.na(precip),
-                   !is.na(val)) %>%
-            select(q = q_scaled, p = precip, d = datetime) %>%
-            mutate(d = as_date(d))
-
-        warning('mike manually edited CAMELS code (hydro_signatures.R) on 2022-12-01 (see lines with "MIKE EDITED" comments). If CAMELS upstream code changes, re-apply these edits.')
-
-        site_fin <- try(compute_hydro_signatures_camels(q = one_site_q$q_scaled,
-                                                        # p = one_site$precip,
-                                                        # d =as_date(one_site$datetime),
-                                                        d =as_date(one_site_q$datetime),
-                                                        tol = 0.1, hy_cal = 'oct_us_gb',
-                                                        qpd = one_site) %>%
-                            mutate(site_code = !!hydro_sites[i]))
-
-        if(inherits(site_fin, 'try-error')){
-            print(paste(hydro_sites[i], 'Failed'))
-            next
-        }
-
-        all_site_hydro <- bind_rows(all_site_hydro, site_fin)
-    }
-
-    write_feather(all_site_hydro, glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
 }
 
 # helper which goes inside of ms_read_csv, this function allows for the users to assign multiple input columns to

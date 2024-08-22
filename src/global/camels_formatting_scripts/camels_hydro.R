@@ -86,7 +86,7 @@ all_scaled <- q_daily %>%
     # mutate(sum = sum*1000) %>%
     left_join(good_site_years, by = c('site_code', 'water_year')) %>%
     filter(good == 1) %>%
-    left_join(site_doms)
+    left_join(site_doms, by = 'site_code')
 
 # annual_flow <- all_scaled %>%
 #     # filter(! site_code %in% c('ON02', 'TE03')) %>%
@@ -136,7 +136,9 @@ hydro_sites <- good_site_years %>%
 
 warning('mike manually edited CAMELS code (hydro_signatures.R) on 2022-12-01. See the lines with "MIKE EDITED" comments. If CAMELS upstream code changes, re-apply these edits.')
 all_site_hydro <- tibble()
-for(i in 1:length(hydro_sites)){
+for(i in seq_along(hydro_sites)){
+
+    if(i == 1 || i %% 50 == 0) print(paste0(i, '/', length(hydro_sites)))
 
     good_years <- good_site_years %>%
         filter(site_code == !!hydro_sites[i]) %>%
@@ -183,11 +185,18 @@ for(i in 1:length(hydro_sites)){
 
     if(inherits(site_fin, 'try-error')){
         stop('oi')
-        print(paste(hydro_sites[i], 'failed'))
-        next
     }
 
     all_site_hydro <- bind_rows(all_site_hydro, site_fin)
 }
 
-write_csv(all_site_hydro, 'scratch/camels_assembly/hydro_attributes.csv')
+all_site_hydro <- all_site_hydro %>%
+    relocate(site_code) %>%
+    left_join(site_doms, by = 'site_code')
+
+for(dmn in unique(all_site_hydro$domain)){
+    all_site_hydro %>%
+        filter(domain == !!dmn) %>%
+        select(-domain) %>%
+        write_feather(glue('scratch/camels_assembly/ms_attributes/{dmn}/hydro.feather'))
+}
