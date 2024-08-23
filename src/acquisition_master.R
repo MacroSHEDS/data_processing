@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
     library(osmdata)
     library(RCurl)
     library(rvest)
+    library(macrosheds)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join

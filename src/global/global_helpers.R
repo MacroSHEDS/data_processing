@@ -11449,6 +11449,12 @@ postprocess_entire_dataset <- function(site_data,
     }
 
     if(push_new_version_to_figshare_and_edi){
+        compute_load()
+    } else {
+        print('compute_load depends on figshare formatting. skipping')
+    }
+
+    if(push_new_version_to_figshare_and_edi){
 
         log_with_indent(glue('Preparing dataset v{vv} for EDI',
                              vv = dataset_version),
@@ -11505,6 +11511,55 @@ postprocess_entire_dataset <- function(site_data,
     }
 
     message('PUSH NEW macrosheds package version now that figshare ids are updated')
+}
+
+compute_load <- function(){
+
+    #need to write out these files, then calc load, THEN zip them up in preparation for figshare.
+    #in 2024 they were pre-unzipped for Gubbins+Lowman, but next time macrosheds_files_by_domain needs to be
+    #run with notes comments/code toggled
+    root_2024 <- 'macrosheds_figshare_v2/macrosheds_files_by_domain'
+
+    dir.create('scratch/load', showWarnings = FALSE)
+    dir.create('logs/load_err', showWarnings = FALSE)
+
+    chemistry <- ms_load_product(macrosheds_root = root_2024,
+                                 prodname = 'stream_chemistry',
+                                 warn = FALSE)
+
+    q <- ms_load_product(macrosheds_root = root_2024,
+                         prodname = 'discharge',
+                         warn = FALSE)
+
+    load_sites <- intersect(unique(chemistry$site_code),
+                            unique(q$site_code))
+
+    clst <- ms_parallelize(maxcores = 8)
+
+    catch <- foreach::foreach(s = load_sites) %dopar% {
+
+        ms_flux <- try({
+             ms_calc_flux_rsfme(
+                chemistry = filter(chemistry, site_code == !!s),
+                q = filter(q, site_code == !!s),
+                method = c('pw', 'rating', 'composite', 'beale', 'average'),
+                aggregation = 'annual',
+                good_year_check = FALSE
+            )
+        })
+
+        if(inherits(ms_flux, 'try-error')){
+            write_lines(ms_flux, glue('logs/load_err/{s}.txt'))
+        } else {
+            write_feather(ms_flux, glue('scratch/load/{s}.feather'))
+        }
+
+        return(NULL)
+    }
+
+    warning('check logs/load_err!')
+
+    ms_unparallelize(clst)
 }
 
 add_a_few_more_things_to_figshare <- function(){
