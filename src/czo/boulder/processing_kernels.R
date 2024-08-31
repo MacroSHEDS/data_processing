@@ -126,8 +126,7 @@ process_0_2889 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2918 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_2918 <- function(network, domain, prodname_ms, site_code, components){
 
     csv_file <- grep('.csv', components, value = TRUE)
     metadata_file <- grep('.txt', components, value = TRUE)
@@ -147,21 +146,24 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
                     c = metadata_file)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-        mutate(site = 'GGL') %>%
-        mutate(nchar = nchar(DATE_TIME)) %>%
-        mutate(DATE_TIME = ifelse(nchar %in% c(6, 7, 8), paste0(DATE_TIME, ' 00:00'), DATE_TIME)) %>%
-        mutate(date = str_split_fixed(DATE_TIME, ' ', n = Inf)[,1]) %>%
-        mutate(time = str_split_fixed(DATE_TIME, ' ', n = Inf)[,2]) %>%
-        mutate(hour = str_split_fixed(time, ':', n = Inf)[,1],
-               minute = str_split_fixed(time, ':', n = Inf)[,2]) %>%
-        mutate(hour = ifelse(nchar(hour) == 1, paste0(0, hour), hour)) %>%
-        mutate(month = str_split_fixed(date, '/', n = Inf)[,1],
-               day = str_split_fixed(date, '/', n = Inf)[,2],
-               year = str_split_fixed(date, '/', n = Inf)[,3]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-               month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-        mutate(date_time = paste0(month, '/', day, '/', year, ' ', hour, ':', minute))
+        as_tibble() %>%
+        mutate(site = 'GGL',
+               date_time = if_else(nchar(DATE_TIME) <= 8,
+                                   paste(DATE_TIME, '00:00'),
+                                   DATE_TIME))
 
+    if(any(is.na(str_match(d$date_time, '\\d+/\\d+/\\d{2} \\d{1,2}:\\d{2}')[, 1]))){
+        stop('new datetime formatting detected')
+    }
+
+    unq_yrs <- str_extract(d$date_time, '\\d+/\\d+/(\\d+)',
+                           group = 1) %>%
+        unique() %>%
+        as.numeric()
+
+    if(any(unq_yrs > as.numeric(substr(year(Sys.Date()), 1, 2)))){
+        stop('did boulder include years before 2000? do they parse in the next step?')
+    }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('date_time' = '%m/%d/%y %H:%M'),
@@ -173,21 +175,18 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
                          set_to_NA = c('null', ''),
                          is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     metadata <- read_file(metadata_path)
 
     meta_check <- str_split_fixed(metadata, '\\t', n = Inf)
     error_check <- grepl(x = meta_check, pattern = 'NOTE: There is an error in method of computing discharge from salt injections that needs to account for')
 
-    if(TRUE %in% error_check){
-        d <- d %>%
-            mutate(ms_status = 1)
+    if(any(error_check)){
+        d <- mutate(d, ms_status = 1)
     }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     return(d)
@@ -195,8 +194,7 @@ process_1_2918 <- function(network, domain, prodname_ms, site_code,
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2919 <- function(network, domain, prodname_ms, site_code,
-                           components){
+process_1_2919 <- function(network, domain, prodname_ms, site_code, components){
 
     csv_file <- grep('.csv', components, value = TRUE)
     metadata_file <- grep('.txt', components, value = TRUE)
@@ -216,21 +214,15 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
                           c = metadata_file)
 
     d <- read.csv(rawfile, colClasses = 'character') %>%
-             mutate(site = 'GGU') %>%
-             mutate(nchar = nchar(DATE_TIME)) %>%
-             mutate(DATE_TIME = ifelse(nchar %in% c(8, 9), paste0(DATE_TIME, ' 00:00'), DATE_TIME)) %>%
-             mutate(date = str_split_fixed(DATE_TIME, ' ', n = Inf)[,1]) %>%
-             mutate(time = str_split_fixed(DATE_TIME, ' ', n = Inf)[,2]) %>%
-             mutate(hour = str_split_fixed(time, ':', n = Inf)[,1],
-                    minute = str_split_fixed(time, ':', n = Inf)[,2]) %>%
-             mutate(hour = ifelse(nchar(hour) == 1, paste0(0, hour), hour)) %>%
-             mutate(month = str_split_fixed(date, '/', n = Inf)[,1],
-                    day = str_split_fixed(date, '/', n = Inf)[,2],
-                    year = str_split_fixed(date, '/', n = Inf)[,3]) %>%
-             mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day),
-                    month = ifelse(nchar(month) == 1, paste0(0, month), month)) %>%
-             mutate(date_time = paste0(month, '/', day, '/', year, ' ', hour, ':', minute))
+        as_tibble() %>%
+        mutate(site = 'GGU',
+               date_time = if_else(nchar(DATE_TIME) <= 10,
+                                   paste(DATE_TIME, '00:00'),
+                                   DATE_TIME))
 
+    if(any(is.na(str_match(d$date_time, '\\d+/\\d+/\\d{4} \\d{1,2}:\\d{2}')[, 1]))){
+        stop('new datetime formatting detected')
+    }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
                          datetime_cols = c('date_time' = '%m/%d/%Y %H:%M'),
@@ -241,21 +233,18 @@ process_1_2919 <- function(network, domain, prodname_ms, site_code,
                          set_to_NA = 'null',
                          is_sensor = TRUE)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     metadata <- read_file(metadata_path)
 
     meta_check <- str_split_fixed(metadata, '\\t', n = Inf)
     error_check <- grepl(x = meta_check, pattern = 'NOTE: There is an error in method of computing discharge from salt injections that needs to account for')
 
-    if(TRUE %in% error_check){
-        d <- d %>%
-            mutate(ms_status = 1)
+    if(any(error_check)){
+        d <- mutate(d, ms_status = 1)
     }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
-
     d <- synchronize_timestep(d)
 
     return(d)

@@ -11520,7 +11520,8 @@ compute_load <- function(){
     #run with notes comments/code toggled
     root_2024 <- 'macrosheds_figshare_v2/macrosheds_files_by_domain'
 
-    dir.create('scratch/load', showWarnings = FALSE)
+    dir.create('scratch/load_out', showWarnings = FALSE)
+    dir.create('scratch/load_diag', showWarnings = FALSE)
     dir.create('logs/load_err', showWarnings = FALSE)
 
     chemistry <- ms_load_product(macrosheds_root = root_2024,
@@ -11538,7 +11539,7 @@ compute_load <- function(){
 
     catch <- foreach::foreach(s = load_sites) %dopar% {
 
-        ms_flux <- try({
+        load_out <- try({
              ms_calc_flux_rsfme(
                 chemistry = filter(chemistry, site_code == !!s),
                 q = filter(q, site_code == !!s),
@@ -11548,10 +11549,11 @@ compute_load <- function(){
             )
         })
 
-        if(inherits(ms_flux, 'try-error')){
-            write_lines(ms_flux, glue('logs/load_err/{s}.txt'))
+        if(inherits(load_out, 'try-error')){
+            write_lines(load_out, glue('logs/load_err/{s}.txt'))
         } else {
-            write_feather(ms_flux, glue('scratch/load/{s}.feather'))
+            write_csv(load_out$load, glue('scratch/load_out/{s}.csv'))
+            write_csv(load_out$diagnostics, glue('scratch/load_diag/{s}.csv'))
         }
 
         return(NULL)

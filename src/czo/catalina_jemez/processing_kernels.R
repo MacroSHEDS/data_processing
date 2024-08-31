@@ -215,22 +215,23 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
 
     d <- read.csv(rawfile, colClasses = 'character')
 
-    if(!grepl('MCZOB', component)) {
+    if(! grepl('MCZOB', component)){
 
         col_names <- names(d)
-        site_code_cols <- col_names[!grepl('DateTime|time', col_names)]
+        site_code_cols <- col_names[! grepl('DateTime|time', col_names)]
         datetime_col <- col_names[grepl('DateTime|time', col_names)]
 
         d <- d %>%
+            as_tibble() %>%
             pivot_longer(cols = site_code_cols, names_to = 'sites', values_to = 'discharge') %>%
             filter(discharge != '[cfs]') %>%
-            mutate(time = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,2]) %>%
+            mutate(time = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[, 2]) %>%
             mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
-            mutate(date = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,1])
+            mutate(date = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[, 1])
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c('date' = '%m/%e/%Y',
-                                                  'time' = '%H:%M'),
+                                               'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'sites',
                              data_cols =  'discharge',
@@ -242,6 +243,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
     } else {
 
         d <- d %>%
+            as_tibble() %>%
             filter(Streamflow != 'cfs') %>%
             mutate(time = str_split_fixed(datetime, ' ', n = Inf)[,2]) %>%
             mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
@@ -250,7 +252,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c('date' = '%m/%e/%Y',
-                                                  'time' = '%H:%M'),
+                                               'time' = '%H:%M'),
                              datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('Streamflow' = 'discharge'),
@@ -260,12 +262,10 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
                              sampling_type = 'I')
     }
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     #cubic feet to liters
-    d <- d %>%
-        mutate(val = val*28.317)
+    d <- mutate(d, val = val * 28.317)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -317,7 +317,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component){
 
         return(d)
 
-    } else{
+    } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
                              datetime_cols = c('date' = '%m/%e/%Y',
