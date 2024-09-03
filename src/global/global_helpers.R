@@ -3425,7 +3425,7 @@ ms_general <- function(network = domain,
     #site_filter: character vector. only these sites will be retrieved.
     #bulk_mode. logical: if TRUE, the bounding box of the domain will be used to
     #   retrieve spatial data. if FALSE, site bboxes are used instead. TRUE is
-    #   appropriate everywhere except NEON as of 2024
+    #   appropriate everywhere except NEON as of 2024. questioning that on 20240902
 
     if(get_missing_only){
         get_missing_only <<- TRUE
@@ -9952,9 +9952,11 @@ get_gee_standard <- function(network,
         }
 
         smallest_ws <- min(site_boundary$area)
-        rez <- case_when(smallest_ws < 1e5 ~ rez,
-                         between(smallest_ws, 1e5, 1e6) ~ rez * 2,
-                         smallest_ws > 1e6 ~ rez * 4)
+        rez <- case_when(smallest_ws < 1e2 ~ rez / 4,
+                         smallest_ws < 1e3 ~ rez / 2,
+                         smallest_ws < 1e5 ~ rez,
+                         smallest_ws < 1e6 ~ rez * 2,
+                         smallest_ws >= 1e6 ~ rez * 4)
 
         if(summary_stat == 'median'){
 
@@ -10039,6 +10041,8 @@ get_gee_standard <- function(network,
                     type = 'batch')
 
     } else {
+
+        ## this never happens anymore? if resuscitate, resolve resolution/scale better
 
         if(exists('gee_bounding_dates', where = .GlobalEnv)){
             gee_startdate <- gee_bounding_dates[1]
@@ -17633,7 +17637,7 @@ check_for_derelict_ws_traits <- function(){
 
 check_for_missing_ws_traits <- function(){
 
-    print('checking for missing/empty ws_traits dirs')
+    print('checking for missing/empty/partial ws_traits dirs')
     require_shell_tool('find')
 
     print('empties (some should be, e.g. nlcd outside N.Am or nsidc outside CONUS):')
@@ -17647,7 +17651,7 @@ check_for_missing_ws_traits <- function(){
         'tcw', 'terrain', 'tree_cover', 'veg_cover'
     )
 
-    print('missing:')
+    cat('missing:\n')
     missings <- c()
     for(wt in all_ws_traits){
 
@@ -17664,6 +17668,78 @@ check_for_missing_ws_traits <- function(){
     }
 
     cat(paste(missings, collapse = '\n'), '\n')
+
+    # ##
+
+    cat('looking for partial ws_trait files\n')
+
+    ff <- system('find data -path "*/ws_traits/*.feather"', intern = TRUE)
+    traits <- unique(str_extract(ff, 'data/[^/]+/[^/]+/ws_traits/([^/]+)', group = 1))
+    res <- tibble(starts = Date(), ends = Date())
+    for(trt in traits){
+
+        trt_files <- str_subset(ff, glue('/{trt}/'))
+        for(f in trt_files){
+
+            sit <- str_extract(f, 'data/[^/]+/[^/]+/ws_traits/[^/]+/(.+)(?=\\.feather)', group = 1)
+            dmn <- str_extract(f, 'data/[^/]+/([^/]+)/ws_traits/', group = 1)
+            d <- read_feather(f)
+
+            timecol <- d %>%
+                filter(if_any(any_of(c('val', 'dayl')), ~! is.na(.))) %>%
+                rename_with(~sub('year|date|datetime', 'timecol', .)) %>%
+                pull(timecol)
+
+            ex <- timecol[1]
+            if(! is.na(ex) && nchar(ex) == 4){
+                timecol <- as.Date(paste0(timecol, '-01-01'))
+            } else {
+                timecol <- as.Date(timecol)
+            }
+
+            res <- bind_rows(res,
+                             tibble(domain = dmn,
+                                    site_code = sit,
+                                    trait = trt,
+                                    starts = min(timecol),
+                                    ends = max(timecol),
+                                    lengths = as.numeric(diff(range(timecol)))))
+        }
+    }
+
+    trait_lengths <- res %>%
+        group_by(trait) %>%
+        filter(! all(is.na(starts)),
+               ! all(lengths > max(lengths) * 0.9))
+
+    if(nrow(trait_lengths)){
+        trait_lengths <- trait_lengths %>%
+            filter(lengths <= max(lengths) * 0.9) %>%
+            ungroup() %>%
+            group_by(domain, trait, lengths) %>%
+            mutate(tempsite = sub('raw_|sum_', '', site_code)) %>%
+            filter(! setequal(tempsite, c('CARI', 'CUPE', 'OKSR', 'GUIL'))) %>%
+            filter(! setequal(tempsite, c('CARI', 'OKSR'))) %>%
+            filter(! setequal(tempsite, c('CUPE', 'GUIL'))) %>%
+            ungroup() %>%
+            group_by(domain, trait, lengths) %>%
+            summarize(n = n(),
+                      sites = paste(site_code, collapse = ', '),
+                      .groups = 'drop') %>%
+            arrange(trait, domain, n) %>%
+            mutate(sumf = str_detect(sites, '(?:^| )sum_'),
+                   rawf = str_detect(sites, '(?:^| )raw_'),
+                   sites = gsub('sum_|raw_', '', sites)) %>%
+            select(trait, domain, lengths, n, sites, sumf, rawf)
+    }
+
+    trait_lengths
+    # write_csv(trait_lengths, 'scratch/ws_traits_partials.csv')
+
+    if(nrow(trait_lengths)){
+        cat('partial ws_trait files detected. summary in trait_lengths. these may need to be rerun/debugged:\n')
+        print(trait_lengths, n = 1000)
+    }
 }
 
 check_product_existence <- function(){

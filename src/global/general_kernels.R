@@ -49,8 +49,7 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code, boundaries)
 
 #gpp: STATUS=READY
 #. handle_errors
-process_3_ms806 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     gpp <- try(get_gee_standard(network = network,
                                 domain = domain,
@@ -61,49 +60,49 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code,
                                 site_boundary = boundaries,
                                 contiguous_us = TRUE))
 
-    if(is.null(gpp)) {
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+    if(is.null(gpp)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(gpp) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(gpp, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
 
     gpp <- gpp$table %>%
-        mutate(year = substr(datetime, 1,4)) %>%
-        mutate(doy = substr(datetime, 5,7)) %>%
+        mutate(year = substr(datetime, 1, 4)) %>%
+        mutate(doy = substr(datetime, 5, 7)) %>%
         mutate(date_ = ymd(paste(year, '01', '01', sep = '-'))) %>%
         mutate(datetime = as.Date(as.numeric(doy), format = '%j', origin = date_)) %>%
         mutate(year = as.numeric(year)) %>%
         select(site_code, datetime, year, var, val) %>%
-        filter(!is.na(val))
+        filter(! is.na(val))
 
     if(all(gpp$val == 0) || all(is.na(gpp$val))){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
     gpp_sum <- gpp %>%
         filter(var == 'gpp_median') %>%
         group_by(site_code, year, var) %>%
-        summarise(val = sum(val, na.rm = TRUE),
-                  count = n()) %>%
-        mutate(val = (val/(count*16))*365) %>%
+        summarize(val = sum(val, na.rm = TRUE),
+                  count = n(),
+                  .groups = 'drop') %>%
+        mutate(val = (val / (count * 16)) * 365) %>%
         mutate(var = 'gpp_sum') %>%
         select(-count)
 
     gpp_sd_year <- gpp %>%
         filter(var == 'gpp_median') %>%
         group_by(site_code, year, var) %>%
-        summarise(val = sd(val, na.rm = TRUE)) %>%
+        summarize(val = sd(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         mutate(var = 'gpp_sd_year')
 
     gpp_sd <- gpp %>%
         filter(var == 'gpp_sd') %>%
         group_by(site_code, year, var) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
+        summarize(val = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         mutate(var = 'gpp_sd_space')
 
     gpp_final <- rbind(gpp_sum, gpp_sd_year, gpp_sd) %>%
@@ -115,24 +114,19 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code,
     gpp_final <- append_unprod_prefix(gpp_final, prodname_ms)
     gpp_raw <- append_unprod_prefix(gpp_raw, prodname_ms)
 
-    dir <- glue('data/{n}/{d}/ws_traits/gpp/',
-                n = network,
-                d = domain)
-
     gpp_final <- bind_older_ws_traits(gpp_final)
     gpp_raw <- bind_older_ws_traits(gpp_raw)
 
     save_general_files(final_file = gpp_final,
                        raw_file = gpp_raw,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/gpp/'))
 
     return()
 }
 
 #lai; fpar: STATUS=READY
 #. handle_errors
-process_3_ms807 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms807 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     if(grepl('lai', prodname_ms)) {
         lai <- try(get_gee_standard(network = network,
@@ -146,34 +140,31 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
                                     bit_mask = '1',
                                     batch = TRUE))
 
-        if(is.null(lai)) {
-            return(generate_ms_err(glue('No data were retrived for {s}',
-                                        s = site_code)))
+        if(is.null(lai)){
+            return(generate_ms_err(glue('No data were retrived for {site_code}')))
         }
 
-        if(class(lai) == 'try-error'){
-            return(generate_ms_err(glue('error in retrieving {s}',
-                                        s = site_code)))
+        if(inherits(lai, 'try-error')){
+            return(generate_ms_err(glue('error in retrieving {site_code}')))
         }
-
 
         lai <- lai$table %>%
-            mutate(year = as.numeric(substr(datetime, 1,4))) %>%
+            mutate(year = as.numeric(substr(datetime, 1, 4))) %>%
             mutate(datetime = ymd(datetime)) %>%
             select(site_code, datetime, year, var, val)
 
         if(all(lai$val == 0) || all(is.na(lai$val))){
-            return(generate_ms_exception(glue('No data were retrived for {s}',
-                                              s = site_code)))
+            return(generate_ms_exception(glue('No data were retrived for {site_code}')))
         }
 
         lai_means <- lai %>%
             filter(var == 'lai_median') %>%
             group_by(site_code, year) %>%
-            summarise(lai_max = max(val, na.rm = TRUE),
+            summarize(lai_max = max(val, na.rm = TRUE),
                       lai_min = min(val, na.rm = TRUE),
                       lai_mean = mean(val, na.rm = TRUE),
-                      lai_sd_year = sd(val, na.rm = TRUE)) %>%
+                      lai_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('lai_max', 'lai_min', 'lai_mean', 'lai_sd_year'),
                          names_to = 'var',
                          values_to = 'val')
@@ -181,7 +172,8 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
         lai_sd <- lai %>%
             filter(var == 'lai_sd') %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'lai_sd_space')
 
         lai_final <- rbind(lai_means, lai_sd) %>%
@@ -190,20 +182,17 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
         lai_raw <- lai %>%
             select(datetime, site_code, var, val)
 
-        dir <- glue('data/{n}/{d}/ws_traits/lai/',
-                    n = network, d = domain)
-
         lai_final <- append_unprod_prefix(lai_final, prodname_ms)
-
         lai_raw <- append_unprod_prefix(lai_raw, prodname_ms)
 
         lai_final <- bind_older_ws_traits(lai_final)
         lai_raw <- bind_older_ws_traits(lai_raw)
 
-        save_general_files(final_file = lai_final,
-                           raw_file = lai_raw,
-                           domain_dir = dir)
-
+        save_general_files(
+            final_file = lai_final,
+            raw_file = lai_raw,
+            domain_dir = glue('data/{network}/{domain}/ws_traits/lai/')
+        )
     }
 
     if(grepl('fpar', prodname_ms)) {
@@ -218,33 +207,31 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
                                      bit_mask = '1',
                                      batch = TRUE))
 
-        if(is.null(fpar)) {
-            return(generate_ms_exception(glue('No data were retrived for {s}',
-                                              s = site_code)))
+        if(is.null(fpar)){
+            return(generate_ms_exception(glue('No data were retrived for {site_code}')))
         }
 
-        if(class(fpar) == 'try-error'){
-            return(generate_ms_err(glue('error in retrieving {s}',
-                                        s = site_code)))
+        if(inherits(fpar, 'try-error')){
+            return(generate_ms_err(glue('error in retrieving {site_code}')))
         }
 
         fpar <- fpar$table %>%
-            mutate(year = as.numeric(substr(datetime, 1,4))) %>%
+            mutate(year = as.numeric(substr(datetime, 1, 4))) %>%
             mutate(datetime = ymd(datetime)) %>%
             select(site_code, datetime, year, var, val)
 
         if(all(fpar$val == 0) || all(is.na(fpar$val))){
-            return(generate_ms_exception(glue('No data were retrived for {s}',
-                                              s = site_code)))
+            return(generate_ms_exception(glue('No data were retrived for {site_code}')))
         }
 
         fpar_means <- fpar %>%
             filter(var == 'fpar_median') %>%
             group_by(site_code, year) %>%
-            summarise(fpar_max = max(val, na.rm = TRUE),
+            summarize(fpar_max = max(val, na.rm = TRUE),
                       fpar_min = min(val, na.rm = TRUE),
                       fpar_mean = mean(val, na.rm = TRUE),
-                      fpar_sd_year = sd(val, na.rm = TRUE)) %>%
+                      fpar_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('fpar_max', 'fpar_min', 'fpar_mean', 'fpar_sd_year'),
                          names_to = 'var',
                          values_to = 'val')
@@ -252,7 +239,8 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
         fpar_sd <- fpar %>%
             filter(var == 'fpar_sd') %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'fpar_sd_space')
 
         fpar_final <- rbind(fpar_means, fpar_sd) %>%
@@ -262,18 +250,16 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code,
             select(datetime, site_code, val, var)
 
         fpar_final <- append_unprod_prefix(fpar_final, prodname_ms)
-
         fpar_raw <- append_unprod_prefix(fpar_raw, prodname_ms)
-
-        dir <- glue('data/{n}/{d}/ws_traits/fpar/',
-                    n = network, d = domain)
 
         fpar_final <- bind_older_ws_traits(fpar_final)
         fpar_raw <- bind_older_ws_traits(fpar_raw)
 
-        save_general_files(final_file = fpar_final,
-                           raw_file = fpar_raw,
-                           domain_dir = dir)
+        save_general_files(
+            final_file = fpar_final,
+            raw_file = fpar_raw,
+            domain_dir = glue('data/{network}/{domain}/ws_traits/fpar/')
+        )
 
         return()
     }
@@ -349,10 +335,9 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_code,
 
 #prism_precip; prism_temp_mean: STATUS=READY
 #. handle_errors
-process_3_ms809 <- function(network, domain, prodname_ms, site_code,
-                            boundaries){
+process_3_ms809 <- function(network, domain, prodname_ms, site_code, boundaries){
 
-    if(grepl('prism_precip', prodname_ms)) {
+    if(grepl('prism_precip', prodname_ms)){
         final <- try(get_gee_standard(network = network,
                                       domain = domain,
                                       gee_id = 'OREGONSTATE/PRISM/AN81d',
@@ -364,7 +349,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
                                       contiguous_us = TRUE))
     }
 
-    if(grepl('prism_temp_mean', prodname_ms)) {
+    if(grepl('prism_temp_mean', prodname_ms)){
         final <- try(get_gee_standard(network = network,
                                       domain = domain,
                                       gee_id = 'OREGONSTATE/PRISM/AN81d',
@@ -376,14 +361,12 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
                                       contiguous_us = TRUE))
     }
 
-    if(is.null(final)) {
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+    if(is.null(final)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(final) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(final, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
 
     final <- final$table %>%
@@ -391,8 +374,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
         mutate(datetime = ymd(datetime))
 
     if(all(is.na(final$val)) || all(final$val == 0)){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
     if(grepl('prism_precip', prodname_ms)){
@@ -401,8 +383,9 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
             filter(var == 'precip_median') %>%
             mutate(year = year(datetime)) %>%
             group_by(site_code, year) %>%
-            summarise(cumulative_precip = sum(val, na.rm = TRUE),
-                      precip_sd_year = sd(val, na.rm = TRUE)) %>%
+            summarize(cumulative_precip = sum(val, na.rm = TRUE),
+                      precip_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('cumulative_precip', 'precip_sd_year'),
                          names_to = 'var',
                          values_to = 'val') %>%
@@ -412,7 +395,8 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
             filter(var == 'precip_sd') %>%
             mutate(year = year(datetime)) %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'precip_sd_space')
 
         final_sum <- rbind(final_sum_c, final_sum_sd) %>%
@@ -424,8 +408,9 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
             filter(var == 'temp_mean_median') %>%
             mutate(year = year(datetime)) %>%
             group_by(site_code, year) %>%
-            summarise(temp_mean = mean(val, na.rm = TRUE),
-                      temp_sd_year = sd(val, na.rm = TRUE)) %>%
+            summarize(temp_mean = mean(val, na.rm = TRUE),
+                      temp_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('temp_mean', 'temp_sd_year'),
                          names_to = 'var',
                          values_to = 'val')
@@ -434,7 +419,8 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
             filter(var == 'temp_mean_sd') %>%
             mutate(year = year(datetime)) %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'temp_sd_space')
 
         final_sum <- rbind(final_temp, temp_sd) %>%
@@ -444,11 +430,8 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
     final <- final %>%
         select(datetime, site_code, var, val)
 
-    type <- str_split_fixed(prodname_ms, '__', n = Inf)[,1]
+    type <- str_split_fixed(prodname_ms, '__', n = Inf)[, 1]
     type <- ifelse(type == 'prism_precip', 'cc_precip', 'cc_temp')
-
-    dir <- glue('data/{n}/{d}/ws_traits/{v}/',
-                n = network, d = domain, v = type)
 
     final <- append_unprod_prefix(final, prodname_ms)
     final_sum <- append_unprod_prefix(final_sum, prodname_ms)
@@ -458,7 +441,7 @@ process_3_ms809 <- function(network, domain, prodname_ms, site_code,
 
     save_general_files(final_file = final_sum,
                        raw_file = final,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/{type}/'))
 
     return()
 }
@@ -899,7 +882,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                                    d = domain,
                                    n = network,
                                    s = sites[s],
-                                   p = str_split_fixed(prodname_ms, '__', n = Inf)[1,1],
+                                   p = str_split_fixed(prodname_ms, '__', n = Inf)[1, 1],
                                    e = e)
 
             file_name <- paste0('nlcdX_X', e, 'X_X', sites[s])
@@ -972,7 +955,6 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
         ) %>% invisible()
 
         nlcd_rast <- terra::rast(temp_rgee)
-
         nlcd_rast[as.vector(terra::values(nlcd_rast)) == 0] <- NA
 
         googledrive::drive_rm(rel_file)
@@ -983,8 +965,8 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
             rename(id = '.',
                    CellTally = 'n')
 
-        if(length(str_split_fixed(year, '_', n = Inf)[1,]) == 2){
-            year <- as.numeric(str_split_fixed(year, pattern = '_', n = Inf)[1,1])
+        if(length(str_split_fixed(year, '_', n = Inf)[1, ]) == 2){
+            year <- as.numeric(str_split_fixed(year, pattern = '_', n = Inf)[1, 1])
         }
 
         if(year == 1992){
@@ -995,17 +977,17 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                 mutate(sum = sum(CellTally, na.rm = TRUE))
 
             nlcd_e_1992names <- nlcd_e %>%
-                mutate(percent = round((CellTally/sum)*100, 1)) %>%
+                mutate(percent = round((CellTally / sum) * 100, 1)) %>%
                 mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
                 select(var = macrosheds_1992_code, val = percent) %>%
                 mutate(year = !!year)
 
             nlcd_e_norm_names <- nlcd_e %>%
                 group_by(macrosheds_code) %>%
-                summarise(CellTally1992 = sum(CellTally, na.rm = TRUE)) %>%
-                ungroup() %>%
+                summarize(CellTally1992 = sum(CellTally, na.rm = TRUE),
+                          .groups = 'drop') %>%
                 mutate(sum = sum(CellTally1992, na.rm = TRUE)) %>%
-                mutate(percent = round((CellTally1992/sum)*100, 1)) %>%
+                mutate(percent = round((CellTally1992 / sum) * 100, 1)) %>%
                 mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
                 select(var = macrosheds_code, val = percent) %>%
                 mutate(year = !!year)
@@ -1020,7 +1002,7 @@ process_3_ms813 <- function(network, domain, prodname_ms, site_code, boundaries)
                                 by = 'id')
 
             nlcd_e <- nlcd_e %>%
-                mutate(percent = round((CellTally*100)/sum(CellTally, na.rm = TRUE), 1)) %>%
+                mutate(percent = round((CellTally * 100) / sum(CellTally, na.rm = TRUE), 1)) %>%
                 mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
                 select(var = macrosheds_code, val = percent) %>%
                 mutate(year = !!year) %>%
@@ -1096,7 +1078,7 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
 
             val_mean <- round(unname(ws_values['mean']), 3)
             val_sd <- round(unname(ws_values['sd']), 3)
-            percent_na <-round(unname(ws_values['pctCellErr']), 2)
+            percent_na <- round(unname(ws_values['pctCellErr']), 2)
 
             one_year_var <- tibble(year = year,
                                    val = c(val_mean, val_sd),
@@ -1130,13 +1112,12 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
 
             logerror(msg = msg,
                      logger = logger_module)
-        } else{
+        } else {
             fin_nadp <- append_unprod_prefix(fin_nadp, prodname_ms)
             write_feather(fin_nadp, glue('{d}sum_{s}.feather',
                                          d = nadp_dir,
                                          s = sites[s]))
         }
-
     }
 }
 
@@ -1261,8 +1242,7 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
 
 #ndvi: STATUS=READY
 #. handle_errors
-process_3_ms817 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms817 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     ndvi <- try(get_gee_standard(network = network,
                                  domain = domain,
@@ -1274,29 +1254,28 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_code,
                                  qa_band = 'SummaryQA',
                                  bit_mask = '11'))
 
-    if(is.null(ndvi)) {
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+    if(is.null(ndvi)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(ndvi) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(ndvi, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
 
     ndvi <- ndvi$table %>%
         mutate(datetime = ymd(datetime)) %>%
         select(site_code, datetime, var, val) %>%
         mutate(year = year(datetime)) %>%
-        mutate(val = val/100)
+        mutate(val = val / 100)
 
     ndvi_means <- ndvi %>%
         filter(var == 'ndvi_median') %>%
         group_by(site_code, year) %>%
-        summarise(ndvi_max = max(val, na.rm = TRUE),
+        summarize(ndvi_max = max(val, na.rm = TRUE),
                   ndvi_min = min(val, na.rm = TRUE),
                   ndvi_mean = mean(val, na.rm = TRUE),
-                  ndvi_sd_year = sd(val, na.rm = TRUE)) %>%
+                  ndvi_sd_year = sd(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
                      names_to = 'var',
                      values_to = 'val')
@@ -1304,7 +1283,8 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_code,
     ndvi_sd <- ndvi %>%
         filter(var == 'ndvi_sd') %>%
         group_by(site_code, year) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
+        summarize(val = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         mutate(var = 'ndvi_sd_space')
 
     ndvi_final <- rbind(ndvi_means, ndvi_sd) %>%
@@ -1314,18 +1294,14 @@ process_3_ms817 <- function(network, domain, prodname_ms, site_code,
         select(datetime, site_code, var, val)
 
     ndvi_final <- append_unprod_prefix(ndvi_final, prodname_ms)
-
     ndvi_raw <- append_unprod_prefix(ndvi_raw, prodname_ms)
-
-    dir <- glue('data/{n}/{d}/ws_traits/ndvi/',
-                n = network, d = domain)
 
     ndvi_final <- bind_older_ws_traits(ndvi_final)
     ndvi_raw <- bind_older_ws_traits(ndvi_raw)
 
     save_general_files(final_file = ndvi_final,
                        raw_file = ndvi_raw,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/ndvi/'))
 
     return()
 }
@@ -1388,8 +1364,7 @@ process_3_ms818 <- function(network, domain, prodname_ms, site_code,
 
 #tcw: STATUS=READY
 #. handle_errors
-process_3_ms819 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms819 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     tcw <- try(get_gee_standard(network = network,
                                 domain = domain,
@@ -1399,16 +1374,13 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
                                 rez = 5000,
                                 site_boundary = boundaries))
 
-    if(is.null(tcw)) {
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+    if(is.null(tcw)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(tcw) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(tcw, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
-
 
     tcw <- tcw$table %>%
         mutate(datetime = ymd(paste0(substr(datetime, 1, 7), '_01'))) %>%
@@ -1417,10 +1389,11 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
     tcw_means <- tcw %>%
         filter(var == 'tcw_median') %>%
         group_by(site_code, year) %>%
-        summarise(tcw_max = max(val, na.rm = TRUE),
+        summarize(tcw_max = max(val, na.rm = TRUE),
                   tcw_min = min(val, na.rm = TRUE),
                   tcw_mean = mean(val, na.rm = TRUE),
-                  tcw_sd_year = sd(val, na.rm = TRUE)) %>%
+                  tcw_sd_year = sd(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         pivot_longer(cols = c('tcw_max', 'tcw_min', 'tcw_mean', 'tcw_sd_year'),
                      names_to = 'var',
                      values_to = 'val')
@@ -1428,7 +1401,8 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
     tcw_sd <- tcw %>%
         filter(var == 'tcw_sd') %>%
         group_by(site_code, year) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
+        summarize(val = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         mutate(var = 'tcw_sd_space')
 
     tcw_final <- rbind(tcw_means, tcw_sd) %>%
@@ -1436,11 +1410,6 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
 
     tcw <- tcw %>%
         select(datetime, site_code, var, val)
-
-
-    dir <- glue('data/{n}/{d}/ws_traits/tcw/',
-                n = network,
-                d = domain)
 
     tcw <- append_unprod_prefix(tcw, prodname_ms)
     tcw_final <- append_unprod_prefix(tcw_final, prodname_ms)
@@ -1450,15 +1419,14 @@ process_3_ms819 <- function(network, domain, prodname_ms, site_code,
 
     save_general_files(final_file = tcw_final,
                        raw_file = tcw,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/tcw/'))
 
     return()
 }
 
 #et_ref: STATUS=READY
 #. handle_errors
-process_3_ms820 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms820 <- function(network, domain, prodname_ms, site_code, boundaries){
 
     final <- try(get_gee_standard(network = network,
                                   domain = domain,
@@ -1470,15 +1438,12 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
                                   batch = TRUE,
                                   contiguous_us = TRUE))
 
-
-    if(is.null(final)) {
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+    if(is.null(final)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(final) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(final, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
 
     final <- final$table %>%
@@ -1486,16 +1451,16 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
         mutate(datetime = ymd(datetime))
 
     if(all(is.na(final$val)) || all(final$val == 0)){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
     final_ <- final %>%
         filter(var == 'et_ref_median') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_code, year) %>%
-        summarise(et_ref_mean = mean(val, na.rm = TRUE),
-                  et_ref_sd_year = sd(val, na.rm = TRUE)) %>%
+        summarize(et_ref_mean = mean(val, na.rm = TRUE),
+                  et_ref_sd_year = sd(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         pivot_longer(cols = c('et_ref_mean', 'et_ref_sd_year'),
                      names_to = 'var',
                      values_to = 'val')
@@ -1504,7 +1469,8 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
         filter(var == 'et_ref_sd') %>%
         mutate(year = year(datetime)) %>%
         group_by(site_code, year) %>%
-        summarise(val = mean(val, na.rm = TRUE)) %>%
+        summarize(val = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         mutate(var = 'et_ref_sd_space')
 
     final_sum <- rbind(final_, temp_sd) %>%
@@ -1516,52 +1482,43 @@ process_3_ms820 <- function(network, domain, prodname_ms, site_code,
     final <- append_unprod_prefix(final, prodname_ms)
     final_sum <- append_unprod_prefix(final_sum, prodname_ms)
 
-    dir <- glue('data/{n}/{d}/ws_traits/et_ref/',
-                n = network, d = domain)
-
     final <- bind_older_ws_traits(final)
     final_sum <- bind_older_ws_traits(final_sum)
 
     save_general_files(final_file = final_sum,
                        raw_file = final,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/et_ref/'))
 
     return()
 }
 
 #nsidc: STATUS=READY
 #. handle_errors
-process_3_ms821 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms821 <- function(network, domain, prodname_ms, site_code, boundaries){
 
-    usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
-                                  ymax = 49.384), crs = 4326) %>%
-        sf::st_as_sfc(., crs = 4326)
+    usa_bb <- sf::st_bbox(
+        obj = c(xmin = -124.725, ymin = 24.498, xmax = -66.9499, ymax = 49.384),
+        crs = 4326
+    ) %>%
+        sf::st_as_sfc(crs = 4326)
 
-    snow_dir <- glue('data/{n}/{d}/ws_traits/nsidc',
-                     n = network,
-                     d = domain)
-
+    snow_dir <- glue('data/{network}/{domain}/ws_traits/nsidc')
     dir.create(snow_dir, recursive = TRUE, showWarnings = FALSE)
-
-    snow_files <- list.files('data/spatial/nsidc/', recursive = TRUE, full.names = TRUE)
+    snow_files <- list.files('data/spatial/nsidc/',
+                             recursive = TRUE,
+                             full.names = TRUE)
 
     sites <- boundaries$site_code
     for(s in 1:length(sites)){
 
-        files <- list.files(glue('data/{n}/{d}/derived/',
-                                 n = network,
-                                 d = domain))
-
+        files <- list.files(glue('data/{network}/{domain}/derived/'))
         ws_prodname <- grep('ws_boundary', files, value = TRUE)
 
         # If there are multiple ws boundary folders, get largest prod code
         if(length(ws_prodname) > 1){
 
-            prod_codes <- str_match(ws_prodname, 'ms([0-9]{3})$')[,2]
-
+            prod_codes <- str_match(ws_prodname, 'ms([0-9]{3})$')[, 2]
             max_code <- max(prod_codes)
-
             ws_prodname <- ws_prodname[grep(max_code, prod_codes)]
         }
 
@@ -1572,18 +1529,13 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                         s = sites[s])
 
         site_boundary <- sf::st_read(ws_path, quiet = TRUE)
-
         is_usa <- ! length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 0
 
-        if(!is_usa){
-            msg <- generate_ms_exception(glue('No data available for {s}',
-                                              s = sites[s]))
-
-            logerror(msg = msg,
-                     logger = logger_module)
+        if(! is_usa){
+            msg <- generate_ms_exception(glue('No data available for {sites[s]}'))
+            logerror(msg = msg, logger = logger_module)
             next
         }
-
 
         nthreads <- parallel::detectCores()
         clst <- ms_parallelize(maxcores = nthreads)
@@ -1606,16 +1558,18 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                     pivot_longer(cols = starts_with(c('SWE', 'DEPTH'))) %>%
                     mutate(weighted_value = value*weight) %>%
                     group_by(name) %>%
-                    summarise(val = sum(weighted_value, na.rm = TRUE),
+                    summarize(val = sum(weighted_value, na.rm = TRUE),
                               weights = sum(weight, na.rm = TRUE),
                               n = n(),
                               sd = sd(value, na.rm = TRUE),
-                              na = sum(is.na(value))) %>%
-                    mutate(mean = val/weights,
-                           pctCellErr = (na/n)*100) %>%
-                    mutate(var = str_split_fixed(name, '_', n = Inf)[,1],
-                           day = str_split_fixed(name, '_', n = Inf)[,2]) %>%
-                    mutate(datetime = as_date(as.numeric(day), origin = paste0(snow_year, '-09-30'))) %>%
+                              na = sum(is.na(value)),
+                              .groups = 'drop') %>%
+                    mutate(mean = val / weights,
+                           pctCellErr = (na / n) * 100) %>%
+                    mutate(var = str_split_fixed(name, '_', n = Inf)[, 1],
+                           day = str_split_fixed(name, '_', n = Inf)[, 2]) %>%
+                    mutate(datetime = as_date(as.numeric(day),
+                                              origin = paste0(snow_year, '-09-30'))) %>%
                     select(datetime, mean, sd, var, pctCellErr) %>%
                     mutate(var = case_when(var == 'DEPTH' ~ 'snow_depth',
                                            var == 'SWE' ~ 'swe')) %>%
@@ -1623,8 +1577,7 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
                     mutate(var = paste(var, name, sep = '_')) %>%
                     select(datetime, var, val = value, pctCellErr)
 
-                final
-
+                return(final)
             }
 
         ms_unparallelize(clst)
@@ -1637,10 +1590,11 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
             mutate(year = year(datetime)) %>%
             filter(var == 'snow_depth_mean') %>%
             group_by(site_code, year) %>%
-            summarise(snow_depth_ann_max = max(val, na.rm = TRUE),
+            summarize(snow_depth_ann_max = max(val, na.rm = TRUE),
                       snow_depth_ann_min = min(val, na.rm = TRUE),
                       snow_depth_ann_mean = mean(val, na.rm = TRUE),
-                      snow_depth_sd_year = sd(val, na.rm = TRUE)) %>%
+                      snow_depth_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('snow_depth_ann_max', 'snow_depth_ann_min',
                                   'snow_depth_ann_mean', 'snow_depth_sd_year'),
                          names_to = 'var',
@@ -1650,17 +1604,19 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
             mutate(year = year(datetime)) %>%
             filter(var == 'snow_depth_sd') %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'snow_depth_sd_space')
 
         swe_means <- all_years %>%
             mutate(year = year(datetime)) %>%
             filter(var == 'swe_mean') %>%
             group_by(site_code, year) %>%
-            summarise(swe_ann_max = max(val, na.rm = TRUE),
+            summarize(swe_ann_max = max(val, na.rm = TRUE),
                       swe_ann_min = min(val, na.rm = TRUE),
                       swe_ann_mean = mean(val, na.rm = TRUE),
-                      swe_sd_year = sd(val, na.rm = TRUE)) %>%
+                      swe_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             pivot_longer(cols = c('swe_ann_max', 'swe_ann_min', 'swe_ann_mean',
                                   'swe_sd_year'),
                          names_to = 'var',
@@ -1670,35 +1626,29 @@ process_3_ms821 <- function(network, domain, prodname_ms, site_code,
             mutate(year = year(datetime)) %>%
             filter(var == 'swe_sd') %>%
             group_by(site_code, year) %>%
-            summarise(val = mean(val, na.rm = TRUE)) %>%
+            summarize(val = mean(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
             mutate(var = 'swe_sd_space')
 
         snow_final <- rbind(snow_d_means, snow_d_sd, swe_means, swe_sd) %>%
             select(year, site_code, var, val)
-
-
-        dir <- glue('data/{n}/{d}/ws_traits/nsidc/',
-                    n = network,
-                    d = domain)
 
         all_years <- append_unprod_prefix(all_years, prodname_ms)
         snow_final <- append_unprod_prefix(snow_final, prodname_ms)
 
         save_general_files(final_file = snow_final,
                            raw_file = all_years,
-                           domain_dir = dir)
-
+                           domain_dir = glue('data/{network}/{domain}/ws_traits/nsidc/'))
     }
 }
 
 #glhymps: STATUS=READY
 #. handle_errors
-process_3_ms822 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms822 <- function(network, domain, prodname_ms, site_code, boundaries){
 
-    dir.create(glue('data/{n}/{d}/ws_traits/glhymps/',
-                    n = network,
-                    d = domain), recursive = TRUE, showWarnings = FALSE)
+    dir.create(glue('data/{network}/{ddomain}/ws_traits/glhymps/'),
+               recursive = TRUE,
+               showWarnings = FALSE)
 
     glhymps <- st_read('data/spatial/GLHYMPS/GLHYMPS.shp', quiet = TRUE)
 
@@ -1720,34 +1670,39 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
         site_area <- site_area * 10000
 
         # glhymps is maybe an invalid geometry, need to fix
+        message('is the comment above still relevant? see code at top of lithology kernel if so')
+        browser()
         sub_surface <- sf::st_intersection(glhymps, site_boundary) %>%
             mutate(intersect_area = as.numeric(sf::st_area(geometry))) %>%
-            mutate(prop_basin = intersect_area/!!site_area) %>%
+            mutate(prop_basin = intersect_area / !!site_area) %>%
             mutate(Porosity_weight = Porosty*prop_basin,
-                   Permeability_no_permafrost_weight = Prmblty_n_*prop_basin,
-                   Permeability_permafrost_weight = Prmblt_*prop_basin,
-                   Permeability_standard_deviation_weight = Prmblty_s_*prop_basin)
+                   Permeability_no_permafrost_weight = Prmblty_n_ * prop_basin,
+                   Permeability_permafrost_weight = Prmblt_ * prop_basin,
+                   Permeability_standard_deviation_weight = Prmblty_s_ * prop_basin)
 
-        area_sub_dif <- sum(sub_surface$intersect_area)/site_area
-        area_sub_dif <- abs(1-area_sub_dif)
+        area_sub_dif <- sum(sub_surface$intersect_area) / site_area
+        area_sub_dif <- abs(1 - area_sub_dif)
 
         if(area_sub_dif < 0.05){
             pctCellErr <- 0
-        } else{
-            pctCellErr <- area_sub_dif*100
+        } else {
+            pctCellErr <- area_sub_dif * 100
         }
 
         sub_surface <- sub_surface %>%
+            as_tibble() %>%
             group_by(site_code) %>%
-            summarise(sub_surf_porosity_mean = sum(Porosity_weight),
+            summarize(sub_surf_porosity_mean = sum(Porosity_weight),
                       sub_surf_porosity_sd = sd(Porosty),
                       sub_surf_permeability_mean = sum(Permeability_no_permafrost_weight),
                       sub_surf_permeability_sd = sd(Prmblty_n_),
                       sub_surf_permeability_perm_mean = sum(Permeability_permafrost_weight),
-                      sub_surf_permeability_perm_sd = sd(Prmblt_)) %>%
-            as_tibble() %>%
+                      sub_surf_permeability_perm_sd = sd(Prmblt_),
+                      .groups = 'drop') %>%
             select(site_code, starts_with('sub_surf')) %>%
-            pivot_longer(cols = starts_with('sub_surf'), names_to = 'var', values_to = 'val') %>%
+            pivot_longer(cols = starts_with('sub_surf'),
+                         names_to = 'var',
+                         values_to = 'val') %>%
             mutate(year = NA,
                    pctCellErr = !!pctCellErr)
 
@@ -1757,18 +1712,15 @@ process_3_ms822 <- function(network, domain, prodname_ms, site_code,
                                         n = network,
                                         d = domain,
                                         s = sites[s]))
-
     }
 }
 
 #lithology: STATUS=READY
 #. handle_errors
-process_3_ms823 <- function(network, domain, prodname_ms, site_code,
-                            boundaries) {
+process_3_ms823 <- function(network, domain, prodname_ms, site_code, boundaries){
 
-    dir.create(glue('data/{n}/{d}/ws_traits/lithology/',
-                    n = network,
-                    d = domain), recursive = TRUE)
+    dir.create(glue('data/{network}/{domain}/ws_traits/lithology/'),
+               recursive = TRUE)
 
     sf::sf_use_s2(FALSE)
     glim <- st_read('data/spatial/LiMW/LiMW_GIS 2015.gdb', quiet = TRUE)
@@ -1801,14 +1753,15 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
         lithology  <- sf::st_intersection(glim, site_boundary) %>%
             mutate(intersect_area = as.numeric(sf::st_area(Shape))) %>%
             group_by(xx) %>%
-            summarise(intersect_area = sum(intersect_area))
+            summarize(intersect_area = sum(intersect_area),
+                      .groups = 'drop')
 
-        total_area <- sum(lithology$intersect_area, na.rm = T)
+        total_area <- sum(lithology$intersect_area, na.rm = TRUE)
 
         lithology <- lithology %>%
-            mutate(prop = intersect_area/!!total_area) %>%
-            mutate(prop_basin = intersect_area/!!total_area) %>%
-            mutate(prop_basin = round(prop_basin, 5)*100) %>%
+            mutate(prop = intersect_area / !!total_area) %>%
+            mutate(prop_basin = intersect_area / !!total_area) %>%
+            mutate(prop_basin = round(prop_basin, 5) * 100) %>%
             as_tibble() %>%
             mutate(var = paste0('geol_class_', toupper(xx)),
                    site_code = !!sites[s],
@@ -1825,15 +1778,14 @@ process_3_ms823 <- function(network, domain, prodname_ms, site_code,
             filter(! var %in% !!vars_prez)
 
         lithology <- rbind(lithology, geol_tib)
-
         lithology <- append_unprod_prefix(lithology, prodname_ms)
 
         write_feather(lithology, glue('data/{n}/{d}/ws_traits/lithology/{s}.feather',
                                       n = network,
                                       d = domain,
                                       s = sites[s]))
-
     }
+
     sf::sf_use_s2(TRUE)
 }
 

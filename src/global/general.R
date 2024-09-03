@@ -44,6 +44,18 @@ ws_areas <- site_data %>%
     right_join(select(boundaries, site_code)) %>%
     select(site_code, ws_area_ha)
 
+rel_dif <- tibble(
+    min_area = min(ws_areas$ws_area_ha),
+    max_area = max(ws_areas$ws_area_ha),
+    rel_dif = abs(diff(range(ws_areas$ws_area_ha))) / min(ws_areas$ws_area_ha)
+)
+if(rel_dif$rel_dif > 1000 && ! domain %in% non_bulk_domains){
+    warning('Large variation in basin sizes across ', domain, '. ',
+            'Min: ', rel_dif$min_area, '; max: ', rel_dif$max_area, '; relative',
+            ' difference > 1000. Would be wise to assign this domain to the "',
+            'non_bulk_domains" variable before running ms_general.')
+}
+
 boundaries <- boundaries %>%
     select(-any_of('area')) %>%
     left_join(ws_areas) %>%
