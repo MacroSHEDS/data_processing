@@ -154,6 +154,7 @@ known_publishers <- c(
     'Joerd',
     'Remote Sensing in Ecology and Conservation',
     'NASA EOSDIS Land Processes DAAC',
+    'NASA EOSDIS Land Processes Distributed Active Archive Center',
     'Oregon State University',
     'Earth Resources Observation and Science (EROS) Center',
     'ORNL DAAC',
@@ -17603,6 +17604,49 @@ run_postchecks <- function(){
     remove_some_molecular_forms()
     check_for_missing_ws_traits()
     check_for_derelict_ws_traits()
+    check_for_Inf_NaN_traits()
+}
+
+check_for_Inf_NaN_traits <- function(){
+
+    print('correcting for derelict ws_traits feathers')
+    require_shell_tool('find')
+
+    ff <- system('find data -type f -path "*/ws_traits/*.feather"',
+                 intern = TRUE)
+
+    infs_detected <- nans_detected <- c()
+    for(i in 1:length(ff)){
+
+        f <- ff[i]
+        xx <- read_feather(f)
+        if('val' %in% colnames(xx)){
+
+            if(any(is.infinite(xx$val))){
+                infs_detected <- c(infs_detected, f)
+                xx$val[is.infinite(xx$val)] <- NA
+            }
+
+            if(any(is.nan(xx$val))){
+                nans_detected <- c(nans_detected, f)
+                xx$val[is.na(xx$val)] <- NA
+            }
+
+            write_feather(xx, f)
+
+        } else {
+
+            if(! grepl('domain_climate', f)){
+                print('temporary loop break')
+                break
+            }
+        }
+    }
+
+    cat('the following files had Inf values. these have been corrected, but maybe fix upstream:\n',
+        paste(infs_detected, collapse = '\n'))
+    cat('\nthe following files had NaN values. these have been corrected, but maybe fix upstream:\n',
+        paste(nans_detected, collapse = '\n'))
 }
 
 check_for_derelict_ws_traits <- function(){
@@ -17622,16 +17666,21 @@ check_for_derelict_ws_traits <- function(){
         pull(site_code)
 
     to_delete <- attr_files[! found_sites %in% forreals_sites]
-    print(to_delete)
+    if(length(to_delete)){
 
-    resp <- get_response_1char('Derelict ws_attrs files discovered. Okay to delete these? (Y/n)',
-                               possible_chars = c('Y', 'n'))
+        print(to_delete)
 
-    if(resp == 'Y'){
-        invisible(file.remove(to_delete))
-        print(paste('deleted', length(to_delete), 'files'))
+        resp <- get_response_1char('Derelict ws_attrs files discovered. Okay to delete these? (Y/n)',
+                                   possible_chars = c('Y', 'n'))
+
+        if(resp == 'Y'){
+            invisible(file.remove(to_delete))
+            cat(paste('deleted', length(to_delete), 'files'), '\n')
+        } else {
+            cat('not deleting. be warned that the sites associated with these files are not in site_data!\n')
+        }
     } else {
-        print('not deleting. be warned that the sites associated with these files are not in site_data!')
+        cat('Nothing to do\n')
     }
 }
 
@@ -17710,10 +17759,13 @@ check_for_missing_ws_traits <- function(){
     trait_lengths <- res %>%
         group_by(trait) %>%
         filter(! all(is.na(starts)),
+               # ! all(lengths == max(lengths)))
                ! all(lengths > max(lengths) * 0.9))
 
     if(nrow(trait_lengths)){
-        trait_lengths <- trait_lengths %>%
+
+        trait_lengths <<- trait_lengths %>%
+            # filter(lengths != max(lengths)) %>%
             filter(lengths <= max(lengths) * 0.9) %>%
             ungroup() %>%
             group_by(domain, trait, lengths) %>%
@@ -17733,13 +17785,24 @@ check_for_missing_ws_traits <- function(){
             select(trait, domain, lengths, n, sites, sumf, rawf)
     }
 
-    trait_lengths
+    # tl = trait_lengths
+    # filter(tl, sumf, !rawf) %>% arrange(lengths) %>% print(n=1000)
+    # filter(res, trait == 'tcw') %>% filter(domain == 'east_river') %>% arrange(lengths) %>% print(n=100)
+    # filter(tl, trait == 'nlcd') %>% arrange(lengths) %>% print(n=100)
+
     # write_csv(trait_lengths, 'scratch/ws_traits_partials.csv')
 
     if(nrow(trait_lengths)){
-        cat('partial ws_trait files detected. summary in trait_lengths. these may need to be rerun/debugged:\n')
-        print(trait_lengths, n = 1000)
+        cat('partial ws_trait files detected. summary in trait_lengths (global). these may need to be rerun/debugged:\n')
+        print(arrange(trait_lengths, lengths), n = 100)
     }
+
+    ## check for incorrect number of ws_traits folders
+
+    req_tools <- c('bash', 'sed', 'echo', 'wc', 'tr', 'ls', 'sort')
+    invisible(sapply(req_tools, function(x) require_shell_tool(x)))
+    cat('verify number of folders under ws_traits for each domain (hbef and suef missing nrcs soils as of 2024)\n')
+    system("find . -type d -name ws_traits -exec bash -c 'ls \"$1\" | wc -l | tr -d \"\n\"; echo -n \" \"; echo \"$1\" | sed \"s|^\\./||\"' _ {} \\; | sort")
 }
 
 check_product_existence <- function(){

@@ -13,36 +13,27 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code, boundaries)
                                 contiguous_us = TRUE))
 
     if(is.null(npp)){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(class(npp) == 'try-error'){
-        return(generate_ms_err(glue('error in retrieving {s}',
-                                    s = site_code)))
+    if(inherits(npp, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
-
-    npp$table <- npp$table %>%
-        mutate(datetime = as.numeric(substr(datetime, 0, 4)))
 
     npp <- npp$table %>%
+        mutate(datetime = as.numeric(substr(datetime, 0, 4)),
+               val = val * 0.0001) %>% #scale factor of gee product
         select(year = datetime, site_code, var, val)
 
     if(all(is.na(npp$val))){
-        return(generate_ms_exception(glue('No data were retrived for {s}',
-                                          s = site_code)))
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
     npp <- append_unprod_prefix(npp, prodname_ms)
-
-    dir <- glue('data/{n}/{d}/ws_traits/npp/',
-                n = network,
-                d = domain)
-
     npp <- bind_older_ws_traits(npp)
 
     save_general_files(final_file = npp,
-                       domain_dir = dir)
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/npp/'))
 
     return()
 }
@@ -69,11 +60,12 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries)
     }
 
     gpp <- gpp$table %>%
-        mutate(year = substr(datetime, 1, 4)) %>%
-        mutate(doy = substr(datetime, 5, 7)) %>%
-        mutate(date_ = ymd(paste(year, '01', '01', sep = '-'))) %>%
-        mutate(datetime = as.Date(as.numeric(doy), format = '%j', origin = date_)) %>%
-        mutate(year = as.numeric(year)) %>%
+        mutate(year = substr(datetime, 1, 4),
+               doy = substr(datetime, 5, 7),
+               date_ = ymd(paste(year, '01', '01', sep = '-')),
+               datetime = as.Date(as.numeric(doy), format = '%j', origin = date_),
+               year = as.numeric(year),
+               val = val * 0.0001) %>% #scale factor of gee product
         select(site_code, datetime, year, var, val) %>%
         filter(! is.na(val))
 
@@ -124,6 +116,63 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries)
     return()
 }
 
+#gpp_global_500m; npp_global_500m: STATUS=READY
+#. handle_errors
+process_3_ms826 <- function(network, domain, prodname_ms, site_code, boundaries){
+
+    prodname <- prodname_from_prodname_ms(prodname_ms)
+    pp <- try(get_gee_standard(network = network,
+                               domain = domain,
+                               gee_id = 'MODIS/061/MOD17A3HGF',
+                               band = paste0(toupper(substr(prodname, 1, 1)), 'pp'),
+                               prodname = prodname,
+                               rez = 500,
+                               site_boundary = boundaries,
+                               contiguous_us = TRUE))
+
+    if(is.null(pp)){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
+    }
+
+    if(inherits(pp, 'try-error')){
+        return(generate_ms_err(glue('error in retrieving {site_code}')))
+    }
+
+    pp <- pp$table %>%
+        mutate(year = as.numeric(substr(datetime, 1, 4)),
+               datetime = as.Date(gsub('_', '-', datetime)))%>%
+        select(site_code, datetime, year, var, val) %>%
+        filter(! is.na(val))
+
+    if(all(pp$val == 0) || all(is.na(pp$val))){
+        return(generate_ms_exception(glue('No data were retrived for {site_code}')))
+    }
+
+    pp_sum <- pp %>%
+        filter(var == paste0(prodname, '_median'))
+
+    pp_sd <- pp %>%
+        filter(var == paste0(prodname, '_sd'))
+
+    pp_final <- bind_rows(pp_sum, pp_sd) %>%
+        select(year, site_code, var, val)
+
+    pp_raw <- pp %>%
+        select(datetime, site_code, var, val)
+
+    pp_final <- append_unprod_prefix(pp_final, prodname_ms)
+    pp_raw <- append_unprod_prefix(pp_raw, prodname_ms)
+
+    pp_final <- bind_older_ws_traits(pp_final)
+    pp_raw <- bind_older_ws_traits(pp_raw)
+
+    save_general_files(final_file = pp_final,
+                       raw_file = pp_raw,
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/{prodname}/'))
+
+    return()
+}
+
 #lai; fpar: STATUS=READY
 #. handle_errors
 process_3_ms807 <- function(network, domain, prodname_ms, site_code, boundaries){
@@ -150,7 +199,8 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code, boundaries)
 
         lai <- lai$table %>%
             mutate(year = as.numeric(substr(datetime, 1, 4))) %>%
-            mutate(datetime = ymd(datetime)) %>%
+            mutate(datetime = ymd(datetime),
+                   val = val * 0.1) %>% #scale factor of gee product
             select(site_code, datetime, year, var, val)
 
         if(all(lai$val == 0) || all(is.na(lai$val))){
@@ -217,7 +267,8 @@ process_3_ms807 <- function(network, domain, prodname_ms, site_code, boundaries)
 
         fpar <- fpar$table %>%
             mutate(year = as.numeric(substr(datetime, 1, 4))) %>%
-            mutate(datetime = ymd(datetime)) %>%
+            mutate(datetime = ymd(datetime),
+                   val = val * 0.01) %>% #scale factor of gee product
             select(site_code, datetime, year, var, val)
 
         if(all(fpar$val == 0) || all(is.na(fpar$val))){
@@ -1240,68 +1291,93 @@ process_3_ms816 <- function(network, domain, prodname_ms, site_code,
     }
 }
 
-#ndvi: STATUS=READY
+#ndvi; evi: STATUS=READY
 #. handle_errors
 process_3_ms817 <- function(network, domain, prodname_ms, site_code, boundaries){
 
-    ndvi <- try(get_gee_standard(network = network,
-                                 domain = domain,
-                                 gee_id = 'MODIS/006/MOD13Q1',
-                                 band = 'NDVI',
-                                 prodname = 'ndvi',
-                                 rez = 250,
-                                 site_boundary = boundaries,
-                                 qa_band = 'SummaryQA',
-                                 bit_mask = '11'))
+    prodname <- prodname_from_prodname_ms(prodname_ms)
+    geeid <- ifelse(prodname == 'evi',
+                    'MODIS/061/MOD13Q1', #should only be this one in 2025
+                    'MODIS/006/MOD13Q1')
 
-    if(is.null(ndvi)){
+    vi <- try({
+        get_gee_standard(
+            network = network,
+            domain = domain,
+            gee_id = geeid,
+            band = toupper(prodname),
+            prodname = prodname,
+            rez = 250,
+            site_boundary = boundaries,
+            qa_band = 'SummaryQA',
+            bit_mask = '11'
+        )
+    })
+
+    if(is.null(vi)){
         return(generate_ms_exception(glue('No data were retrived for {site_code}')))
     }
 
-    if(inherits(ndvi, 'try-error')){
+    if(inherits(vi, 'try-error')){
         return(generate_ms_err(glue('error in retrieving {site_code}')))
     }
 
-    ndvi <- ndvi$table %>%
+    vi <- vi$table %>%
         mutate(datetime = ymd(datetime)) %>%
         select(site_code, datetime, var, val) %>%
-        mutate(year = year(datetime)) %>%
-        mutate(val = val / 100)
+        mutate(year = year(datetime),
+               val = val * 0.0001) #scale factor of gee product
 
-    ndvi_means <- ndvi %>%
-        filter(var == 'ndvi_median') %>%
-        group_by(site_code, year) %>%
-        summarize(ndvi_max = max(val, na.rm = TRUE),
-                  ndvi_min = min(val, na.rm = TRUE),
-                  ndvi_mean = mean(val, na.rm = TRUE),
-                  ndvi_sd_year = sd(val, na.rm = TRUE),
-                  .groups = 'drop') %>%
-        pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
-                     names_to = 'var',
-                     values_to = 'val')
+    if(prodname == 'ndvi'){
 
-    ndvi_sd <- ndvi %>%
-        filter(var == 'ndvi_sd') %>%
+        vi_means <- vi %>%
+            filter(var == 'ndvi_median') %>%
+            group_by(site_code, year) %>%
+            summarize(ndvi_max = max(val, na.rm = TRUE),
+                      ndvi_min = min(val, na.rm = TRUE),
+                      ndvi_mean = mean(val, na.rm = TRUE),
+                      ndvi_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
+            pivot_longer(cols = c('ndvi_max', 'ndvi_min', 'ndvi_mean', 'ndvi_sd_year'),
+                         names_to = 'var',
+                         values_to = 'val')
+    } else {
+
+        vi_means <- vi %>%
+            filter(var == 'evi_median') %>%
+            group_by(site_code, year) %>%
+            summarize(evi_max = max(val, na.rm = TRUE),
+                      evi_min = min(val, na.rm = TRUE),
+                      evi_mean = mean(val, na.rm = TRUE),
+                      evi_sd_year = sd(val, na.rm = TRUE),
+                      .groups = 'drop') %>%
+            pivot_longer(cols = c('evi_max', 'evi_min', 'evi_mean', 'evi_sd_year'),
+                         names_to = 'var',
+                         values_to = 'val')
+    }
+
+    vi_sd <- vi %>%
+        filter(var == paste0(prodname, '_sd')) %>%
         group_by(site_code, year) %>%
         summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        mutate(var = 'ndvi_sd_space')
+        mutate(var = paste0(prodname, '_sd_space'))
 
-    ndvi_final <- rbind(ndvi_means, ndvi_sd) %>%
+    vi_final <- rbind(vi_means, vi_sd) %>%
         select(year, site_code, var, val)
 
-    ndvi_raw <- ndvi %>%
+    vi_raw <- vi %>%
         select(datetime, site_code, var, val)
 
-    ndvi_final <- append_unprod_prefix(ndvi_final, prodname_ms)
-    ndvi_raw <- append_unprod_prefix(ndvi_raw, prodname_ms)
+    vi_final <- append_unprod_prefix(vi_final, prodname_ms)
+    vi_raw <- append_unprod_prefix(vi_raw, prodname_ms)
 
-    ndvi_final <- bind_older_ws_traits(ndvi_final)
-    ndvi_raw <- bind_older_ws_traits(ndvi_raw)
+    vi_final <- bind_older_ws_traits(vi_final)
+    vi_raw <- bind_older_ws_traits(vi_raw)
 
-    save_general_files(final_file = ndvi_final,
-                       raw_file = ndvi_raw,
-                       domain_dir = glue('data/{network}/{domain}/ws_traits/ndvi/'))
+    save_general_files(final_file = vi_final,
+                       raw_file = vi_raw,
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/{prodname}/'))
 
     return()
 }

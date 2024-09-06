@@ -13,6 +13,12 @@ unprod <- univ_products  %>%
 
 if(exists('general_prod_filter_')){
 
+    unrec_prod <- setdiff(general_prod_filter_, unprod$prodname)
+    if(length(unrec_prod)){
+        warning('unrecognized general product name(s): ',
+                paste(unrec_prod, collapse = ', '))
+    }
+
     unprod <- filter(unprod, prodname %in% general_prod_filter_)
 
     loginfo(paste('general_prod_filter_ is set. only working on',
@@ -49,6 +55,7 @@ rel_dif <- tibble(
     max_area = max(ws_areas$ws_area_ha),
     rel_dif = abs(diff(range(ws_areas$ws_area_ha))) / min(ws_areas$ws_area_ha)
 )
+
 if(rel_dif$rel_dif > 1000 && ! domain %in% non_bulk_domains){
     warning('Large variation in basin sizes across ', domain, '. ',
             'Min: ', rel_dif$min_area, '; max: ', rel_dif$max_area, '; relative',
@@ -92,20 +99,22 @@ loginfo('(Re)uploading ws_boundaries to GEE',
 
 sm(rgee::ee_manage_create(asset_folder))
 
-asset_path <- file.path(asset_folder, 'all_ws_boundaries')
+if(bulk_mode){
 
-ee_shape <- try(sf_as_ee(boundaries,
-                         via = 'getInfo_to_asset',
-                         assetId = asset_path,
-                         overwrite = TRUE,
-                         quiet = TRUE),
-                silent = TRUE)
+    ee_shape <- try({
+        sf_as_ee(boundaries,
+                 via = 'getInfo_to_asset',
+                 assetId = file.path(asset_folder, 'all_ws_boundaries'),
+                 overwrite = TRUE,
+                 quiet = TRUE)
+    }, silent = TRUE)
+}
 
-if(inherits(ee_shape, 'try-error')){
+if(! bulk_mode || (exists('ee_shape') && inherits(ee_shape, 'try-error'))){
 
     for(i in 1:nrow(boundaries)){
-        one_boundary <- boundaries[i,]
-        asset_path <- paste0(asset_folder, '/', one_boundary$site_code)
+        one_boundary <- boundaries[i, ]
+        asset_path <- file.path(asset_folder, one_boundary$site_code)
         sf_as_ee(one_boundary,
                  via = 'getInfo_to_asset',
                  assetId = asset_path,

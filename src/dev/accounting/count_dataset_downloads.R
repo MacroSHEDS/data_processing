@@ -4,10 +4,7 @@ library(tidyverse)
 
 # options(timeout = 300)
 
-# setwd('~/git/macrosheds/data_acquisition')
-
-# conf <- jsonlite::fromJSON('config.json',
-#                            simplifyDataFrame = FALSE)
+# FIGSHARE ####
 
 # collection_id <- 5621740
 token <- Sys.getenv('RFIGSHARE_PAT')
@@ -35,10 +32,11 @@ counts <- tibble(
 for(i in 1:nrow(counts)){
     counts[i, 'downloads_figshare'] <-
         GET(paste0('https://stats.figshare.com/total/downloads/article/',
-                   counts$id[i])) %>%
+                   counts$id_figshare[i])) %>%
         content()
 }
 
+# EDI ####
 
 ## entity IDs are going to change every time EDI dataset is updated
 ## to get a proper audit on a per-item basis, can either visually cross reference
@@ -54,6 +52,14 @@ edi_report <- GET('https://pasta.lternet.edu/audit/reads/edi/1262') %>%
 xx = as_list(edi_report)
 # ls.str(xx)
 # ls.str(xx[[1]])
-xx$resourceReads[[49]]
-sapply(xx$resourceReads, function(z) z$totalReads[[1]])
+# xx$resourceReads[[49]]
+tot_edi_reads <- sapply(xx$resourceReads, function(z) z$totalReads[[1]],
+       USE.NAMES = FALSE) %>%
+    as.numeric() %>%
+    sum()
+
+# totals ####
+
+cat(paste('Figshare indiv file downloads (why so many of "variable_metadata"?):', sum(counts$downloads_figshare)))
+cat(paste('EDI KNOWN indiv file downloads (full dataset downlodas not counted still?):', tot_edi_reads))
 
