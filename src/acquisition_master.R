@@ -314,12 +314,12 @@ dir.create('logs', showWarnings = FALSE)
 run_prechecks()
 
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'luquillo')
+dmnrow <- which(network_domain$domain == 'east_river')
 
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
-    # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
+    # drop_automated_entries(glue('data/{network}/{domain}'))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -356,40 +356,40 @@ for(dmnrow in 1:nrow(network_domain)){
     get_all_local_helpers(network = network,
                           domain = domain)
 
-    # # stop here and go to processing_kernels.R to continue
-    # ms_retrieve(network = network,
-    #             # prodname_filter = c('precipitation'),
-    #             domain = domain)
-    #
-    # if(domain != 'neon'){
-    #     check_for_derelicts(network = network,
-    #                         domain = domain)
-    # }
-    #
-    # ms_munge(network = network,
-    #          # prodname_filter = c('discharge'),
-    #          domain = domain)
-    #
-    # #build this into ms_delineate and add a new parameter for it.
-    # #(only useful when rerunning stuff after a fix. otherwise just delineate them all.)
-    # has_wsbound = get_product_info(network = network,
-    #                  domain = domain,
-    #                  status_level = 'munge',
-    #                  get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
-    # if(domain != 'mcmurdo' && has_wsbound){
-    #     #might have to specify locatoin to whitebox executable:
-    #     # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
-    #     sw(ms_delineate(network = network,
-    #                     domain = domain,
-    #                     dev_machine_status = ms_instance$machine_status,
-    #                     # overwrite_wb_sites = c('CJ'),
-    #                     verbose = FALSE))
-    # }
-    #
-    # ms_derive(network = network,
-    #           # prodname_filter = c('CUSTOMprecip_flux_inst'),
-    #           domain = domain,
-    #           precip_pchem_pflux_skip_existing = FALSE)
+    # stop here and go to processing_kernels.R to continue
+    ms_retrieve(network = network,
+                # prodname_filter = c('precipitation'),
+                domain = domain)
+
+    if(domain != 'neon'){
+        check_for_derelicts(network = network,
+                            domain = domain)
+    }
+
+    ms_munge(network = network,
+             # prodname_filter = c('discharge'),
+             domain = domain)
+
+    #build this into ms_delineate and add a new parameter for it.
+    #(only useful when rerunning stuff after a fix. otherwise just delineate them all.)
+    has_wsbound = get_product_info(network = network,
+                     domain = domain,
+                     status_level = 'munge',
+                     get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
+    if(domain != 'mcmurdo' && has_wsbound){
+        #might have to specify locatoin to whitebox executable:
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
+        sw(ms_delineate(network = network,
+                        domain = domain,
+                        dev_machine_status = ms_instance$machine_status,
+                        # overwrite_wb_sites = c('CJ'),
+                        verbose = FALSE))
+    }
+
+    ms_derive(network = network,
+              # prodname_filter = c('CUSTOMprecip_flux_inst'),
+              domain = domain,
+              precip_pchem_pflux_skip_existing = FALSE)
 
     #these domains are either widely dispersed, or have both very small (10e1-2) and very large (10e5-6+) sites
     #this might serve better as a domain-prod filter, but also it might not hurt to treat non_bulk_domains the same way for all prods
@@ -401,6 +401,7 @@ for(dmnrow in 1:nrow(network_domain)){
         ms_general(network = network,
                    domain = domain,
                    get_missing_only = F,
+                   general_prod_filter = c('gpp_global_500m', 'npp_global_500m', 'evi'),
                    # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
                    bulk_mode = F) #seems reasonable to require this next year
                    # bulk_mode = ifelse(domain %in% non_bulk_domains, FALSE, TRUE)) #daymet is always in bulk mode.

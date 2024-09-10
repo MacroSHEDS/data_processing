@@ -10441,6 +10441,7 @@ load_config_datasets <- function(from_where){
 
         univ_products <- sm(googlesheets4::read_sheet(conf$univ_prods_gsheet,
                                                       na = c('', 'NA')))
+
         domain_detection_limits <- sm(googlesheets4::read_sheet(
             conf$dl_sheet,
             na = c('', 'NA'),
@@ -11880,8 +11881,8 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
 
         ms_vars_ws <- ms_vars %>%
             filter(variable_type == 'ws_char') %>%
+            # arrange(variable_subtype, tolower(variable_code)) %>%
             select(variable_code, variable_name, unit) %>%
-            arrange(tolower(variable_code)) %>%
             mutate(
                 data_class_code = str_extract(variable_code,
                                               '^([a-z])(?=[a-z]_)',
@@ -11893,7 +11894,8 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             ) %>%
             left_join(univ_codes,
                       by = c('data_class_code', 'data_source_code')) %>%
-            select(-matches('data.*code'))
+            select(-matches('data.*code')) %>%
+            arrange(data_class, data_source, variable_code)
 
         write_csv(ms_vars_ws, outfile_ws)
         save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
@@ -12021,7 +12023,7 @@ scrape_citations_into_bibtex <- function(d, outfile = NULL){
 
     writeLines(bib_out, outfile)
 
-    message('Timeseries citations have been written to ', outfile,
+    message('Citations have been written to ', outfile,
             '. Import to Zotero, then export references in AGU style to Data Use Agreements, ',
             'and then press any key to continue.')
     cat('>')
@@ -12249,6 +12251,7 @@ assemble_misc_docs_figshare <- function(where){
         select(prodname, primary_source = data_source, retrieved_from_GEE = type,
                doi, license, citation, url, addtl_info = notes) %>%
         mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE))
+
 
     scrape_citations_into_bibtex(
         d = attrib_ws_data,
@@ -13973,36 +13976,31 @@ clean_portal_dataset <- function(){
 
 generate_output_dataset <- function(vsn){
 
-    tryCatch({
+    require_shell_tool('rsync')
+    require_shell_tool('find')
 
-        # #find doesn't accept OR in globs. there is a way to do this though
-        # system(paste0('find data -path *derived/{*.feather,*.shx,*.shp,',
-        #           '*.prj,*.dbf} -printf %P\\\\0\\\\n | ',
-        #           'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    # #find doesn't accept OR in globs. there is a way to do this though
+    # system(paste0('find data -path *derived/{*.feather,*.shx,*.shp,',
+    #           '*.prj,*.dbf} -printf %P\\\\0\\\\n | ',
+    #           'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
 
-        #copy feathers to output dir
-        system(paste0('find data -path "*derived/*.feather" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    #copy feathers to output dir
+    system(paste0('find data -path "*derived/*.feather" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
 
-        #copy shapefiles to output dir
-        system(paste0('find data -path "*derived/*.shp" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
-        system(paste0('find data -path "*derived/*.shx" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
-        system(paste0('find data -path "*derived/*.prj" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
-        system(paste0('find data -path "*derived/*.dbf" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    #copy shapefiles to output dir
+    system(paste0('find data -path "*derived/*.shp" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    system(paste0('find data -path "*derived/*.shx" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    system(paste0('find data -path "*derived/*.prj" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
+    system(paste0('find data -path "*derived/*.dbf" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
 
-        #copy documentation to output dir
-        system(paste0('find data -path "*derived/documentation*.txt" -printf %P\\\\0\\\\n | ',
-                  'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
-
-    }, error = function(e){
-        stop(glue('generate_output_dataset can only run on a unix-like machine ',
-                  'with `find` and `rsync` installed'),
-             call. = FALSE)
-    })
+    #copy documentation to output dir
+    system(paste0('find data -path "*derived/documentation*.txt" -printf %P\\\\0\\\\n | ',
+              'rsync -av --files-from=- data macrosheds_dataset_v', vsn))
 
     find_dirs_within_outputdata <- function(keyword, vsn){
 
@@ -16516,12 +16514,14 @@ generate_watershed_summaries <- function(){
 
     join_if_exists <- function(x, d){
 
-        if(exists(x,
-                  where = parent.frame(),
-                  inherits = FALSE)){
-
+        prod_exists <- exists(x,
+                              where = parent.frame(),
+                              inherits = FALSE)
+        if(prod_exists){
             d <- full_join(d, get(x),
                            by = 'site_code')
+        } else {
+            warning('could not locate product ', d, ' when generating watershed summaries')
         }
 
         return(d)
@@ -16546,7 +16546,8 @@ generate_watershed_summaries <- function(){
                var == 'cc_cumulative_precip',
                val < 30000) %>%
         group_by(site_code) %>%
-        summarize(cc_mean_annual_precip = mean(val, na.rm = TRUE)) %>%
+        summarize(cc_mean_annual_precip = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(cc_mean_annual_precip))
 
     # Prism temp
@@ -16557,7 +16558,8 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'cc_temp_mean') %>%
         group_by(site_code) %>%
-        summarize(cc_mean_annual_temp = mean(val, na.rm = TRUE)) %>%
+        summarize(cc_mean_annual_temp = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(cc_mean_annual_temp))
 
     # start of season
@@ -16567,7 +16569,8 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_sos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_sos = mean(val, na.rm = TRUE)) %>%
+        summarize(vd_mean_sos = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(vd_mean_sos))
 
     # end of season
@@ -16577,7 +16580,8 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_eos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_eos = mean(val, na.rm = TRUE)) %>%
+        summarize(vd_mean_eos = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(vd_mean_eos))
 
     # length of season
@@ -16587,7 +16591,8 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_los_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_los = mean(val, na.rm = TRUE)) %>%
+        summarize(vd_mean_los = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(vd_mean_los))
 
     # maximum day of photosynthesis
@@ -16597,29 +16602,55 @@ generate_watershed_summaries <- function(){
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'vd_mos_mean') %>%
         group_by(site_code) %>%
-        summarize(vd_mean_mos = mean(val, na.rm = TRUE)) %>%
+        summarize(vd_mean_mos = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(vd_mean_mos))
 
-    # gpp
-    gpp_files <- fils[grepl('/gpp', fils)]
+    # CONUS gpp
+    gpp_files <- fils[grepl('/gpp/', fils)]
     gpp_files <- gpp_files[grepl('/sum_', gpp_files)]
 
     gpp <- map_dfr(gpp_files, read_feather) %>%
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_gpp_sum') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_gpp = mean(val, na.rm = TRUE)) %>%
+        summarize(va_mean_annual_gpp = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(!is.na(va_mean_annual_gpp))
 
-    # npp
-    npp_files <- fils[grepl('/npp', fils)]
+    # CONUS npp
+    npp_files <- fils[grepl('/npp/', fils)]
 
     npp <- map_dfr(npp_files, read_feather) %>%
         filter(year != substr(Sys.Date(), 0, 4),
                var == 'va_npp_median') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_npp = mean(val, na.rm = TRUE)) %>%
+        summarize(va_mean_annual_npp = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(! is.na(va_mean_annual_npp))
+
+    # global gpp
+    gpp_files_glob <- fils[grepl('/gpp_global_500m', fils)]
+    gpp_files_glob <- gpp_files_glob[grepl('/sum_', gpp_files_glob)]
+
+    gpp_glob <- map_dfr(gpp_files_glob, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vb_gpp_global_500m_median') %>%
+        group_by(site_code) %>%
+        summarize(vb_mean_annual_gpp_global_500m = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
+        filter(! is.na(vb_mean_annual_gpp_global_500m))
+
+    # global npp
+    npp_files <- fils[grepl('/npp_global_500m', fils)]
+
+    npp_glob <- map_dfr(npp_files, read_feather) %>%
+        filter(year != substr(Sys.Date(), 0, 4),
+               var == 'vb_npp_global_500m_median') %>%
+        group_by(site_code) %>%
+        summarize(vb_mean_annual_npp_global_500m = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
+        filter(! is.na(vb_mean_annual_npp_global_500m))
 
     # terrain
     terrain_fils <- fils[grepl('/terrain', fils)]
@@ -16650,9 +16681,15 @@ generate_watershed_summaries <- function(){
         group_by(site_code) %>%
         mutate(max_year = max(year)) %>%
         filter(year == max_year) %>%
+        ungroup() %>%
         select(-year, -max_year) %>%
-        distinct(site_code, var, .keep_all = T) %>%
+        distinct(site_code, var, .keep_all = TRUE) %>%
         pivot_wider(names_from = 'var', values_from = 'val')
+
+    if('lg_lncd_lichens' %in% colnames(nlcd)){
+        colnames(nlcd)[colnames(nlcd) == 'lg_lncd_lichens'] = 'lg_nlcd_lichens'
+        nlcd <- nlcd[, c('site_code', sort(setdiff(colnames(nlcd), 'site_code')))]
+    }
 
     # soil
     soil_fils <- fils[grepl('/nrcs_soils', fils)]
@@ -16686,8 +16723,8 @@ generate_watershed_summaries <- function(){
                !is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarize(ck_mean_annual_et = mean(val, na.rm = TRUE)) %>%
-        ungroup() %>%
+        summarize(ck_mean_annual_et = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         filter(! is.na(ck_mean_annual_et))
 
     # geological chem
@@ -16698,8 +16735,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val, na.rm = TRUE)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val, na.rm = TRUE),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # fpar
@@ -16710,8 +16747,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarize(vb_mean_annual_fpar = mean(val)) %>%
-        ungroup() %>%
+        summarize(vb_mean_annual_fpar = mean(val),
+                  .groups = 'drop') %>%
         filter(! is.na(vb_mean_annual_fpar))
 
     # lai
@@ -16722,8 +16759,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarize(vb_mean_annual_lai = mean(val)) %>%
-        ungroup() %>%
+        summarize(vb_mean_annual_lai = mean(val),
+                  .groups = 'drop') %>%
         filter(! is.na(vb_mean_annual_lai))
 
     # tcw (tesselated cap wetness)
@@ -16734,8 +16771,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarize(vj_mean_annual_tcw = mean(val)) %>%
-        ungroup() %>%
+        summarize(vj_mean_annual_tcw = mean(val),
+                  .groups = 'drop') %>%
         filter(! is.na(vj_mean_annual_tcw))
 
     # ndvi
@@ -16746,9 +16783,21 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
-        summarize(vb_mean_annual_ndvi = mean(val)) %>%
-        ungroup() %>%
+        summarize(vb_mean_annual_ndvi = mean(val),
+                  .groups = 'drop') %>%
         filter(! is.na(vb_mean_annual_ndvi))
+
+    # evi
+    ff <- fils[grepl('/evi', fils) & grepl('/sum_', fils)]
+
+    evi <- map_dfr(ff, read_feather) %>%
+        filter(var %in% c('vb_evi_mean'),
+               ! is.na(val)) %>%
+        select(-year) %>%
+        group_by(site_code) %>%
+        summarize(vb_mean_annual_evi = mean(val),
+                  .groups = 'drop') %>%
+        filter(! is.na(vb_mean_annual_evi))
 
     # nsidc snow data
     ff <- fils[grepl('/nsidc', fils) & grepl('/sum_', fils)]
@@ -16758,8 +16807,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # lithology
@@ -16770,8 +16819,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # glhymps soil porosity
@@ -16783,8 +16832,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # modis igbp
@@ -16795,8 +16844,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     # nadp
@@ -16807,8 +16856,8 @@ generate_watershed_summaries <- function(){
                ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code, var) %>%
-        summarize(mean_val = mean(val)) %>%
-        ungroup() %>%
+        summarize(mean_val = mean(val),
+                  .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
     wide_spat_data <- join_if_exists('precip', wide_spat_data)
@@ -16819,6 +16868,8 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('mos', wide_spat_data)
     wide_spat_data <- join_if_exists('gpp', wide_spat_data)
     wide_spat_data <- join_if_exists('npp', wide_spat_data)
+    wide_spat_data <- join_if_exists('gpp_glob', wide_spat_data)
+    wide_spat_data <- join_if_exists('npp_glob', wide_spat_data)
     wide_spat_data <- join_if_exists('terrain', wide_spat_data)
     wide_spat_data <- join_if_exists('bfi', wide_spat_data)
     wide_spat_data <- join_if_exists('nlcd', wide_spat_data)
@@ -16831,6 +16882,7 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('lai', wide_spat_data)
     wide_spat_data <- join_if_exists('tcw', wide_spat_data)
     wide_spat_data <- join_if_exists('ndvi', wide_spat_data)
+    wide_spat_data <- join_if_exists('evi', wide_spat_data)
     wide_spat_data <- join_if_exists('nsidc', wide_spat_data)
     wide_spat_data <- join_if_exists('glhymps', wide_spat_data)
     wide_spat_data <- join_if_exists('lithology', wide_spat_data)
@@ -17585,7 +17637,7 @@ run_postchecks <- function(){
     #look for neon duplicate records
     neon_dupe_check <- read_feather('data/neon/neon/derived/discharge__ms002/SYCA.feather',
                                     columns = 'site_code') %>% distinct()
-    if(neon_dupe_check > 1) stop('raw NEON Q for site SYCA contains COMO data. same with FLNT and MCDI. This is resolved in the munge kernel, but has not propagated')
+    if(nrow(neon_dupe_check) > 1) stop('raw NEON Q for site SYCA contains COMO data. same with FLNT and MCDI. This is resolved in the munge kernel, but has not propagated')
 
     #look for derelict "year" column in some Q files
     q_files <- system("find data/ -path '*/derived/discharge*.feather'", intern = TRUE)
@@ -17609,7 +17661,7 @@ run_postchecks <- function(){
 
 check_for_Inf_NaN_traits <- function(){
 
-    print('correcting for derelict ws_traits feathers')
+    print('correcting Inf and NaN where they appear in ws_traits')
     require_shell_tool('find')
 
     ff <- system('find data -type f -path "*/ws_traits/*.feather"',
@@ -17622,23 +17674,21 @@ check_for_Inf_NaN_traits <- function(){
         xx <- read_feather(f)
         if('val' %in% colnames(xx)){
 
+            rewrite_f <- FALSE
             if(any(is.infinite(xx$val))){
                 infs_detected <- c(infs_detected, f)
                 xx$val[is.infinite(xx$val)] <- NA
+                rewrite_f <- TRUE
             }
 
             if(any(is.nan(xx$val))){
                 nans_detected <- c(nans_detected, f)
                 xx$val[is.na(xx$val)] <- NA
+                rewrite_f <- TRUE
             }
 
-            write_feather(xx, f)
-
-        } else {
-
-            if(! grepl('domain_climate', f)){
-                print('temporary loop break')
-                break
+            if(rewrite_f){
+                write_feather(xx, f)
             }
         }
     }
@@ -17697,7 +17747,8 @@ check_for_missing_ws_traits <- function(){
         'et_ref', 'fpar', 'geochemical', 'glhymps', 'gpp', 'lai', 'length_season',
         'lithology', 'max_season', 'modis_igbp', 'nadp', 'ndvi', 'nlcd',
         'npp', 'nrcs_soils', 'nsidc', 'pelletier_soil_thickness', 'start_season',
-        'tcw', 'terrain', 'tree_cover', 'veg_cover'
+        'tcw', 'terrain', 'tree_cover', 'veg_cover', 'npp_global_500m',
+        'gpp_global_500m', 'evi'
     )
 
     cat('missing:\n')
@@ -19208,6 +19259,12 @@ convert_ms_to_bib <- function(citation, list = FALSE){
 
     #list: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
     #   rather than a formatted citation
+
+    # stop('this function needs work. get it to parse the following correctly:')
+    # Van Cleve, K., F.S. Chapin, R. Ruess, M.C. Mack, J.B. Jones, and Bonanza Creek LTER. 2023. Caribou-Poker Creeks Research Watershed: Daily Flow Rates for C2, C3, C4 ver 24. Environmental Data Initiative. https://doi.org/10.6073/pasta/2131d13a7a0a46abd039736e56b9f551 (Accessed 2024-09-09).
+    # Carroll, R., Newman, A., Beutler, C., Williams, K., & O'Ryan, D. (2023). Stream discharge and temperature data collected within the East River, Colorado for the Lawrence Berkeley National Laboratory Watershed Function Science Focus Area (water years 2019 to 2022). Watershed Function SFA, ESS-DIVE repository. https://doi.org/10.15485/1779721
+    #    (not sure about the original form of that one)
+    # there's a chance these are fine already
 
     once_per_session_warning(
         label = 'publishers',
