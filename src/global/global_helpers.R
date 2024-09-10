@@ -3479,7 +3479,8 @@ ms_delineate <- function(network,
             domain == !!domain,
             # ! is.na(latitude),
             # ! is.na(longitude),
-            site_type == 'stream_gauge') %>%
+            site_type == 'stream_gauge',
+            in_workflow == 1) %>%
         select(site_code, latitude, longitude, CRS, colocated_gauge_id)
 
     #checks
@@ -10855,7 +10856,8 @@ precip_gauge_from_site_data <- function(network, domain, prodname_ms) {
     locations <- site_data %>%
         filter(network == !!network,
                domain == !!domain,
-               site_type == 'rain_gauge')
+               site_type == 'rain_gauge',
+               in_workflow == 1)
 
     crs <- unique(locations$CRS)
 
@@ -10892,7 +10894,8 @@ stream_gauge_from_site_data <- function(network, domain, prodname_ms) {
     locations <- site_data %>%
         filter(network == !!network,
                domain == !!domain,
-               site_type == 'stream_gauge')
+               site_type == 'stream_gauge',
+               in_workflow == 1)
 
     crs <- unique(locations$CRS)
 
@@ -11083,7 +11086,7 @@ log_with_indent <- function(msg, logger, level = 'info', indent = 1){
 final_cleanup <- function(path){
 
     #started with more encapsulation, but that's a lot of unneccessary read/write
-    #operations, which can be hard on SSDs
+    #operations, which can be hard on SSDs...
 
     require_shell_tool('find')
     print('final cleanup...')
@@ -11092,7 +11095,7 @@ final_cleanup <- function(path){
     NaN_to_NA(path = path)
     #make sure portal data got updated
 
-    #so now dumping operations here. So far:
+    #...so now dumping operations here. So far:
     #1. convert datetime to date. we no longer have intentions of going sub-daily
     #2. remove sampling regime information from the variable name, into two separate columns
     #   scratch that. separate grab/installed into its own column, but ditch sensor/nonsensor
@@ -11409,6 +11412,18 @@ postprocess_entire_dataset <- function(site_data,
                                            dataset_version = dataset_version)
         reformat_camels_for_ms(vsn = dataset_version)
 
+        #run precip through the range check again (found crazy low values in luquillo precip)
+        ff <- system(paste('find', fs_dir, '-path "*/2_timeseries_data/*/precipitation/*.feather"'),
+                     intern = TRUE)
+        for(f in ff){
+            zz = read_feather(f)
+            if(any(na.omit(zz$val) < 0)){
+                print(f)
+                zz$val[! is.na(zz$val) & zz$val < 0] <- 0
+                write_feather(zz, f)
+            }
+        }
+
         # log_with_indent('adding legal metadata to each domain directory',
         #                 logger = logger_module)
         # legal_details_scrape(dataset_version = dataset_version)
@@ -11422,16 +11437,16 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
         # upload_dataset_to_figshare(dataset_version = dataset_version)
 
-        warning('are name issues like "lncd_lichens" not yet fixed upstream?')
-        system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
-                    "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i"))
-        system(glue("find ../portal -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
-                    "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' ",
-                    "-e 's/idbp/igbp/g' -i"))
-        read_feather('../portal/data/general/biplot/year.feather') %>%
-            mutate(var = ifelse(var == 'lb_igbp_cloased_shrub', 'lb_igbp_closed_shrub', var),
-                   var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
-            write_feather('../portal/data/general/biplot/year.feather')
+        # warning('are name issues like "lncd_lichens" not yet fixed upstream?')
+        # system(glue("find {fs_dir} -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
+        #             "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' -i"))
+        # system(glue("find ../portal -name '*.csv' | xargs sed -e 's/cloased_shrub/closed_shrub/g' ",
+        #             "-e 's/lg_lncd/lg_nlcd/g' -e 's/ci_mean_annual_et/ck_mean_annual_et/g' ",
+        #             "-e 's/idbp/igbp/g' -i"))
+        # read_feather('../portal/data/general/biplot/year.feather') %>%
+        #     mutate(var = ifelse(var == 'lb_igbp_cloased_shrub', 'lb_igbp_closed_shrub', var),
+        #            var = ifelse(var == 'lg_lncd_lichens', 'lg_nlcd_lichens', var)) %>%
+        #     write_feather('../portal/data/general/biplot/year.feather')
 
         #make feather versions of ws attr files
         read_csv(file.path(fs_dir, '1_watershed_attribute_data/ws_attr_summaries.csv'),
@@ -11466,11 +11481,12 @@ postprocess_entire_dataset <- function(site_data,
                              vv = dataset_version),
                         logger = logger_module)
 
+        # remotes::install_github('EDIorg/EMLassemblyline')
         library(EMLassemblyline)
         library(EDIutils)
 
-        edi_dir <- paste0('macrosheds_figshare_v', dataset_version) #not a mistake
-        dir.create(edi_dir, showWarnings = FALSE)
+        fs_dir <- paste0('macrosheds_figshare_v', dataset_version)
+        dir.create(fs_dir, showWarnings = FALSE)
 
         wd <- file.path('eml', 'eml_templates')
         ed <- file.path('eml', 'eml_out')
@@ -11478,15 +11494,17 @@ postprocess_entire_dataset <- function(site_data,
 
         if(! length(list.files(wd))) stop('need EML templates. see build_eml_templates.R')
 
-        message('REMOVING contents of eml/data_links in 10 seconds. mash ESC to abort.')
-        Sys.sleep(10)
+        usr_rsp <- get_response_1char('REMOVING contents of eml/data_links. Might want to back this up. Continue? (y/n) >',
+                                      c('y', 'n'))
+        if(usr_rsp == 'n') stop('taking no further action')
+
         unlink(dd, recursive = TRUE)
 
         dir.create(wd, recursive = TRUE, showWarnings = FALSE)
         dir.create(ed, recursive = TRUE, showWarnings = FALSE)
         dir.create(dd, recursive = TRUE, showWarnings = FALSE)
 
-        prepare_for_edi(where = edi_dir,
+        prepare_for_edi(from = fs_dir,
                         dataset_version = dataset_version,
                         wd = wd, ed = ed, dd = dd)
 
@@ -11573,7 +11591,8 @@ compute_load <- function(){
 add_a_few_more_things_to_figshare <- function(){
 
     ntw_dmn_join <- site_data %>%
-        filter(site_type != 'rain_gauge') %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
         select(domain, network, site_code)
     read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
         left_join(ntw_dmn_join, by = 'site_code') %>%
@@ -12010,6 +12029,8 @@ scrape_citations_into_bibtex <- function(d, outfile = NULL){
             pull(citation)
     }
 
+    cites <- unique(cites)
+
     bib_out <- ''
     for(cc in cites){
         bib_out <- glue(bib_out,
@@ -12035,6 +12056,8 @@ format_citation_for_DUA <- function(citations){
     #summarizes a vector of citations into the format we use for tables in
     #the Data Use Agreements document, e.g.:
     #Bowden 2021a-d; Kling 2016a-t; 2019; Shaver 2019; Zarnetske 2020; Zarnetske, Bowden, and Abbot 2020a,b
+
+    citations <- unique(citations)
 
     auths_ <- years_ <- c()
     for(cc in citations){
@@ -12198,7 +12221,7 @@ format_attrib_for_DUA <- function(d, outfile){
         write_csv(outfile)
 
     message('Section 4.1 table has been written to ', outfile,
-            '. Copy it to Data Use Agreements and then press any key to continue.')
+            '. Copy it to Data Use Agreements, 0.5 pt border, 8 pt Arial, 0.028 cell padding, middle vertical alignment, no minimum row height, bold header, and then press any key to continue.')
     readLines(n = 1)
 }
 
@@ -12239,10 +12262,6 @@ assemble_misc_docs_figshare <- function(where){
     )
     format_attrib_for_DUA(d = attrib_ts_data_noletters, outfile = 'scratch/DUA.csv')
 
-    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
-                                path = file.path(docs_dir, '01a_data_use_agreements.docx'),
-                                overwrite = TRUE)
-
     attrib_ws_data <- googlesheets4::read_sheet(
         conf$univ_prods_gsheet,
         na = c('', 'NA'),
@@ -12252,11 +12271,14 @@ assemble_misc_docs_figshare <- function(where){
                doi, license, citation, url, addtl_info = notes) %>%
         mutate(retrieved_from_GEE = ifelse(retrieved_from_GEE == 'gee', TRUE, FALSE))
 
-
     scrape_citations_into_bibtex(
         d = attrib_ws_data,
         outfile = file.path(docs_dir, '06_ws_attr_documentation', '06h_ws_attr_refs.bib')
     )
+
+    googledrive::drive_download(file = googledrive::as_id(conf$data_use_agreements),
+                                path = file.path(docs_dir, '01a_data_use_agreements.docx'),
+                                overwrite = TRUE)
 
     #these datasets required for macrosheds package functioning
     save(attrib_ws_data, file = '../r_package/data/attribution_and_intellectual_rights_ws_attr.RData')
@@ -12567,40 +12589,40 @@ combine_and_move_spatial_objects <- function(from, to){
     }
 }
 
-prepare_for_edi <- function(where, dataset_version){
+prepare_for_edi <- function(from, dataset_version){
 
     log_with_indent('Converting 2_timeseries_data feathers to CSV (takes a few mins)',
                     indent = 2,
                     logger = logger_module)
-    convert_ts_feathers_to_csv(file.path(where, '2_timeseries_data'))
+    convert_ts_feathers_to_csv(file.path(from, '2_timeseries_data'))
 
     log_with_indent('Combining 2_timeseries_data CSVs (takes a few mins. should be merged with the previous)',
                     indent = 2,
                     logger = logger_module)
-    combine_ts_csvs(file.path(where, '2_timeseries_data'))
+    combine_ts_csvs(file.path(from, '2_timeseries_data'))
 
     log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
                     indent = 2,
                     logger = logger_module)
-    combine_daymet_csvs(file.path(where, '4_CAMELS-compliant_Daymet_forcings'))
+    combine_daymet_csvs(file.path(from, '4_CAMELS-compliant_Daymet_forcings'))
 
     log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
                     indent = 2,
                     logger = logger_module)
-    combine_ws_attrs(where)
+    combine_ws_attrs(from)
 
     log_with_indent('Combining spatial objects by domain',
                     indent = 2,
                     logger = logger_module)
-    combine_and_move_spatial_objects(from = file.path(where, '2_timeseries_data'),
-                                     to = file.path(where, '5_shapefiles'))
+    combine_and_move_spatial_objects(from = file.path(from, '2_timeseries_data'),
+                                     to = file.path(from, '5_shapefiles'))
 
     warning('removing neon, etc. address this in v2 (see related warnings)')
     remove_more_stuff_temporarily()
 
-    eml_misc(where)
+    eml_misc(from)
 
-    build_eml_data_links_and_generate_eml(where, vsn = dataset_version,
+    build_eml_data_links_and_generate_eml(from, vsn = dataset_version,
                                           wd = wd, dd = dd, ed = ed)
 }
 
@@ -13093,6 +13115,8 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     }
 
     require_shell_tool('rename')
+    require_shell_tool('find')
+    require_shell_tool('rmdir')
 
     #prepare documentation files needed by the package (some of these funcnames are now misnomers)
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
@@ -14494,7 +14518,8 @@ undo_scale_flux_by_area <- function(d){
     sites <- unique(d$site_code)
 
     ws_areas <- site_data %>%
-        filter(site_type == 'stream_gauge') %>%
+        filter(site_type == 'stream_gauge',
+               in_workflow == 1) %>%
         select(site_code, ws_area_ha) %>%
         filter(site_code %in% !!sites)
 
@@ -14928,7 +14953,8 @@ catalog_held_data <- function(network_domain, site_data){
     }
 
     all_site_breakdown <- site_data %>%
-        filter(! site_type == 'rain_gauge') %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
         select(-in_workflow, -notes, -CRS, -local_time_zone)
 
     all_variable_breakdown <- tibble()
@@ -16534,7 +16560,8 @@ generate_watershed_summaries <- function(){
     fils <- fils[grepl('ws_traits', fils)]
 
     wide_spat_data <- site_data %>%
-        filter(site_type == 'stream_gauge') %>%
+        filter(site_type == 'stream_gauge',
+               in_workflow == 1) %>%
         select(network, domain, site_code, ws_area_ha)
 
     # Prism precip
@@ -16607,27 +16634,27 @@ generate_watershed_summaries <- function(){
         filter(!is.na(vd_mean_mos))
 
     # CONUS gpp
-    gpp_files <- fils[grepl('/gpp/', fils)]
+    gpp_files <- fils[grepl('/gpp_CONUS_30m', fils)]
     gpp_files <- gpp_files[grepl('/sum_', gpp_files)]
 
     gpp <- map_dfr(gpp_files, read_feather) %>%
         filter(year != substr(Sys.Date(), 0, 4),
-               var == 'va_gpp_sum') %>%
+               var == 'va_gpp_CONUS_30m_sum') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_gpp = mean(val, na.rm = TRUE),
+        summarize(va_mean_annual_gpp_CONUS_30m = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        filter(!is.na(va_mean_annual_gpp))
+        filter(!is.na(va_mean_annual_gpp_CONUS_30m))
 
     # CONUS npp
-    npp_files <- fils[grepl('/npp/', fils)]
+    npp_files <- fils[grepl('/npp_CONUS_250m', fils)]
 
     npp <- map_dfr(npp_files, read_feather) %>%
         filter(year != substr(Sys.Date(), 0, 4),
-               var == 'va_npp_median') %>%
+               var == 'va_npp_CONUS_250m_median') %>%
         group_by(site_code) %>%
-        summarize(va_mean_annual_npp = mean(val, na.rm = TRUE),
+        summarize(va_mean_annual_npp_CONUS_250m = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        filter(! is.na(va_mean_annual_npp))
+        filter(! is.na(va_mean_annual_npp_CONUS_250m))
 
     # global gpp
     gpp_files_glob <- fils[grepl('/gpp_global_500m', fils)]
@@ -16955,12 +16982,14 @@ generate_watershed_raw_spatial_dataset <- function(){
 
             all_trait <- map_dfr(trait_files, read_feather)
         }
+        # if(any(c('va_npp_median',
 
         raw_spatial_dat <- plyr::rbind.fill(raw_spatial_dat, all_trait)
     }
 
     site_doms <- site_data %>%
-        filter(site_type != 'rain_gauge') %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
         select(network, domain, site_code)
 
     raw_spatial_dat <- raw_spatial_dat %>%
@@ -17076,7 +17105,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
     #df = default sites for each domain
     df <- site_data %>%
-        filter(site_type != 'rain_gauge') %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -17113,7 +17143,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 
         stream_sites <- site_data %>%
             filter(domain == dom,
-                   site_type == 'stream_gauge') %>%
+                   site_type == 'stream_gauge',
+                   in_workflow == 1) %>%
             filter(site_code %in% sites) %>%
             pull(site_code)
 
@@ -17438,7 +17469,8 @@ compute_yearly_summary <- function(filter_ms_interp = FALSE,
 compute_yearly_summary_ws <- function(){
 
     df <- site_data %>%
-        filter(site_type != 'rain_gauge') %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
         group_by(network, domain) %>%
         summarize(site_code = first(site_code),
                   pretty_domain = first(pretty_domain),
@@ -17514,7 +17546,8 @@ compute_yearly_summary_ws <- function(){
         final <- rbind(conc_sum, all_domain)
 
         areas <- site_data %>%
-            filter(site_type == 'stream_gauge') %>%
+            filter(site_type == 'stream_gauge',
+                   in_workflow == 1) %>%
             select(site_code, domain, val = ws_area_ha) %>%
             mutate(Date = NA,
                    Year = NA,
@@ -17744,9 +17777,9 @@ check_for_missing_ws_traits <- function(){
 
     all_ws_traits <- c(
         'bare_cover', 'bfi', 'cc_precip', 'cc_temp', 'daymet', 'end_season',
-        'et_ref', 'fpar', 'geochemical', 'glhymps', 'gpp', 'lai', 'length_season',
+        'et_ref', 'fpar', 'geochemical', 'glhymps', 'gpp_CONUS_30m', 'lai', 'length_season',
         'lithology', 'max_season', 'modis_igbp', 'nadp', 'ndvi', 'nlcd',
-        'npp', 'nrcs_soils', 'nsidc', 'pelletier_soil_thickness', 'start_season',
+        'npp_CONUS_250m', 'nrcs_soils', 'nsidc', 'pelletier_soil_thickness', 'start_season',
         'tcw', 'terrain', 'tree_cover', 'veg_cover', 'npp_global_500m',
         'gpp_global_500m', 'evi'
     )
@@ -17937,7 +17970,11 @@ check_that_ws_areas_match <- function(){
         dmn <- str_split_fixed(wb, '/', n = 4)[, 3]
         area <- round(d$area, 3)
 
-        siterow <- filter(site_data, site_code == !!site_code, site_type == 'stream_gauge')
+        siterow <- filter(site_data,
+                          site_code == !!site_code,
+                          site_type == 'stream_gauge',
+                          in_workflow == 1)
+
         if(nrow(siterow) != 1) warning('expected one row in siterow. got ', nrow(d))
 
         area2 <- round(siterow$ws_area_ha, 3)
@@ -19260,7 +19297,7 @@ convert_ms_to_bib <- function(citation, list = FALSE){
     #list: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
     #   rather than a formatted citation
 
-    # stop('this function needs work. get it to parse the following correctly:')
+    stop('this function needs work. get it to parse the following correctly:')
     # Van Cleve, K., F.S. Chapin, R. Ruess, M.C. Mack, J.B. Jones, and Bonanza Creek LTER. 2023. Caribou-Poker Creeks Research Watershed: Daily Flow Rates for C2, C3, C4 ver 24. Environmental Data Initiative. https://doi.org/10.6073/pasta/2131d13a7a0a46abd039736e56b9f551 (Accessed 2024-09-09).
     # Carroll, R., Newman, A., Beutler, C., Williams, K., & O'Ryan, D. (2023). Stream discharge and temperature data collected within the East River, Colorado for the Lawrence Berkeley National Laboratory Watershed Function Science Focus Area (water years 2019 to 2022). Watershed Function SFA, ESS-DIVE repository. https://doi.org/10.15485/1779721
     #    (not sure about the original form of that one)
@@ -19946,7 +19983,8 @@ pre_interp_precip <- function(d){
 
     siterow <- filter(site_data,
                       site_code == this_site,
-                      site_type == 'rain_gauge')
+                      site_type == 'rain_gauge',
+                      in_workflow == 1)
 
     if(nrow(siterow) == 0) stop(this_site, ' missing from site data gsheet')
     if(nrow(siterow) > 1) stop(this_site, ' duplicated in site data gsheet')

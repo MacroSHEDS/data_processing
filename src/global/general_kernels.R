@@ -1,13 +1,14 @@
 
-#npp: STATUS=READY
+#npp_CONUS_250m: STATUS=READY
 #. handle_errors
 process_3_ms805 <- function(network, domain, prodname_ms, site_code, boundaries){
 
+    warning('original CONUS npp (250m) and gpp (30m) kernels might have internal naming issues now. untested since 9/24 modification. note that gpp func has more transformations')
     npp <- try(get_gee_standard(network = network,
                                 domain = domain,
                                 gee_id = 'UMT/NTSG/v2/LANDSAT/NPP',
                                 band = 'annualNPP',
-                                prodname = 'npp',
+                                prodname = 'npp_CONUS_250m',
                                 rez = 30,
                                 site_boundary = boundaries,
                                 contiguous_us = TRUE))
@@ -33,12 +34,12 @@ process_3_ms805 <- function(network, domain, prodname_ms, site_code, boundaries)
     npp <- bind_older_ws_traits(npp)
 
     save_general_files(final_file = npp,
-                       domain_dir = glue('data/{network}/{domain}/ws_traits/npp/'))
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/npp_CONUS_250m/'))
 
     return()
 }
 
-#gpp: STATUS=READY
+#gpp_CONUS_30m: STATUS=READY
 #. handle_errors
 process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries){
 
@@ -46,7 +47,7 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries)
                                 domain = domain,
                                 gee_id = 'UMT/NTSG/v2/LANDSAT/GPP',
                                 band = 'GPP',
-                                prodname = 'gpp',
+                                prodname = 'gpp_CONUS_30m',
                                 rez = 30,
                                 site_boundary = boundaries,
                                 contiguous_us = TRUE))
@@ -74,28 +75,28 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries)
     }
 
     gpp_sum <- gpp %>%
-        filter(var == 'gpp_median') %>%
+        filter(var == 'gpp_CONUS_30m_median') %>%
         group_by(site_code, year, var) %>%
         summarize(val = sum(val, na.rm = TRUE),
                   count = n(),
                   .groups = 'drop') %>%
         mutate(val = (val / (count * 16)) * 365) %>%
-        mutate(var = 'gpp_sum') %>%
+        mutate(var = 'gpp_CONUS_30m_sum') %>%
         select(-count)
 
     gpp_sd_year <- gpp %>%
-        filter(var == 'gpp_median') %>%
+        filter(var == 'gpp_CONUS_30m_median') %>%
         group_by(site_code, year, var) %>%
         summarize(val = sd(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        mutate(var = 'gpp_sd_year')
+        mutate(var = 'gpp_CONUS_30m_sd_year')
 
     gpp_sd <- gpp %>%
-        filter(var == 'gpp_sd') %>%
+        filter(var == 'gpp_CONUS_30m_sd') %>%
         group_by(site_code, year, var) %>%
         summarize(val = mean(val, na.rm = TRUE),
                   .groups = 'drop') %>%
-        mutate(var = 'gpp_sd_space')
+        mutate(var = 'gpp_CONUS_30m_sd_space')
 
     gpp_final <- rbind(gpp_sum, gpp_sd_year, gpp_sd) %>%
         select(year, site_code, var, val)
@@ -111,7 +112,7 @@ process_3_ms806 <- function(network, domain, prodname_ms, site_code, boundaries)
 
     save_general_files(final_file = gpp_final,
                        raw_file = gpp_raw,
-                       domain_dir = glue('data/{network}/{domain}/ws_traits/gpp/'))
+                       domain_dir = glue('data/{network}/{domain}/ws_traits/gpp_CONUS_30m/'))
 
     return()
 }

@@ -32,23 +32,23 @@ q_daily <- all_q %>%
     # filter(remove == 0) %>%
     # select(-remove) %>%
     # group_by(site_code, datetime) %>%
-    # summarise(val = mean(val),
+    # summarize(val = mean(val),
     #           ms_status = max(ms_status),
     #           ms_interp = max(ms_interp)) %>%
     # ungroup() %>%
     mutate(q_scaled = (val * 86400) / 1000) %>%
     left_join(site_area, by = 'site_code') %>%
-    mutate(q_scaled = q_scaled/(ws_area_ha * 10000)) %>%
+    mutate(q_scaled = q_scaled / (ws_area_ha * 10000)) %>%
     mutate(q_scaled = q_scaled * 1000) %>%
     filter(! is.na(q_scaled))
 
 # Look at watershed with mostly full wateryears (camels functions operate on wateryear)
 q_check <- q_daily %>%
-    mutate(year = year(datetime),
-           month = month(datetime)) %>%
+    mutate(year = year(date),
+           month = month(date)) %>%
     mutate(water_year = ifelse(month %in% c(10, 11, 12), year + 1, year)) %>%
     group_by(site_code, water_year) %>%
-    summarise(n = n(),
+    summarize(n = n(),
               ms_status = sum(ms_status),
               ms_interp = sum(ms_interp)) %>%
     ungroup()
@@ -73,12 +73,12 @@ good_site_years <- q_check %>%
     mutate(good = 1)
 
 all_scaled <- q_daily %>%
-    mutate(year = year(datetime),
-           month = month(datetime)) %>%
+    mutate(year = year(date),
+           month = month(date)) %>%
     mutate(water_year = ifelse(month %in% c(10, 11, 12), year + 1, year)) %>%
     filter(! is.na(q_scaled)) %>%
     group_by(site_code, water_year) %>%
-    summarise(sum = sum(q_scaled, na.rm = TRUE),
+    summarize(sum = sum(q_scaled, na.rm = TRUE),
               n = n(),
               ms_status = sum(ms_status),
               ms_interp = sum(ms_interp)) %>%
@@ -91,7 +91,7 @@ all_scaled <- q_daily %>%
 # annual_flow <- all_scaled %>%
 #     # filter(! site_code %in% c('ON02', 'TE03')) %>%
 #     group_by(site_code) %>%
-#     summarise(sum = mean(sum, na.rm = T)) %>%
+#     summarize(sum = mean(sum, na.rm = T)) %>%
 #     ungroup() %>%
 #     full_join(site_eco, by = 'site_code') %>%
 #     filter(! is.na(eco_region)) %>%
@@ -108,13 +108,13 @@ all_daymet <- list.files('scratch/camels_assembly/daymet_with_pet',
 
 # daymet_annual <- all_daymet %>%
 #     group_by(site_code, date) %>%
-#     summarise(prcp = mean(prcp)) %>%
+#     summarize(prcp = mean(prcp)) %>%
 #     ungroup() %>%
 #     mutate(year = year(date),
 #            month = month(date)) %>%
 #     mutate(water_year = ifelse(month %in% c(10, 11, 12), year + 1, year)) %>%
 #     group_by(site_code, water_year) %>%
-#     summarise(prcp = sum(prcp, na.rm = TRUE),
+#     summarize(prcp = sum(prcp, na.rm = TRUE),
 #               n = n()) %>%
 #     ungroup()
 
@@ -124,7 +124,7 @@ all_daymet <- list.files('scratch/camels_assembly/daymet_with_pet',
 #     filter(runoff_ratio < 2) %>%
 #     # filter(! site_code %in% c('ON02', 'TE03')) %>%
 #     group_by(site_code) %>%
-#     summarise(mean_rr = mean(runoff_ratio, na.rm = TRUE)) %>%
+#     summarize(mean_rr = mean(runoff_ratio, na.rm = TRUE)) %>%
 #     ungroup() %>%
 #     full_join(site_eco, by = 'site_code') %>%
 #     filter(! is.na(eco_region)) %>%
@@ -146,27 +146,28 @@ for(i in seq_along(hydro_sites)){
 
     one_site_q <- q_daily %>%
         filter(site_code == !!hydro_sites[i]) %>%
-        mutate(year = year(datetime),
-               month = month(datetime),
+        mutate(year = year(date),
+               month = month(date),
                water_year = ifelse(month %in% c(10, 11, 12), year + 1, year)) %>%
         filter(water_year %in% !!good_years)
 
     one_site_precip <- all_daymet %>%
         mutate(year = year(date),
                month = month(date),
-               water_year = ifelse(month %in% c(10, 11, 12), year + 1, year)) %>%
+               water_year = ifelse(month %in% c(10, 11, 12), year + 1, year),
+               date = as.Date(date)) %>%
         filter(site_code == !!hydro_sites[i],
                water_year %in% !!good_years) %>%
         group_by(date, site_code) %>%
-        summarise(precip = mean(prcp, na.rm = TRUE)) %>%
-        ungroup() %>%
-        rename(datetime = date)
+        summarize(precip = mean(prcp, na.rm = TRUE),
+                  .groups = 'drop')
+        # rename(datetime = date)
 
     one_site <- full_join(one_site_q, one_site_precip,
-                          by = c('datetime', 'site_code')) %>%
+                          by = c('date', 'site_code')) %>%
         # filter(! is.na(precip),
         #        ! is.na(val)) %>%
-        select(q = q_scaled, p = precip, d = datetime) %>%
+        select(q = q_scaled, p = precip, d = date) %>%
         mutate(d = as_date(d))
 
     site_fin <- try({
@@ -175,7 +176,7 @@ for(i in seq_along(hydro_sites)){
             # p = one_site$p,
             # d = one_site$d, #see modifications to this function
             q = one_site_q$q_scaled,
-            d = as_date(one_site_q$datetime),
+            d = one_site_q$date,
             qpd = one_site,
             tol = 0.1,
             hy_cal = 'oct_us_gb'

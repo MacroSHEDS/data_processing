@@ -317,6 +317,7 @@ run_prechecks()
 dmnrow <- which(network_domain$domain == 'east_river')
 
 for(dmnrow in 1:nrow(network_domain)){
+    stop('in 2025, need to address site arctic: "I-Minus_2_TK_High Side". systemic. adjusted in site data but not elsewhere')
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{network}/{domain}'))
@@ -402,7 +403,6 @@ for(dmnrow in 1:nrow(network_domain)){
                    domain = domain,
                    get_missing_only = F,
                    general_prod_filter = c('gpp_global_500m', 'npp_global_500m', 'evi'),
-                   # general_prod_filter = c('npp', 'gpp', 'lai', 'fpar', 'tree_cover', 'veg_cover', 'bare_cover', 'prism_precip', 'prism_temp_mean', 'ndvi', 'tcw', 'et_ref'),
                    bulk_mode = F) #seems reasonable to require this next year
                    # bulk_mode = ifelse(domain %in% non_bulk_domains, FALSE, TRUE)) #daymet is always in bulk mode.
     }
