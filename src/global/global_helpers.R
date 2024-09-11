@@ -11281,6 +11281,85 @@ remove_spatial_portal_files <- function(){
     system("find ../portal -type d -name '*gauge_locations' -exec rm -r {} \\;")
 }
 
+conform_ws_attr_names <- function(){
+
+    #1. drop all time-words from variable names (since these are aggregated
+    #   at different temporal levels, and those levels are apparent from the date/year).
+    #   EXCEPTION for the word "annual" in nadp variables. needed to indicate
+    #   that although these are given a jan 1 date, they in fact apply to the whole year.
+    #2. put the names of statistics after the actual variable names
+    #3. remove the variable prefix
+
+    var_changes <- c(
+        area_ha = 'area',
+        ws_area_ha = 'area',
+        mean_annual_precip = 'precip_mean',
+        mean_annual_temp = 'temp_mean',
+        mean_sos = 'sos_mean',
+        mean_eos = 'eos_mean',
+        mean_los = 'los_mean',
+        mean_mos = 'mos_mean',
+        mean_annual_gpp_CONUS_30m = 'gpp_CONUS_30m_mean',
+        mean_annual_npp_CONUS_250m = 'npp_CONUS_250m_mean',
+        mean_annual_gpp_global_500m = 'gpp_global_500m_mean',
+        mean_annual_npp_global_500m = 'npp_global_500m_mean',
+        mean_annual_et = 'et_ref_mean',
+        mean_annual_fpar = 'fpar_mean',
+        mean_annual_lai = 'lai_mean',
+        mean_annual_tcw = 'tcw_mean',
+        mean_annual_ndvi = 'ndvi_mean',
+        mean_annual_evi = 'evi_mean',
+        snow_depth_ann_mean = 'snow_depth_mean',
+        swe_ann_mean = 'swe_mean',
+        temp_mean_median = 'temp_median'
+    )
+
+    univ_codes <- univ_products %>%
+        select(starts_with('data_')) %>%
+        distinct()
+
+    attr_ts <- list.files('../portal/data/general/spatial_downloadables',
+                          pattern = 'spatial_timeseries',
+                          full.names = TRUE)
+
+    for(f in attr_ts){
+        trt <- read_csv(f) %>%
+            mutate(
+                # data_class_code = str_extract(var,
+                #                               '^([a-z])(?=[a-z]_)',
+                #                               group = 1),
+                # data_source_code = str_extract(var,
+                #                                '^[a-z]([a-z])(?=_)',
+                #                                group = 1),
+                var = drop_var_prefix(var)
+            ) %>%
+            # left_join(univ_codes,
+            #           by = c('data_class_code', 'data_source_code')) %>%
+            # select(-matches('data.*code')) %>%
+            # select(network, domain, site_code, date, var, val, data_class, data_source, pctCellErr) %>%
+            mutate(var = sub('^annual_', '', var),
+                   var = sub('_space$', '', var),
+                   var = dplyr::recode(var, !!!var_changes)) %>%
+            group_by(var) %>%
+            mutate(year = year(date),
+                   date = if(length(unique(substr(date, 6, 10))) == 1) NA_Date_ else date) %>%
+            ungroup() %>%
+            select(network, domain, site_code, var, year, date, val, pctCellErr) %>%
+            arrange(network, domain, site_code, year, date) %>%
+            write_csv(f)
+    }
+
+    read_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv') %>%
+        rename_with(~substr(., 4, nchar(.)),
+                    .cols = 5:ncol(.)) %>%
+        rename_with(~dplyr::recode(., !!!var_changes),
+                    .cols = 4:ncol(.)) %>%
+        rename_with(~sub('^annual_', '', .)) %>%
+        rename_with(~sub('_space$', '', .)) %>%
+        arrange(network, domain, site_code) %>%
+        write_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv')
+}
+
 postprocess_entire_dataset <- function(site_data,
                                        network_domain,
                                        dataset_version,
@@ -11385,6 +11464,8 @@ postprocess_entire_dataset <- function(site_data,
     compute_yearly_summary(filter_ms_interp = FALSE,
                            filter_ms_status = FALSE)
     compute_yearly_summary_ws()
+
+    conform_ws_attr_names()
 
     # log_with_indent('Calculating sizes of downloadable files',
     #                 logger = logger_module)
@@ -11914,7 +11995,7 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             left_join(univ_codes,
                       by = c('data_class_code', 'data_source_code')) %>%
             select(-matches('data.*code')) %>%
-            arrange(data_class, data_source, variable_code)
+            arrange(data_class, tolower(data_source), tolower(variable_code))
 
         write_csv(ms_vars_ws, outfile_ws)
         save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
@@ -16747,7 +16828,7 @@ generate_watershed_summaries <- function(){
 
     et_ref <- map_dfr(et_ref_fils, read_feather) %>%
         filter(var %in% c('ck_et_ref_mean'),
-               !is.na(val)) %>%
+               ! is.na(val)) %>%
         select(-year) %>%
         group_by(site_code) %>%
         summarize(ck_mean_annual_et = mean(val, na.rm = TRUE),
@@ -16982,7 +17063,6 @@ generate_watershed_raw_spatial_dataset <- function(){
 
             all_trait <- map_dfr(trait_files, read_feather)
         }
-        # if(any(c('va_npp_median',
 
         raw_spatial_dat <- plyr::rbind.fill(raw_spatial_dat, all_trait)
     }
