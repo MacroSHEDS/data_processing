@@ -11325,20 +11325,9 @@ conform_ws_attr_names <- function(){
     for(f in attr_ts){
         trt <- read_csv(f) %>%
             mutate(
-                # data_class_code = str_extract(var,
-                #                               '^([a-z])(?=[a-z]_)',
-                #                               group = 1),
-                # data_source_code = str_extract(var,
-                #                                '^[a-z]([a-z])(?=_)',
-                #                                group = 1),
                 var = drop_var_prefix(var)
             ) %>%
-            # left_join(univ_codes,
-            #           by = c('data_class_code', 'data_source_code')) %>%
-            # select(-matches('data.*code')) %>%
-            # select(network, domain, site_code, date, var, val, data_class, data_source, pctCellErr) %>%
-            mutate(var = sub('^annual_', '', var),
-                   var = sub('_space$', '', var),
+            mutate(var = sub('_space$', '', var),
                    var = dplyr::recode(var, !!!var_changes)) %>%
             group_by(var) %>%
             mutate(year = year(date),
@@ -11354,7 +11343,6 @@ conform_ws_attr_names <- function(){
                     .cols = 5:ncol(.)) %>%
         rename_with(~dplyr::recode(., !!!var_changes),
                     .cols = 4:ncol(.)) %>%
-        rename_with(~sub('^annual_', '', .)) %>%
         rename_with(~sub('_space$', '', .)) %>%
         arrange(network, domain, site_code) %>%
         write_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv')
@@ -16956,6 +16944,31 @@ generate_watershed_summaries <- function(){
                   .groups = 'drop') %>%
         pivot_wider(names_from = 'var', values_from = 'mean_val')
 
+    # modis GFCC
+    tree_cover <- map_dfr(fils[grepl('/tree_cover', fils)], read_feather) %>%
+        filter(grepl('_median', var),
+               ! is.na(val)) %>%
+        group_by(site_code, var) %>%
+        summarize(tree_cover_mean = mean(val),
+                  .groups = 'drop') %>%
+        select(-var)
+
+    bare_cover <- map_dfr(fils[grepl('/bare_cover', fils)], read_feather) %>%
+        filter(grepl('_median', var),
+               ! is.na(val)) %>%
+        group_by(site_code, var) %>%
+        summarize(bare_cover_mean = mean(val),
+                  .groups = 'drop') %>%
+        select(-var)
+
+    veg_cover <- map_dfr(fils[grepl('/veg_cover', fils)], read_feather) %>%
+        filter(grepl('_median', var),
+               ! is.na(val)) %>%
+        group_by(site_code, var) %>%
+        summarize(veg_cover_mean = mean(val),
+                  .groups = 'drop') %>%
+        select(-var)
+
     # nadp
     ff <- fils[grepl('/nadp', fils)]
 
@@ -16995,6 +17008,9 @@ generate_watershed_summaries <- function(){
     wide_spat_data <- join_if_exists('glhymps', wide_spat_data)
     wide_spat_data <- join_if_exists('lithology', wide_spat_data)
     wide_spat_data <- join_if_exists('modis_igbp', wide_spat_data)
+    wide_spat_data <- join_if_exists('tree_cover', wide_spat_data)
+    wide_spat_data <- join_if_exists('veg_cover', wide_spat_data)
+    wide_spat_data <- join_if_exists('bare_cover', wide_spat_data)
     wide_spat_data <- join_if_exists('nadp', wide_spat_data)
 
     dir.create('../portal/data/general/spatial_downloadables',

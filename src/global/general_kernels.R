@@ -1085,13 +1085,15 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
     # https://www.sciencebase.gov/catalog/item/53481333e4b06f6ce034aae7
     # https://github.com/USEPA/StreamCat/blob/master/ControlTable_StreamCat.csv
 
-    nadp_dir <- glue('data/{n}/{d}/ws_traits/nadp/',
-                     n = network,
-                     d = domain)
+    nadp_dir <- glue('data/{network}/{domain}/ws_traits/nadp/')
 
-    dir.create(nadp_dir, recursive = TRUE, showWarnings = FALSE)
+    dir.create(nadp_dir,
+               recursive = TRUE,
+               showWarnings = FALSE)
 
-    nadp_files <- list.files('data/spatial/ndap', recursive = TRUE, full.names = TRUE)
+    nadp_files <- list.files('data/spatial/ndap',
+                             recursive = TRUE,
+                             full.names = TRUE)
 
     sites <- boundaries$site_code
 
@@ -1100,15 +1102,14 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
         site_boundary <- boundaries %>%
             filter(site_code == !!sites[s])
 
-        usa_bb <- sf::st_bbox(obj	= c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
+        usa_bb <- sf::st_bbox(obj = c(xmin = -124.725, ymin = 24.498, xmax = -66.9499,
                                       ymax = 49.384), crs = 4326) %>%
-            sf::st_as_sfc(., crs = 4326)
+            sf::st_as_sfc(crs = 4326)
 
         is_usa <- length(sm(sf::st_intersects(usa_bb, site_boundary))[[1]]) == 1
 
-        if(!is_usa){
-            msg <- generate_ms_exception(glue('No data available for {s}',
-                                              s = sites[s]))
+        if(! is_usa){
+            msg <- generate_ms_exception(glue('No data available for {sites[s]}'))
 
             logerror(msg = msg,
                      logger = logger_module)
@@ -1118,14 +1119,14 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
         all_vars <- tibble()
         for(p in 1:length(nadp_files)){
 
-            year <- str_split_fixed(nadp_files[p], '/', n = Inf)[1,4]
-            var <- str_split_fixed(str_split_fixed(nadp_files[p], '/', n = Inf)[1,5], '_', Inf)[1,2]
+            year <- str_split_fixed(nadp_files[p], '/', n = Inf)[1, 4]
+            var <- str_split_fixed(str_split_fixed(nadp_files[p], '/', n = Inf)[1, 5], '_', Inf)[1, 2]
 
             ws_values <- try(extract_ws_mean(site_boundary = site_boundary,
                                              raster_path = nadp_files[p]),
                              silent = TRUE)
 
-            if(inherits(ws_values, 'try-error')) { next }
+            if(inherits(ws_values, 'try-error')) next
 
 
             val_mean <- round(unname(ws_values['mean']), 3)
@@ -1159,16 +1160,14 @@ process_3_ms814 <- function(network, domain, prodname_ms, site_code,
             select(year, site_code, var, val, pctCellErr)
 
         if(all(is.na(fin_nadp$val))){
-            msg <- generate_ms_exception(glue('No data were retrived for {s}',
-                                              s = sites[s]))
+            msg <- generate_ms_exception(glue('No data were retrived for {sites[s]}'))
 
             logerror(msg = msg,
                      logger = logger_module)
         } else {
             fin_nadp <- append_unprod_prefix(fin_nadp, prodname_ms)
-            write_feather(fin_nadp, glue('{d}sum_{s}.feather',
-                                         d = nadp_dir,
-                                         s = sites[s]))
+            write_feather(fin_nadp,
+                          glue('{nadp_dir}sum_{sites[s]}.feather'))
         }
     }
 }
@@ -2138,7 +2137,7 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code, boundaries)
                            by = 'id')
 
         igbp_e <- igbp_e %>%
-            mutate(percent = round((CellTally*100)/sum(CellTally, na.rm = TRUE), 3)) %>%
+            mutate(percent = round((CellTally * 100) / sum(CellTally, na.rm = TRUE), 3)) %>%
             mutate(percent = ifelse(is.na(percent), 0, percent)) %>%
             select(var = macrosheds_code, val = percent) %>%
             mutate(year = !!year) %>%
@@ -2148,7 +2147,7 @@ process_3_ms825 <- function(network, domain, prodname_ms, site_code, boundaries)
     }
 
     igbp_final <- igbp_all %>%
-        mutate(year = as.numeric(str_split_fixed(year, '_', n = Inf)[,1])) %>%
+        mutate(year = as.numeric(str_split_fixed(year, '_', n = Inf)[, 1])) %>%
         select(year, site_code, var, val)
 
     igbp_final <- append_unprod_prefix(igbp_final, prodname_ms)
