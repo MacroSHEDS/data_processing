@@ -80,18 +80,6 @@ variables_ws_attr_timeseries.csv
 
 ⠀⠀⠀⠀Variable metadata (standard units and definitions) for temporally explicit watershed attributes
 
-variable_category_codes_ws_attr.csv
-
-⠀⠀⠀⠀Watershed attribute category codes (the second letter of the variable
-
-⠀⠀⠀⠀code prefix)
-
-variable_data_source_codes_ws_attr.csv
-
-⠀⠀⠀⠀Watershed attribute data source codes (the first letter of the
-
-⠀⠀⠀⠀variable code prefix)
-
 detection_limits.csv
 
 ⠀⠀⠀⠀Primary data source detection limits

@@ -11290,6 +11290,8 @@ conform_ws_attr_names <- function(){
     #2. put the names of statistics after the actual variable names
     #3. remove the variable prefix
 
+    cat('Cleaning up ws attr files and conforming variable names\n')
+
     var_changes <- c(
         area_ha = 'area',
         ws_area_ha = 'area',
@@ -11311,7 +11313,8 @@ conform_ws_attr_names <- function(){
         mean_annual_evi = 'evi_mean',
         snow_depth_ann_mean = 'snow_depth_mean',
         swe_ann_mean = 'swe_mean',
-        temp_mean_median = 'temp_median'
+        temp_mean_median = 'temp_median',
+        temp_mean_sd = 'temp_sd'
     )
 
     univ_codes <- univ_products %>%
@@ -11323,11 +11326,12 @@ conform_ws_attr_names <- function(){
                           full.names = TRUE)
 
     for(f in attr_ts){
-        trt <- read_csv(f) %>%
+        trt <- read_csv(f, show_col_types = FALSE) %>%
             mutate(
                 var = drop_var_prefix(var)
             ) %>%
             mutate(var = sub('_space$', '', var),
+                   var = sub('^annual_', '', var),
                    var = dplyr::recode(var, !!!var_changes)) %>%
             group_by(var) %>%
             mutate(year = year(date),
@@ -11338,12 +11342,14 @@ conform_ws_attr_names <- function(){
             write_csv(f)
     }
 
-    read_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv') %>%
+    read_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv',
+             show_col_types = FALSE) %>%
         rename_with(~substr(., 4, nchar(.)),
                     .cols = 5:ncol(.)) %>%
         rename_with(~dplyr::recode(., !!!var_changes),
                     .cols = 4:ncol(.)) %>%
         rename_with(~sub('_space$', '', .)) %>%
+        rename_with(~sub('^annual_', '', .)) %>%
         arrange(network, domain, site_code) %>%
         write_csv('../portal/data/general/spatial_downloadables/watershed_summaries.csv')
 }
@@ -11479,7 +11485,8 @@ postprocess_entire_dataset <- function(site_data,
 
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
-        reformat_camels_for_ms(vsn = dataset_version)
+        reformat_camels_for_ms(vsn = dataset_version,
+                               rebuild = TRUE)
 
         #run precip through the range check again (found crazy low values in luquillo precip)
         ff <- system(paste('find', fs_dir, '-path "*/2_timeseries_data/*/precipitation/*.feather"'),
@@ -11487,7 +11494,7 @@ postprocess_entire_dataset <- function(site_data,
         for(f in ff){
             zz = read_feather(f)
             if(any(na.omit(zz$val) < 0)){
-                print(f)
+                # print(f)
                 zz$val[! is.na(zz$val) & zz$val < 0] <- 0
                 write_feather(zz, f)
             }
@@ -11579,14 +11586,14 @@ postprocess_entire_dataset <- function(site_data,
 
         manually_edit_eml()
 
-        stop('figure out why some Q values have uncertainty, some have 0, some NA. fix and rm the code immediately below this')
-        setwd('~/git/macrosheds/data_acquisition/eml/data_links/')
-        zz = list.files(pattern = '^timeseries_[a-z_]+\\.csv$')
-        for(z in zz){
-            read_csv(z) %>%
-                mutate(val_err = ifelse(var_category %in% c('discharge', 'precipitation'), NA_real_, val_err)) %>%
-                write_csv(z)
-        }
+        # stop('figure out why some Q values have uncertainty, some have 0, some NA. fix and rm the code immediately below this')
+        # setwd('~/git/macrosheds/data_acquisition/eml/data_links/')
+        # zz = list.files(pattern = '^timeseries_[a-z_]+\\.csv$')
+        # for(z in zz){
+        #     read_csv(z) %>%
+        #         mutate(val_err = ifelse(var_category %in% c('discharge', 'precipitation'), NA_real_, val_err)) %>%
+        #         write_csv(z)
+        # }
 
         # log_with_indent(glue('Uploading dataset v{vv} to EDI',
         #                      vv = dataset_version),
@@ -11611,6 +11618,7 @@ compute_load <- function(){
     #need to write out these files, then calc load, THEN zip them up in preparation for figshare.
     #in 2024 they were pre-unzipped for Gubbins+Lowman, but next time macrosheds_files_by_domain needs to be
     #run with notes comments/code toggled
+    stop('work to do')
     root_2024 <- 'macrosheds_figshare_v2/macrosheds_files_by_domain'
 
     dir.create('scratch/load_out', showWarnings = FALSE)
@@ -11663,10 +11671,12 @@ add_a_few_more_things_to_figshare <- function(){
         filter(site_type != 'rain_gauge',
                in_workflow == 1) %>%
         select(domain, network, site_code)
+
     read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
         left_join(ntw_dmn_join, by = 'site_code') %>%
         relocate(domain, network, .after = 'site_code') %>%
         write_feather(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'))
+
     read_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv')) %>%
         left_join(ntw_dmn_join, by = 'site_code') %>%
         relocate(domain, network, .after = 'site_code') %>%
@@ -11796,10 +11806,6 @@ remove_flux_neon_etc <- function(where, rm_dmns){
     read_csv(loc) %>%
         filter(! chem_category %in% c('precip_flux', 'stream_flux')) %>%
         write_csv(loc)
-}
-
-remove_more_stuff_temporarily <- function(){
-    st_delete('macrosheds_figshare_v1/5_shapefiles/neon_stream_gauge_locations.shp', driver = 'ESRI Shapefile')
 }
 
 manually_edit_eml <- function(){
@@ -12321,7 +12327,8 @@ assemble_misc_docs_figshare <- function(where){
     dir.create(docs_dir, showWarnings = FALSE)
 
     attrib_ts_data_noletters <- postprocess_attribution_ts()
-    attrib_ts_data <- add_letters_to_attrib_ts(attrib_ts_data_noletters)
+    attrib_ts_data <- add_letters_to_attrib_ts(attrib_ts_data_noletters) %>%
+        arrange(network, domain, macrosheds_prodname)
     write_csv(attrib_ts_data,
               file.path(docs_dir, '01b_attribution_and_intellectual_rights_complete.csv'))
 
@@ -12383,6 +12390,7 @@ assemble_misc_docs_figshare <- function(where){
     #           file.path(docs_dir, '06_ws_attr_documentation', '06e_ws_attr_data_source_codes.csv'))
 
     prepare_data_irreg_doc_for_figshare(outfile = file.path(docs_dir, '08_data_irregularities.csv'))
+    prepare_dist_record_for_figshare(outfile = file.path(docs_dir, '09_disturbance_record.csv'))
 }
 
 prepare_data_irreg_doc_for_figshare <- function(outfile){
@@ -12393,6 +12401,49 @@ prepare_data_irreg_doc_for_figshare <- function(outfile){
         col_types = 'ccccccccn'
     )) %>%
         mutate(included_in_current_dataset = as.logical(included_in_current_dataset)) %>%
+        write_csv(outfile)
+}
+
+prepare_dist_record_for_figshare <- function(outfile){
+
+    dist_rec <- sm(googlesheets4::read_sheet(
+        'https://docs.google.com/spreadsheets/d/1jrYTulv3Wnfk3qBghXX1KjynJjkXB7M3n2M0TsdN4ys/edit?gid=0#gid=0',
+        na = c('', 'NA'),
+        col_types = 'ccccccccDDc'
+    ))
+
+    if(any(is.na(dist_rec$watershed_type))){
+        stop('missing value in disturbance record "watershed_type" column')
+    }
+
+    dist_test <- site_data %>%
+        filter(in_workflow == 1,
+               site_type != 'rain_gauge') %>%
+        select(domain, site_code, ws_status) %>%
+        full_join(dist_rec, by = c('domain', 'site_code'))
+
+    dist_test <- dist_test %>%
+        select(domain, site_code, x_site_data = ws_status, x_dist = watershed_type, disturbance_source)
+
+    nasum <- is.na(dist_test$x_site_data) + is.na(dist_test$x_dist)
+    if(any(is.na(nasum) | nasum == 1)){
+        stop('presence/absence mismatch between ws_status (site data) and watershed_type (disturbance record). There should really be only one such column, but there it is for now.')
+    }
+
+    distcompare <- dist_test$x_site_data == dist_test$x_dist
+    if(any(! distcompare, na.rm = TRUE)){
+        stop('value mismatch between ws_status (site data) and watershed_type (disturbance record). There should really be only one such column, but there it is for now.')
+    }
+
+    dist_rec %>%
+        mutate(watershed_type = case_match(watershed_type,
+                                           'exp' ~ 'experimental',
+                                           'non_exp' ~ 'non_experimental')) %>%
+        rename(watershed_status = watershed_type,
+               disturbance_class = disturbance_type,
+               disturbance_type = disturbance_def,
+               details = disturbance_ex,
+               reference = data_source) %>%
         write_csv(outfile)
 }
 
@@ -12554,7 +12605,7 @@ convert_ts_feathers_to_csv <- function(where){
 combine_ts_csvs <- function(where){
 
     #combines all timeseries csvs within a domain into a single
-    #csv, continaing all sites and variable categories (discharge, stream_chemistry, etc).
+    #csv, containing all sites and variable categories (discharge, stream_chemistry, etc).
     #var_category becomes a column.
 
     #should be merged with convert_ts_feathers_to_csv for efficiency
@@ -12563,8 +12614,6 @@ combine_ts_csvs <- function(where){
                      recursive = TRUE,
                      pattern = '\\.csv',
                      full.names = TRUE)
-
-    if(any(grepl('flux_inst', fs))) stop('this isnt set up to separate flux and chem. need a way to do that')
 
     domains <- unique(str_match(fs, '2_timeseries_data/[A-Za-z_]+/([A-Za-z_]+)?/.*\\.csv$')[, 2])
 
@@ -12577,7 +12626,7 @@ combine_ts_csvs <- function(where){
         domain_combined <- tibble()
         for(i in seq_along(fs_d)){
 
-            domain_combined <- read_csv(fs_d[i]) %>%
+            domain_combined <- read_csv(fs_d[i], show_col_types = FALSE) %>%
                 mutate(var_category = !!var_type[i]) %>%
                 relocate(var_category, .after = 'var') %>%
                 bind_rows(domain_combined)
@@ -12600,11 +12649,10 @@ combine_daymet_csvs <- function(where){
                      pattern = '\\.csv',
                      full.names = TRUE)
 
-    map_dfr(fs, read_csv) %>%
+    map_dfr(fs, read_csv, show_col_types = FALSE) %>%
         write_csv(glue('{where}/CAMELS-compliant_Daymet_forcings.csv'))
 
-    # file.remove(fs)
-    message('uncomment file.remove above')
+    invisible(file.remove(fs))
 }
 
 combine_and_move_spatial_objects <- function(from, to){
@@ -12665,7 +12713,7 @@ prepare_for_edi <- function(from, dataset_version){
                     logger = logger_module)
     convert_ts_feathers_to_csv(file.path(from, '2_timeseries_data'))
 
-    log_with_indent('Combining 2_timeseries_data CSVs (takes a few mins. should be merged with the previous)',
+    log_with_indent('Combining 2_timeseries_data CSVs (takes a few mins. should be merged with the previous func)',
                     indent = 2,
                     logger = logger_module)
     combine_ts_csvs(file.path(from, '2_timeseries_data'))
@@ -12686,9 +12734,6 @@ prepare_for_edi <- function(from, dataset_version){
     combine_and_move_spatial_objects(from = file.path(from, '2_timeseries_data'),
                                      to = file.path(from, '5_shapefiles'))
 
-    warning('removing neon, etc. address this in v2 (see related warnings)')
-    remove_more_stuff_temporarily()
-
     eml_misc(from)
 
     build_eml_data_links_and_generate_eml(from, vsn = dataset_version,
@@ -12697,33 +12742,30 @@ prepare_for_edi <- function(from, dataset_version){
 
 build_eml_data_links_and_generate_eml <- function(where, vsn){
 
-    warning('removing neon and v2 dev domains. address this in v2')
-    rm_networks <- c('webb', 'mwo', 'neon')
-    # rm_networks <- c() #use this if not removing any networks this round
-    rm_neon_sites <- TRUE
-    # rm_neon_sites <- FALSE #switch this too
-    neon_sites <- filter(site_data, domain == 'neon') %>% pull(site_code)
-    broken_sites <- c('LaJaraSouthSpring', 'UpperJaramilloSpring') #fix these some day? they have no summary data.
+    message('build_eml_data_links_and_generate_eml could still be cleaned up a bit, and possibly further automated')
+
+    # rm_networks <- c('webb', 'mwo')
+    rm_networks <- c() #use this if not removing any networks this round
 
     #update this if necessary**
     warning('is bear still the only non-lter network that\'s on EDI?')
     non_lter_networks_on_edi <- c('bear')
 
-    warning(paste('look through creator_name1 and contact_name1 on',
-                  'https://docs.google.com/spreadsheets/d/1x38OiUPhD7C3m0vBj2kRZO_ORQrks4aOo0DDrFBjY7I/edit#gid=1195899788',
-                  'and make sure they all follow acceptable formats for separate_names helper (2 or 3 name components, space separated)'))
-
     ##grab resources from gsheets
 
-    googlesheets4::read_sheet(
-        conf$disturbance_record_gsheet,
-        na = c('', 'NA'),
-        col_types = 'c'
-    ) %>%
-        filter(! network %in% rm_networks) %>%
-        rename(ws_status = watershed_type, pulse_or_chronic = disturbance_type,
-               disturbance = disturbance_def, details = disturbance_ex) %>%
-        write_csv(file.path(dd, 'disturbance_record.csv'))
+    # googlesheets4::read_sheet(
+    #     conf$disturbance_record_gsheet,
+    #     na = c('', 'NA'),
+    #     col_types = 'c'
+    # ) %>%
+    #     filter(! network %in% rm_networks) %>%
+    #     rename(ws_status = watershed_type,
+    #            pulse_or_chronic = disturbance_type,
+    #            disturbance = disturbance_def,
+    #            details = disturbance_ex) %>%
+    #     write_csv(file.path(dd, 'disturbance_record.csv'))
+    file.copy(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/09_disturbance_record.csv'),
+              file.path(dd, 'disturbance_record.csv'))
 
     googlesheets4::read_sheet(
         conf$univ_prods_gsheet,
@@ -12737,7 +12779,8 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     ##build provenance table
 
-    prov <- read_csv(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv')) %>%
+    prov <- read_csv(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv'),
+                     show_col_types = FALSE) %>%
         mutate(dataPackageID = NA_character_, systemID = NA_character_, title = NA_character_,
                givenName = NA_character_, middleInitial = NA_character_,
                surName = NA_character_, role = NA_character_,
@@ -12769,7 +12812,6 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         arrange(organizationName, dataPackageID, title)
 
     write_tsv(prov, file.path(wd, 'provenance.txt'), na = '', quote = 'all')
-    # write_csv(prov, file.path(wd, 'provenance.csv'))
 
     ## link misc files
 
@@ -12878,10 +12920,10 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     file.link(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06h_ws_attr_refs.bib'),
               file.path(dd, 'ws_attr_refs.bib'))
     sw(file.remove(file.path(dd, 'changelog.txt')))
-    file.link(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/03_changelog.txt'),
-              file.path(dd, 'changelog.txt'))
+    file.link('CHANGELOG.md',
+              file.path(dd, 'changelog.md'))
     sw(file.remove(file.path(dd, 'glossary.txt')))
-    file.link(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/02_glossary.txt'),
+    file.link(glue('src/templates/figshare_docfiles/02_glossary.txt'),
               file.path(dd, 'glossary.txt'))
 
     ## zip documentation.txt files together
@@ -12890,20 +12932,20 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
                            full.names = TRUE, recursive = TRUE,
                            pattern = 'documentation_.*?\\.txt')
 
-    docdir = glue('{dd}/code_autodocumentation')
+    docdir <- glue('{dd}/code_autodocumentation')
     dir.create(docdir)
 
-    ntws = unique(str_match(docfiles, glue('^macrosheds_figshare_v{vsn}/2_timeseries_data/([a-z_]+)'))[, 2])
+    ntws <- unique(str_match(docfiles, glue('^macrosheds_figshare_v{vsn}/2_timeseries_data/([a-z_]+)'))[, 2])
     for(i in seq_along(ntws)){
 
         dir.create(file.path(docdir, ntws[i]))
-        dmns = list.files(glue('macrosheds_figshare_v{vsn}/2_timeseries_data/{ntws[i]}'))
-        dmns = grep('\\.csv', dmns, invert = TRUE, value = TRUE)
+        dmns <- list.files(glue('macrosheds_figshare_v{vsn}/2_timeseries_data/{ntws[i]}'))
+        dmns <- grep('\\.csv', dmns, invert = TRUE, value = TRUE)
         for(j in seq_along(dmns)){
 
             dir.create(file.path(docdir, ntws[i], dmns[j]))
-            fs = list.files(glue('macrosheds_figshare_v{vsn}/2_timeseries_data/{ntws[i]}/{dmns[j]}/documentation'), full.names = TRUE)
-            fs = grep('README.txt$', fs, invert = TRUE, value = TRUE)
+            fs <- list.files(glue('macrosheds_figshare_v{vsn}/2_timeseries_data/{ntws[i]}/{dmns[j]}/documentation'), full.names = TRUE)
+            fs <- grep('README.txt$', fs, invert = TRUE, value = TRUE)
             file.copy(fs, file.path(docdir, ntws[i], dmns[j]))
         }
     }
@@ -12914,16 +12956,16 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     ## sample regimen codes
 
-    reg_codes = tribble(~sample_regimen_code, ~definition,
-                        'IS', 'Sample collected by an Installed Sensor.',
-                        'GN', 'Sample collected by hand (Grab sample) without a sensor (Non-sensor), e.g. a water sample for lab analysis.',
-                        'IN', 'Sample collected via an Installed apparatus, though not with a sensor per se (Non-sensor). This is rare.',
-                        'GS', 'Sample collected by hand (Grab sample), using a handheld Sensor.')
-
-    write_csv(reg_codes, file.path(dd, 'variable_sample_regimen_codes_timeseries.csv'))
-
-    basenames = c(basenames, 'variable_sample_regimen_codes_timeseries.csv')
-    descriptions = c(descriptions, 'Time-series sample regimen codes (the two-letter prefix on all time-series variable names)')
+    # reg_codes = tribble(~sample_regimen_code, ~definition,
+    #                     'IS', 'Sample collected by an Installed Sensor.',
+    #                     'GN', 'Sample collected by hand (Grab sample) without a sensor (Non-sensor), e.g. a water sample for lab analysis.',
+    #                     'IN', 'Sample collected via an Installed apparatus, though not with a sensor per se (Non-sensor). This is rare.',
+    #                     'GS', 'Sample collected by hand (Grab sample), using a handheld Sensor.')
+    #
+    # write_csv(reg_codes, file.path(dd, 'variable_sample_regimen_codes_timeseries.csv'))
+    #
+    # basenames = c(basenames, 'variable_sample_regimen_codes_timeseries.csv')
+    # descriptions = c(descriptions, 'Time-series sample regimen codes (the two-letter prefix on all time-series variable names)')
 
     ## include bibtex files with macrosheds R package
 
@@ -12934,7 +12976,8 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     ## misc
 
-    read_csv(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv')) %>%
+    read_csv(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv'),
+             show_col_types = FALSE) %>%
         filter(! network %in% rm_networks) %>%
         write_csv(file.path(dd, 'attribution_and_intellectual_rights_timeseries.csv'))
 
@@ -12942,45 +12985,26 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     basenames = grep('\\.feather$', basenames, invert = TRUE, value = TRUE)
     descriptions = grep('\\.feather$', descriptions, invert = TRUE, value = TRUE)
 
-    if(rm_neon_sites){
-        read_csv('eml/data_links/CAMELS_compliant_Daymet_forcings.csv') %>%
-            filter(! site_code %in% neon_sites) %>%
-            write_csv('eml/data_links/CAMELS_compliant_Daymet_forcings.csv')
-        read_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv') %>%
-            filter(! site_code %in% neon_sites) %>%
-            write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
-    }
-
-    read_csv('eml/data_links/timeseries_mcmurdo.csv') %>%
-        select(-year) %>%
-        write_csv('eml/data_links/timeseries_mcmurdo.csv')
-
-    read_csv('eml/data_links/ws_attr_summaries.csv') %>%
-        rename(lg_nlcd_lichens = lg_lncd_lichens,
-               lb_igbp_closed_shrub = lb_igbp_cloased_shrub) %>%
-        filter(! site_code %in% broken_sites) %>%
-        write_csv('eml/data_links/ws_attr_summaries.csv')
-
-    ## add hydro attributes to CAMELS attrs
-
-    all_site_hydro <- read_feather(glue('macrosheds_figshare_v{vsn}/hydro_attr_dumpfile.feather'))
-
-    read_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv') %>%
-        left_join(all_site_hydro) %>%
-        arrange(site_code) %>%
-        write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
+    # if(rm_neon_sites){
+    #     read_csv('eml/data_links/CAMELS_compliant_Daymet_forcings.csv') %>%
+    #         filter(! site_code %in% neon_sites) %>%
+    #         write_csv('eml/data_links/CAMELS_compliant_Daymet_forcings.csv')
+    #     read_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv') %>%
+    #         filter(! site_code %in% neon_sites) %>%
+    #         write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
+    # }
 
     ## write eml
 
-    temporal_coverage <- map(ts_tables, ~range(read_csv(.)$datetime)) %>%
+    temporal_coverage <- map(ts_tables, ~range(read_csv(., show_col_types = FALSE)$date)) %>%
         reduce(~c(min(c(.x[1], .y[1])), max(c(.x[2], .y[2]))))
 
-    if(rm_neon_sites){
-        file.copy('eml/eml_templates/geographic_coverage.txt', '/tmp/aaa', overwrite = TRUE)
-        read_lines('eml/eml_templates/geographic_coverage.txt') %>%
-            str_subset(paste0('^', paste(neon_sites, collapse = '|')), negate = TRUE) %>%
-            write_lines('eml/eml_templates/geographic_coverage.txt')
-    }
+    # if(rm_neon_sites){
+    #     file.copy('eml/eml_templates/geographic_coverage.txt', '/tmp/aaa', overwrite = TRUE)
+    #     read_lines('eml/eml_templates/geographic_coverage.txt') %>%
+    #         str_subset(paste0('^', paste(neon_sites, collapse = '|')), negate = TRUE) %>%
+    #         write_lines('eml/eml_templates/geographic_coverage.txt')
+    # }
 
     other_entities <- c('shapefiles.zip',
                         'data_use_agreements.docx',
@@ -12992,7 +13016,7 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     make_eml(wd, dd, ed,
              dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data from small watershed ecosystem studies',
-             temporal.coverage = as.Date(temporal_coverage),
+             temporal.coverage = temporal_coverage,
              geographic.description = NULL,#not needed if geographic_coverage.txt exists,
              geographic.coordinates = NULL,#same,
              maintenance.description = 'ongoing',
@@ -13017,14 +13041,14 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
              # package.id = 'edi.981.1')
              package.id = 'edi.1262.1')
 
-    if(rm_neon_sites){
-        file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
-    }
+    # if(rm_neon_sites){
+    #     file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
+    # }
 
     ## (the upload to our server can be automated by uncommenting the following line
     ## (and modifying it to accept a password):
-    # system('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v1')
-    warning('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v1')
+    # system(paste0('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v', vsn))
+    warning(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
 }
 
 get_edi_identifier <- function(x){
@@ -13098,13 +13122,26 @@ split_names <- function(x){
     #Jane H. Doe
     #J. H. Doe
 
+    institution_indicators <- c('science', 'center', 'service', 'group', 'institute', 'department', 'national')
+
     xsep <- lapply(x, function(xx){
+
         if(is.na(xx)) return(c(NA_character_, NA_character_, NA_character_))
         splt <- strsplit(xx, '\\ ')[[1]]
-        if(length(splt) > 3) stop('non-NA names must have 1-3 space-separated components')
-        if(length(splt) == 1) splt <- c(splt, '', '')
-        if(length(splt) == 2) splt <- c(splt[1], '', splt[2])
-        if(nchar(splt[2]) > 1) splt[2] <- toupper(substr(splt[2], 1, 1))
+
+        is_institution <- any(sapply(institution_indicators, function(z) grepl(z, xx, ignore.case = TRUE)))
+        if(length(splt) > 3 && ! is_institution) stop('non-NA names must have 1-3 space-separated components')
+
+        if(is_institution) return(c(xx, '', ''))
+
+        if(length(splt) == 1){
+            splt <- c(splt, '', '')
+        } else if(length(splt) == 2){
+            splt <- c(splt[1], '', splt[2])
+        } else if(length(splt) == 3 && nchar(splt[2]) > 1){
+            splt[2] <- toupper(substr(splt[2], 1, 1))
+        }
+
         splt
     })
 
@@ -13120,25 +13157,27 @@ combine_ws_attrs <- function(where){
                            full.names = TRUE,
                            pattern = '*.csv')
 
-    map_dfr(ws_attrs, read_csv) %>%
+    map_dfr(ws_attrs, read_csv, show_col_types = FALSE) %>%
         write_csv(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries.csv'))
 
-    file.remove(ws_attrs)
+    invisible(file.remove(ws_attrs))
     # file.remove(glue('{where}/1_watershed_attribute_data/ws_attr_timeseries'))
 
     #camels-compliant watershed attributes
     ws_attrs <- list.files(glue('{where}/3_CAMELS-compliant_watershed_attributes'),
                            full.names = TRUE)
 
-    d <- read_csv(ws_attrs[1])
+    d <- read_csv(ws_attrs[1], show_col_types = FALSE)
     for(i in 2:length(ws_attrs)){
-        d <- full_join(d, read_csv(ws_attrs[i]), by = 'site_code')
+        d <- full_join(d,
+                       read_csv(ws_attrs[i],
+                                show_col_types = FALSE),
+                       by = 'site_code')
     }
 
     write_csv(d, glue('{where}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
 
-    # file.remove(ws_attrs)
-    message('uncomment file.remove above')
+    invisible(file.remove(ws_attrs))
 }
 
 eml_misc <- function(where){
@@ -13169,7 +13208,8 @@ eml_misc <- function(where){
         flags = '-r9Xq')
 
     #clean up camels-style data
-    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+    read_csv(file.path(where, '3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'),
+             show_col_types = FALSE) %>%
         relocate('site_code', .before = p_mean) %>%
         filter(! grepl('[0-9]{8}', site_code)) %>%
         arrange(site_code) %>%
@@ -16791,11 +16831,11 @@ generate_watershed_summaries <- function(){
     soil_fils <- fils[grepl('/nrcs_soils', fils)]
 
     soil <- map_dfr(soil_fils, read_feather) %>%
-        filter(var %in% c('pf_soil_org',
-                          'pf_soil_sand',
-                          'pf_soil_silt',
-                          'pf_soil_clay',
-                          'pf_soil_ph')) %>%
+        # filter(var %in% c('pf_soil_org',
+        #                   'pf_soil_sand',
+        #                   'pf_soil_silt',
+        #                   'pf_soil_clay',
+        #                   'pf_soil_ph')) %>%
         filter(pctCellErr <= 15) %>%
         select(-year, -pctCellErr) %>%
         pivot_wider(names_from = 'var', values_from = 'val')
@@ -16949,7 +16989,7 @@ generate_watershed_summaries <- function(){
         filter(grepl('_median', var),
                ! is.na(val)) %>%
         group_by(site_code, var) %>%
-        summarize(tree_cover_mean = mean(val),
+        summarize(vb_tree_cover_mean = mean(val),
                   .groups = 'drop') %>%
         select(-var)
 
@@ -16957,7 +16997,7 @@ generate_watershed_summaries <- function(){
         filter(grepl('_median', var),
                ! is.na(val)) %>%
         group_by(site_code, var) %>%
-        summarize(bare_cover_mean = mean(val),
+        summarize(vb_bare_cover_mean = mean(val),
                   .groups = 'drop') %>%
         select(-var)
 
@@ -16965,7 +17005,7 @@ generate_watershed_summaries <- function(){
         filter(grepl('_median', var),
                ! is.na(val)) %>%
         group_by(site_code, var) %>%
-        summarize(veg_cover_mean = mean(val),
+        summarize(vb_veg_cover_mean = mean(val),
                   .groups = 'drop') %>%
         select(-var)
 
@@ -17048,8 +17088,8 @@ generate_watershed_raw_spatial_dataset <- function(){
 
         if(! length(trait_files)) next
 
-        extention <- str_split_fixed(trait_files, '/', n = Inf)[,6]
-        check_sum_raw <- str_split_fixed(extention, '_', n = Inf)[,1]
+        extention <- str_split_fixed(trait_files, '/', n = Inf)[, 6]
+        check_sum_raw <- str_split_fixed(extention, '_', n = Inf)[, 1]
         sum_raw_prez <- unique(check_sum_raw)
 
         if((length(sum_raw_prez) == 1 && sum_raw_prez == 'sum') ||
@@ -17076,7 +17116,6 @@ generate_watershed_raw_spatial_dataset <- function(){
 
         if(all(c('raw', 'sum') %in% sum_raw_prez)){
             trait_files <- trait_files[grepl('raw', trait_files)]
-
             all_trait <- map_dfr(trait_files, read_feather)
         }
 
@@ -17089,7 +17128,8 @@ generate_watershed_raw_spatial_dataset <- function(){
         select(network, domain, site_code)
 
     raw_spatial_dat <- raw_spatial_dat %>%
-        filter(!is.na(val)) %>%
+        as_tibble() %>%
+        filter(! is.na(val)) %>%
         left_join(site_doms,
                   by = 'site_code') %>%
         mutate(date = as.Date(datetime)) %>%
@@ -17126,6 +17166,9 @@ generate_watershed_raw_spatial_dataset <- function(){
         raw_spatial_dat <- filter(raw_spatial_dat,
                                   ! var %in% wonky_varnames)
     }
+
+    # raw_spatial_dat$var[raw_spatial_dat$var == 'cc_temp_mean_median'] <- 'cc_temp_median'
+    # raw_spatial_dat$var[raw_spatial_dat$var == 'cc_temp_mean_sd'] <- 'cc_temp_sd'
 
     category_codes <- univ_products %>%
         select(variable_category_code = data_class_code,
@@ -18744,17 +18787,21 @@ legal_details_scrape <- function(dataset_version){
     }
 }
 
-reformat_camels_for_ms <- function(vsn){
+reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
+
+    #rebuild = FALSE assumes scratch/ already contains rebuilt data
 
     ms_attributes_dir <- 'scratch/camels_assembly/ms_attributes'
     daymet_dir <- 'scratch/camels_assembly/daymet_with_pet'
 
-    source('src/global/camels_formatting_scripts/append_pet_to_daymet.R',
-           local = new.env())
-    source('src/global/camels_formatting_scripts/camelsesque_ws_attrs.R',
-           local = new.env())
-    source('src/global/camels_formatting_scripts/camels_hydro.R',
-           local = new.env())
+    if(rebuild){
+        source('src/global/camels_formatting_scripts/append_pet_to_daymet.R',
+               local = new.env())
+        source('src/global/camels_formatting_scripts/camelsesque_ws_attrs.R',
+               local = new.env())
+        source('src/global/camels_formatting_scripts/camels_hydro.R',
+               local = new.env())
+    }
 
     attr_files <- list.files(ms_attributes_dir,
                              recursive = TRUE,
@@ -19393,7 +19440,7 @@ convert_ms_to_bib <- function(citation, list = FALSE){
     #list: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
     #   rather than a formatted citation
 
-    stop('this function needs work. get it to parse the following correctly:')
+    stop('this function needs work. get it to parse the following correctly: (it might already work with these, but not with their originals)')
     # Van Cleve, K., F.S. Chapin, R. Ruess, M.C. Mack, J.B. Jones, and Bonanza Creek LTER. 2023. Caribou-Poker Creeks Research Watershed: Daily Flow Rates for C2, C3, C4 ver 24. Environmental Data Initiative. https://doi.org/10.6073/pasta/2131d13a7a0a46abd039736e56b9f551 (Accessed 2024-09-09).
     # Carroll, R., Newman, A., Beutler, C., Williams, K., & O'Ryan, D. (2023). Stream discharge and temperature data collected within the East River, Colorado for the Lawrence Berkeley National Laboratory Watershed Function Science Focus Area (water years 2019 to 2022). Watershed Function SFA, ESS-DIVE repository. https://doi.org/10.15485/1779721
     #    (not sure about the original form of that one)
@@ -20197,3 +20244,4 @@ bind_older_ws_traits <- function(d){
 
     return(d_out)
 }
+

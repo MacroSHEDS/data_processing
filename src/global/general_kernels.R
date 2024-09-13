@@ -385,7 +385,7 @@ process_3_ms808 <- function(network, domain, prodname_ms, site_code,
     return()
 }
 
-#prism_precip; prism_temp_mean: STATUS=READY
+#prism_precip; prism_temp: STATUS=READY
 #. handle_errors
 process_3_ms809 <- function(network, domain, prodname_ms, site_code, boundaries){
 

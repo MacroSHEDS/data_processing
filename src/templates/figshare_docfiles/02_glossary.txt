@@ -31,13 +31,15 @@ discharge
     Streamflow; water volume over time; reported in L/s.
 stream chemistry
     Concentration of chemical constituents in stream water; reported in mg/L or mEq/L.
-stream flux
-    Mass of chemical constituents in stream water, per watershed area, over time; reported in kg/ha/d.
+stream flux (scaled)
+    Daily mass of chemical constituents passing a stream location, (per watershed area); reported in kg(/ha)/d.
+load
+	Total mass of chemical constituents in stream water, computed monthly or annually. Essentially the integral of flux over a longer period.
 precipitation
     Rainfall, snowfall, or both combined; reported per watershed in mm.
 precipitation chemistry
     Concentration of chemical constituents in precipitation; reported in mg/L or mEq/L; averaged across watershed area.
-precipitation flux
-    Mass of chemical constituents in precipitation, per watershed area, over time; reported in kd/ha/d.
+precipitation flux (scaled)
+    Daily mass of chemical constituents in precipitation, (per watershed area); reported in kd(/ha)/d.
 watershed attributes
     Areal watershed summary statistics, variables available are common to all MacroSheds sites.
