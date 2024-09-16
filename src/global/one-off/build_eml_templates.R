@@ -68,6 +68,8 @@ template_categorical_variables(wd, dd)
 
 # copy the first timeseries template (hbef) to account for all the other domains ####
 
+#on 20240916, adapting this section for use within the processing system
+
 ts_templts <- list.files('eml/data_links', pattern = '^timeseries')
 ts_templts <- grep('hbef\\.csv$', ts_templts, value = TRUE, invert = TRUE)
 ts_dmns <- str_match(ts_templts, '^timeseries_([a-z_0-9]+)\\.csv$')[, 2]
@@ -77,10 +79,21 @@ for(td in ts_dmns){
               overwrite = TRUE)
 }
 
-var_cat_map <- c('stream_chemistry' = 'Stream chemistry',
-                 'precip_chemistry' = 'Precipitation chemistry',
-                 'precipitation' = 'Precipitation depth',
-                 'discharge' = 'Stream discharge')
+var_cat_map <- c(
+    stream_chemistry = 'Stream chemistry',
+    precip_chemistry = 'Precipitation chemistry',
+    precipitation = 'Precipitation depth',
+    discharge = 'Stream discharge',
+    stream_flux_inst_scaled = 'Daily stream flux, scaled by watershed area',
+    precip_flux_inst_scaled = 'Daily precipitation flux, scaled by watershed area',
+    CUSTOM_precipitation = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Precipitation depth.',
+    CUSTOM_stream_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily stream flux, scaled by watershed area.',
+    CUSTOM_precip_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area.',
+    CUSTOM_stream_flux_inst_scaled_RefMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the regression method and scaled by watershed area.',
+    CUSTOM_stream_flux_inst_scaled_RefTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the composite method and scaled by watershed area.',
+    CUSTOM_stream_flux_inst_scaled_ClmMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the regression method and scaled by watershed area.',
+    CUSTOM_stream_flux_inst_scaled_ClmTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the composite method and scaled by watershed area.'
+)
 
 for(td in ts_dmns){
     read_tsv(glue('eml/eml_templates/catvars_timeseries_{td}.txt')) %>%

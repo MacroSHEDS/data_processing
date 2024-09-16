@@ -12625,21 +12625,36 @@ combine_ts_csvs <- function(where){
 
         fs_d <- grep(glue('2_timeseries_data/[A-Za-z_]+/{d}?/.*\\.csv$'), fs, value = TRUE)
         network_dir <- paste(str_split(fs_d[1], '/')[[1]][1:3], collapse = '/')
-        var_type <- str_match(fs_d, '([a-z_]+)/[^/]+\\.csv$')[, 2]
+        var_type <- str_match(fs_d, '^[^/]+/[^/]+/[^/]+/[^/]+/([^/]+)')[, 2] %>%
+            str_replace('CUSTOM', 'CUSTOM_')
 
         domain_combined <- tibble()
         for(i in seq_along(fs_d)){
 
-            domain_combined <- read_csv(fs_d[i], show_col_types = FALSE) %>%
-                mutate(var_category = !!var_type[i]) %>%
-                relocate(var_category, .after = 'var') %>%
-                bind_rows(domain_combined)
+            if(grepl('^CUSTOM_stream', var_type[i]) && d == 'panola'){
+
+                var_subtype <- str_match(fs_d[i], '^[^/]+/[^/]+/[^/]+/[^/]+/[^/]+/([^/]+)')[, 2]
+                var_subtype <- paste(var_type[i], var_subtype, sep = '_')
+                var_subtype <- sub('_Flx', '', var_subtype)
+
+                domain_combined <- read_csv(fs_d[i], show_col_types = FALSE) %>%
+                    mutate(var_category = !!var_subtype) %>%
+                    relocate(var_category, .after = 'var') %>%
+                    bind_rows(domain_combined)
+
+            } else {
+
+                domain_combined <- read_csv(fs_d[i], show_col_types = FALSE) %>%
+                    mutate(var_category = !!var_type[i]) %>%
+                    relocate(var_category, .after = 'var') %>%
+                    bind_rows(domain_combined)
+            }
 
             file.remove(fs_d[i])
         }
 
         domain_combined %>%
-            arrange(site_code, var_category, var) %>%
+            arrange(site_code, grepl('^CUSTOM', var_category), var_category, var) %>%
             write_csv(file.path(network_dir, paste0('timeseries_', d, '.csv')))
     }
 }
@@ -12755,19 +12770,8 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     warning('is bear still the only non-lter network that\'s on EDI?')
     non_lter_networks_on_edi <- c('bear')
 
-    ##grab resources from gsheets
+    ##grab resources from gsheets (etc)
 
-    # googlesheets4::read_sheet(
-    #     conf$disturbance_record_gsheet,
-    #     na = c('', 'NA'),
-    #     col_types = 'c'
-    # ) %>%
-    #     filter(! network %in% rm_networks) %>%
-    #     rename(ws_status = watershed_type,
-    #            pulse_or_chronic = disturbance_type,
-    #            disturbance = disturbance_def,
-    #            details = disturbance_ex) %>%
-    #     write_csv(file.path(dd, 'disturbance_record.csv'))
     file.copy(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/09_disturbance_record.csv'),
               file.path(dd, 'disturbance_record.csv'))
 
@@ -12997,6 +13001,45 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     #         filter(! site_code %in% neon_sites) %>%
     #         write_csv('eml/data_links/CAMELS_compliant_ws_attr_summaries.csv')
     # }
+
+    #(re)create attributes and catvars templates for all domains, using hbef as template-template
+
+    var_cat_map <- c(
+        stream_chemistry = 'Stream chemistry',
+        precip_chemistry = 'Precipitation chemistry',
+        precipitation = 'Precipitation depth',
+        discharge = 'Stream discharge',
+        stream_flux_inst_scaled = 'Daily stream flux, scaled by watershed area',
+        precip_flux_inst_scaled = 'Daily precipitation flux, scaled by watershed area',
+        CUSTOM_precipitation = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Precipitation depth.',
+        CUSTOM_stream_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily stream flux, scaled by watershed area.',
+        CUSTOM_precip_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area.',
+        CUSTOM_stream_flux_inst_scaled_RefMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the regression method and scaled by watershed area.',
+        CUSTOM_stream_flux_inst_scaled_RefTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the composite method and scaled by watershed area.',
+        CUSTOM_stream_flux_inst_scaled_ClmMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the regression method and scaled by watershed area.',
+        CUSTOM_stream_flux_inst_scaled_ClmTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the composite method and scaled by watershed area.'
+    ) %>%
+        stack() %>%
+        rename(definition = values,
+               var_category = ind)
+
+    ts_templts <- list.files('eml/data_links', pattern = '^timeseries.*?\\.csv')
+    ts_templts <- grep('hbef\\.csv$', ts_templts, value = TRUE, invert = TRUE)
+    ts_dmns <- str_match(ts_templts, '^timeseries_([a-z_0-9]+)\\.csv$')[, 2]
+    for(td in ts_dmns){
+
+        file.copy(from = 'eml/eml_templates/attributes_timeseries_hbef.txt',
+                  to = glue('eml/eml_templates/attributes_timeseries_{td}.txt'),
+                  overwrite = TRUE)
+
+        read_csv(glue('eml/data_links/timeseries_{td}.csv'),
+                 show_col_types = FALSE) %>%
+            distinct(var_category) %>%
+            left_join(var_cat_map, by = 'var_category') %>%
+            mutate(attributeName = 'var_category') %>%
+            select(attributeName, code = var_category, definition) %>%
+            write_tsv(glue('eml/eml_templates/catvars_timeseries_{td}.txt'))
+    }
 
     ## write eml
 
