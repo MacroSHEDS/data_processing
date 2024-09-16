@@ -1,0 +1,7 @@
+attributeName	code	definition
+data_class	climate	watershed attributes pertaining to the atmosphere or climate
+data_class	hydrology	watershed attributes pertaining to streamflow
+data_class	landcover	watershed attributes pertaining to land use and land cover categorizations
+data_class	parent material	watershed attributes pertaining to soil and bedrock
+data_class	terrain	watershed attributes pertaining to topography
+data_class	vegetation	watershed attributes pertaining to vegetation cover

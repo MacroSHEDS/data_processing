@@ -2,3 +2,5 @@
 "variable_code"	"MacroSheds variable short name"	"character"				
 "variable_name"	"Full name of MacroSheds variable"	"character"				
 "unit"	"Variable unit"	"character"				
+"data_class"	"The category to which each watershed attribute belongs"	"categorical"				
+"data_source"	"The source from which each watershed attribute was acquired"	"character"				

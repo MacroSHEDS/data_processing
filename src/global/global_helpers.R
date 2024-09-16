@@ -11991,6 +11991,10 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
             select(-matches('data.*code')) %>%
             arrange(data_class, tolower(data_source), tolower(variable_code))
 
+        ms_vars_ws %>%
+            filter(! grepl('^multi-year ', variable_name)) %>%
+            write_csv('scratch/ms_vars_ws_ts.csv')
+
         write_csv(ms_vars_ws, outfile_ws)
         save(ms_vars_ws, file = '../r_package/data/ms_vars_ws_attr.RData')
 
@@ -12828,9 +12832,9 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/05_timeseries_documentation/05b_timeseries_variable_metadata.csv'),
         glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/05_timeseries_documentation/05e_range_check_limits.csv'),
         glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/05_timeseries_documentation/05f_detection_limits_and_precision.csv'),
-        glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06b_ws_attr_variable_metadata.csv'),
-        glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv'),
-        glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv'),
+        glue('scratch/ms_vars_ws_ts.csv'),
+        # glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06d_ws_attr_variable_category_codes.csv'),
+        # glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/06_ws_attr_documentation/06e_ws_attr_data_source_codes.csv'),
         glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/08_data_irregularities.csv'),
         glue('macrosheds_figshare_v{vsn}/macrosheds_documentation_packageformat/variable_catalog.csv'),
         glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/attribution_and_intellectual_rights_timeseries.csv')
@@ -12840,9 +12844,9 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     basenames <- sub('^0[1-9][a-z]?_', '', basenames)
     basenames <- sub('site_metadata', 'sites', basenames)
     basenames <- sub('timeseries_variable_metadata', 'variables_timeseries', basenames)
-    basenames <- sub('ws_attr_variable_metadata', 'variables_ws_attr_timeseries', basenames)
-    basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
-    basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
+    basenames <- sub('ms_vars_ws_ts', 'variables_ws_attr_timeseries', basenames)
+    # basenames <- sub('ws_attr_variable_category_codes', 'variable_category_codes_ws_attr', basenames)
+    # basenames <- sub('ws_attr_data_source_codes', 'variable_data_source_codes_ws_attr', basenames)
     basenames <- sub('detection_limits_and_precision', 'detection_limits', basenames)
     basenames <- sub('CAMELS_compliant_ws_attr', 'CAMELS_compliant_ws_attr_summaries', basenames)
     basenames <- sub('variable_catalog', 'data_coverage_breakdown', basenames)
@@ -12884,12 +12888,12 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     descriptions <- str_replace(descriptions,
                                 '^variables_ws_attr_timeseries\\.csv$',
                                 'Watershed attribute variable metadata (standard units and definitions)')
-    descriptions <- str_replace(descriptions,
-                                '^variable_category_codes_ws_attr\\.csv$',
-                                'Watershed attribute category codes (the second letter of the variable code prefix)')
-    descriptions <- str_replace(descriptions,
-                                '^variable_data_source_codes_ws_attr\\.csv$',
-                                'Watershed attribute data source codes (the first letter of the variable code prefix)')
+    # descriptions <- str_replace(descriptions,
+    #                             '^variable_category_codes_ws_attr\\.csv$',
+    #                             'Watershed attribute category codes (the second letter of the variable code prefix)')
+    # descriptions <- str_replace(descriptions,
+    #                             '^variable_data_source_codes_ws_attr\\.csv$',
+    #                             'Watershed attribute data source codes (the first letter of the variable code prefix)')
     descriptions <- str_replace(descriptions,
                                 '^data_irregularities\\.csv$',
                                 'Any notable inconsistencies within the MacroSheds dataset')
