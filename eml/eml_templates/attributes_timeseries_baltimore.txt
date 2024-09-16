@@ -1,5 +1,5 @@
 "attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
-"datetime"	"date and time in UTC"	"Date"		"Y-M-DTh:m:sZ"		
+"datetime"	"date"	"Date"		"Y-M-D"		
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
 "var"	"variable name and prefix(G = grab sample, I = installed instrument, S = sensor, N = non-sensor)"	"character"				
 "var_category"	"the variable category"	"categorical"				

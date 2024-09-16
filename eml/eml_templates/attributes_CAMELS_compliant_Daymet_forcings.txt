@@ -1,5 +1,5 @@
 "attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
-"date"	"date as UTC timestamp with 00:00:00 time"	"Date"		"Y-M-DTh:m:sZ"		
+"date"	"date"	"Date"		"Y-M-D"		
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
 "dayl(s)"	"Watershed average seconds of daylight"	"numeric"	"second"		"NA"	"missing value"
 "prcp(mm/day)"	"Watershed average precipitation"	"numeric"	"millimetersPerDay"		"NA"	"missing value"

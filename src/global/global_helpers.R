@@ -18836,7 +18836,8 @@ reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
 
             this_site <- this_daymet %>%
                 filter(site_code == !!s) %>%
-                mutate(pet = if_else(is.infinite(pet), NA_real_, pet)) %>%
+                mutate(date = as.Date(date),
+                       pet = if_else(is.infinite(pet), NA_real_, pet)) %>%
                 rename(`dayl(s)` = dayl,
                        `prcp(mm/day)` = prcp,
                        `srad(W/m2)` = srad,
