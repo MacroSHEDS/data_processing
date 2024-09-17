@@ -11483,12 +11483,24 @@ postprocess_entire_dataset <- function(site_data,
         #this func is disabled. just a (probably redundant) postcheck now
         create_missing_stream_gauge_locations(where = fs_dir)
 
+        #run precip through the range check again (found crazy low values in luquillo precip) [1]
+        ff <- system(paste0('find macrosheds_dataset_v', vsn, ' -path "*/precipitation*/*.feather"'),
+                     intern = TRUE)
+        for(f in ff){
+            zz = read_feather(f)
+            if(any(na.omit(zz$val) < 0)){
+                print(f)
+                zz$val[! is.na(zz$val) & zz$val < 0] <- 0
+                write_feather(zz, f)
+            }
+        }
+
         prepare_for_figshare_packageformat(where = fs_dir,
                                            dataset_version = dataset_version)
         reformat_camels_for_ms(vsn = dataset_version,
                                rebuild = TRUE)
 
-        #run precip through the range check again (found crazy low values in luquillo precip)
+        #run precip through the range check again (found crazy low values in luquillo precip) [1]
         ff <- system(paste('find', fs_dir, '-path "*/2_timeseries_data/*/precipitation/*.feather"'),
                      intern = TRUE)
         for(f in ff){
@@ -11604,11 +11616,11 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
-    if(push_new_version_to_figshare_and_edi){
-        log_with_indent('Adding CAMELS data to Figshare (yes, this should happen earlier)',
-                        logger = logger_module)
-        add_a_few_more_things_to_figshare(vsn = dataset_version)
-    }
+    # if(push_new_version_to_figshare_and_edi){
+    #     log_with_indent('Adding CAMELS data to Figshare (yes, this should happen earlier)',
+    #                     logger = logger_module)
+    #     add_a_few_more_things_to_figshare(vsn = dataset_version)
+    # }
 
     message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
@@ -11618,6 +11630,9 @@ compute_load <- function(){
     #need to write out these files, then calc load, THEN zip them up in preparation for figshare.
     #in 2024 they were pre-unzipped for Gubbins+Lowman, but next time macrosheds_files_by_domain needs to be
     #run with notes comments/code toggled
+
+    #20240917 addendum: the comments have been toggled back, so all shoudld be well,
+    #but might need to change the location of root_2024? or at least the variable name
     stop('work to do')
     root_2024 <- 'macrosheds_figshare_v2/macrosheds_files_by_domain'
 
@@ -12982,6 +12997,21 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     ws_bib <- readr::read_file('eml/data_links/ws_attr_refs.bib')
     save(ws_bib, file = '../r_package/data/bibtex_ws_attr.RData')
 
+    ## load estimates
+
+    ntw_dmn_join <- site_data %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
+        select(domain, network, site_code)
+
+    sw(map_dfr(list.files('scratch/load_out', full.names = TRUE),
+                     read_csv, col_types = 'ccnncl') %>%
+        filter(! is.na(load)) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        arrange(network, domain, site_code, var, water_year) %>%
+        select(network, domain, site_code, var, water_year, everything()) %>%
+        write_csv(file.path(dd, 'load_annual.csv')))
+
     ## misc
 
     read_csv(glue('macrosheds_figshare_v{vsn}/0_documentation_and_metadata/01b_attribution_and_intellectual_rights_complete.csv'),
@@ -13274,7 +13304,8 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     require_shell_tool('find')
     require_shell_tool('rmdir')
 
-    #prepare documentation files needed by the package (some of these funcnames are now misnomers)
+    ##prepare documentation files needed by the package (some of these funcnames are now misnomers)
+
     prepare_site_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/site_metadata.csv'))
     prepare_variable_metadata_for_figshare(outfile = file.path(where, 'macrosheds_documentation_packageformat/variable_metadata.csv'),
                                            fs_format = 'old')
@@ -13290,7 +13321,8 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
                 vv = dataset_version)
 
-    ## copy over all files from the output dataset. clean up some stuff
+    ## copy over all files from the output dataset.
+
     file.copy(from = glue('macrosheds_dataset_v', dataset_version),
               to = where,
               recursive = TRUE)
@@ -13298,7 +13330,40 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
     file.rename(from = file.path(where, glue('macrosheds_dataset_v', dataset_version)),
                 to = tld)
 
-    # switch these lines on to make temp versions of dataset before package is updated ****
+    ## write load estimates to figshare timeseries folder as feathers
+
+    ntw_dmn_join <- site_data %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
+        select(domain, network, site_code)
+
+    loadf <- list.files('scratch/load_out', full.names = TRUE)
+    loadsites <- str_extract(loadf, '([^/]+)?\\.csv', group = 1)
+    for(s in loadsites){
+
+        dmn <- filter(ntw_dmn_join, site_code == !!s) %>%
+            pull(domain)
+        ntw <- filter(ntw_dmn_join, site_code == !!s) %>%
+            pull(network)
+
+        loaddir <- glue('macrosheds_figshare_v2/macrosheds_files_by_domain/{ntw}/{dmn}/derived/stream_load_scaled_annual')
+        if(s %in% loadsites){
+            d <- read_csv(loadf[loadsites == s], col_types = 'ccnncl')
+            if(nrow(d)){
+                d <- filter(d, ! is.na(load))
+                dir.create(loaddir, showWarnings = FALSE)
+                write_feather(
+                    d,
+                    file.path(loaddir, paste0(s, '.feather'))
+                )
+            }
+        }
+    }
+    message('verify that there are load files zipped up in macrosheds_files_by_domain')
+
+    # clean up some stuff, zip up timeseries data (including load)
+
+    # uncomment these lines to make temp versions of dataset before package is updated ****
     #append a distinguishing token to all network dirs
     # system(glue("rename 's/(.*)/$1_/' {tld}/*")) #****
 
@@ -13930,6 +13995,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
          file = '../r_package/data/sysdata.RData')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
+
     # other_uploadsA <- list.files('../portal/data/general/spatial_downloadables',
     other_uploadsA <- list.files(paste0('macrosheds_figshare_v', dataset_version, '/1_watershed_attribute_data/ws_attr_timeseries'),
                                  full.names = TRUE,
@@ -14081,10 +14147,76 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         # }
     }
 
+    #### CREATE, UPLOAD, PUBLISH WS ATTRS
+
+    more_fs_uploads <- c(camels_ws_attrs = glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'),
+                         camels_daymet = glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
+    more_fs_titles <- c('watershed_summaries_CAMELS', 'Daymet_forcings_CAMELS')
+
+    file_ids_for_r_package3 <- tibble()
+    for(i in seq_along(more_fs_uploads)){
+
+        uf <- more_fs_uploads[i]
+        ut <- more_fs_titles[i]
+
+        if(! ut %in% existing_extras_deets$title){
+            fs_id <- figshare_create_article(
+                title = ut,
+                description = 'See README',
+                keywords = list(names(uf)),
+                category_ids = cat_ids,
+                authors = conf$figshare_author_list,
+                type = 'dataset',
+                token = token)
+        } else {
+            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
+        }
+
+        #if existing article, delete old version
+        if(ut %in% existing_extras_deets$title){
+
+            for(fsid_ in fs_id){
+
+                fls <- figshare_list_article_files(fsid_,
+                                                   token = token)
+
+                # if(length(fls) >= 1){
+                for(j in seq_along(fls)){
+                    figshare_delete_article_file(fsid_,
+                                                 file_id = fls[[j]]$id,
+                                                 token = token)
+                }
+                # }
+            }
+        }
+
+        fs_id <- fs_id[1]
+
+        figshare_upload_article(fs_id,
+                                file = unname(uf),
+                                token = token)
+
+        figshare_publish_article(article_id = fs_id,
+                                 token = token) #22090694, 22090697
+
+        #update file IDs for R package functions that reference figshare
+        fls <- figshare_list_article_files(fs_id,
+                                           token = token)
+
+        file_ids_for_r_package3 <- bind_rows(
+            file_ids_for_r_package3,
+            tibble(ut, fig_code = fls[[1]]$id))
+    }
+
+    # load(file = '../r_package/data/sysdata2.RData')
+    file_ids_for_r_package2 <- file_ids_for_r_package2 %>%
+        filter(! ut %in% file_ids_for_r_package3$ut) %>%
+        bind_rows(file_ids_for_r_package3)
     save(file_ids_for_r_package2,
-         file = '../r_package/data/sysdata2.RData') #don't forget to add CAMELS ids in add_a_few_more_things_to_figshare()
+         file = '../r_package/data/sysdata2.RData')
+
     readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
-         file = '../r_package/data/figshare_id_check.txt')
+                       file = '../r_package/data/figshare_id_check.txt')
 }
 
 detrmin_mean_record_length <- function(df){
@@ -18857,12 +18989,29 @@ reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
     daymet_files <- list.files(daymet_dir,
                                full.names = TRUE)
 
-    soil <- map_dfr(grep('soil\\.', attr_files, value = TRUE), read_feather)
-    clim <- map_dfr(grep('clim\\.', attr_files, value = TRUE), read_feather)
-    topo <- map_dfr(grep('topo\\.', attr_files, value = TRUE), read_feather)
-    geol <- map_dfr(grep('geol\\.', attr_files, value = TRUE), read_feather)
-    vege <- map_dfr(grep('vege\\.', attr_files, value = TRUE), read_feather)
-    hydro <- map_dfr(grep('hydro\\.', attr_files, value = TRUE), read_feather)
+    ntw_dmn_join <- site_data %>%
+        filter(site_type != 'rain_gauge',
+               in_workflow == 1) %>%
+        select(domain, network, site_code)
+
+    soil <- map_dfr(grep('soil\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+    clim <- map_dfr(grep('clim\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+    topo <- map_dfr(grep('topo\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+    geol <- map_dfr(grep('geol\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+    vege <- map_dfr(grep('vege\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+    hydro <- map_dfr(grep('hydro\\.', attr_files, value = TRUE), read_feather) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
 
     dir.create(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes'), showWarnings = FALSE)
     dir.create(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings'), showWarnings = FALSE)
@@ -18881,7 +19030,7 @@ reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
         sites <- unique(this_daymet$site_code)
         for(s in sites){
 
-            this_site <- this_daymet %>%
+            this_daymet %>%
                 filter(site_code == !!s) %>%
                 mutate(date = as.Date(date),
                        pet = if_else(is.infinite(pet), NA_real_, pet)) %>%
@@ -18892,10 +19041,10 @@ reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
                        `tmax(C)` = tmax,
                        `tmin(C)` = tmin,
                        `vp(Pa)` = vp,
-                       `pet(mm)` = pet)
-
-            write_csv(this_site,
-                      glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv'))
+                       `pet(mm)` = pet) %>%
+                left_join(ntw_dmn_join, by = 'site_code') %>%
+                relocate(domain, network, .after = 'site_code') %>%
+                write_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv'))
         }
     }
 }
@@ -19488,7 +19637,7 @@ convert_ms_to_bib <- function(citation, list = FALSE){
     #list: logical. If TRUE, return a list of citation components (e.g. to be converted to BibTeX),
     #   rather than a formatted citation
 
-    stop('this function needs work. get it to parse the following correctly: (it might already work with these, but not with their originals)')
+    warning('this function needs work. get it to parse the following correctly: (it might already work with these, but not with their originals)')
     # Van Cleve, K., F.S. Chapin, R. Ruess, M.C. Mack, J.B. Jones, and Bonanza Creek LTER. 2023. Caribou-Poker Creeks Research Watershed: Daily Flow Rates for C2, C3, C4 ver 24. Environmental Data Initiative. https://doi.org/10.6073/pasta/2131d13a7a0a46abd039736e56b9f551 (Accessed 2024-09-09).
     # Carroll, R., Newman, A., Beutler, C., Williams, K., & O'Ryan, D. (2023). Stream discharge and temperature data collected within the East River, Colorado for the Lawrence Berkeley National Laboratory Watershed Function Science Focus Area (water years 2019 to 2022). Watershed Function SFA, ESS-DIVE repository. https://doi.org/10.15485/1779721
     #    (not sure about the original form of that one)

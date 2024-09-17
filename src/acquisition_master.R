@@ -1,3 +1,5 @@
+warning('in 2025, need to address site arctic: "I-Minus_2_TK_High Side". systemic. adjusted in site data but not elsewhere')
+warning('gee now requires the use of a "cloud project" see starred email from 9/16/24 for setup deets')
 suppressPackageStartupMessages({
 
 
@@ -317,7 +319,6 @@ run_prechecks()
 dmnrow <- which(network_domain$domain == 'east_river')
 
 for(dmnrow in 1:nrow(network_domain)){
-    stop('in 2025, need to address site arctic: "I-Minus_2_TK_High Side". systemic. adjusted in site data but not elsewhere')
 
     # drop_automated_entries('.') #use with caution!
     # drop_automated_entries(glue('data/{network}/{domain}'))
