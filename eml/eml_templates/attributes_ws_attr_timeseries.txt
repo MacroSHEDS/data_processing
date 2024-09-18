@@ -3,6 +3,7 @@
 "domain"	"Short name for MacroSheds domain. See sites.csv"	"character"				
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
 "var"	"variable code. See variables_ws_attr_timeseries.csv"	"character"				
+"year"	"date"	"Date"		"Y"		
 "date"	"date"	"Date"		"Y-M-D"		
 "val"	"data value. See variables_ws_attr_timeseries.csv for units"	"numeric"	"variable_unit"		"NA"	"missing value"
 "pctCellErr"	"The percentage of raster cells within the watershed for which no data were available. This includes both implicit (nothing reported for a particular cell) and explicit (""missing data"" code) values. MacroSheds does not report pctCellErr for products retrieved from Google Earth Engine, but we may in a future version."	"numeric"	"percent"		"NA"	"missing value"

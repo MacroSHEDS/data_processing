@@ -1,5 +1,7 @@
 "attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
+"domain"	"Short name for MacroSheds domain. See sites.csv"	"character"				
+"network"	"Short name for MacroSheds network. See sites.csv "	"character"				
 "p_mean"	"mean daily precipitation 1989-10-01 to 2009-09-30 (Daymet)"	"numeric"	"millimeterPerDay"		"NA"	"missing value"
 "pet_mean"	"mean daily PET (estimated using Priestley-Taylor formulation with gridded alpha product from Aschonitis et al. 2017)"	"numeric"	"millimeterPerDay"		"NA"	"missing value"
 "aridity"	"aridity (ratio of pet_mean to p_mean) (Daymet)"	"numeric"	"dimensionless"		"NA"	"missing value"

@@ -1,7 +1,7 @@
 "attributeName"	"attributeDefinition"	"class"	"unit"	"dateTimeFormatString"	"missingValueCode"	"missingValueCodeExplanation"
 "date"	"date"	"Date"		"Y-M-D"		
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
-"grab_sample"	"Logical indicating whether the observation was obtained via grab sample or installed sensor."	"logical"				
+"grab_sample"	"Logical indicating whether the observation was obtained via grab sample or installed sensor. 1 = TRUE (grab sample), 0 = FALSE (installed sensor)"	"numeric"	"dimensionless			
 "var"	"variable code (see variables_timeseries.csv)"	"character"				
 "var_category"	"primarily distinguishes concentration from flux, stream chemistry from precipitation chemistry, and stream flux from precip flux"	"categorical"				
 "val"	"data value. See variables_time_series.csv for units"	"numeric"	"variable_unit"		"NA"	"missing value"

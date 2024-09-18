@@ -9,4 +9,4 @@
 "details"	"Details of the disturbance"	"character"			"NA"	"missing value"
 "start_date"	"The date on which the disturbance began"	"Date"		"Y-M-D"	"NA"	"missing value"
 "end_date"	"The date on which the disturbance ended"	"Date"		"Y-M-D"	"NA"	"missing value"
-"data_source"	"A URL where more information can be found"	"character"			"NA"	"missing value"
+"reference"	"A URL where more information can be found"	"character"			"NA"	"missing value"
