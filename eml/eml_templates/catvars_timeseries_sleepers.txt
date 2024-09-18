@@ -3,7 +3,7 @@ var_category	CUSTOM_precipitation	Custom product. Redistributed as provided by p
 var_category	stream_chemistry	Stream chemistry
 var_category	discharge	Stream discharge
 var_category	precip_chemistry	Precipitation chemistry
-var_category	precip_flux_inst_scaled	Daily precipitation flux, scaled by watershed area
+var_category	precip_flux_inst_scaled	Daily precipitation flux, scaled by watershed area, reported in kg/ha/d.
 var_category	precipitation	Precipitation depth
-var_category	stream_flux_inst_scaled	Daily stream flux, scaled by watershed area
-var_category	CUSTOM_precip_flux_inst_scaled	Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area.
+var_category	stream_flux_inst_scaled	Daily stream flux, scaled by watershed area, reported in kg/ha/d.
+var_category	CUSTOM_precip_flux_inst_scaled	Custom product. Redistributed as computed by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area, reported in kg/ha/d..

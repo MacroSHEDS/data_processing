@@ -23,7 +23,7 @@ dir.create(dd, recursive = TRUE, showWarnings = FALSE)
 
 view_unit_dictionary()
 zz = EML::get_unitList()
-grep('meter', zz$units$id, value=T)
+grep('kilogram', zz$units$id, value=T)
 dplyr::filter(zz$units, id == 'number')
 unit_types = sort(unique(zz$unitTypes$id))
 more_unit_types = sort(unique(zz$units$unitType))
