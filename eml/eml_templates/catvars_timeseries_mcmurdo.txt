@@ -1,4 +1,4 @@
 attributeName	code	definition
 var_category	stream_chemistry	Stream chemistry
 var_category	discharge	Stream discharge
-var_category	stream_flux_inst	NA
+var_category	stream_flux_inst	Daily stream flux, NOT scaled by watershed area. Only for watersheds with unknown boundaries. Reported in kg/d.

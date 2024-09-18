@@ -79,6 +79,7 @@ for(td in ts_dmns){
               overwrite = TRUE)
 }
 
+#this was modified and added to global_helpers.R
 var_cat_map <- c(
     stream_chemistry = 'Stream chemistry',
     precip_chemistry = 'Precipitation chemistry',

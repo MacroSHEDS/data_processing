@@ -11558,6 +11558,7 @@ postprocess_entire_dataset <- function(site_data,
     }
 
     if(push_new_version_to_figshare_and_edi){
+        stop('ugh. looks like i computed load from figshare files, but load output is used above, so this needs to move up. possibly it can happen after prepare_for_figshare')
         compute_load()
     } else {
         print('compute_load depends on figshare formatting. skipping')
@@ -12379,8 +12380,8 @@ assemble_misc_docs_figshare <- function(where){
     save(attrib_ws_data, file = '../r_package/data/attribution_and_intellectual_rights_ws_attr.RData')
     save(attrib_ts_data, file = '../r_package/data/attribution_and_intellectual_rights_timeseries.RData')
 
-    # select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
-    #     write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
+    select(domain_detection_limits, -precision, -sigfigs, -added_programmatically) %>%
+        write_csv(file.path(docs_dir, '05_timeseries_documentation', '05f_detection_limits_and_precision.csv'))
     # file.copy('src/templates/figshare_docfiles/05g_detection_limits_and_precision_column_descriptions.txt',
     #           file.path(docs_dir, '05_timeseries_documentation'))
     # file.copy('src/templates/figshare_docfiles/07a_CAMELS-compliant_datasets_metadata.txt',
@@ -12778,6 +12779,8 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     message('build_eml_data_links_and_generate_eml could still be cleaned up a bit, and possibly further automated')
 
+    require_shell_tool('pandoc', path = '/home/mike/anaconda3/bin') #if you have pandoc installed globally, remove path arg
+
     # rm_networks <- c('webb', 'mwo')
     rm_networks <- c() #use this if not removing any networks this round
 
@@ -12949,6 +12952,13 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     file.link(glue('src/templates/figshare_docfiles/02_glossary.txt'),
               file.path(dd, 'glossary.txt'))
 
+    ## compile changelog to HTML
+
+    #add your own path if pandoc is installed via conda, or remove path if it's
+    #installed system-wide
+    system('/home/mike/anaconda3/bin/pandoc eml/data_links/changelog.md -o eml/data_links/changelog.html')
+    get_response_enter('Updated eml/data_links/changelog.html needs to be posted to https://macrosheds.org/pages/changelog.html.\nUpload it to our server and replace the old file, then press enter to continue.\n>')
+
     ## zip documentation.txt files together
 
     docfiles <- list.files(glue('macrosheds_figshare_v{vsn}/2_timeseries_data'),
@@ -13039,15 +13049,16 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         precip_chemistry = 'Precipitation chemistry',
         precipitation = 'Precipitation depth',
         discharge = 'Stream discharge',
-        stream_flux_inst_scaled = 'Daily stream flux, scaled by watershed area',
-        precip_flux_inst_scaled = 'Daily precipitation flux, scaled by watershed area',
-        CUSTOM_precipitation = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Precipitation depth.',
-        CUSTOM_stream_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily stream flux, scaled by watershed area.',
-        CUSTOM_precip_flux_inst_scaled = 'Custom product. Redistributed as provided by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area.',
-        CUSTOM_stream_flux_inst_scaled_RefMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the regression method and scaled by watershed area.',
-        CUSTOM_stream_flux_inst_scaled_RefTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the composite method and scaled by watershed area.',
-        CUSTOM_stream_flux_inst_scaled_ClmMod = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the regression method and scaled by watershed area.',
-        CUSTOM_stream_flux_inst_scaled_ClmTot = 'Custom product. Redistributed as provided by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the composite method and scaled by watershed area.'
+        stream_flux_inst_scaled = 'Daily stream flux, scaled by watershed area, reported in kg/ha/d.',
+        precip_flux_inst_scaled = 'Daily precipitation flux, scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_precipitation = 'Custom product. Redistributed as computed by primary source, so nonstandard within the MacroSheds corpus. Precipitation depth.',
+        CUSTOM_stream_flux_inst_scaled = 'Custom product. Redistributed as computed by primary source, so nonstandard within the MacroSheds corpus. Daily stream flux, scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_precip_flux_inst_scaled = 'Custom product. Redistributed as computed by primary source, so nonstandard within the MacroSheds corpus. Daily precipitation flux, scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_stream_flux_inst_scaled_RefMod = 'Custom product. Redistributed as computed by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the regression method and scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_stream_flux_inst_scaled_RefTot = 'Custom product. Redistributed as computed by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for reference model, computed by the composite method and scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_stream_flux_inst_scaled_ClmMod = 'Custom product. Redistributed as computed by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the regression method and scaled by watershed area, reported in kg/ha/d.',
+        CUSTOM_stream_flux_inst_scaled_ClmTot = 'Custom product. Redistributed as computed by primary source (in this case Panola Mountain Research Watershed), so nonstandard within the MacroSheds corpus. Daily stream flux for climate models, computed by the composite method and scaled by watershed area, reported in kg/ha/d.',
+        stream_flux_inst = 'Daily stream flux, NOT scaled by watershed area. Only for watersheds with unknown boundaries. Reported in kg/d.'
     ) %>%
         stack() %>%
         rename(definition = values,
@@ -13087,9 +13098,31 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
                         'data_use_agreements.docx',
                         'timeseries_refs.bib',
                         'ws_attr_refs.bib',
-                        'changelog.txt',
+                        'changelog.html',
                         'glossary.txt',
                         'code_autodocumentation.zip')
+
+    other_ent_desc <- c(
+        'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
+        'Terms and conditions for using MacroSheds data.',
+        'Complete bibliographic references for time-series data.',
+        'Complete bibliographic references for watershed attribute data.',
+        'List of improvements and bugfixes associated with each version of the MacroSheds dataset. File hosted at https://macrosheds.org/pages/changelog.html',
+        'Glossary of terms related to the MacroSheds dataset.',
+        'Programmatically assembled pseudo-scripts intended to help users recreate/edit specific MacroSheds data products (Also see our code on GitHub).'
+    )
+
+    #add load stuff
+    basenames <- c(basenames, 'load_annual.csv')
+    descriptions <- c(descriptions, 'Annual solute loads for each site, computed by up to 5 methods, and with a recommended method based on Aulenbach et al. 2016')
+
+    #rebuild geographic coverage template
+    if(file.exists(file.path(wd, 'geographic_coverage.txt'))){
+        file.remove(file.path(wd, 'geographic_coverage.txt'))
+    }
+    template_geographic_coverage(wd, dd, 'sites.csv',
+                                 lat.col = 'latitude', lon.col = 'longitude',
+                                 site.col = 'site_code')
 
     make_eml(wd, dd, ed,
              dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data from small watershed ecosystem studies',
@@ -13101,22 +13134,14 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
              data.table.name = basenames,
              data.table.description = descriptions,
              data.table.quote.character = rep('"', length(basenames)),
-             data.table.url = paste0('https://macrosheds.org/data/macrosheds_v1/', basenames),
+             data.table.url = glue('https://macrosheds.org/data/macrosheds_v{vsn}/{basenames}'),
              other.entity = other_entities,
              other.entity.name = other_entities,
-             other.entity.description = c(
-                 'Watershed boundaries, stream gauge locations, and precip gauge locations, for all domains.',
-                 'Terms and conditions for using MacroSheds data.',
-                 'Complete bibliographic references for time-series data.',
-                 'Complete bibliographic references for watershed attribute data.',
-                 'List of changes made since the last version of the MacroSheds dataset.',
-                 'Glossary of terms related to the MacroSheds dataset.',
-                 'Programmatically assembled pseudo-scripts intended to help users recreate/edit specific MacroSheds data products (Also see our code on GitHub).'),
-             other.entity.url = paste0('https://macrosheds.org/data/macrosheds_v1/', other_entities),
+             other.entity.description = other_ent_desc,
+             other.entity.url = glue('https://macrosheds.org/data/macrosheds_v{vsn}/{other_entities}'),
              user.id = conf$edi_user_id,
              user.domain = NULL, #pretty sure this doesn't apply to us
-             # package.id = 'edi.981.1')
-             package.id = 'edi.1262.1')
+             package.id = glue('edi.1262.{vsn}'))
 
     # if(rm_neon_sites){
     #     file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
@@ -13359,7 +13384,6 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
             }
         }
     }
-    message('verify that there are load files zipped up in macrosheds_files_by_domain')
 
     # clean up some stuff, zip up timeseries data (including load)
 
@@ -18602,7 +18626,11 @@ remove_some_molecular_forms <- function(){
     }
 }
 
-require_shell_tool <- function(tool){
+require_shell_tool <- function(tool, path = NULL){
+
+    if(! is.null(path)){
+        tool <- file.path(path, tool)
+    }
 
     command_check <- try({
         system(glue('{tool} --version'),
