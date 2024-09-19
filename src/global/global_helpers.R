@@ -11688,10 +11688,12 @@ add_a_few_more_things_to_figshare <- function(){
                in_workflow == 1) %>%
         select(domain, network, site_code)
 
-    read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+    cmls1 <- read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
+        select(-starts_with(c('network', 'domain'))) %>%
         left_join(ntw_dmn_join, by = 'site_code') %>%
-        relocate(domain, network, .after = 'site_code') %>%
-        write_feather(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'))
+        relocate(domain, network, .after = 'site_code')
+    write_feather(cmls1, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather')) %>%
+    write_csv(cmls1, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
 
     read_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv')) %>%
         left_join(ntw_dmn_join, by = 'site_code') %>%
@@ -11826,7 +11828,8 @@ remove_flux_neon_etc <- function(where, rm_dmns){
 
 manually_edit_eml <- function(){
 
-    if(.Platform$OS.type == 'windows') stop('this will not work on windows (but can be adapted quickly)')
+    require_shell_tool('ls')
+    require_shell_tool('head')
 
     att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
 
@@ -13064,9 +13067,9 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         rename(definition = values,
                var_category = ind)
 
-    ts_templts <- list.files('eml/data_links', pattern = '^timeseries.*?\\.csv')
-    ts_templts <- grep('hbef\\.csv$', ts_templts, value = TRUE, invert = TRUE)
-    ts_dmns <- str_match(ts_templts, '^timeseries_([a-z_0-9]+)\\.csv$')[, 2]
+    ts_fls <- list.files('eml/data_links', pattern = '^timeseries.*?\\.csv')
+    ts_fls <- grep('hbef\\.csv$', ts_fls, value = TRUE, invert = TRUE)
+    ts_dmns <- str_match(ts_fls, '^timeseries_([a-z_0-9]+)\\.csv$')[, 2]
     for(td in ts_dmns){
 
         file.copy(from = 'eml/eml_templates/attributes_timeseries_hbef.txt',
@@ -13082,7 +13085,23 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
             write_tsv(glue('eml/eml_templates/catvars_timeseries_{td}.txt'))
     }
 
-    ## write eml
+    ## "logical" is an illegal data class in EML... Need to convert to integer.
+
+    message('Converting grab_sample to numeric. This modification should be moved upstream, before files are linked')
+    ts_fls <- list.files('eml/data_links',
+                         pattern = '^timeseries.*?\\.csv',
+                         full.names = TRUE)
+    for(f in ts_fls){
+        read_csv(f, show_col_types = FALSE) %>%
+            mutate(grab_sample = as.numeric(grab_sample)) %>%
+            write_csv(f)
+    }
+
+    read_csv('eml/data_links/load_annual.csv') %>%
+        mutate(ms_recommended = as.numeric(ms_recommended)) %>%
+        write_csv('eml/data_links/load_annual.csv')
+
+    ## a few more deets
 
     temporal_coverage <- map(ts_tables, ~range(read_csv(., show_col_types = FALSE)$date)) %>%
         reduce(~c(min(c(.x[1], .y[1])), max(c(.x[2], .y[2]))))
@@ -13124,6 +13143,9 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
                                  lat.col = 'latitude', lon.col = 'longitude',
                                  site.col = 'site_code')
 
+    edi_pkg_id <- glue('edi.1262.{vsn}')
+
+    #supported classes: character, numeric, categorical, Date
     make_eml(wd, dd, ed,
              dataset.title = 'MacroSheds: a synthesis of long-term biogeochemical, hydroclimatic, and geospatial data from small watershed ecosystem studies',
              temporal.coverage = temporal_coverage,
@@ -13141,7 +13163,20 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
              other.entity.url = glue('https://macrosheds.org/data/macrosheds_v{vsn}/{other_entities}'),
              user.id = conf$edi_user_id,
              user.domain = NULL, #pretty sure this doesn't apply to us
-             package.id = glue('edi.1262.{vsn}'))
+             package.id = edi_pkg_id)
+
+    message(paste(edi_pkg_id, 'written to eml/eml_out. USE THE PREVIEWER BEFORE PUBLISHING!\nhttps://portal.edirepository.org/nis/metadataPreviewer'))
+
+    #use this to fix issues related to attribute ordering
+    # z_order_to = read_csv('eml/data_links/ws_attr_summaries.csv',
+    #                       na = '') %>%
+    #     colnames()
+    # z_order_from = read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
+    # if(length(z_order_to) != length(z_order_from$attributeName)) stop()
+    # z_order_from[match(z_order_to, z_order_from$attributeName), ] %>%
+    #     mutate(missingValueCode = 'NA') %>%
+    #     write_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt',
+    #               na = '')
 
     # if(rm_neon_sites){
     #     file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
@@ -13150,7 +13185,7 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     ## (the upload to our server can be automated by uncommenting the following line
     ## (and modifying it to accept a password):
     # system(paste0('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v', vsn))
-    warning(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
+    message(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
 }
 
 get_edi_identifier <- function(x){
