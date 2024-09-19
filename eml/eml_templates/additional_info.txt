@@ -8,7 +8,7 @@ MacroSheds data portal
 
 "macrosheds" R package
 
-	https://github.com/MacroSHEDS/macrosheds
+    https://github.com/MacroSHEDS/macrosheds
 
 MacroSheds data paper
 

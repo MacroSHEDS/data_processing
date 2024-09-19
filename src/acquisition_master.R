@@ -1,5 +1,6 @@
 warning('in 2025, need to address site arctic: "I-Minus_2_TK_High Side". systemic. adjusted in site data but not elsewhere')
-warning('gee now requires the use of a "cloud project" see starred email from 9/16/24 for setup deets')
+warning('gee now requires the use of a "cloud project". see starred email from 9/16/24 for setup deets')
+warning('the grab_sample column in each timeseries dataset AND the ms_recommended column in annual load need to be converted to numeric. this currently happens downstream of the split between packageversion and eml version. ugly')
 suppressPackageStartupMessages({
 
 
@@ -50,7 +51,8 @@ suppressPackageStartupMessages({
 
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
-#(or after each run that results in a change). Starting in 2015, use decimal versioning.
+#(or after each run that results in a change). Starting in 2025, use decimal versioning?
+#how would that work with EDI? maybe not.
 vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,

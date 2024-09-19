@@ -11484,6 +11484,7 @@ postprocess_entire_dataset <- function(site_data,
         create_missing_stream_gauge_locations(where = fs_dir)
 
         #run precip through the range check again (found crazy low values in luquillo precip) [1]
+        #TODO move this upstream
         ff <- system(paste0('find macrosheds_dataset_v', vsn, ' -path "*/precipitation*/*.feather"'),
                      intern = TRUE)
         for(f in ff){
@@ -11501,6 +11502,7 @@ postprocess_entire_dataset <- function(site_data,
                                rebuild = TRUE)
 
         #run precip through the range check again (found crazy low values in luquillo precip) [1]
+        #TODO move this upstream
         ff <- system(paste('find', fs_dir, '-path "*/2_timeseries_data/*/precipitation/*.feather"'),
                      intern = TRUE)
         for(f in ff){
@@ -11833,8 +11835,8 @@ manually_edit_eml <- function(){
 
     att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
 
-    most_recent_eml <- system('ls -t eml/eml_out | head -n 1', intern = TRUE)
-    eml <- read_lines(file.path('eml/eml_out', most_recent_eml))
+    most_recent_eml <- system('ls -t eml/eml_out/*.xml | head -n 1', intern = TRUE)
+    eml <- read_lines(most_recent_eml)
 
     new_eml_chunk <- c('\t<methods>', '\t\t<methodStep>', '\t\t\t<description>',
                        NA, '\t\t\t</description>', '\t\t</methodStep>', '\t</methods>')
@@ -11872,7 +11874,13 @@ manually_edit_eml <- function(){
     ctrlline <- grep('^ *<principal(?!>public)', eml, perl = TRUE)
     eml[ctrlline] <- sub('vlahm', 'uid=vlahm,o=EDI,dc=edirepository,dc=org', eml[ctrlline])
 
-    write_lines(eml, file.path('eml/eml_out', most_recent_eml))
+    write_lines(eml, most_recent_eml)
+
+    ## (the upload to our server can be automated by uncommenting the following line
+    ## (and modifying it to accept a password):
+    # system(paste0('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v', vsn))
+    message(paste(most_recent_eml, 'is compiled and customized. USE THE PREVIEWER BEFORE PUBLISHING!\nhttps://portal.edirepository.org/nis/metadataPreviewer.jsp'))
+    message(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -13165,8 +13173,6 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
              user.domain = NULL, #pretty sure this doesn't apply to us
              package.id = edi_pkg_id)
 
-    message(paste(edi_pkg_id, 'written to eml/eml_out. USE THE PREVIEWER BEFORE PUBLISHING!\nhttps://portal.edirepository.org/nis/metadataPreviewer'))
-
     #use this to fix issues related to attribute ordering
     # z_order_to = read_csv('eml/data_links/ws_attr_summaries.csv',
     #                       na = '') %>%
@@ -13181,11 +13187,6 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     # if(rm_neon_sites){
     #     file.copy('/tmp/aaa', 'eml/eml_templates/geographic_coverage.txt', overwrite = TRUE)
     # }
-
-    ## (the upload to our server can be automated by uncommenting the following line
-    ## (and modifying it to accept a password):
-    # system(paste0('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v', vsn))
-    message(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
 }
 
 get_edi_identifier <- function(x){
@@ -13410,7 +13411,8 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
         if(s %in% loadsites){
             d <- read_csv(loadf[loadsites == s], col_types = 'ccnncl')
             if(nrow(d)){
-                d <- filter(d, ! is.na(load))
+                d <- filter(d, ! is.na(load)) %>%
+                    mutate(ms_recommended = as.numeric(ms_recommended)) ## TODO move upstream! (?)
                 dir.create(loaddir, showWarnings = FALSE)
                 write_feather(
                     d,
@@ -13440,14 +13442,28 @@ prepare_for_figshare_packageformat <- function(where, dataset_version){
 
         message(paste('working on', jd))
 
+        ## convert grab_sample column to numeric
+        #TODO move upstream!
+
+        conv_fs <- list.files(jd,
+                              pattern = 'feather$',
+                              recursive = TRUE,
+                              full.names = TRUE) %>%
+            str_subset('stream_load_scaled',
+                       negate = TRUE)
+
+        for(ff in conv_fs){
+            read_feather(ff) %>%
+                mutate(grab_sample = as.numeric(grab_sample)) %>%
+                write_feather(ff)
+        }
+
         ## incise the now-superfluous "derived" directory from the path
         to_folder <- sub(pattern = '/derived$',
                          replacement = '',
                          x = jd)
 
-        system(glue('mv {j}/* {t}',
-                    j = jd,
-                    t = to_folder))
+        system(glue('mv {jd}/* {to_folder}'))
         file.remove(jd)
 
         dmn <- str_match(to_folder, '/([^/]+)$')[, 2]
@@ -13514,7 +13530,7 @@ figshare_create_article <- function(title,
                                   description = description,
                                   defined_type = type,
                                   keywords = keywords,
-                                  categories = category_ids,
+                                  categories_by_source_id = as.character(category_ids), #this changed ~2024. "categories" key no longer accepted by API
                                   authors = authors),
                              auto_unbox = TRUE)
 
@@ -13600,7 +13616,6 @@ figshare_publish_article <- function(article_id,
     method <- paste("account/articles", article_id, 'publish', sep = "/")
     request <- paste(base, method, sep = "/")
     header <- c(Authorization = sprintf("token %s", token))
-
 
     r <- expo_backoff(
         expr = httr::POST(request, config = httr::add_headers(header)),
@@ -13723,6 +13738,41 @@ figshare_list_article_files <- function(article_id,
         expr = {
             httr::GET(paste0('https://api.figshare.com/v2/account/articles/',
                              article_id, '/files?page_size=1000'),
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
+
+    return(content(r))
+}
+
+figshare_list_article_versions <- function(article_id,
+                                           token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET(paste0('https://api.figshare.com/v2/articles/',
+                             article_id, '/versions?page_size=1000'),
+                      httr::add_headers(header))
+        },
+        max_attempts = 5
+    ) %>% invisible()
+
+    return(content(r))
+}
+
+figshare_list_version_details <- function(article_id,
+                                          vsn_number,
+                                          token){
+
+    header <- c(Authorization = sprintf("token %s", token))
+
+    r <- expo_backoff(
+        expr = {
+            httr::GET(paste0('https://api.figshare.com/v2/articles/',
+                             article_id, '/versions/', vsn_number, '?page_size=1000'),
                       httr::add_headers(header))
         },
         max_attempts = 5
@@ -13932,7 +13982,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     ## get a Figshare private access token (PAT) and add it to R env
     # usethis::edit_r_environ()
 
-    ## get category IDs from category names
+    ## get category IDs from category names (these have changed....)
     # qqq <- content(rfigshare::fs_category_list(debug = TRUE))[[1]]
     # all_categories <- sapply(qqq, function(x) { xx = x$name; names(xx) = x$id ; return(xx)})
     # categories <- c('Earth Sciences not elsewhere classified',
@@ -13951,12 +14001,12 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     token <- Sys.getenv('RFIGSHARE_PAT') #see comments above to set
     auth_header <- c(Authorization = sprintf('token %s', token))
-    cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above
-    tld <- glue('macrosheds_figshare_v{vv}/macrosheds_files_by_domain',
-                vv = dataset_version)
+    # cat_ids <- c(80, 214, 251, 255, 261, 673) #determined above (these have changed)
+    cat_ids <- c(410402, 370799, 310304, 370399, 379999, 410206)
+    tld <- glue('macrosheds_figshare_v{dataset_version}/macrosheds_files_by_domain')
 
     # Figshare versioning procedures: https://help.figshare.com/article/can-i-edit-or-delete-my-research-after-it-has-been-made-public
-    message('uploading dataset to fighare under original format (still used by macrosheds package)')
+    message('uploading dataset to fighare in package format')
 
     usr_rsp <- get_response_1char('Proceeding will update existing published articles on Figshare. Continue? (y/n) >',
                                   c('y', 'n'))
@@ -13991,6 +14041,19 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
         for(j in seq_along(dmns)){
 
+            #include only author components recognized by figshare
+            # fshare_auths <- lapply(conf$figshare_author_list,
+            #        function(x){
+            #            x$orcid_id <- NULL
+            #            x
+            #        })
+            fshare_auths <- conf$figshare_author_list
+            if(ms_instance$which_machine == 'BM1'){ #if mike gave you access to the figshare account for MS, comment this conditional
+                fshare_auths[[1]] <- NULL #mike, included by default if uploading to mike's figshare account
+            }
+            fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Amanda'))]]$orcid_id <- NULL #could update Amanda's orcid instead
+            fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Matthew'))]]$orcid_id <- NULL #could update Matt's orcid instead
+
             dmn <- sub('.zip', '', dmns[j])
 
             ## if new dmn, create figshare "article", which in this case is a dataset.
@@ -13999,16 +14062,16 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             print(paste('uploading', ntw, dmn))
 
             if(! dmn %in% existing_dmn_deets$domain){
+
                 fs_id <- figshare_create_article(
                     title = glue('Network: ', ntw, ', Domain: ', dmn),
-                    description = glue('MacroSheds timeseries data, shapefiles, ',
-                                       'and metadata for domain: {d}, within network: {n}',
-                                       d = dmn,
-                                       n = ntw),
-                    keywords = list('czo'),
-                    category_ids = cat_ids,
+                    description = 'MacroSheds data on Figshare are only intended to be accessed via the "macrosheds" R package. The official dataset is at https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262.',
+                    # description = glue('MacroSheds timeseries data, shapefiles, ',
+                    #                    'and metadata for domain: {dmn}, within network: {ntw}'),
+                    keywords = 'placeholder', #we don't actually want these articles to be searchable
+                    category_ids = cat_ids, #required unfortunately
                     type = 'dataset',
-                    authors = conf$figshare_author_list,
+                    authors = fshare_auths,
                     token = token)
             } else {
                 fs_id <- existing_dmn_deets$id[existing_dmn_deets$domain == dmn]
@@ -14020,22 +14083,17 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                 fls <- figshare_list_article_files(fs_id,
                                                    token = token)
 
-                # if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
-                # if(length(fls) >= 1){
+                if(length(fls) > 1) stop(paste('article', fs_id, 'contains more than one file'))
                 for(k in seq_along(fls)){
                     figshare_delete_article_file(fs_id,
                                                  file_id = fls[[k]]$id,
                                                  token = token)
                 }
-                # }
             }
 
             #upload new/updated domain zip to that article
             figshare_upload_article(fs_id,
-                                    file = glue('{t}/{n}/{d}.zip',
-                                                t = tld,
-                                                n = ntw,
-                                                d = dmn),
+                                    file = glue('{tld}/{ntw}/{dmn}.zip'),
                                     token = token)
 
             figshare_publish_article(article_id = fs_id,
@@ -14103,19 +14161,6 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     ms_var_catalog <- read_csv(paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
     save(ms_var_catalog, file = '../r_package/data/ms_var_catalog.RData')
 
-    #mad TEMP
-    ws_attr_sets = c('macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/climate.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/hydrology.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/landcover.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/parentmaterial.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/terrain.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_timeseries/vegetation.feather',
-                     'macrosheds_figshare_v1/1_watershed_attribute_data/ws_attr_summaries.feather')
-    rm_sites_ = c('MC_ FLUME', 'NHC', 'UNHC', 'w101')
-    for(f in ws_attr_sets){
-        read_feather(f) %>% filter(! site_code %in% rm_sites_) %>% write_feather(f)
-    }
-
     file_ids_for_r_package2 <- tibble()
     for(i in seq_along(other_uploads)){
 
@@ -14125,7 +14170,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         if(! ut %in% existing_extras_deets$title){
             fs_id <- figshare_create_article(
                 title = ut,
-                description = 'See README',
+                description = 'MacroSheds data on Figshare are only intended to be accessed via the "macrosheds" R package. The official dataset is at https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262.',
                 keywords = list(names(uf)),
                 category_ids = cat_ids,
                 authors = conf$figshare_author_list,
@@ -14140,16 +14185,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
             for(fsid_ in fs_id){
 
-                fls <- figshare_list_article_files(fsid_,
-                                                   token = token)
+                fls <- figshare_list_article_files(fsid_, token = token)
 
-                # if(length(fls) >= 1){
                 for(j in seq_along(fls)){
                     figshare_delete_article_file(fsid_,
                                                  file_id = fls[[j]]$id,
                                                  token = token)
                 }
-                # }
             }
         }
 
@@ -14221,7 +14263,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         if(! ut %in% existing_extras_deets$title){
             fs_id <- figshare_create_article(
                 title = ut,
-                description = 'See README',
+                description = 'MacroSheds data on Figshare are only intended to be accessed via the "macrosheds" R package. The official dataset is at https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262.',
                 keywords = list(names(uf)),
                 category_ids = cat_ids,
                 authors = conf$figshare_author_list,
