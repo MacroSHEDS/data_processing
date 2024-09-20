@@ -5660,7 +5660,7 @@ convert_molecule <- function(x, from, to){
         filter(variable_code == !!from) %>%
         pull(molecule)
 
-    if(!is.na(molecule_real)) {
+    if(! is.na(molecule_real)){
         from <- molecule_real
     }
 
@@ -11619,12 +11619,6 @@ postprocess_entire_dataset <- function(site_data,
                         logger = logger_module)
     }
 
-    # if(push_new_version_to_figshare_and_edi){
-    #     log_with_indent('Adding CAMELS data to Figshare (yes, this should happen earlier)',
-    #                     logger = logger_module)
-    #     add_a_few_more_things_to_figshare(vsn = dataset_version)
-    # }
-
     message('PUSH NEW macrosheds package version now that figshare ids are updated')
 }
 
@@ -11681,112 +11675,6 @@ compute_load <- function(){
     warning('check logs/load_err!')
 
     ms_unparallelize(clst)
-}
-
-add_a_few_more_things_to_figshare <- function(){
-
-    ntw_dmn_join <- site_data %>%
-        filter(site_type != 'rain_gauge',
-               in_workflow == 1) %>%
-        select(domain, network, site_code)
-
-    cmls1 <- read_csv(glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv')) %>%
-        select(-starts_with(c('network', 'domain'))) %>%
-        left_join(ntw_dmn_join, by = 'site_code') %>%
-        relocate(domain, network, .after = 'site_code')
-    write_feather(cmls1, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather')) %>%
-    write_csv(cmls1, glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
-
-    read_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv')) %>%
-        left_join(ntw_dmn_join, by = 'site_code') %>%
-        relocate(domain, network, .after = 'site_code') %>%
-        write_feather(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
-
-    token <- Sys.getenv('RFIGSHARE_PAT')
-    cat_ids <- c(80, 214, 251, 255, 261, 673)
-    tld <- glue('macrosheds_figshare_v{vsn}/macrosheds_files_by_domain')
-
-    existing_articles <- figshare_list_articles(token)
-    existing_dmn_deets <- tibble(
-        title = sapply(existing_articles, function(x) x$title),
-        id = sapply(existing_articles, function(x) x$id),
-        domain = str_match(title, '^Network: .+?, Domain: (.+)$')[, 2]
-    ) %>%
-        filter(! is.na(domain)) %>%
-        select(-title)
-    existing_extras_deets <- tibble(
-        title = sapply(existing_articles, function(x) x$title),
-        id = sapply(existing_articles, function(x) x$id),
-    )
-
-    more_fs_uploads <- c(camels_ws_attrs = glue('macrosheds_figshare_v{vsn}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'),
-                         camels_daymet = glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
-    more_fs_titles <- c('watershed_summaries_CAMELS', 'Daymet_forcings_CAMELS')
-
-    file_ids_for_r_package3 <- tibble()
-    for(i in seq_along(more_fs_uploads)){
-
-        uf <- more_fs_uploads[i]
-        ut <- more_fs_titles[i]
-
-        if(! ut %in% existing_extras_deets$title){
-            fs_id <- figshare_create_article(
-                title = ut,
-                description = 'See README',
-                keywords = list(names(uf)),
-                category_ids = cat_ids,
-                authors = conf$figshare_author_list,
-                type = 'dataset',
-                token = token)
-        } else {
-            fs_id <- existing_extras_deets$id[existing_extras_deets$title == ut]
-        }
-
-        #if existing article, delete old version
-        if(ut %in% existing_extras_deets$title){
-
-            for(fsid_ in fs_id){
-
-                fls <- figshare_list_article_files(fsid_,
-                                                   token = token)
-
-                # if(length(fls) >= 1){
-                for(j in seq_along(fls)){
-                    figshare_delete_article_file(fsid_,
-                                                 file_id = fls[[j]]$id,
-                                                 token = token)
-                }
-                # }
-            }
-        }
-
-        fs_id <- fs_id[1]
-
-        figshare_upload_article(fs_id,
-                                file = unname(uf),
-                                token = token)
-
-        figshare_publish_article(article_id = fs_id,
-                                 token = token) #22090694, 22090697
-
-        #update file IDs for R package functions that reference figshare
-        fls <- figshare_list_article_files(fs_id,
-                                           token = token)
-
-        file_ids_for_r_package3 <- bind_rows(
-            file_ids_for_r_package3,
-            tibble(ut, fig_code = fls[[1]]$id))
-    }
-
-    load(file = '../r_package/data/sysdata2.RData')
-    file_ids_for_r_package2 <- file_ids_for_r_package2 %>%
-        filter(! ut %in% file_ids_for_r_package3$ut) %>%
-        bind_rows(file_ids_for_r_package3)
-    save(file_ids_for_r_package2,
-         file = '../r_package/data/sysdata2.RData')
-
-    readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
-                       file = '../r_package/data/figshare_id_check.txt')
 }
 
 remove_flux_neon_etc <- function(where, rm_dmns){
@@ -11988,8 +11876,13 @@ prepare_variable_metadata_for_figshare <- function(outfile, fs_format){
         write_csv(ms_vars_ts, outfile_ts)
 
         ms_vars_ts <- ms_vars %>%
-            select(variable_code, molecule, valence, flux_convertible) %>%
-            right_join(ms_vars_ts, by = 'variable_code') %>%
+            filter(! variable_type == 'ws_char') %>%
+            select(variable_code, variable_name, unit, molecule, valence, flux_convertible) %>%
+            full_join(select(ms_vars_ts, variable_code, chem_category, observations,
+                             n_sites, first_record, last_record),
+                      by = 'variable_code') %>%
+            mutate(n_sites = if_else(is.na(n_sites), 0, n_sites),
+                   observations = if_else(is.na(observations), 0, observations)) %>%
             relocate(molecule, valence, .after = 'unit') %>%
             relocate(flux_convertible, .after = 'last_record') %>%
             arrange(tolower(variable_name), chem_category)
@@ -12688,15 +12581,19 @@ combine_ts_csvs <- function(where){
 
 combine_daymet_csvs <- function(where){
 
-    #combines all daymet files into a single csv. removes individual csvs.
+    #combines all daymet files into a single csv (for EDI) and feather (for figshare). removes individual csvs.
 
     fs <- list.files(where,
                      recursive = TRUE,
                      pattern = '\\.csv',
                      full.names = TRUE)
 
-    map_dfr(fs, read_csv, show_col_types = FALSE) %>%
-        write_csv(glue('{where}/CAMELS-compliant_Daymet_forcings.csv'))
+    dd <- map_dfr(fs, read_csv, show_col_types = FALSE) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+
+    write_feather(dd, glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
+    write_csv(dd, glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'))
 
     invisible(file.remove(fs))
 }
@@ -12764,15 +12661,15 @@ prepare_for_edi <- function(from, dataset_version){
                     logger = logger_module)
     combine_ts_csvs(file.path(from, '2_timeseries_data'))
 
-    log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
-                    indent = 2,
-                    logger = logger_module)
-    combine_daymet_csvs(file.path(from, '4_CAMELS-compliant_Daymet_forcings'))
-
-    log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
-                    indent = 2,
-                    logger = logger_module)
-    combine_ws_attrs(from)
+    # log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
+    #                 indent = 2,
+    #                 logger = logger_module)
+    # combine_daymet_csvs(file.path(from, '4_CAMELS-compliant_Daymet_forcings'))
+    #
+    # log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
+    #                 indent = 2,
+    #                 logger = logger_module)
+    # combine_ws_attrs(from)
 
     log_with_indent('Combining spatial objects by domain',
                     indent = 2,
@@ -12967,7 +12864,7 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
 
     #add your own path if pandoc is installed via conda, or remove path if it's
     #installed system-wide
-    system('/home/mike/anaconda3/bin/pandoc eml/data_links/changelog.md -o eml/data_links/changelog.html')
+    system('/home/mike/anaconda3/bin/pandoc eml/data_links/changelog.md -o eml/data_links/changelog.html --metadata=charset="UTF-8"')
     get_response_enter('Updated eml/data_links/changelog.html needs to be posted to https://macrosheds.org/pages/changelog.html.\nUpload it to our server and replace the old file, then press enter to continue.\n>')
 
     ## zip documentation.txt files together
@@ -13313,6 +13210,12 @@ combine_ws_attrs <- function(where){
                        by = 'site_code')
     }
 
+    d <- d %>%
+        select(-starts_with(c('network', 'domain'))) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        relocate(domain, network, .after = 'site_code')
+
+    write_feather(d, glue('{where}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.feather'))
     write_csv(d, glue('{where}/3_CAMELS-compliant_watershed_attributes/CAMELS_compliant_ws_attr.csv'))
 
     invisible(file.remove(ws_attrs))
@@ -13330,8 +13233,8 @@ eml_misc <- function(where){
     #                  full.names = TRUE)
     # file.rename(fs, sub('watershed_attributes/', 'watershed_attributes/CAMELS-compliant_ws_attr_ts_', fs))
 
-    file.rename(glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS-compliant_Daymet_forcings.csv'),
-                glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'))
+    # file.rename(glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS-compliant_Daymet_forcings.csv'),
+    #             glue('{where}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.csv'))
 
     ## link shapefiles to eml loading dock and zip them together
 
@@ -14029,30 +13932,25 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         id = sapply(existing_articles, function(x) x$id),
     )
 
+    #format authors
+    fshare_auths <- conf$figshare_author_list
+    if(ms_instance$which_machine == 'BM1'){ #if mike gave you access to the figshare account for MS, comment this conditional
+        fshare_auths[[1]] <- NULL #mike, included by default if uploading to mike's figshare account
+    }
+    fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Amanda'))]]$orcid_id <- NULL #could update Amanda's orcid instead
+    fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Matthew'))]]$orcid_id <- NULL #could update Matt's orcid instead
+
     ### CREATE, UPLOAD, PUBLISH TIMESERIES
 
     ntws <- list.files(tld)
 
-    file_ids_for_r_package <- tibble()
+    file_ids_for_r_package_ <- tibble()
     for(i in seq_along(ntws)){
 
         ntw <- ntws[i]
         dmns <- list.files(file.path(tld, ntw))
 
         for(j in seq_along(dmns)){
-
-            #include only author components recognized by figshare
-            # fshare_auths <- lapply(conf$figshare_author_list,
-            #        function(x){
-            #            x$orcid_id <- NULL
-            #            x
-            #        })
-            fshare_auths <- conf$figshare_author_list
-            if(ms_instance$which_machine == 'BM1'){ #if mike gave you access to the figshare account for MS, comment this conditional
-                fshare_auths[[1]] <- NULL #mike, included by default if uploading to mike's figshare account
-            }
-            fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Amanda'))]]$orcid_id <- NULL #could update Amanda's orcid instead
-            fshare_auths[[which(sapply(fshare_auths, \(x) x$first_name == 'Matthew'))]]$orcid_id <- NULL #could update Matt's orcid instead
 
             dmn <- sub('.zip', '', dmns[j])
 
@@ -14102,14 +14000,19 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             #get new file ID
             fls <- figshare_list_article_files(fs_id,
                                                token = token)
-            file_ids_for_r_package <- bind_rows(
-                file_ids_for_r_package,
+            file_ids_for_r_package_ <- bind_rows(
+                file_ids_for_r_package_,
                 tibble(network = ntw, domain = dmn, fig_code = fls[[1]]$id))
         }
     }
 
-    save(file_ids_for_r_package,
-         file = '../r_package/data/sysdata.RData')
+    #update figshare codes for R package
+    load('../r_package/data/sysdata.RData')
+    full_join(file_ids_for_r_package,
+              file_ids_for_r_package_,
+              by = c('network', 'domain')) %>%
+        rename(!!paste0('fig_code_v', dataset_version) := fig_code) %>%
+        save(file = '../r_package/data/sysdata.RData')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
 
@@ -14158,11 +14061,12 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
     titles <- titles[! rms]
 
     #variable catalog can be included with package data
-    ms_var_catalog <- read_csv(paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'))
+    ms_var_catalog <- read_csv(paste0('macrosheds_figshare_v', dataset_version, '/macrosheds_documentation_packageformat/variable_catalog.csv'),
+                               show_col_types = FALSE)
     save(ms_var_catalog, file = '../r_package/data/ms_var_catalog.RData')
 
-    file_ids_for_r_package2 <- tibble()
-    for(i in seq_along(other_uploads)){
+    file_ids_for_r_package2_ <- tibble()
+    for(i in rev(seq_along(other_uploads))){
 
         uf <- other_uploads[i]
         ut <- titles[i]
@@ -14171,9 +14075,10 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             fs_id <- figshare_create_article(
                 title = ut,
                 description = 'MacroSheds data on Figshare are only intended to be accessed via the "macrosheds" R package. The official dataset is at https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262.',
-                keywords = list(names(uf)),
+                # keywords = list(names(uf)),
+                keywords = 'placeholder',
                 category_ids = cat_ids,
-                authors = conf$figshare_author_list,
+                authors = fshare_auths,
                 type = 'dataset',
                 token = token)
         } else {
@@ -14208,44 +14113,9 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
         fls <- figshare_list_article_files(fs_id,
                                            token = token)
 
-        file_ids_for_r_package2 <- bind_rows(
-            file_ids_for_r_package2,
+        file_ids_for_r_package2_ <- bind_rows(
+            file_ids_for_r_package2_,
             tibble(ut, fig_code = fls[[1]]$id))
-        # if(ut == 'site_metadata'){
-        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-        #                             fls[[1]]$id,
-        #                             "/g' ../r_package/R/ms_download_site_data.R -i"),
-        #                      intern = TRUE,
-        #                      ignore.stdout = FALSE,
-        #                      ignore.stderr = FALSE)
-        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_site_data.R. maybe your path is different?')
-        # }
-
-        # if(ut == 'variable_metadata'){
-        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-        #                             fls[[1]]$id,
-        #                             "/g' ../r_package/R/ms_download_variables.R -i"),
-        #                      intern = TRUE,
-        #                      ignore.stdout = FALSE,
-        #                      ignore.stderr = FALSE)
-        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_download_variables.R or ms_conversions_.R. maybe your path is different?')
-        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-        #                             fls[[1]]$id,
-        #                             "/g' ../r_package/R/ms_conversions_.R -i"),
-        #                      intern = TRUE,
-        #                      ignore.stdout = FALSE,
-        #                      ignore.stderr = FALSE)
-        # }
-
-        # if(ut == 'variable_catalog'){
-        #     sysout <- system(paste0("sed -r 's/files\\/[0-9]+/files\\/",
-        #                             fls[[1]]$id,
-        #                             "/g' ../r_package/R/ms_catalog.R -i"),
-        #                      intern = TRUE,
-        #                      ignore.stdout = FALSE,
-        #                      ignore.stderr = FALSE)
-        #     if(length(sysout)) stop('cannot update file ID in r_package/R/ms_catalog.R maybe your path is different?')
-        # }
     }
 
     #### CREATE, UPLOAD, PUBLISH WS ATTRS
@@ -14254,7 +14124,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                          camels_daymet = glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/CAMELS_compliant_Daymet_forcings.feather'))
     more_fs_titles <- c('watershed_summaries_CAMELS', 'Daymet_forcings_CAMELS')
 
-    file_ids_for_r_package3 <- tibble()
+    file_ids_for_r_package3_ <- tibble()
     for(i in seq_along(more_fs_uploads)){
 
         uf <- more_fs_uploads[i]
@@ -14264,9 +14134,10 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             fs_id <- figshare_create_article(
                 title = ut,
                 description = 'MacroSheds data on Figshare are only intended to be accessed via the "macrosheds" R package. The official dataset is at https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262.',
-                keywords = list(names(uf)),
+                # keywords = list(names(uf)),
+                keywords = 'placeholder',
                 category_ids = cat_ids,
-                authors = conf$figshare_author_list,
+                authors = fshare_auths,
                 type = 'dataset',
                 token = token)
         } else {
@@ -14281,13 +14152,11 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                 fls <- figshare_list_article_files(fsid_,
                                                    token = token)
 
-                # if(length(fls) >= 1){
                 for(j in seq_along(fls)){
                     figshare_delete_article_file(fsid_,
                                                  file_id = fls[[j]]$id,
                                                  token = token)
                 }
-                # }
             }
         }
 
@@ -14298,26 +14167,36 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
                                 token = token)
 
         figshare_publish_article(article_id = fs_id,
-                                 token = token) #22090694, 22090697
+                                 token = token)
 
         #update file IDs for R package functions that reference figshare
         fls <- figshare_list_article_files(fs_id,
                                            token = token)
 
-        file_ids_for_r_package3 <- bind_rows(
-            file_ids_for_r_package3,
+        file_ids_for_r_package3_ <- bind_rows(
+            file_ids_for_r_package3_,
             tibble(ut, fig_code = fls[[1]]$id))
     }
 
-    # load(file = '../r_package/data/sysdata2.RData')
-    file_ids_for_r_package2 <- file_ids_for_r_package2 %>%
-        filter(! ut %in% file_ids_for_r_package3$ut) %>%
-        bind_rows(file_ids_for_r_package3)
-    save(file_ids_for_r_package2,
-         file = '../r_package/data/sysdata2.RData')
+    #update figshare codes for R package
+    load('../r_package/data/sysdata2.RData')
 
-    readr::write_lines(file_ids_for_r_package2$fig_code[file_ids_for_r_package2$ut == 'watershed_summaries'],
-                       file = '../r_package/data/figshare_id_check.txt')
+    newvcol <- paste0('fig_code_v', dataset_version)
+
+    file_ids_for_r_package2 <- file_ids_for_r_package2_ %>%
+        filter(! ut %in% !!file_ids_for_r_package3_$ut) %>%
+        bind_rows(file_ids_for_r_package3_) %>%
+        full_join(file_ids_for_r_package2,
+              by = 'ut') %>%
+        rename(!!newvcol := fig_code) %>%
+        relocate(!!newvcol, .after = last_col())
+
+    save(file_ids_for_r_package2, file = '../r_package/data/sysdata2.RData')
+
+    file_ids_for_r_package2 %>%
+        filter(ut == 'watershed_summaries') %>%
+        pull(!!newvcol) %>%
+        readr::write_lines(file = '../r_package/data/figshare_id_check.txt')
 }
 
 detrmin_mean_record_length <- function(df){
@@ -19148,10 +19027,22 @@ reformat_camels_for_ms <- function(vsn, rebuild = TRUE){
                        `vp(Pa)` = vp,
                        `pet(mm)` = pet) %>%
                 left_join(ntw_dmn_join, by = 'site_code') %>%
-                relocate(domain, network, .after = 'site_code') %>%
+                relocate(domain, network, .after = 'site_code')
                 write_csv(glue('macrosheds_figshare_v{vsn}/4_CAMELS-compliant_Daymet_forcings/{s}.csv'))
         }
     }
+
+    log_with_indent('Combining 4_CAMELS-compliant_Daymet_forcings CSVs',
+                    indent = 2,
+                    logger = logger_module)
+    combine_daymet_csvs(glue('macrosheds_figshare_v{vsn}'))
+
+    log_with_indent('Combining ws attrs (separately for ms and camels-compliant)',
+                    indent = 2,
+                    logger = logger_module)
+    combine_ws_attrs(glue('macrosheds_figshare_v{vsn}'))
+
+    get_response_enter('in 2024, i moved and edited the funcs that combine camels attrs (and daymet). check the combined files in macrosheds_figshare_vX and verify that they have "domain" and "network" columns, and that 3_ does not contain polluted "domain.y.y.y" etc cols. check again that these files appear correctly in eml/data_links at the end. [enter to continue]')
 }
 
 # helper which goes inside of ms_read_csv, this function allows for the users to assign multiple input columns to
