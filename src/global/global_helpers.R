@@ -161,8 +161,11 @@ known_publishers <- c(
     'NASA National Snow and Ice Data Center Distributed Active Archive Center',
     'PANGAEA',
     'ISPRS Journal of Photogrammetry and Remote Sensing',
-    'International Journal of Climatology',
-    'Scholars Portal Dataverse'
+    'International Journal of Climatology', #journal
+    'Scholars Portal Dataverse',
+    'Svartberget Research Station',
+    'SITES',
+    'Water Resour. Res' #journal
 )
 #known_publishers NOTES. fix these in citation gsheet before building dataset.
 #(also apply to institutional_authors below):
@@ -199,7 +202,8 @@ institutional_authors <- c(
     'USDA Forest Service, Southern Region',
     'Mapzen',
     'PRISM Climate Group',
-    'Soil Survey Staff'
+    'Soil Survey Staff',
+    'Svartberget Research Station'
 )
 
 two_letter_seq <- paste0(rep(letters, each = 26), letters)
@@ -11255,7 +11259,19 @@ postprocess_attribution_ts <- function(){
     )
 
     attrib_d <- left_join(attrib_d, pcm,
-                          by = c(macrosheds_prodcode = 'prodcode', 'domain')) %>%
+                          by = c(macrosheds_prodcode = 'prodcode', 'domain'),
+                          relationship = 'many-to-many')
+
+    attrib_d %>%
+        filter(is.na(prodname),
+               ! grepl('^ms[0-9]+$', macrosheds_prodcode)) %>%
+        select(network, domain, macrosheds_prodcode) %>%
+        distinct() %>%
+        print(n = 1000)
+
+    get_response_enter('postprocess_attribution_ts is dropping the above records. if that seems right, press ENTER to continue')
+
+    attrib_d <- attrib_d %>%
         relocate(prodname, .after = 'macrosheds_prodcode') %>%
         filter(! is.na(prodname)) %>%
         rename(macrosheds_prodname = prodname) %>%
@@ -12041,6 +12057,18 @@ scrape_citations_into_bibtex <- function(d, outfile = NULL){
         return(bib_out)
     }
 
+    nwisyr <- year(Sys.Date())
+    nwis_citation <- glue(
+        '\n@misc{nwis_<<nwisyr>>,\n\t',
+        'title = {{National} {Water} {Information} {System} data available on the {World} {Wide} {Web} ({USGS} {Water} {Data} for the {Nation})},\n\t',
+        'publisher = {National Water Information System},\n\t',
+        'author = {{U.S. Geological Survey}},\n\t',
+        'year = {<<nwisyr>>},\n\t',
+        'url = {http://waterdata.usgs.gov/nwis/}\n}',
+        .open = '<<', .close = '>>', .trim = FALSE
+    )
+
+    bib_out <- paste0(bib_out, nwis_citation)
     writeLines(bib_out, outfile)
 
     message('Citations have been written to ', outfile,
@@ -14008,11 +14036,13 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
 
     #update figshare codes for R package
     load('../r_package/data/sysdata.RData')
-    full_join(file_ids_for_r_package,
-              file_ids_for_r_package_,
-              by = c('network', 'domain')) %>%
-        rename(!!paste0('fig_code_v', dataset_version) := fig_code) %>%
-        save(file = '../r_package/data/sysdata.RData')
+    file_ids_for_r_package <- full_join(file_ids_for_r_package,
+                                        file_ids_for_r_package_,
+                                        by = c('network', 'domain')) %>%
+        rename(!!paste0('fig_code_v', dataset_version) := fig_code)
+
+    save(file_ids_for_r_package,
+         file = '../r_package/data/sysdata.RData')
 
     ### CREATE, UPLOAD, PUBLISH SITES, VARS, LEGAL STUFF, SPATIAL DATA, AND DOCUMENTATION
 
@@ -19704,7 +19734,7 @@ convert_ms_to_bib <- function(citation, list = FALSE){
 
     doi_url <- ifelse(grepl('^https?://doi\\.org', url), 'doi', 'url')
 
-    if(grepl('Journal', pub)){
+    if(grepl('Journal|Resour\\.', pub)){
 
         bib <- glue('\n@article{', key,
                     ',\n\ttitle = {', title,
