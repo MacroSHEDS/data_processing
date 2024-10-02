@@ -6,4 +6,8 @@ Data dashboard for visualization: macrosheds.org
 
 R package for data access and analysis: https://github.com/MacroSHEDS/macrosheds
 
+R package vignettes: https://macrosheds.org/pages/vignettes
+
+Live dataset changelog: https://macrosheds.org/pages/changelog.html
+
 Questions: mail@macrosheds.org

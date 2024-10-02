@@ -303,7 +303,7 @@ process_2_ms014 <- stream_gauge_from_site_data
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms012 <- function(network, domain, prodname_ms) {
+process_2_ms012 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,
@@ -317,7 +317,7 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms011 <- function(network, domain, prodname_ms) {
+process_2_ms011 <- function(network, domain, prodname_ms){
 
     pull_usgs_discharge(network = network,
                         domain = domain,

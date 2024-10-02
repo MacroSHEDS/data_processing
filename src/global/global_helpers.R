@@ -10359,14 +10359,13 @@ combine_products <- function(network, domain, prodname_ms, input_prodname_ms,
 
     dir.create(dir, showWarnings = FALSE)
 
-    site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
-    sites <- unique(str_split_fixed(site_feather, '[.]feather', n = Inf)[,1])
+    site_feather <- str_split_fixed(files, '/', n = Inf)[, 6]
+    sites <- unique(str_split_fixed(site_feather, '[.]feather', n = Inf)[, 1])
 
     cmbn <- tibble()
     for(i in 1:length(sites)){
 
-        site_files <- grep(paste0(sites[i], '.feather'), files, value = TRUE)
-
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
 
         dd <- duplicated(select(site_full, datetime, var))
@@ -11647,7 +11646,7 @@ compute_load <- function(){
     #20240917 addendum: the comments have been toggled back, so all shoudld be well,
     #but might need to change the location of root_2024? or at least the variable name
     stop('work to do')
-    root_2024 <- 'macrosheds_figshare_v2/macrosheds_files_by_domain'
+    root_2024 <- '~/ssd2/ms_test'
 
     dir.create('scratch/load_out', showWarnings = FALSE)
     dir.create('scratch/load_diag', showWarnings = FALSE)
@@ -11669,7 +11668,7 @@ compute_load <- function(){
     catch <- foreach::foreach(s = load_sites) %dopar% {
 
         load_out <- try({
-             ms_calc_flux_rsfme(
+             ms_calc_flux(
                 chemistry = filter(chemistry, site_code == !!s),
                 q = filter(q, site_code == !!s),
                 method = c('pw', 'rating', 'composite', 'beale', 'average'),
@@ -11737,7 +11736,8 @@ manually_edit_eml <- function(){
     require_shell_tool('ls')
     require_shell_tool('head')
 
-    att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt')
+    att <- read_tsv('eml/eml_templates/attributes_ws_attr_summaries.txt',
+                    show_col_types = FALSE)
 
     most_recent_eml <- system('ls -t eml/eml_out/*.xml | head -n 1', intern = TRUE)
     eml <- read_lines(most_recent_eml)
@@ -12943,7 +12943,7 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
     ws_bib <- readr::read_file('eml/data_links/ws_attr_refs.bib')
     save(ws_bib, file = '../r_package/data/bibtex_ws_attr.RData')
 
-    ## load estimates
+    ## load estimates and diagnostics
 
     ntw_dmn_join <- site_data %>%
         filter(site_type != 'rain_gauge',
@@ -12957,6 +12957,14 @@ build_eml_data_links_and_generate_eml <- function(where, vsn){
         arrange(network, domain, site_code, var, water_year) %>%
         select(network, domain, site_code, var, water_year, everything()) %>%
         write_csv(file.path(dd, 'load_annual.csv')))
+
+    map_dfr(list.files('scratch/load_diag', full.names = TRUE),
+            read_csv, col_types = 'ccnnnnnnn') %>%
+        select(-any_of('ws_area_ha')) %>%
+        left_join(ntw_dmn_join, by = 'site_code') %>%
+        arrange(network, domain, site_code, var, water_year) %>%
+        select(network, domain, site_code, var, water_year, everything()) %>%
+        write_csv(file.path(dd, 'load_annual_diagnostics.csv'))
 
     ## misc
 
@@ -13985,7 +13993,7 @@ upload_dataset_to_figshare_packageversion <- function(dataset_version){
             ## if new dmn, create figshare "article", which in this case is a dataset.
             ## else get the fs_id of the existing article
 
-            print(paste('uploading', ntw, dmn))
+            print(paste('uploading', ntw, '-', dmn))
 
             if(! dmn %in% existing_dmn_deets$domain){
 
@@ -18361,8 +18369,14 @@ check_for_dupes <- function(){
         f <- ff[i]
         if(i %% 100 == 0) print(glue('{i}/{fflen} files checked'))
 
-        dd <- read_feather(f, columns = c('datetime', 'site_code', 'var')) %>%
-            duplicated()
+        ostensible_sitecode <- str_extract(f, '([^/]+?)\\.feather', group = 1)
+
+        dd <- read_feather(f, columns = c('datetime', 'site_code', 'var'))
+        sites_d <- unique(dd$site_code)
+        if(any(sites_d != ostensible_sitecode)){
+            message(sites_d[sites_d != ostensible_sitecode], ' encountered in wrong file: ', f)
+        }
+        dd <- duplicated(dd)
 
         if(any(dd)){
             # browser()

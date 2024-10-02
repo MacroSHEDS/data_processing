@@ -4,7 +4,7 @@ domain	short name for the data domain associated with a MacroSheds site. See sit
 site_code	short name for MacroSheds site. See sites.csv	character					
 area	watershed area	numeric	hectare		NA	missing value	watershed area is calculated using the R function sf::st_area() with inputs from either watershed boundary shapefiles provided by domains or watershed shapfiles delineated by macrosheds based on latitude and longitude of stream gauges
 precip_mean	multi-year mean of annual precip_median [class: climate, source: PRISM]	numeric	millimeter		NA	missing value	
-temp_mean	multi-year mean of annual precip_median [class: climate, source: PRISM]	numeric	celsius		NA	missing value	
+temp_mean	multi-year mean of annual temp_median [class: climate, source: PRISM]	numeric	celsius		NA	missing value	
 sos_mean	watershed-mean start of growing season (or multi-year mean thereof) [class: vegetation, source: USGS]	numeric	dayOfYear		NA	missing value	
 eos_mean	watershed-mean end of growing season as day of year (or multi-year mean thereof) [class: vegetation, source: USGS]	numeric	dayOfYear		NA	missing value	
 los_mean	watershed-mean length of growing season as day of year (or multi-year mean thereof) [class: vegetation, source: USGS]	numeric	number		NA	missing value	

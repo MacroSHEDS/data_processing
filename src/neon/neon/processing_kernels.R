@@ -590,6 +590,9 @@ process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception('Relevant file missing'))
     }
 
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
     if(all(is.na(rawd$surfWaterNitrateMean))){
         return(generate_ms_exception(paste('No data for', site_code)))
     }
@@ -646,6 +649,9 @@ process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception('Relevant file missing'))
     }
 
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
     if(all(is.na(rawd$PARMean))){
         return(generate_ms_exception(paste('No data for', site_code)))
     }
@@ -696,6 +702,9 @@ process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
+
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
 
     if(all(is.na(rawd$surfWaterTempMean))){
         return(generate_ms_exception(paste('No data for', site_code)))
@@ -933,6 +942,9 @@ process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
+
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
 
     na_test <- rawd %>%
         select(specificConductance, dissolvedOxygen, pH, chlorophyll, turbidity, fDOM) %>%
@@ -1180,6 +1192,9 @@ process_1_DP1.20206.001 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception(paste('No data for', site_code)))
     }
 
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
     rawd$remark_summary <- as.numeric(
         ! is.na(rawd$externalRemarks) &
             grepl('vial|volume| id',
@@ -1313,7 +1328,7 @@ process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
     }
 
     #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
-    rawd <- filter(rawd, ! siteID == !!site_code)
+    rawd <- filter(rawd, siteID == !!site_code)
 
     if(all(is.na(rawd$maxpostDischarge))){
         return(generate_ms_exception(paste('No data for', site_code)))
